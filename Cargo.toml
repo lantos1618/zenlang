@@ -1,0 +1,18 @@
+[package]
+name = "lynlang"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+inkwell = { version = "0.6.0", features = ["llvm18-1"] }
+nom = "7.1"
+thiserror = "1.0"
+ariadne = "0.4.1"
+
+[lib]
+name = "lynlang"
+path = "src/lib.rs"
+
+[[test]]
+name = "codegen"
+harness = true
