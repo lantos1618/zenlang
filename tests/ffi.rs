@@ -1,5 +1,5 @@
 use inkwell::context::Context;
-use lynlang::ast::{self, Declaration, ExternalFunction, Function, Statement, Expression, Type};
+use lynlang::ast::{self, Declaration, ExternalFunction, Function, Statement, Expression, AstType};
 use lynlang::compiler::Compiler;
 
 #[test]
@@ -11,14 +11,14 @@ fn test_printf() {
         declarations: vec![
             Declaration::ExternalFunction(ExternalFunction {
                 name: "printf".to_string(),
-                args: vec![Type::String], // First arg is format string
-                return_type: Type::Int64,
+                args: vec![AstType::String], // First arg is format string
+                return_type: AstType::Int64,
                 is_varargs: true, // printf is variadic
             }),
             Declaration::Function(Function {
                 name: "main".to_string(),
                 args: vec![],
-                return_type: Type::Int64,
+                return_type: AstType::Int64,
                 body: vec![
                     Statement::Expression(Expression::FunctionCall {
                         name: "printf".to_string(),
@@ -51,18 +51,18 @@ fn test_external_math_function() {
         declarations: vec![
             Declaration::ExternalFunction(ExternalFunction {
                 name: "sqrt".to_string(),
-                args: vec![Type::Float],
-                return_type: Type::Float,
+                args: vec![AstType::Float],
+                return_type: AstType::Float,
                 is_varargs: false,
             }),
             Declaration::Function(Function {
                 name: "calculate_distance".to_string(),
-                args: vec![("x".to_string(), Type::Float), ("y".to_string(), Type::Float)],
-                return_type: Type::Float,
+                args: vec![("x".to_string(), AstType::Float), ("y".to_string(), AstType::Float)],
+                return_type: AstType::Float,
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "sum_squares".to_string(),
-                        type_: Type::Float,
+                        type_: AstType::Float,
                         initializer: Some(Expression::BinaryOp {
                             left: Box::new(Expression::BinaryOp {
                                 left: Box::new(Expression::Identifier("x".to_string())),

@@ -4,17 +4,21 @@
 //! The parser will produce these structures, and the compiler will consume them.
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Type {
+pub enum AstType {
     Int8,
     Int32,
     Int64,
     Float,
     String,
     Void,
-    Pointer(Box<Type>),
+    Pointer(Box<AstType>),
     Function {
-        args: Vec<Type>,
-        return_type: Box<Type>,
+        args: Vec<AstType>,
+        return_type: Box<AstType>,
+    },
+    Struct {
+        name: String,
+        fields: Vec<(String, AstType)>,
     },
 }
 
@@ -59,6 +63,14 @@ pub enum Expression {
         pointer: Box<Expression>,
         offset: Box<Expression>,
     },
+    StructLiteral {
+        name: String,
+        fields: Vec<(String, Expression)>,
+    },
+    StructField {
+        struct_: Box<Expression>,
+        field: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -67,7 +79,7 @@ pub enum Statement {
     Return(Expression),
     VariableDeclaration {
         name: String,
-        type_: Type,
+        type_: AstType,
         initializer: Option<Expression>,
     },
     VariableAssignment {
@@ -83,8 +95,8 @@ pub enum Statement {
 #[derive(Debug, Clone)]
 pub struct Function {
     pub name: String,
-    pub args: Vec<(String, Type)>,
-    pub return_type: Type,
+    pub args: Vec<(String, AstType)>,
+    pub return_type: AstType,
     pub body: Vec<Statement>,
 }
 
@@ -92,8 +104,8 @@ pub struct Function {
 #[derive(Debug, Clone)]
 pub struct ExternalFunction {
     pub name: String,
-    pub args: Vec<Type>,  // Just types, no names for external functions
-    pub return_type: Type,
+    pub args: Vec<AstType>,  // Just types, no names for external functions
+    pub return_type: AstType,
     pub is_varargs: bool,  // For functions like printf
 }
 

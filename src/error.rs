@@ -1,5 +1,6 @@
 use thiserror::Error;
 use inkwell::builder::BuilderError;
+use inkwell::support::LLVMString;
 
 #[derive(Error, Debug)]
 pub enum CompileError {
@@ -32,6 +33,18 @@ pub enum CompileError {
 
 impl From<BuilderError> for CompileError {
     fn from(err: BuilderError) -> Self {
+        CompileError::LLVMError(err.to_string())
+    }
+}
+
+impl From<String> for CompileError {
+    fn from(err: String) -> Self {
+        CompileError::InternalError(err)
+    }
+}
+
+impl From<LLVMString> for CompileError {
+    fn from(err: LLVMString) -> Self {
         CompileError::LLVMError(err.to_string())
     }
 }

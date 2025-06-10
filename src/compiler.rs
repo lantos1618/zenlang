@@ -1,4 +1,4 @@
-use crate::ast::{self, BinaryOperator, Expression, Statement, Type as AstType};
+use crate::ast::{self, BinaryOperator, Expression, Statement, AstType as AstType};
 use crate::error::{CompileError, Result};
 
 use inkwell::{
@@ -6,7 +6,7 @@ use inkwell::{
     builder::Builder,
     context::Context,
     module::Module,
-    types::{BasicType, BasicTypeEnum, BasicMetadataTypeEnum, FunctionType, PointerType},
+    types::{BasicType, BasicTypeEnum, BasicMetadataTypeEnum, FunctionType, StructType},
     values::{BasicValueEnum, FunctionValue, PointerValue},
     AddressSpace,
 };
@@ -203,13 +203,31 @@ impl<'ctx> Compiler<'ctx> {
                 Ok(())
             }
             Statement::VariableAssignment { name, value } => {
-                let (alloca, _) = self
+                let (alloca, type_) = self
                     .variables
                     .get(name)
                     .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
-                let value = self.compile_expression(value)?;
-                self.builder.build_store(*alloca, value)?;
-                Ok(())
+                
+                match value {
+                    Expression::StructLiteral { name: struct_name, fields } => {
+                        // For struct literals, we need to assign each field individually
+                        let struct_type = self.module.get_struct_type(struct_name)
+                            .ok_or_else(|| CompileError::InternalError(format!("Struct type {} not found", struct_name)))?;
+                        
+                        for (field_name, field_value) in fields {
+                            // Use our safe helper method to get the field pointer
+                            let field_ptr = self.get_struct_field_ptr(struct_type, *alloca, field_name)?;
+                            let value = self.compile_expression(field_value)?;
+                            self.builder.build_store(field_ptr, value)?;
+                        }
+                        Ok(())
+                    }
+                    _ => {
+                        let value = self.compile_expression(value)?;
+                        self.builder.build_store(*alloca, value)?;
+                        Ok(())
+                    }
+                }
             }
             Statement::PointerAssignment { pointer, value } => {
                 let ptr = self.compile_expression(pointer)?;
@@ -452,6 +470,27 @@ impl<'ctx> Compiler<'ctx> {
                     _ => Err(CompileError::InvalidPointerOperation("Invalid pointer offset types".to_string())),
                 }
             }
+            Expression::StructLiteral { name, fields } => {
+                let struct_type = self.module.get_struct_type(name)
+                    .ok_or_else(|| CompileError::InternalError(format!("Struct type {} not found", name)))?;
+                
+                let field_values: Result<Vec<BasicValueEnum>> = fields
+                    .iter()
+                    .map(|(_, expr)| self.compile_expression(expr))
+                    .collect();
+                let field_values = field_values?;
+                
+                Ok(self.context.const_struct(&field_values, false).into())
+            }
+            Expression::StructField { struct_, field } => {
+                let struct_value = self.compile_expression(struct_)?;
+                let struct_type = struct_value.get_type()
+                    .into_struct_type()
+                    .ok_or_else(|| CompileError::InternalError("Expected struct type".to_string()))?;
+                
+                // Use our safe helper method to load the field
+                self.load_struct_field(struct_type, struct_value, field)
+            }
         }
     }
 
@@ -492,6 +531,20 @@ impl<'ctx> Compiler<'ctx> {
                     Type::Void => Err(CompileError::InvalidPointerOperation("Cannot create pointer to void".to_string())),
                 }
             }
+            AstType::Struct { name, fields } => {
+                let field_types: Result<Vec<BasicTypeEnum>> = fields
+                    .iter()
+                    .map(|(_, t)| {
+                        self.to_llvm_type(t)
+                            .and_then(|lyn_type| self.expect_basic_type(lyn_type))
+                    })
+                    .collect();
+                let field_types = field_types?;
+                
+                let struct_type = self.context.struct_type(&field_types, false);
+                struct_type.set_name(name);
+                Ok(Type::Basic(struct_type.into()))
+            }
         }
     }
 
@@ -502,5 +555,66 @@ impl<'ctx> Compiler<'ctx> {
             Type::Function(_) => Err(CompileError::InvalidFunctionType("Expected non-function type".to_string())),
             Type::Void => Err(CompileError::InvalidFunctionType("Expected non-void type".to_string())),
         }
+    }
+
+    /// Safely get a struct field pointer, validating the type and field index
+    fn get_struct_field_ptr(
+        &self,
+        struct_type: StructType<'ctx>,
+        struct_value: BasicValueEnum<'ctx>,
+        field_name: &str,
+    ) -> Result<PointerValue<'ctx>> {
+        // Get the field index from the struct type
+        let field_index = struct_type.get_field_index(field_name)
+            .ok_or_else(|| CompileError::InternalError(format!("Field {} not found in struct", field_name)))?;
+
+        // Now we can safely use build_struct_gep since we've validated the field exists
+        let field_ptr = match struct_value {
+            BasicValueEnum::PointerValue(ptr) => {
+                // For pointer types, we need to load the value first
+                let loaded = self.builder.build_load(struct_type, ptr, "loaded_struct")?;
+                self.builder.build_struct_gep(
+                    struct_type,
+                    loaded.into_pointer_value(),
+                    field_index,
+                    field_name
+                )?
+            }
+            _ => {
+                self.builder.build_struct_gep(
+                    struct_type,
+                    struct_value.into_pointer_value(),
+                    field_index,
+                    field_name
+                )?
+            }
+        };
+
+        Ok(field_ptr)
+    }
+
+    /// Safely load a struct field value
+    fn load_struct_field(
+        &self,
+        struct_type: StructType<'ctx>,
+        struct_value: BasicValueEnum<'ctx>,
+        field_name: &str,
+    ) -> Result<BasicValueEnum<'ctx>> {
+        let field_ptr = self.get_struct_field_ptr(struct_type, struct_value, field_name)?;
+        let field_type = field_ptr.get_type().get_element_type();
+        Ok(self.builder.build_load(field_type, field_ptr, field_name)?.into())
+    }
+
+    /// Compile a struct field access expression
+    fn compile_struct_field_access(
+        &self,
+        struct_value: BasicValueEnum<'ctx>,
+        field_name: &str,
+    ) -> Result<BasicValueEnum<'ctx>> {
+        let struct_type = struct_value.get_type()
+            .into_struct_type()
+            .ok_or_else(|| CompileError::InternalError("Expected struct type".to_string()))?;
+        
+        self.load_struct_field(struct_type, struct_value, field_name)
     }
 } 

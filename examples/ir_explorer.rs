@@ -6,7 +6,7 @@
 //! Run with: cargo run --example ir_explorer
 
 use inkwell::context::Context;
-use lynlang::ast::{self, Declaration, ExternalFunction, Expression, Function, Statement, Type};
+use lynlang::ast::{self, Declaration, ExternalFunction, Expression, Function, Statement, AstType};
 use lynlang::compiler::Compiler;
 
 fn main() {
@@ -17,12 +17,12 @@ fn main() {
         let mut compiler = Compiler::new(&context);
         let program = ast::Program::from_functions(vec![ast::Function {
             name: "test_nested_ifs".to_string(),
-            args: vec![("x".to_string(), Type::Int64)],
-            return_type: Type::Int64,
+            args: vec![("x".to_string(), AstType::Int64)],
+            return_type: AstType::Int64,
             body: vec![
                 Statement::VariableDeclaration {
                     name: "result".to_string(),
-                    type_: Type::Int64,
+                    type_: AstType::Int64,
                     initializer: None,
                 },
                 Statement::Expression(Expression::Conditional {
@@ -58,7 +58,7 @@ fn main() {
         let program = ast::Program::from_functions(vec![ast::Function {
             name: "test_string".to_string(),
             args: vec![],
-            return_type: Type::String,
+            return_type: AstType::String,
             body: vec![Statement::Return(Expression::String("Hello, World!".to_string()))],
         }]);
 
@@ -86,14 +86,14 @@ fn main() {
             declarations: vec![
                 Declaration::ExternalFunction(ExternalFunction {
                     name: "printf".to_string(),
-                    args: vec![Type::String], // First arg is format string
-                    return_type: Type::Int64,
+                    args: vec![AstType::String], // First arg is format string
+                    return_type: AstType::Int64,
                     is_varargs: true, // printf is variadic
                 }),
                 Declaration::Function(Function {
                     name: "main".to_string(),
                     args: vec![],
-                    return_type: Type::Int64,
+                    return_type: AstType::Int64,
                     body: vec![
                         Statement::Expression(Expression::FunctionCall {
                             name: "printf".to_string(),
