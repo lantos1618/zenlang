@@ -29,6 +29,8 @@ pub enum CompileError {
     InternalError(String),
     #[error("Invalid pointer operation: {0}")]
     InvalidPointerOperation(String),
+    #[error("Invalid loop condition: {0}")]
+    InvalidLoopCondition(String),
 }
 
 impl From<BuilderError> for CompileError {

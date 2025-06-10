@@ -90,6 +90,10 @@ pub enum Statement {
         pointer: Expression,
         value: Expression,
     },
+    Loop {
+        condition: Expression,
+        body: Vec<Statement>,
+    },
 }
 
 #[derive(Debug, Clone)]

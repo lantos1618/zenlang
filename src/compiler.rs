@@ -21,7 +21,6 @@ enum Type<'ctx> {
 }
 
 impl<'ctx> Type<'ctx> {
-    #[allow(dead_code)]
     fn into_basic_type(self) -> Result<BasicTypeEnum<'ctx>> {
         match self {
             Type::Basic(t) => Ok(t),
@@ -29,10 +28,13 @@ impl<'ctx> Type<'ctx> {
         }
     }
 
-    #[allow(dead_code)]
-    fn is_void(&self) -> bool {
-        matches!(self, Type::Void)
+    fn into_function_type(self) -> Result<FunctionType<'ctx>> {
+        match self {
+            Type::Function(t) => Ok(t),
+            _ => Err(CompileError::InternalError("Expected function type".to_string())),
+        }
     }
+
 }
 
 /// The `Compiler` struct is responsible for compiling a Lynlang AST into LLVM IR.
@@ -179,20 +181,16 @@ impl<'ctx> Compiler<'ctx> {
                 type_,
                 initializer,
             } => {
-                let lyn_type = self.to_llvm_type(type_)?;
-                
-                // For function types, we store as a pointer
-                let alloca = match lyn_type {
-                    Type::Function(_) => {
-                        let ptr_type = self.context.ptr_type(AddressSpace::default());
-                        self.builder.build_alloca(ptr_type, name)?
-                    }
-                    _ => {
-                        let llvm_type = self.expect_basic_type(lyn_type)?;
-                        self.builder.build_alloca(llvm_type, name)?
+                let llvm_type = match self.to_llvm_type(type_)? {
+                    Type::Basic(b) => b,
+                    Type::Function(f) => self.context.ptr_type(AddressSpace::default()).into(),
+                    Type::Void => {
+                        return Err(CompileError::InternalError(
+                            "Cannot declare variable of type void".to_string(),
+                        ))
                     }
                 };
-                
+                let alloca = self.builder.build_alloca(llvm_type, name)?;
                 self.variables.insert(name.clone(), (alloca, type_.clone()));
 
                 if let Some(init) = initializer {
@@ -207,27 +205,10 @@ impl<'ctx> Compiler<'ctx> {
                     .variables
                     .get(name)
                     .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
-                
-                match value {
-                    Expression::StructLiteral { name: struct_name, fields } => {
-                        // For struct literals, we need to assign each field individually
-                        let struct_type = self.module.get_struct_type(struct_name)
-                            .ok_or_else(|| CompileError::InternalError(format!("Struct type {} not found", struct_name)))?;
-                        
-                        for (field_name, field_value) in fields {
-                            // Use our safe helper method to get the field pointer
-                            let field_ptr = self.get_struct_field_ptr(struct_type, *alloca, field_name)?;
-                            let value = self.compile_expression(field_value)?;
-                            self.builder.build_store(field_ptr, value)?;
-                        }
-                        Ok(())
-                    }
-                    _ => {
-                        let value = self.compile_expression(value)?;
-                        self.builder.build_store(*alloca, value)?;
-                        Ok(())
-                    }
-                }
+
+                let value = self.compile_expression(value)?;
+                self.builder.build_store(*alloca, value)?;
+                Ok(())
             }
             Statement::PointerAssignment { pointer, value } => {
                 let ptr = self.compile_expression(pointer)?;
@@ -240,6 +221,33 @@ impl<'ctx> Compiler<'ctx> {
                     }
                     _ => Err(CompileError::InvalidPointerOperation("Expected pointer type".to_string())),
                 }
+            }
+            Statement::Loop { condition, body } => {
+                // Create the loop blocks
+                let function = self.current_function
+                    .ok_or_else(|| CompileError::InternalError("No current function".to_string()))?;
+                let loop_cond = self.context.append_basic_block(function, "loop_cond");
+                let loop_body = self.context.append_basic_block(function, "loop_body");
+                let after_loop = self.context.append_basic_block(function, "after_loop");
+
+                // Branch to the loop header
+                self.builder.build_unconditional_branch(loop_cond)?;
+
+                // Set up the loop header
+                self.builder.position_at_end(loop_cond);
+                let cond = self.compile_expression(condition)?;
+                self.builder.build_conditional_branch(cond.into_int_value(), loop_body, after_loop)?;
+
+                // Compile the loop body
+                self.builder.position_at_end(loop_body);
+                for stmt in body {
+                    self.compile_statement(stmt)?;
+                }
+                self.builder.build_unconditional_branch(loop_cond)?;
+
+                // Set up the exit block
+                self.builder.position_at_end(after_loop);
+                Ok(())
             }
         }
     }
@@ -263,16 +271,31 @@ impl<'ctx> Compiler<'ctx> {
                 Ok(global.as_pointer_value().into())
             }
             Expression::Identifier(name) => {
+                // Check for function name first
+                if let Some(func) = self.module.get_function(name) {
+                    // A function name used as a value is its pointer
+                    if !self.variables.contains_key(name) {
+                        return Ok(func.as_global_value().as_pointer_value().into());
+                    }
+                }
+
+                // Check for variable
                 let (alloca, type_) = self
                     .variables
                     .get(name)
                     .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
-                
-                // Get the type to load
-                let load_type = self.to_llvm_type(type_)?;
-                let basic_type = self.expect_basic_type(load_type)?;
-                
-                Ok(self.builder.build_load(basic_type, *alloca, name)?)
+
+                let load_type = match self.to_llvm_type(type_)? {
+                    Type::Basic(b) => b,
+                    Type::Function(f) => self.context.ptr_type(AddressSpace::default()).into(),
+                    Type::Void => {
+                        return Err(CompileError::InternalError(
+                            "Cannot load void type".to_string(),
+                        ))
+                    }
+                };
+
+                Ok(self.builder.build_load(load_type, *alloca, name)?)
             }
             Expression::BinaryOp { left, op, right } => {
                 let l = self.compile_expression(left)?;
@@ -316,25 +339,30 @@ impl<'ctx> Compiler<'ctx> {
                     .map(|arg| self.compile_expression(arg))
                     .collect::<Result<Vec<_>>>()?;
                 let metadata_args: Vec<_> = compiled_args.iter().map(|arg| (*arg).into()).collect();
-                
+
                 // If name is in variables, it's a function pointer call
-                if let Some((ptr, type_)) = self.variables.get(name) {
+                if let Some((var_ptr, type_)) = self.variables.get(name) {
                     if let AstType::Function { .. } = type_ {
-                        // For function pointers, we need to load the function pointer
-                        let ptr_type = self.context.ptr_type(AddressSpace::default());
-                        let _func_ptr = self.builder.build_load(ptr_type, *ptr, name)?;
-                        
-                        // Get the function from the module
-                        let function = self.module.get_function(name).ok_or_else(|| CompileError::UndefinedFunction(name.clone()))?;
-                        let call = self.builder.build_call(function, &metadata_args, "call")?;
+                        // It's a function pointer variable. Load the pointer.
+                        let func_type = self.to_llvm_type(type_)?.into_function_type()?;
+                        let func_ptr_type = self.context.ptr_type(AddressSpace::default());
+
+                        let func_ptr = self
+                            .builder
+                            .build_load(func_ptr_type, *var_ptr, &format!("{}_ptr", name))?
+                            .into_pointer_value();
+
+                        let call = self.builder.build_indirect_call(func_type, func_ptr, &metadata_args, "call")?;
                         return Ok(call.try_as_basic_value().left().unwrap());
                     }
                 }
 
                 // Otherwise, it's a direct function call
-                let function = self.module.get_function(name).ok_or_else(|| CompileError::UndefinedFunction(name.clone()))?;
+                let function = self.module.get_function(name).ok_or_else(|| {
+                    CompileError::UndefinedFunction(name.clone())
+                })?;
                 let call = self.builder.build_call(function, &metadata_args, "call")?;
-                
+
                 Ok(call.try_as_basic_value().left().unwrap())
             }
             Expression::Conditional { scrutinee, arms } => {
@@ -434,40 +462,72 @@ impl<'ctx> Compiler<'ctx> {
             Expression::Dereference(expr) => {
                 let ptr = self.compile_expression(expr)?;
                 match ptr {
-                    BasicValueEnum::PointerValue(ptr) => {
-                        // For newer LLVM versions, we need to use opaque pointers
-                        let ptr_type = self.context.ptr_type(AddressSpace::default());
-                        Ok(self.builder.build_load(ptr_type, ptr, "deref")?)
+                    BasicValueEnum::PointerValue(ptr_val) => {
+                        // To load from a pointer, we need to know what type it points to.
+                        let pointee_ast_type = match expr.as_ref() {
+                            Expression::Identifier(name) => {
+                                let (_, var_ast_type) = self
+                                    .variables
+                                    .get(name)
+                                    .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
+
+                                if let AstType::Pointer(pointee) = var_ast_type {
+                                    *pointee.clone()
+                                } else {
+                                    return Err(CompileError::InvalidPointerOperation(format!(
+                                        "Variable '{}' is not a pointer type",
+                                        name
+                                    )));
+                                }
+                            }
+                            _ => {
+                                return Err(CompileError::InvalidPointerOperation(
+                                    "Dereferencing complex expressions is not yet supported".to_string(),
+                                ))
+                            }
+                        };
+                        let ptr_type = self.to_llvm_type(&pointee_ast_type)?.into_basic_type()?;
+                        Ok(self.builder.build_load(ptr_type, ptr_val, "deref")?)
                     }
-                    _ => Err(CompileError::InvalidPointerOperation("Expected pointer type".to_string())),
+                    _ => Err(CompileError::InvalidPointerOperation(
+                        "Cannot dereference non-pointer type".to_string(),
+                    )),
                 }
             }
             Expression::PointerOffset { pointer, offset } => {
                 let ptr = self.compile_expression(pointer)?;
                 let off = self.compile_expression(offset)?;
-                
+
                 match (ptr, off) {
                     (BasicValueEnum::PointerValue(ptr), BasicValueEnum::IntValue(off)) => {
-                        // For newer LLVM versions, we use opaque pointers
-                        let ptr_type = self.context.ptr_type(AddressSpace::default());
-                        // Calculate the offset in bytes
-                        let offset = self.builder.build_int_mul(
-                            off,
-                            self.context.i64_type().const_int(8, false), // Assume 8-byte alignment
-                            "offset_bytes"
-                        )?;
-                        // Add the offset using GEP2
-                        let offset_ptr = unsafe {
-                            self.builder.build_gep(
-                                ptr_type,
-                                ptr,
-                                &[offset],
-                                "offset_ptr"
-                            )?
+                        // To calculate pointer offsets, we need the pointee type.
+                        let pointee_ast_type = match pointer.as_ref() {
+                            Expression::Identifier(name) => {
+                                let (_, var_ast_type) = self
+                                    .variables
+                                    .get(name)
+                                    .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
+
+                                if let AstType::Pointer(pointee) = var_ast_type {
+                                    *pointee.clone()
+                                } else {
+                                    return Err(CompileError::InvalidPointerOperation(format!(
+                                        "Variable '{}' is not a pointer type",
+                                        name
+                                    )));
+                                }
+                            }
+                            _ => return Err(CompileError::InvalidPointerOperation(
+                                "Offsetting complex pointer expressions is not supported".to_string()
+                            ))
                         };
+                        let pointee_llvm_type = self.to_llvm_type(&pointee_ast_type)?.into_basic_type()?;
+                        let offset_ptr = unsafe { self.builder.build_gep(pointee_llvm_type, ptr, &[off], "offset_ptr")? };
                         Ok(offset_ptr.into())
                     }
-                    _ => Err(CompileError::InvalidPointerOperation("Invalid pointer offset types".to_string())),
+                    _ => Err(CompileError::InvalidPointerOperation(
+                        "Invalid pointer offset types".to_string(),
+                    )),
                 }
             }
             Expression::StructLiteral { name, fields } => {
@@ -483,13 +543,62 @@ impl<'ctx> Compiler<'ctx> {
                 Ok(self.context.const_struct(&field_values, false).into())
             }
             Expression::StructField { struct_, field } => {
-                let struct_value = self.compile_expression(struct_)?;
-                let struct_type = struct_value.get_type()
-                    .into_struct_type()
-                    .ok_or_else(|| CompileError::InternalError("Expected struct type".to_string()))?;
-                
-                // Use our safe helper method to load the field
-                self.load_struct_field(struct_type, struct_value, field)
+                // To access a struct field, we need a pointer to the struct.
+                // We will inspect the `struct_` expression to get this pointer,
+                // rather than compiling it to a value. This avoids loading the whole struct.
+
+                let (struct_ptr, struct_ast_type) =
+                    if let Expression::Identifier(name) = struct_.as_ref() {
+                        // Case 1: `variable.field`. The variable is an alloca, which is a pointer.
+                        let (ptr, ast_type) = self.variables.get(name)
+                            .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
+                        (*ptr, ast_type.clone())
+                    } else if let Expression::Dereference(ptr_expr) = struct_.as_ref() {
+                        // Case 2: `(*pointer).field`. Compile the inner expression to get the pointer.
+                        let ptr_to_struct = self.compile_expression(ptr_expr)?.into_pointer_value();
+
+                        // We need the AST type of what `ptr_expr` points to.
+                        // This logic is fragile and only handles identifiers for now.
+                        let pointee_type = if let Expression::Identifier(ptr_name) = ptr_expr.as_ref() {
+                            let (_, var_type) = self.variables.get(ptr_name)
+                                .ok_or_else(|| CompileError::UndefinedVariable(ptr_name.clone()))?;
+                            if let AstType::Pointer(pointee) = var_type {
+                                *pointee.clone()
+                            } else {
+                                return Err(CompileError::InvalidPointerOperation(format!("Variable '{}' is not a pointer", ptr_name)));
+                            }
+                        } else {
+                            return Err(CompileError::InternalError("Field access on complex pointer expressions not yet supported".to_string()));
+                        };
+                        (ptr_to_struct, pointee_type)
+                    } else {
+                        // Other cases (like r-value `function().field`) would need `extractvalue`
+                        // and a more robust way to get an expression's type. Not supported yet.
+                        return Err(CompileError::InternalError("Field access on r-values is not supported".to_string()));
+                    };
+
+                // Common path for l-values (cases 1 and 2): use GEP and load.
+                let (field_index, field_llvm_type) =
+                    if let AstType::Struct { fields, .. } = &struct_ast_type {
+                        let index = fields.iter()
+                            .position(|(f_name, _)| f_name == field)
+                            .map(|i| i as u32)
+                            .ok_or_else(|| CompileError::InternalError(format!("Field '{}' not found in struct", field)))?;
+
+                        let field_ast_type = &fields[index as usize].1;
+                        let llvm_type = self.to_llvm_type(field_ast_type)?.into_basic_type()?;
+                        (index, llvm_type)
+                    } else {
+                        return Err(CompileError::InternalError("Expression is not a struct type".to_string()));
+                    };
+
+                let llvm_struct_type = self.to_llvm_type(&struct_ast_type)?.into_basic_type()?.into_struct_type();
+
+                let field_ptr = unsafe {
+                    self.builder.build_struct_gep(llvm_struct_type, struct_ptr, field_index, field)?
+                };
+
+                Ok(self.builder.build_load(field_llvm_type, field_ptr, field)?)
             }
         }
     }
@@ -515,34 +624,42 @@ impl<'ctx> Compiler<'ctx> {
                     .collect();
                 let param_types = param_types?;
 
-                let func_type = match ret_type {
+                let function_type = match ret_type {
                     Type::Basic(b) => b.fn_type(&param_types, false),
                     Type::Function(f) => f,
                     Type::Void => self.context.void_type().fn_type(&param_types, false),
                 };
 
-                Ok(Type::Function(func_type))
+                Ok(Type::Function(function_type))
             }
             AstType::Pointer(pointee_type) => {
-                let pointee_llvm_type = self.to_llvm_type(pointee_type)?;
-                match pointee_llvm_type {
-                    Type::Basic(_) => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
-                    Type::Function(_) => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
-                    Type::Void => Err(CompileError::InvalidPointerOperation("Cannot create pointer to void".to_string())),
+                if let AstType::Void = **pointee_type {
+                    return Err(CompileError::InvalidPointerOperation(
+                        "Cannot create a pointer to void".to_string(),
+                    ));
                 }
+                // Pointers are opaque, so they are all just `ptr`.
+                // The type of what they point to is tracked by our compiler, not LLVM's type system.
+                let _ = self.to_llvm_type(pointee_type)?; // ensure pointee is a valid type
+                Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into()))
             }
             AstType::Struct { name, fields } => {
+                if let Some(existing_type) = self.module.get_struct_type(name) {
+                    if !existing_type.is_opaque() {
+                        return Ok(Type::Basic(existing_type.into()));
+                    }
+                    // If it exists but is opaque, we will set its body below.
+                }
+
+                let struct_type = self.module.get_struct_type(name)
+                    .unwrap_or_else(|| self.context.opaque_struct_type(name));
+
                 let field_types: Result<Vec<BasicTypeEnum>> = fields
                     .iter()
-                    .map(|(_, t)| {
-                        self.to_llvm_type(t)
-                            .and_then(|lyn_type| self.expect_basic_type(lyn_type))
-                    })
+                    .map(|(_, t)| self.to_llvm_type(t).and_then(|t| t.into_basic_type()))
                     .collect();
                 let field_types = field_types?;
-                
-                let struct_type = self.context.struct_type(&field_types, false);
-                struct_type.set_name(name);
+                struct_type.set_body(&field_types, false);
                 Ok(Type::Basic(struct_type.into()))
             }
         }
@@ -564,32 +681,14 @@ impl<'ctx> Compiler<'ctx> {
         struct_value: BasicValueEnum<'ctx>,
         field_name: &str,
     ) -> Result<PointerValue<'ctx>> {
-        // Get the field index from the struct type
-        let field_index = struct_type.get_field_index(field_name)
-            .ok_or_else(|| CompileError::InternalError(format!("Field {} not found in struct", field_name)))?;
-
-        // Now we can safely use build_struct_gep since we've validated the field exists
-        let field_ptr = match struct_value {
-            BasicValueEnum::PointerValue(ptr) => {
-                // For pointer types, we need to load the value first
-                let loaded = self.builder.build_load(struct_type, ptr, "loaded_struct")?;
-                self.builder.build_struct_gep(
-                    struct_type,
-                    loaded.into_pointer_value(),
-                    field_index,
-                    field_name
-                )?
-            }
-            _ => {
-                self.builder.build_struct_gep(
-                    struct_type,
-                    struct_value.into_pointer_value(),
-                    field_index,
-                    field_name
-                )?
-            }
+        // Find the field index by name
+        let field_index = struct_type.get_field_type_at_index(0)
+            .ok_or_else(|| CompileError::InternalError(format!("Field {} not found", field_name)))?;
+        
+        // Get the field pointer using GEP
+        let field_ptr = unsafe {
+            self.builder.build_struct_gep(struct_type, struct_value.into_pointer_value(), 0, field_name)?
         };
-
         Ok(field_ptr)
     }
 
@@ -601,8 +700,10 @@ impl<'ctx> Compiler<'ctx> {
         field_name: &str,
     ) -> Result<BasicValueEnum<'ctx>> {
         let field_ptr = self.get_struct_field_ptr(struct_type, struct_value, field_name)?;
-        let field_type = field_ptr.get_type().get_element_type();
-        Ok(self.builder.build_load(field_type, field_ptr, field_name)?.into())
+        // With opaque pointers, we need to get the field type from the struct type
+        let field_type = struct_type.get_field_type_at_index(0)
+            .ok_or_else(|| CompileError::InternalError(format!("Field {} not found", field_name)))?;
+        Ok(self.builder.build_load(field_type, field_ptr, field_name)?)
     }
 
     /// Compile a struct field access expression
@@ -611,10 +712,10 @@ impl<'ctx> Compiler<'ctx> {
         struct_value: BasicValueEnum<'ctx>,
         field_name: &str,
     ) -> Result<BasicValueEnum<'ctx>> {
-        let struct_type = struct_value.get_type()
-            .into_struct_type()
-            .ok_or_else(|| CompileError::InternalError("Expected struct type".to_string()))?;
-        
+        let struct_type = match struct_value.get_type() {
+            BasicTypeEnum::StructType(t) => t,
+            _ => return Err(CompileError::InternalError("Expected struct type".to_string())),
+        };
         self.load_struct_field(struct_type, struct_value, field_name)
     }
 } 

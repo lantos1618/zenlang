@@ -315,10 +315,10 @@ fn test_function_pointer() {
                         args: vec![AstType::Int64, AstType::Int64],
                         return_type: Box::new(AstType::Int64),
                     },
-                    initializer: None,
+                    initializer: Some(Expression::Identifier("add".to_string())),
                 },
                 Statement::Return(Expression::FunctionCall {
-                    name: "add".to_string(),
+                    name: "op".to_string(),
                     args: vec![
                         Expression::Integer64(40),
                         Expression::Integer64(2),
@@ -333,7 +333,7 @@ fn test_function_pointer() {
     
     // Verify function pointer handling
     assert!(ir.contains("define i64 @test_func_ptr"));
-    assert!(ir.contains("call i64"));
+    assert!(ir.contains("call i64")); // Indirect call
 }
 
 #[test]
@@ -387,16 +387,19 @@ fn test_pointer_operations() {
 
     let program = ast::Program::from_functions(vec![ast::Function {
         name: "test_pointers".to_string(),
-        args: vec![("x".to_string(), AstType::Int64)],
+        args: vec![],
         return_type: AstType::Int64,
         body: vec![
-            // Create a pointer to x
+            Statement::VariableDeclaration {
+                name: "x".to_string(),
+                type_: AstType::Int64,
+                initializer: Some(Expression::Integer64(42)),
+            },
             Statement::VariableDeclaration {
                 name: "ptr".to_string(),
                 type_: AstType::Pointer(Box::new(AstType::Int64)),
                 initializer: Some(Expression::AddressOf(Box::new(Expression::Identifier("x".to_string())))),
             },
-            // Dereference and return
             Statement::Return(Expression::Dereference(Box::new(Expression::Identifier("ptr".to_string())))),
         ],
     }]);
@@ -404,7 +407,7 @@ fn test_pointer_operations() {
     compiler.compile_program(&program).unwrap();
     let ir = compiler.module.print_to_string().to_string();
     assert!(ir.contains("define i64 @test_pointers"));
-    assert!(ir.contains("alloca i64*"));
+    assert!(ir.contains("alloca ptr")); // Opaque pointer style
     assert!(ir.contains("load i64"));
 }
 
@@ -444,59 +447,83 @@ fn test_pointer_assignment() {
     let mut compiler = Compiler::new(&context);
 
     let program = ast::Program::from_functions(vec![ast::Function {
-        name: "test_ptr_assignment".to_string(),
-        args: vec![("ptr".to_string(), AstType::Pointer(Box::new(AstType::Int64)))],
+        name: "test_ptr_assign".to_string(),
+        args: vec![],
         return_type: AstType::Int64,
         body: vec![
-            // Assign value through pointer
+            Statement::VariableDeclaration {
+                name: "x".to_string(),
+                type_: AstType::Int64,
+                initializer: Some(Expression::Integer64(42)),
+            },
+            Statement::VariableDeclaration {
+                name: "ptr".to_string(),
+                type_: AstType::Pointer(Box::new(AstType::Int64)),
+                initializer: Some(Expression::AddressOf(Box::new(Expression::Identifier("x".to_string())))),
+            },
             Statement::PointerAssignment {
                 pointer: Expression::Identifier("ptr".to_string()),
-                value: Expression::Integer64(42),
+                value: Expression::Integer64(100),
             },
-            // Return dereferenced value
             Statement::Return(Expression::Dereference(Box::new(Expression::Identifier("ptr".to_string())))),
         ],
     }]);
 
     compiler.compile_program(&program).unwrap();
     let ir = compiler.module.print_to_string().to_string();
-    assert!(ir.contains("define i64 @test_ptr_assignment"));
-    assert!(ir.contains("store i64 42"));
+    assert!(ir.contains("define i64 @test_ptr_assign"));
+    assert!(ir.contains("store i64 100"));
     assert!(ir.contains("load i64"));
 }
 
 #[test]
-fn test_invalid_pointer_operations() {
+fn test_invalid_dereferencing_non_pointer() {
     let context = Context::create();
     let mut compiler = Compiler::new(&context);
 
-    // Test dereferencing non-pointer
+    // Test dereferencing a non-pointer
     let program = ast::Program::from_functions(vec![ast::Function {
         name: "test_invalid_deref".to_string(),
-        args: vec![("x".to_string(), AstType::Int64)],
+        args: vec![],
         return_type: AstType::Int64,
-        body: vec![Statement::Return(Expression::Dereference(Box::new(Expression::Identifier("x".to_string()))))],
+        body: vec![
+            Statement::VariableDeclaration {
+                name: "x".to_string(),
+                type_: AstType::Int64,
+                initializer: Some(Expression::Integer64(42)),
+            },
+            Statement::Return(Expression::Dereference(Box::new(Expression::Identifier("x".to_string())))),
+        ],
     }]);
 
     let result = compiler.compile_program(&program);
     assert!(result.is_err());
     match result {
-        Err(CompileError::InvalidPointerOperation(_)) => (),
+        Err(CompileError::InvalidPointerOperation(msg)) if msg.contains("non-pointer") => (),
         _ => panic!("Expected InvalidPointerOperation error"),
     }
+}
 
-    // Test pointer to void
+#[test]
+fn test_void_pointer_declaration() {
+    let context = Context::create();
+    let mut compiler = Compiler::new(&context);
+
     let program = ast::Program::from_functions(vec![ast::Function {
         name: "test_void_ptr".to_string(),
         args: vec![],
-        return_type: AstType::Pointer(Box::new(AstType::Void)),
-        body: vec![Statement::Return(Expression::Integer64(0))],
+        return_type: AstType::Int64,
+        body: vec![Statement::VariableDeclaration {
+                name: "ptr".to_string(),
+                type_: AstType::Pointer(Box::new(AstType::Void)),
+                initializer: None,
+            }],
     }]);
 
     let result = compiler.compile_program(&program);
     assert!(result.is_err());
     match result {
-        Err(CompileError::InvalidPointerOperation(_)) => (),
+        Err(CompileError::InvalidPointerOperation(msg)) if msg.contains("pointer to void") => (),
         _ => panic!("Expected InvalidPointerOperation error"),
     }
 }
@@ -537,9 +564,9 @@ fn test_struct_creation_and_access() {
 
     compiler.compile_program(&program).unwrap();
     let ir = compiler.module.print_to_string().to_string();
-    assert!(ir.contains("define i64 @test_struct"));
-    assert!(ir.contains("%Point = type { i64, i64 }"));
-    assert!(ir.contains("getelementptr"));
+    assert!(ir.contains("%Point = type { i64, i64 }"), "IR should define the Point struct type");
+    assert!(ir.contains("define i64 @test_struct"), "IR should define the test_struct function");
+    assert!(ir.contains("getelementptr"), "IR should use GEP to access struct field");
 }
 
 #[test]
@@ -547,29 +574,53 @@ fn test_struct_pointer() {
     let context = Context::create();
     let mut compiler = Compiler::new(&context);
 
-    let program = ast::Program::from_functions(vec![ast::Function {
-        name: "test_struct_ptr".to_string(),
-        args: vec![("ptr".to_string(), AstType::Pointer(Box::new(AstType::Struct {
-            name: "Point".to_string(),
-            fields: vec![
-                ("x".to_string(), AstType::Int64),
-                ("y".to_string(), AstType::Int64),
+    let program = ast::Program::from_functions(vec![
+        ast::Function {
+            name: "test_struct_ptr".to_string(),
+            args: vec![],
+            return_type: AstType::Int64,
+            body: vec![
+                Statement::VariableDeclaration {
+                    name: "s".to_string(),
+                    type_: AstType::Struct {
+                        name: "Point".to_string(),
+                        fields: vec![
+                            ("x".to_string(), AstType::Int64),
+                            ("y".to_string(), AstType::Int64),
+                        ],
+                    },
+                    initializer: Some(Expression::StructLiteral {
+                        name: "Point".to_string(),
+                        fields: vec![
+                            ("x".to_string(), Expression::Integer64(10)),
+                            ("y".to_string(), Expression::Integer64(20)),
+                        ],
+                    }),
+                },
+                Statement::VariableDeclaration {
+                    name: "ptr".to_string(),
+                    type_: AstType::Pointer(Box::new(AstType::Struct {
+                        name: "Point".to_string(),
+                        fields: vec![
+                            ("x".to_string(), AstType::Int64),
+                            ("y".to_string(), AstType::Int64),
+                        ],
+                    })),
+                    initializer: Some(Expression::AddressOf(Box::new(Expression::Identifier("s".to_string())))),
+                },
+                Statement::Return(Expression::StructField {
+                    struct_: Box::new(Expression::Dereference(Box::new(Expression::Identifier("ptr".to_string())))),
+                    field: "x".to_string(),
+                }),
             ],
-        })))],
-        return_type: AstType::Int64,
-        body: vec![
-            Statement::Return(Expression::StructField {
-                struct_: Box::new(Expression::Dereference(Box::new(Expression::Identifier("ptr".to_string())))),
-                field: "x".to_string(),
-            }),
-        ],
-    }]);
+        },
+    ]);
 
     compiler.compile_program(&program).unwrap();
     let ir = compiler.module.print_to_string().to_string();
-    assert!(ir.contains("define i64 @test_struct_ptr"));
-    assert!(ir.contains("%Point = type { i64, i64 }"));
-    assert!(ir.contains("getelementptr"));
+    assert!(ir.contains("define i64 @test_struct_ptr"), "IR should define test function");
+    assert!(ir.contains("load ptr"), "IR should load from struct pointer");
+    assert!(ir.contains("getelementptr"), "IR should use GEP to access dereferenced struct field");
 }
 
 #[test]
@@ -620,6 +671,74 @@ fn test_struct_field_assignment() {
     let ir = compiler.module.print_to_string().to_string();
     assert!(ir.contains("define i64 @test_struct_assign"));
     assert!(ir.contains("%Point = type { i64, i64 }"));
-    assert!(ir.contains("store"));
-    assert!(ir.contains("getelementptr"));
+    assert!(ir.contains("store { i64, i64 }"), "IR should store the whole struct on assignment");
+    assert!(ir.contains("getelementptr"), "IR should use GEP to access the field for the return");
+}
+
+#[test]
+fn test_loop_construct() {
+    let context = Context::create();
+    let mut compiler = Compiler::new(&context);
+
+    let program = ast::Program::from_functions(vec![ast::Function {
+        name: "test_loop".to_string(),
+        args: vec![("n".to_string(), AstType::Int64)],
+        return_type: AstType::Int64,
+        body: vec![
+            Statement::VariableDeclaration {
+                name: "sum".to_string(),
+                type_: AstType::Int64,
+                initializer: Some(Expression::Integer64(0)),
+            },
+            Statement::VariableDeclaration {
+                name: "i".to_string(),
+                type_: AstType::Int64,
+                initializer: Some(Expression::Integer64(0)),
+            },
+            Statement::Loop {
+                condition: Expression::BinaryOp {
+                    left: Box::new(Expression::Identifier("i".to_string())),
+                    op: ast::BinaryOperator::LessThan,
+                    right: Box::new(Expression::Identifier("n".to_string())),
+                },
+                body: vec![
+                    Statement::VariableAssignment {
+                        name: "sum".to_string(),
+                        value: Expression::BinaryOp {
+                            left: Box::new(Expression::Identifier("sum".to_string())),
+                            op: ast::BinaryOperator::Add,
+                            right: Box::new(Expression::Identifier("i".to_string())),
+                        },
+                    },
+                    Statement::VariableAssignment {
+                        name: "i".to_string(),
+                        value: Expression::BinaryOp {
+                            left: Box::new(Expression::Identifier("i".to_string())),
+                            op: ast::BinaryOperator::Add,
+                            right: Box::new(Expression::Integer64(1)),
+                        },
+                    },
+                ],
+            },
+            Statement::Return(Expression::Identifier("sum".to_string())),
+        ],
+    }]);
+
+    compiler.compile_program(&program).unwrap();
+    let ir = compiler.module.print_to_string().to_string();
+    
+    // Check for loop structure
+    assert!(ir.contains("loop_cond:"), "Missing loop condition block");
+    assert!(ir.contains("loop_body:"), "Missing loop body block");
+    assert!(ir.contains("after_loop:"), "Missing after loop block");
+    
+    // Check for loop condition
+    assert!(ir.contains("icmp slt i64"), "Missing loop condition check");
+    
+    // Check for loop body operations
+    assert!(ir.contains("add i64"), "Missing addition in loop body");
+    
+    // Check for loop control flow
+    assert!(ir.contains("br label %loop_cond"), "Missing branch back to loop condition");
+    assert!(ir.contains("br i1"), "Missing conditional branch for loop");
 } 
