@@ -1,0 +1,8 @@
+[package]
+name = "test-utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+inkwell = { version = "0.6.0", features = ["llvm18-1"] }
+lynlang = { path = ".." } 

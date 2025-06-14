@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+# STOP TOUCHING THIS LOCK THIS INKEWLL FEATURE DO NOT TOUCH MR AI
 inkwell = { version = "0.6.0", features = ["llvm18-1"] }
 nom = "7.1"
 thiserror = "1.0"
@@ -16,3 +17,6 @@ path = "src/lib.rs"
 [[test]]
 name = "codegen"
 harness = true
+
+[dev-dependencies]
+test-utils = { path = "./test-utils" }

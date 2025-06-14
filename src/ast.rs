@@ -34,11 +34,13 @@ pub enum BinaryOperator {
     GreaterThan,
     LessThanEquals,
     GreaterThanEquals,
+    StringConcat,
 }
 
 #[derive(Debug, Clone)]
 pub enum Expression {
     Integer8(i8),
+    Integer16(i16),
     Integer32(i32),
     Integer64(i64),
     Float(f64),
@@ -71,6 +73,7 @@ pub enum Expression {
         struct_: Box<Expression>,
         field: String,
     },
+    StringLength(Box<Expression>),
 }
 
 #[derive(Debug, Clone)]

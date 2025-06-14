@@ -1,13 +1,14 @@
 use crate::ast::{self, BinaryOperator, Expression, Statement, AstType as AstType};
-use crate::error::{CompileError, Result};
+use crate::error::{CompileError, Result, Span};
 
 use inkwell::{
-    basic_block::BasicBlock,
     builder::Builder,
     context::Context,
     module::Module,
-    types::{BasicType, BasicTypeEnum, BasicMetadataTypeEnum, FunctionType, StructType},
-    values::{BasicValueEnum, FunctionValue, PointerValue},
+    types::{BasicType, BasicTypeEnum, BasicMetadataTypeEnum, FunctionType},
+    values::{BasicValue, BasicValueEnum, FunctionValue, PointerValue, IntValue, FloatValue},
+    IntPredicate,
+    FloatPredicate,
     AddressSpace,
 };
 
@@ -24,17 +25,16 @@ impl<'ctx> Type<'ctx> {
     fn into_basic_type(self) -> Result<BasicTypeEnum<'ctx>> {
         match self {
             Type::Basic(t) => Ok(t),
-            _ => Err(CompileError::InternalError("Expected basic type".to_string())),
+            _ => Err(CompileError::InternalError("Expected basic type".to_string(), None)),
         }
     }
 
     fn into_function_type(self) -> Result<FunctionType<'ctx>> {
         match self {
             Type::Function(t) => Ok(t),
-            _ => Err(CompileError::InternalError("Expected function type".to_string())),
+            _ => Err(CompileError::InternalError("Expected function type".to_string(), None)),
         }
     }
-
 }
 
 /// The `Compiler` struct is responsible for compiling a Lynlang AST into LLVM IR.
@@ -103,7 +103,10 @@ impl<'ctx> Compiler<'ctx> {
             Type::Void => self.context.void_type().fn_type(&param_types, ext_func.is_varargs),
         };
 
-        self.module.add_function(&ext_func.name, function_type, None);
+        // Only declare if not already declared
+        if self.module.get_function(&ext_func.name).is_none() {
+            self.module.add_function(&ext_func.name, function_type, None);
+        }
         Ok(())
     }
 
@@ -127,14 +130,17 @@ impl<'ctx> Compiler<'ctx> {
             Type::Void => self.context.void_type().fn_type(&param_types, false),
         };
 
-        self.module.add_function(&function.name, function_type, None);
+        // Only declare if not already declared
+        if self.module.get_function(&function.name).is_none() {
+            self.module.add_function(&function.name, function_type, None);
+        }
         Ok(())
     }
 
     /// Compiles a single function.
     pub fn compile_function(&mut self, function: &ast::Function) -> Result<()> {
         let function_value = self.module.get_function(&function.name)
-            .ok_or_else(|| CompileError::InternalError("Function not declared".to_string()))?;
+            .ok_or_else(|| CompileError::InternalError("Function not declared".to_string(), None))?;
             
         let entry_block = self.context.append_basic_block(function_value, "entry");
         self.builder.position_at_end(entry_block);
@@ -155,9 +161,15 @@ impl<'ctx> Compiler<'ctx> {
             self.compile_statement(statement)?;
         }
 
-        // Only emit return if not already returned
-        if let AstType::Void = function.return_type {
-            self.builder.build_return(None)?;
+        // Check if we need to add a return statement
+        if let Some(block) = self.builder.get_insert_block() {
+            if block.get_terminator().is_none() {
+                if let AstType::Void = function.return_type {
+                    self.builder.build_return(None)?;
+                } else {
+                    return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
+                }
+            }
         }
 
         self.current_function = None;
@@ -183,49 +195,53 @@ impl<'ctx> Compiler<'ctx> {
             } => {
                 let llvm_type = match self.to_llvm_type(type_)? {
                     Type::Basic(b) => b,
-                    Type::Function(f) => self.context.ptr_type(AddressSpace::default()).into(),
+                    Type::Function(_f) => self.context.ptr_type(AddressSpace::default()).into(),
                     Type::Void => {
                         return Err(CompileError::InternalError(
                             "Cannot declare variable of type void".to_string(),
-                        ))
+                            None,
+                        ));
                     }
                 };
-                let alloca = self.builder.build_alloca(llvm_type, name)?;
-                self.variables.insert(name.clone(), (alloca, type_.clone()));
 
+                let alloca = self.builder.build_alloca(llvm_type, name)?;
                 if let Some(init) = initializer {
                     let value = self.compile_expression(init)?;
                     self.builder.build_store(alloca, value)?;
                 }
-
+                self.variables.insert(name.clone(), (alloca, type_.clone()));
                 Ok(())
             }
             Statement::VariableAssignment { name, value } => {
-                let (alloca, type_) = self
+                let (alloca, _type_) = self
                     .variables
                     .get(name)
-                    .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
+                    .ok_or_else(|| CompileError::UndeclaredVariable(name.clone(), None))?;
 
                 let value = self.compile_expression(value)?;
                 self.builder.build_store(*alloca, value)?;
                 Ok(())
             }
             Statement::PointerAssignment { pointer, value } => {
-                let ptr = self.compile_expression(pointer)?;
-                let val = self.compile_expression(value)?;
+                let ptr = self.compile_expression(&pointer)?;
+                let val = self.compile_expression(&value)?;
                 
                 match ptr {
                     BasicValueEnum::PointerValue(ptr) => {
                         self.builder.build_store(ptr, val)?;
                         Ok(())
                     }
-                    _ => Err(CompileError::InvalidPointerOperation("Expected pointer type".to_string())),
+                    _ => Err(CompileError::TypeMismatch {
+                        expected: "pointer".to_string(),
+                        found: format!("{:?}", ptr.get_type()),
+                        span: None,
+                    }),
                 }
             }
             Statement::Loop { condition, body } => {
                 // Create the loop blocks
                 let function = self.current_function
-                    .ok_or_else(|| CompileError::InternalError("No current function".to_string()))?;
+                    .ok_or_else(|| CompileError::InternalError("No current function".to_string(), None))?;
                 let loop_cond = self.context.append_basic_block(function, "loop_cond");
                 let loop_body = self.context.append_basic_block(function, "loop_body");
                 let after_loop = self.context.append_basic_block(function, "after_loop");
@@ -236,6 +252,16 @@ impl<'ctx> Compiler<'ctx> {
                 // Set up the loop header
                 self.builder.position_at_end(loop_cond);
                 let cond = self.compile_expression(condition)?;
+                
+                // Ensure condition is a boolean
+                if !cond.is_int_value() || !cond.into_int_value().get_type().is_int_type() || 
+                   cond.into_int_value().get_type().get_bit_width() != 1 {
+                    return Err(CompileError::InvalidLoopCondition(
+                        "Loop condition must be a boolean (i1) value".to_string(),
+                        None,
+                    ));
+                }
+                
                 self.builder.build_conditional_branch(cond.into_int_value(), loop_body, after_loop)?;
 
                 // Compile the loop body
@@ -245,7 +271,7 @@ impl<'ctx> Compiler<'ctx> {
                 }
                 self.builder.build_unconditional_branch(loop_cond)?;
 
-                // Set up the exit block
+                // Set up the after loop block
                 self.builder.position_at_end(after_loop);
                 Ok(())
             }
@@ -253,469 +279,486 @@ impl<'ctx> Compiler<'ctx> {
     }
 
     /// Compiles a single expression.
-    fn compile_expression(&self, expr: &Expression) -> Result<BasicValueEnum<'ctx>> {
+    fn compile_expression(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>> {
         match expr {
-            Expression::Integer8(n) => Ok(self.context.i8_type().const_int(*n as u64, true).into()),
-            Expression::Integer32(n) => Ok(self.context.i32_type().const_int(*n as u64, true).into()),
-            Expression::Integer64(n) => Ok(self.context.i64_type().const_int(*n as u64, true).into()),
-            Expression::Float(n) => Ok(self.context.f64_type().const_float(*n).into()),
-            Expression::String(s) => {
-                let string_value = self.context.const_string(s.as_bytes(), false);
-                let global = self.module.add_global(
-                    string_value.get_type(),
-                    None,
-                    "string",
-                );
-                global.set_initializer(&string_value);
-                global.set_constant(true);
-                Ok(global.as_pointer_value().into())
+            Expression::Integer8(n) => {
+                Ok(self.context.i8_type().const_int(*n as u64, false).into())
+            }
+            Expression::Integer16(n) => {
+                Ok(self.context.i16_type().const_int(*n as u64, false).into())
+            }
+            Expression::Integer32(n) => {
+                Ok(self.context.i32_type().const_int(*n as u64, false).into())
+            }
+            Expression::Integer64(n) => {
+                Ok(self.context.i64_type().const_int(*n as u64, false).into())
+            }
+            Expression::Float(n) => {
+                Ok(self.context.f64_type().const_float(*n).into())
+            }
+            Expression::String(val) => {
+                let ptr = self.builder.build_global_string_ptr(val, "str")?;
+                Ok(ptr.as_pointer_value().into())
             }
             Expression::Identifier(name) => {
-                // Check for function name first
-                if let Some(func) = self.module.get_function(name) {
-                    // A function name used as a value is its pointer
-                    if !self.variables.contains_key(name) {
-                        return Ok(func.as_global_value().as_pointer_value().into());
+                let (alloca, _) = self.variables.get(name)
+                    .ok_or_else(|| CompileError::UndeclaredVariable(name.clone(), None))?;
+                let load = self.builder.build_load(alloca.get_type(), *alloca, name)?;
+                Ok(load)
+            }
+            Expression::BinaryOp { op, left, right } => {
+                let left_val = self.compile_expression(left)?;
+                let right_val = self.compile_expression(right)?;
+
+                match op {
+                    BinaryOperator::Add => {
+                        if left_val.is_int_value() && right_val.is_int_value() {
+                            let result = self.builder.build_int_add(
+                                left_val.into_int_value(),
+                                right_val.into_int_value(),
+                                "addtmp"
+                            )?;
+                            Ok(result.into())
+                        } else if left_val.is_float_value() && right_val.is_float_value() {
+                            let result = self.builder.build_float_add(
+                                left_val.into_float_value(),
+                                right_val.into_float_value(),
+                                "addtmp"
+                            )?;
+                            Ok(result.into())
+                        } else {
+                            Err(CompileError::TypeMismatch {
+                                expected: "int or float".to_string(),
+                                found: "mixed types".to_string(),
+                                span: None,
+                            })
+                        }
                     }
-                }
-
-                // Check for variable
-                let (alloca, type_) = self
-                    .variables
-                    .get(name)
-                    .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
-
-                let load_type = match self.to_llvm_type(type_)? {
-                    Type::Basic(b) => b,
-                    Type::Function(f) => self.context.ptr_type(AddressSpace::default()).into(),
-                    Type::Void => {
-                        return Err(CompileError::InternalError(
-                            "Cannot load void type".to_string(),
+                    BinaryOperator::Subtract => {
+                        if left_val.is_int_value() && right_val.is_int_value() {
+                            let result = self.builder.build_int_sub(
+                                left_val.into_int_value(),
+                                right_val.into_int_value(),
+                                "subtmp"
+                            )?;
+                            Ok(result.into())
+                        } else if left_val.is_float_value() && right_val.is_float_value() {
+                            let result = self.builder.build_float_sub(
+                                left_val.into_float_value(),
+                                right_val.into_float_value(),
+                                "subtmp"
+                            )?;
+                            Ok(result.into())
+                        } else {
+                            Err(CompileError::TypeMismatch {
+                                expected: "int or float".to_string(),
+                                found: "mixed types".to_string(),
+                                span: None,
+                            })
+                        }
+                    }
+                    BinaryOperator::Multiply => {
+                        if left_val.is_int_value() && right_val.is_int_value() {
+                            let result = self.builder.build_int_mul(
+                                left_val.into_int_value(),
+                                right_val.into_int_value(),
+                                "multmp"
+                            )?;
+                            Ok(result.into())
+                        } else if left_val.is_float_value() && right_val.is_float_value() {
+                            let result = self.builder.build_float_mul(
+                                left_val.into_float_value(),
+                                right_val.into_float_value(),
+                                "multmp"
+                            )?;
+                            Ok(result.into())
+                        } else {
+                            Err(CompileError::TypeMismatch {
+                                expected: "int or float".to_string(),
+                                found: "mixed types".to_string(),
+                                span: None,
+                            })
+                        }
+                    }
+                    BinaryOperator::Divide => {
+                        if left_val.is_int_value() && right_val.is_int_value() {
+                            let result = self.builder.build_int_signed_div(
+                                left_val.into_int_value(),
+                                right_val.into_int_value(),
+                                "divtmp"
+                            )?;
+                            Ok(result.into())
+                        } else if left_val.is_float_value() && right_val.is_float_value() {
+                            let result = self.builder.build_float_div(
+                                left_val.into_float_value(),
+                                right_val.into_float_value(),
+                                "divtmp"
+                            )?;
+                            Ok(result.into())
+                        } else {
+                            Err(CompileError::TypeMismatch {
+                                expected: "int or float".to_string(),
+                                found: "mixed types".to_string(),
+                                span: None,
+                            })
+                        }
+                    }
+                    BinaryOperator::Equals => {
+                        if left_val.is_int_value() && right_val.is_int_value() {
+                            let result = self.builder.build_int_compare(
+                                IntPredicate::EQ,
+                                left_val.into_int_value(),
+                                right_val.into_int_value(),
+                                "eqtmp"
+                            )?;
+                            Ok(result.into())
+                        } else if left_val.is_float_value() && right_val.is_float_value() {
+                            let result = self.builder.build_float_compare(
+                                FloatPredicate::OEQ,
+                                left_val.into_float_value(),
+                                right_val.into_float_value(),
+                                "eqtmp"
+                            )?;
+                            Ok(result.into())
+                        } else {
+                            Err(CompileError::TypeMismatch {
+                                expected: "int or float".to_string(),
+                                found: "mixed types".to_string(),
+                                span: None,
+                            })
+                        }
+                    }
+                    BinaryOperator::NotEquals => {
+                        if left_val.is_int_value() && right_val.is_int_value() {
+                            let result = self.builder.build_int_compare(
+                                IntPredicate::NE,
+                                left_val.into_int_value(),
+                                right_val.into_int_value(),
+                                "netmp"
+                            )?;
+                            Ok(result.into())
+                        } else if left_val.is_float_value() && right_val.is_float_value() {
+                            let result = self.builder.build_float_compare(
+                                FloatPredicate::ONE,
+                                left_val.into_float_value(),
+                                right_val.into_float_value(),
+                                "netmp"
+                            )?;
+                            Ok(result.into())
+                        } else {
+                            Err(CompileError::TypeMismatch {
+                                expected: "int or float".to_string(),
+                                found: "mixed types".to_string(),
+                                span: None,
+                            })
+                        }
+                    }
+                    BinaryOperator::LessThan => {
+                        if left_val.is_int_value() && right_val.is_int_value() {
+                            let result = self.builder.build_int_compare(
+                                IntPredicate::SLT,
+                                left_val.into_int_value(),
+                                right_val.into_int_value(),
+                                "lttmp"
+                            )?;
+                            Ok(result.into())
+                        } else if left_val.is_float_value() && right_val.is_float_value() {
+                            let result = self.builder.build_float_compare(
+                                FloatPredicate::OLT,
+                                left_val.into_float_value(),
+                                right_val.into_float_value(),
+                                "lttmp"
+                            )?;
+                            Ok(result.into())
+                        } else {
+                            Err(CompileError::TypeMismatch {
+                                expected: "int or float".to_string(),
+                                found: "mixed types".to_string(),
+                                span: None,
+                            })
+                        }
+                    }
+                    BinaryOperator::GreaterThan => {
+                        if left_val.is_int_value() && right_val.is_int_value() {
+                            let result = self.builder.build_int_compare(
+                                IntPredicate::SGT,
+                                left_val.into_int_value(),
+                                right_val.into_int_value(),
+                                "gttmp"
+                            )?;
+                            Ok(result.into())
+                        } else if left_val.is_float_value() && right_val.is_float_value() {
+                            let result = self.builder.build_float_compare(
+                                FloatPredicate::OGT,
+                                left_val.into_float_value(),
+                                right_val.into_float_value(),
+                                "gttmp"
+                            )?;
+                            Ok(result.into())
+                        } else {
+                            Err(CompileError::TypeMismatch {
+                                expected: "int or float".to_string(),
+                                found: "mixed types".to_string(),
+                                span: None,
+                            })
+                        }
+                    }
+                    BinaryOperator::LessThanEquals => {
+                        if left_val.is_int_value() && right_val.is_int_value() {
+                            let result = self.builder.build_int_compare(
+                                IntPredicate::SLE,
+                                left_val.into_int_value(),
+                                right_val.into_int_value(),
+                                "letmp"
+                            )?;
+                            Ok(result.into())
+                        } else if left_val.is_float_value() && right_val.is_float_value() {
+                            let result = self.builder.build_float_compare(
+                                FloatPredicate::OLE,
+                                left_val.into_float_value(),
+                                right_val.into_float_value(),
+                                "letmp"
+                            )?;
+                            Ok(result.into())
+                        } else {
+                            Err(CompileError::TypeMismatch {
+                                expected: "int or float".to_string(),
+                                found: "mixed types".to_string(),
+                                span: None,
+                            })
+                        }
+                    }
+                    BinaryOperator::GreaterThanEquals => {
+                        if left_val.is_int_value() && right_val.is_int_value() {
+                            let result = self.builder.build_int_compare(
+                                IntPredicate::SGE,
+                                left_val.into_int_value(),
+                                right_val.into_int_value(),
+                                "getmp"
+                            )?;
+                            Ok(result.into())
+                        } else if left_val.is_float_value() && right_val.is_float_value() {
+                            let result = self.builder.build_float_compare(
+                                FloatPredicate::OGE,
+                                left_val.into_float_value(),
+                                right_val.into_float_value(),
+                                "getmp"
+                            )?;
+                            Ok(result.into())
+                        } else {
+                            Err(CompileError::TypeMismatch {
+                                expected: "int or float".to_string(),
+                                found: "mixed types".to_string(),
+                                span: None,
+                            })
+                        }
+                    }
+                    BinaryOperator::StringConcat => {
+                        Err(CompileError::UnsupportedFeature(
+                            "String concatenation not yet implemented".to_string(),
+                            None,
                         ))
                     }
-                };
-
-                Ok(self.builder.build_load(load_type, *alloca, name)?)
-            }
-            Expression::BinaryOp { left, op, right } => {
-                let l = self.compile_expression(left)?;
-                let r = self.compile_expression(right)?;
-
-                match (l, r) {
-                    (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => match op {
-                        BinaryOperator::Add => Ok(self.builder.build_int_add(l, r, "add")?.into()),
-                        BinaryOperator::Subtract => Ok(self.builder.build_int_sub(l, r, "sub")?.into()),
-                        BinaryOperator::Multiply => Ok(self.builder.build_int_mul(l, r, "mul")?.into()),
-                        BinaryOperator::Divide => Ok(self.builder.build_int_signed_div(l, r, "div")?.into()),
-                        BinaryOperator::Equals => Ok(self.builder.build_int_compare(inkwell::IntPredicate::EQ, l, r, "eq")?.into()),
-                        BinaryOperator::NotEquals => Ok(self.builder.build_int_compare(inkwell::IntPredicate::NE, l, r, "ne")?.into()),
-                        BinaryOperator::LessThan => Ok(self.builder.build_int_compare(inkwell::IntPredicate::SLT, l, r, "lt")?.into()),
-                        BinaryOperator::GreaterThan => Ok(self.builder.build_int_compare(inkwell::IntPredicate::SGT, l, r, "gt")?.into()),
-                        BinaryOperator::LessThanEquals => Ok(self.builder.build_int_compare(inkwell::IntPredicate::SLE, l, r, "le")?.into()),
-                        BinaryOperator::GreaterThanEquals => Ok(self.builder.build_int_compare(inkwell::IntPredicate::SGE, l, r, "ge")?.into()),
-                    },
-                    (BasicValueEnum::FloatValue(l), BasicValueEnum::FloatValue(r)) => match op {
-                        BinaryOperator::Add => Ok(self.builder.build_float_add(l, r, "add")?.into()),
-                        BinaryOperator::Subtract => Ok(self.builder.build_float_sub(l, r, "sub")?.into()),
-                        BinaryOperator::Multiply => Ok(self.builder.build_float_mul(l, r, "mul")?.into()),
-                        BinaryOperator::Divide => Ok(self.builder.build_float_div(l, r, "div")?.into()),
-                        BinaryOperator::Equals => Ok(self.builder.build_float_compare(inkwell::FloatPredicate::OEQ, l, r, "eq")?.into()),
-                        BinaryOperator::NotEquals => Ok(self.builder.build_float_compare(inkwell::FloatPredicate::ONE, l, r, "ne")?.into()),
-                        BinaryOperator::LessThan => Ok(self.builder.build_float_compare(inkwell::FloatPredicate::OLT, l, r, "lt")?.into()),
-                        BinaryOperator::GreaterThan => Ok(self.builder.build_float_compare(inkwell::FloatPredicate::OGT, l, r, "gt")?.into()),
-                        BinaryOperator::LessThanEquals => Ok(self.builder.build_float_compare(inkwell::FloatPredicate::OLE, l, r, "le")?.into()),
-                        BinaryOperator::GreaterThanEquals => Ok(self.builder.build_float_compare(inkwell::FloatPredicate::OGE, l, r, "ge")?.into()),
-                    },
-                    (l, r) => Err(CompileError::InvalidBinaryOperation {
-                        op: format!("{:?}", op),
-                        left: format!("{:?}", l),
-                        right: format!("{:?}", r),
-                    }),
                 }
             }
             Expression::FunctionCall { name, args } => {
-                let compiled_args: Vec<BasicValueEnum> = args
+                let function = self.module.get_function(name)
+                    .ok_or_else(|| CompileError::UndeclaredFunction(name.clone(), None))?;
+
+                let compiled_args: Result<Vec<BasicValueEnum>> = args
                     .iter()
                     .map(|arg| self.compile_expression(arg))
-                    .collect::<Result<Vec<_>>>()?;
-                let metadata_args: Vec<_> = compiled_args.iter().map(|arg| (*arg).into()).collect();
+                    .collect();
+                let compiled_args = compiled_args?;
 
-                // If name is in variables, it's a function pointer call
-                if let Some((var_ptr, type_)) = self.variables.get(name) {
-                    if let AstType::Function { .. } = type_ {
-                        // It's a function pointer variable. Load the pointer.
-                        let func_type = self.to_llvm_type(type_)?.into_function_type()?;
-                        let func_ptr_type = self.context.ptr_type(AddressSpace::default());
+                let call_result = self.builder.build_call(
+                    function,
+                    &compiled_args.iter().map(|arg| arg.as_basic_value()).collect::<Vec<_>>(),
+                    "calltmp"
+                )?;
 
-                        let func_ptr = self
-                            .builder
-                            .build_load(func_ptr_type, *var_ptr, &format!("{}_ptr", name))?
-                            .into_pointer_value();
-
-                        let call = self.builder.build_indirect_call(func_type, func_ptr, &metadata_args, "call")?;
-                        return Ok(call.try_as_basic_value().left().unwrap());
-                    }
+                if function.get_type().get_return_type().is_none() {
+                    Ok(self.context.void_type().const_void().into())
+                } else {
+                    let basic_value = call_result.try_as_basic_value()?.left()
+                        .ok_or_else(|| CompileError::InternalError(
+                            "Function call did not return a basic value".to_string(),
+                            None,
+                        ))?;
+                    Ok(basic_value)
                 }
-
-                // Otherwise, it's a direct function call
-                let function = self.module.get_function(name).ok_or_else(|| {
-                    CompileError::UndefinedFunction(name.clone())
-                })?;
-                let call = self.builder.build_call(function, &metadata_args, "call")?;
-
-                Ok(call.try_as_basic_value().left().unwrap())
             }
             Expression::Conditional { scrutinee, arms } => {
-                let scrutinee_value = self.compile_expression(scrutinee)?;
-                let current_function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
-                
-                // We need to generate actual comparisons and branches
-                let merge_block = self.context.append_basic_block(current_function, "merge");
-                
-                // Prepare phi node - but we need to know the type
-                let result_type = if !arms.is_empty() {
-                    self.compile_expression(&arms[0].1)?.get_type()
-                } else {
-                    return Err(CompileError::InternalError("Empty conditional arms".to_string()));
-                };
-                
-                // Return to where we were
-                let entry_block = self.builder.get_insert_block().unwrap();
-                self.builder.position_at_end(merge_block);
-                let phi = self.builder.build_phi(result_type, "result")?;
-                
-                // Go back to entry to generate comparisons
-                self.builder.position_at_end(entry_block);
-                
-                let mut incoming: Vec<(BasicValueEnum<'ctx>, BasicBlock<'ctx>)> = Vec::new();
-                let mut next_test_block = None;
-                
-                for (i, (pattern, body)) in arms.iter().enumerate() {
-                    let is_last = i == arms.len() - 1;
-                    
-                    // Create blocks for this arm
-                    let test_block = if i == 0 {
-                        entry_block
-                    } else {
-                        next_test_block.unwrap()
-                    };
-                    
-                    let then_block = self.context.append_basic_block(current_function, &format!("then{}", i));
-                    next_test_block = if !is_last {
-                        Some(self.context.append_basic_block(current_function, &format!("test{}", i + 1)))
-                    } else {
-                        None
-                    };
-                    
-                    self.builder.position_at_end(test_block);
-                    
-                    // Generate comparison for pattern
-                    let pattern_value = self.compile_expression(pattern)?;
-                    
-                    // Compare scrutinee with pattern
-                    let condition = match (scrutinee_value, pattern_value) {
-                        (BasicValueEnum::IntValue(s), BasicValueEnum::IntValue(p)) => {
-                            self.builder.build_int_compare(inkwell::IntPredicate::EQ, s, p, "cmp")?
-                        }
-                        (BasicValueEnum::FloatValue(s), BasicValueEnum::FloatValue(p)) => {
-                            self.builder.build_float_compare(inkwell::FloatPredicate::OEQ, s, p, "cmp")?
-                        }
-                        _ => return Err(CompileError::InvalidPatternMatching("Pattern type mismatch".to_string())),
-                    };
-                    
-                    // Branch based on comparison
-                    if let Some(next) = next_test_block {
-                        self.builder.build_conditional_branch(condition, then_block, next)?;
-                    } else {
-                        // Last pattern - if not matched, still go to merge (or could error)
-                        self.builder.build_conditional_branch(condition, then_block, merge_block)?;
-                    }
-                    
-                    // Generate body
-                    self.builder.position_at_end(then_block);
-                    let body_value = self.compile_expression(body)?;
-                    incoming.push((body_value, self.builder.get_insert_block().unwrap()));
-                    self.builder.build_unconditional_branch(merge_block)?;
+                let parent_function = self.current_function
+                    .ok_or_else(|| CompileError::InternalError("No current function for conditional".to_string(), None))?;
+
+                let cond_val = self.compile_expression(scrutinee)?;
+                if !cond_val.is_int_value() || !cond_val.into_int_value().get_type().is_int_type() || 
+                   cond_val.into_int_value().get_type().get_bit_width() != 1 {
+                    return Err(CompileError::TypeMismatch {
+                        expected: "boolean (i1) for conditional expression".to_string(),
+                        found: format!("{:?}", cond_val.get_type()),
+                        span: None,
+                    });
                 }
-                
-                // Add all incoming values to phi
-                self.builder.position_at_end(merge_block);
-                for (value, block) in &incoming {
-                    phi.add_incoming(&[(value, *block)]);
-                }
-                
+
+                let then_bb = self.context.append_basic_block(parent_function, "then");
+                let else_bb = self.context.append_basic_block(parent_function, "else");
+                let merge_bb = self.context.append_basic_block(parent_function, "ifcont");
+
+                self.builder.build_conditional_branch(cond_val.into_int_value(), then_bb, else_bb)?;
+
+                // Emit 'then' block
+                self.builder.position_at_end(then_bb);
+                let then_val = self.compile_expression(&arms[0].1)?;
+                self.builder.build_unconditional_branch(merge_bb)?;
+
+                let then_bb_end = self.builder.get_insert_block().unwrap();
+
+                // Emit 'else' block
+                self.builder.position_at_end(else_bb);
+                let else_val = self.compile_expression(&arms[1].1)?;
+                self.builder.build_unconditional_branch(merge_bb)?;
+
+                let else_bb_end = self.builder.get_insert_block().unwrap();
+
+                // Emit 'merge' block
+                self.builder.position_at_end(merge_bb);
+                let phi = self.builder.build_phi(
+                    then_val.get_type(),
+                    "iftmp"
+                )?;
+                phi.add_incoming(&[(&then_val, then_bb_end), (&else_val, else_bb_end)]);
+
                 Ok(phi.as_basic_value())
             }
             Expression::AddressOf(expr) => {
-                let value = self.compile_expression(expr)?;
-                // For variables, we can get their alloca directly
-                if let Expression::Identifier(name) = expr.as_ref() {
-                    if let Some((alloca, _)) = self.variables.get(name) {
-                        return Ok((*alloca).into());
+                match &**expr {
+                    Expression::Identifier(name) => {
+                        let (alloca, _type_) = self
+                            .variables
+                            .get(name)
+                            .ok_or_else(|| CompileError::UndeclaredVariable(name.clone(), None))?;
+                        Ok(alloca.as_basic_value_enum())
                     }
+                    _ => Err(CompileError::UnsupportedFeature(
+                        "AddressOf only supported for identifiers".to_string(),
+                        None,
+                    )),
                 }
-                // For other expressions, we need to create a temporary
-                let temp = self.builder.build_alloca(value.get_type(), "temp")?;
-                self.builder.build_store(temp, value)?;
-                Ok(temp.into())
             }
             Expression::Dereference(expr) => {
-                let ptr = self.compile_expression(expr)?;
-                match ptr {
-                    BasicValueEnum::PointerValue(ptr_val) => {
-                        // To load from a pointer, we need to know what type it points to.
-                        let pointee_ast_type = match expr.as_ref() {
-                            Expression::Identifier(name) => {
-                                let (_, var_ast_type) = self
-                                    .variables
-                                    .get(name)
-                                    .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
-
-                                if let AstType::Pointer(pointee) = var_ast_type {
-                                    *pointee.clone()
-                                } else {
-                                    return Err(CompileError::InvalidPointerOperation(format!(
-                                        "Variable '{}' is not a pointer type",
-                                        name
-                                    )));
-                                }
-                            }
-                            _ => {
-                                return Err(CompileError::InvalidPointerOperation(
-                                    "Dereferencing complex expressions is not yet supported".to_string(),
-                                ))
-                            }
-                        };
-                        let ptr_type = self.to_llvm_type(&pointee_ast_type)?.into_basic_type()?;
-                        Ok(self.builder.build_load(ptr_type, ptr_val, "deref")?)
-                    }
-                    _ => Err(CompileError::InvalidPointerOperation(
-                        "Cannot dereference non-pointer type".to_string(),
-                    )),
+                let ptr_val = self.compile_expression(expr)?;
+                if !ptr_val.is_pointer_value() {
+                    return Err(CompileError::TypeMismatch {
+                        expected: "pointer".to_string(),
+                        found: format!("{:?}", ptr_val.get_type()),
+                        span: None,
+                    });
                 }
+                Ok(self.builder.build_load(ptr_val.into_pointer_value(), "deref_tmp"))
             }
             Expression::PointerOffset { pointer, offset } => {
-                let ptr = self.compile_expression(pointer)?;
-                let off = self.compile_expression(offset)?;
+                let base_val = self.compile_expression(pointer)?;
+                let offset_val = self.compile_expression(offset)?;
 
-                match (ptr, off) {
-                    (BasicValueEnum::PointerValue(ptr), BasicValueEnum::IntValue(off)) => {
-                        // To calculate pointer offsets, we need the pointee type.
-                        let pointee_ast_type = match pointer.as_ref() {
-                            Expression::Identifier(name) => {
-                                let (_, var_ast_type) = self
-                                    .variables
-                                    .get(name)
-                                    .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
+                if !base_val.is_pointer_value() {
+                    return Err(CompileError::TypeMismatch {
+                        expected: "pointer for pointer offset base".to_string(),
+                        found: format!("{:?}", base_val.get_type()),
+                        span: None,
+                    });
+                }
+                if !offset_val.is_int_value() {
+                    return Err(CompileError::TypeMismatch {
+                        expected: "integer for pointer offset value".to_string(),
+                        found: format!("{:?}", offset_val.get_type()),
+                        span: None,
+                    });
+                }
 
-                                if let AstType::Pointer(pointee) = var_ast_type {
-                                    *pointee.clone()
-                                } else {
-                                    return Err(CompileError::InvalidPointerOperation(format!(
-                                        "Variable '{}' is not a pointer type",
-                                        name
-                                    )));
-                                }
-                            }
-                            _ => return Err(CompileError::InvalidPointerOperation(
-                                "Offsetting complex pointer expressions is not supported".to_string()
-                            ))
-                        };
-                        let pointee_llvm_type = self.to_llvm_type(&pointee_ast_type)?.into_basic_type()?;
-                        let offset_ptr = unsafe { self.builder.build_gep(pointee_llvm_type, ptr, &[off], "offset_ptr")? };
-                        Ok(offset_ptr.into())
-                    }
-                    _ => Err(CompileError::InvalidPointerOperation(
-                        "Invalid pointer offset types".to_string(),
-                    )),
+                unsafe {
+                    Ok(self.builder.build_gep(
+                        base_val.into_pointer_value(),
+                        &[offset_val.into_int_value()],
+                        "gep_tmp"
+                    )?.into())
                 }
             }
-            Expression::StructLiteral { name, fields } => {
-                let struct_type = self.module.get_struct_type(name)
-                    .ok_or_else(|| CompileError::InternalError(format!("Struct type {} not found", name)))?;
-                
-                let field_values: Result<Vec<BasicValueEnum>> = fields
-                    .iter()
-                    .map(|(_, expr)| self.compile_expression(expr))
-                    .collect();
-                let field_values = field_values?;
-                
-                Ok(self.context.const_struct(&field_values, false).into())
-            }
-            Expression::StructField { struct_, field } => {
-                // To access a struct field, we need a pointer to the struct.
-                // We will inspect the `struct_` expression to get this pointer,
-                // rather than compiling it to a value. This avoids loading the whole struct.
-
-                let (struct_ptr, struct_ast_type) =
-                    if let Expression::Identifier(name) = struct_.as_ref() {
-                        // Case 1: `variable.field`. The variable is an alloca, which is a pointer.
-                        let (ptr, ast_type) = self.variables.get(name)
-                            .ok_or_else(|| CompileError::UndefinedVariable(name.clone()))?;
-                        (*ptr, ast_type.clone())
-                    } else if let Expression::Dereference(ptr_expr) = struct_.as_ref() {
-                        // Case 2: `(*pointer).field`. Compile the inner expression to get the pointer.
-                        let ptr_to_struct = self.compile_expression(ptr_expr)?.into_pointer_value();
-
-                        // We need the AST type of what `ptr_expr` points to.
-                        // This logic is fragile and only handles identifiers for now.
-                        let pointee_type = if let Expression::Identifier(ptr_name) = ptr_expr.as_ref() {
-                            let (_, var_type) = self.variables.get(ptr_name)
-                                .ok_or_else(|| CompileError::UndefinedVariable(ptr_name.clone()))?;
-                            if let AstType::Pointer(pointee) = var_type {
-                                *pointee.clone()
-                            } else {
-                                return Err(CompileError::InvalidPointerOperation(format!("Variable '{}' is not a pointer", ptr_name)));
-                            }
-                        } else {
-                            return Err(CompileError::InternalError("Field access on complex pointer expressions not yet supported".to_string()));
-                        };
-                        (ptr_to_struct, pointee_type)
-                    } else {
-                        // Other cases (like r-value `function().field`) would need `extractvalue`
-                        // and a more robust way to get an expression's type. Not supported yet.
-                        return Err(CompileError::InternalError("Field access on r-values is not supported".to_string()));
-                    };
-
-                // Common path for l-values (cases 1 and 2): use GEP and load.
-                let (field_index, field_llvm_type) =
-                    if let AstType::Struct { fields, .. } = &struct_ast_type {
-                        let index = fields.iter()
-                            .position(|(f_name, _)| f_name == field)
-                            .map(|i| i as u32)
-                            .ok_or_else(|| CompileError::InternalError(format!("Field '{}' not found in struct", field)))?;
-
-                        let field_ast_type = &fields[index as usize].1;
-                        let llvm_type = self.to_llvm_type(field_ast_type)?.into_basic_type()?;
-                        (index, llvm_type)
-                    } else {
-                        return Err(CompileError::InternalError("Expression is not a struct type".to_string()));
-                    };
-
-                let llvm_struct_type = self.to_llvm_type(&struct_ast_type)?.into_basic_type()?.into_struct_type();
-
-                let field_ptr = unsafe {
-                    self.builder.build_struct_gep(llvm_struct_type, struct_ptr, field_index, field)?
-                };
-
-                Ok(self.builder.build_load(field_llvm_type, field_ptr, field)?)
-            }
+            Expression::StructLiteral { .. } => Err(CompileError::UnsupportedFeature(
+                "Struct literals not yet implemented".to_string(),
+                None,
+            )),
+            Expression::StructField { .. } => Err(CompileError::UnsupportedFeature(
+                "Struct field access not yet implemented".to_string(),
+                None,
+            )),
+            Expression::StringLength(_) => Err(CompileError::UnsupportedFeature(
+                "String length not yet implemented".to_string(),
+                None,
+            )),
         }
     }
 
-    /// Converts a Lynlang type to an LLVM type or void
+    /// Converts a Lynlang type to an LLVM type.
     fn to_llvm_type(&self, type_: &AstType) -> Result<Type<'ctx>> {
         match type_ {
             AstType::Int8 => Ok(Type::Basic(self.context.i8_type().into())),
             AstType::Int32 => Ok(Type::Basic(self.context.i32_type().into())),
             AstType::Int64 => Ok(Type::Basic(self.context.i64_type().into())),
             AstType::Float => Ok(Type::Basic(self.context.f64_type().into())),
-            AstType::String => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
             AstType::Void => Ok(Type::Void),
+            AstType::Pointer(inner_type) => {
+                let inner_llvm_type = self.to_llvm_type(inner_type)?;
+                Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into()))
+            }
+            AstType::String => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())),
             AstType::Function { args, return_type } => {
-                let ret_type = self.to_llvm_type(return_type)?;
                 let param_types: Result<Vec<BasicMetadataTypeEnum>> = args
                     .iter()
-                    .map(|t| {
-                        self.to_llvm_type(t)
+                    .map(|ty| {
+                        self.to_llvm_type(ty)
                             .and_then(|lyn_type| self.expect_basic_type(lyn_type))
                             .map(|basic_type| basic_type.into())
                     })
                     .collect();
                 let param_types = param_types?;
+                let ret_type = self.to_llvm_type(return_type)?;
 
-                let function_type = match ret_type {
+                let fn_type = match ret_type {
                     Type::Basic(b) => b.fn_type(&param_types, false),
                     Type::Function(f) => f,
                     Type::Void => self.context.void_type().fn_type(&param_types, false),
                 };
-
-                Ok(Type::Function(function_type))
-            }
-            AstType::Pointer(pointee_type) => {
-                if let AstType::Void = **pointee_type {
-                    return Err(CompileError::InvalidPointerOperation(
-                        "Cannot create a pointer to void".to_string(),
-                    ));
-                }
-                // Pointers are opaque, so they are all just `ptr`.
-                // The type of what they point to is tracked by our compiler, not LLVM's type system.
-                let _ = self.to_llvm_type(pointee_type)?; // ensure pointee is a valid type
-                Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into()))
+                Ok(Type::Function(fn_type))
             }
             AstType::Struct { name, fields } => {
-                if let Some(existing_type) = self.module.get_struct_type(name) {
-                    if !existing_type.is_opaque() {
-                        return Ok(Type::Basic(existing_type.into()));
-                    }
-                    // If it exists but is opaque, we will set its body below.
+                // Check if struct type already exists
+                if let Some(struct_type) = self.module.get_struct_type(name) {
+                    Ok(Type::Basic(struct_type.into()))
+                } else {
+                    // Define the struct type (opaque first, then set body)
+                    let struct_type = self.context.opaque_struct_type(name);
+                    let field_types: Result<Vec<BasicTypeEnum>> = fields
+                        .iter()
+                        .map(|(_, ty)| {
+                            self.to_llvm_type(ty)
+                                .and_then(|lyn_type| self.expect_basic_type(lyn_type))
+                        })
+                        .collect();
+                    let field_types = field_types?;
+                    struct_type.set_body(&field_types, false); // false for not packed
+                    Ok(Type::Basic(struct_type.into()))
                 }
-
-                let struct_type = self.module.get_struct_type(name)
-                    .unwrap_or_else(|| self.context.opaque_struct_type(name));
-
-                let field_types: Result<Vec<BasicTypeEnum>> = fields
-                    .iter()
-                    .map(|(_, t)| self.to_llvm_type(t).and_then(|t| t.into_basic_type()))
-                    .collect();
-                let field_types = field_types?;
-                struct_type.set_body(&field_types, false);
-                Ok(Type::Basic(struct_type.into()))
             }
         }
     }
 
-    /// Helper to get just the BasicTypeEnum, or error if void
+    /// Expects a basic type, returning an error if not.
     fn expect_basic_type<'a>(&self, t: Type<'a>) -> Result<BasicTypeEnum<'a>> {
         match t {
             Type::Basic(b) => Ok(b),
-            Type::Function(_) => Err(CompileError::InvalidFunctionType("Expected non-function type".to_string())),
-            Type::Void => Err(CompileError::InvalidFunctionType("Expected non-void type".to_string())),
+            _ => Err(CompileError::InternalError("Expected basic type".to_string(), None)),
         }
-    }
-
-    /// Safely get a struct field pointer, validating the type and field index
-    fn get_struct_field_ptr(
-        &self,
-        struct_type: StructType<'ctx>,
-        struct_value: BasicValueEnum<'ctx>,
-        field_name: &str,
-    ) -> Result<PointerValue<'ctx>> {
-        // Find the field index by name
-        let field_index = struct_type.get_field_type_at_index(0)
-            .ok_or_else(|| CompileError::InternalError(format!("Field {} not found", field_name)))?;
-        
-        // Get the field pointer using GEP
-        let field_ptr = unsafe {
-            self.builder.build_struct_gep(struct_type, struct_value.into_pointer_value(), 0, field_name)?
-        };
-        Ok(field_ptr)
-    }
-
-    /// Safely load a struct field value
-    fn load_struct_field(
-        &self,
-        struct_type: StructType<'ctx>,
-        struct_value: BasicValueEnum<'ctx>,
-        field_name: &str,
-    ) -> Result<BasicValueEnum<'ctx>> {
-        let field_ptr = self.get_struct_field_ptr(struct_type, struct_value, field_name)?;
-        // With opaque pointers, we need to get the field type from the struct type
-        let field_type = struct_type.get_field_type_at_index(0)
-            .ok_or_else(|| CompileError::InternalError(format!("Field {} not found", field_name)))?;
-        Ok(self.builder.build_load(field_type, field_ptr, field_name)?)
-    }
-
-    /// Compile a struct field access expression
-    fn compile_struct_field_access(
-        &self,
-        struct_value: BasicValueEnum<'ctx>,
-        field_name: &str,
-    ) -> Result<BasicValueEnum<'ctx>> {
-        let struct_type = match struct_value.get_type() {
-            BasicTypeEnum::StructType(t) => t,
-            _ => return Err(CompileError::InternalError("Expected struct type".to_string())),
-        };
-        self.load_struct_field(struct_type, struct_value, field_name)
     }
 } 
