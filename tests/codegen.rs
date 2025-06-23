@@ -3,9 +3,9 @@ mod test_utils;
 use inkwell::context::Context;
 use inkwell::execution_engine::{ExecutionEngine, JitFunction};
 use inkwell::OptimizationLevel;
-use lynlang::ast::{self, AstType, Expression, Statement, BinaryOperator};
-use lynlang::compiler::Compiler;
-use lynlang::error::CompileError;
+use zen::ast::{self, AstType, Expression, Statement, BinaryOperator};
+use zen::compiler::Compiler;
+use zen::error::CompileError;
 use test_utils::TestContext;
 use std::error::Error;
 
@@ -188,8 +188,8 @@ fn test_undefined_variable() {
     let result = test_context.compile(&program);
     assert!(result.is_err());
     match result {
-        Err(CompileError::UndefinedVariable(name)) => assert_eq!(name, "x"),
-        _ => panic!("Expected UndefinedVariable error"),
+        Err(CompileError::UndeclaredVariable(name, _)) => assert_eq!(name, "x"),
+        _ => panic!("Expected UndeclaredVariable error"),
     }
 }
 
@@ -212,12 +212,11 @@ fn test_type_mismatch() {
     let result = test_context.compile(&program);
     assert!(result.is_err());
     match result {
-        Err(CompileError::InvalidBinaryOperation { op, left, right }) => {
-            assert_eq!(op, "Add");
-            assert!(left.contains("IntValue"));
-            assert!(right.contains("FloatValue"));
+        Err(CompileError::TypeMismatch { expected, found, .. }) => {
+            assert_eq!(expected, "int or float");
+            assert!(found.contains("mixed types"));
         }
-        _ => panic!("Expected InvalidBinaryOperation error"),
+        _ => panic!("Expected TypeMismatch error"),
     }
 }
 
@@ -239,8 +238,8 @@ fn test_undefined_function() {
     let result = test_context.compile(&program);
     assert!(result.is_err());
     match result {
-        Err(CompileError::UndefinedFunction(name)) => assert_eq!(name, "nonexistent"),
-        _ => panic!("Expected UndefinedFunction error"),
+        Err(CompileError::UndeclaredFunction(name, _)) => assert_eq!(name, "nonexistent"),
+        _ => panic!("Expected UndeclaredFunction error"),
     }
 }
 
@@ -262,8 +261,8 @@ fn test_invalid_function_type() {
     let result = test_context.compile(&program);
     assert!(result.is_err());
     match result {
-        Err(CompileError::InvalidFunctionType(_)) => (),
-        _ => panic!("Expected InvalidFunctionType error"),
+        Err(CompileError::UnsupportedFeature(msg, _)) if msg.contains("function type") => (),
+        _ => panic!("Expected UnsupportedFeature error for function type"),
     }
 }
 
@@ -524,8 +523,8 @@ fn test_invalid_dereferencing_non_pointer() {
     let result = test_context.compile(&program);
     assert!(result.is_err());
     match result {
-        Err(CompileError::InvalidPointerOperation(msg)) if msg.contains("non-pointer") => (),
-        _ => panic!("Expected InvalidPointerOperation error"),
+        Err(CompileError::TypeMismatch { expected: _, found: _, span: _ }) => (),
+        _ => panic!("Expected TypeMismatch error for dereferencing non-pointer"),
     }
 }
 
@@ -548,8 +547,8 @@ fn test_void_pointer_declaration() {
     let result = test_context.compile(&program);
     assert!(result.is_err());
     match result {
-        Err(CompileError::InvalidPointerOperation(msg)) if msg.contains("pointer to void") => (),
-        _ => panic!("Expected InvalidPointerOperation error"),
+        Err(CompileError::UnsupportedFeature(msg, _)) if msg.contains("pointer to void") => (),
+        _ => panic!("Expected UnsupportedFeature error for void pointer"),
     }
 }
 

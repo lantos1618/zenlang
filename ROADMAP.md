@@ -1,4 +1,4 @@
-# Lynlang Compiler Roadmap
+# Zen Compiler Roadmap
 
 ## Current Status
 ✅ Basic compiler infrastructure
@@ -16,7 +16,7 @@
 - [ ] External function declarations (`extern`)
 - [ ] C-compatible types and calling conventions
 - [ ] Linking with C libraries
-- [ ] Header file generation for Lynlang functions
+- [ ] Header file generation for Zen functions
 
 ### 2. Parser - HIGH PRIORITY
 **Why:** Currently using manual AST construction in tests

@@ -1,4 +1,3 @@
-use thiserror::Error;
 use inkwell::builder::BuilderError;
 use inkwell::support::LLVMString;
 use std::fmt;
@@ -25,6 +24,7 @@ pub enum CompileError {
     MissingReturnStatement(String, Option<Span>),
     InternalError(String, Option<Span>),
     UnsupportedFeature(String, Option<Span>),
+    TypeError(String, Option<Span>),
 }
 
 impl From<BuilderError> for CompileError {
@@ -48,14 +48,15 @@ impl From<LLVMString> for CompileError {
 impl fmt::Display for CompileError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            CompileError::SyntaxError(msg, span) => write!(f, "Syntax Error: {}{}", msg, span.map_or("".to_string(), |s| format!(" at line {} column {}", s.line, s.column))),
-            CompileError::UndeclaredVariable(name, span) => write!(f, "Undeclared variable: '{}'{}", name, span.map_or("".to_string(), |s| format!(" at line {} column {}", s.line, s.column))),
-            CompileError::UndeclaredFunction(name, span) => write!(f, "Undeclared function: '{}'{}", name, span.map_or("".to_string(), |s| format!(" at line {} column {}", s.line, s.column))),
-            CompileError::TypeMismatch { expected, found, span } => write!(f, "Type mismatch: Expected {}, found {}{}", expected, found, span.map_or("".to_string(), |s| format!(" at line {} column {}", s.line, s.column))),
-            CompileError::InvalidLoopCondition(msg, span) => write!(f, "Invalid loop condition: {}{}", msg, span.map_or("".to_string(), |s| format!(" at line {} column {}", s.line, s.column))),
-            CompileError::MissingReturnStatement(func_name, span) => write!(f, "Missing return statement in function '{}'{}", func_name, span.map_or("".to_string(), |s| format!(" at line {} column {}", s.line, s.column))),
-            CompileError::InternalError(msg, span) => write!(f, "Internal Compiler Error: {}{}", msg, span.map_or("".to_string(), |s| format!(" at line {} column {}", s.line, s.column))),
-            CompileError::UnsupportedFeature(msg, span) => write!(f, "Unsupported Feature: {}{}", msg, span.map_or("".to_string(), |s| format!(" at line {} column {}", s.line, s.column))),
+            CompileError::SyntaxError(msg, span) => write!(f, "Syntax Error: {}{}", msg, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
+            CompileError::UndeclaredVariable(name, span) => write!(f, "Undeclared variable: '{}'{}", name, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
+            CompileError::UndeclaredFunction(name, span) => write!(f, "Undeclared function: '{}'{}", name, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
+            CompileError::TypeMismatch { expected, found, span } => write!(f, "Type mismatch: Expected {}, found {}{}", expected, found, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
+            CompileError::InvalidLoopCondition(msg, span) => write!(f, "Invalid loop condition: {}{}", msg, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
+            CompileError::MissingReturnStatement(func_name, span) => write!(f, "Missing return statement in function '{}'{}", func_name, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
+            CompileError::InternalError(msg, span) => write!(f, "Internal Compiler Error: {}{}", msg, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
+            CompileError::UnsupportedFeature(msg, _) => write!(f, "Unsupported feature: {}", msg),
+            CompileError::TypeError(msg, span) => write!(f, "Type error: {}{}", msg, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
         }
     }
 }

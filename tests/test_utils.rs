@@ -4,7 +4,7 @@ use inkwell::{
     module::Module,
     OptimizationLevel,
 };
-use lynlang::{
+use zen::{
     ast::{self, AstType, Expression, Statement},
     compiler::Compiler,
     error::CompileError,
@@ -16,37 +16,83 @@ use std::ops::{Deref, DerefMut};
 /// module and context.
 pub struct TestContext<'ctx> {
     context: &'ctx Context,
-    module: Module<'ctx>,
     compiler: Compiler<'ctx>,
 }
 
 impl<'ctx> TestContext<'ctx> {
     /// Creates a new test context with a fresh module and compiler.
     pub fn new(context: &'ctx Context) -> Self {
-        let module = context.create_module("test");
         let compiler = Compiler::new(context);
         Self {
             context,
-            module,
             compiler,
         }
     }
 
+    /// Resets the test context to a clean state.
+    /// This clears all compiled code and resets the compiler state.
+    pub fn reset(&mut self) {
+        // Create a new compiler instance to ensure clean state
+        // This is safer than trying to clear individual fields, especially private ones
+        self.compiler = Compiler::new(self.context);
+    }
+
     /// Compiles a program into the test context's module.
     pub fn compile(&mut self, program: &ast::Program) -> Result<(), CompileError> {
-        // Create a new module for this compilation
-        self.module = self.context.create_module("test");
-        self.compiler.module = self.module.clone();
-        self.compiler.compile_program(program)
+        // Reset to a clean state before each compilation
+        self.reset();
+        
+        // Compile the program
+        self.compiler.compile_program(program)?;
+        
+        // Verify functions were added to the module
+        let func_count = self.compiler.module.get_functions().count();
+        println!("After compilation, module has {} functions", func_count);
+        
+        if func_count == 0 {
+            return Err(CompileError::InternalError(
+                "No functions were added to the module".to_string(), 
+                None
+            ));
+        }
+        
+        // Print the module's IR for debugging
+        println!(
+            "Module IR after compilation:\n{}", 
+            self.compiler.module.print_to_string().to_string()
+        );
+        
+        // Verify the module has the expected functions
+        let func_names: Vec<_> = self.compiler.module.get_functions()
+            .map(|f| f.get_name().to_str().unwrap_or("<invalid>").to_string())
+            .collect();
+        println!("Functions in module after compilation: {:?}", func_names);
+        
+        Ok(())
     }
 
     /// Runs a compiled program and returns its result.
     /// The program must have a 'main' function that returns an i64.
     pub fn run(&self) -> Result<i64, String> {
-        let execution_engine = self
-            .module
+        // Debug: Print all functions in the module
+        println!("Functions in module before execution (count: {}):", self.compiler.module.get_functions().count());
+        for func in self.compiler.module.get_functions() {
+            println!("  - {}", func.get_name().to_str().unwrap_or("<invalid>"));
+        }
+        
+        // Create a new execution engine with our module
+        let execution_engine = self.compiler.module
             .create_jit_execution_engine(OptimizationLevel::None)
             .map_err(|e| format!("Failed to create JIT engine: {}", e))?;
+            
+        // Verify the module contains the main function
+        if self.compiler.module.get_function("main").is_none() {
+            return Err(format!("Module does not contain a 'main' function. Available functions: {:?}", 
+                self.compiler.module.get_functions()
+                    .map(|f| f.get_name().to_str().unwrap_or("<invalid>").to_string())
+                    .collect::<Vec<_>>()
+            ));
+        }
 
         let jit_function: JitFunction<unsafe extern "C" fn() -> i64> = unsafe {
             execution_engine
@@ -59,7 +105,7 @@ impl<'ctx> TestContext<'ctx> {
 
     /// Gets the IR string for the current module.
     pub fn get_ir(&self) -> String {
-        self.module.print_to_string().to_string()
+        self.compiler.module.print_to_string().to_string()
     }
 
     /// Creates a simple test program that returns a constant value.
@@ -153,6 +199,7 @@ impl<'ctx> TestContext<'ctx> {
 
 impl<'ctx> Deref for TestContext<'ctx> {
     type Target = Compiler<'ctx>;
+
     fn deref(&self) -> &Self::Target {
         &self.compiler
     }

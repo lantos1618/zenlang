@@ -1,6 +1,6 @@
 use inkwell::context::Context;
-use lynlang::ast::{self, Declaration, ExternalFunction, Function, Statement, Expression, AstType};
-use lynlang::compiler::Compiler;
+use zen::ast::{self, Declaration, ExternalFunction, Function, Statement, Expression, AstType};
+use zen::compiler::Compiler;
 
 #[test]
 fn test_printf() {
@@ -22,7 +22,7 @@ fn test_printf() {
                 body: vec![
                     Statement::Expression(Expression::FunctionCall {
                         name: "printf".to_string(),
-                        args: vec![Expression::String("Hello from Lynlang!\n".to_string())],
+                        args: vec![Expression::String("Hello from Zen!\n".to_string())],
                     }),
                     Statement::Return(Expression::Integer64(0)),
                 ],

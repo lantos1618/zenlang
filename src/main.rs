@@ -43,7 +43,7 @@ fn main() -> Result<()> {
     // Create target machine
     let target = match Target::from_name("x86-64") {
         Some(t) => t,
-        None => return Err(CompileError::InternalError("Failed to get x86-64 target".to_string())),
+        None => return Err(CompileError::InternalError("Failed to get x86-64 target".to_string(), None)),
     };
     
     let target_machine = target.create_target_machine(
@@ -53,7 +53,7 @@ fn main() -> Result<()> {
         OptimizationLevel::None,
         inkwell::targets::RelocMode::Default,
         inkwell::targets::CodeModel::Default,
-    ).ok_or(CompileError::InternalError("Failed to create target machine".to_string()))?;
+    ).ok_or(CompileError::InternalError("Failed to create target machine".to_string(), None))?;
     
     // Emit object file
     let output_path = Path::new("output.o");

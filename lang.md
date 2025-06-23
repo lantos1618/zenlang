@@ -1,4 +1,4 @@
-Yes, excellent! "Errors as values" is a modern and robust approach, aligning perfectly with Lynlang's explicit and controlled philosophy, and avoids the complexities and non-local control flow of try/catch exceptions.
+Yes, excellent! "Errors as values" is a modern and robust approach, aligning perfectly with Zen's explicit and controlled philosophy, and avoids the complexities and non-local control flow of try/catch exceptions.
 
 This means functions that can fail will typically return a type like `Result<ValueType, ErrorType>` or `Option<ValueType>` (if the error is simply "not found" or "no value").
 
@@ -6,7 +6,7 @@ Let's create the Table of Contents first to structure the final draft, then proc
 
 ---
 
-**Lynlang Language Overview (Conceptual v1.0 - Final Draft Outline)**
+**Zen Language Overview (Conceptual v1.0 - Final Draft Outline)**
 
 **Table of Contents:**
 
@@ -32,7 +32,7 @@ Let's create the Table of Contents first to structure the final draft, then proc
     *   Declaration without Initialization (Default Values)
 
 5.  **Data Structures**
-    *   **Structs (Record Types)**
+    *   **Structs (Product Types)**
         *   Definition
         *   Instantiation (Struct Literals)
         *   Field Access
@@ -97,16 +97,16 @@ This looks like a comprehensive structure. I will now generate the content in mu
 
 **(1/N - Will indicate when to prompt for next part)**
 
-Okay, here's the first part of the Lynlang Language Overview v1.0, covering sections 1-4 from the Table of Contents.
+Okay, here's the first part of the Zen Language Overview v1.0, covering sections 1-4 from the Table of Contents.
 
 (1/4)
 
-// Lynlang Language Overview (Conceptual v1.0 - Final Draft)
+// Zen Language Overview (Conceptual v1.0 - Final Draft)
 
 // --- 1. Philosophy & General Notes ---
 
 // **Core Tenets:**
-// Lynlang aims to be a modern, explicit, and performant systems programming language
+// Zen aims to be a modern, explicit, and performant systems programming language
 // with powerful compile-time metaprogramming capabilities. It prioritizes clarity,
 // consistency, and developer control. The design features a minimalist core syntax
 // that composes into expressive patterns, striving to reduce syntactic noise by
@@ -175,7 +175,7 @@ log_mod := build.import("log")           // For logging framework
 //   - Null pointer: `core.nullPtr<T>()` or a dedicated literal like `null_ptr<T>`.
 //   - Dereference: `ptr_val^` (syntax TBD, `^` is a placeholder).
 // - `Ref<T>`: Managed reference/pointer to T. Semantics (e.g., ARC, ORC, ownership-based,
-//   GC-integration) are a critical part of Lynlang's memory model, to be detailed.
+//   GC-integration) are a critical part of Zen's memory model, to be detailed.
 
 // **Collection Types (Conceptual - likely from `collections` module):**
 // - `Array<T>`: Fixed-size or dynamically-sized contiguous sequence of T.
@@ -204,13 +204,13 @@ log_mod := build.import("log")           // For logging framework
 // **Binding Syntax:**
 // - Immutable binding, type inferred: `name := expression`
 //   `PI := 3.14159`
-//   `Greeting := "Hello, Lynlang!"`
+//   `Greeting := "Hello, Zen!"`
 // - Mutable binding, type inferred: `name ::= expression`
 //   `requestCounter ::= 0`
 //   `currentMessage ::= str_utils.Builder.new()`
 // - Immutable binding, explicit type: `name : type = expression`
 //   `MaxUsers : uint32 = 1000`
-//   `AppName : string = "Lynlang Central"`
+//   `AppName : string = "Zen Central"`
 // - Mutable binding, explicit type: `name :: type = expression`
 //   `activeConnections :: uint16 = 0`
 //   `buffer :: Array<byte> = collections.ArrayList<byte>.withCapacity(1024)`
@@ -235,76 +235,50 @@ optionalName : Option<string>     // Initialized to Option<string>.None
 This covers the foundational elements. Ready for the next part (Data Structures, Namespacing, Functions, Conditional Expressions, Loops)?
 
 
-Okay, here's the second part of the Lynlang Language Overview v1.0, covering Data Structures, Namespacing, Functions, the unified Conditional Expression, and the Loop construct.
+Okay, here's the second part of the Zen Language Overview v1.0, covering Data Structures, Namespacing, Functions, the unified Conditional Expression, and the Loop construct.
 
 (2/4)
 
 // --- 5. Data Structures ---
 
-// **Structs (Record Types):**
+// **Structs (Product Types):**
 // - Define custom data types composed of named fields.
-// - Definition (comma-separated members, trailing comma allowed):
-//   `StructName: {`
-//   `    fieldName : fieldType = defaultValue,  // Immutable field`
-//   `    anotherField :: anotherType = defaultValue, // Mutable field`
-//   `    // Behavior implementations can also be nested here (see Behaviors section)`
-//   `}`
+// - Definition:
+//   `Person = { name: string, age: int, is_member: bool }`
 // Example:
-Vector2D: {
-    x : float64 = 0.0,
-    y : float64 = 0.0,
-
-    // Example of a method-like free function associated via UFCS,
-    // conceptually part of Vector2D's API.
-    // (Actual definition would be outside or in an 'impl' block if that style was chosen)
-    // length_sq = (self: Vector2D) float64 { return self.x*self.x + self.y*self.y; }
+Person = {
+    name: string,
+    age: int,
+    is_member: bool,
 }
 
-UserProfile: {
-    user_id : uint64, // No default, must be provided
-    username : string,
-    is_active :: bool = true, // Mutable, defaults to true
-    last_login : Option<uint64> = Option<uint64>.None, // Timestamp
-}
-
-// - Instantiation (Using struct literal syntax):
-//   `variable := StructName { field1: value1, field2: value2, ... }`
-//   Fields not provided will use their default values.
-//   It's an error if a field without a default is not provided.
-v1 := Vector2D{} // v1 is {x:0.0, y:0.0}
-v2 := Vector2D{x: 3.0, y: 4.0}
-profile1 := UserProfile{user_id: 101, username: "Alice"}
-// profile1.is_active is true, profile1.last_login is None
-
-// - Field Access: `instance.fieldName`
-//   `v2.x` // Read immutable field
-//   `profile1.is_active = false` // Write to mutable field
-
+// - Instantiation (using struct literal syntax):
+//   `alice := Person { name: "Alice", age: 30, is_member: true }`
+// - Field access: `alice.name`, `alice.age`
 
 // **Enums (Sum Types / Tagged Unions):**
 // - Define a type that can be one of several distinct variants.
 // - Each variant can optionally hold data of a specific type.
-// - Definition (comma-separated variants, trailing comma allowed):
-//   `EnumName: enum {`
-//   `    Variant1,`
-//   `    Variant2(AssociatedType),`
-//   `    Variant3({field1: Type1, field2: Type2}), // Variant with anonymous struct payload`
-//   `}`
+// - Definition:
+//   `Color = | Red | Green | Blue`
+//   `Action = | Stop | Go | Wait(duration: int)`
 // Example:
-NetworkEvent: enum {
-    Connected,
-    Disconnected,
-    DataReceived(Array<byte>),
-    ErrorOccurred({ code: int32, message: string }),
-}
+Color =
+| Red
+| Green
+| Blue
+
+Action =
+| Stop
+| Go
+| Wait(duration: int)
 
 // - Instantiation:
-event1 := NetworkEvent.Connected
-event2 := NetworkEvent.DataReceived(collections.ArrayList<byte>.new(0xDE, 0xAD, 0xBE, 0xEF).toArray())
-event3 := NetworkEvent.ErrorOccurred({code: 500, message: "Server timeout"})
+//   `c := Color.Red`
+//   `a := Action.Wait(5)`
+// - Pattern matching uses the same `|` separator for arms (see Conditional Expression section).
 
-// - Using enum variants (typically with the Conditional Expression for matching):
-//   See Conditional Expression section for how to match and extract data.
+// This style is minimal, elegant, and visually distinctive: use `{ ... }` for structs and `|` for enums.
 
 
 // --- 6. Namespacing & Organization ---
@@ -328,7 +302,7 @@ Geometry: {
 // dist := Geometry.distance(origin_geom, Geometry.Point2D{x:3.0, y:4.0})
 
 // **Modules (Primary Organization via `@std.build.import`):**
-// - Lynlang code is organized into modules. Each file can be a module, or a directory
+// - Zen code is organized into modules. Each file can be a module, or a directory
 //   can represent a larger module with submodules.
 // - The `build := @std.build` object's `import("specifier")` function loads modules.
 // - Loaded modules are typically assigned to a variable, which then acts as a namespace.
@@ -371,60 +345,50 @@ area2 := my_rect.Rectangle_area() // UFCS call (no other args)
 // --- 8. Control Flow ---
 
 // **Conditional Expression (Unified If/Match - NO 'if' or 'match' KEYWORDS):**
-// - Syntax: `( ScrutineeExpressionOrTrue ) { Pattern1 => Result1, Pattern2 => Result2, ... }`
+// - Syntax: `scrutinee ? (pattern) => logic => result` or simply `scrutinee (pattern) => logic => result` with arms separated by `?`, `|`, or newlines.
 // - This is the sole construct for conditional logic and pattern matching.
-// - `ScrutineeExpressionOrTrue`: The value to be matched, or `true` for general conditional chains.
-// - `Pattern => Result`: An arm where `Pattern` is matched against the scrutinee. If it matches,
-//   the `Result` expression is evaluated and becomes the value of the entire construct.
-// - The construct is an expression; it evaluates to the `Result` of the chosen arm.
-// - Must be exhaustive if its value is used (i.e., all possible cases of the scrutinee
-//   must be covered by patterns, or a wildcard `_` pattern must be present).
+// - The scrutinee is the value to be matched. If omitted, it defaults to `true` (for boolean chains).
+// - Each arm consists of:
+//     - A pattern (with optional capture/destructuring)
+//     - An optional logic expression (boolean, using `&&`, `||`, etc.)
+//     - The result expression (evaluated if the pattern and logic match)
+// - The construct is an expression; it evaluates to the result of the first matching arm.
+// - Must be exhaustive if its value is used (i.e., all possible cases of the scrutinee must be covered by patterns, or a wildcard `_` pattern must be present).
 //   If used as a statement (value discarded), non-exhaustive forms might be allowed.
-
+//
 // - **Pattern Matching Capabilities (Conceptual):**
 //   - Literals: `10`, `"text"`, `true`, `HttpVerb.Get`
-//   - Variables: `x` (can bind a new variable or match an existing one, TBD scoping rules)
+//   - Variables: `(x)` (binds the value to `x`)
 //   - Wildcard: `_` (matches anything without binding)
-//   - Type Checks: `(TypeName)` (e.g., `(string)`). The variable being checked is
-//     type-narrowed within the `=> {}` block of that arm.
-//   - Enum Variant Checks & Destructuring:
-//     `(MyEnum.Variant)`
-//     `(MyEnum.VariantWithData(bound_var))` (binds payload to `bound_var`)
-//     `(MyEnum.VariantWithStructPayload({field1: bound_f1, field2: _}))`
-//   - Boolean Expressions (when scrutinee is `true`): Any expression evaluating to `bool`.
-//   - Guards (optional extension): `(pattern where condition)`
+//   - Enum Variant Checks & Destructuring: `(.Variant)`, `(.Variant(x))`, `(.Variant(x, y))`
+//   - Logic: Any boolean expression after the capture, e.g. `(x) => x > 0 && x < 50`
+//
+// Example: General Conditional Logic (no 'if' keyword)
+score
+| score < 0                => "Invalid (negative)"
+| score == 0               => "Zero"
+| score > 0 && score < 50  => "Low"
+| score >= 50 && score < 80 => "Medium"
+| score >= 80 && score <= 100 => "High"
+| _                        => "Unknown"
 
-// Example: General Conditional Logic (Scrutinee is `true`)
-determineSign = (num: int32) string {
-    return (true) { // Scrutinee for boolean conditions
-        (num < 0) => { "Negative" },
-        (num == 0) => { "Zero" },
-        (num > 0) => { "Positive" },
-        // No '_' needed if all int32 states relative to zero are covered.
-        // However, for robustness or if num could be non-standard, `_` is safer.
-    }
-}
+// Example: Matching on an Enum Value with Destructuring and Logic
+result
+| .Ok(x)                    => "Success: $(x)"
+| .Err(code, msg) => code < 100   => "Minor error: $(msg)"
+| .Err(code, msg) => code >= 100  => "Major error: $(msg)"
+| _                              => "Unknown result"
 
-// Example: Matching on an Enum Value (NetworkEvent defined earlier)
-processNetworkEvent = (event: NetworkEvent, io_h: io.Stream) void {
-    (event) { // Scrutinee is 'event'
-        (NetworkEvent.Connected) => {
-            io_h.writeString("Network connection established.\n")
-        },
-        (NetworkEvent.Disconnected) => {
-            io_h.writeString("Network connection lost.\n")
-        },
-        // Example of destructuring an enum variant's payload:
-        // (This syntax for pattern destructuring is illustrative and needs finalization)
-        (NetworkEvent.DataReceived(data_payload)) => {
-            io_h.writeString("Received $(data_payload.length()) bytes of data.\n")
-        },
-        (NetworkEvent.ErrorOccurred({code: err_code, message: err_msg})) => {
-            io_h.writeString("Network Error $(err_code): $(err_msg)\n")
-        },
-        // No '_' needed if all NetworkEvent variants are handled and this is a statement.
-    }
-}
+// Example: Matching a struct with logic
+person
+| (p) => p.age < 18                   => "Minor: No access"
+| (p) => p.age >= 18 && p.is_member   => "Adult member: Full access"
+| (p) => p.age >= 18 && !p.is_member  => "Adult non-member: Limited access"
+| _                                   => "Unknown"
+
+// - Arms can be separated by `?`, `|`, or newlines for flexibility and readability.
+// - No 'if', 'where', or other guard keywords are needed; logic is just a boolean expression after the capture.
+// - Destructuring, logic, and result are all part of the arm, making the syntax minimal and expressive.
 
 
 // **Loop Construct: `loop`**
@@ -484,13 +448,13 @@ logItems = (items: collections.List<string>, log_h: /* log_mod */) void {
 
 Next up: Error Handling, Behaviors, and Comptime Metaprogramming. Ready for part 3?
 
-Okay, here's the third part of the Lynlang Language Overview v1.0, covering Error Handling (Errors as Values), Behaviors, and Compile-Time Metaprogramming.
+Okay, here's the third part of the Zen Language Overview v1.0, covering Error Handling (Errors as Values), Behaviors, and Compile-Time Metaprogramming.
 
 (3/4)
 
 // --- 9. Error Handling (Errors as Values) ---
 
-// - Lynlang adopts an "errors as values" approach, avoiding traditional try/catch exceptions.
+// - Zen adopts an "errors as values" approach, avoiding traditional try/catch exceptions.
 // - Functions that can fail gracefully return a sum type, typically `Result<ValueType, ErrorType>`
 //   or `Option<ValueType>` (if the error is simply "value not present").
 
@@ -614,7 +578,7 @@ Closer: behavior {
 //      Here, `stream` would be a "fat pointer" or "trait object" containing a pointer
 //      to the data and a vtable (virtual method table) for the `Writer` methods.
 // - The choice between static and dynamic dispatch has performance and code size implications.
-//   Lynlang would need to provide syntax to control this or have clear default rules.
+//   Zen would need to provide syntax to control this or have clear default rules.
 
 
 // --- 11. Compile-Time Metaprogramming (`comptime`) ---
@@ -649,231 +613,47 @@ Closer: behavior {
 //   - Fundamental compiler operations are exposed as functions in the `core` module.
 //   `SizeOfInt := core.sizeOf(int32)`
 //   `TypeNameStr := core.typeName(Point)`
-//   `core.compileError("This configuration is invalid.")` // Halts compilation
-//   `core.assert(SizeOfInt == 4, "int32 should be 4 bytes!")` // Comptime assertion
+//   `core.compileError("This configuration is invalid.")`
 
-// - **Comptime Control Flow:**
-//   - Conditional expressions `(ScrutineeOrTrue) { Arms... }` and `loop` constructs
-//     can be used within `comptime` blocks if their conditions and involved values
-//     are comptime-known.
-
-// - **Code Generation (Conceptual):**
-//   - Advanced comptime capabilities could include AST (Abstract Syntax Tree) manipulation
-//     or string-based code generation that is then parsed and compiled, allowing for
-//     powerful macros and domain-specific language extensions. This is a highly
-//     advanced feature requiring careful design of the AST API and safety.
-//   - Example: `generated_code_string := comptime { /* build string */ }`
-//     `core.compileString(generated_code_string)` // Hypothetical
-
-
-(End of 3/4)
-
-One more part to go, covering Async, Memory Management, String Interpolation, and the Main Program Example with a conceptual Standard Library structure. Ready for the final piece?
-
-Alright, here's the final part of the Lynlang Language Overview v1.0, covering Async, Memory Management, String Interpolation, and the Main Program Example.
-
-(4/4)
-
-// --- 12. Asynchronous Programming (`async`/`await`) ---
-
-// - Lynlang supports asynchronous programming using `async` functions and the `await` keyword.
-// - This is designed for non-blocking I/O operations and concurrent tasks.
-// - Requires an async runtime/scheduler (provided by the Lynlang environment or standard library).
-
-// - **`async` Functions and `Task<T>`:**
-//   - A function marked with `async` returns a `Task<ReturnType>`.
-//   - `Task<T>` (likely from `async_mod := build.import("async")`) represents a computation
-//     that will eventually produce a value of type `T` or complete with `void`.
-//   - Syntax: `funcName = async (params) Task<ReturnType> { body }`
-// Example:
-// file_io := build.import("file_io") // Hypothetical module for async file ops
-// readFileToString = async (path: string) Task<Result<string, file_io.Error>> {
-//     file_open_result := await file_io.openAsync(path, file_io.Mode.Read)
-//     // Manual error propagation (could be simplified with a '?' operator TBD)
-//     opened_file := (file_open_result) {
-//         (Result.Ok(file_handle)) => { file_handle },
-//         (Result.Err(err)) => { return Result<string, file_io.Error>.Err(err) },
-//     }
+// --- Elegance in Conditional Expressions ---
 //
-//     content_result := await opened_file.readAllToStringAsync()
-//     await opened_file.closeAsync() // Ensure resources are released
+// Zen encourages the most elegant, minimal, and readable style for conditional expressions.
 //
-//     return content_result // This is Task<Result<string, file_io.Error>>
-// }
-
-// - **`await` Expression:**
-//   - `result := await some_task;`
-//   - When `await` is used on a `Task<T>`, the execution of the current `async` function
-//     is suspended until the awaited task completes.
-//   - If the task completes successfully with a value, `await` returns that value.
-//   - If the task completes with an error (if `Task<T>` can represent errors, e.g.,
-//     `Task<Result<T,E>>`), `await` would propagate or return that error status.
-//   - `await` can only be used inside an `async` function.
-
-// - **Event Loop / Scheduler (Runtime Responsibility):**
-//   - The Lynlang runtime environment is responsible for managing an event loop or
-//     task scheduler that executes `Task`s, polls for I/O completion, and resumes
-//     suspended `async` functions.
-
-
-// --- 13. Memory Management & Allocators ---
-
-// - **Pointer Types:**
-//   - `Ptr<T>`: Unsafe raw pointer. Used for low-level programming, FFI, and implementing
-//     custom data structures or allocators. Requires manual lifetime management.
-//   - `Ref<T>`: Managed reference. The exact semantics (e.g., Automatic Reference Counting
-//     (ARC/ORC), tracing Garbage Collector (GC), or an ownership/borrowing system
-//     integrated with lifetimes) are a crucial design decision for Lynlang's safety
-//     and performance characteristics, yet to be fully detailed. This choice will
-//     significantly influence how higher-level code is written.
-
-// - **Allocator Convention:**
-//   - Lynlang promotes explicit control over memory allocation where needed.
-//   - Allocators are typically structs that conform to an expected structure (duck typing
-//     for behavior) or implement a specific `Allocator` behavior defined in `std/mem`.
-//   - `mem := build.import("mem")` would provide:
-//     - `mem.Allocator`: A behavior defining methods like `alloc`, `free`, `realloc`.
-//     - `mem.Layout`: A struct describing size and alignment: `{ size: usize, align: usize }`.
-//     - `mem.ConcurrencyModel`: enum { SingleThreaded, ThreadSafeBlocking, AsyncOptimized }.
-//     - `mem.DefaultHeapAllocator`: An instance of a default, general-purpose heap allocator.
-//     - `mem.NullAllocator`: An allocator that always fails to allocate (for testing/static cases).
-
-// Example Allocator Behavior (Conceptual):
-// Allocator: behavior {
-//     alloc = (self: Ptr<Self>, layout: mem.Layout) Result<Ptr<byte>, mem.AllocError>,
-//     free = (self: Ptr<Self>, ptr: Ptr<byte>, layout: mem.Layout) void,
-//     // realloc, etc.
-//     getConcurrencyModel = (self: Ptr<Self>) mem.ConcurrencyModel,
-// }
-
-// - **Using Allocators:**
-//   - Collections and other types that require dynamic memory can be designed to accept
-//     an allocator instance during construction.
-//   `my_list := collections.List<int32>.newWithAllocator(mem.DefaultHeapAllocator)`
-//   `my_custom_list := collections.List<int32>.newWithAllocator(MyCustomPageAllocator{})`
-
-
-// --- 14. String Interpolation ---
-
-// - Strings support interpolation using `$(expression)`.
-// - The result of the `expression` is converted to a string. This typically relies
-//   on the expression's type implementing a `Stringer` behavior (see Behaviors).
-// Example:
-// user_name := "Alex"
-// user_age := 30
-// greeting_message := "User: $(user_name), Age: $(user_age), Next year: $(user_age + 1)"
-
-
-// --- 15. Main Program Example & Standard Library Structure (Conceptual) ---
-
-// (Assumes typical preamble aliases 'core', 'build', 'io', 'os', 'str_utils', 'ct_utils',
-// 'collections', 'log_mod', 'math', 'mem', 'async_mod' are in scope)
-
-// Define a simple struct for the example
-DataRecord: {
-    id: uint32,
-    payload: string,
-
-    // Implement Stringer behavior for DataRecord
-    Stringer: {
-        toString = (self: DataRecord) string {
-            return "Record{id: $(self.id), payload: \"$(self.payload)\"}";
-        }
+// **Preferred (Flat) Style:**
+// For simple value-based matches (booleans, enums, etc.), use the flat style:
+//
+// Example: Boolean
+is_admin
+| true  => "Welcome, admin!"
+| _     => "Access denied."
+//
+// Example: Enum
+colour
+| .Red   => STOP
+| .Blue  => GO
+| .Green => GO
+//
+// Example: Number with guards
+score
+| score < 0                => "Invalid (negative)"
+| score == 0               => "Zero"
+| score > 0 && score < 50  => "Low"
+| score >= 50 && score < 80 => "Medium"
+| score >= 80 && score <= 100 => "High"
+| _                        => "Unknown"
+//
+// **Nested Style (Allowed, but use sparingly):**
+// For more complex, multi-level logic, you may nest matches, but this is rarely needed for simple cases.
+//
+// Example: Nested (not recommended for simple booleans)
+_ => {
+    (is_admin) {
+        (true) => "Welcome, admin!"
+        (_)    => "Access denied."
     }
 }
-
-// Entry point
-main = async () Task<void> {
-    log_mod.print(log_mod.Level.Info, "Lynlang v1.0 Demo Program Running.")
-
-    // Comptime usage
-    comptime {
-        core.assert(core.sizeOf(int32) == 4, "int32 size assumption failed!")
-        ct_utils.println("This message is printed during compilation.")
-    }
-    StaticMessage := comptime { "Built on: " + core.compilerIntrinsic("build_timestamp") }
-    log_mod.print(log_mod.Level.Debug, StaticMessage)
-
-    // Variable declarations and struct instantiation
-    record1 := DataRecord{id: 1, payload: "First item"}
-    record2_opt :: Option<DataRecord> = Option<DataRecord>.Some(DataRecord{id: 2, payload: "Second item"})
-
-    // Using imported string utilities and Stringer behavior
-    log_mod.print(log_mod.Level.Info, str_utils.toUpper(record1.toString()))
-
-    // Conditional expression (unified if/match)
-    (record2_opt) {
-        (Option.Some(rec)) => { // Destructuring Option.Some
-            log_mod.print(log_mod.Level.Info, "Found record: $(rec.toString())")
-        },
-        (Option.None) => {
-            log_mod.print(log_mod.Level.Warning, "Second record is None.")
-        },
-    }
-
-    // Loop construct
-    total_len ::= 0
-    words := collections.ArrayList<string>.new("Hello", "Lynlang", "World")
-    word_loop: loop(words.iter()) {
-        word => {
-            log_mod.print(log_mod.Level.Debug, "Word: $(word)")
-            total_len = total_len + word.length() // Assuming string has .length()
-        }
-        else => { log_mod.print(log_mod.Level.Info, "Total length of words: $(total_len)") }
-    }
-
-    // Async operation example
-    // fake_fetch = async (url: string) Task<string> {
-    //    async_mod.sleep(100) // Simulate network delay, from `build.import("async")`
-    //    return "Fake content from $(url)"
-    // }
-    // content_task := fake_fetch("http://example.com")
-    // fetched_data := await content_task
-    // log_mod.print(log_mod.Level.Info, "Async fetched: $(fetched_data)")
-
-    // Error handling with Result (conceptual)
-    // parse_result := str_utils.parseInt("123x") // Returns Result<int32, ParseError>
-    // (parse_result) {
-    //    (Result.Ok(num)) => { log_mod.print(log_mod.Level.Info, "Parsed int: $(num)") },
-    //    (Result.Err(err)) => { log_mod.print(log_mod.Level.Error, "Parse error: $(err.toString())") },
-    // }
-
-    log_mod.print(log_mod.Level.Info, "Program finished gracefully.")
-    // For async main, the runtime handles waiting for tasks and eventual exit.
-    // os.exit(0) can be called explicitly if needed, especially for sync main.
-}
-
-
-// --- Conceptual Standard Library Module Structure (via `build.import("name")`) ---
-// - "core": (Accessed via @std.core) Compiler intrinsics, most fundamental types/ops.
-// - "os": Filesystem, environment variables, process control, time.
-// - "io": Streams (stdin, stdout, stderr), readers, writers, buffers.
-// - "string": String manipulation, builders, parsing, formatting.
-// - "math": Mathematical constants and functions.
-// - "collections": Generic data structures (List, Array, Map, Set, etc.) and iterators.
-// - "comptime_utils": Higher-level utilities for compile-time programming.
-// - "mem": Allocator behavior/interface, default allocators, memory utilities, ConcurrencyModel.
-// - "async": Task<T> type, async schedulers, synchronization primitives (Mutex, Channel).
-// - "log": Logging framework (LogLevel enum, print functions).
-// - "net" or "http": Networking protocols, HTTP client/server.
-// - "json", "toml", etc.: Data serialization/deserialization formats.
-// - "result": Definition of `Result<T,E>` if not in `core`.
-// - "testing": Framework for writing unit and integration tests.
-// ... and more as the standard library grows.
-
-
-(End of 4/4)
-
-This v1.0 draft captures a highly distinctive language. It's minimalist in its core syntax but aims for significant power through composition, strong compile-time capabilities, and explicit control. The "errors as values" and the unified conditional/match expression are key characteristics.
-
-The next steps in a real language design process would be to:
-
-Formalize the Grammar: Create a precise EBNF or similar grammar.
-
-Detail Core Semantics: Fully specify the memory model for Ref<T>, behavior dispatch, iteration protocols, pattern matching rules, error propagation, module resolution, etc.
-
-Define the Standard Library API: Specify the exact functions, types, and behaviors in each standard module.
-
-Build a Compiler/Interpreter: The ultimate test!
-
-This has been a fantastic collaborative design session! Lynlang has a very strong identity now.
+//
+// **Guidance:**
+// - Use the flat style whenever possible for clarity and elegance.
+// - Reserve nesting for cases where the result of one match is itself a match on another value, or for grouping related logic.
+// - Zen's philosophy: minimal, direct, and expressive code is always preferred.

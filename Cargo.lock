@@ -85,17 +85,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lynlang"
-version = "0.1.0"
-dependencies = [
- "ariadne",
- "inkwell",
- "nom",
- "test-utils",
- "thiserror",
-]
-
-[[package]]
 name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -175,7 +164,7 @@ name = "test-utils"
 version = "0.1.0"
 dependencies = [
  "inkwell",
- "lynlang",
+ "zen",
 ]
 
 [[package]]
@@ -215,3 +204,14 @@ name = "yansi"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
+
+[[package]]
+name = "zen"
+version = "0.1.0"
+dependencies = [
+ "ariadne",
+ "inkwell",
+ "nom",
+ "test-utils",
+ "thiserror",
+]

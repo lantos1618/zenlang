@@ -1,5 +1,5 @@
 [package]
-name = "lynlang"
+name = "zen"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,7 +11,7 @@ thiserror = "1.0"
 ariadne = "0.4.1"
 
 [lib]
-name = "lynlang"
+name = "zen"
 path = "src/lib.rs"
 
 [[test]]

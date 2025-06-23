@@ -1,13 +1,13 @@
 //! IR Explorer - Development tool for examining LLVM IR output
 //! 
 //! This is not a test, but rather a utility for debugging and exploring
-//! what LLVM IR the compiler generates for various Lynlang constructs.
+//! what LLVM IR the compiler generates for various Zen constructs.
 //! 
 //! Run with: cargo run --example ir_explorer
 
 use inkwell::context::Context;
-use lynlang::ast::{self, Declaration, ExternalFunction, Expression, Function, Statement, AstType};
-use lynlang::compiler::Compiler;
+use zen::ast::{self, Declaration, ExternalFunction, Expression, Function, Statement, AstType};
+use zen::compiler::Compiler;
 
 fn main() {
     let context = Context::create();
@@ -97,7 +97,7 @@ fn main() {
                     body: vec![
                         Statement::Expression(Expression::FunctionCall {
                             name: "printf".to_string(),
-                            args: vec![Expression::String("Hello from Lynlang!\n".to_string())],
+                            args: vec![Expression::String("Hello from Zen!\n".to_string())],
                         }),
                         Statement::Return(Expression::Integer64(0)),
                     ],
