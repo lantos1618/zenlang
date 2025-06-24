@@ -1,0 +1,247 @@
+use super::lexer::{Lexer, Token};
+use crate::ast::{Program, Declaration, Function, Statement, Expression, AstType, BinaryOperator};
+
+pub struct Parser<'a> {
+    lexer: Lexer<'a>,
+    current_token: Token,
+    peek_token: Token,
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(mut lexer: Lexer<'a>) -> Self {
+        let current_token = lexer.next_token();
+        let peek_token = lexer.next_token();
+        Parser {
+            lexer,
+            current_token,
+            peek_token,
+        }
+    }
+
+    pub fn parse_program(&mut self) -> Program {
+        let mut declarations = vec![];
+        
+        while self.current_token != Token::Eof {
+            if let Token::Keyword(ref keyword) = self.current_token {
+                if keyword == "fn" {
+                    if let Ok(function) = self.parse_function() {
+                        declarations.push(Declaration::Function(function));
+                    }
+                }
+            }
+            self.next_token();
+        }
+        
+        Program { declarations }
+    }
+
+    fn parse_function(&mut self) -> Result<Function, String> {
+        // Skip 'fn'
+        self.next_token();
+        
+        // Parse function name
+        let name = if let Token::Identifier(name) = &self.current_token {
+            name.clone()
+        } else {
+            return Err("Expected function name".to_string());
+        };
+        self.next_token();
+        
+        // Skip '('
+        if self.current_token != Token::Symbol('(') {
+            return Err("Expected '('".to_string());
+        }
+        self.next_token();
+        
+        // Parse arguments (empty for now)
+        let args = vec![];
+        
+        // Skip ')'
+        if self.current_token != Token::Symbol(')') {
+            return Err("Expected ')'".to_string());
+        }
+        self.next_token();
+        
+        // Parse return type
+        let return_type = self.parse_type()?;
+        
+        // Skip '{'
+        if self.current_token != Token::Symbol('{') {
+            return Err("Expected '{'".to_string());
+        }
+        self.next_token();
+        
+        // Parse function body
+        let mut body = vec![];
+        while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
+            body.push(self.parse_statement()?);
+        }
+        
+        // Skip '}'
+        if self.current_token == Token::Symbol('}') {
+            self.next_token();
+        }
+        
+        Ok(Function {
+            name,
+            args,
+            return_type,
+            body,
+        })
+    }
+
+    fn parse_statement(&mut self) -> Result<Statement, String> {
+        match &self.current_token {
+            Token::Keyword(ref keyword) => {
+                match keyword.as_str() {
+                    "return" => {
+                        self.next_token();
+                        let expr = self.parse_expression()?;
+                        if self.current_token == Token::Symbol(';') {
+                            self.next_token();
+                        }
+                        Ok(Statement::Return(expr))
+                    }
+                    "let" => {
+                        self.next_token();
+                        let name = if let Token::Identifier(name) = &self.current_token {
+                            name.clone()
+                        } else {
+                            return Err("Expected variable name".to_string());
+                        };
+                        self.next_token();
+                        
+                        if self.current_token != Token::Symbol(':') {
+                            return Err("Expected ':'".to_string());
+                        }
+                        self.next_token();
+                        
+                        let type_ = self.parse_type()?;
+                        
+                        if self.current_token != Token::Operator("=".to_string()) {
+                            return Err("Expected '='".to_string());
+                        }
+                        self.next_token();
+                        
+                        let initializer = Some(self.parse_expression()?);
+                        
+                        if self.current_token == Token::Symbol(';') {
+                            self.next_token();
+                        }
+                        
+                        Ok(Statement::VariableDeclaration {
+                            name,
+                            type_,
+                            initializer,
+                        })
+                    }
+                    _ => Err(format!("Unknown keyword: {}", keyword)),
+                }
+            }
+            _ => {
+                let expr = self.parse_expression()?;
+                if self.current_token == Token::Symbol(';') {
+                    self.next_token();
+                }
+                Ok(Statement::Expression(expr))
+            }
+        }
+    }
+
+    fn parse_expression(&mut self) -> Result<Expression, String> {
+        self.parse_binary_expression(0)
+    }
+
+    fn parse_binary_expression(&mut self, precedence: u8) -> Result<Expression, String> {
+        let mut left = self.parse_primary_expression()?;
+        
+        while let Token::Operator(ref op) = self.current_token {
+            let op_precedence = self.get_operator_precedence(op);
+            if op_precedence < precedence {
+                break;
+            }
+            
+            let op_token = op.clone();
+            self.next_token();
+            
+            let right = self.parse_binary_expression(op_precedence + 1)?;
+            
+            left = Expression::BinaryOp {
+                left: Box::new(left),
+                op: self.parse_binary_operator(&op_token)?,
+                right: Box::new(right),
+            };
+        }
+        
+        Ok(left)
+    }
+
+    fn parse_primary_expression(&mut self) -> Result<Expression, String> {
+        match &self.current_token {
+            Token::Integer(value) => {
+                let value = value.parse::<i32>().map_err(|_| "Invalid integer".to_string())?;
+                self.next_token();
+                Ok(Expression::Integer32(value))
+            }
+            Token::Identifier(name) => {
+                let name = name.clone();
+                self.next_token();
+                Ok(Expression::Identifier(name))
+            }
+            Token::Symbol('(') => {
+                self.next_token();
+                let expr = self.parse_expression()?;
+                if self.current_token != Token::Symbol(')') {
+                    return Err("Expected ')'".to_string());
+                }
+                self.next_token();
+                Ok(expr)
+            }
+            _ => Err(format!("Unexpected token: {:?}", self.current_token)),
+        }
+    }
+
+    fn parse_type(&mut self) -> Result<AstType, String> {
+        match &self.current_token {
+            Token::Identifier(ref name) => {
+                let type_ = match name.as_str() {
+                    "int32" => AstType::Int32,
+                    "int64" => AstType::Int64,
+                    "float" => AstType::Float,
+                    "string" => AstType::String,
+                    "void" => AstType::Void,
+                    _ => return Err(format!("Unknown type: {}", name)),
+                };
+                self.next_token();
+                Ok(type_)
+            }
+            _ => Err(format!("Expected type, got: {:?}", self.current_token)),
+        }
+    }
+
+    fn parse_binary_operator(&self, op: &str) -> Result<BinaryOperator, String> {
+        match op {
+            "+" => Ok(BinaryOperator::Add),
+            "-" => Ok(BinaryOperator::Subtract),
+            "*" => Ok(BinaryOperator::Multiply),
+            "/" => Ok(BinaryOperator::Divide),
+            "==" => Ok(BinaryOperator::Equals),
+            "!=" => Ok(BinaryOperator::NotEquals),
+            _ => Err(format!("Unknown operator: {}", op)),
+        }
+    }
+
+    fn get_operator_precedence(&self, op: &str) -> u8 {
+        match op {
+            "*" | "/" => 2,
+            "+" | "-" => 1,
+            "==" | "!=" => 0,
+            _ => 0,
+        }
+    }
+
+    fn next_token(&mut self) {
+        self.current_token = self.peek_token.clone();
+        self.peek_token = self.lexer.next_token();
+    }
+} 

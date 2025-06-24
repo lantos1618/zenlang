@@ -1,4 +1,6 @@
 pub mod symbols;
+pub mod lexer;
+pub mod parser;
 
 // Re-export the symbols module for easier access
 pub use symbols::{Symbol, SymbolTable};

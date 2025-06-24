@@ -38,7 +38,7 @@ pub enum BinaryOperator {
     StringConcat,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Integer8(i8),
     Integer16(i16),
@@ -77,7 +77,7 @@ pub enum Expression {
     StringLength(Box<Expression>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Expression(Expression),
     Return(Expression),
@@ -100,7 +100,7 @@ pub enum Statement {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: String,
     pub args: Vec<(String, AstType)>,
@@ -109,7 +109,7 @@ pub struct Function {
 }
 
 // For C FFI support
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExternalFunction {
     pub name: String,
     pub args: Vec<AstType>,  // Just types, no names for external functions
@@ -117,13 +117,13 @@ pub struct ExternalFunction {
     pub is_varargs: bool,  // For functions like printf
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Declaration {
     Function(Function),
     ExternalFunction(ExternalFunction),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub declarations: Vec<Declaration>,
 }
