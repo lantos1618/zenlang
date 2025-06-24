@@ -6,6 +6,7 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AstType {
     Int8,
+    Int16,
     Int32,
     Int64,
     Float,
