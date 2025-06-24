@@ -1,15 +1,12 @@
-use inkwell::{
-    context::Context,
-    execution_engine::JitFunction,
-    module::Module,
-    OptimizationLevel,
-};
+use inkwell::execution_engine::JitFunction;
+use inkwell::OptimizationLevel;
 use zen::{
     ast::{self, AstType, Expression, Statement},
     compiler::Compiler,
     error::CompileError,
 };
 use std::ops::{Deref, DerefMut};
+use inkwell::context::Context;
 
 /// A test context that manages the LLVM context, module, and compiler state
 /// for running tests. This ensures all compilation and execution use the same

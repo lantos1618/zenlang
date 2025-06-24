@@ -20,6 +20,14 @@ impl<'ctx> Compiler<'ctx> {
                 match inner_type {
                     Type::Basic(_b) => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
                     Type::Function(_) | Type::Void => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
+                    Type::Pointer(_) => Err(CompileError::UnsupportedFeature(
+                        "Pointer to pointer is not supported".to_string(),
+                        None,
+                    )),
+                    Type::Struct(_) => Err(CompileError::UnsupportedFeature(
+                        "Pointer to struct is not supported".to_string(),
+                        None,
+                    )),
                 }
             }
             AstType::Struct { name, fields } => {

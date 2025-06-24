@@ -1,13 +1,12 @@
-mod test_utils;
+extern crate test_utils;
 
-use inkwell::context::Context;
-use inkwell::execution_engine::{ExecutionEngine, JitFunction};
-use inkwell::OptimizationLevel;
 use zen::ast::{self, AstType, Expression, Statement, BinaryOperator};
-use zen::compiler::Compiler;
-use zen::error::CompileError;
 use test_utils::TestContext;
-use std::error::Error;
+use zen::error::CompileError;
+use inkwell::context::Context;
+use inkwell::OptimizationLevel;
+use inkwell::execution_engine::JitFunction;
+use test_utils::test_context;
 
 // Helper function to compile and execute a program
 fn compile_and_run<'ctx>(test_context: &mut TestContext<'ctx>, program: &ast::Program) -> i64 {

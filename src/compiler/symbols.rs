@@ -123,7 +123,7 @@ mod tests {
     fn test_symbol_table_scoping() {
         let context = Context::create();
         let i32_type = context.i32_type();
-        let fn_type = i32_type.fn_type(&[], false);
+        let _fn_type = i32_type.fn_type(&[], false);
         
         let mut symtab = SymbolTable::new();
         

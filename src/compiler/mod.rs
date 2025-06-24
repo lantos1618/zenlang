@@ -28,9 +28,11 @@ mod stmt_codegen;
 mod types;
 mod structs;
 
-#[derive(Debug, Clone, Copy)]
-enum Type<'ctx> {
+#[derive(Debug, Clone)]
+pub enum Type<'ctx> {
     Basic(BasicTypeEnum<'ctx>),
+    Pointer(Box<Type<'ctx>>),
+    Struct(StructType<'ctx>),
     Function(FunctionType<'ctx>),
     Void,
 }
@@ -39,14 +41,11 @@ impl<'ctx> Type<'ctx> {
     fn into_basic_type(self) -> Result<BasicTypeEnum<'ctx>, CompileError> {
         match self {
             Type::Basic(t) => Ok(t),
-            _ => Err(CompileError::InternalError("Expected basic type".to_string(), None)),
-        }
-    }
-
-    fn into_function_type(self) -> Result<FunctionType<'ctx>, CompileError> {
-        match self {
-            Type::Function(t) => Ok(t),
-            _ => Err(CompileError::InternalError("Expected function type".to_string(), None)),
+            _ => Err(CompileError::TypeMismatch {
+                expected: "basic type".to_string(),
+                found: format!("{:?}", self),
+                span: None,
+            }),
         }
     }
 }
@@ -226,6 +225,18 @@ impl<'ctx> Compiler<'ctx> {
             },
             Type::Function(f) => f,
             Type::Void => self.context.void_type().fn_type(&param_metadata, ext_func.is_varargs),
+            Type::Pointer(_) => {
+                return Err(CompileError::UnsupportedFeature(
+                    "Cannot use pointer type as function return type".to_string(),
+                    None,
+                ));
+            }
+            Type::Struct(_) => {
+                return Err(CompileError::UnsupportedFeature(
+                    "Cannot use struct type as function return type".to_string(),
+                    None,
+                ));
+            }
         };
 
         // Only declare if not already declared
@@ -291,6 +302,18 @@ impl<'ctx> Compiler<'ctx> {
             },
             Type::Function(f) => f,
             Type::Void => self.context.void_type().fn_type(&param_metadata, false),
+            Type::Pointer(_) => {
+                return Err(CompileError::UnsupportedFeature(
+                    "Cannot use pointer type as function return type".to_string(),
+                    None,
+                ));
+            }
+            Type::Struct(_) => {
+                return Err(CompileError::UnsupportedFeature(
+                    "Cannot use struct type as function return type".to_string(),
+                    None,
+                ));
+            }
         };
         
         // Only declare if not already declared

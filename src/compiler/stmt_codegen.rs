@@ -23,6 +23,18 @@ impl<'ctx> Compiler<'ctx> {
                             None,
                         ));
                     }
+                    Type::Pointer(_) => {
+                        return Err(CompileError::UnsupportedFeature(
+                            "Cannot declare variable of pointer type directly".to_string(),
+                            None,
+                        ));
+                    }
+                    Type::Struct(_) => {
+                        return Err(CompileError::UnsupportedFeature(
+                            "Cannot declare variable of struct type directly".to_string(),
+                            None,
+                        ));
+                    }
                 };
                 if let Some(expr) = initializer {
                     // Special case: initializing a function pointer with a function identifier
