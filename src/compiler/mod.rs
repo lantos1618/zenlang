@@ -371,10 +371,32 @@ impl<'ctx> Compiler<'ctx> {
         // Check if we need to add a return statement
         if let Some(block) = self.builder.get_insert_block() {
             if block.get_terminator().is_none() {
-                if let AstType::Void = function.return_type {
-                    self.builder.build_return(None)?;
+                // Check if the last statement was an expression that should be returned
+                if let Some(last_stmt) = function.body.last() {
+                    if let Statement::Expression(expr) = last_stmt {
+                        // For non-void functions, treat trailing expressions as return values
+                        if !matches!(function.return_type, AstType::Void) {
+                            let value = self.compile_expression(expr)?;
+                            self.builder.build_return(Some(&value))?;
+                        } else {
+                            // For void functions, just return void
+                            self.builder.build_return(None)?;
+                        }
+                    } else {
+                        // Not a trailing expression, handle normally
+                        if let AstType::Void = function.return_type {
+                            self.builder.build_return(None)?;
+                        } else {
+                            return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
+                        }
+                    }
                 } else {
-                    return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
+                    // No statements in function body
+                    if let AstType::Void = function.return_type {
+                        self.builder.build_return(None)?;
+                    } else {
+                        return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
+                    }
                 }
             }
         }

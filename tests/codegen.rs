@@ -930,4 +930,98 @@ fn test_string_literal_ir() {
     }]);
     let result = test_context.compile(&program);
     assert!(result.is_ok());
+}
+
+#[test]
+fn test_full_pipeline_zen_syntax() {
+    test_context!(|test_context: &mut TestContext| {
+        // Test the full pipeline: Zen source → lexer → parser → codegen
+        let zen_source = "main = () int32 { 42 }";
+        
+        // Lex the source
+        let lexer = zen::compiler::lexer::Lexer::new(zen_source);
+        
+        // Parse the source
+        let mut parser = zen::compiler::parser::Parser::new(lexer);
+        let program = parser.parse_program();
+        
+        // Verify the program was parsed correctly
+        assert_eq!(program.declarations.len(), 1);
+        if let ast::Declaration::Function(func) = &program.declarations[0] {
+            assert_eq!(func.name, "main");
+            assert_eq!(func.return_type, AstType::Int32);
+            assert_eq!(func.body.len(), 1);
+            if let Statement::Expression(Expression::Integer32(42)) = &func.body[0] {
+                // Correctly parsed
+            } else {
+                panic!("Expected Expression(Integer32(42)), got {:?}", func.body[0]);
+            }
+        } else {
+            panic!("Expected Function declaration");
+        }
+        
+        // Compile the program
+        let result = test_context.compile(&program);
+        assert!(result.is_ok(), "Compilation failed: {:?}", result);
+        
+        // Run the program
+        let execution_result = test_context.run();
+        assert!(execution_result.is_ok(), "Execution failed: {:?}", execution_result);
+        assert_eq!(execution_result.unwrap(), 42);
+    });
+}
+
+#[test]
+fn test_full_pipeline_with_variable() {
+    test_context!(|test_context: &mut TestContext| {
+        // Test the full pipeline with a variable declaration
+        let zen_source = "main = () int32 { x := 42; x }";
+        
+        // Lex the source
+        let lexer = zen::compiler::lexer::Lexer::new(zen_source);
+        
+        // Parse the source
+        let mut parser = zen::compiler::parser::Parser::new(lexer);
+        let program = parser.parse_program();
+        
+        // Verify the program was parsed correctly
+        assert_eq!(program.declarations.len(), 1);
+        if let ast::Declaration::Function(func) = &program.declarations[0] {
+            assert_eq!(func.name, "main");
+            assert_eq!(func.return_type, AstType::Int32);
+            assert_eq!(func.body.len(), 2);
+            
+            // First statement should be variable declaration
+            if let Statement::VariableDeclaration { name, type_, initializer } = &func.body[0] {
+                assert_eq!(name, "x");
+                assert_eq!(*type_, AstType::Int32);
+                assert!(initializer.is_some());
+                if let Some(Expression::Integer32(42)) = initializer {
+                    // Correct
+                } else {
+                    panic!("Expected initializer to be Integer32(42)");
+                }
+            } else {
+                panic!("Expected VariableDeclaration, got {:?}", func.body[0]);
+            }
+            
+            // Second statement should be trailing expression
+            if let Statement::Expression(Expression::Identifier(name)) = &func.body[1] {
+                assert_eq!(name, "x");
+            } else {
+                panic!("Expected Expression(Identifier(\"x\")), got {:?}", func.body[1]);
+            }
+        } else {
+            panic!("Expected Function declaration");
+        }
+        
+        // Compile the program
+        let result = test_context.compile(&program);
+        assert!(result.is_ok(), "Compilation failed: {:?}", result);
+        
+        // Run the program
+        let execution_result = test_context.run();
+        assert!(execution_result.is_ok(), "Execution failed: {:?}", execution_result);
+        assert_eq!(execution_result.unwrap(), 42);
+    });
 } 
