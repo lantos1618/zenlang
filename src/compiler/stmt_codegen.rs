@@ -60,6 +60,23 @@ impl<'ctx> Compiler<'ctx> {
                         }
                     }
                     let value = self.compile_expression(expr)?;
+                    let value = match (value, type_) {
+                        (BasicValueEnum::IntValue(int_val), AstType::Int32) => {
+                            if int_val.get_type().get_bit_width() != 32 {
+                                self.builder.build_int_truncate(int_val, self.context.i32_type(), "trunc").unwrap().into()
+                            } else {
+                                int_val.into()
+                            }
+                        }
+                        (BasicValueEnum::IntValue(int_val), AstType::Int64) => {
+                            if int_val.get_type().get_bit_width() != 64 {
+                                self.builder.build_int_s_extend(int_val, self.context.i64_type(), "sext").unwrap().into()
+                            } else {
+                                int_val.into()
+                            }
+                        }
+                        _ => value,
+                    };
                     self.builder.build_store(alloca, value)?;
                 }
                 // Register the variable in the variables map
@@ -70,6 +87,23 @@ impl<'ctx> Compiler<'ctx> {
                 // Look up the variable in the symbol table
                 let (alloca, var_type) = self.get_variable(name)?;
                 let value = self.compile_expression(value)?;
+                let value = match (&value, &var_type) {
+                    (BasicValueEnum::IntValue(int_val), AstType::Int32) => {
+                        if int_val.get_type().get_bit_width() != 32 {
+                            self.builder.build_int_truncate(*int_val, self.context.i32_type(), "trunc").unwrap().into()
+                        } else {
+                            (*int_val).into()
+                        }
+                    }
+                    (BasicValueEnum::IntValue(int_val), AstType::Int64) => {
+                        if int_val.get_type().get_bit_width() != 64 {
+                            self.builder.build_int_s_extend(*int_val, self.context.i64_type(), "sext").unwrap().into()
+                        } else {
+                            (*int_val).into()
+                        }
+                    }
+                    _ => value.clone(),
+                };
                 match &var_type {
                     AstType::Pointer(inner) if matches!(**inner, AstType::Function { .. }) => {
                         // Store function pointer directly

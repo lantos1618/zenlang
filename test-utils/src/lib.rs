@@ -6,8 +6,10 @@ use inkwell::OptimizationLevel;
 use inkwell::execution_engine::JitFunction;
 use inkwell::module::Module;
 use inkwell::builder::Builder;
+use inkwell::types::BasicType;
 use zen::ast::{self, AstType, Expression, Statement, BinaryOperator};
 use zen::compiler::Compiler;
+use zen::compiler::symbols::{SymbolTable, Symbol};
 use zen::error::CompileError;
 use std::ops::{Deref, DerefMut};
 
@@ -32,9 +34,32 @@ impl<'ctx> TestContext<'ctx> {
     /// Resets the test context to a clean state.
     /// This clears all compiled code and resets the compiler state.
     pub fn reset(&mut self) {
-        // Create a new compiler instance to ensure clean state
-        // This is safer than trying to clear individual fields, especially private ones
-        self.compiler = Compiler::new(self.context);
+        // Clear the module by creating a new one with the same context
+        // This is safer than creating a new compiler instance which can cause
+        // LLVM object lifetime issues
+        self.compiler.module = self.context.create_module("main");
+        
+        // Reset the builder
+        self.compiler.builder = self.context.create_builder();
+        
+        // Clear all state
+        self.compiler.variables.clear();
+        self.compiler.functions.clear();
+        self.compiler.current_function = None;
+        
+        // Reset symbol table but keep basic types
+        self.compiler.symbols = SymbolTable::new();
+        
+        // Re-add basic types to the symbol table
+        let i64_type = self.context.i64_type();
+        let i32_type = self.context.i32_type();
+        let float_type = self.context.f64_type();
+        let bool_type = self.context.bool_type();
+        
+        self.compiler.symbols.insert("i64", Symbol::Type(i64_type.as_basic_type_enum()));
+        self.compiler.symbols.insert("i32", Symbol::Type(i32_type.as_basic_type_enum()));
+        self.compiler.symbols.insert("f64", Symbol::Type(float_type.as_basic_type_enum()));
+        self.compiler.symbols.insert("bool", Symbol::Type(bool_type.as_basic_type_enum()));
     }
 
     /// Compiles a program into the test context's module.

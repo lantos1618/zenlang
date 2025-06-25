@@ -12,18 +12,6 @@ impl<'ctx> Compiler<'ctx> {
     pub fn compile_string_literal(&mut self, val: &str) -> Result<BasicValueEnum<'ctx>, CompileError> {
         let ptr = self.builder.build_global_string_ptr(val, "str")?;
         let ptr_val = ptr.as_pointer_value();
-        if let Some(func) = self.current_function {
-            if let Some(return_type) = func.get_type().get_return_type() {
-                if return_type.is_int_type() {
-                    let ptr_int = self.builder.build_ptr_to_int(
-                        ptr_val,
-                        return_type.into_int_type(),
-                        "str_to_int"
-                    )?;
-                    return Ok(ptr_int.into());
-                }
-            }
-        }
         Ok(ptr_val.into())
     }
 

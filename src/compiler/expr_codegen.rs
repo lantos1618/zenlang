@@ -6,10 +6,10 @@ use super::*;
 impl<'ctx> Compiler<'ctx> {
     pub fn compile_expression(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
         match expr {
-            Expression::Integer8(n) => self.compile_integer_literal(*n as i64),
-            Expression::Integer16(n) => self.compile_integer_literal(*n as i64),
-            Expression::Integer32(n) => self.compile_integer_literal(*n as i64),
-            Expression::Integer64(n) => self.compile_integer_literal(*n),
+            Expression::Integer8(n) => Ok(self.context.i8_type().const_int(*n as u64, false).into()),
+            Expression::Integer16(n) => Ok(self.context.i16_type().const_int(*n as u64, false).into()),
+            Expression::Integer32(n) => Ok(self.context.i32_type().const_int(*n as u64, false).into()),
+            Expression::Integer64(n) => Ok(self.context.i64_type().const_int(*n as u64, false).into()),
             Expression::Float(n) => self.compile_float_literal(*n),
             Expression::String(val) => self.compile_string_literal(val),
             Expression::Identifier(name) => self.compile_identifier(name),
