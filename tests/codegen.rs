@@ -255,7 +255,7 @@ fn test_invalid_function_type() {
         }]);
 
         let result = test_context.compile(&program);
-        assert!(result.is_ok());
+        assert!(result.is_err());
     });
 }
 
@@ -497,7 +497,7 @@ fn test_invalid_dereferencing_non_pointer() {
         }]);
 
         let result = test_context.compile(&program);
-        assert!(result.is_ok());
+        assert!(result.is_err());
     });
 }
 
@@ -519,7 +519,7 @@ fn test_void_pointer_declaration() {
         }]);
 
         let result = test_context.compile(&program);
-        assert!(result.is_ok());
+        assert!(result.is_err());
     });
 }
 
