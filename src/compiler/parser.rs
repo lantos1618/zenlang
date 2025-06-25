@@ -18,7 +18,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_program(&mut self) -> Program {
+    pub fn parse_program(&mut self) -> Result<Program, String> {
         let mut declarations = vec![];
         
         while self.current_token != Token::Eof {
@@ -26,19 +26,25 @@ impl<'a> Parser<'a> {
             if let Token::Identifier(_) = &self.current_token {
                 // Could be a function definition: name = (params) returnType { ... }
                 if self.peek_token == Token::Operator("=".to_string()) {
-                    if let Ok(function) = self.parse_function() {
-                        declarations.push(Declaration::Function(function));
-                        // Do not advance token here; parse_function already advances as needed
-                    } else {
-                        self.next_token();
+                    match self.parse_function() {
+                        Ok(function) => {
+                            declarations.push(Declaration::Function(function));
+                            // Do not advance token here; parse_function already advances as needed
+                        }
+                        Err(e) => {
+                            return Err(e);
+                        }
                     }
                 } else {
                     // Could be a variable declaration or other statement
-                    if let Ok(_statement) = self.parse_statement() {
-                        // For now, skip non-function declarations
-                        // Do not advance token here; parse_statement already advances as needed
-                    } else {
-                        self.next_token();
+                    match self.parse_statement() {
+                        Ok(_statement) => {
+                            // For now, skip non-function declarations
+                            // Do not advance token here; parse_statement already advances as needed
+                        }
+                        Err(e) => {
+                            return Err(e);
+                        }
                     }
                 }
             } else {
@@ -46,7 +52,7 @@ impl<'a> Parser<'a> {
             }
         }
         
-        Program { declarations }
+        Ok(Program { declarations })
     }
 
     fn parse_function(&mut self) -> Result<Function, String> {
@@ -70,8 +76,35 @@ impl<'a> Parser<'a> {
         }
         self.next_token();
         
-        // Parse arguments (empty for now)
-        let args = vec![];
+        // Parse arguments
+        let mut args = vec![];
+        while self.current_token != Token::Symbol(')') && self.current_token != Token::Eof {
+            // Parse parameter name
+            let param_name = if let Token::Identifier(name) = &self.current_token {
+                name.clone()
+            } else {
+                return Err("Expected parameter name".to_string());
+            };
+            self.next_token();
+            
+            // Skip ':'
+            if self.current_token != Token::Symbol(':') {
+                return Err("Expected ':'".to_string());
+            }
+            self.next_token();
+            
+            // Parse parameter type
+            let param_type = self.parse_type()?;
+            
+            args.push((param_name, param_type));
+            
+            // Check for comma or closing parenthesis
+            if self.current_token == Token::Symbol(',') {
+                self.next_token();
+            } else if self.current_token != Token::Symbol(')') {
+                return Err("Expected ',' or ')'".to_string());
+            }
+        }
         
         // Skip ')'
         if self.current_token != Token::Symbol(')') {
@@ -355,8 +388,34 @@ impl<'a> Parser<'a> {
                 let name = name.clone();
                 self.next_token();
                 
+                // Check for function call (e.g., add(21, 21))
+                if self.current_token == Token::Symbol('(') {
+                    self.next_token();
+                    let mut args = vec![];
+                    
+                    // Parse arguments
+                    while self.current_token != Token::Symbol(')') && self.current_token != Token::Eof {
+                        args.push(self.parse_expression()?);
+                        
+                        if self.current_token == Token::Symbol(',') {
+                            self.next_token();
+                        } else if self.current_token != Token::Symbol(')') {
+                            return Err("Expected ',' or ')'".to_string());
+                        }
+                    }
+                    
+                    if self.current_token != Token::Symbol(')') {
+                        return Err("Expected ')'".to_string());
+                    }
+                    self.next_token();
+                    
+                    Ok(Expression::FunctionCall {
+                        name,
+                        args,
+                    })
+                }
                 // Check for member access (e.g., io.print)
-                if self.current_token == Token::Symbol('.') {
+                else if self.current_token == Token::Symbol('.') {
                     self.next_token();
                     if let Token::Identifier(member) = &self.current_token {
                         let member = member.clone();

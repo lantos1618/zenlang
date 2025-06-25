@@ -1,8 +1,10 @@
 use inkwell::context::Context;
 use inkwell::targets::{Target, TargetMachine};
 use inkwell::OptimizationLevel;
-
+use inkwell::execution_engine::JitFunction;
 use std::path::Path;
+use std::io::{self, Write, BufRead};
+use std::env;
 
 mod ast;
 mod compiler;
@@ -11,107 +13,214 @@ mod error;
 use crate::compiler::{Compiler, lexer::Lexer, parser::Parser};
 use crate::error::{Result, CompileError};
 
-fn main() -> Result<()> {
+fn main() -> std::io::Result<()> {
     // Initialize LLVM
-    inkwell::targets::Target::initialize_native(&inkwell::targets::InitializationConfig::default())?;
+    inkwell::targets::Target::initialize_native(&inkwell::targets::InitializationConfig::default())
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("LLVM initialization failed: {}", e)))?;
     
-    // Create LLVM context and module
-    let context = Context::create();
-    let module = context.create_module("main");
+    let args: Vec<String> = env::args().collect();
     
-    // Create compiler
-    let mut compiler = Compiler::new(&context);
-    
-    // Debug: Check if the module is working
-    println!("Module name: {}", compiler.module.get_name().to_str().unwrap_or("<invalid>"));
-    println!("Module functions before compilation: {}", compiler.module.get_functions().count());
-    
-    // Zen source code
-    let zen_source = "main = () int32 { x := 42; y := 10; x + y }";
-    println!("Compiling Zen source: {}", zen_source);
-    
-    // The parser bug has been fixed! This should now correctly parse all 3 statements:
-    // 1. x := 42 (variable declaration)
-    // 2. y := 10 (variable declaration) 
-    // 3. x + y (trailing expression as return value)
-    
-    // Lex the source
-    let lexer = Lexer::new(zen_source);
-    
-    // Parse the source
-    let mut parser = Parser::new(lexer);
-    let program = parser.parse_program();
-    
-    println!("Parsed program with {} declarations", program.declarations.len());
-    
-    // Compile the program
-    println!("Compiling program with {} declarations", program.declarations.len());
-    compiler.compile_program(&program)?;
-    
-    // Print the generated LLVM IR for debugging
-    println!("Generated LLVM IR:");
-    let ir_string = module.print_to_string().to_string();
-    println!("IR string length: {}", ir_string.len());
-    println!("IR content: '{}'", ir_string);
-    
-    // Write IR to a file to see if it's different
-    std::fs::write("output.ll", &ir_string).unwrap();
-    println!("IR written to output.ll");
-    
-    // Try printing each function individually
-    println!("Individual function IR:");
-    for func in module.get_functions() {
-        println!("Function: {}", func.get_name().to_str().unwrap_or("<invalid>"));
-        // Print the function's LLVM representation
-        println!("LLVM value: {}", func.get_name().to_str().unwrap_or("<invalid>"));
-    }
-    
-    // Verify the LLVM IR
-    if let Err(errors) = module.verify() {
-        println!("LLVM IR verification failed:");
-        println!("{}", errors.to_string());
-    } else {
-        println!("LLVM IR verification passed");
-    }
-    
-    // Also check what functions are in the module
-    println!("Functions in module:");
-    for func in module.get_functions() {
-        println!("  Function: {} (defined: {})", 
-            func.get_name().to_str().unwrap_or("<invalid>"),
-            func.get_first_basic_block().is_some());
-        
-        // Print function details
-        if let Some(block) = func.get_first_basic_block() {
-            println!("    First block: {}", block.get_name().to_str().unwrap_or("<invalid>"));
-            println!("    Block terminator: {:?}", block.get_terminator());
+    match args.len() {
+        1 => {
+            // No arguments - start REPL
+            run_repl()?;
+        }
+        2 => {
+            // One argument - treat as file path
+            let file_path = &args[1];
+            if file_path == "--help" || file_path == "-h" {
+                print_usage();
+                return Ok(());
+            }
+            run_file(file_path)?;
+        }
+        _ => {
+            print_usage();
+            return Ok(());
         }
     }
     
-    // Write object file
-    let target = match Target::from_name("x86-64") {
-        Some(t) => t,
-        None => return Err(CompileError::InternalError("Failed to get x86-64 target".to_string(), None)),
-    };
+    Ok(())
+}
+
+fn print_usage() {
+    println!("Zen Language Compiler");
+    println!();
+    println!("Usage:");
+    println!("  zen                    Start interactive REPL");
+    println!("  zen <file.zen>         Compile and run a Zen file");
+    println!("  zen --help             Show this help message");
+    println!();
+    println!("Examples:");
+    println!("  zen                    # Start REPL");
+    println!("  zen hello.zen          # Run hello.zen file");
+}
+
+fn run_repl() -> std::io::Result<()> {
+    println!("🎉 Welcome to the Zen REPL!");
+    println!("Type Zen code and press Enter to execute.");
+    println!("Type 'exit' or 'quit' to exit.");
+    println!("Type 'help' for available commands.");
+    println!();
     
-    let target_machine = target.create_target_machine(
-        &TargetMachine::get_default_triple(),
-        "generic",
-        "",
-        OptimizationLevel::None,
-        inkwell::targets::RelocMode::Default,
-        inkwell::targets::CodeModel::Default,
-    ).ok_or(CompileError::InternalError("Failed to create target machine".to_string(), None))?;
+    let context = Context::create();
+    let mut compiler = Compiler::new(&context);
     
-    // Emit object file
-    let output_path = Path::new("output.o");
-    target_machine.write_to_file(&module, inkwell::targets::FileType::Object, output_path)?;
+    let stdin = io::stdin();
+    let mut stdin = stdin.lock();
+    let mut stdout = io::stdout();
     
-    println!("Compilation successful! Output written to output.o");
-    
-    // Note: The object file can be linked into an executable using:
-    // gcc output.o -o zen_program
-    // ./zen_program
+    loop {
+        print!("zen> ");
+        stdout.flush()?;
+        
+        let mut input = String::new();
+        stdin.read_line(&mut input)?;
+        
+        let input = input.trim();
+        
+        match input {
+            "exit" | "quit" => {
+                println!("Goodbye! 👋");
+                break;
+            }
+            "help" => {
+                print_repl_help();
+                continue;
+            }
+            "clear" => {
+                // Clear screen (simple version)
+                print!("\x1B[2J\x1B[1;1H");
+                stdout.flush()?;
+                continue;
+            }
+            "" => continue,
+            _ => {
+                // Try to parse and execute the input
+                match execute_zen_code(&mut compiler, input) {
+                    Ok(result) => {
+                        if let Some(value) = result {
+                            println!("=> {}", value);
+                        }
+                    }
+                    Err(e) => {
+                        println!("❌ Error: {}", e);
+                    }
+                }
+            }
+        }
+    }
     
     Ok(())
+}
+
+fn run_file(file_path: &str) -> std::io::Result<()> {
+    println!("📁 Compiling and running: {}", file_path);
+    
+    // Read the file
+    let source = std::fs::read_to_string(file_path)
+        .map_err(|e| io::Error::new(io::ErrorKind::NotFound, format!("Failed to read file: {}", e)))?;
+    
+    let context = Context::create();
+    let mut compiler = Compiler::new(&context);
+    
+    match execute_zen_code(&mut compiler, &source) {
+        Ok(result) => {
+            if let Some(value) = result {
+                println!("=> {}", value);
+            }
+        }
+        Err(e) => {
+            eprintln!("❌ Compilation error: {}", e);
+            std::process::exit(1);
+        }
+    }
+    
+    Ok(())
+}
+
+fn execute_zen_code(compiler: &mut Compiler, source: &str) -> Result<Option<String>> {
+    // Reset the compiler for each execution
+    let context = compiler.context;
+    *compiler = Compiler::new(context);
+    
+    // Parse the source
+    let lexer = Lexer::new(source);
+    let mut parser = Parser::new(lexer);
+    let program = parser.parse_program()
+        .map_err(|e| CompileError::InternalError(format!("Parse error: {}", e), None))?;
+    
+    if program.declarations.is_empty() {
+        return Ok(None);
+    }
+    
+    // Compile the program
+    compiler.compile_program(&program)?;
+    
+    // Verify the LLVM IR
+    if let Err(errors) = compiler.module.verify() {
+        return Err(CompileError::InternalError(
+            format!("LLVM IR verification failed: {}", errors.to_string()),
+            None
+        ));
+    }
+    
+    // JIT execution: run main() if present
+    let execution_engine = compiler.module.create_jit_execution_engine(OptimizationLevel::None)
+        .map_err(|e| CompileError::InternalError(format!("Failed to create JIT engine: {}", e), None))?;
+    if let Some(main_fn) = compiler.module.get_function("main") {
+        let ret_type = main_fn.get_type().get_return_type();
+        if let Some(ty) = ret_type {
+            match ty {
+                inkwell::types::BasicTypeEnum::IntType(int_ty) => {
+                    let width = int_ty.get_bit_width();
+                    if width == 32 {
+                        type MainFuncI32 = unsafe extern "C" fn() -> i32;
+                        let result = unsafe {
+                            let jit_fn: JitFunction<MainFuncI32> = execution_engine.get_function("main")
+                                .map_err(|e| CompileError::InternalError(format!("JIT lookup failed: {}", e), None))?;
+                            jit_fn.call()
+                        };
+                        return Ok(Some(result.to_string()));
+                    } else if width == 64 {
+                        type MainFuncI64 = unsafe extern "C" fn() -> i64;
+                        let result = unsafe {
+                            let jit_fn: JitFunction<MainFuncI64> = execution_engine.get_function("main")
+                                .map_err(|e| CompileError::InternalError(format!("JIT lookup failed: {}", e), None))?;
+                            jit_fn.call()
+                        };
+                        return Ok(Some(result.to_string()));
+                    } else {
+                        return Ok(Some("[main returns unsupported int width]".to_string()));
+                    }
+                }
+                _ => {
+                    return Ok(Some("[main returns unsupported type]".to_string()));
+                }
+            }
+        } else {
+            // void return
+            type MainFuncVoid = unsafe extern "C" fn();
+            let _ = unsafe {
+                let jit_fn: JitFunction<MainFuncVoid> = execution_engine.get_function("main")
+                    .map_err(|e| CompileError::InternalError(format!("JIT lookup failed: {}", e), None))?;
+                jit_fn.call()
+            };
+            return Ok(Some("[main returned void]".to_string()));
+        }
+    }
+    Ok(Some("[no main function to execute]".to_string()))
+}
+
+fn print_repl_help() {
+    println!("Available commands:");
+    println!("  help                    Show this help");
+    println!("  clear                   Clear the screen");
+    println!("  exit, quit              Exit the REPL");
+    println!();
+    println!("Zen code examples:");
+    println!("  main = () int32 {{ 42 }}");
+    println!("  add = (a: int32, b: int32) int32 {{ a + b }}");
+    println!("  x := 10; y := 20; x + y");
+    println!();
 } 

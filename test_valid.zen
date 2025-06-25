@@ -1,0 +1,4 @@
+add = (a: int32, b: int32) int32 {
+    a + b
+}
+main = () int32 { add(21, 21) }  

@@ -1,0 +1,2 @@
+// this should throw
+main = () i32 { 10 } 
