@@ -25,7 +25,17 @@ use inkwell::values::BasicValue as _;
 use inkwell::AddressSpace;
 use inkwell::Either;
 use std::collections::HashMap;
+
+// Expression codegen modules
 mod expr_codegen;
+mod expr_binary;
+mod expr_literals;
+mod expr_functions;
+mod expr_structs;
+mod expr_pointers;
+mod expr_control;
+mod expr_strings;
+
 mod stmt_codegen;
 mod types;
 mod structs;
@@ -153,25 +163,24 @@ impl<'ctx> Compiler<'ctx> {
     pub fn compile_program(&mut self, program: &ast::Program) -> Result<(), CompileError> {
         println!("Compiling program with {} declarations", program.declarations.len());
         
-        // First pass: declare all functions (including external)
+        // First pass: declare external functions only
         for declaration in &program.declarations {
             match declaration {
                 ast::Declaration::ExternalFunction(ext_func) => {
                     println!("Declaring external function: {}", ext_func.name);
                     self.declare_external_function(ext_func)?;
                 }
-                ast::Declaration::Function(func) => {
-                    println!("Declaring function: {}", func.name);
-                    self.declare_function(func)?;
+                ast::Declaration::Function(_) => {
+                    // Skip function declarations - we'll define them directly
                 }
             }
         }
         
-        // Second pass: compile function bodies
+        // Second pass: define and compile function bodies
         for declaration in &program.declarations {
             if let ast::Declaration::Function(func) = declaration {
-                println!("Compiling function: {}", func.name);
-                self.compile_function(func)?;
+                println!("Defining and compiling function: {}", func.name);
+                self.define_and_compile_function(func)?;
             }
         }
         
@@ -248,9 +257,9 @@ impl<'ctx> Compiler<'ctx> {
         Ok(())
     }
 
-    /// Declares a function (without compiling its body)
-    fn declare_function(&mut self, function: &ast::Function) -> Result<(), CompileError> {
-        println!("Declaring function: {}", function.name);
+    /// Defines and compiles a function in one step
+    fn define_and_compile_function(&mut self, function: &ast::Function) -> Result<(), CompileError> {
+        println!("DEBUG: Starting to define and compile function: {}", function.name);
         
         // First, get the return type
         let return_type = self.to_llvm_type(&function.return_type)?;
@@ -318,35 +327,31 @@ impl<'ctx> Compiler<'ctx> {
             }
         };
         
-        // Only declare if not already declared
-        if self.module.get_function(&function.name).is_none() {
-            let function_value = self.module.add_function(&function.name, function_type, None);
-            println!("  Declared function: {:?}", function_value);
-            
-            // Set names for all arguments
-            for (i, (arg_name, _)) in function.args.iter().enumerate() {
-                if let Some(param) = function_value.get_nth_param(i as u32) {
-                    param.set_name(arg_name);
-                }
+        // Define the function (this creates a definition, not a declaration)
+        let function_value = self.module.add_function(&function.name, function_type, None);
+        println!("  Defined function: {:?}", function_value);
+        
+        // Set the function linkage to external so it can be linked
+        function_value.set_linkage(inkwell::module::Linkage::External);
+        
+        // Set names for all arguments
+        for (i, (arg_name, _)) in function.args.iter().enumerate() {
+            if let Some(param) = function_value.get_nth_param(i as u32) {
+                param.set_name(arg_name);
             }
-            
-            // Add to symbol table
-            self.symbols.insert(
-                function.name.clone(),
-                Symbol::Function(function_value),
-            );
         }
-        Ok(())
-    }
-
-    /// Compiles a single function.
-    pub fn compile_function(&mut self, function: &ast::Function) -> Result<(), CompileError> {
-        let function_value = self.module.get_function(&function.name)
-            .ok_or_else(|| CompileError::InternalError("Function not declared".to_string(), None))?;
-            
+        
+        // Add to symbol table
+        self.symbols.insert(
+            function.name.clone(),
+            Symbol::Function(function_value),
+        );
+        
+        // Now compile the function body
         let entry_block = self.context.append_basic_block(function_value, "entry");
         self.builder.position_at_end(entry_block);
         self.current_function = Some(function_value);
+        println!("DEBUG: Created entry block and positioned builder");
 
         // Clear variables from previous function by entering a new scope
         self.symbols.enter_scope();
@@ -364,28 +369,35 @@ impl<'ctx> Compiler<'ctx> {
             self.variables.insert(name.clone(), (alloca, type_.clone()));
         }
 
-        for statement in &function.body {
+        println!("DEBUG: Compiling {} statements in function body", function.body.len());
+        for (i, statement) in function.body.iter().enumerate() {
+            println!("DEBUG: Compiling statement {}: {:?}", i, statement);
             self.compile_statement(statement)?;
         }
 
         // Check if we need to add a return statement
         if let Some(block) = self.builder.get_insert_block() {
             if block.get_terminator().is_none() {
+                println!("DEBUG: No terminator found, adding return statement");
                 // Check if the last statement was an expression that should be returned
                 if let Some(last_stmt) = function.body.last() {
                     if let Statement::Expression(expr) = last_stmt {
                         // For non-void functions, treat trailing expressions as return values
                         if !matches!(function.return_type, AstType::Void) {
+                            println!("DEBUG: Compiling trailing expression as return value");
                             let value = self.compile_expression(expr)?;
                             self.builder.build_return(Some(&value))?;
+                            println!("DEBUG: Added return statement with value");
                         } else {
                             // For void functions, just return void
                             self.builder.build_return(None)?;
+                            println!("DEBUG: Added void return statement");
                         }
                     } else {
                         // Not a trailing expression, handle normally
                         if let AstType::Void = function.return_type {
                             self.builder.build_return(None)?;
+                            println!("DEBUG: Added void return statement (no trailing expr)");
                         } else {
                             return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
                         }
@@ -394,14 +406,20 @@ impl<'ctx> Compiler<'ctx> {
                     // No statements in function body
                     if let AstType::Void = function.return_type {
                         self.builder.build_return(None)?;
+                        println!("DEBUG: Added void return statement (empty function)");
                     } else {
                         return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
                     }
                 }
+            } else {
+                println!("DEBUG: Block already has terminator");
             }
+        } else {
+            println!("DEBUG: No insert block found");
         }
 
         self.current_function = None;
+        println!("DEBUG: Finished defining and compiling function: {}", function.name);
         Ok(())
     }
 } 

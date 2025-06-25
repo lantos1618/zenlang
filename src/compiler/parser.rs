@@ -91,19 +91,67 @@ impl<'a> Parser<'a> {
         // Parse function body
         let mut body = vec![];
         while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
-            // Try to parse a statement
+            // Save current lexer state for backtracking
+            let saved_position = self.lexer.position;
+            let saved_read_position = self.lexer.read_position;
+            let saved_current_char = self.lexer.current_char;
+            let saved_token = self.current_token.clone();
+            let saved_peek = self.peek_token.clone();
+            
+            // Try to parse a statement first
             match self.parse_statement() {
                 Ok(stmt) => {
                     body.push(stmt);
                 },
-                Err(_e) => {
-                    // If we can't parse a statement, try to parse a trailing expression
-                    if self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
+                Err(e) => {
+                    // Check if this is a binary expression error
+                    if e.contains("Binary expression, not statement") {
+                        // Restore lexer state and parse as expression
+                        self.lexer.position = saved_position;
+                        self.lexer.read_position = saved_read_position;
+                        self.lexer.current_char = saved_current_char;
+                        self.current_token = saved_token;
+                        self.peek_token = saved_peek;
+                        
                         if let Ok(expr) = self.parse_expression() {
                             body.push(Statement::Expression(expr));
+                            
+                            // Consume semicolon if present
+                            if self.current_token == Token::Symbol(';') {
+                                self.next_token();
+                            }
+                        } else {
+                            break;
+                        }
+                    } else {
+                        // Restore lexer state and try to parse as trailing expression
+                        self.lexer.position = saved_position;
+                        self.lexer.read_position = saved_read_position;
+                        self.lexer.current_char = saved_current_char;
+                        self.current_token = saved_token;
+                        self.peek_token = saved_peek;
+                        
+                        // Check if we're at a token that could be a trailing expression
+                        let could_be_expression = matches!(
+                            self.current_token,
+                            Token::Identifier(_) | Token::Integer(_) | Token::Float(_) | Token::StringLiteral(_) | Token::Symbol('(')
+                        );
+                        
+                        if could_be_expression {
+                            if let Ok(expr) = self.parse_expression() {
+                                body.push(Statement::Expression(expr));
+                                
+                                // Consume semicolon if present
+                                if self.current_token == Token::Symbol(';') {
+                                    self.next_token();
+                                }
+                            } else {
+                                break;
+                            }
+                        } else {
+                            break;
                         }
                     }
-                    break;
                 }
             }
         }
@@ -137,7 +185,7 @@ impl<'a> Parser<'a> {
                         match op.as_str() {
                             ":=" | "::=" => {
                                 // Variable declaration: name := value or name ::= value
-                                let is_mutable = op == "::=";
+                                let _is_mutable = op == "::=";
                                 self.next_token();
                                 let initializer = self.parse_expression()?;
                                 
@@ -155,7 +203,7 @@ impl<'a> Parser<'a> {
                             }
                             ":" | "::" => {
                                 // Typed variable declaration: name: Type = value or name:: Type = value
-                                let is_mutable = op == "::";
+                                let _is_mutable = op == "::";
                                 self.next_token();
                                 
                                 let type_ = self.parse_type()?;
@@ -192,6 +240,13 @@ impl<'a> Parser<'a> {
                                 })
                             }
                             _ => {
+                                // Check if this is a binary expression (e.g., x + y)
+                                if matches!(op.as_str(), "+" | "-" | "*" | "/" | "==" | "!=" | "<" | ">" | "<=" | ">=") {
+                                    // This is a binary expression, not a statement
+                                    // We need to restore the identifier and parse as expression
+                                    return Err("Binary expression, not statement".to_string());
+                                }
+                                
                                 // Could be a function call or other expression
                                 let expr = self.parse_expression()?;
                                 if self.current_token == Token::Symbol(';') {
@@ -251,7 +306,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> Result<Expression, String> {
-        self.parse_binary_expression(0)
+        let result = self.parse_binary_expression(0);
+        result
     }
 
     fn parse_binary_expression(&mut self, precedence: u8) -> Result<Expression, String> {

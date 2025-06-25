@@ -243,14 +243,34 @@ fn test_function_with_multiple_statements() {
         assert_eq!(func.return_type, AstType::Int32);
         
         // This should have 3 statements: x := 42, y := 10, and x + y
-        // But currently the parser only parses the first one
-        println!("Function body has {} statements:", func.body.len());
-        for (i, stmt) in func.body.iter().enumerate() {
-            println!("  Statement {}: {:?}", i, stmt);
+        assert_eq!(func.body.len(), 3);
+        
+        // Check the first statement (x := 42)
+        if let Statement::VariableDeclaration { name, type_, initializer } = &func.body[0] {
+            assert_eq!(name, "x");
+            assert_eq!(*type_, AstType::Int32);
+            assert!(matches!(initializer, Some(Expression::Integer32(42))));
+        } else {
+            panic!("Expected VariableDeclaration for first statement");
         }
         
-        // TODO: Fix parser to handle multiple statements
-        // assert_eq!(func.body.len(), 3);
+        // Check the second statement (y := 10)
+        if let Statement::VariableDeclaration { name, type_, initializer } = &func.body[1] {
+            assert_eq!(name, "y");
+            assert_eq!(*type_, AstType::Int32);
+            assert!(matches!(initializer, Some(Expression::Integer32(10))));
+        } else {
+            panic!("Expected VariableDeclaration for second statement");
+        }
+        
+        // Check the third statement (x + y)
+        if let Statement::Expression(Expression::BinaryOp { left, op, right }) = &func.body[2] {
+            assert!(matches!(**left, Expression::Identifier(ref name) if name == "x"));
+            assert_eq!(*op, zen::ast::BinaryOperator::Add);
+            assert!(matches!(**right, Expression::Identifier(ref name) if name == "y"));
+        } else {
+            panic!("Expected BinaryOp expression for third statement");
+        }
     } else {
         panic!("Expected function declaration");
     }
