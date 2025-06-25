@@ -13,7 +13,7 @@ fn test_parse_empty_program() {
 
 #[test]
 fn test_parse_simple_function() {
-    let input = "fn main() int32 { return 42; }";
+    let input = "main = () int32 { 42 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -25,7 +25,7 @@ fn test_parse_simple_function() {
                 args: vec![],
                 return_type: AstType::Int32,
                 body: vec![
-                    Statement::Return(Expression::Integer32(42))
+                    Statement::Expression(Expression::Integer32(42))
                 ],
             })
         ],
@@ -35,7 +35,7 @@ fn test_parse_simple_function() {
 
 #[test]
 fn test_parse_variable_declaration() {
-    let input = "fn main() int32 { let x: int32 = 10; return x; }";
+    let input = "main = () int32 { x := 10; x }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -52,7 +52,7 @@ fn test_parse_variable_declaration() {
                         type_: AstType::Int32,
                         initializer: Some(Expression::Integer32(10)),
                     },
-                    Statement::Return(Expression::Identifier("x".to_string())),
+                    Statement::Expression(Expression::Identifier("x".to_string())),
                 ],
             })
         ],
@@ -62,7 +62,7 @@ fn test_parse_variable_declaration() {
 
 #[test]
 fn test_parse_binary_expression() {
-    let input = "fn main() int32 { return 5 + 3; }";
+    let input = "main = () int32 { 5 + 3 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -74,7 +74,7 @@ fn test_parse_binary_expression() {
                 args: vec![],
                 return_type: AstType::Int32,
                 body: vec![
-                    Statement::Return(Expression::BinaryOp {
+                    Statement::Expression(Expression::BinaryOp {
                         left: Box::new(Expression::Integer32(5)),
                         op: zen::ast::BinaryOperator::Add,
                         right: Box::new(Expression::Integer32(3)),
@@ -87,51 +87,80 @@ fn test_parse_binary_expression() {
 }
 
 #[test]
-fn test_parse_zen_imports() {
-    let input = "comptime { build := @std.build io := build.import(\"io\") }";
+fn test_parse_zen_variable_declarations() {
+    let input = "test = () int32 { x := 42; y ::= 10; z: int32 = 5; w:: uint64 = 100; x + y }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
     
-    // For now, just test that it parses without error
-    // We'll need to add ComptimeBlock to AST later
-    assert_eq!(program, Program { declarations: vec![] });
-}
-
-#[test]
-fn test_parse_conditional_expression() {
-    let input = "fn grade(score: int32) string { return score -> s { | s >= 90 => \"A\" | s >= 80 => \"B\" | true => \"C\" }; }";
-    let lexer = Lexer::new(input);
-    let mut parser = Parser::new(lexer);
-    let program = parser.parse_program();
-    
-    // For now, just test that it parses without error
-    // We'll need to add Conditional to AST later
-    assert_eq!(program, Program { declarations: vec![] });
+    // The parser should parse the function with different variable declaration syntax
+    assert!(program.declarations.len() > 0);
+    if let Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.name, "test");
+        assert_eq!(func.return_type, AstType::Int32);
+    } else {
+        panic!("Expected function declaration");
+    }
 }
 
 #[test]
 fn test_parse_loop_with_condition() {
-    let input = "fn countdown() void { counter ::= 10; loop counter > 0 { counter = counter - 1; } }";
+    let input = "countdown = () void { counter ::= 10; loop counter > 0 { counter = counter - 1 } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
     
-    // For now, just test that it parses without error
-    // We'll need to add Loop to AST later
-    assert_eq!(program, Program { declarations: vec![] });
+    let expected = Program {
+        declarations: vec![
+            Declaration::Function(Function {
+                name: "countdown".to_string(),
+                args: vec![],
+                return_type: AstType::Void,
+                body: vec![
+                    Statement::VariableDeclaration {
+                        name: "counter".to_string(),
+                        type_: AstType::Int32,
+                        initializer: Some(Expression::Integer32(10)),
+                    },
+                    Statement::Loop {
+                        condition: Expression::BinaryOp {
+                            left: Box::new(Expression::Identifier("counter".to_string())),
+                            op: zen::ast::BinaryOperator::GreaterThan,
+                            right: Box::new(Expression::Integer32(0)),
+                        },
+                        body: vec![
+                            Statement::VariableAssignment {
+                                name: "counter".to_string(),
+                                value: Expression::BinaryOp {
+                                    left: Box::new(Expression::Identifier("counter".to_string())),
+                                    op: zen::ast::BinaryOperator::Subtract,
+                                    right: Box::new(Expression::Integer32(1)),
+                                },
+                            },
+                        ],
+                    },
+                ],
+            })
+        ],
+    };
+    assert_eq!(program, expected);
 }
 
 #[test]
 fn test_parse_loop_with_in() {
-    let input = "fn print_names() void { names := [\"Alice\", \"Bob\"]; loop name in names { io.print(name); } }";
+    let input = "print_names = () void { names := [\"Alice\", \"Bob\"]; loop name in names { io.print(name) } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
     
-    // For now, just test that it parses without error
-    // We'll need to add Loop to AST later
-    assert_eq!(program, Program { declarations: vec![] });
+    // The parser should parse the function, even if loop syntax isn't fully implemented
+    assert!(program.declarations.len() > 0);
+    if let Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.name, "print_names");
+        assert_eq!(func.return_type, AstType::Void);
+    } else {
+        panic!("Expected function declaration");
+    }
 }
 
 #[test]
@@ -159,13 +188,42 @@ fn test_parse_enum_definition() {
 }
 
 #[test]
-fn test_parse_zen_variable_declarations() {
-    let input = "fn test() int32 { x := 42; y ::= 10; z: int32 = 5; w:: uint64 = 100; return x + y; }";
+fn test_parse_conditional_expression() {
+    let input = "grade = (score: int32) string { score -> s { | s >= 90 => \"A\" | s >= 80 => \"B\" | true => \"C\" } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
     
     // For now, just test that it parses without error
-    // We'll need to update variable declaration parsing later
+    // We'll need to add Conditional to AST later
     assert_eq!(program, Program { declarations: vec![] });
+}
+
+#[test]
+fn test_parse_comptime_block() {
+    let input = "comptime { build := @std.build io := build.import(\"io\") }";
+    let lexer = Lexer::new(input);
+    let mut parser = Parser::new(lexer);
+    let program = parser.parse_program();
+    
+    // For now, just test that it parses without error
+    // We'll need to add ComptimeBlock to AST later
+    assert_eq!(program, Program { declarations: vec![] });
+}
+
+#[test]
+fn test_parse_member_access() {
+    let input = "main = () void { io.print(\"Hello\") }";
+    let lexer = Lexer::new(input);
+    let mut parser = Parser::new(lexer);
+    let program = parser.parse_program();
+    
+    // The parser should parse the function with member access
+    assert!(program.declarations.len() > 0);
+    if let Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.name, "main");
+        assert_eq!(func.return_type, AstType::Void);
+    } else {
+        panic!("Expected function declaration");
+    }
 } 

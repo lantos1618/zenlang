@@ -22,29 +22,46 @@ impl<'a> Parser<'a> {
         let mut declarations = vec![];
         
         while self.current_token != Token::Eof {
-            if let Token::Keyword(ref keyword) = self.current_token {
-                if keyword == "fn" {
+            // Parse top-level declarations
+            if let Token::Identifier(_) = &self.current_token {
+                // Could be a function definition: name = (params) returnType { ... }
+                if self.peek_token == Token::Operator("=".to_string()) {
                     if let Ok(function) = self.parse_function() {
                         declarations.push(Declaration::Function(function));
+                        // Do not advance token here; parse_function already advances as needed
+                    } else {
+                        self.next_token();
+                    }
+                } else {
+                    // Could be a variable declaration or other statement
+                    if let Ok(_statement) = self.parse_statement() {
+                        // For now, skip non-function declarations
+                        // Do not advance token here; parse_statement already advances as needed
+                    } else {
+                        self.next_token();
                     }
                 }
+            } else {
+                self.next_token();
             }
-            self.next_token();
         }
         
         Program { declarations }
     }
 
     fn parse_function(&mut self) -> Result<Function, String> {
-        // Skip 'fn'
-        self.next_token();
-        
         // Parse function name
         let name = if let Token::Identifier(name) = &self.current_token {
             name.clone()
         } else {
             return Err("Expected function name".to_string());
         };
+        self.next_token();
+        
+        // Skip '='
+        if self.current_token != Token::Operator("=".to_string()) {
+            return Err("Expected '='".to_string());
+        }
         self.next_token();
         
         // Skip '('
@@ -74,7 +91,30 @@ impl<'a> Parser<'a> {
         // Parse function body
         let mut body = vec![];
         while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
-            body.push(self.parse_statement()?);
+            // Try to parse a statement
+            match self.parse_statement() {
+                Ok(stmt) => {
+                    body.push(stmt);
+                    // After successfully parsing a statement, check for trailing expression
+                    if self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
+                        // Check if current token could start an expression
+                        if let Token::Identifier(_) | Token::Integer(_) | Token::Float(_) | Token::StringLiteral(_) | Token::Symbol('(') = self.current_token {
+                            if let Ok(expr) = self.parse_expression() {
+                                body.push(Statement::Expression(expr));
+                            }
+                        }
+                    }
+                },
+                Err(_e) => {
+                    // Try to parse a trailing expression before '}'
+                    if self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
+                        if let Ok(expr) = self.parse_expression() {
+                            body.push(Statement::Expression(expr));
+                        }
+                    }
+                    break;
+                }
+            }
         }
         
         // Skip '}'
@@ -92,47 +132,118 @@ impl<'a> Parser<'a> {
 
     fn parse_statement(&mut self) -> Result<Statement, String> {
         match &self.current_token {
-            Token::Keyword(ref keyword) => {
-                match keyword.as_str() {
-                    "return" => {
-                        self.next_token();
+            Token::Identifier(_) => {
+                // Could be variable declaration or assignment
+                let name = if let Token::Identifier(name) = &self.current_token {
+                    name.clone()
+                } else {
+                    return Err("Expected identifier".to_string());
+                };
+                self.next_token();
+                
+                match &self.current_token {
+                    Token::Operator(op) => {
+                        match op.as_str() {
+                            ":=" | "::=" => {
+                                // Variable declaration: name := value or name ::= value
+                                let is_mutable = op == "::=";
+                                self.next_token();
+                                let initializer = self.parse_expression()?;
+                                
+                                if self.current_token == Token::Symbol(';') {
+                                    self.next_token();
+                                }
+                                
+                                // For now, we'll use a placeholder type
+                                // In a real implementation, we'd infer the type from the initializer
+                                Ok(Statement::VariableDeclaration {
+                                    name,
+                                    type_: AstType::Int32, // Placeholder
+                                    initializer: Some(initializer),
+                                })
+                            }
+                            ":" | "::" => {
+                                // Typed variable declaration: name: Type = value or name:: Type = value
+                                let is_mutable = op == "::";
+                                self.next_token();
+                                
+                                let type_ = self.parse_type()?;
+                                
+                                if self.current_token != Token::Operator("=".to_string()) {
+                                    return Err("Expected '='".to_string());
+                                }
+                                self.next_token();
+                                
+                                let initializer = self.parse_expression()?;
+                                
+                                if self.current_token == Token::Symbol(';') {
+                                    self.next_token();
+                                }
+                                
+                                Ok(Statement::VariableDeclaration {
+                                    name,
+                                    type_,
+                                    initializer: Some(initializer),
+                                })
+                            }
+                            "=" => {
+                                // Variable assignment: name = value
+                                self.next_token();
+                                let value = self.parse_expression()?;
+                                
+                                if self.current_token == Token::Symbol(';') {
+                                    self.next_token();
+                                }
+                                
+                                Ok(Statement::VariableAssignment {
+                                    name,
+                                    value,
+                                })
+                            }
+                            _ => {
+                                // Could be a function call or other expression
+                                let expr = self.parse_expression()?;
+                                if self.current_token == Token::Symbol(';') {
+                                    self.next_token();
+                                }
+                                Ok(Statement::Expression(expr))
+                            }
+                        }
+                    }
+                    _ => {
+                        // Could be a function call or other expression
                         let expr = self.parse_expression()?;
                         if self.current_token == Token::Symbol(';') {
                             self.next_token();
                         }
-                        Ok(Statement::Return(expr))
+                        Ok(Statement::Expression(expr))
                     }
-                    "let" => {
+                }
+            }
+            Token::Keyword(ref keyword) => {
+                match keyword.as_str() {
+                    "loop" => {
                         self.next_token();
-                        let name = if let Token::Identifier(name) = &self.current_token {
-                            name.clone()
-                        } else {
-                            return Err("Expected variable name".to_string());
-                        };
-                        self.next_token();
+                        // Parse loop condition or iterable
+                        let condition = self.parse_expression()?;
                         
-                        if self.current_token != Token::Symbol(':') {
-                            return Err("Expected ':'".to_string());
+                        if self.current_token != Token::Symbol('{') {
+                            return Err("Expected '{'".to_string());
                         }
                         self.next_token();
                         
-                        let type_ = self.parse_type()?;
-                        
-                        if self.current_token != Token::Operator("=".to_string()) {
-                            return Err("Expected '='".to_string());
+                        let mut body = vec![];
+                        while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
+                            body.push(self.parse_statement()?);
                         }
-                        self.next_token();
                         
-                        let initializer = Some(self.parse_expression()?);
-                        
-                        if self.current_token == Token::Symbol(';') {
+                        if self.current_token == Token::Symbol('}') {
                             self.next_token();
                         }
                         
-                        Ok(Statement::VariableDeclaration {
-                            name,
-                            type_,
-                            initializer,
+                        Ok(Statement::Loop {
+                            condition,
+                            body,
                         })
                     }
                     _ => Err(format!("Unknown keyword: {}", keyword)),
@@ -183,10 +294,35 @@ impl<'a> Parser<'a> {
                 self.next_token();
                 Ok(Expression::Integer32(value))
             }
+            Token::Float(value) => {
+                let value = value.parse::<f64>().map_err(|_| "Invalid float".to_string())?;
+                self.next_token();
+                Ok(Expression::Float(value))
+            }
+            Token::StringLiteral(value) => {
+                let value = value.clone();
+                self.next_token();
+                Ok(Expression::String(value))
+            }
             Token::Identifier(name) => {
                 let name = name.clone();
                 self.next_token();
-                Ok(Expression::Identifier(name))
+                
+                // Check for member access (e.g., io.print)
+                if self.current_token == Token::Symbol('.') {
+                    self.next_token();
+                    if let Token::Identifier(member) = &self.current_token {
+                        let member = member.clone();
+                        self.next_token();
+                        // For now, we'll just return the member name as a string
+                        // In a real implementation, we'd create a proper member access expression
+                        Ok(Expression::Identifier(format!("{}.{}", name, member)))
+                    } else {
+                        Err("Expected identifier after '.'".to_string())
+                    }
+                } else {
+                    Ok(Expression::Identifier(name))
+                }
             }
             Token::Symbol('(') => {
                 self.next_token();
@@ -205,9 +341,18 @@ impl<'a> Parser<'a> {
         match &self.current_token {
             Token::Identifier(ref name) => {
                 let type_ = match name.as_str() {
+                    "int8" => AstType::Int8,
+                    "int16" => AstType::Int16,
                     "int32" => AstType::Int32,
                     "int64" => AstType::Int64,
-                    "float" => AstType::Float,
+                    "uint8" => AstType::Int8, // Placeholder
+                    "uint16" => AstType::Int16, // Placeholder
+                    "uint32" => AstType::Int32, // Placeholder
+                    "uint64" => AstType::Int64, // Placeholder
+                    "usize" => AstType::Int64, // Placeholder
+                    "float32" => AstType::Float, // Placeholder
+                    "float64" => AstType::Float,
+                    "bool" => AstType::Int8, // Placeholder
                     "string" => AstType::String,
                     "void" => AstType::Void,
                     _ => return Err(format!("Unknown type: {}", name)),
@@ -227,6 +372,10 @@ impl<'a> Parser<'a> {
             "/" => Ok(BinaryOperator::Divide),
             "==" => Ok(BinaryOperator::Equals),
             "!=" => Ok(BinaryOperator::NotEquals),
+            "<" => Ok(BinaryOperator::LessThan),
+            ">" => Ok(BinaryOperator::GreaterThan),
+            "<=" => Ok(BinaryOperator::LessThanEquals),
+            ">=" => Ok(BinaryOperator::GreaterThanEquals),
             _ => Err(format!("Unknown operator: {}", op)),
         }
     }
@@ -235,7 +384,7 @@ impl<'a> Parser<'a> {
         match op {
             "*" | "/" => 2,
             "+" | "-" => 1,
-            "==" | "!=" => 0,
+            "==" | "!=" | "<" | ">" | "<=" | ">=" => 0,
             _ => 0,
         }
     }
