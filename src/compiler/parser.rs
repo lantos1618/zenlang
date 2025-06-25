@@ -95,18 +95,9 @@ impl<'a> Parser<'a> {
             match self.parse_statement() {
                 Ok(stmt) => {
                     body.push(stmt);
-                    // After successfully parsing a statement, check for trailing expression
-                    if self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
-                        // Check if current token could start an expression
-                        if let Token::Identifier(_) | Token::Integer(_) | Token::Float(_) | Token::StringLiteral(_) | Token::Symbol('(') = self.current_token {
-                            if let Ok(expr) = self.parse_expression() {
-                                body.push(Statement::Expression(expr));
-                            }
-                        }
-                    }
                 },
                 Err(_e) => {
-                    // Try to parse a trailing expression before '}'
+                    // If we can't parse a statement, try to parse a trailing expression
                     if self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
                         if let Ok(expr) = self.parse_expression() {
                             body.push(Statement::Expression(expr));

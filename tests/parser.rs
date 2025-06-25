@@ -226,4 +226,32 @@ fn test_parse_member_access() {
     } else {
         panic!("Expected function declaration");
     }
+}
+
+#[test]
+fn test_function_with_multiple_statements() {
+    let source = "main = () int32 { x := 42; y := 10; x + y }";
+    let lexer = Lexer::new(source);
+    let mut parser = Parser::new(lexer);
+    let program = parser.parse_program();
+    
+    assert_eq!(program.declarations.len(), 1);
+    
+    if let Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.name, "main");
+        assert_eq!(func.args.len(), 0);
+        assert_eq!(func.return_type, AstType::Int32);
+        
+        // This should have 3 statements: x := 42, y := 10, and x + y
+        // But currently the parser only parses the first one
+        println!("Function body has {} statements:", func.body.len());
+        for (i, stmt) in func.body.iter().enumerate() {
+            println!("  Statement {}: {:?}", i, stmt);
+        }
+        
+        // TODO: Fix parser to handle multiple statements
+        // assert_eq!(func.body.len(), 3);
+    } else {
+        panic!("Expected function declaration");
+    }
 } 

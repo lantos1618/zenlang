@@ -8,9 +8,8 @@ mod ast;
 mod compiler;
 mod error;
 
-use crate::compiler::Compiler;
+use crate::compiler::{Compiler, lexer::Lexer, parser::Parser};
 use crate::error::{Result, CompileError};
-use crate::ast::{Program, Declaration, Function, Statement, Expression, AstType};
 
 fn main() -> Result<()> {
     // Initialize LLVM
@@ -23,19 +22,18 @@ fn main() -> Result<()> {
     // Create compiler
     let mut compiler = Compiler::new(&context);
     
-    // Create a simple test program
-    let program = Program {
-        declarations: vec![
-            Declaration::Function(Function {
-                name: "main".to_string(),
-                args: vec![], // No arguments for main
-                return_type: AstType::Int32,
-                body: vec![
-                    Statement::Return(Expression::Integer32(42))
-                ],
-            }),
-        ],
-    };
+    // Zen source code
+    let zen_source = "main = () int32 { 42 }";
+    println!("Compiling Zen source: {}", zen_source);
+    
+    // Lex the source
+    let lexer = Lexer::new(zen_source);
+    
+    // Parse the source
+    let mut parser = Parser::new(lexer);
+    let program = parser.parse_program();
+    
+    println!("Parsed program with {} declarations", program.declarations.len());
     
     // Compile the program
     compiler.compile_program(&program)?;
