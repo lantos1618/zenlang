@@ -885,7 +885,7 @@ fn test_full_pipeline_zen_syntax() {
         
         // Parse the source
         let mut parser = zen::compiler::parser::Parser::new(lexer);
-        let program = parser.parse_program();
+        let program = parser.parse_program().unwrap();
         
         // Verify the program was parsed correctly
         assert_eq!(program.declarations.len(), 1);
@@ -924,7 +924,7 @@ fn test_full_pipeline_with_variable() {
         
         // Parse the source
         let mut parser = zen::compiler::parser::Parser::new(lexer);
-        let program = parser.parse_program();
+        let program = parser.parse_program().unwrap();
         
         // Verify the program was parsed correctly
         assert_eq!(program.declarations.len(), 1);
