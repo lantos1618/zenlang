@@ -1,0 +1,10 @@
+fib = (x: int32) int32 {
+    x ? | 0 => 0
+        | 1 => 1
+        | => fib(x-1) + fib(x-2)
+}
+
+main = () int32 {
+    num := fib(10)
+    num
+}

@@ -219,45 +219,69 @@ area2 := my_rect.area()       // UFCS call, more idiomatic
 
 #### Conditional Expression
 
-Zen uses a single, unified construct for all conditional logic and pattern matching. It replaces `if-else` chains and `switch`/`match` statements with a more powerful and expressive syntax. The core structure is a block of arms `| pattern => expression`.
+Zen uses a single, unified construct for all conditional logic and pattern matching. It replaces `if-else` chains and `switch`/`match` statements with a more powerful and expressive syntax. The core structure uses the `?` operator for pattern matching: `scrutinee ? | pattern => expression`.
 
-**Focusing and Guarding with `->`**
+**Pattern Matching with `?`**
 
-For more complex matches, the `->` arrow is used in two ways:
+The `?` operator indicates pattern matching on a value. The scrutinee is available directly in the match arms without needing a capture variable.
 
-1.  **Scrutinee Focus:** To improve readability, you can "focus" the value being matched into a short name for the block: `scrutinee -> name { arms... }`.
-2.  **Pattern Guards:** To add a conditional guard, the `->` arrow separates a pattern from a boolean guard expression: `| pattern -> guard => result`.
-
-This creates an extremely clean, readable, and keyword-free system.
-
-**Example 1: Guarded value matching**
+**Example 1: Simple value matching**
 
 ```zen
 score: int = 85
 
-// Focus `score` into `s` for the block.
-// Each arm is now a simple boolean expression using `s`.
-grade := score -> s {
-    | s >= 90 => "A"
-    | s >= 80 => "B"
-    | s >= 70 => "C"
-    | true    => "D or F" // `true` serves as the `else` case.
-}
+// Match directly on the score value
+grade := score ? | 90..=100 => "A"
+                 | 80..=89  => "B"
+                 | 70..=79  => "C"
+                 | _        => "D or F"
 ```
 
-**Example 2: Destructuring with guards**
+**Example 2: Enum destructuring with `->`**
 
 ```zen
-// Focus `action` into `a` for the block.
-handle_action := action -> a {
-    // Match pattern `.Error(err)` on `a`, then check guard `err.code >= 500`.
-    | .Error(err) -> err.code >= 500 => "Server Error: $(err.message)"
-    | .Error(err) -> err.code >= 400 => "Client Error: $(err.message)"
-    | .Wait(d) -> d > 1000           => "A long wait is scheduled."
-    | .Wait(_)                       => "A short wait is scheduled."
-    | _                              => "Action is Go or Stop."
-}
+// Use `->` for destructuring and binding values from enum variants
+handle_action := action ? | .Error -> err => "Error: $(err.message)"
+                         | .Wait -> duration => "Wait $(duration)ms"
+                         | .Stop => "Stopping"
+                         | _ => "Default action"
 ```
+
+**Example 3: Struct destructuring**
+
+```zen
+point := Point{ x: 10, y: 20 }
+description := point ? | { x -> x_val, y -> y_val } => "Point at $(x_val), $(y_val)"
+```
+
+**Example 4: With guards using `->`**
+
+```zen
+// Use `->` to bind a value and apply a guard condition
+score ? | s -> s >= 90 => "A"
+        | s -> s >= 80 => "B"
+        | s -> s >= 70 => "C"
+        | _ => "F"
+```
+
+**Example 5: Complex patterns with blocks**
+
+```zen
+result ? | .Ok -> value => {
+            io.print("Success: $(value)")
+            value
+         }
+         | .Err -> err => {
+            io.print("Error: $(err)")
+            0
+         }
+```
+
+This creates an extremely clean, readable, and keyword-free system where:
+- `?` indicates pattern matching
+- `->` is used for destructuring and binding in patterns
+- `=>` separates patterns from their result expressions
+- Blocks `{ }` are optional for simple expressions
 
 #### The `loop` Construct
 
@@ -301,12 +325,11 @@ parse_int = (s: string) Result<int, ParseError> {
 }
 
 // Handling the result
-parsed_value := parse_int("123a") |
-    | .Ok(value) => {
+parsed_value := parse_int("123a") ? | .Ok -> value => {
         io.print("Success: $(value)")
         value // This block evaluates to `value`
     }
-    | .Err(err) => {
+    | .Err -> err => {
         io.print("Error: $(err.message)")
         0 // Return a default value on error
     }
@@ -418,13 +441,11 @@ HttpError =
 
 // 3. Functions
 handle_request = (url: string) Result<string, HttpError> {
-    // Using the conditional expression with guards.
-    return url -> u {
-        | str_utils.equals(u, "/home")      => .Ok("Welcome home!")
-        | str_utils.equals(u, "/users")     => .Ok("List of users")
-        | str_utils.starts_with(u, "/admin") => .Err(.BadRequest("Admin access required"))
-        | true                               => .Err(.NotFound)
-    }
+    // Using the conditional expression with the new ? syntax
+    return url ? | u -> str_utils.equals(u, "/home")      => .Ok("Welcome home!")
+                | u -> str_utils.equals(u, "/users")     => .Ok("List of users")
+                | u -> str_utils.starts_with(u, "/admin") => .Err(.BadRequest("Admin access required"))
+                | _ => .Err(.NotFound)
 }
 
 // 4. Entry Point
@@ -432,10 +453,9 @@ main = () void {
     urls_to_test := ["/home", "/admin/dashboard", "/about"]
 
     loop url in urls_to_test {
-        response_text := handle_request(url) |
-            | .Ok(body) => "SUCCESS: Fetched $(url) -> $(body)"
-            | .Err(.NotFound) => "FAILURE: Path $(url) not found"
-            | .Err(.BadRequest(reason)) => "FAILURE: Bad request for $(url): $(reason)"
+        response_text := handle_request(url) ? | .Ok -> body => "SUCCESS: Fetched $(url) -> $(body)"
+                                              | .Err -> .NotFound => "FAILURE: Path $(url) not found"
+                                              | .Err -> .BadRequest(reason) => "FAILURE: Bad request for $(url): $(reason)"
 
         io.print_line(response_text)
     }
