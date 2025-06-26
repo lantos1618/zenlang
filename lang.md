@@ -72,8 +72,8 @@ comptime {
 ### 3. Basic Types & Literals
 
 *   **Primitive Types:** `bool` (`true`, `false`), `void`, `string`.
-*   **Integers:** `int8`, `int16`, `int32`, `int64` (signed); `uint8`, `uint16`, `uint32`, `uint64` (unsigned); `usize` (pointer-sized unsigned).
-*   **Floats:** `float32`, `float64`.
+*   **Integers:** `i8`, `i16`, `i32`, `i64` (signed); `u8`, `u16`, `u32`, `u64` (unsigned); `usize` (pointer-sized unsigned).
+*   **Floats:** `f32`, `f64`.
 *   **Pointer Types:**
     *   `Ptr<T>`: A raw, unsafe pointer to type `T`. Null is `core.null_ptr<T>()`.
     *   `Ref<T>`: A managed reference to `T`. (Semantics like ARC or ownership are TBD).
@@ -103,17 +103,17 @@ Declaring a variable with `name:: Type` initializes it to the type's default val
 ```zen
 // Immutable bindings (Constants)
 PI := 3.14159
-MAX_USERS: uint32 = 1000
+MAX_USERS: u32 = 1000
 
 // Mutable bindings (Variables)
 request_counter ::= 0
-active_connections:: uint16 = 0
+active_connections:: u16 = 0
 
 // Assignment to a mutable variable
 request_counter = request_counter + 1
 
 // Default initialization
-user_score:: int32         // Initialized to 0
+user_score:: i32         // Initialized to 0
 current_user:: Option<User> // Initialized to Option.None
 ```
 
@@ -166,9 +166,9 @@ action2 := Action.Error({ code: 404, message: "Not found" })
     ```zen
     Geometry = {
         PI := 3.1415926535,
-        Point2D = { x: float64, y: float64 },
+        Point2D = { x: f64, y: f64 },
 
-        distance = (p1: Point2D, p2: Point2D) float64 {
+        distance = (p1: Point2D, p2: Point2D) f64 {
             dx := p1.x - p2.x
             dy := p1.y - p2.y
             return math.sqrt(dx*dx + dy*dy)
@@ -188,7 +188,7 @@ Functions are defined with `name = (parameters) returnType { ... }`.
 
 ```zen
 // A simple function
-calculate_area = (width: float64, height: float64) float64 {
+calculate_area = (width: f64, height: f64) f64 {
     return width * height
 }
 
@@ -202,10 +202,10 @@ print_greeting = (name: string, prefix: string = "Hello") void {
 A free function whose first parameter is of type `T` can be called as if it were a method on an instance of `T`.
 
 ```zen
-Rectangle = { width: float64, height: float64 }
+Rectangle = { width: f64, height: f64 }
 
 // A free function associated with Rectangle
-area = (rect: Rectangle) float64 {
+area = (rect: Rectangle) f64 {
     return rect.width * rect.height
 }
 
@@ -385,7 +385,7 @@ The `comptime` keyword designates code to be executed at compile time.
         return [N]T{} // Returns a default-initialized array
     }
 
-    my_array := make_array(int32, 1024) // Creates a [1024]int32
+    my_array := make_array(i32, 1024) // Creates a [1024]i32
     ```
 
 ### 12. Asynchronous Programming (`async`/`await`)

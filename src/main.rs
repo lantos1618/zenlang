@@ -219,8 +219,8 @@ fn print_repl_help() {
     println!("  exit, quit              Exit the REPL");
     println!();
     println!("Zen code examples:");
-    println!("  main = () int32 {{ 42 }}");
-    println!("  add = (a: int32, b: int32) int32 {{ a + b }}");
+    println!("  main = () i32 {{ 42 }}");
+    println!("  add = (a: i32, b: i32) i32 {{ a + b }}");
     println!("  x := 10; y := 20; x + y");
     println!();
 } 

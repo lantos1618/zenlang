@@ -13,7 +13,7 @@ fn test_parse_empty_program() {
 
 #[test]
 fn test_parse_simple_function() {
-    let input = "main = () int32 { 42 }";
+    let input = "main = () i32 { 42 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -23,7 +23,7 @@ fn test_parse_simple_function() {
             Declaration::Function(Function {
                 name: "main".to_string(),
                 args: vec![],
-                return_type: AstType::Int32,
+                return_type: AstType::I32,
                 body: vec![
                     Statement::Expression(Expression::Integer32(42))
                 ],
@@ -35,7 +35,7 @@ fn test_parse_simple_function() {
 
 #[test]
 fn test_parse_variable_declaration() {
-    let input = "main = () int32 { x := 10; x }";
+    let input = "main = () i32 { x := 10; x }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -45,11 +45,11 @@ fn test_parse_variable_declaration() {
             Declaration::Function(Function {
                 name: "main".to_string(),
                 args: vec![],
-                return_type: AstType::Int32,
+                return_type: AstType::I32,
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "x".to_string(),
-                        type_: AstType::Int32,
+                        type_: AstType::I32,
                         initializer: Some(Expression::Integer32(10)),
                     },
                     Statement::Expression(Expression::Identifier("x".to_string())),
@@ -62,7 +62,7 @@ fn test_parse_variable_declaration() {
 
 #[test]
 fn test_parse_binary_expression() {
-    let input = "main = () int32 { 5 + 3 }";
+    let input = "main = () i32 { 5 + 3 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -72,7 +72,7 @@ fn test_parse_binary_expression() {
             Declaration::Function(Function {
                 name: "main".to_string(),
                 args: vec![],
-                return_type: AstType::Int32,
+                return_type: AstType::I32,
                 body: vec![
                     Statement::Expression(Expression::BinaryOp {
                         left: Box::new(Expression::Integer32(5)),
@@ -88,7 +88,7 @@ fn test_parse_binary_expression() {
 
 #[test]
 fn test_parse_zen_variable_declarations() {
-    let input = "test = () int32 { x := 42; y ::= 10; z: int32 = 5; w:: uint64 = 100; x + y }";
+    let input = "test = () i32 { x := 42; y ::= 10; z: i32 = 5; w:: u64 = 100; x + y }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -97,7 +97,7 @@ fn test_parse_zen_variable_declarations() {
     assert!(program.declarations.len() > 0);
     if let Declaration::Function(func) = &program.declarations[0] {
         assert_eq!(func.name, "test");
-        assert_eq!(func.return_type, AstType::Int32);
+        assert_eq!(func.return_type, AstType::I32);
     } else {
         panic!("Expected function declaration");
     }
@@ -119,7 +119,7 @@ fn test_parse_loop_with_condition() {
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "counter".to_string(),
-                        type_: AstType::Int32,
+                        type_: AstType::I32,
                         initializer: Some(Expression::Integer32(10)),
                     },
                     Statement::Loop {
@@ -165,7 +165,7 @@ fn test_parse_loop_with_in() {
 
 #[test]
 fn test_parse_struct_definition() {
-    let input = "Person = { name: string, age: int32 }";
+    let input = "Person = { name: string, age: i32 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -177,7 +177,7 @@ fn test_parse_struct_definition() {
 
 #[test]
 fn test_parse_enum_definition() {
-    let input = "Action = | Stop | Go | Wait(duration: int32)";
+    let input = "Action = | Stop | Go | Wait(duration: i32)";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -189,7 +189,7 @@ fn test_parse_enum_definition() {
 
 #[test]
 fn test_parse_conditional_expression() {
-    let input = "grade = (score: int32) string { score -> s { | s >= 90 => \"A\" | s >= 80 => \"B\" | true => \"C\" } }";
+    let input = "grade = (score: i32) string { score -> s { | s >= 90 => \"A\" | s >= 80 => \"B\" | true => \"C\" } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -230,7 +230,7 @@ fn test_parse_member_access() {
 
 #[test]
 fn test_function_with_multiple_statements() {
-    let source = "main = () int32 { x := 42; y := 10; x + y }";
+    let source = "main = () i32 { x := 42; y := 10; x + y }";
     let lexer = Lexer::new(source);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -240,7 +240,7 @@ fn test_function_with_multiple_statements() {
     if let Declaration::Function(func) = &program.declarations[0] {
         assert_eq!(func.name, "main");
         assert_eq!(func.args.len(), 0);
-        assert_eq!(func.return_type, AstType::Int32);
+        assert_eq!(func.return_type, AstType::I32);
         
         // This should have 3 statements: x := 42, y := 10, and x + y
         assert_eq!(func.body.len(), 3);
@@ -248,7 +248,7 @@ fn test_function_with_multiple_statements() {
         // Check the first statement (x := 42)
         if let Statement::VariableDeclaration { name, type_, initializer } = &func.body[0] {
             assert_eq!(name, "x");
-            assert_eq!(*type_, AstType::Int32);
+            assert_eq!(*type_, AstType::I32);
             assert!(matches!(initializer, Some(Expression::Integer32(42))));
         } else {
             panic!("Expected VariableDeclaration for first statement");
@@ -257,7 +257,7 @@ fn test_function_with_multiple_statements() {
         // Check the second statement (y := 10)
         if let Statement::VariableDeclaration { name, type_, initializer } = &func.body[1] {
             assert_eq!(name, "y");
-            assert_eq!(*type_, AstType::Int32);
+            assert_eq!(*type_, AstType::I32);
             assert!(matches!(initializer, Some(Expression::Integer32(10))));
         } else {
             panic!("Expected VariableDeclaration for second statement");

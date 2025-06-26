@@ -1,4 +1,4 @@
-add = (a: int32, b: int32) int32 {
+add = (a: i32, b: i32) i32 {
     a + b
 }
-main = () int32 { add(21, 21) }  
+main = () i32 { add(21, 21) }  

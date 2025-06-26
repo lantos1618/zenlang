@@ -230,7 +230,7 @@ impl<'a> Parser<'a> {
                                 // In a real implementation, we'd infer the type from the initializer
                                 Ok(Statement::VariableDeclaration {
                                     name,
-                                    type_: AstType::Int32, // Placeholder
+                                    type_: AstType::I32, // Placeholder
                                     initializer: Some(initializer),
                                 })
                             }
@@ -447,18 +447,18 @@ impl<'a> Parser<'a> {
         match &self.current_token {
             Token::Identifier(ref name) => {
                 let type_ = match name.as_str() {
-                    "int8" => AstType::Int8,
-                    "int16" => AstType::Int16,
-                    "int32" => AstType::Int32,
-                    "int64" => AstType::Int64,
-                    "uint8" => AstType::Int8, // Placeholder
-                    "uint16" => AstType::Int16, // Placeholder
-                    "uint32" => AstType::Int32, // Placeholder
-                    "uint64" => AstType::Int64, // Placeholder
-                    "usize" => AstType::Int64, // Placeholder
-                    "float32" => AstType::Float, // Placeholder
-                    "float64" => AstType::Float,
-                    "bool" => AstType::Int8, // Placeholder
+                    "i8" => AstType::I8,
+                    "i16" => AstType::I16,
+                    "i32" => AstType::I32,
+                    "i64" => AstType::I64,
+                    "u8" => AstType::I8, // Placeholder
+                    "u16" => AstType::I16, // Placeholder
+                    "u32" => AstType::I32, // Placeholder
+                    "u64" => AstType::I64, // Placeholder
+                    "usize" => AstType::I64, // Placeholder
+                    "f32" => AstType::Float, // Placeholder
+                    "f64" => AstType::Float,
+                    "bool" => AstType::I8, // Placeholder
                     "string" => AstType::String,
                     "void" => AstType::Void,
                     _ => return Err(format!("Unknown type: {}", name)),

@@ -138,7 +138,7 @@ impl<'ctx> TestContext<'ctx> {
         ast::Program::from_functions(vec![ast::Function {
             name: "main".to_string(),
             args: vec![],
-            return_type: AstType::Int64,
+            return_type: AstType::i64,
             body: vec![Statement::Return(Expression::Integer64(value))],
         }])
     }
@@ -152,7 +152,7 @@ impl<'ctx> TestContext<'ctx> {
         ast::Program::from_functions(vec![ast::Function {
             name: "main".to_string(),
             args: vec![],
-            return_type: AstType::Int64,
+            return_type: AstType::i64,
             body: vec![Statement::Return(Expression::BinaryOp {
                 left: Box::new(Expression::Integer64(left)),
                 op,
@@ -166,11 +166,11 @@ impl<'ctx> TestContext<'ctx> {
         ast::Program::from_functions(vec![ast::Function {
             name: "main".to_string(),
             args: vec![],
-            return_type: AstType::Int64,
+            return_type: AstType::i64,
             body: vec![
                 Statement::VariableDeclaration {
                     name: name.to_string(),
-                    type_: AstType::Int64,
+                    type_: AstType::i64,
                     initializer: Some(Expression::Integer64(value)),
                 },
                 Statement::Return(Expression::Identifier(name.to_string())),
@@ -194,7 +194,7 @@ impl<'ctx> TestContext<'ctx> {
             ast::Function {
                 name: "main".to_string(),
                 args: vec![],
-                return_type: AstType::Int64,
+                return_type: AstType::i64,
                 body: vec![Statement::Return(Expression::FunctionCall {
                     name: func_name.to_string(),
                     args,
@@ -215,7 +215,7 @@ impl<'ctx> TestContext<'ctx> {
             ast::Function {
                 name: "main".to_string(),
                 args: vec![],
-                return_type: AstType::Int64,
+                return_type: AstType::i64,
                 body: vec![Statement::Return(Expression::Integer64(0))],
             },
         ])

@@ -17,12 +17,12 @@ fn main() {
         let mut compiler = Compiler::new(&context);
         let program = ast::Program::from_functions(vec![ast::Function {
             name: "test_nested_ifs".to_string(),
-            args: vec![("x".to_string(), AstType::Int64)],
-            return_type: AstType::Int64,
+            args: vec![("x".to_string(), AstType::I64)],
+            return_type: AstType::I64,
             body: vec![
                 Statement::VariableDeclaration {
                     name: "result".to_string(),
-                    type_: AstType::Int64,
+                    type_: AstType::I64,
                     initializer: None,
                 },
                 Statement::Expression(Expression::Conditional {
@@ -87,13 +87,13 @@ fn main() {
                 Declaration::ExternalFunction(ExternalFunction {
                     name: "printf".to_string(),
                     args: vec![AstType::String], // First arg is format string
-                    return_type: AstType::Int64,
+                    return_type: AstType::I64,
                     is_varargs: true, // printf is variadic
                 }),
                 Declaration::Function(Function {
                     name: "main".to_string(),
                     args: vec![],
-                    return_type: AstType::Int64,
+                    return_type: AstType::I64,
                     body: vec![
                         Statement::Expression(Expression::FunctionCall {
                             name: "printf".to_string(),

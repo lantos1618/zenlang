@@ -12,13 +12,13 @@ fn test_printf() {
             Declaration::ExternalFunction(ExternalFunction {
                 name: "printf".to_string(),
                 args: vec![AstType::String], // First arg is format string
-                return_type: AstType::Int64,
+                return_type: AstType::I64,
                 is_varargs: true, // printf is variadic
             }),
             Declaration::Function(Function {
                 name: "main".to_string(),
                 args: vec![],
-                return_type: AstType::Int64,
+                return_type: AstType::I64,
                 body: vec![
                     Statement::Expression(Expression::FunctionCall {
                         name: "printf".to_string(),

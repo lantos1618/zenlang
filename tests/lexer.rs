@@ -120,7 +120,7 @@ fn test_lexer_conditional_arrow() {
 
 #[test]
 fn test_lexer_zen_variable_declarations() {
-    let input = "x := 42 y ::= 10 z: int32 = 5 w:: uint64 = 100";
+    let input = "x := 42 y ::= 10 z: i32 = 5 w:: u64 = 100";
     let mut lexer = Lexer::new(input);
     assert_eq!(lexer.next_token(), Token::Identifier("x".to_string()));
     assert_eq!(lexer.next_token(), Token::Operator(":=".to_string()));
@@ -130,12 +130,12 @@ fn test_lexer_zen_variable_declarations() {
     assert_eq!(lexer.next_token(), Token::Integer("10".to_string()));
     assert_eq!(lexer.next_token(), Token::Identifier("z".to_string()));
     assert_eq!(lexer.next_token(), Token::Symbol(':'));
-    assert_eq!(lexer.next_token(), Token::Identifier("int32".to_string()));
+    assert_eq!(lexer.next_token(), Token::Identifier("i32".to_string()));
     assert_eq!(lexer.next_token(), Token::Operator("=".to_string()));
     assert_eq!(lexer.next_token(), Token::Integer("5".to_string()));
     assert_eq!(lexer.next_token(), Token::Identifier("w".to_string()));
     assert_eq!(lexer.next_token(), Token::Operator("::".to_string()));
-    assert_eq!(lexer.next_token(), Token::Identifier("uint64".to_string()));
+    assert_eq!(lexer.next_token(), Token::Identifier("u64".to_string()));
     assert_eq!(lexer.next_token(), Token::Operator("=".to_string()));
     assert_eq!(lexer.next_token(), Token::Integer("100".to_string()));
     assert_eq!(lexer.next_token(), Token::Eof);
@@ -170,7 +170,7 @@ fn test_lexer_loop_with_in() {
 
 #[test]
 fn test_lexer_debug_variable_declarations() {
-    let input = "x := 42 y ::= 10 z: int32 = 5 w:: uint64 = 100";
+    let input = "x := 42 y ::= 10 z: i32 = 5 w:: u64 = 100";
     let mut lexer = Lexer::new(input);
     
     println!("Debugging token sequence for: '{}'", input);
@@ -187,7 +187,7 @@ fn test_lexer_debug_variable_declarations() {
 
 #[test]
 fn test_lexer_debug_simple() {
-    let input = "w:: uint64";
+    let input = "w:: u64";
     let mut lexer = Lexer::new(input);
     
     println!("Debugging simple sequence: '{}'", input);
@@ -204,16 +204,16 @@ fn test_lexer_debug_simple() {
 
 #[test]
 fn test_lexer_debug_input_chars() {
-    let input = "x := 42 y ::= 10 z: int32 = 5 w:: uint64 = 100";
+    let input = "x := 42 y ::= 10 z: i32 = 5 w:: u64 = 100";
     println!("Input string: '{}'", input);
     println!("Input bytes: {:?}", input.as_bytes());
     println!("Input chars: {:?}", input.chars().collect::<Vec<_>>());
     
-    // Find the position of "w:: uint64"
-    if let Some(pos) = input.find("w:: uint64") {
-        println!("Found 'w:: uint64' at position {}", pos);
+    // Find the position of "w:: u64"
+    if let Some(pos) = input.find("w:: u64") {
+        println!("Found 'w:: u64' at position {}", pos);
         let before = &input[..pos];
-        let after = &input[pos + "w:: uint64".len()..];
+        let after = &input[pos + "w:: u64".len()..];
         println!("Before: '{}'", before);
         println!("After: '{}'", after);
         println!("After bytes: {:?}", after.as_bytes());
@@ -222,7 +222,7 @@ fn test_lexer_debug_input_chars() {
 
 #[test]
 fn test_lexer_debug_step_by_step() {
-    let input = "w:: uint64";
+    let input = "w:: u64";
     let mut lexer = Lexer::new(input);
     
     println!("Step-by-step debugging for: '{}'", input);
@@ -241,7 +241,7 @@ fn test_lexer_debug_step_by_step() {
     println!("After token 2 - position: {}, read_position: {}, current_char: {:?}", 
              lexer.position, lexer.read_position, lexer.current_char);
     
-    // Step 3: Get 'uint64'
+    // Step 3: Get 'u64'
     let token3 = lexer.next_token();
     println!("Token 3: {:?}", token3);
     println!("After token 3 - position: {}, read_position: {}, current_char: {:?}", 

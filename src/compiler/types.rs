@@ -3,10 +3,10 @@ use super::*;
 impl<'ctx> Compiler<'ctx> {
     pub fn to_llvm_type(&mut self, type_: &AstType) -> Result<Type<'ctx>, CompileError> {
         match type_ {
-            AstType::Int8 => Ok(Type::Basic(self.context.i8_type().into())),
-            AstType::Int16 => Ok(Type::Basic(self.context.i16_type().into())),
-            AstType::Int32 => Ok(Type::Basic(self.context.i32_type().into())),
-            AstType::Int64 => Ok(Type::Basic(self.context.i64_type().into())),
+            AstType::I8 => Ok(Type::Basic(self.context.i8_type().into())),
+            AstType::I16 => Ok(Type::Basic(self.context.i16_type().into())),
+            AstType::I32 => Ok(Type::Basic(self.context.i32_type().into())),
+            AstType::I64 => Ok(Type::Basic(self.context.i64_type().into())),
             AstType::Float => Ok(Type::Basic(self.context.f64_type().into())),
             AstType::String => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
             AstType::Pointer(inner) => {
