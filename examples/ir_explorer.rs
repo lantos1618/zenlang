@@ -6,7 +6,7 @@
 //! Run with: cargo run --example ir_explorer
 
 use inkwell::context::Context;
-use zen::ast::{self, Declaration, ExternalFunction, Expression, Function, Statement, AstType};
+use zen::ast::{self, Declaration, ExternalFunction, Expression, Function, Statement, AstType, VariableDeclarationType};
 use zen::compiler::Compiler;
 
 fn main() {
@@ -29,6 +29,7 @@ fn main() {
                         right: Box::new(Expression::Identifier("y".to_string())),
                     }),
                     is_mutable: false,
+                    declaration_type: VariableDeclarationType::ExplicitImmutable,
                 },
                 Statement::Return(Expression::Identifier("result".to_string())),
             ],
@@ -146,6 +147,7 @@ fn main() {
                                 }),
                             }),
                             is_mutable: false,
+                            declaration_type: VariableDeclarationType::ExplicitImmutable,
                         },
                         Statement::Return(Expression::FunctionCall {
                             name: "sqrt".to_string(),

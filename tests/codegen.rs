@@ -82,12 +82,13 @@ fn test_string_literal() {
                 body: vec![
                     Statement::VariableDeclaration { 
                         name: "str".to_string(),
-                        type_: AstType::String,
+                        type_: Some(AstType::String),
                         initializer: Some(Expression::FunctionCall {
                             name: "get_string".to_string(),
                             args: vec![],
                         }),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::Return(Expression::Integer64(0)), // Return 0 to indicate success
                 ],
@@ -321,12 +322,13 @@ fn test_function_pointer() {
                 body: vec![
                     Statement::VariableDeclaration { 
                         name: "op".to_string(),
-                        type_: AstType::Function {
+                        type_: Some(AstType::Function {
                             args: vec![AstType::I64, AstType::I64],
                             return_type: Box::new(AstType::I64),
-                        },
+                        }),
                         initializer: Some(Expression::Identifier("add".to_string())),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::Return(Expression::FunctionCall {
                         name: "op".to_string(),
@@ -566,6 +568,7 @@ fn test_struct_creation_and_access() {
                             ],
                         }),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     // Access struct field
                     Statement::Return(Expression::StructField {
@@ -607,6 +610,7 @@ fn test_struct_pointer() {
                             ],
                         }),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::VariableDeclaration { 
                         name: "ptr".to_string(),
@@ -619,6 +623,7 @@ fn test_struct_pointer() {
                         })),
                         initializer: Some(Expression::AddressOf(Box::new(Expression::Identifier("s".to_string())))),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::Return(Expression::StructField {
                         struct_: Box::new(Expression::Dereference(Box::new(Expression::Identifier("ptr".to_string())))),
@@ -660,6 +665,7 @@ fn test_struct_field_assignment() {
                             ],
                         }),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::VariableAssignment {
                         name: "s".to_string(),
@@ -695,15 +701,17 @@ fn test_loop_construct() {
             body: vec![
                 Statement::VariableDeclaration { 
                     name: "sum".to_string(),
-                    type_: AstType::I64,
+                    type_: Some(AstType::I64),
                     initializer: Some(Expression::Integer64(0)),
                     is_mutable: false,
+                    declaration_type: VariableDeclarationType::ExplicitImmutable,
                 },
                 Statement::VariableDeclaration { 
                     name: "i".to_string(),
-                    type_: AstType::I64,
+                    type_: Some(AstType::I64),
                     initializer: Some(Expression::Integer64(0)),
                     is_mutable: false,
+                    declaration_type: VariableDeclarationType::ExplicitImmutable,
                 },
                 Statement::Loop { 
                     iterator: None, 
@@ -730,6 +738,7 @@ fn test_loop_construct() {
                             },
                         },
                     ],
+                    label: None,
                 },
                 Statement::Return(Expression::Identifier("sum".to_string())),
             ],
@@ -773,6 +782,7 @@ fn test_string_concatenation() {
                             ],
                         }),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::Return(Expression::Integer64(0)),
                 ],
@@ -869,6 +879,7 @@ fn test_string_length() {
                     type_: AstType::String,
                     initializer: Some(Expression::String("hello".to_string())),
                     is_mutable: false,
+                    declaration_type: VariableDeclarationType::ExplicitImmutable,
                 },
                 Statement::Return(Expression::StringLength(Box::new(Expression::Identifier("s".to_string())))),
             ],

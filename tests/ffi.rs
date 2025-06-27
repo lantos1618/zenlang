@@ -1,5 +1,5 @@
 use inkwell::context::Context;
-use zen::ast::{self, Declaration, ExternalFunction, Function, Statement, Expression, AstType};
+use zen::ast::{self, Declaration, ExternalFunction, Function, Statement, Expression, AstType, VariableDeclarationType};
 use zen::compiler::Compiler;
 
 #[test]
@@ -66,6 +66,7 @@ fn test_float_operations() {
                             right: Box::new(Expression::Identifier("y".to_string())),
                         }),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::Return(Expression::Identifier("result".to_string())),
                 ],
@@ -158,6 +159,7 @@ fn test_external_math_function() {
                             }),
                         }),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::Return(Expression::FunctionCall {
                         name: "sqrt".to_string(),

@@ -5,7 +5,7 @@ use inkwell::context::Context;
 use inkwell::OptimizationLevel;
 use inkwell::execution_engine::JitFunction;
 use inkwell::types::BasicType;
-use zen::ast::{self, AstType, Expression, Statement, BinaryOperator};
+use zen::ast::{self, AstType, Expression, Statement, BinaryOperator, VariableDeclarationType};
 use zen::compiler::Compiler;
 use zen::compiler::symbols::{SymbolTable, Symbol};
 use zen::error::CompileError;
@@ -172,9 +172,10 @@ impl<'ctx> TestContext<'ctx> {
             body: vec![
                 Statement::VariableDeclaration {
                     name: name.to_string(),
-                    type_: AstType::I64,
+                    type_: Some(AstType::I64),
                     initializer: Some(Expression::Integer64(value)),
                     is_mutable: false,
+                    declaration_type: VariableDeclarationType::ExplicitImmutable,
                 },
                 Statement::Return(Expression::Identifier(name.to_string())),
             ],
