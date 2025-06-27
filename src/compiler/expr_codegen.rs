@@ -52,20 +52,49 @@ impl<'ctx> Compiler<'ctx> {
                         Ok(result.into())
                     },
                     (BasicValueEnum::FloatValue(l), BasicValueEnum::FloatValue(r)) => {
-                        let result = match op {
-                            BinaryOperator::Add => self.builder.build_float_add(l, r, "fadd").map_err(|e| CompileError::from(e))?,
-                            BinaryOperator::Subtract => self.builder.build_float_sub(l, r, "fsub").map_err(|e| CompileError::from(e))?,
-                            BinaryOperator::Multiply => self.builder.build_float_mul(l, r, "fmul").map_err(|e| CompileError::from(e))?,
-                            BinaryOperator::Divide => self.builder.build_float_div(l, r, "fdiv").map_err(|e| CompileError::from(e))?,
-                            BinaryOperator::Equals => self.builder.build_float_compare(FloatPredicate::OEQ, l, r, "feq").map_err(|e| CompileError::from(e))?.into(),
-                            BinaryOperator::NotEquals => self.builder.build_float_compare(FloatPredicate::ONE, l, r, "fne").map_err(|e| CompileError::from(e))?.into(),
-                            BinaryOperator::LessThan => self.builder.build_float_compare(FloatPredicate::OLT, l, r, "flt").map_err(|e| CompileError::from(e))?.into(),
-                            BinaryOperator::GreaterThan => self.builder.build_float_compare(FloatPredicate::OGT, l, r, "fgt").map_err(|e| CompileError::from(e))?.into(),
-                            BinaryOperator::LessThanEquals => self.builder.build_float_compare(FloatPredicate::OLE, l, r, "fle").map_err(|e| CompileError::from(e))?.into(),
-                            BinaryOperator::GreaterThanEquals => self.builder.build_float_compare(FloatPredicate::OGE, l, r, "fge").map_err(|e| CompileError::from(e))?.into(),
-                            _ => return Err(CompileError::TypeError("Unsupported binary operator for floats".to_string(), None)),
-                        };
-                        Ok(result)
+                        match op {
+                            BinaryOperator::Add => {
+                                let result = self.builder.build_float_add(l, r, "fadd").map_err(|e| CompileError::from(e))?;
+                                Ok(result.into())
+                            },
+                            BinaryOperator::Subtract => {
+                                let result = self.builder.build_float_sub(l, r, "fsub").map_err(|e| CompileError::from(e))?;
+                                Ok(result.into())
+                            },
+                            BinaryOperator::Multiply => {
+                                let result = self.builder.build_float_mul(l, r, "fmul").map_err(|e| CompileError::from(e))?;
+                                Ok(result.into())
+                            },
+                            BinaryOperator::Divide => {
+                                let result = self.builder.build_float_div(l, r, "fdiv").map_err(|e| CompileError::from(e))?;
+                                Ok(result.into())
+                            },
+                            BinaryOperator::Equals => {
+                                let result = self.builder.build_float_compare(FloatPredicate::OEQ, l, r, "feq").map_err(|e| CompileError::from(e))?;
+                                Ok(result.into())
+                            },
+                            BinaryOperator::NotEquals => {
+                                let result = self.builder.build_float_compare(FloatPredicate::ONE, l, r, "fne").map_err(|e| CompileError::from(e))?;
+                                Ok(result.into())
+                            },
+                            BinaryOperator::LessThan => {
+                                let result = self.builder.build_float_compare(FloatPredicate::OLT, l, r, "flt").map_err(|e| CompileError::from(e))?;
+                                Ok(result.into())
+                            },
+                            BinaryOperator::GreaterThan => {
+                                let result = self.builder.build_float_compare(FloatPredicate::OGT, l, r, "fgt").map_err(|e| CompileError::from(e))?;
+                                Ok(result.into())
+                            },
+                            BinaryOperator::LessThanEquals => {
+                                let result = self.builder.build_float_compare(FloatPredicate::OLE, l, r, "fle").map_err(|e| CompileError::from(e))?;
+                                Ok(result.into())
+                            },
+                            BinaryOperator::GreaterThanEquals => {
+                                let result = self.builder.build_float_compare(FloatPredicate::OGE, l, r, "fge").map_err(|e| CompileError::from(e))?;
+                                Ok(result.into())
+                            },
+                            _ => Err(CompileError::TypeError("Unsupported binary operator for floats".to_string(), None)),
+                        }
                     },
                     _ => Err(CompileError::TypeError("Type mismatch in binary operation".to_string(), None)),
                 }
