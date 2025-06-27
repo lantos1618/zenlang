@@ -98,7 +98,7 @@ Zen has a simple, consistent system for defining bindings. The `=` symbol is use
 | `name:: T = value`| **Mutable**    | Explicit | Declares a variable with an explicit type.   |
 
 **Declaration without Initialization:**
-Declaring a variable with `name:: Type` initializes it to the type's default value (0, `false`, `None`, etc.). It is a compile error if the type has no defined default.
+Declaring a variable with `name:: Type` initializes it to the type's default value (0, `false`, `None`, etc.). The compiler will error when the type has no defined default.
 
 ```zen
 // Immutable bindings (Constants)
@@ -199,7 +199,7 @@ print_greeting = (name: string, prefix: string = "Hello") void {
 ```
 
 **Uniform Function Call Syntax (UFCS):**
-A free function whose first parameter is of type `T` can be called as if it were a method on an instance of `T`.
+A free function whose first parameter is of type `T` can be called as though it were a method on an instance of `T`.
 
 ```zen
 Rectangle = { width: f64, height: f64 }
@@ -219,7 +219,9 @@ area2 := my_rect.area()       // UFCS call, more idiomatic
 
 #### Conditional Expression
 
-Zen uses a single, unified construct for all conditional logic and pattern matching. It replaces `if-else` chains and `switch`/`match` statements with a more powerful and expressive syntax. The core structure uses the `?` operator for pattern matching: `scrutinee ? | pattern => expression`.
+**Important: Zen has NO `if` or `else` keywords.** All conditional logic uses the unified `?` operator.
+
+Zen uses a single, unified construct for all conditional logic and pattern matching. It replaces traditional conditional statements and `switch`/`match` statements with a more powerful and expressive syntax. The core structure uses the `?` operator for pattern matching: `scrutinee ? | pattern => expression`.
 
 **Pattern Matching with `?`**
 
