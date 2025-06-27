@@ -55,10 +55,9 @@ impl<'ctx> Type<'ctx> {
     }
 }
 
-/// The `Compiler` struct is responsible for compiling a Zen AST into LLVM IR.
 /// Information about a struct type, including its fields and their indices
 #[derive(Debug, Clone)]
-struct StructTypeInfo<'ctx> {
+pub struct StructTypeInfo<'ctx> {
     /// The LLVM struct type
     llvm_type: StructType<'ctx>,
     /// Mapping from field name to (index, type)
@@ -74,7 +73,7 @@ pub struct Compiler<'ctx> {
     pub current_function: Option<FunctionValue<'ctx>>,
     pub symbols: SymbolTable<'ctx>,
     /// Map from struct name to its type information
-    struct_types: HashMap<String, StructTypeInfo<'ctx>>,
+    pub struct_types: HashMap<String, StructTypeInfo<'ctx>>,
 }
 
 impl<'ctx> Compiler<'ctx> {
@@ -165,6 +164,9 @@ impl<'ctx> Compiler<'ctx> {
                 }
                 ast::Declaration::Function(_) => {
                     // Skip function declarations - we'll define them directly
+                }
+                ast::Declaration::Struct(_) | ast::Declaration::Enum(_) | ast::Declaration::ModuleImport { .. } => {
+                    // Skip type definitions and module imports for now
                 }
             }
         }
@@ -489,6 +491,9 @@ impl<'ctx> Compiler<'ctx> {
             BinaryOperator::LessThanEquals => self.compile_less_than_equals(left_val, right_val),
             BinaryOperator::GreaterThanEquals => self.compile_greater_than_equals(left_val, right_val),
             BinaryOperator::StringConcat => self.compile_string_concat(left_val, right_val),
+            BinaryOperator::Modulo | BinaryOperator::And | BinaryOperator::Or => {
+                todo!("Modulo, And, Or operators not implemented yet")
+            }
         }
     }
 

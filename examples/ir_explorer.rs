@@ -12,42 +12,31 @@ use zen::compiler::Compiler;
 fn main() {
     let context = Context::create();
     
-    // Test 1: Nested conditionals
+    // Test 1: Simple arithmetic and function calls
     {
         let mut compiler = Compiler::new(&context);
         let program = ast::Program::from_functions(vec![ast::Function {
-            name: "test_nested_ifs".to_string(),
-            args: vec![("x".to_string(), AstType::I64)],
+            name: "test_arithmetic".to_string(),
+            args: vec![("x".to_string(), AstType::I64), ("y".to_string(), AstType::I64)],
             return_type: AstType::I64,
             body: vec![
                 Statement::VariableDeclaration {
                     name: "result".to_string(),
                     type_: AstType::I64,
-                    initializer: None,
+                    initializer: Some(Expression::BinaryOp {
+                        left: Box::new(Expression::Identifier("x".to_string())),
+                        op: ast::BinaryOperator::Add,
+                        right: Box::new(Expression::Identifier("y".to_string())),
+                    }),
+                    is_mutable: false,
                 },
-                Statement::Expression(Expression::Conditional {
-                    scrutinee: Box::new(Expression::Identifier("x".to_string())),
-                    arms: vec![
-                        (
-                            Expression::Integer64(1),
-                            Expression::Integer64(10),
-                        ),
-                        (
-                            Expression::Integer64(2),
-                            Expression::Integer64(20),
-                        ),
-                        (
-                            Expression::Integer64(3),
-                            Expression::Integer64(30),
-                        ),
-                    ],
-                }),
                 Statement::Return(Expression::Identifier("result".to_string())),
             ],
+            is_async: false,
         }]);
 
         compiler.compile_program(&program).unwrap();
-        println!("Nested conditionals IR:");
+        println!("Simple arithmetic IR:");
         println!("{}", compiler.module.print_to_string().to_string());
         println!("\n---\n");
     }
@@ -60,6 +49,7 @@ fn main() {
             args: vec![],
             return_type: AstType::String,
             body: vec![Statement::Return(Expression::String("Hello, World!".to_string()))],
+            is_async: false,
         }]);
 
         compiler.compile_program(&program).unwrap();
@@ -79,7 +69,7 @@ fn main() {
         }
     }
 
-    // Test C FFI with printf
+    // Test 3: C FFI with printf
     {
         let mut compiler = Compiler::new(&context);
         let program = ast::Program {
@@ -101,6 +91,7 @@ fn main() {
                         }),
                         Statement::Return(Expression::Integer64(0)),
                     ],
+                    is_async: false,
                 }),
             ],
         };
@@ -119,6 +110,64 @@ fn main() {
         }
         if ir.contains("...") {
             println!("✓ Found varargs (...)");
+        }
+    }
+
+    // Test 4: Math library FFI
+    {
+        let mut compiler = Compiler::new(&context);
+        let program = ast::Program {
+            declarations: vec![
+                Declaration::ExternalFunction(ExternalFunction {
+                    name: "sqrt".to_string(),
+                    args: vec![AstType::F64],
+                    return_type: AstType::F64,
+                    is_varargs: false,
+                }),
+                Declaration::Function(Function {
+                    name: "calculate_distance".to_string(),
+                    args: vec![("x".to_string(), AstType::F64), ("y".to_string(), AstType::F64)],
+                    return_type: AstType::F64,
+                    body: vec![
+                        Statement::VariableDeclaration {
+                            name: "sum_squares".to_string(),
+                            type_: AstType::F64,
+                            initializer: Some(Expression::BinaryOp {
+                                left: Box::new(Expression::BinaryOp {
+                                    left: Box::new(Expression::Identifier("x".to_string())),
+                                    op: ast::BinaryOperator::Multiply,
+                                    right: Box::new(Expression::Identifier("x".to_string())),
+                                }),
+                                op: ast::BinaryOperator::Add,
+                                right: Box::new(Expression::BinaryOp {
+                                    left: Box::new(Expression::Identifier("y".to_string())),
+                                    op: ast::BinaryOperator::Multiply,
+                                    right: Box::new(Expression::Identifier("y".to_string())),
+                                }),
+                            }),
+                            is_mutable: false,
+                        },
+                        Statement::Return(Expression::FunctionCall {
+                            name: "sqrt".to_string(),
+                            args: vec![Expression::Identifier("sum_squares".to_string())],
+                        }),
+                    ],
+                    is_async: false,
+                }),
+            ],
+        };
+
+        compiler.compile_program(&program).unwrap();
+        println!("Math library FFI (sqrt) IR:");
+        let ir = compiler.module.print_to_string().to_string();
+        println!("{}", ir);
+        
+        // Check what we actually get
+        if ir.contains("declare double @sqrt(double)") {
+            println!("✓ Found sqrt declaration");
+        }
+        if ir.contains("call double @sqrt") {
+            println!("✓ Found sqrt function call");
         }
     }
 } 

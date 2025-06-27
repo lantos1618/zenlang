@@ -27,6 +27,7 @@ fn test_parse_simple_function() {
                 body: vec![
                     Statement::Expression(Expression::Integer32(42))
                 ],
+                is_async: false,
             })
         ],
     };
@@ -51,9 +52,11 @@ fn test_parse_variable_declaration() {
                         name: "x".to_string(),
                         type_: AstType::I32,
                         initializer: Some(Expression::Integer32(10)),
+                        is_mutable: false,
                     },
                     Statement::Expression(Expression::Identifier("x".to_string())),
                 ],
+                is_async: false,
             })
         ],
     };
@@ -80,6 +83,7 @@ fn test_parse_binary_expression() {
                         right: Box::new(Expression::Integer32(3)),
                     }),
                 ],
+                is_async: false,
             })
         ],
     };
@@ -131,13 +135,14 @@ fn test_parse_loop_with_condition() {
                         name: "counter".to_string(),
                         type_: AstType::I32,
                         initializer: Some(Expression::Integer32(10)),
+                        is_mutable: false,
                     },
                     Statement::Loop {
-                        condition: Expression::BinaryOp {
+                        condition: Some(Expression::BinaryOp {
                             left: Box::new(Expression::Identifier("counter".to_string())),
                             op: zen::ast::BinaryOperator::GreaterThan,
                             right: Box::new(Expression::Integer32(0)),
-                        },
+                        }),
                         body: vec![
                             Statement::VariableAssignment {
                                 name: "counter".to_string(),
@@ -148,8 +153,10 @@ fn test_parse_loop_with_condition() {
                                 },
                             },
                         ],
+                        iterator: None,
                     },
                 ],
+                is_async: false,
             })
         ],
     };
@@ -290,7 +297,7 @@ fn test_function_with_multiple_statements() {
         assert_eq!(func.body.len(), 3);
         
         // Check the first statement (x := 42)
-        if let Statement::VariableDeclaration { name, type_, initializer } = &func.body[0] {
+        if let Statement::VariableDeclaration { name, type_, initializer, is_mutable: _ } = &func.body[0] {
             assert_eq!(name, "x");
             assert_eq!(*type_, AstType::I32);
             assert!(matches!(initializer, Some(Expression::Integer32(42))));
@@ -299,7 +306,7 @@ fn test_function_with_multiple_statements() {
         }
         
         // Check the second statement (y := 10)
-        if let Statement::VariableDeclaration { name, type_, initializer } = &func.body[1] {
+        if let Statement::VariableDeclaration { name, type_, initializer, is_mutable: _ } = &func.body[1] {
             assert_eq!(name, "y");
             assert_eq!(*type_, AstType::I32);
             assert!(matches!(initializer, Some(Expression::Integer32(10))));
@@ -318,4 +325,90 @@ fn test_function_with_multiple_statements() {
     } else {
         panic!("Expected function declaration");
     }
+}
+
+#[test]
+fn test_parse_function_with_return() {
+    let input = "test = () i64 { x := 42; y := 10; x + y }";
+    let lexer = Lexer::new(input);
+    let mut parser = Parser::new(lexer);
+    let program = parser.parse_program().unwrap();
+    
+    let expected = Program {
+        declarations: vec![
+            Declaration::Function(Function {
+                name: "test".to_string(),
+                args: vec![("x".to_string(), AstType::I64), ("y".to_string(), AstType::I64)],
+                return_type: AstType::I64,
+                body: vec![
+                    Statement::VariableDeclaration {
+                        name: "x".to_string(),
+                        type_: AstType::I64,
+                        initializer: Some(Expression::Integer64(42)),
+                        is_mutable: false,
+                    },
+                    Statement::VariableDeclaration {
+                        name: "y".to_string(),
+                        type_: AstType::I64,
+                        initializer: Some(Expression::Integer64(10)),
+                        is_mutable: false,
+                    },
+                    Statement::Return(Expression::BinaryOp {
+                        left: Box::new(Expression::Identifier("x".to_string())),
+                        op: zen::ast::BinaryOperator::Add,
+                        right: Box::new(Expression::Identifier("y".to_string())),
+                    }),
+                ],
+                is_async: false,
+            })
+        ],
+    };
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_loop_with_return() {
+    let input = "test = () i64 { counter ::= 10; loop counter > 0 { counter = counter - 1 } }";
+    let lexer = Lexer::new(input);
+    let mut parser = Parser::new(lexer);
+    let program = parser.parse_program().unwrap();
+    
+    let expected = Program {
+        declarations: vec![
+            Declaration::Function(Function {
+                name: "test".to_string(),
+                args: vec![("counter".to_string(), AstType::I64)],
+                return_type: AstType::I64,
+                body: vec![
+                    Statement::VariableDeclaration {
+                        name: "counter".to_string(),
+                        type_: AstType::I32,
+                        initializer: Some(Expression::Integer32(10)),
+                        is_mutable: false,
+                    },
+                    Statement::Loop {
+                        condition: Some(Expression::BinaryOp {
+                            left: Box::new(Expression::Identifier("counter".to_string())),
+                            op: zen::ast::BinaryOperator::GreaterThan,
+                            right: Box::new(Expression::Integer32(0)),
+                        }),
+                        body: vec![
+                            Statement::VariableAssignment {
+                                name: "counter".to_string(),
+                                value: Expression::BinaryOp {
+                                    left: Box::new(Expression::Identifier("counter".to_string())),
+                                    op: zen::ast::BinaryOperator::Subtract,
+                                    right: Box::new(Expression::Integer32(1)),
+                                },
+                            },
+                        ],
+                        iterator: None,
+                    },
+                    Statement::Return(Expression::Integer64(0)),
+                ],
+                is_async: false,
+            })
+        ],
+    };
+    assert_eq!(program, expected);
 } 

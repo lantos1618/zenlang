@@ -1,3 +1,5 @@
+use crate::error::Span;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Identifier(String),
@@ -10,11 +12,19 @@ pub enum Token {
     Eof,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TokenWithSpan {
+    pub token: Token,
+    pub span: Span,
+}
+
 pub struct Lexer<'a> {
     pub input: &'a str,
     pub position: usize,
     pub read_position: usize,
     pub current_char: Option<char>,
+    pub line: usize,
+    pub column: usize,
 }
 
 impl<'a> Lexer<'a> {
@@ -24,6 +34,8 @@ impl<'a> Lexer<'a> {
             position: 0,
             read_position: 0,
             current_char: None,
+            line: 1,
+            column: 1,
         };
         lexer.read_char();
         lexer
@@ -37,11 +49,30 @@ impl<'a> Lexer<'a> {
         }
         self.position = self.read_position;
         self.read_position += 1;
+        
+        // Update line and column tracking
+        if let Some(c) = self.current_char {
+            if c == '\n' {
+                self.line += 1;
+                self.column = 1;
+            } else {
+                self.column += 1;
+            }
+        }
     }
 
     pub fn next_token(&mut self) -> Token {
+        self.next_token_with_span().token
+    }
+
+    pub fn next_token_with_span(&mut self) -> TokenWithSpan {
+        let start_pos = self.position;
+        let start_line = self.line;
+        let start_column = self.column;
+        
         self.skip_whitespace();
-        match self.current_char {
+        
+        let token = match self.current_char {
             Some(c) if c.is_ascii_alphabetic() || c == '_' || c == '@' => {
                 let ident = self.read_identifier();
                 if self.is_keyword(&ident) {
@@ -68,22 +99,60 @@ impl<'a> Lexer<'a> {
                     if next == '=' {
                         self.read_char(); // consume ':'
                         self.read_char(); // consume '='
-                        return Token::Operator(":=".to_string());
+                        return TokenWithSpan {
+                            token: Token::Operator(":=".to_string()),
+                            span: Span { start: start_pos, end: self.position, line: start_line, column: start_column },
+                        };
                     } else if next == ':' {
                         self.read_char(); // consume ':'
                         if let Some(next2) = self.peek_char() {
                             if next2 == '=' {
                                 self.read_char(); // consume second ':'
                                 self.read_char(); // consume '='
-                                return Token::Operator("::=".to_string());
+                                return TokenWithSpan {
+                                    token: Token::Operator("::=".to_string()),
+                                    span: Span { start: start_pos, end: self.position, line: start_line, column: start_column },
+                                };
                             }
                         }
                         self.read_char(); // consume second ':'
-                        return Token::Operator("::".to_string());
+                        return TokenWithSpan {
+                            token: Token::Operator("::".to_string()),
+                            span: Span { start: start_pos, end: self.position, line: start_line, column: start_column },
+                        };
                     }
                 }
                 self.read_char();
                 Token::Symbol(':')
+            }
+            Some('.') => {
+                // Check for range operators (.., ..=)
+                if let Some(next) = self.peek_char() {
+                    if next == '.' {
+                        self.read_char(); // consume first '.'
+                        if let Some(next2) = self.peek_char() {
+                            if next2 == '=' {
+                                self.read_char(); // consume second '.'
+                                self.read_char(); // consume '='
+                                return TokenWithSpan {
+                                    token: Token::Operator("..=".to_string()),
+                                    span: Span { start: start_pos, end: self.position, line: start_line, column: start_column },
+                                };
+                            }
+                        }
+                        self.read_char(); // consume second '.'
+                        return TokenWithSpan {
+                            token: Token::Operator("..".to_string()),
+                            span: Span { start: start_pos, end: self.position, line: start_line, column: start_column },
+                        };
+                    }
+                }
+                self.read_char();
+                Token::Symbol('.')
+            }
+            Some('?') => {
+                self.read_char();
+                Token::Symbol('?')
             }
             Some('|') => {
                 // Only treat as operator if part of '||'
@@ -91,7 +160,10 @@ impl<'a> Lexer<'a> {
                     if next == '|' {
                         self.read_char(); // consume '|'
                         self.read_char(); // consume second '|'
-                        return Token::Operator("||".to_string());
+                        return TokenWithSpan {
+                            token: Token::Operator("||".to_string()),
+                            span: Span { start: start_pos, end: self.position, line: start_line, column: start_column },
+                        };
                     }
                 }
                 self.read_char();
@@ -108,8 +180,13 @@ impl<'a> Lexer<'a> {
             None => Token::Eof,
             _ => {
                 self.read_char();
-                self.next_token()
+                return self.next_token_with_span();
             }
+        };
+        
+        TokenWithSpan {
+            token,
+            span: Span { start: start_pos, end: self.position, line: start_line, column: start_column },
         }
     }
 
@@ -148,11 +225,11 @@ impl<'a> Lexer<'a> {
     }
 
     fn is_keyword(&self, ident: &str) -> bool {
-        matches!(ident, "loop" | "in" | "comptime" | "async" | "await" | "behavior" | "impl")
+        matches!(ident, "loop" | "in" | "comptime" | "async" | "await" | "behavior" | "impl" | "extern" | "break" | "continue")
     }
 
     fn is_symbol(&self, c: char) -> bool {
-        matches!(c, '{' | '}' | '(' | ')' | '[' | ']' | ';' | ',' | '|' | '&' | '!' | '.')
+        matches!(c, '{' | '}' | '(' | ')' | '[' | ']' | ';' | ',' | '|' | '&' | '!' | '.' | '?')
     }
 
     fn is_operator_start(&self, c: char) -> bool {
@@ -174,7 +251,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn read_operator(&mut self) -> String {
-        let start = self.position;
+        let _start = self.position;
         let first_char = self.current_char.unwrap();
         self.read_char();
         
@@ -193,16 +270,16 @@ impl<'a> Lexer<'a> {
         // Handle two-character operators
         if let Some(second_char) = self.current_char {
             let two_char_op = format!("{}{}", first_char, second_char);
-            if matches!(two_char_op.as_str(), "==" | "!=" | "<=" | ">=" | "&&" | "||" | "->" | "=>" | ":=" | "::") {
+            if matches!(two_char_op.as_str(), "==" | "!=" | "<=" | ">=" | "&&" | "||" | "->" | "=>" | ":=" | "::" | "..") {
                 self.read_char();
                 return two_char_op;
             }
         }
         
         // Single character operator
-        self.input[start..self.position].to_string()
+        first_char.to_string()
     }
-    
+
     fn peek_char(&self) -> Option<char> {
         if self.read_position >= self.input.len() {
             None

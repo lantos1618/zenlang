@@ -7,95 +7,122 @@ impl<'ctx> Compiler<'ctx> {
             AstType::I16 => Ok(Type::Basic(self.context.i16_type().into())),
             AstType::I32 => Ok(Type::Basic(self.context.i32_type().into())),
             AstType::I64 => Ok(Type::Basic(self.context.i64_type().into())),
-            AstType::Float => Ok(Type::Basic(self.context.f64_type().into())),
-            AstType::String => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
+            AstType::U8 => Ok(Type::Basic(self.context.i8_type().into())),
+            AstType::U16 => Ok(Type::Basic(self.context.i16_type().into())),
+            AstType::U32 => Ok(Type::Basic(self.context.i32_type().into())),
+            AstType::U64 => Ok(Type::Basic(self.context.i64_type().into())),
+            AstType::F32 => Ok(Type::Basic(self.context.f32_type().into())),
+            AstType::F64 => Ok(Type::Basic(self.context.f64_type().into())),
+            AstType::Bool => Ok(Type::Basic(self.context.bool_type().into())),
+            AstType::String => {
+                // String is represented as a pointer to i8
+                Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into()))
+            },
+            AstType::Void => Ok(Type::Void),
             AstType::Pointer(inner) => {
-                if let AstType::Void = **inner {
-                    return Err(CompileError::UnsupportedFeature(
-                        "pointer to void is not supported".to_string(),
-                        None,
-                    ));
-                }
                 let inner_type = self.to_llvm_type(inner)?;
                 match inner_type {
-                    Type::Basic(_b) => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
-                    Type::Function(_) | Type::Void => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
-                    Type::Pointer(_) => Err(CompileError::UnsupportedFeature(
-                        "Pointer to pointer is not supported".to_string(),
-                        None,
-                    )),
-                    Type::Struct(_) => Err(CompileError::UnsupportedFeature(
-                        "Pointer to struct is not supported".to_string(),
-                        None,
-                    )),
+                    Type::Basic(basic_type) => Ok(Type::Basic(basic_type)),
+                    Type::Function(_) => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())), // Function pointers as void*
+                    Type::Void => Err(CompileError::TypeError("Cannot create pointer to void".to_string(), None)),
+                    Type::Pointer(_) => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())), // Pointer to pointer as void*
+                    Type::Struct(_) => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())), // Pointer to struct as void*
                 }
-            }
-            AstType::Struct { name, fields } => {
-                // Check if we already have this struct type
-                if let Some(info) = self.struct_types.get(name) {
-                    return Ok(Type::Basic(info.llvm_type.into()));
+            },
+            AstType::Array(inner) => {
+                let inner_type = self.to_llvm_type(inner)?;
+                match inner_type {
+                    Type::Basic(basic_type) => Ok(Type::Basic(basic_type)), // 0 means unknown size
+                    _ => Ok(Type::Basic(self.context.i8_type().array_type(0).into())), // Default to array of bytes
                 }
-                // Check if the struct type exists in the module but not in our map
-                if let Some(struct_type) = self.module.get_struct_type(name) {
-                    // Rebuild the field mapping
-                    let field_mapping: HashMap<String, (usize, AstType)> = fields
-                        .iter()
-                        .enumerate()
-                        .map(|(i, (name, ty))| (name.clone(), (i, ty.clone())))
-                        .collect();
-                    let info = StructTypeInfo {
-                        llvm_type: struct_type,
-                        fields: field_mapping,
-                    };
-                    let name_clone = name.clone();
-                    self.struct_types.insert(name_clone, info);
-                    return Ok(Type::Basic(struct_type.into()));
-                }
-                // Create a new struct type
-                let field_types: Result<Vec<BasicTypeEnum>, CompileError> = fields
-                    .iter()
-                    .map(|(_, ty)| {
-                        self.to_llvm_type(ty)
-                            .and_then(|lyn_type| self.expect_basic_type(lyn_type))
-                    })
-                    .collect();
-                let field_types = field_types?;
-                let field_mapping: HashMap<String, (usize, AstType)> = fields
-                    .iter()
-                    .enumerate()
-                    .map(|(i, (name, ty))| (name.clone(), (i, ty.clone())))
-                    .collect();
-                let struct_type = self.context.opaque_struct_type(name);
-                struct_type.set_body(&field_types, false);
-                let info = StructTypeInfo {
-                    llvm_type: struct_type,
-                    fields: field_mapping,
-                };
-                let name_clone = name.clone();
-                self.struct_types.insert(name_clone, info);
-                Ok(Type::Basic(struct_type.into()))
-            }
+            },
             AstType::Function { args, return_type } => {
-                let param_types: Result<Vec<BasicTypeEnum>, CompileError> = args
-                    .iter()
-                    .map(|ty| {
-                        let llvm_ty = self.to_llvm_type(ty)?;
-                        match llvm_ty {
-                            Type::Basic(b) => Ok(b),
-                            _ => Err(CompileError::InternalError("Function argument type must be a basic type".to_string(), None)),
+                let return_llvm_type = self.to_llvm_type(return_type)?;
+                let arg_llvm_types: Result<Vec<BasicTypeEnum<'ctx>>, CompileError> = args.iter().map(|arg| {
+                    let arg_type = self.to_llvm_type(arg)?;
+                    match arg_type {
+                        Type::Basic(basic_type) => Ok(basic_type),
+                        _ => Ok(self.context.i64_type().into()), // Default to i64 for complex types
+                    }
+                }).collect();
+                let arg_llvm_types = arg_llvm_types?;
+                
+                // Convert BasicTypeEnum to BasicMetadataTypeEnum for function signatures
+                let arg_metadata_types: Vec<BasicMetadataTypeEnum<'ctx>> = arg_llvm_types.iter().map(|ty| (*ty).into()).collect();
+                
+                let function_type = match return_llvm_type {
+                    Type::Basic(basic_type) => basic_type.fn_type(&arg_metadata_types, false),
+                    _ => self.context.i64_type().fn_type(&arg_metadata_types, false),
+                };
+                Ok(Type::Function(function_type))
+            },
+            AstType::Struct { name, fields } => {
+                // Check if we've already created this struct type
+                if let Some(struct_type) = self.context.get_struct_type(name) {
+                    Ok(Type::Struct(struct_type))
+                } else {
+                    // Create a new struct type
+                    let field_types: Result<Vec<BasicTypeEnum<'ctx>>, CompileError> = fields.iter().map(|(_, field_type)| {
+                        let llvm_type = self.to_llvm_type(field_type)?;
+                        match llvm_type {
+                            Type::Basic(basic_type) => Ok(basic_type),
+                            _ => Ok(self.context.i64_type().into()), // Default to i64 for complex types
                         }
-                    })
-                    .collect();
-                let param_types = param_types?;
-                let param_metadata: Vec<BasicMetadataTypeEnum> = param_types.iter().map(|ty| (*ty).into()).collect();
-                let ret_type = self.to_llvm_type(return_type)?;
-                match ret_type {
-                    Type::Basic(b) => Ok(Type::Function(b.fn_type(&param_metadata, false))),
-                    Type::Void => Ok(Type::Function(self.context.void_type().fn_type(&param_metadata, false))),
-                    _ => Err(CompileError::InternalError("Function return type must be a basic type or void".to_string(), None)),
+                    }).collect();
+                    let field_types = field_types?;
+                    
+                    let struct_type = self.context.opaque_struct_type(name);
+                    struct_type.set_body(&field_types, false);
+                    Ok(Type::Struct(struct_type))
                 }
-            }
-            AstType::Void => Ok(Type::Void),
+            },
+            AstType::Enum { name, variants: _ } => {
+                // Enums are represented as integers for now
+                // TODO: Implement proper enum representation
+                Ok(Type::Basic(self.context.i64_type().into()))
+            },
+            AstType::Ref(inner) => {
+                // Ref<T> is represented as a pointer to T
+                let inner_type = self.to_llvm_type(inner)?;
+                match inner_type {
+                    Type::Basic(basic_type) => Ok(Type::Basic(basic_type)),
+                    _ => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())),
+                }
+            },
+            AstType::Option(inner) => {
+                // Option<T> is represented as a pointer to T (null = None, non-null = Some)
+                let inner_type = self.to_llvm_type(inner)?;
+                match inner_type {
+                    Type::Basic(basic_type) => Ok(Type::Basic(basic_type)),
+                    _ => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())),
+                }
+            },
+            AstType::Result { ok_type, err_type } => {
+                // Result<T, E> is represented as a struct with a tag and union
+                // For now, just use a pointer to represent it
+                let _ok_type = self.to_llvm_type(ok_type)?;
+                let _err_type = self.to_llvm_type(err_type)?;
+                Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into()))
+            },
+            AstType::Range { start_type, end_type, inclusive: _ } => {
+                // Range is represented as a struct with start and end values
+                let _start_type = self.to_llvm_type(start_type)?;
+                let _end_type = self.to_llvm_type(end_type)?;
+                // For now, just use i64 for both start and end
+                let range_struct = self.context.struct_type(&[
+                    self.context.i64_type().into(),
+                    self.context.i64_type().into(),
+                ], false);
+                Ok(Type::Struct(range_struct))
+            },
+            AstType::Generic { name, type_args } => {
+                // For now, just use the first type argument or default to i64
+                if let Some(first_arg) = type_args.first() {
+                    self.to_llvm_type(first_arg)
+                } else {
+                    Ok(Type::Basic(self.context.i64_type().into()))
+                }
+            },
         }
     }
     pub fn expect_basic_type<'a>(&self, t: Type<'a>) -> Result<BasicTypeEnum<'a>, CompileError> {

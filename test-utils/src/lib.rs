@@ -4,8 +4,6 @@
 use inkwell::context::Context;
 use inkwell::OptimizationLevel;
 use inkwell::execution_engine::JitFunction;
-use inkwell::module::Module;
-use inkwell::builder::Builder;
 use inkwell::types::BasicType;
 use zen::ast::{self, AstType, Expression, Statement, BinaryOperator};
 use zen::compiler::Compiler;
@@ -33,6 +31,7 @@ impl<'ctx> TestContext<'ctx> {
 
     /// Resets the test context to a clean state.
     /// This clears all compiled code and resets the compiler state.
+    /// More efficient than creating a new compiler instance.
     pub fn reset(&mut self) {
         // Clear the module by creating a new one with the same context
         // This is safer than creating a new compiler instance which can cause
@@ -42,10 +41,11 @@ impl<'ctx> TestContext<'ctx> {
         // Reset the builder
         self.compiler.builder = self.context.create_builder();
         
-        // Clear all state
+        // Clear all volatile state
         self.compiler.variables.clear();
         self.compiler.functions.clear();
         self.compiler.current_function = None;
+        self.compiler.struct_types.clear();
         
         // Reset symbol table but keep basic types
         self.compiler.symbols = SymbolTable::new();
@@ -140,6 +140,7 @@ impl<'ctx> TestContext<'ctx> {
             args: vec![],
             return_type: AstType::I64,
             body: vec![Statement::Return(Expression::Integer64(value))],
+            is_async: false,
         }])
     }
 
@@ -158,6 +159,7 @@ impl<'ctx> TestContext<'ctx> {
                 op,
                 right: Box::new(Expression::Integer64(right)),
             })],
+            is_async: false,
         }])
     }
 
@@ -172,9 +174,11 @@ impl<'ctx> TestContext<'ctx> {
                     name: name.to_string(),
                     type_: AstType::I64,
                     initializer: Some(Expression::Integer64(value)),
+                    is_mutable: false,
                 },
                 Statement::Return(Expression::Identifier(name.to_string())),
             ],
+            is_async: false,
         }])
     }
 
@@ -190,6 +194,7 @@ impl<'ctx> TestContext<'ctx> {
                 args: vec![("arg".to_string(), return_type.clone())],
                 return_type: return_type.clone(),
                 body: vec![Statement::Return(Expression::Identifier("arg".to_string()))],
+                is_async: false,
             },
             ast::Function {
                 name: "main".to_string(),
@@ -199,6 +204,7 @@ impl<'ctx> TestContext<'ctx> {
                     name: func_name.to_string(),
                     args,
                 })],
+                is_async: false,
             },
         ])
     }
@@ -211,12 +217,14 @@ impl<'ctx> TestContext<'ctx> {
                 args: vec![("arg".to_string(), return_type.clone())],
                 return_type: return_type.clone(),
                 body: vec![Statement::Return(Expression::Identifier("arg".to_string()))],
+                is_async: false,
             },
             ast::Function {
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
                 body: vec![Statement::Return(Expression::Integer64(0))],
+                is_async: false,
             },
         ])
     }

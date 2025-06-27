@@ -9,10 +9,17 @@ pub enum AstType {
     I16,
     I32,
     I64,
-    Float,
+    U8,
+    U16,
+    U32,
+    U64,
+    F32,
+    F64,
+    Bool,
     String,
     Void,
     Pointer(Box<AstType>),
+    Array(Box<AstType>),
     Function {
         args: Vec<AstType>,
         return_type: Box<AstType>,
@@ -21,6 +28,33 @@ pub enum AstType {
         name: String,
         fields: Vec<(String, AstType)>,
     },
+    Enum {
+        name: String,
+        variants: Vec<EnumVariant>,
+    },
+    // Enhanced type system support
+    Ref(Box<AstType>), // Managed reference
+    Option(Box<AstType>), // Option<T>
+    Result {
+        ok_type: Box<AstType>,
+        err_type: Box<AstType>,
+    }, // Result<T, E>
+    Range {
+        start_type: Box<AstType>,
+        end_type: Box<AstType>,
+        inclusive: bool,
+    }, // Range types for .. and ..=
+    // For generic types (future)
+    Generic {
+        name: String,
+        type_args: Vec<AstType>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnumVariant {
+    pub name: String,
+    pub payload: Option<AstType>, // Some(type) for variants with data, None for unit variants
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,6 +63,7 @@ pub enum BinaryOperator {
     Subtract,
     Multiply,
     Divide,
+    Modulo,
     Equals,
     NotEquals,
     LessThan,
@@ -36,6 +71,8 @@ pub enum BinaryOperator {
     LessThanEquals,
     GreaterThanEquals,
     StringConcat,
+    And,
+    Or,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -44,7 +81,13 @@ pub enum Expression {
     Integer16(i16),
     Integer32(i32),
     Integer64(i64),
-    Float(f64),
+    Unsigned8(u8),
+    Unsigned16(u16),
+    Unsigned32(u32),
+    Unsigned64(u64),
+    Float32(f32),
+    Float64(f64),
+    Boolean(bool),
     String(String),
     Identifier(String),
     BinaryOp {
@@ -56,9 +99,10 @@ pub enum Expression {
         name: String,
         args: Vec<Expression>,
     },
+    // Enhanced conditional expression for pattern matching with unified ? syntax
     Conditional {
         scrutinee: Box<Expression>,
-        arms: Vec<(Expression, Expression)>, // (pattern, body)
+        arms: Vec<ConditionalArm>,
     },
     AddressOf(Box<Expression>),
     Dereference(Box<Expression>),
@@ -74,17 +118,88 @@ pub enum Expression {
         struct_: Box<Expression>,
         field: String,
     },
+    // New expressions for enhanced features
+    ArrayLiteral(Vec<Expression>),
+    ArrayIndex {
+        array: Box<Expression>,
+        index: Box<Expression>,
+    },
+    EnumVariant {
+        enum_name: String,
+        variant: String,
+        payload: Option<Box<Expression>>,
+    },
+    MemberAccess {
+        object: Box<Expression>,
+        member: String,
+    },
     StringLength(Box<Expression>),
+    // For comptime expressions
+    Comptime(Box<Expression>),
+    // Range expressions
+    Range {
+        start: Box<Expression>,
+        end: Box<Expression>,
+        inclusive: bool,
+    },
+    // Pattern matching expressions
+    PatternMatch {
+        scrutinee: Box<Expression>,
+        arms: Vec<PatternArm>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConditionalArm {
+    pub pattern: Pattern,
+    pub guard: Option<Expression>, // Optional guard condition
+    pub body: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PatternArm {
+    pub pattern: Pattern,
+    pub guard: Option<Expression>, // Optional guard condition using ->
+    pub body: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Pattern {
+    Literal(Expression),
+    Identifier(String),
+    Struct {
+        name: String,
+        fields: Vec<(String, Pattern)>,
+    },
+    EnumVariant {
+        enum_name: String,
+        variant: String,
+        payload: Option<Box<Pattern>>,
+    },
+    Wildcard, // _ pattern
+    Or(Vec<Pattern>), // | pattern1 | pattern2
+    Range {
+        start: Box<Expression>,
+        end: Box<Expression>,
+        inclusive: bool,
+    }, // For range patterns like 1..=10
+    Binding {
+        name: String,
+        pattern: Box<Pattern>,
+    }, // For -> binding in patterns
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Expression(Expression),
     Return(Expression),
+    // Enhanced variable declarations supporting all Zen syntax
     VariableDeclaration {
         name: String,
-        type_: AstType,
+        type_: Option<AstType>, // None for inferred types
         initializer: Option<Expression>,
+        is_mutable: bool, // true for ::= and :: T =, false for := and : T =
+        declaration_type: VariableDeclarationType,
     },
     VariableAssignment {
         name: String,
@@ -94,10 +209,39 @@ pub enum Statement {
         pointer: Expression,
         value: Expression,
     },
+    // Enhanced loop construct supporting all iteration patterns
     Loop {
-        condition: Expression,
+        condition: Option<Expression>, // None for infinite loops
+        iterator: Option<LoopIterator>, // Some for "loop x in collection"
+        label: Option<String>, // For labeled loops
         body: Vec<Statement>,
     },
+    Break {
+        label: Option<String>, // For labeled break
+    },
+    Continue {
+        label: Option<String>, // For labeled continue
+    },
+    // New statements for enhanced features
+    ComptimeBlock(Vec<Statement>),
+    ModuleImport {
+        alias: String,
+        module_path: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum VariableDeclarationType {
+    InferredImmutable, // :=
+    InferredMutable,   // ::=
+    ExplicitImmutable, // : T =
+    ExplicitMutable,   // :: T =
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoopIterator {
+    pub variable: String,
+    pub collection: Expression,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -106,6 +250,7 @@ pub struct Function {
     pub args: Vec<(String, AstType)>,
     pub return_type: AstType,
     pub body: Vec<Statement>,
+    pub is_async: bool, // For async functions
 }
 
 // For C FFI support
@@ -118,9 +263,35 @@ pub struct ExternalFunction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct StructDefinition {
+    pub name: String,
+    pub fields: Vec<StructField>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructField {
+    pub name: String,
+    pub type_: AstType,
+    pub is_mutable: bool,
+    pub default_value: Option<Expression>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnumDefinition {
+    pub name: String,
+    pub variants: Vec<EnumVariant>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Declaration {
     Function(Function),
     ExternalFunction(ExternalFunction),
+    Struct(StructDefinition),
+    Enum(EnumDefinition),
+    ModuleImport {
+        alias: String,
+        module_path: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -137,9 +308,12 @@ impl Program {
     }
 
     pub fn functions(&self) -> impl Iterator<Item = &Function> {
-        self.declarations.iter().filter_map(|decl| match decl {
-            Declaration::Function(f) => Some(f),
-            _ => None,
+        self.declarations.iter().filter_map(|decl| {
+            if let Declaration::Function(func) = decl {
+                Some(func)
+            } else {
+                None
+            }
         })
     }
 } 

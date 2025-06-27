@@ -1,6 +1,6 @@
 extern crate test_utils;
 
-use zen::ast::{self, AstType, Expression, Statement, BinaryOperator};
+use zen::ast::{self, AstType, Expression, Statement, BinaryOperator, ConditionalArm, Pattern};
 use test_utils::TestContext;
 use zen::error::CompileError;
 use inkwell::context::Context;
@@ -69,24 +69,25 @@ fn test_variable_declaration_ir() {
 fn test_string_literal() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "get_string".to_string(),
                 args: vec![],
                 return_type: AstType::String,
                 body: vec![Statement::Return(Expression::String("Hello, World!".to_string()))],
             },
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
                 body: vec![
-                    Statement::VariableDeclaration {
+                    Statement::VariableDeclaration { 
                         name: "str".to_string(),
                         type_: AstType::String,
                         initializer: Some(Expression::FunctionCall {
                             name: "get_string".to_string(),
                             args: vec![],
                         }),
+                        is_mutable: false,
                     },
                     Statement::Return(Expression::Integer64(0)), // Return 0 to indicate success
                 ],
@@ -102,7 +103,7 @@ fn test_string_literal() {
 #[test]
 fn test_conditional_expression() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -114,8 +115,8 @@ fn test_conditional_expression() {
                         right: Box::new(Expression::Integer64(1)),
                     }),
                     arms: vec![
-                        (Expression::Integer64(1), Expression::Integer64(42)),
-                        (Expression::Integer64(0), Expression::Integer64(0)),
+                        ConditionalArm { pattern: Pattern::Literal(Expression::Integer64(1)), guard: None, body: Expression::Integer64(42) },
+                        ConditionalArm { pattern: Pattern::Literal(Expression::Integer64(0)), guard: None, body: Expression::Integer64(0) },
                     ],
                 }),
             ],
@@ -141,7 +142,7 @@ fn test_variable_declaration() {
 fn test_function_call() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "add".to_string(),
                 args: vec![
                     ("a".to_string(), AstType::I64),
@@ -154,7 +155,7 @@ fn test_function_call() {
                     right: Box::new(Expression::Identifier("b".to_string())),
                 })],
             },
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
@@ -177,7 +178,7 @@ fn test_function_call() {
 #[test]
 fn test_undefined_variable() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "test_undefined".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -196,14 +197,14 @@ fn test_undefined_variable() {
 #[test]
 fn test_type_mismatch() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "test_type_mismatch".to_string(),
             args: vec![],
             return_type: AstType::I64,
             body: vec![Statement::Return(Expression::BinaryOp {
                 left: Box::new(Expression::Integer64(1)),
                 op: ast::BinaryOperator::Add,
-                right: Box::new(Expression::Float(2.0)),
+                right: Box::new(Expression::Float64(2.0)),
             })],
         }]);
 
@@ -222,7 +223,7 @@ fn test_type_mismatch() {
 #[test]
 fn test_undefined_function() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "test_undefined_func".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -244,7 +245,7 @@ fn test_undefined_function() {
 #[test]
 fn test_invalid_function_type() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "test_invalid_type".to_string(),
             args: vec![("x".to_string(), AstType::Function {
                 args: vec![AstType::I64],
@@ -262,7 +263,7 @@ fn test_invalid_function_type() {
 #[test]
 fn test_nested_conditionals() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -274,18 +275,18 @@ fn test_nested_conditionals() {
                         right: Box::new(Expression::Integer64(1)),
                     }),
                     arms: vec![
-                        (Expression::Integer64(1), Expression::Conditional {
+                        ConditionalArm { pattern: Pattern::Literal(Expression::Integer64(1)), guard: None, body: Expression::Conditional {
                             scrutinee: Box::new(Expression::BinaryOp {
                                 left: Box::new(Expression::Integer64(2)),
                                 op: ast::BinaryOperator::Equals,
                                 right: Box::new(Expression::Integer64(2)),
                             }),
                             arms: vec![
-                                (Expression::Integer64(1), Expression::Integer64(42)),
-                                (Expression::Integer64(0), Expression::Integer64(0)),
+                                ConditionalArm { pattern: Pattern::Literal(Expression::Integer64(1)), guard: None, body: Expression::Integer64(42) },
+                                ConditionalArm { pattern: Pattern::Literal(Expression::Integer64(0)), guard: None, body: Expression::Integer64(0) },
                             ],
-                        }),
-                        (Expression::Integer64(0), Expression::Integer64(0)),
+                        }},
+                        ConditionalArm { pattern: Pattern::Literal(Expression::Integer64(0)), guard: None, body: Expression::Integer64(0) },
                     ],
                 }),
             ],
@@ -300,7 +301,7 @@ fn test_nested_conditionals() {
 fn test_function_pointer() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "add".to_string(),
                 args: vec![
                     ("a".to_string(), AstType::I64),
@@ -313,18 +314,19 @@ fn test_function_pointer() {
                     right: Box::new(Expression::Identifier("b".to_string())),
                 })],
             },
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "test_func_ptr".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
                 body: vec![
-                    Statement::VariableDeclaration {
+                    Statement::VariableDeclaration { 
                         name: "op".to_string(),
                         type_: AstType::Function {
                             args: vec![AstType::I64, AstType::I64],
                             return_type: Box::new(AstType::I64),
                         },
                         initializer: Some(Expression::Identifier("add".to_string())),
+                        is_mutable: false,
                     },
                     Statement::Return(Expression::FunctionCall {
                         name: "op".to_string(),
@@ -346,7 +348,7 @@ fn test_function_pointer() {
 fn test_recursive_function() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "factorial".to_string(),
                 args: vec![("n".to_string(), AstType::I64)],
                 return_type: AstType::I64,
@@ -358,8 +360,8 @@ fn test_recursive_function() {
                             right: Box::new(Expression::Integer64(0)),
                         }),
                         arms: vec![
-                            (Expression::Integer64(1), Expression::Integer64(1)),
-                            (Expression::Integer64(0), Expression::BinaryOp {
+                            ConditionalArm { pattern: Pattern::Literal(Expression::Integer64(1)), guard: None, body: Expression::Integer64(1) },
+                            ConditionalArm { pattern: Pattern::Literal(Expression::Integer64(0)), guard: None, body: Expression::BinaryOp {
                                 left: Box::new(Expression::Identifier("n".to_string())),
                                 op: ast::BinaryOperator::Multiply,
                                 right: Box::new(Expression::FunctionCall {
@@ -370,12 +372,12 @@ fn test_recursive_function() {
                                         right: Box::new(Expression::Integer64(1)),
                                     }],
                                 }),
-                            }),
+                            }},
                         ],
                     }),
                 ],
             },
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
@@ -396,20 +398,22 @@ fn test_recursive_function() {
 #[test]
 fn test_pointer_operations() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
             body: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDeclaration { 
                     name: "x".to_string(),
                     type_: AstType::I64,
                     initializer: Some(Expression::Integer64(42)),
+                    is_mutable: false,
                 },
-                Statement::VariableDeclaration {
+                Statement::VariableDeclaration { 
                     name: "p".to_string(),
                     type_: AstType::Pointer(Box::new(AstType::I64)),
                     initializer: Some(Expression::AddressOf(Box::new(Expression::Identifier("x".to_string())))),
+                    is_mutable: false,
                 },
                 Statement::Return(Expression::Dereference(Box::new(Expression::Identifier("p".to_string())))),
             ],
@@ -423,18 +427,19 @@ fn test_pointer_operations() {
 #[test]
 fn test_pointer_arithmetic() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "test_ptr_arithmetic".to_string(),
             args: vec![("arr".to_string(), AstType::Pointer(Box::new(AstType::I64)))],
             return_type: AstType::I64,
             body: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDeclaration { 
                     name: "ptr".to_string(),
                     type_: AstType::Pointer(Box::new(AstType::I64)),
                     initializer: Some(Expression::PointerOffset {
                         pointer: Box::new(Expression::Identifier("arr".to_string())),
                         offset: Box::new(Expression::Integer64(1)),
                     }),
+                    is_mutable: false,
                 },
                 Statement::Return(Expression::Dereference(Box::new(Expression::Identifier("ptr".to_string())))),
             ],
@@ -448,20 +453,22 @@ fn test_pointer_arithmetic() {
 #[test]
 fn test_pointer_assignment() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "test_ptr_assign".to_string(),
             args: vec![],
             return_type: AstType::I64,
             body: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDeclaration { 
                     name: "x".to_string(),
                     type_: AstType::I64,
                     initializer: Some(Expression::Integer64(42)),
+                    is_mutable: false,
                 },
-                Statement::VariableDeclaration {
+                Statement::VariableDeclaration { 
                     name: "ptr".to_string(),
                     type_: AstType::Pointer(Box::new(AstType::I64)),
                     initializer: Some(Expression::AddressOf(Box::new(Expression::Identifier("x".to_string())))),
+                    is_mutable: false,
                 },
                 Statement::PointerAssignment {
                     pointer: Expression::Identifier("ptr".to_string()),
@@ -482,15 +489,16 @@ fn test_pointer_assignment() {
 #[test]
 fn test_invalid_dereferencing_non_pointer() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "test_invalid_deref".to_string(),
             args: vec![],
             return_type: AstType::I64,
             body: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDeclaration { 
                     name: "x".to_string(),
                     type_: AstType::I64,
                     initializer: Some(Expression::Integer64(42)),
+                    is_mutable: false,
                 },
                 Statement::Return(Expression::Dereference(Box::new(Expression::Identifier("x".to_string())))),
             ],
@@ -504,15 +512,16 @@ fn test_invalid_dereferencing_non_pointer() {
 #[test]
 fn test_void_pointer_declaration() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
             body: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDeclaration { 
                     name: "ptr".to_string(),
                     type_: AstType::Pointer(Box::new(AstType::Void)),
                     initializer: None,
+                    is_mutable: false,
                 },
                 Statement::Return(Expression::Integer64(0)),
             ],
@@ -534,13 +543,13 @@ fn test_struct_creation_and_access() {
         ], false);
 
         let program = ast::Program::from_functions(vec![
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
                 body: vec![
                     // Create a struct instance
-                    Statement::VariableDeclaration {
+                    Statement::VariableDeclaration { 
                         name: "p".to_string(),
                         type_: AstType::Struct {
                             name: "Point".to_string(),
@@ -556,6 +565,7 @@ fn test_struct_creation_and_access() {
                                 ("y".to_string(), Expression::Integer64(20)),
                             ],
                         }),
+                        is_mutable: false,
                     },
                     // Access struct field
                     Statement::Return(Expression::StructField {
@@ -575,12 +585,12 @@ fn test_struct_creation_and_access() {
 fn test_struct_pointer() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "test_struct_ptr".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
                 body: vec![
-                    Statement::VariableDeclaration {
+                    Statement::VariableDeclaration { 
                         name: "s".to_string(),
                         type_: AstType::Struct {
                             name: "Point".to_string(),
@@ -596,8 +606,9 @@ fn test_struct_pointer() {
                                 ("y".to_string(), Expression::Integer64(20)),
                             ],
                         }),
+                        is_mutable: false,
                     },
-                    Statement::VariableDeclaration {
+                    Statement::VariableDeclaration { 
                         name: "ptr".to_string(),
                         type_: AstType::Pointer(Box::new(AstType::Struct {
                             name: "Point".to_string(),
@@ -607,6 +618,7 @@ fn test_struct_pointer() {
                             ],
                         })),
                         initializer: Some(Expression::AddressOf(Box::new(Expression::Identifier("s".to_string())))),
+                        is_mutable: false,
                     },
                     Statement::Return(Expression::StructField {
                         struct_: Box::new(Expression::Dereference(Box::new(Expression::Identifier("ptr".to_string())))),
@@ -626,12 +638,12 @@ fn test_struct_pointer() {
 fn test_struct_field_assignment() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "test_struct_assign".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
                 body: vec![
-                    Statement::VariableDeclaration {
+                    Statement::VariableDeclaration { 
                         name: "s".to_string(),
                         type_: AstType::Struct {
                             name: "Point".to_string(),
@@ -647,6 +659,7 @@ fn test_struct_field_assignment() {
                                 ("y".to_string(), Expression::Integer64(20)),
                             ],
                         }),
+                        is_mutable: false,
                     },
                     Statement::VariableAssignment {
                         name: "s".to_string(),
@@ -675,27 +688,30 @@ fn test_struct_field_assignment() {
 #[test]
 fn test_loop_construct() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "test_loop".to_string(),
             args: vec![("n".to_string(), AstType::I64)],
             return_type: AstType::I64,
             body: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDeclaration { 
                     name: "sum".to_string(),
                     type_: AstType::I64,
                     initializer: Some(Expression::Integer64(0)),
+                    is_mutable: false,
                 },
-                Statement::VariableDeclaration {
+                Statement::VariableDeclaration { 
                     name: "i".to_string(),
                     type_: AstType::I64,
                     initializer: Some(Expression::Integer64(0)),
+                    is_mutable: false,
                 },
-                Statement::Loop {
-                    condition: Expression::BinaryOp {
+                Statement::Loop { 
+                    iterator: None, 
+                    condition: Some(Expression::BinaryOp {
                         left: Box::new(Expression::Identifier("i".to_string())),
                         op: ast::BinaryOperator::LessThan,
                         right: Box::new(Expression::Identifier("n".to_string())),
-                    },
+                    }),
                     body: vec![
                         Statement::VariableAssignment {
                             name: "sum".to_string(),
@@ -728,7 +744,7 @@ fn test_loop_construct() {
 fn test_string_concatenation() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "concat_strings".to_string(),
                 args: vec![
                     ("s1".to_string(), AstType::String),
@@ -741,12 +757,12 @@ fn test_string_concatenation() {
                     right: Box::new(Expression::Identifier("s2".to_string())),
                 })],
             },
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
                 body: vec![
-                    Statement::VariableDeclaration {
+                    Statement::VariableDeclaration { 
                         name: "result".to_string(),
                         type_: AstType::String,
                         initializer: Some(Expression::FunctionCall {
@@ -756,6 +772,7 @@ fn test_string_concatenation() {
                                 Expression::String("World!".to_string()),
                             ],
                         }),
+                        is_mutable: false,
                     },
                     Statement::Return(Expression::Integer64(0)),
                 ],
@@ -771,7 +788,7 @@ fn test_string_concatenation() {
 fn test_string_comparison() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "compare_strings".to_string(),
                 args: vec![
                     ("s1".to_string(), AstType::String),
@@ -784,7 +801,7 @@ fn test_string_comparison() {
                     right: Box::new(Expression::Identifier("s2".to_string())),
                 })],
             },
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
@@ -805,7 +822,7 @@ fn test_string_comparison() {
 
         // Test with different strings
         let program = ast::Program::from_functions(vec![
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "compare_strings".to_string(),
                 args: vec![
                     ("s1".to_string(), AstType::String),
@@ -818,7 +835,7 @@ fn test_string_comparison() {
                     right: Box::new(Expression::Identifier("s2".to_string())),
                 })],
             },
-            ast::Function {
+            ast::Function { is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
@@ -842,15 +859,16 @@ fn test_string_comparison() {
 #[test]
 fn test_string_length() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
             body: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDeclaration { 
                     name: "s".to_string(),
                     type_: AstType::String,
                     initializer: Some(Expression::String("hello".to_string())),
+                    is_mutable: false,
                 },
                 Statement::Return(Expression::StringLength(Box::new(Expression::Identifier("s".to_string())))),
             ],
@@ -863,7 +881,7 @@ fn test_string_length() {
 #[test]
 fn test_string_literal_ir() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -934,7 +952,7 @@ fn test_full_pipeline_with_variable() {
             assert_eq!(func.body.len(), 2);
             
             // First statement should be variable declaration
-            if let Statement::VariableDeclaration { name, type_, initializer } = &func.body[0] {
+            if let Statement::VariableDeclaration { is_mutable: false,  name, type_, initializer } = &func.body[0] {
                 assert_eq!(name, "x");
                 assert_eq!(*type_, AstType::I32);
                 assert!(initializer.is_some());
