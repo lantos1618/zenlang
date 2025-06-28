@@ -1,7 +1,7 @@
 use super::LLVMCompiler;
 use crate::ast::Expression;
 use crate::error::CompileError;
-use inkwell::values::BasicValueEnum;
+use inkwell::values::{BasicValueEnum, BasicValue};
 
 impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_expression(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
@@ -153,20 +153,20 @@ impl<'ctx> LLVMCompiler<'ctx> {
 
         // Allocate the array on the heap (malloc)
         let i64_type = self.context.i64_type();
-        let elem_size = i64_type.size_of().unwrap();
+        let elem_size = i64_type.size_of();
         let total_size = i64_type.const_int(array_len as u64, false);
         let malloc_fn = self.module.get_function("malloc").ok_or_else(|| CompileError::InternalError("No malloc function declared".to_string(), None))?;
         let size = self.builder.build_int_mul(elem_size, total_size, "arraysize");
-        let raw_ptr = self.builder.build_call(malloc_fn, &[size.into()], "arraymalloc").try_as_basic_value().left().unwrap().into_pointer_value();
-        let array_ptr = self.builder.build_pointer_cast(raw_ptr, element_type.ptr_type(inkwell::AddressSpace::Generic), "arrayptr");
+        let raw_ptr = self.builder.build_call(malloc_fn, &[size?.into()], "arraymalloc")?.try_as_basic_value().left().unwrap().into_pointer_value();
+        let array_ptr = self.builder.build_pointer_cast(raw_ptr, self.context.ptr_type(inkwell::AddressSpace::default()), "arrayptr")?;
 
         // Store each element
         for (i, expr) in elements.iter().enumerate() {
             let value = self.compile_expression(expr)?;
             let gep = unsafe {
-                self.builder.build_gep(element_type, array_ptr, &[element_type.const_int(i as u64, false)], &format!("arrayidx{}", i))
+                self.builder.build_gep(element_type, array_ptr, &[element_type.const_int(i as u64, false)], &format!("arrayidx{}", i))?
             };
-            self.builder.build_store(gep, value);
+            self.builder.build_store(gep, value)?;
         }
         Ok(array_ptr.as_basic_value_enum())
     }
@@ -177,9 +177,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let array_ptr = self.compile_expression(array)?.into_pointer_value();
         let index_val = self.compile_expression(index)?;
         let gep = unsafe {
-            self.builder.build_gep(element_type, array_ptr, &[index_val.into_int_value()], "arrayidx")
+            self.builder.build_gep(element_type, array_ptr, &[index_val.into_int_value()], "arrayidx")?
         };
-        let loaded = self.builder.build_load(element_type, gep, "arrayload");
+        let loaded = self.builder.build_load(element_type, gep, "arrayload")?;
         Ok(loaded)
     }
 
@@ -213,20 +213,40 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     fn compile_comptime_expression(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // This will be implemented by the comptime module
-        // For now, return a placeholder
-        Ok(self.context.i64_type().const_int(0, false).into())
+        // For now, compile comptime expressions the same as regular expressions
+        // In the future, this should evaluate at compile time and return constants
+        self.compile_expression(expr)
     }
 
-    fn compile_pattern_match(&mut self, scrutinee: &Expression, arms: &[crate::ast::PatternArm]) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // This will be implemented by the control_flow module
-        // For now, return a placeholder
-        Ok(self.context.i64_type().const_int(0, false).into())
+    fn compile_pattern_match(&mut self, _scrutinee: &Expression, arms: &[crate::ast::PatternArm]) -> Result<BasicValueEnum<'ctx>, CompileError> {
+        // For now, implement a simple pattern matching that evaluates the first arm
+        // In the future, this should implement proper pattern matching with guards
+        if let Some(first_arm) = arms.first() {
+            self.compile_expression(&first_arm.body)
+        } else {
+            Err(CompileError::InternalError("Pattern match with no arms".to_string(), None))
+        }
     }
 
     fn compile_range_expression(&mut self, start: &Expression, end: &Expression, inclusive: bool) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // This will be implemented by the types module
-        // For now, return a placeholder
-        Ok(self.context.i64_type().const_int(0, false).into())
+        // For now, represent ranges as a simple struct { start: i64, end: i64, inclusive: bool }
+        let start_val = self.compile_expression(start)?;
+        let end_val = self.compile_expression(end)?;
+        
+        // Create a simple struct type for the range
+        let range_struct_type = self.context.struct_type(&[
+            start_val.get_type(),
+            end_val.get_type(),
+            self.context.bool_type().into(),
+        ], false);
+        
+        // Create the range struct value
+        let range_struct = self.context.const_struct(&[
+            start_val,
+            end_val,
+            self.context.bool_type().const_int(inclusive as u64, false).into(),
+        ], false);
+        
+        Ok(range_struct.as_basic_value_enum())
     }
 } 

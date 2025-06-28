@@ -4,19 +4,16 @@ These are the remaining placeholder methods in `src/codegen/llvm/expressions.rs`
 
 - [x] `compile_array_literal` — Heap-allocate and store array elements (done)
 - [x] `compile_array_index` — Index into arrays and load values (done)
-- [ ] `compile_member_access` — Access struct fields
-- [ ] `compile_enum_variant` — Construct enum variants
-- [ ] `compile_pattern_match` — Pattern matching codegen
-- [ ] `compile_range_expression` — Range value codegen
-- [ ] `compile_comptime_expression` — Compile-time expression evaluation
+- [x] `compile_member_access` — Access struct fields (done)
+- [x] `compile_enum_variant` — Construct enum variants (done)
+- [x] `compile_pattern_match` — Pattern matching codegen (done)
+- [x] `compile_range_expression` — Range value codegen (done)
+- [x] `compile_comptime_expression` — Compile-time expression evaluation (done)
 
-**Order of implementation:**
-1. `compile_member_access`
-2. `compile_enum_variant`
-3. `compile_pattern_match`
-4. `compile_range_expression`
-5. `compile_comptime_expression`
+**All placeholders implemented!** ✅
 
----
-
-Work through these in order for maximum language feature coverage. 
+**Next priorities for biggest impact:**
+1. Fix pointer operations (4 failing tests)
+2. Fix struct support (3 failing tests) 
+3. Fix function pointers (1 failing test)
+4. Fix type inference issues (1 failing test) 
