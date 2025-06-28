@@ -1,0 +1,174 @@
+use super::core::Parser;
+use crate::ast::{Expression, BinaryOperator};
+use crate::error::{CompileError, Result};
+use crate::lexer::Token;
+
+impl<'a> Parser<'a> {
+    pub fn parse_expression(&mut self) -> Result<Expression> {
+        self.parse_binary_expression(0)
+    }
+
+    fn parse_binary_expression(&mut self, precedence: u8) -> Result<Expression> {
+        let mut left = self.parse_unary_expression()?;
+        
+        while let Token::Operator(op) = &self.current_token {
+            let op_clone = op.clone();
+            let next_prec = self.get_precedence(&op_clone);
+            if next_prec > precedence {
+                self.next_token(); // advance past the operator
+                let right = self.parse_binary_expression(next_prec)?;
+                left = Expression::BinaryOp {
+                    left: Box::new(left),
+                    op: self.token_to_binary_operator(&op_clone)?,
+                    right: Box::new(right),
+                };
+            } else {
+                break;
+            }
+        }
+        Ok(left)
+    }
+
+    fn parse_unary_expression(&mut self) -> Result<Expression> {
+        match &self.current_token {
+            Token::Operator(op) if op == "-" => {
+                self.next_token();
+                let expr = self.parse_unary_expression()?;
+                // For now, represent unary minus as BinaryOp with 0 - expr
+                Ok(Expression::BinaryOp {
+                    left: Box::new(Expression::Integer32(0)),
+                    op: BinaryOperator::Subtract,
+                    right: Box::new(expr),
+                })
+            }
+            Token::Operator(op) if op == "!" => {
+                self.next_token();
+                let expr = self.parse_unary_expression()?;
+                // For now, represent logical not as a function call
+                Ok(Expression::FunctionCall {
+                    name: "not".to_string(),
+                    args: vec![expr],
+                })
+            }
+            _ => self.parse_primary_expression(),
+        }
+    }
+
+    fn parse_primary_expression(&mut self) -> Result<Expression> {
+        match &self.current_token {
+            Token::Integer(value_str) => {
+                let value = value_str.parse::<i64>().map_err(|_| {
+                    CompileError::SyntaxError(
+                        format!("Invalid integer: {}", value_str),
+                        Some(self.current_span.clone()),
+                    )
+                })?;
+                self.next_token();
+                if value <= i8::MAX as i64 && value >= i8::MIN as i64 {
+                    Ok(Expression::Integer8(value as i8))
+                } else if value <= i32::MAX as i64 && value >= i32::MIN as i64 {
+                    Ok(Expression::Integer32(value as i32))
+                } else {
+                    Ok(Expression::Integer64(value))
+                }
+            }
+            Token::Float(value_str) => {
+                let value = value_str.parse::<f64>().map_err(|_| {
+                    CompileError::SyntaxError(
+                        format!("Invalid float: {}", value_str),
+                        Some(self.current_span.clone()),
+                    )
+                })?;
+                self.next_token();
+                Ok(Expression::Float64(value))
+            }
+            Token::StringLiteral(value) => {
+                let value = value.clone();
+                self.next_token();
+                Ok(Expression::String(value))
+            }
+            Token::Identifier(name) => {
+                let name = name.clone();
+                self.next_token();
+                if self.current_token == Token::Symbol('(') {
+                    self.parse_call_expression(name)
+                } else {
+                    Ok(Expression::Identifier(name))
+                }
+            }
+            Token::Symbol('(') => {
+                self.next_token();
+                let expr = self.parse_expression()?;
+                if self.current_token != Token::Symbol(')') {
+                    return Err(CompileError::SyntaxError(
+                        "Expected closing parenthesis".to_string(),
+                        Some(self.current_span.clone()),
+                    ));
+                }
+                self.next_token();
+                Ok(expr)
+            }
+            _ => Err(CompileError::SyntaxError(
+                format!("Unexpected token: {:?}", self.current_token),
+                Some(self.current_span.clone()),
+            )),
+        }
+    }
+
+    fn parse_call_expression(&mut self, function_name: String) -> Result<Expression> {
+        self.next_token(); // consume '('
+        let mut arguments = vec![];
+        if self.current_token != Token::Symbol(')') {
+            loop {
+                arguments.push(self.parse_expression()?);
+                if self.current_token == Token::Symbol(')') {
+                    break;
+                }
+                if self.current_token != Token::Symbol(',') {
+                    return Err(CompileError::SyntaxError(
+                        "Expected ',' or ')' in function call".to_string(),
+                        Some(self.current_span.clone()),
+                    ));
+                }
+                self.next_token();
+            }
+        }
+        self.next_token(); // consume ')'
+        Ok(Expression::FunctionCall {
+            name: function_name,
+            args: arguments,
+        })
+    }
+
+    fn token_to_binary_operator(&self, op: &str) -> Result<BinaryOperator> {
+        match op {
+            "+" => Ok(BinaryOperator::Add),
+            "-" => Ok(BinaryOperator::Subtract),
+            "*" => Ok(BinaryOperator::Multiply),
+            "/" => Ok(BinaryOperator::Divide),
+            "%" => Ok(BinaryOperator::Modulo),
+            "==" => Ok(BinaryOperator::Equals),
+            "!=" => Ok(BinaryOperator::NotEquals),
+            "<" => Ok(BinaryOperator::LessThan),
+            ">" => Ok(BinaryOperator::GreaterThan),
+            "<=" => Ok(BinaryOperator::LessThanEquals),
+            ">=" => Ok(BinaryOperator::GreaterThanEquals),
+            "&&" => Ok(BinaryOperator::And),
+            "||" => Ok(BinaryOperator::Or),
+            _ => Err(CompileError::SyntaxError(
+                format!("Unknown binary operator: {}", op),
+                Some(self.current_span.clone()),
+            )),
+        }
+    }
+
+    fn get_precedence(&self, op: &str) -> u8 {
+        match op {
+            "==" | "!=" => 1,
+            "<" | "<=" | ">" | ">=" => 2,
+            "+" | "-" => 3,
+            "*" | "/" | "%" => 4,
+            _ => 0,
+        }
+    }
+}

@@ -5,6 +5,7 @@ use crate::ast::Program;
 use crate::codegen::llvm::LLVMCompiler;
 use crate::error::{CompileError, Result};
 use inkwell::context::Context;
+use inkwell::module::Module;
 
 /// The main compiler structure.
 pub struct Compiler<'ctx> {
@@ -30,5 +31,20 @@ impl<'ctx> Compiler<'ctx> {
         }
 
         Ok(llvm_compiler.module.print_to_string().to_string())
+    }
+
+    /// Gets the LLVM module after compilation for execution engine creation.
+    pub fn get_module(&self, program: &Program) -> Result<Module<'ctx>> {
+        let mut llvm_compiler = LLVMCompiler::new(self.context);
+        llvm_compiler.compile_program(program)?;
+
+        if let Err(e) = llvm_compiler.module.verify() {
+            return Err(CompileError::InternalError(
+                format!("LLVM verification error: {}", e.to_string()),
+                None,
+            ));
+        }
+
+        Ok(llvm_compiler.module)
     }
 } 
