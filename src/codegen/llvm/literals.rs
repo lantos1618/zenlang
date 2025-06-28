@@ -1,8 +1,9 @@
-use super::core::Compiler;
+use super::LLVMCompiler;
+use crate::ast::AstType;
 use crate::error::CompileError;
 use inkwell::values::BasicValueEnum;
 
-impl<'ctx> Compiler<'ctx> {
+impl<'ctx> LLVMCompiler<'ctx> {
     // Expression compilation methods for literals
     pub fn compile_integer_literal(&self, value: i64) -> Result<BasicValueEnum<'ctx>, CompileError> {
         Ok(self.context.i64_type().const_int(value as u64, false).into())

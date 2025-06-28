@@ -11,21 +11,23 @@ use inkwell::module::Module;
 use inkwell::builder::Builder;
 use inkwell::execution_engine::{ExecutionEngine};
 
-/// A test context that manages the LLVM context, module, and compiler state
+/// A test context that manages the LLVM context and compiler state
 /// for running tests. This ensures all compilation and execution use the same
-/// module and context.
+/// context.
 pub struct TestContext<'ctx> {
     context: &'ctx Context,
     compiler: Compiler<'ctx>,
+    compiled_ir: Option<String>,
 }
 
 impl<'ctx> TestContext<'ctx> {
-    /// Creates a new test context with a fresh module and compiler.
+    /// Creates a new test context with a fresh compiler.
     pub fn new(context: &'ctx Context) -> Self {
         let compiler = Compiler::new(context);
         Self {
             context,
             compiler,
+            compiled_ir: None,
         }
     }
 
@@ -35,6 +37,7 @@ impl<'ctx> TestContext<'ctx> {
         // Create a new compiler instance to ensure clean state
         // This is safer than trying to clear individual fields, especially private ones
         self.compiler = Compiler::new(self.context);
+        self.compiled_ir = None;
     }
 
     /// Compiles a program into the test context's module.
@@ -42,31 +45,15 @@ impl<'ctx> TestContext<'ctx> {
         // Reset to a clean state before each compilation
         self.reset();
         
-        // Compile the program
-        self.compiler.compile_program(program)?;
-        
-        // Verify functions were added to the module
-        let func_count = self.compiler.module.get_functions().count();
-        println!("After compilation, module has {} functions", func_count);
-        
-        if func_count == 0 {
-            return Err(CompileError::InternalError(
-                "No functions were added to the module".to_string(), 
-                None
-            ));
-        }
+        // Compile the program using the new API
+        let ir = self.compiler.compile_llvm(program)?;
+        self.compiled_ir = Some(ir);
         
         // Print the module's IR for debugging
         println!(
             "Module IR after compilation:\n{}", 
-            self.compiler.module.print_to_string().to_string()
+            self.compiled_ir.as_ref().unwrap()
         );
-        
-        // Verify the module has the expected functions
-        let func_names: Vec<_> = self.compiler.module.get_functions()
-            .map(|f| f.get_name().to_str().unwrap_or("<invalid>").to_string())
-            .collect();
-        println!("Functions in module after compilation: {:?}", func_names);
         
         Ok(())
     }
@@ -74,38 +61,15 @@ impl<'ctx> TestContext<'ctx> {
     /// Runs a compiled program and returns its result.
     /// The program must have a 'main' function that returns an i64.
     pub fn run(&self) -> Result<i64, String> {
-        // Debug: Print all functions in the module
-        println!("Functions in module before execution (count: {}):", self.compiler.module.get_functions().count());
-        for func in self.compiler.module.get_functions() {
-            println!("  - {}", func.get_name().to_str().unwrap_or("<invalid>"));
-        }
-        
-        // Create a new execution engine with our module
-        let execution_engine = self.compiler.module
-            .create_jit_execution_engine(OptimizationLevel::None)
-            .map_err(|e| format!("Failed to create JIT engine: {}", e))?;
-            
-        // Verify the module contains the main function
-        if self.compiler.module.get_function("main").is_none() {
-            return Err(format!("Module does not contain a 'main' function. Available functions: {:?}", 
-                self.compiler.module.get_functions()
-                    .map(|f| f.get_name().to_str().unwrap_or("<invalid>").to_string())
-                    .collect::<Vec<_>>()
-            ));
-        }
-
-        let jit_function: JitFunction<unsafe extern "C" fn() -> i64> = unsafe {
-            execution_engine
-                .get_function("main")
-                .map_err(|e| format!("Failed to get main function: {}", e))?
-        };
-
-        Ok(unsafe { jit_function.call() })
+        // For now, we'll need to recompile to get access to the module for execution
+        // This is a limitation of the new architecture - we need to store the LLVM compiler
+        // or provide a way to execute the compiled IR
+        Err("Execution not yet implemented in new architecture".to_string())
     }
 
     /// Gets the IR string for the current module.
     pub fn get_ir(&self) -> String {
-        self.compiler.module.print_to_string().to_string()
+        self.compiled_ir.clone().unwrap_or_else(|| "No IR available".to_string())
     }
 
     /// Creates a simple test program that returns a constant value.

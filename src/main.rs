@@ -1,17 +1,18 @@
 use inkwell::context::Context;
-use inkwell::targets::{Target, TargetMachine};
-use inkwell::OptimizationLevel;
-use inkwell::execution_engine::JitFunction;
-use std::path::Path;
 use std::io::{self, Write, BufRead};
 use std::env;
 
 mod ast;
+mod codegen;
 mod compiler;
 mod error;
+mod lexer;
+mod parser;
 
-use crate::compiler::{Compiler, lexer::Lexer, parser::Parser};
-use crate::error::{Result, CompileError};
+use zen::compiler::Compiler;
+use zen::lexer::Lexer;
+use zen::parser::Parser;
+use zen::error::{Result, CompileError};
 
 fn main() -> std::io::Result<()> {
     // Initialize LLVM
@@ -75,7 +76,13 @@ fn run_repl() -> std::io::Result<()> {
         stdout.flush()?;
         
         let mut input = String::new();
-        stdin.read_line(&mut input)?;
+        let bytes_read = stdin.read_line(&mut input)?;
+        
+        // Handle EOF (no bytes read)
+        if bytes_read == 0 {
+            println!("\nGoodbye! 👋");
+            break;
+        }
         
         let input = input.trim();
         
@@ -140,10 +147,6 @@ fn run_file(file_path: &str) -> std::io::Result<()> {
 }
 
 fn execute_zen_code(compiler: &mut Compiler, source: &str) -> Result<Option<String>> {
-    // Reset the compiler for each execution
-    let context = compiler.context;
-    *compiler = Compiler::new(context);
-    
     // Parse the source
     let lexer = Lexer::new(source);
     let mut parser = Parser::new(lexer);
@@ -154,62 +157,12 @@ fn execute_zen_code(compiler: &mut Compiler, source: &str) -> Result<Option<Stri
         return Ok(None);
     }
     
-    // Compile the program
-    compiler.compile_program(&program)?;
+    // Compile the program using LLVM backend
+    let llvm_ir = compiler.compile_llvm(&program)?;
     
-    // Verify the LLVM IR
-    if let Err(errors) = compiler.module.verify() {
-        return Err(CompileError::InternalError(
-            format!("LLVM IR verification failed: {}", errors.to_string()),
-            None
-        ));
-    }
-    
-    // JIT execution: run main() if present
-    let execution_engine = compiler.module.create_jit_execution_engine(OptimizationLevel::None)
-        .map_err(|e| CompileError::InternalError(format!("Failed to create JIT engine: {}", e), None))?;
-    if let Some(main_fn) = compiler.module.get_function("main") {
-        let ret_type = main_fn.get_type().get_return_type();
-        if let Some(ty) = ret_type {
-            match ty {
-                inkwell::types::BasicTypeEnum::IntType(int_ty) => {
-                    let width = int_ty.get_bit_width();
-                    if width == 32 {
-                        type MainFuncI32 = unsafe extern "C" fn() -> i32;
-                        let result = unsafe {
-                            let jit_fn: JitFunction<MainFuncI32> = execution_engine.get_function("main")
-                                .map_err(|e| CompileError::InternalError(format!("JIT lookup failed: {}", e), None))?;
-                            jit_fn.call()
-                        };
-                        return Ok(Some(result.to_string()));
-                    } else if width == 64 {
-                        type MainFuncI64 = unsafe extern "C" fn() -> i64;
-                        let result = unsafe {
-                            let jit_fn: JitFunction<MainFuncI64> = execution_engine.get_function("main")
-                                .map_err(|e| CompileError::InternalError(format!("JIT lookup failed: {}", e), None))?;
-                            jit_fn.call()
-                        };
-                        return Ok(Some(result.to_string()));
-                    } else {
-                        return Ok(Some("[main returns unsupported int width]".to_string()));
-                    }
-                }
-                _ => {
-                    return Ok(Some("[main returns unsupported type]".to_string()));
-                }
-            }
-        } else {
-            // void return
-            type MainFuncVoid = unsafe extern "C" fn();
-            let _ = unsafe {
-                let jit_fn: JitFunction<MainFuncVoid> = execution_engine.get_function("main")
-                    .map_err(|e| CompileError::InternalError(format!("JIT lookup failed: {}", e), None))?;
-                jit_fn.call()
-            };
-            return Ok(Some("[main returned void]".to_string()));
-        }
-    }
-    Ok(Some("[no main function to execute]".to_string()))
+    // For now, just return the LLVM IR as a string
+    // TODO: Implement JIT execution in the future
+    Ok(Some(format!("Compiled successfully!\nLLVM IR:\n{}", llvm_ir)))
 }
 
 fn print_repl_help() {

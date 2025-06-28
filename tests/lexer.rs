@@ -1,4 +1,5 @@
-use zen::compiler::lexer::{Lexer, Token};
+use zen::lexer::Lexer;
+use zen::lexer::Token;
 
 #[test]
 fn test_lexer_identifier_integer_eof() {

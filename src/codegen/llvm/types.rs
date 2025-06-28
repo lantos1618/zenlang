@@ -1,6 +1,12 @@
-use super::*;
+use super::{LLVMCompiler, Type};
+use crate::ast::AstType;
+use crate::error::CompileError;
+use inkwell::{
+    types::{BasicType, BasicTypeEnum, BasicMetadataTypeEnum},
+    AddressSpace,
+};
 
-impl<'ctx> Compiler<'ctx> {
+impl<'ctx> LLVMCompiler<'ctx> {
     pub fn to_llvm_type(&mut self, type_: &AstType) -> Result<Type<'ctx>, CompileError> {
         match type_ {
             AstType::I8 => Ok(Type::Basic(self.context.i8_type().into())),

@@ -1,6 +1,12 @@
-use super::*;
+use super::{LLVMCompiler, Type};
+use crate::ast::{AstType, Expression, Statement};
+use crate::error::CompileError;
+use inkwell::{
+    types::{BasicType, BasicTypeEnum},
+    values::BasicValueEnum,
+};
 
-impl<'ctx> Compiler<'ctx> {
+impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_statement(&mut self, statement: &Statement) -> Result<(), CompileError> {
         match statement {
             Statement::Expression(expr) => {

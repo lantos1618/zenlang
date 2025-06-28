@@ -1,13 +1,14 @@
-use super::core::{Compiler, Type};
-use crate::ast::{self, AstType};
+use super::{LLVMCompiler, Type};
+use crate::ast::{self, AstType, ExternalFunction, Function};
 use crate::error::CompileError;
 use inkwell::{
-    types::{BasicTypeEnum, BasicMetadataTypeEnum},
-    values::BasicValueEnum,
+    types::{BasicType, BasicTypeEnum, BasicMetadataTypeEnum},
+    values::{BasicValueEnum, FunctionValue, PointerValue},
+    AddressSpace,
 };
 use inkwell::module::Linkage;
 
-impl<'ctx> Compiler<'ctx> {
+impl<'ctx> LLVMCompiler<'ctx> {
     /// Declares an external function (C FFI)
     pub fn declare_external_function(&mut self, ext_func: &ast::ExternalFunction) -> Result<(), CompileError> {
         let ret_type = self.to_llvm_type(&ext_func.return_type)?;

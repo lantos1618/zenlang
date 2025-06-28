@@ -1,10 +1,11 @@
-use super::core::Compiler;
+use super::LLVMCompiler;
+use crate::ast::Expression;
 use crate::error::CompileError;
 use inkwell::values::BasicValueEnum;
 use inkwell::IntPredicate;
 
-impl<'ctx> Compiler<'ctx> {
-    pub fn compile_conditional(&mut self, scrutinee: &ast::Expression, arms: &[(ast::Expression, ast::Expression)]) -> Result<BasicValueEnum<'ctx>, CompileError> {
+impl<'ctx> LLVMCompiler<'ctx> {
+    pub fn compile_conditional(&mut self, scrutinee: &Expression, arms: &[(Expression, Expression)]) -> Result<BasicValueEnum<'ctx>, CompileError> {
         let parent_function = self.current_function
             .ok_or_else(|| CompileError::InternalError("No current function for conditional".to_string(), None))?;
         let cond_val = self.compile_expression(scrutinee)?;

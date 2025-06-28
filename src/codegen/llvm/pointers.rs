@@ -1,11 +1,16 @@
-use super::core::Compiler;
+use super::LLVMCompiler;
+use crate::ast::Expression;
 use crate::error::CompileError;
-use inkwell::values::BasicValueEnum;
+use inkwell::{
+    types::{AsTypeRef, BasicType, BasicTypeEnum},
+    values::{BasicValue, BasicValueEnum, PointerValue},
+    AddressSpace,
+};
 
-impl<'ctx> Compiler<'ctx> {
-    pub fn compile_address_of(&mut self, expr: &ast::Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
+impl<'ctx> LLVMCompiler<'ctx> {
+    pub fn compile_address_of(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
         match expr {
-            ast::Expression::Identifier(name) => {
+            Expression::Identifier(name) => {
                 let (alloca, _type_) = self
                     .variables
                     .get(name)
@@ -19,7 +24,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    pub fn compile_dereference(&mut self, expr: &ast::Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
+    pub fn compile_dereference(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
         let ptr_val = self.compile_expression(expr)?;
         if !ptr_val.is_pointer_value() {
             return Err(CompileError::TypeMismatch {
@@ -32,11 +37,11 @@ impl<'ctx> Compiler<'ctx> {
         
         // Try to determine the element type from the pointer
         // For struct pointers, we need to find the struct type
-        let element_type: inkwell::types::BasicTypeEnum = if let inkwell::types::BasicTypeEnum::PointerType(_) = ptr_val.get_type() {
+        let element_type: BasicTypeEnum = if let BasicTypeEnum::PointerType(_) = ptr_val.get_type() {
             // Check if this is a pointer to a struct
             let struct_name = self.struct_types.iter()
                 .find(|(_, _info)| {
-                    let struct_ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
+                    let struct_ptr_type = self.context.ptr_type(AddressSpace::default());
                     struct_ptr_type.as_type_ref() == ptr_val.get_type().as_type_ref()
                 })
                 .map(|(name, _)| name.clone());
@@ -58,7 +63,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(self.builder.build_load(element_type, ptr, "load_tmp")?.into())
     }
 
-    pub fn compile_pointer_offset(&mut self, pointer: &ast::Expression, offset: &ast::Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
+    pub fn compile_pointer_offset(&mut self, pointer: &Expression, offset: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
         let base_val = self.compile_expression(pointer)?;
         let offset_val = self.compile_expression(offset)?;
         if !base_val.is_pointer_value() {

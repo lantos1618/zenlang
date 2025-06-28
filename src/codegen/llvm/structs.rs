@@ -1,6 +1,23 @@
-use super::*;
+use super::{LLVMCompiler, Type};
+use crate::ast::{AstType, Expression};
+use crate::error::CompileError;
+use inkwell::{
+    types::{AsTypeRef, StructType},
+    values::BasicValueEnum,
+};
+use inkwell::types::BasicTypeEnum;
+use std::collections::HashMap;
 
-impl<'ctx> Compiler<'ctx> {
+#[derive(Debug, Clone)]
+pub struct StructTypeInfo<'ctx> {
+    /// The LLVM struct type
+    pub llvm_type: StructType<'ctx>,
+    /// Mapping from field name to (index, type)
+    pub fields: HashMap<String, (usize, AstType)>,
+}
+// Move any struct registration, lookup, or field access helpers here as needed. 
+
+impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_struct_literal(&mut self, name: &str, fields: &[(String, Expression)]) -> Result<BasicValueEnum<'ctx>, CompileError> {
         let (llvm_type, fields_with_info) = {
             let struct_info = self.struct_types.get(name)
@@ -68,7 +85,7 @@ impl<'ctx> Compiler<'ctx> {
                 let struct_name = self.struct_types.iter()
                     .find(|(_, _info)| {
                         // Check if this struct's pointer type matches our pointer type
-                        let struct_ptr_type = self.context.ptr_type(AddressSpace::default());
+                        let struct_ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
                         struct_ptr_type.as_type_ref() == ptr_type.as_type_ref()
                     })
                     .map(|(name, _)| name.clone());

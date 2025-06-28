@@ -1,16 +1,16 @@
-use super::core::Compiler;
-use crate::ast::BinaryOperator;
+use super::LLVMCompiler;
+use crate::ast::{Expression, BinaryOperator};
 use crate::error::CompileError;
 use inkwell::values::BasicValueEnum;
 use inkwell::{IntPredicate, FloatPredicate};
 use inkwell::AddressSpace;
 
-impl<'ctx> Compiler<'ctx> {
+impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_binary_operation(
         &mut self,
         op: &BinaryOperator,
-        left: &ast::Expression,
-        right: &ast::Expression,
+        left: &Expression,
+        right: &Expression,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         let left_val = self.compile_expression(left)?;
         let right_val = self.compile_expression(right)?;
@@ -396,11 +396,153 @@ impl<'ctx> Compiler<'ctx> {
         left_val: BasicValueEnum<'ctx>,
         right_val: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // For now, just return a concatenated string pointer
-        // TODO: Implement proper string concatenation
+        // Ensure both operands are string pointers (i8* in LLVM)
         let i8_ptr_type = self.context.ptr_type(AddressSpace::default());
-        let result = i8_ptr_type.const_null();
-        Ok(result.into())
+        
+        let left_ptr = if left_val.is_pointer_value() {
+            left_val.into_pointer_value()
+        } else if left_val.is_int_value() {
+            // Convert from integer to pointer
+            let int_val = left_val.into_int_value();
+            self.builder.build_int_to_ptr(
+                int_val,
+                i8_ptr_type,
+                "str_ptr"
+            )?
+        } else {
+            return Err(CompileError::TypeMismatch {
+                expected: "string or string pointer".to_string(),
+                found: left_val.get_type().to_string(),
+                span: None,
+            });
+        };
+        
+        let right_ptr = if right_val.is_pointer_value() {
+            right_val.into_pointer_value()
+        } else if right_val.is_int_value() {
+            // Convert from integer to pointer
+            let int_val = right_val.into_int_value();
+            self.builder.build_int_to_ptr(
+                int_val,
+                i8_ptr_type,
+                "str_ptr"
+            )?
+        } else {
+            return Err(CompileError::TypeMismatch {
+                expected: "string or string pointer".to_string(),
+                found: right_val.get_type().to_string(),
+                span: None,
+            });
+        };
+        
+        // Declare the strcat function if it doesn't exist
+        let strcat_fn = match self.module.get_function("strcat") {
+            Some(f) => f,
+            None => {
+                // Declare strcat: i8* @strcat(i8*, i8*)
+                let i8_ptr_type = self.context.ptr_type(AddressSpace::default());
+                let fn_type = self.context.i8_type().fn_type(
+                    &[i8_ptr_type.into(), i8_ptr_type.into()], 
+                    false
+                );
+                self.module.add_function("strcat", fn_type, None)
+            }
+        };
+        
+        // Declare malloc if it doesn't exist
+        let malloc_fn = match self.module.get_function("malloc") {
+            Some(f) => f,
+            None => {
+                // Declare malloc: i8* @malloc(i64)
+                let i64_type = self.context.i64_type();
+                let fn_type = self.context.ptr_type(AddressSpace::default())
+                    .fn_type(&[i64_type.into()], false);
+                self.module.add_function("malloc", fn_type, None)
+            }
+        };
+        
+        // Declare strlen if it doesn't exist
+        let strlen_fn = match self.module.get_function("strlen") {
+            Some(f) => f,
+            None => {
+                // Declare strlen: i64 @strlen(i8*)
+                let i8_ptr_type = self.context.ptr_type(AddressSpace::default());
+                let fn_type = self.context.i64_type().fn_type(
+                    &[i8_ptr_type.into()], 
+                    false
+                );
+                self.module.add_function("strlen", fn_type, None)
+            }
+        };
+        
+        // Get lengths of both strings
+        let left_len = {
+            let call = self.builder.build_call(
+                strlen_fn, 
+                &[left_ptr.into()], 
+                "left_len"
+            )?;
+            call.try_as_basic_value().left().ok_or_else(|| 
+                CompileError::InternalError("strlen did not return a value".to_string(), None)
+            )?.into_int_value()
+        };
+        
+        let right_len = {
+            let call = self.builder.build_call(
+                strlen_fn, 
+                &[right_ptr.into()], 
+                "right_len"
+            )?;
+            call.try_as_basic_value().left().ok_or_else(|| 
+                CompileError::InternalError("strlen did not return a value".to_string(), None)
+            )?.into_int_value()
+        };
+        
+        // Calculate total length needed (left + right + 1 for null terminator)
+        let total_len = self.builder.build_int_add(
+            left_len,
+            right_len,
+            "total_len"
+        )?;
+        
+        let one = self.context.i64_type().const_int(1, false);
+        let total_len = self.builder.build_int_add(total_len, one, "total_len_with_null")?;
+        
+        // Allocate memory for the new string
+        let new_str_ptr = {
+            let call = self.builder.build_call(
+                malloc_fn,
+                &[total_len.into()],
+                "new_str"
+            )?;
+            call.try_as_basic_value().left().ok_or_else(|| 
+                CompileError::InternalError("malloc did not return a value".to_string(), None)
+            )?.into_pointer_value()
+        };
+        
+        // Cast the result to i8*
+        let new_str_ptr = self.builder.build_pointer_cast(
+            new_str_ptr,
+            self.context.ptr_type(AddressSpace::default()),
+            "new_str_ptr"
+        )?;
+        
+        // Copy first string
+        self.builder.build_store(new_str_ptr, self.context.i8_type().const_int(0, false))?;
+        let _ = self.builder.build_call(
+            strcat_fn,
+            &[new_str_ptr.into(), left_ptr.into()],
+            "concat1"
+        )?;
+        
+        // Concatenate second string
+        let _ = self.builder.build_call(
+            strcat_fn,
+            &[new_str_ptr.into(), right_ptr.into()],
+            "concat2"
+        )?;
+        
+        Ok(new_str_ptr.into())
     }
 
     fn compile_modulo(

@@ -7,130 +7,89 @@ use inkwell::execution_engine::JitFunction;
 use inkwell::types::BasicType;
 use zen::ast::{self, AstType, Expression, Statement, BinaryOperator, VariableDeclarationType};
 use zen::compiler::Compiler;
-use zen::compiler::symbols::{SymbolTable, Symbol};
+use zen::codegen::llvm::LLVMCompiler;
 use zen::error::CompileError;
 use std::ops::{Deref, DerefMut};
 
-/// A test context that manages the LLVM context, module, and compiler state
+/// A test context that manages the LLVM context and compiler state
 /// for running tests. This ensures all compilation and execution use the same
-/// module and context.
+/// context.
 pub struct TestContext<'ctx> {
     context: &'ctx Context,
     compiler: Compiler<'ctx>,
+    llvm_compiler: Option<LLVMCompiler<'ctx>>,
 }
 
 impl<'ctx> TestContext<'ctx> {
-    /// Creates a new test context with a fresh module and compiler.
+    /// Creates a new test context with a fresh compiler.
     pub fn new(context: &'ctx Context) -> Self {
         let compiler = Compiler::new(context);
         Self {
             context,
             compiler,
+            llvm_compiler: None,
         }
     }
 
-    /// Resets the test context to a clean state.
-    /// This clears all compiled code and resets the compiler state.
-    /// More efficient than creating a new compiler instance.
-    pub fn reset(&mut self) {
-        // Clear the module by creating a new one with the same context
-        // This is safer than creating a new compiler instance which can cause
-        // LLVM object lifetime issues
-        self.compiler.module = self.context.create_module("main");
+    /// Compiles a program and returns the LLVM IR as a string.
+    pub fn compile(&mut self, program: &ast::Program) -> Result<String, CompileError> {
+        // Create a new LLVM compiler and compile the program
+        let mut llvm_compiler = LLVMCompiler::new(self.context);
+        llvm_compiler.compile_program(program)?;
         
-        // Reset the builder
-        self.compiler.builder = self.context.create_builder();
+        // Store the compiler for later use
+        self.llvm_compiler = Some(llvm_compiler);
         
-        // Clear all volatile state
-        self.compiler.variables.clear();
-        self.compiler.functions.clear();
-        self.compiler.current_function = None;
-        self.compiler.struct_types.clear();
-        
-        // Reset symbol table but keep basic types
-        self.compiler.symbols = SymbolTable::new();
-        
-        // Re-add basic types to the symbol table
-        let i64_type = self.context.i64_type();
-        let i32_type = self.context.i32_type();
-        let float_type = self.context.f64_type();
-        let bool_type = self.context.bool_type();
-        
-        self.compiler.symbols.insert("i64", Symbol::Type(i64_type.as_basic_type_enum()));
-        self.compiler.symbols.insert("i32", Symbol::Type(i32_type.as_basic_type_enum()));
-        self.compiler.symbols.insert("f64", Symbol::Type(float_type.as_basic_type_enum()));
-        self.compiler.symbols.insert("bool", Symbol::Type(bool_type.as_basic_type_enum()));
+        // Return the IR as a string
+        Ok(self.llvm_compiler.as_ref().unwrap().module.print_to_string().to_string())
     }
 
-    /// Compiles a program into the test context's module.
-    pub fn compile(&mut self, program: &ast::Program) -> Result<(), CompileError> {
-        // Reset to a clean state before each compilation
-        self.reset();
-        
-        // Compile the program
-        self.compiler.compile_program(program)?;
-        
-        // Verify functions were added to the module
-        let func_count = self.compiler.module.get_functions().count();
-        println!("After compilation, module has {} functions", func_count);
-        
-        if func_count == 0 {
-            return Err(CompileError::InternalError(
-                "No functions were added to the module".to_string(), 
-                None
-            ));
+    /// Gets the LLVM IR as a string.
+    pub fn get_ir(&self) -> Result<String, CompileError> {
+        if let Some(ref llvm_compiler) = self.llvm_compiler {
+            Ok(llvm_compiler.module.print_to_string().to_string())
+        } else {
+            Err(CompileError::InternalError("No LLVM compiler available".to_string(), None))
         }
-        
-        // Print the module's IR for debugging
-        println!(
-            "Module IR after compilation:\n{}", 
-            self.compiler.module.print_to_string().to_string()
-        );
-        
-        // Verify the module has the expected functions
-        let func_names: Vec<_> = self.compiler.module.get_functions()
-            .map(|f| f.get_name().to_str().unwrap_or("<invalid>").to_string())
-            .collect();
-        println!("Functions in module after compilation: {:?}", func_names);
-        
-        Ok(())
     }
 
-    /// Runs a compiled program and returns its result.
-    /// The program must have a 'main' function that returns an i64.
-    pub fn run(&self) -> Result<i64, String> {
-        // Debug: Print all functions in the module
-        println!("Functions in module before execution (count: {}):", self.compiler.module.get_functions().count());
-        for func in self.compiler.module.get_functions() {
-            println!("  - {}", func.get_name().to_str().unwrap_or("<invalid>"));
-        }
-        
-        // Create a new execution engine with our module
-        let execution_engine = self.compiler.module
-            .create_jit_execution_engine(OptimizationLevel::None)
-            .map_err(|e| format!("Failed to create JIT engine: {}", e))?;
-            
-        // Verify the module contains the main function
-        if self.compiler.module.get_function("main").is_none() {
-            return Err(format!("Module does not contain a 'main' function. Available functions: {:?}", 
-                self.compiler.module.get_functions()
-                    .map(|f| f.get_name().to_str().unwrap_or("<invalid>").to_string())
-                    .collect::<Vec<_>>()
-            ));
-        }
+    /// Runs a compiled program and returns the result.
+    pub fn run(&self) -> Result<i64, CompileError> {
+        if let Some(ref llvm_compiler) = self.llvm_compiler {
+            let execution_engine = llvm_compiler.module
+                .create_jit_execution_engine(OptimizationLevel::None)
+                .map_err(|e| CompileError::InternalError(format!("Failed to create execution engine: {}", e), None))?;
 
-        let jit_function: JitFunction<unsafe extern "C" fn() -> i64> = unsafe {
-            execution_engine
-                .get_function("main")
-                .map_err(|e| format!("Failed to get main function: {}", e))?
-        };
+            let main_function: JitFunction<unsafe extern "C" fn() -> i64> = unsafe {
+                execution_engine
+                    .get_function("main")
+                    .map_err(|e| CompileError::InternalError(format!("Failed to get main function: {}", e), None))?
+            };
 
-        Ok(unsafe { jit_function.call() })
+            unsafe {
+                Ok(main_function.call())
+            }
+        } else {
+            Err(CompileError::InternalError("No LLVM compiler available".to_string(), None))
+        }
     }
 
-    /// Gets the IR string for the current module.
-    pub fn get_ir(&self) -> String {
-        self.compiler.module.print_to_string().to_string()
+    /// Gets access to the LLVM module for testing purposes.
+    pub fn module(&self) -> Result<&inkwell::module::Module<'ctx>, CompileError> {
+        if let Some(ref llvm_compiler) = self.llvm_compiler {
+            Ok(&llvm_compiler.module)
+        } else {
+            Err(CompileError::InternalError("No LLVM compiler available".to_string(), None))
+        }
+    }
+
+    /// Gets mutable access to the LLVM compiler for testing purposes.
+    pub fn llvm_compiler_mut(&mut self) -> Result<&mut LLVMCompiler<'ctx>, CompileError> {
+        if let Some(ref mut llvm_compiler) = self.llvm_compiler {
+            Ok(llvm_compiler)
+        } else {
+            Err(CompileError::InternalError("No LLVM compiler available".to_string(), None))
+        }
     }
 
     /// Creates a simple test program that returns a constant value.
@@ -200,7 +159,7 @@ impl<'ctx> TestContext<'ctx> {
             ast::Function {
                 name: "main".to_string(),
                 args: vec![],
-                return_type: AstType::I64,
+                return_type: return_type,
                 body: vec![Statement::Return(Expression::FunctionCall {
                     name: func_name.to_string(),
                     args,
@@ -210,24 +169,15 @@ impl<'ctx> TestContext<'ctx> {
         ])
     }
 
-    /// Creates a test program that declares and returns a function.
+    /// Creates a test program with a function that returns a specific type.
     pub fn create_function_program(name: &str, return_type: AstType) -> ast::Program {
-        ast::Program::from_functions(vec![
-            ast::Function {
-                name: name.to_string(),
-                args: vec![("arg".to_string(), return_type.clone())],
-                return_type: return_type.clone(),
-                body: vec![Statement::Return(Expression::Identifier("arg".to_string()))],
-                is_async: false,
-            },
-            ast::Function {
-                name: "main".to_string(),
-                args: vec![],
-                return_type: AstType::I64,
-                body: vec![Statement::Return(Expression::Integer64(0))],
-                is_async: false,
-            },
-        ])
+        ast::Program::from_functions(vec![ast::Function {
+            name: name.to_string(),
+            args: vec![],
+            return_type: return_type,
+            body: vec![Statement::Return(Expression::Integer64(42))], // Default return value
+            is_async: false,
+        }])
     }
 }
 

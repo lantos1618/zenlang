@@ -36,9 +36,9 @@ fn main() {
             is_async: false,
         }]);
 
-        compiler.compile_program(&program).unwrap();
+        let ir = compiler.compile_llvm(&program).unwrap();
         println!("Simple arithmetic IR:");
-        println!("{}", compiler.module.print_to_string().to_string());
+        println!("{}", ir);
         println!("\n---\n");
     }
 
@@ -53,9 +53,8 @@ fn main() {
             is_async: false,
         }]);
 
-        compiler.compile_program(&program).unwrap();
+        let ir = compiler.compile_llvm(&program).unwrap();
         println!("String operations IR:");
-        let ir = compiler.module.print_to_string().to_string();
         println!("{}", ir);
         
         // Check if string contains the expected pattern
@@ -97,9 +96,8 @@ fn main() {
             ],
         };
 
-        compiler.compile_program(&program).unwrap();
+        let ir = compiler.compile_llvm(&program).unwrap();
         println!("C FFI (printf) IR:");
-        let ir = compiler.module.print_to_string().to_string();
         println!("{}", ir);
         
         // Check what we actually get
@@ -159,9 +157,8 @@ fn main() {
             ],
         };
 
-        compiler.compile_program(&program).unwrap();
+        let ir = compiler.compile_llvm(&program).unwrap();
         println!("Math library FFI (sqrt) IR:");
-        let ir = compiler.module.print_to_string().to_string();
         println!("{}", ir);
         
         // Check what we actually get

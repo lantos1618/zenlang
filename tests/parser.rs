@@ -1,6 +1,6 @@
-use zen::compiler::lexer::Lexer;
-use zen::compiler::parser::Parser;
-use zen::ast::{Program, Declaration, Function, Statement, Expression, AstType, VariableDeclarationType};
+use zen::lexer::Lexer;
+use zen::parser::Parser;
+use zen::ast::{Program, Declaration, Function, Statement, Expression, AstType, VariableDeclarationType, BinaryOperator};
 use zen::error::CompileError;
 
 #[test]
@@ -81,7 +81,7 @@ fn test_parse_binary_expression() {
                 body: vec![
                     Statement::Expression(Expression::BinaryOp {
                         left: Box::new(Expression::Integer32(5)),
-                        op: zen::ast::BinaryOperator::Add,
+                        op: BinaryOperator::Add,
                         right: Box::new(Expression::Integer32(3)),
                     }),
                 ],
@@ -143,7 +143,7 @@ fn test_parse_loop_with_condition() {
                     Statement::Loop {
                         condition: Some(Expression::BinaryOp {
                             left: Box::new(Expression::Identifier("counter".to_string())),
-                            op: zen::ast::BinaryOperator::GreaterThan,
+                            op: BinaryOperator::GreaterThan,
                             right: Box::new(Expression::Integer32(0)),
                         }),
                         body: vec![
@@ -151,7 +151,7 @@ fn test_parse_loop_with_condition() {
                                 name: "counter".to_string(),
                                 value: Expression::BinaryOp {
                                     left: Box::new(Expression::Identifier("counter".to_string())),
-                                    op: zen::ast::BinaryOperator::Subtract,
+                                    op: BinaryOperator::Subtract,
                                     right: Box::new(Expression::Integer32(1)),
                                 },
                             },
@@ -321,7 +321,7 @@ fn test_function_with_multiple_statements() {
         // Check the third statement (x + y)
         if let Statement::Expression(Expression::BinaryOp { left, op, right }) = &func.body[2] {
             assert!(matches!(**left, Expression::Identifier(ref name) if name == "x"));
-            assert_eq!(*op, zen::ast::BinaryOperator::Add);
+            assert_eq!(*op, BinaryOperator::Add);
             assert!(matches!(**right, Expression::Identifier(ref name) if name == "y"));
         } else {
             panic!("Expected BinaryOp expression for third statement");
@@ -361,7 +361,7 @@ fn test_parse_function_with_return() {
                     },
                     Statement::Return(Expression::BinaryOp {
                         left: Box::new(Expression::Identifier("x".to_string())),
-                        op: zen::ast::BinaryOperator::Add,
+                        op: BinaryOperator::Add,
                         right: Box::new(Expression::Identifier("y".to_string())),
                     }),
                 ],
@@ -396,7 +396,7 @@ fn test_parse_loop_with_return() {
                     Statement::Loop {
                         condition: Some(Expression::BinaryOp {
                             left: Box::new(Expression::Identifier("counter".to_string())),
-                            op: zen::ast::BinaryOperator::GreaterThan,
+                            op: BinaryOperator::GreaterThan,
                             right: Box::new(Expression::Integer32(0)),
                         }),
                         body: vec![
@@ -404,7 +404,7 @@ fn test_parse_loop_with_return() {
                                 name: "counter".to_string(),
                                 value: Expression::BinaryOp {
                                     left: Box::new(Expression::Identifier("counter".to_string())),
-                                    op: zen::ast::BinaryOperator::Subtract,
+                                    op: BinaryOperator::Subtract,
                                     right: Box::new(Expression::Integer32(1)),
                                 },
                             },

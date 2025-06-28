@@ -11,7 +11,7 @@ use test_utils::test_context;
 // Helper function to compile and execute a program
 fn compile_and_run<'ctx>(test_context: &mut TestContext<'ctx>, program: &ast::Program) -> i64 {
     test_context.compile(program).unwrap();
-    let execution_engine = test_context.module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
+    let execution_engine = test_context.module().unwrap().create_jit_execution_engine(OptimizationLevel::None).unwrap();
     let jit_function: JitFunction<unsafe extern "C" fn() -> i64> = unsafe { execution_engine.get_function("main").unwrap() };
     let result = unsafe { jit_function.call() };
     drop(execution_engine); // Explicitly drop before returning
@@ -32,7 +32,7 @@ fn test_simple_return_ir() {
     test_context!(|test_context: &mut TestContext| {
         let program = TestContext::create_simple_program(42);
         test_context.compile(&program).unwrap();
-        let ir = test_context.get_ir();
+        let ir = test_context.get_ir().unwrap();
         assert!(ir.contains("ret i64 42"), "IR should contain 'ret i64 42'\nIR was:\n{}", ir);
     });
 }
@@ -509,7 +509,7 @@ fn test_pointer_assignment() {
         }]);
 
         test_context.compile(&program).unwrap();
-        let ir = test_context.module.print_to_string().to_string();
+        let ir = test_context.module().unwrap().print_to_string().to_string();
         assert!(ir.contains("define i64 @test_ptr_assign"));
         assert!(ir.contains("store i64 100"));
         assert!(ir.contains("load i64"));
@@ -570,10 +570,10 @@ fn test_void_pointer_declaration() {
 fn test_struct_creation_and_access() {
     test_context!(|test_context: &mut TestContext| {
         // First declare the struct type
-        let struct_type = test_context.module.get_context().opaque_struct_type("Point");
+        let struct_type = test_context.module().unwrap().get_context().opaque_struct_type("Point");
         struct_type.set_body(&[
-            test_context.module.get_context().i64_type().into(),
-            test_context.module.get_context().i64_type().into(),
+            test_context.module().unwrap().get_context().i64_type().into(),
+            test_context.module().unwrap().get_context().i64_type().into(),
         ], false);
 
         let program = ast::Program::from_functions(
@@ -669,7 +669,7 @@ fn test_struct_pointer() {
         ]);
 
         test_context.compile(&program).unwrap();
-        let ir = test_context.module.print_to_string().to_string();
+        let ir = test_context.module().unwrap().print_to_string().to_string();
         assert!(ir.contains("define i64 @test_struct_ptr"));
     });
 }
@@ -721,7 +721,7 @@ fn test_struct_field_assignment() {
         ]);
 
         test_context.compile(&program).unwrap();
-        let ir = test_context.module.print_to_string().to_string();
+        let ir = test_context.module().unwrap().print_to_string().to_string();
         assert!(ir.contains("define i64 @test_struct_assign"));
     });
 }
@@ -950,10 +950,10 @@ fn test_full_pipeline_zen_syntax() {
         let zen_source = "main = () i32 { 42 }";
         
         // Lex the source
-        let lexer = zen::compiler::lexer::Lexer::new(zen_source);
+        let lexer = zen::lexer::Lexer::new(zen_source);
         
         // Parse the source
-        let mut parser = zen::compiler::parser::Parser::new(lexer);
+        let mut parser = zen::parser::Parser::new(lexer);
         let program = parser.parse_program().unwrap();
         
         // Verify the program was parsed correctly
@@ -989,10 +989,10 @@ fn test_full_pipeline_with_variable() {
         let zen_source = "main = () i32 { x := 42; x }";
         
         // Lex the source
-        let lexer = zen::compiler::lexer::Lexer::new(zen_source);
+        let lexer = zen::lexer::Lexer::new(zen_source);
         
         // Parse the source
-        let mut parser = zen::compiler::parser::Parser::new(lexer);
+        let mut parser = zen::parser::Parser::new(lexer);
         let program = parser.parse_program().unwrap();
         
         // Verify the program was parsed correctly

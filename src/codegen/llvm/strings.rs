@@ -1,6 +1,9 @@
-use super::*;
+use super::LLVMCompiler;
+use crate::ast::Expression;
+use crate::error::CompileError;
+use inkwell::values::BasicValueEnum;
 
-impl<'ctx> Compiler<'ctx> {
+impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_string_length(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
         let str_val = self.compile_expression(expr)?;
         if !str_val.is_pointer_value() {
@@ -14,7 +17,7 @@ impl<'ctx> Compiler<'ctx> {
         let strlen_fn = match self.module.get_function("strlen") {
             Some(f) => f,
             None => {
-                let i8_ptr_type = self.context.ptr_type(AddressSpace::default());
+                let i8_ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
                 let fn_type = self.context.i64_type().fn_type(
                     &[i8_ptr_type.into()], 
                     false
@@ -29,7 +32,7 @@ impl<'ctx> Compiler<'ctx> {
                 "strlen"
             )?;
             match call.try_as_basic_value() {
-                Either::Left(bv) => {
+                inkwell::Either::Left(bv) => {
                     let int_val = bv.into_int_value();
                     let target_int_type = self.context.i64_type();
                     if int_val.get_type().get_bit_width() != target_int_type.get_bit_width() {
@@ -38,7 +41,7 @@ impl<'ctx> Compiler<'ctx> {
                         int_val.into()
                     }
                 },
-                Either::Right(_) => return Err(CompileError::InternalError(
+                inkwell::Either::Right(_) => return Err(CompileError::InternalError(
                     "strlen did not return a basic value".to_string(),
                     None,
                 )),
