@@ -22,7 +22,7 @@ fn main() {
             body: vec![
                 Statement::VariableDeclaration {
                     name: "result".to_string(),
-                    type_: AstType::I64,
+                    type_: Some(AstType::I64),
                     initializer: Some(Expression::BinaryOp {
                         left: Box::new(Expression::Identifier("x".to_string())),
                         op: ast::BinaryOperator::Add,
@@ -132,7 +132,7 @@ fn main() {
                     body: vec![
                         Statement::VariableDeclaration {
                             name: "sum_squares".to_string(),
-                            type_: AstType::F64,
+                            type_: Some(AstType::F64),
                             initializer: Some(Expression::BinaryOp {
                                 left: Box::new(Expression::BinaryOp {
                                     left: Box::new(Expression::Identifier("x".to_string())),

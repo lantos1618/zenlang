@@ -59,7 +59,7 @@ fn test_float_operations() {
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "result".to_string(),
-                        type_: AstType::F64,
+                        type_: Some(AstType::F64),
                         initializer: Some(Expression::BinaryOp {
                             left: Box::new(Expression::Identifier("x".to_string())),
                             op: ast::BinaryOperator::Add,
@@ -144,7 +144,7 @@ fn test_external_math_function() {
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "sum_squares".to_string(),
-                        type_: AstType::F64,
+                        type_: Some(AstType::F64),
                         initializer: Some(Expression::BinaryOp {
                             left: Box::new(Expression::BinaryOp {
                                 left: Box::new(Expression::Identifier("x".to_string())),

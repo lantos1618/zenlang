@@ -1,6 +1,7 @@
 use zen::compiler::lexer::Lexer;
 use zen::compiler::parser::Parser;
-use zen::ast::{Program, Declaration, Function, Statement, Expression, AstType};
+use zen::ast::{Program, Declaration, Function, Statement, Expression, AstType, VariableDeclarationType};
+use zen::error::CompileError;
 
 #[test]
 fn test_parse_empty_program() {
@@ -50,9 +51,10 @@ fn test_parse_variable_declaration() {
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "x".to_string(),
-                        type_: AstType::I32,
+                        type_: Some(AstType::I32),
                         initializer: Some(Expression::Integer32(10)),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::Expression(Expression::Identifier("x".to_string())),
                 ],
@@ -133,9 +135,10 @@ fn test_parse_loop_with_condition() {
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "counter".to_string(),
-                        type_: AstType::I32,
+                        type_: Some(AstType::I32),
                         initializer: Some(Expression::Integer32(10)),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::Loop {
                         condition: Some(Expression::BinaryOp {
@@ -154,6 +157,7 @@ fn test_parse_loop_with_condition() {
                             },
                         ],
                         iterator: None,
+                        label: None,
                     },
                 ],
                 is_async: false,
@@ -297,18 +301,18 @@ fn test_function_with_multiple_statements() {
         assert_eq!(func.body.len(), 3);
         
         // Check the first statement (x := 42)
-        if let Statement::VariableDeclaration { name, type_, initializer, is_mutable: _ } = &func.body[0] {
+        if let Statement::VariableDeclaration { name, type_, initializer, is_mutable: _, declaration_type: _ } = &func.body[0] {
             assert_eq!(name, "x");
-            assert_eq!(*type_, AstType::I32);
+            assert_eq!(*type_, Some(AstType::I32));
             assert!(matches!(initializer, Some(Expression::Integer32(42))));
         } else {
             panic!("Expected VariableDeclaration for first statement");
         }
         
         // Check the second statement (y := 10)
-        if let Statement::VariableDeclaration { name, type_, initializer, is_mutable: _ } = &func.body[1] {
+        if let Statement::VariableDeclaration { name, type_, initializer, is_mutable: _, declaration_type: _ } = &func.body[1] {
             assert_eq!(name, "y");
-            assert_eq!(*type_, AstType::I32);
+            assert_eq!(*type_, Some(AstType::I32));
             assert!(matches!(initializer, Some(Expression::Integer32(10))));
         } else {
             panic!("Expected VariableDeclaration for second statement");
@@ -343,15 +347,17 @@ fn test_parse_function_with_return() {
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "x".to_string(),
-                        type_: AstType::I64,
+                        type_: Some(AstType::I64),
                         initializer: Some(Expression::Integer64(42)),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::VariableDeclaration {
                         name: "y".to_string(),
-                        type_: AstType::I64,
+                        type_: Some(AstType::I64),
                         initializer: Some(Expression::Integer64(10)),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::Return(Expression::BinaryOp {
                         left: Box::new(Expression::Identifier("x".to_string())),
@@ -382,9 +388,10 @@ fn test_parse_loop_with_return() {
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "counter".to_string(),
-                        type_: AstType::I32,
+                        type_: Some(AstType::I32),
                         initializer: Some(Expression::Integer32(10)),
                         is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
                     Statement::Loop {
                         condition: Some(Expression::BinaryOp {
@@ -403,6 +410,7 @@ fn test_parse_loop_with_return() {
                             },
                         ],
                         iterator: None,
+                        label: None,
                     },
                     Statement::Return(Expression::Integer64(0)),
                 ],

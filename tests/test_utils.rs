@@ -1,12 +1,15 @@
 use inkwell::execution_engine::JitFunction;
 use inkwell::OptimizationLevel;
 use zen::{
-    ast::{self, AstType, Expression, Statement},
+    ast::{self, AstType, Expression, Statement, VariableDeclarationType},
     compiler::Compiler,
     error::CompileError,
 };
 use std::ops::{Deref, DerefMut};
 use inkwell::context::Context;
+use inkwell::module::Module;
+use inkwell::builder::Builder;
+use inkwell::execution_engine::{ExecutionEngine};
 
 /// A test context that manages the LLVM context, module, and compiler state
 /// for running tests. This ensures all compilation and execution use the same
@@ -144,9 +147,10 @@ impl<'ctx> TestContext<'ctx> {
             body: vec![
                 Statement::VariableDeclaration {
                     name: name.to_string(),
-                    type_: AstType::I64,
+                    type_: Some(AstType::I64),
                     initializer: Some(Expression::Integer64(value)),
                     is_mutable: false,
+                    declaration_type: VariableDeclarationType::ExplicitImmutable,
                 },
                 Statement::Return(Expression::Identifier(name.to_string())),
             ],
