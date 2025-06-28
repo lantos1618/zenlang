@@ -64,10 +64,11 @@ impl<'a> Parser<'a> {
                     )
                 })?;
                 self.next_token();
-                if value <= i8::MAX as i64 && value >= i8::MIN as i64 {
-                    Ok(Expression::Integer8(value as i8))
-                } else if value <= i32::MAX as i64 && value >= i32::MIN as i64 {
+                // Default to Integer32 unless out of range
+                if value <= i32::MAX as i64 && value >= i32::MIN as i64 {
                     Ok(Expression::Integer32(value as i32))
+                } else if value <= i8::MAX as i64 && value >= i8::MIN as i64 {
+                    Ok(Expression::Integer8(value as i8))
                 } else {
                     Ok(Expression::Integer64(value))
                 }

@@ -97,33 +97,119 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     fn compile_conditional_expression(&mut self, scrutinee: &Expression, arms: &[crate::ast::ConditionalArm]) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // This will be implemented by the control_flow module
-        // For now, return a placeholder
-        Ok(self.context.i64_type().const_int(0, false).into())
+        let parent_function = self.current_function
+            .ok_or_else(|| CompileError::InternalError("No current function for conditional".to_string(), None))?;
+        
+        // Compile the scrutinee expression
+        let cond_val = self.compile_expression(scrutinee)?;
+        
+        // Ensure it's a boolean value
+        if !cond_val.is_int_value() || cond_val.into_int_value().get_type().get_bit_width() != 1 {
+            return Err(CompileError::TypeMismatch {
+                expected: "boolean (i1) for conditional expression".to_string(),
+                found: format!("{:?}", cond_val.get_type()),
+                span: None,
+            });
+        }
+        
+        // Create basic blocks
+        let then_bb = self.context.append_basic_block(parent_function, "then");
+        let else_bb = self.context.append_basic_block(parent_function, "else");
+        let merge_bb = self.context.append_basic_block(parent_function, "ifcont");
+        
+        // Branch based on condition
+        self.builder.build_conditional_branch(cond_val.into_int_value(), then_bb, else_bb)?;
+        
+        // Emit 'then' block
+        self.builder.position_at_end(then_bb);
+        let then_val = self.compile_expression(&arms[0].body)?;
+        self.builder.build_unconditional_branch(merge_bb)?;
+        let then_bb_end = self.builder.get_insert_block().unwrap();
+        
+        // Emit 'else' block
+        self.builder.position_at_end(else_bb);
+        let else_val = self.compile_expression(&arms[1].body)?;
+        self.builder.build_unconditional_branch(merge_bb)?;
+        let else_bb_end = self.builder.get_insert_block().unwrap();
+        
+        // Emit 'merge' block
+        self.builder.position_at_end(merge_bb);
+        let phi = self.builder.build_phi(
+            then_val.get_type(),
+            "iftmp"
+        )?;
+        
+        // Add incoming values to phi node
+        phi.add_incoming(&[(&then_val, then_bb_end), (&else_val, else_bb_end)]);
+        
+        Ok(phi.as_basic_value())
     }
 
     fn compile_array_literal(&mut self, elements: &[Expression]) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // This will be implemented by the pointers module
-        // For now, return a placeholder
-        Ok(self.context.i64_type().const_int(0, false).into())
+        // For now, treat all arrays as arrays of i64
+        let element_type = self.context.i64_type();
+        let array_len = elements.len() as u32;
+        let array_type = element_type.array_type(array_len);
+
+        // Allocate the array on the heap (malloc)
+        let i64_type = self.context.i64_type();
+        let elem_size = i64_type.size_of().unwrap();
+        let total_size = i64_type.const_int(array_len as u64, false);
+        let malloc_fn = self.module.get_function("malloc").ok_or_else(|| CompileError::InternalError("No malloc function declared".to_string(), None))?;
+        let size = self.builder.build_int_mul(elem_size, total_size, "arraysize");
+        let raw_ptr = self.builder.build_call(malloc_fn, &[size.into()], "arraymalloc").try_as_basic_value().left().unwrap().into_pointer_value();
+        let array_ptr = self.builder.build_pointer_cast(raw_ptr, element_type.ptr_type(inkwell::AddressSpace::Generic), "arrayptr");
+
+        // Store each element
+        for (i, expr) in elements.iter().enumerate() {
+            let value = self.compile_expression(expr)?;
+            let gep = unsafe {
+                self.builder.build_gep(element_type, array_ptr, &[element_type.const_int(i as u64, false)], &format!("arrayidx{}", i))
+            };
+            self.builder.build_store(gep, value);
+        }
+        Ok(array_ptr.as_basic_value_enum())
     }
 
     fn compile_array_index(&mut self, array: &Expression, index: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // This will be implemented by the pointers module
-        // For now, return a placeholder
-        Ok(self.context.i64_type().const_int(0, false).into())
+        // For now, treat all arrays as arrays of i64
+        let element_type = self.context.i64_type();
+        let array_ptr = self.compile_expression(array)?.into_pointer_value();
+        let index_val = self.compile_expression(index)?;
+        let gep = unsafe {
+            self.builder.build_gep(element_type, array_ptr, &[index_val.into_int_value()], "arrayidx")
+        };
+        let loaded = self.builder.build_load(element_type, gep, "arrayload");
+        Ok(loaded)
     }
 
     fn compile_enum_variant(&mut self, enum_name: &str, variant: &str, payload: &Option<Box<Expression>>) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // This will be implemented by the types module
-        // For now, return a placeholder
-        Ok(self.context.i64_type().const_int(0, false).into())
+        // For now, represent enums as a struct { tag: i64, payload: i64 }
+        // Tag is the variant index, payload is the value (or 0 if none)
+        // In the future, this should use the real enum type info
+        let tag = 0; // TODO: look up variant index from enum definition
+        let tag_val = self.context.i64_type().const_int(tag, false);
+        let payload_val = if let Some(expr) = payload {
+            self.compile_expression(expr)?
+        } else {
+            self.context.i64_type().const_int(0, false).into()
+        };
+        let enum_struct_type = self.context.struct_type(&[
+            self.context.i64_type().into(),
+            self.context.i64_type().into(),
+        ], false);
+        let alloca = self.builder.build_alloca(enum_struct_type, &format!("{}_{}_enum_tmp", enum_name, variant))?;
+        let tag_ptr = self.builder.build_struct_gep(enum_struct_type, alloca, 0, "tag_ptr")?;
+        self.builder.build_store(tag_ptr, tag_val)?;
+        let payload_ptr = self.builder.build_struct_gep(enum_struct_type, alloca, 1, "payload_ptr")?;
+        self.builder.build_store(payload_ptr, payload_val)?;
+        let loaded = self.builder.build_load(enum_struct_type, alloca, &format!("{}_{}_enum_val", enum_name, variant))?;
+        Ok(loaded)
     }
 
     fn compile_member_access(&mut self, object: &Expression, member: &str) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // This will be implemented by the structs module
-        // For now, return a placeholder
-        Ok(self.context.i64_type().const_int(0, false).into())
+        // Delegate to the struct field access logic
+        self.compile_struct_field(object, member)
     }
 
     fn compile_comptime_expression(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {

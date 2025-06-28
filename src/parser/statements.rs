@@ -129,6 +129,14 @@ impl<'a> Parser<'a> {
                 }
                 Ok(Statement::Return(expr))
             }
+            // Handle literal expressions as valid statements
+            Token::Integer(_) | Token::Float(_) | Token::StringLiteral(_) => {
+                let expr = self.parse_expression()?;
+                if self.current_token == Token::Symbol(';') {
+                    self.next_token();
+                }
+                Ok(Statement::Expression(expr))
+            }
             _ => Err(CompileError::SyntaxError(
                 format!("Unexpected token in statement: {:?}", self.current_token),
                 Some(self.current_span.clone()),
