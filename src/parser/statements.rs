@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::{Program, Declaration, Statement, VariableDeclarationType};
+use crate::ast::{Program, Declaration, Statement, VariableDeclarationType, Expression, AstType};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 
@@ -12,7 +12,7 @@ impl<'a> Parser<'a> {
                 // Could be a function definition: name = (params) returnType { ... }
                 if self.peek_token == Token::Operator("=".to_string()) {
                     // Check if it's a struct or enum definition
-                    let name = if let Token::Identifier(name) = &self.current_token {
+                    let _name = if let Token::Identifier(name) = &self.current_token {
                         name.clone()
                     } else {
                         unreachable!()
@@ -192,13 +192,35 @@ impl<'a> Parser<'a> {
         };
         
         let initializer = self.parse_expression()?;
+        
+        // Infer type from initializer if not explicitly specified
+        let inferred_type = if type_.is_none() {
+            match &initializer {
+                Expression::Integer8(_) => Some(AstType::I8),
+                Expression::Integer16(_) => Some(AstType::I16),
+                Expression::Integer32(_) => Some(AstType::I32),
+                Expression::Integer64(_) => Some(AstType::I64),
+                Expression::Unsigned8(_) => Some(AstType::U8),
+                Expression::Unsigned16(_) => Some(AstType::U16),
+                Expression::Unsigned32(_) => Some(AstType::U32),
+                Expression::Unsigned64(_) => Some(AstType::U64),
+                Expression::Float32(_) => Some(AstType::F32),
+                Expression::Float64(_) => Some(AstType::F64),
+                Expression::Boolean(_) => Some(AstType::Bool),
+                Expression::String(_) => Some(AstType::String),
+                _ => None, // Can't infer type for other expressions
+            }
+        } else {
+            type_
+        };
+        
         if self.current_token == Token::Symbol(';') {
             self.next_token();
         }
         
         Ok(Statement::VariableDeclaration {
             name,
-            type_,
+            type_: inferred_type,
             initializer: Some(initializer),
             is_mutable,
             declaration_type,

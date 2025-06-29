@@ -124,6 +124,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_program(&mut self, program: &ast::Program) -> Result<(), CompileError> {
         println!("Compiling program with {} declarations", program.declarations.len());
         
+        // First pass: register struct types
+        for declaration in &program.declarations {
+            if let ast::Declaration::Struct(struct_def) = declaration {
+                println!("Registering struct type: {}", struct_def.name);
+                self.register_struct_type(struct_def)?;
+            }
+        }
+        
         for declaration in &program.declarations {
             match declaration {
                 ast::Declaration::ExternalFunction(ext_func) => {
@@ -131,7 +139,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     self.declare_external_function(ext_func)?;
                 }
                 ast::Declaration::Function(_) => {}
-                ast::Declaration::Struct(_) | ast::Declaration::Enum(_) | ast::Declaration::ModuleImport { .. } => {}
+                ast::Declaration::Struct(_) => {} // Already handled above
+                ast::Declaration::Enum(_) | ast::Declaration::ModuleImport { .. } => {}
             }
         }
         
@@ -146,6 +155,52 @@ impl<'ctx> LLVMCompiler<'ctx> {
         for func in self.module.get_functions() {
             println!("  - {}", func.get_name().to_str().unwrap_or("<invalid>"));
         }
+        
+        Ok(())
+    }
+
+    pub fn register_struct_type(&mut self, struct_def: &ast::StructDefinition) -> Result<(), CompileError> {
+        // Convert field types to LLVM types
+        let mut field_types = Vec::new();
+        let mut fields = HashMap::new();
+        
+        for (index, field) in struct_def.fields.iter().enumerate() {
+            let llvm_type = match &field.type_ {
+                AstType::I8 => self.context.i8_type().as_basic_type_enum(),
+                AstType::I16 => self.context.i16_type().as_basic_type_enum(),
+                AstType::I32 => self.context.i32_type().as_basic_type_enum(),
+                AstType::I64 => self.context.i64_type().as_basic_type_enum(),
+                AstType::U8 => self.context.i8_type().as_basic_type_enum(),
+                AstType::U16 => self.context.i16_type().as_basic_type_enum(),
+                AstType::U32 => self.context.i32_type().as_basic_type_enum(),
+                AstType::U64 => self.context.i64_type().as_basic_type_enum(),
+                AstType::F32 => self.context.f32_type().as_basic_type_enum(),
+                AstType::F64 => self.context.f64_type().as_basic_type_enum(),
+                AstType::Bool => self.context.bool_type().as_basic_type_enum(),
+                AstType::String => self.context.i8_type().ptr_type(inkwell::AddressSpace::default()).as_basic_type_enum(),
+                AstType::Void => return Err(CompileError::TypeError("Void type not allowed in struct fields".to_string(), None)),
+                AstType::Pointer(inner) => {
+                    // For pointer types in struct fields, we'll use a generic pointer type
+                    // This is a simplification - in a full implementation we'd need to handle nested types
+                    self.context.ptr_type(inkwell::AddressSpace::default()).as_basic_type_enum()
+                },
+                _ => return Err(CompileError::TypeError(format!("Unsupported type in struct: {:?}", field.type_), None)),
+            };
+            
+            field_types.push(llvm_type);
+            fields.insert(field.name.clone(), (index, field.type_.clone()));
+        }
+        
+        // Create the LLVM struct type
+        let struct_type = self.context.struct_type(&field_types, false);
+        
+        // Register the struct type
+        let struct_info = StructTypeInfo {
+            llvm_type: struct_type,
+            fields,
+        };
+        
+        self.struct_types.insert(struct_def.name.clone(), struct_info);
         
         Ok(())
     }

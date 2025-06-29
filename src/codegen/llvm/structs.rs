@@ -168,4 +168,21 @@ impl<'ctx> LLVMCompiler<'ctx> {
             Err(e) => Err(CompileError::InternalError(e.to_string(), None)),
         }
     }
+
+    pub fn compile_struct_field_assignment(&mut self, struct_alloca: inkwell::values::PointerValue<'ctx>, field_name: &str, value: BasicValueEnum<'ctx>) -> Result<(), CompileError> {
+        // Find the struct type info by matching the pointer type
+        let struct_type_info = self.struct_types.values().find(|info| {
+            info.llvm_type.ptr_type(inkwell::AddressSpace::default()) == struct_alloca.get_type()
+        }).ok_or_else(|| CompileError::TypeError("Struct type info not found for assignment".to_string(), None))?;
+        let struct_type = struct_type_info.llvm_type;
+        let field_index = struct_type_info.fields.get(field_name).map(|(index, _)| *index)
+            .ok_or_else(|| CompileError::TypeError(format!("Field '{}' not found in struct", field_name), None))?;
+        // Create GEP to get the field pointer
+        let field_ptr = unsafe {
+            self.builder.build_struct_gep(struct_type, struct_alloca, field_index as u32, "field_ptr")
+        }.map_err(|e| CompileError::from(e))?;
+        // Store the value to the field
+        self.builder.build_store(field_ptr, value).map_err(|e| CompileError::from(e))?;
+        Ok(())
+    }
 } 

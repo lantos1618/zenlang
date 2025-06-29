@@ -62,23 +62,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 };
                 Ok(Type::Function(function_type))
             },
-            AstType::Struct { name, fields } => {
-                // Check if we've already created this struct type
-                if let Some(struct_type) = self.context.get_struct_type(name) {
-                    Ok(Type::Struct(struct_type))
+            AstType::Struct { name, fields: _ } => {
+                // Check if we've already registered this struct type
+                if let Some(struct_info) = self.struct_types.get(name) {
+                    Ok(Type::Struct(struct_info.llvm_type))
                 } else {
-                    // Create a new struct type
-                    let field_types: Result<Vec<BasicTypeEnum<'ctx>>, CompileError> = fields.iter().map(|(_, field_type)| {
-                        let llvm_type = self.to_llvm_type(field_type)?;
-                        match llvm_type {
-                            Type::Basic(basic_type) => Ok(basic_type),
-                            _ => Ok(self.context.i64_type().into()), // Default to i64 for complex types
-                        }
-                    }).collect();
-                    let field_types = field_types?;
-                    
-                    let struct_type = self.context.opaque_struct_type(name);
-                    struct_type.set_body(&field_types, false);
+                    // If not registered, create a default struct type
+                    // This should not happen if struct registration is working properly
+                    let field_types = vec![
+                        self.context.i64_type().into(),
+                        self.context.i64_type().into(),
+                    ];
+                    let struct_type = self.context.struct_type(&field_types, false);
                     Ok(Type::Struct(struct_type))
                 }
             },

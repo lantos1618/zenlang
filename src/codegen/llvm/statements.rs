@@ -3,7 +3,7 @@ use crate::ast::{AstType, Expression, Statement};
 use crate::error::CompileError;
 use inkwell::{
     types::{BasicType, BasicTypeEnum},
-    values::BasicValueEnum,
+    values::{BasicValueEnum, BasicValue},
 };
 
 impl<'ctx> LLVMCompiler<'ctx> {
@@ -52,7 +52,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 // Extract BasicTypeEnum for build_alloca
                 let basic_type = match llvm_type {
                     Type::Basic(basic) => basic,
-                    _ => return Err(CompileError::TypeError("Cannot allocate non-basic type".to_string(), None)),
+                    Type::Struct(struct_type) => struct_type.as_basic_type_enum(),
+                    Type::Function(fn_type) => fn_type.ptr_type(inkwell::AddressSpace::default()).as_basic_type_enum(),
+                    _ => return Err(CompileError::TypeError("Cannot allocate non-basic or struct type".to_string(), None)),
                 };
 
                 let alloca = self.builder.build_alloca(basic_type, name).map_err(|e| CompileError::from(e))?;
@@ -63,13 +65,36 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     // Handle function pointers specially
                     if let Some(type_) = type_ {
                         if matches!(type_, AstType::Function { .. }) {
-                            // For function pointers, we need to store the function value
-                            self.builder.build_store(alloca, value).map_err(|e| CompileError::from(e))?;
-                            self.variables.insert(name.clone(), (alloca, type_.clone()));
-                            Ok(())
+                            // For function pointers, we need to get the function and store its pointer
+                            if let Expression::Identifier(func_name) = init_expr {
+                                if let Some(function) = self.module.get_function(&func_name) {
+                                    // Store the function pointer
+                                    let func_ptr = function.as_global_value().as_pointer_value();
+                                    self.builder.build_store(alloca, func_ptr).map_err(|e| CompileError::from(e))?;
+                                    self.variables.insert(name.clone(), (alloca, type_.clone()));
+                                    Ok(())
+                                } else {
+                                    Err(CompileError::UndeclaredFunction(func_name.clone(), None))
+                                }
+                            } else {
+                                Err(CompileError::TypeError("Function pointer initializer must be a function name".to_string(), None))
+                            }
                         } else if let AstType::Pointer(inner) = type_ {
-                            // For pointers, we need to handle pointer assignment
-                            self.builder.build_store(alloca, value).map_err(|e| CompileError::from(e))?;
+                            // For pointers, if the initializer is AddressOf, use the pointer inside the alloca
+                            let ptr_value = match init_expr {
+                                Expression::AddressOf(inner_expr) => {
+                                    // Compile the inner expression to get the alloca pointer
+                                    match **inner_expr {
+                                        Expression::Identifier(ref id) => {
+                                            let (inner_alloca, _) = self.variables.get(id).ok_or_else(|| CompileError::UndeclaredVariable(id.clone(), None))?;
+                                            inner_alloca.as_basic_value_enum()
+                                        }
+                                        _ => value.clone(),
+                                    }
+                                }
+                                _ => value.clone(),
+                            };
+                            self.builder.build_store(alloca, ptr_value).map_err(|e| CompileError::from(e))?;
                             self.variables.insert(name.clone(), (alloca, type_.clone()));
                             Ok(())
                         } else {
@@ -86,6 +111,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
                                 }
                                 (BasicValueEnum::FloatValue(float_val), AstType::F64) => {
                                     self.builder.build_float_ext(float_val, self.context.f64_type(), "extend").map_err(|e| CompileError::from(e))?.into()
+                                }
+                                (BasicValueEnum::PointerValue(ptr_val), AstType::Struct { .. }) => {
+                                    // If the value is a pointer and the type is a struct, load the struct value
+                                    let struct_type = match self.to_llvm_type(type_)? {
+                                        Type::Struct(st) => st,
+                                        _ => return Err(CompileError::TypeError("Expected struct type".to_string(), None)),
+                                    };
+                                    self.builder.build_load(struct_type, ptr_val, "load_struct_init")?.into()
                                 }
                                 _ => value,
                             };
@@ -142,7 +175,30 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 }
             }
             Statement::VariableAssignment { name, value } => {
-                // Look up the variable in the symbol table
+                // Check if this is a field assignment (e.g., "s.x")
+                if let Some(dot_pos) = name.find('.') {
+                    let struct_name = &name[..dot_pos];
+                    let field_name = &name[dot_pos + 1..];
+                    // Get the struct variable
+                    let (struct_alloca, struct_type) = self.get_variable(struct_name)?;
+                    // Compile the value to assign
+                    let value = self.compile_expression(value)?;
+                    // Handle type conversion if needed
+                    let value = match (&value, &struct_type) {
+                        (BasicValueEnum::IntValue(int_val), AstType::Struct { .. }) => {
+                            if int_val.get_type().get_bit_width() != 64 {
+                                self.builder.build_int_s_extend(*int_val, self.context.i64_type(), "sext").unwrap().into()
+                            } else {
+                                (*int_val).into()
+                            }
+                        }
+                        _ => value.clone(),
+                    };
+                    // Use struct field assignment
+                    self.compile_struct_field_assignment(struct_alloca, field_name, value)?;
+                    return Ok(());
+                }
+                // Regular variable assignment
                 let (alloca, var_type) = self.get_variable(name)?;
                 let value = self.compile_expression(value)?;
                 let value = match (&value, &var_type) {
@@ -176,18 +232,24 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 Ok(())
             }
             Statement::PointerAssignment { pointer, value } => {
-                let ptr = self.compile_expression(&pointer)?;
+                let ptr_val = self.compile_expression(&pointer)?;
                 let val = self.compile_expression(&value)?;
-                match ptr {
-                    BasicValueEnum::PointerValue(ptr) => {
-                        self.builder.build_store(ptr, val)?;
-                        Ok(())
-                    }
-                    _ => Err(CompileError::TypeMismatch {
+                
+                // For pointer variables, we need to load the address first, then store to that address
+                if ptr_val.is_pointer_value() {
+                    let ptr = ptr_val.into_pointer_value();
+                    // Load the address stored in the pointer variable
+                    let address = self.builder.build_load(self.context.i64_type().ptr_type(inkwell::AddressSpace::default()), ptr, "deref_ptr")?;
+                    // Store the value at that address
+                    let address_ptr = address.into_pointer_value();
+                    self.builder.build_store(address_ptr, val)?;
+                    Ok(())
+                } else {
+                    Err(CompileError::TypeMismatch {
                         expected: "pointer".to_string(),
-                        found: format!("{:?}", ptr.get_type()),
+                        found: format!("{:?}", ptr_val.get_type()),
                         span: None,
-                    }),
+                    })
                 }
             }
             Statement::Loop { condition, body, iterator: _, label: _ } => {
