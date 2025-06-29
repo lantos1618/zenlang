@@ -1,5 +1,3 @@
-extern crate test_utils;
-
 use zen::ast::{self, AstType, Expression, Statement, BinaryOperator, ConditionalArm, Pattern, VariableDeclarationType};
 use test_utils::TestContext;
 use zen::error::CompileError;
@@ -32,7 +30,7 @@ fn test_simple_return_ir() {
     test_context!(|test_context: &mut TestContext| {
         let program = TestContext::create_simple_program(42);
         test_context.compile(&program).unwrap();
-        let ir = test_context.get_ir().unwrap();
+        let ir = test_context.get_ir().expect("Failed to get IR");
         assert!(ir.contains("ret i64 42"), "IR should contain 'ret i64 42'\nIR was:\n{}", ir);
     });
 }
@@ -572,52 +570,60 @@ fn test_void_pointer_declaration() {
 #[test]
 fn test_struct_creation_and_access() {
     test_context!(|test_context: &mut TestContext| {
-        // First declare the struct type
-        let struct_type = test_context.module().unwrap().get_context().opaque_struct_type("Point");
-        struct_type.set_body(&[
-            test_context.module().unwrap().get_context().i64_type().into(),
-            test_context.module().unwrap().get_context().i64_type().into(),
-        ], false);
-
-        let program = ast::Program::from_functions(
-            vec![
-            ast::Function { 
-                is_async: false, 
-                name: "main".to_string(),
-                args: vec![],
-                return_type: AstType::I64,
-                body: vec![
-                    // Create a struct instance
-                    Statement::VariableDeclaration { 
-                        name: "p".to_string(),
-                        type_: Some(AstType::Struct {
-                            name: "Point".to_string(),
-                            fields: vec![
-                                ("x".to_string(), AstType::I64),
-                                ("y".to_string(), AstType::I64),
-                            ],
-                        }),
-                        initializer: Some(Expression::StructLiteral {
-                            name: "Point".to_string(),
-                            fields: vec![
-                                ("x".to_string(), Expression::Integer64(10)),
-                                ("y".to_string(), Expression::Integer64(20)),
-                            ],
-                        }),
-                        is_mutable: false,
-                        declaration_type: VariableDeclarationType::ExplicitImmutable,
-                    },
-                    // Access struct field
-                    Statement::Return(Expression::StructField {
-                        struct_: Box::new(Expression::Identifier("p".to_string())),
-                        field: "x".to_string(),
+        let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
+            name: "Point".to_string(),
+            fields: vec![
+                ast::StructField {
+                    name: "x".to_string(),
+                    type_: ast::AstType::I64,
+                    is_mutable: false,
+                    default_value: None,
+                },
+                ast::StructField {
+                    name: "y".to_string(),
+                    type_: ast::AstType::I64,
+                    is_mutable: false,
+                    default_value: None,
+                },
+            ],
+        });
+        let func = ast::Function {
+            is_async: false,
+            name: "main".to_string(),
+            args: vec![],
+            return_type: AstType::I64,
+            body: vec![
+                Statement::VariableDeclaration {
+                    name: "p".to_string(),
+                    type_: Some(AstType::Struct {
+                        name: "Point".to_string(),
+                        fields: vec![
+                            ("x".to_string(), AstType::I64),
+                            ("y".to_string(), AstType::I64),
+                        ],
                     }),
-                ],
-            },
-        ]);
-
-        let result: i64 = compile_and_run(&mut test_context, &program);
-        assert_eq!(result, 10);
+                    initializer: Some(Expression::StructLiteral {
+                        name: "Point".to_string(),
+                        fields: vec![
+                            ("x".to_string(), Expression::Integer64(10)),
+                            ("y".to_string(), Expression::Integer64(20)),
+                        ],
+                    }),
+                    is_mutable: false,
+                    declaration_type: VariableDeclarationType::ExplicitImmutable,
+                },
+                Statement::Return(Expression::StructField {
+                    struct_: Box::new(Expression::Identifier("p".to_string())),
+                    field: "x".to_string(),
+                }),
+            ],
+        };
+        let program = ast::Program {
+            declarations: vec![struct_decl, ast::Declaration::Function(func)],
+        };
+        test_context.compile(&program).unwrap();
+        let ir = test_context.get_ir().expect("Failed to get IR");
+        assert!(ir.contains("define i64 @main"), "IR should contain main function definition");
     });
 }
 

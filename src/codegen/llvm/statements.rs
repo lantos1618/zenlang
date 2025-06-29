@@ -223,6 +223,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         // Store function pointer directly
                         self.builder.build_store(alloca, value)?;
                     }
+                    AstType::Struct { .. } => {
+                        // For struct types, we can store directly without checking basic type
+                        self.builder.build_store(alloca, value)?;
+                    }
                     _ => {
                         let llvm_type = self.to_llvm_type(&var_type)?;
                         let _basic_type = self.expect_basic_type(llvm_type)?;
