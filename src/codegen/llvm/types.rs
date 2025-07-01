@@ -8,7 +8,8 @@ use inkwell::{
 
 impl<'ctx> LLVMCompiler<'ctx> {
     pub fn to_llvm_type(&mut self, type_: &AstType) -> Result<Type<'ctx>, CompileError> {
-        match type_ {
+        println!("DEBUG: to_llvm_type called with AstType: {:?}", type_);
+        let result = match type_ {
             AstType::I8 => Ok(Type::Basic(self.context.i8_type().into())),
             AstType::I16 => Ok(Type::Basic(self.context.i16_type().into())),
             AstType::I32 => Ok(Type::Basic(self.context.i32_type().into())),
@@ -20,20 +21,20 @@ impl<'ctx> LLVMCompiler<'ctx> {
             AstType::F32 => Ok(Type::Basic(self.context.f32_type().into())),
             AstType::F64 => Ok(Type::Basic(self.context.f64_type().into())),
             AstType::Bool => Ok(Type::Basic(self.context.bool_type().into())),
-            AstType::String => {
-                // String is represented as a pointer to i8
-                Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into()))
-            },
+            AstType::String => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())),
             AstType::Void => Ok(Type::Void),
             AstType::Pointer(inner) => {
                 let inner_type = self.to_llvm_type(inner)?;
                 match inner_type {
-                    Type::Basic(basic_type) => Ok(Type::Basic(basic_type)),
-                    Type::Function(_) => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())), // Function pointers as void*
-                    Type::Void => Err(CompileError::TypeError("Cannot create pointer to void".to_string(), None)),
-                    Type::Pointer(_) => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())), // Pointer to pointer as void*
-                    Type::Struct(_) => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())), // Pointer to struct as void*
+                    Type::Basic(basic_type) => Ok(Type::Basic(basic_type.ptr_type(AddressSpace::default()).into())),
+                    Type::Struct(struct_type) => Ok(Type::Basic(struct_type.ptr_type(AddressSpace::default()).into())),
+                    _ => Err(CompileError::UnsupportedFeature("Unsupported pointer type".to_string(), None)),
                 }
+            },
+            AstType::Struct { name, fields } => {
+                let struct_info = self.struct_types.get(name)
+                    .ok_or_else(|| CompileError::TypeError(format!("Undefined struct type: {}", name), None))?;
+                Ok(Type::Struct(struct_info.llvm_type))
             },
             AstType::Array(inner) => {
                 let inner_type = self.to_llvm_type(inner)?;
@@ -61,21 +62,6 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     _ => self.context.i64_type().fn_type(&arg_metadata_types, false),
                 };
                 Ok(Type::Function(function_type))
-            },
-            AstType::Struct { name, fields: _ } => {
-                // Check if we've already registered this struct type
-                if let Some(struct_info) = self.struct_types.get(name) {
-                    Ok(Type::Struct(struct_info.llvm_type))
-                } else {
-                    // If not registered, create a default struct type
-                    // This should not happen if struct registration is working properly
-                    let field_types = vec![
-                        self.context.i64_type().into(),
-                        self.context.i64_type().into(),
-                    ];
-                    let struct_type = self.context.struct_type(&field_types, false);
-                    Ok(Type::Struct(struct_type))
-                }
             },
             AstType::Enum { name, variants: _ } => {
                 // Enums are represented as integers for now
@@ -124,11 +110,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     Ok(Type::Basic(self.context.i64_type().into()))
                 }
             },
-        }
+        };
+        println!("DEBUG: to_llvm_type returning: {:?}", result);
+        result
     }
     pub fn expect_basic_type<'a>(&self, t: Type<'a>) -> Result<BasicTypeEnum<'a>, CompileError> {
+        println!("DEBUG: expect_basic_type called with type: {:?}", t);
         match t {
-            Type::Basic(b) => Ok(b),
+            Type::Basic(ty) => Ok(ty),
             _ => Err(CompileError::UnsupportedFeature(
                 "Expected basic type, got non-basic type (e.g., function type)".to_string(),
                 None,

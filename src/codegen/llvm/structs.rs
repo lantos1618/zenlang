@@ -8,6 +8,7 @@ use inkwell::{
 };
 use inkwell::types::BasicTypeEnum;
 use std::collections::HashMap;
+use inkwell::AddressSpace;
 
 #[derive(Debug, Clone)]
 pub struct StructTypeInfo<'ctx> {
@@ -68,84 +69,40 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     pub fn compile_struct_field(&mut self, struct_: &Expression, field: &str) -> Result<BasicValueEnum<'ctx>, CompileError> {
+        println!("DEBUG: compile_struct_field called with struct: {:?}, field: {}", struct_, field);
+        
+        // Compile the struct expression to get the struct pointer
         let struct_val = self.compile_expression(struct_)?;
-        let (struct_type, struct_name) = match struct_val.get_type() {
-            BasicTypeEnum::StructType(ty) => {
-                let struct_name = self.struct_types.iter()
-                    .find(|(_, info)| info.llvm_type == ty)
-                    .map(|(name, _)| name.clone())
-                    .ok_or_else(|| CompileError::TypeError(
-                        format!("Unknown struct type: {:?}", ty),
-                        None
-                    ))?;
-                (ty, struct_name)
-            },
-            BasicTypeEnum::PointerType(ptr_type) => {
-                // This is a pointer to a struct, we need to find the struct type
-                // First, try to find a struct type that matches this pointer type
-                let struct_name = self.struct_types.iter()
-                    .find(|(_, _info)| {
-                        // Check if this struct's pointer type matches our pointer type
-                        let struct_ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
-                        struct_ptr_type.as_type_ref() == ptr_type.as_type_ref()
-                    })
-                    .map(|(name, _)| name.clone());
-                
-                if let Some(name) = struct_name {
-                    let struct_info = self.struct_types.get(&name)
-                        .ok_or_else(|| CompileError::TypeError(
-                            format!("Undefined struct type: {}", name),
-                            None
-                        ))?;
-                    (struct_info.llvm_type, name)
-                } else {
-                    // If we can't find a direct match, assume it's a pointer to a struct
-                    // and try to find any struct type (this is a fallback)
-                    let first_struct = self.struct_types.iter().next()
-                        .ok_or_else(|| CompileError::TypeError(
-                            "No struct types defined".to_string(),
-                            None
-                        ))?;
-                    (first_struct.1.llvm_type, first_struct.0.clone())
-                }
-            },
-            _ => {
-                return Err(CompileError::TypeMismatch {
-                    expected: "struct or struct pointer".to_string(),
-                    found: format!("{:?}", struct_val.get_type()),
-                    span: None,
-                });
-            }
-        };
+        println!("DEBUG: struct_val type: {:?}", struct_val.get_type());
         
-        // Get field information
-        let (field_index, field_type) = {
-            let struct_info = self.struct_types.get(&struct_name)
-                .ok_or_else(|| CompileError::TypeError(
-                    format!("Undefined struct type: {}", struct_name),
-                    None
-                ))?;
-            let (field_index, field_type) = struct_info.fields.get(field)
-                .ok_or_else(|| CompileError::TypeError(
-                    format!("No field '{}' in struct '{}'", field, struct_name),
-                    None
-                ))?;
-            (*field_index, field_type.clone())
-        };
+        // Get the struct pointer
+        let struct_ptr = struct_val.into_pointer_value();
+        println!("DEBUG: struct_ptr type: {:?}", struct_ptr.get_type());
         
-        // Handle the struct value - if it's a pointer, use it directly; otherwise, create a temporary
-        let struct_ptr = if struct_val.is_pointer_value() {
-            struct_val.into_pointer_value()
-        } else {
-            let alloca = self.builder.build_alloca(
-                struct_val.get_type(),
-                "struct_field_tmp"
-            )?;
-            self.builder.build_store(alloca, struct_val)?;
-            alloca
-        };
+        // Find the struct type info by matching the pointer type
+        let struct_type_info = self.struct_types.values().find(|info| {
+            struct_ptr.get_type().as_type_ref() == info.llvm_type.ptr_type(AddressSpace::default()).as_type_ref()
+        }).ok_or_else(|| CompileError::TypeError("Struct type info not found for pointer type".to_string(), None))?;
         
-        let field_basic_type = match self.to_llvm_type(&field_type)? {
+        println!("DEBUG: Found struct type info");
+        
+        let struct_type = struct_type_info.llvm_type;
+        let field_index = struct_type_info.fields.get(field).map(|(index, _)| *index)
+            .ok_or_else(|| CompileError::TypeError(format!("Field '{}' not found in struct", field), None))?;
+        
+        println!("DEBUG: Field index: {}", field_index);
+        
+        // Get the field type
+        let field_type = struct_type_info.fields.get(field).map(|(_, ty)| ty.clone())
+            .ok_or_else(|| CompileError::TypeError(format!("Field '{}' type not found", field), None))?;
+        
+        println!("DEBUG: Field type: {:?}", field_type);
+        
+        // Convert field type to LLVM type
+        let field_llvm_type = self.to_llvm_type(&field_type)?;
+        println!("DEBUG: Field LLVM type: {:?}", field_llvm_type);
+        
+        let field_basic_type = match field_llvm_type {
             Type::Basic(ty) => ty,
             Type::Struct(st) => st.as_basic_type_enum(),
             _ => return Err(CompileError::TypeError(
@@ -154,19 +111,28 @@ impl<'ctx> LLVMCompiler<'ctx> {
             )),
         };
         
+        println!("DEBUG: Field basic type: {:?}", field_basic_type);
+        
+        // Get the field pointer using GEP
         let field_ptr = self.builder.build_struct_gep(
             struct_type,
             struct_ptr,
             field_index as u32,
-            &format!("{}_field_{}_ptr", struct_name, field)
+            &format!("{}_ptr", field)
         )?;
         
+        println!("DEBUG: Field pointer created");
+        
+        // Load the field value
         match self.builder.build_load(
             field_basic_type,
             field_ptr,
             &format!("{}_val", field)
         ) {
-            Ok(val) => Ok(val),
+            Ok(val) => {
+                println!("DEBUG: compile_struct_field returning value of type: {:?}", val.get_type());
+                Ok(val)
+            },
             Err(e) => Err(CompileError::InternalError(e.to_string(), None)),
         }
     }
