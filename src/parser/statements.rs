@@ -11,14 +11,14 @@ impl<'a> Parser<'a> {
             if let Token::Identifier(_) = &self.current_token {
                 // Could be a function definition: name = (params) returnType { ... }
                 if self.peek_token == Token::Operator("=".to_string()) {
-                    // Check if it's a struct or enum definition
-                    let _name = if let Token::Identifier(name) = &self.current_token {
+                    // Check if it's a struct, enum, or function definition
+                    let name = if let Token::Identifier(name) = &self.current_token {
                         name.clone()
                     } else {
                         unreachable!()
                     };
                     
-                    // Look ahead to see if it's a struct/enum or function
+                    // Look ahead to see what type of declaration this is
                     let saved_position = self.lexer.position;
                     let saved_read_position = self.lexer.read_position;
                     let saved_current_char = self.lexer.current_char;
@@ -26,17 +26,11 @@ impl<'a> Parser<'a> {
                     let saved_peek_token = self.peek_token.clone();
                     
                     self.next_token(); // consume '='
-                    self.next_token(); // consume '('
                     
-                    // If we see a type after '(', it's likely a function
-                    // If we see a field name, it's likely a struct
-                    let is_function = if let Token::Identifier(_) = &self.current_token {
-                        // Look for ': type' pattern
-                        let has_type_annotation = self.peek_token == Token::Symbol(':');
-                        has_type_annotation
-                    } else {
-                        false
-                    };
+                    // Check what comes after '='
+                    let is_struct = matches!(&self.current_token, Token::Symbol('{'));
+                    let is_enum = matches!(&self.current_token, Token::Operator(op) if op == "|");
+                    let is_function = matches!(&self.current_token, Token::Symbol('('));
                     
                     // Restore lexer state
                     self.lexer.position = saved_position;
@@ -45,10 +39,14 @@ impl<'a> Parser<'a> {
                     self.current_token = saved_current_token;
                     self.peek_token = saved_peek_token;
                     
-                    if is_function {
+                    if is_struct {
+                        declarations.push(Declaration::Struct(self.parse_struct()?));
+                    } else if is_enum {
+                        declarations.push(Declaration::Enum(self.parse_enum()?));
+                    } else if is_function {
                         declarations.push(Declaration::Function(self.parse_function()?));
                     } else {
-                        // For now, assume it's a function
+                        // Try to parse as function (fallback)
                         declarations.push(Declaration::Function(self.parse_function()?));
                     }
                 } else if self.peek_token == Token::Symbol('(') {
@@ -128,6 +126,37 @@ impl<'a> Parser<'a> {
                     self.next_token();
                 }
                 Ok(Statement::Return(expr))
+            }
+            Token::Keyword(keyword) if keyword == "loop" => {
+                self.parse_loop_statement()
+            }
+            Token::Keyword(keyword) if keyword == "break" => {
+                self.next_token();
+                let label = if let Token::Identifier(label_name) = &self.current_token {
+                    let label_name = label_name.clone();
+                    self.next_token();
+                    Some(label_name)
+                } else {
+                    None
+                };
+                if self.current_token == Token::Symbol(';') {
+                    self.next_token();
+                }
+                Ok(Statement::Break { label })
+            }
+            Token::Keyword(keyword) if keyword == "continue" => {
+                self.next_token();
+                let label = if let Token::Identifier(label_name) = &self.current_token {
+                    let label_name = label_name.clone();
+                    self.next_token();
+                    Some(label_name)
+                } else {
+                    None
+                };
+                if self.current_token == Token::Symbol(';') {
+                    self.next_token();
+                }
+                Ok(Statement::Continue { label })
             }
             // Handle literal expressions as valid statements
             Token::Integer(_) | Token::Float(_) | Token::StringLiteral(_) => {
@@ -224,6 +253,87 @@ impl<'a> Parser<'a> {
             initializer: Some(initializer),
             is_mutable,
             declaration_type,
+        })
+    }
+    
+    fn parse_loop_statement(&mut self) -> Result<Statement> {
+        // Skip 'loop' keyword
+        self.next_token();
+        
+        // Check for optional label
+        let label = if self.current_token == Token::Symbol(':') {
+            self.next_token();
+            if let Token::Identifier(label_name) = &self.current_token {
+                let label_name = label_name.clone();
+                self.next_token();
+                Some(label_name)
+            } else {
+                return Err(CompileError::SyntaxError(
+                    "Expected label name after ':'".to_string(),
+                    Some(self.current_span.clone()),
+                ));
+            }
+        } else {
+            None
+        };
+        
+        // Check if this is a "loop x in collection" or "loop condition"
+        let (condition, iterator) = if let Token::Identifier(_) = &self.current_token {
+            // Could be "loop x in collection" or "loop condition"
+            let first_identifier = if let Token::Identifier(name) = &self.current_token {
+                name.clone()
+            } else {
+                unreachable!()
+            };
+            self.next_token();
+            
+            if self.current_token == Token::Keyword("in".to_string()) {
+                // This is "loop x in collection"
+                self.next_token();
+                let collection = self.parse_expression()?;
+                (None, Some(crate::ast::LoopIterator {
+                    variable: first_identifier,
+                    collection,
+                }))
+            } else {
+                // This is "loop condition" - for now, just use the identifier as condition
+                // TODO: Implement proper condition parsing
+                (Some(Expression::Identifier(first_identifier)), None)
+            }
+        } else {
+            // No identifier, must be a condition expression
+            let condition = self.parse_expression()?;
+            (Some(condition), None)
+        };
+        
+        // Opening brace
+        if self.current_token != Token::Symbol('{') {
+            return Err(CompileError::SyntaxError(
+                "Expected '{' for loop body".to_string(),
+                Some(self.current_span.clone()),
+            ));
+        }
+        self.next_token();
+        
+        // Parse loop body
+        let mut body = vec![];
+        while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
+            body.push(self.parse_statement()?);
+        }
+        
+        if self.current_token != Token::Symbol('}') {
+            return Err(CompileError::SyntaxError(
+                "Expected '}' to close loop body".to_string(),
+                Some(self.current_span.clone()),
+            ));
+        }
+        self.next_token();
+        
+        Ok(Statement::Loop {
+            condition,
+            iterator,
+            label,
+            body,
         })
     }
 }
