@@ -71,66 +71,16 @@ impl<'a> Parser<'a> {
 
     pub fn parse_statement(&mut self) -> Result<Statement> {
         match &self.current_token {
-            Token::Identifier(name) => {
-                // Check for variable declarations
+            Token::Identifier(_name) => {
+                // Check for variable declarations using peek tokens
                 match &self.peek_token {
                     Token::Operator(op) if op == ":=" || op == "::=" => {
                         self.parse_variable_declaration()
                     }
                     Token::Symbol(':') => {
-                        // Check for explicit type declarations
-                        // Look ahead to see if this is "name : type = value"
-                        let saved_position = self.lexer.position;
-                        let saved_read_position = self.lexer.read_position;
-                        let saved_current_char = self.lexer.current_char;
-                        let saved_line = self.lexer.line;
-                        let saved_column = self.lexer.column;
-                        
-                        // Advance past the ':'
-                        self.next_token();
-                        
-                        // Try to parse a type
-                        let type_result = self.parse_type();
-                        
-                        // Check if next token is '='
-                        let has_equals = if type_result.is_ok() {
-                            self.current_token == Token::Operator("=".to_string())
-                        } else {
-                            false
-                        };
-                        
-                        // Restore lexer state
-                        self.lexer.position = saved_position;
-                        self.lexer.read_position = saved_read_position;
-                        self.lexer.current_char = saved_current_char;
-                        self.lexer.line = saved_line;
-                        self.lexer.column = saved_column;
-                        
-                        // Re-read the current token
-                        let token_with_span = self.lexer.next_token_with_span();
-                        self.current_token = token_with_span.token;
-                        self.current_span = token_with_span.span;
-                        
-                        // Re-read the peek token
-                        let peek_token_with_span = self.lexer.next_token_with_span();
-                        self.peek_token = peek_token_with_span.token;
-                        self.peek_span = peek_token_with_span.span;
-                        
-                        if has_equals {
-                            println!("DEBUG: Found explicit type declaration, calling parse_variable_declaration");
-                            self.parse_variable_declaration()
-                        } else {
-                            println!("DEBUG: Not a variable declaration, treating as expression");
-                            // Not a variable declaration, treat as expression
-                            let expr = self.parse_expression()?;
-                            if self.current_token == Token::Symbol(';') {
-                                self.next_token();
-                            }
-                            Ok(Statement::Expression(expr))
-                        }
+                        self.parse_variable_declaration()
                     }
                     Token::Operator(op) if op == "::" => {
-                        // Check for explicit mutable declarations
                         self.parse_variable_declaration()
                     }
                     _ => {
@@ -190,10 +140,13 @@ impl<'a> Parser<'a> {
                 }
                 Ok(Statement::Expression(expr))
             }
-            _ => Err(CompileError::SyntaxError(
-                format!("Unexpected token in statement: {:?}", self.current_token),
-                Some(self.current_span.clone()),
-            )),
+            _ => {
+                println!("DEBUG: Unexpected token in statement: {:?} at position {:?}", self.current_token, self.current_span);
+                Err(CompileError::SyntaxError(
+                    format!("Unexpected token in statement: {:?}", self.current_token),
+                    Some(self.current_span.clone()),
+                ))
+            }
         }
     }
 

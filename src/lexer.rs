@@ -18,6 +18,7 @@ pub struct TokenWithSpan {
     pub span: Span,
 }
 
+#[derive(Clone)]
 pub struct Lexer<'a> {
     pub input: &'a str,
     pub position: usize,
@@ -70,7 +71,7 @@ impl<'a> Lexer<'a> {
         let start_line = self.line;
         let start_column = self.column;
         
-        self.skip_whitespace();
+        self.skip_whitespace_and_comments();
         
         let token = match self.current_char {
             Some(c) if c.is_ascii_alphabetic() || c == '_' || c == '@' => {
@@ -190,13 +191,47 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn skip_whitespace(&mut self) {
-        while let Some(c) = self.current_char {
-            if c.is_whitespace() {
-                self.read_char();
-            } else {
-                break;
+    fn skip_whitespace_and_comments(&mut self) {
+        loop {
+            // Skip whitespace
+            while let Some(c) = self.current_char {
+                if c.is_whitespace() {
+                    self.read_char();
+                } else {
+                    break;
+                }
             }
+            // Skip single-line comments
+            if self.current_char == Some('/') && self.peek_char() == Some('/') {
+                // Skip '//'
+                self.read_char();
+                self.read_char();
+                // Skip until end of line or input
+                while let Some(c) = self.current_char {
+                    if c == '\n' {
+                        break;
+                    }
+                    self.read_char();
+                }
+                continue;
+            }
+            // Skip multi-line comments
+            if self.current_char == Some('/') && self.peek_char() == Some('*') {
+                // Skip '/*'
+                self.read_char();
+                self.read_char();
+                // Skip until '*/' or end of input
+                while let Some(c) = self.current_char {
+                    if c == '*' && self.peek_char() == Some('/') {
+                        self.read_char(); // skip '*'
+                        self.read_char(); // skip '/'
+                        break;
+                    }
+                    self.read_char();
+                }
+                continue;
+            }
+            break;
         }
     }
 
