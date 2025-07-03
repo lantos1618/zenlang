@@ -79,28 +79,48 @@ impl<'a> Parser<'a> {
                     }
                     Token::Symbol(':') => {
                         // Check for explicit type declarations
-                        let name_clone = name.clone();
+                        // Look ahead to see if this is "name : type = value"
                         let saved_position = self.lexer.position;
                         let saved_read_position = self.lexer.read_position;
                         let saved_current_char = self.lexer.current_char;
-                        let saved_current_token = self.current_token.clone();
-                        let saved_peek_token = self.peek_token.clone();
+                        let saved_line = self.lexer.line;
+                        let saved_column = self.lexer.column;
                         
-                        self.next_token(); // consume ':'
+                        // Advance past the ':'
+                        self.next_token();
                         
                         // Try to parse a type
                         let type_result = self.parse_type();
+                        
+                        // Check if next token is '='
+                        let has_equals = if type_result.is_ok() {
+                            self.current_token == Token::Operator("=".to_string())
+                        } else {
+                            false
+                        };
                         
                         // Restore lexer state
                         self.lexer.position = saved_position;
                         self.lexer.read_position = saved_read_position;
                         self.lexer.current_char = saved_current_char;
-                        self.current_token = saved_current_token;
-                        self.peek_token = saved_peek_token;
+                        self.lexer.line = saved_line;
+                        self.lexer.column = saved_column;
                         
-                        if type_result.is_ok() && self.peek_token == Token::Operator("=".to_string()) {
+                        // Re-read the current token
+                        let token_with_span = self.lexer.next_token_with_span();
+                        self.current_token = token_with_span.token;
+                        self.current_span = token_with_span.span;
+                        
+                        // Re-read the peek token
+                        let peek_token_with_span = self.lexer.next_token_with_span();
+                        self.peek_token = peek_token_with_span.token;
+                        self.peek_span = peek_token_with_span.span;
+                        
+                        if has_equals {
+                            println!("DEBUG: Found explicit type declaration, calling parse_variable_declaration");
                             self.parse_variable_declaration()
                         } else {
+                            println!("DEBUG: Not a variable declaration, treating as expression");
                             // Not a variable declaration, treat as expression
                             let expr = self.parse_expression()?;
                             if self.current_token == Token::Symbol(';') {
@@ -108,6 +128,10 @@ impl<'a> Parser<'a> {
                             }
                             Ok(Statement::Expression(expr))
                         }
+                    }
+                    Token::Operator(op) if op == "::" => {
+                        // Check for explicit mutable declarations
+                        self.parse_variable_declaration()
                     }
                     _ => {
                         // Not a variable declaration, treat as expression
@@ -174,6 +198,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_variable_declaration(&mut self) -> Result<Statement> {
+        println!("DEBUG: parse_variable_declaration called with token: {:?}", self.current_token);
         let name = if let Token::Identifier(name) = &self.current_token {
             name.clone()
         } else {
@@ -183,16 +208,19 @@ impl<'a> Parser<'a> {
         
         let (is_mutable, declaration_type, type_) = match &self.current_token {
             Token::Operator(op) if op == ":=" => {
+                println!("DEBUG: Found := operator");
                 // Inferred immutable: name := value
                 self.next_token();
                 (false, VariableDeclarationType::InferredImmutable, None)
             }
             Token::Operator(op) if op == "::=" => {
+                println!("DEBUG: Found ::= operator");
                 // Inferred mutable: name ::= value
                 self.next_token();
                 (true, VariableDeclarationType::InferredMutable, None)
             }
             Token::Symbol(':') => {
+                println!("DEBUG: Found : symbol for explicit type");
                 // Explicit immutable: name : T = value
                 self.next_token();
                 let type_ = self.parse_type()?;
@@ -203,6 +231,7 @@ impl<'a> Parser<'a> {
                 (false, VariableDeclarationType::ExplicitImmutable, Some(type_))
             }
             Token::Operator(op) if op == "::" => {
+                println!("DEBUG: Found :: operator");
                 // Explicit mutable: name :: T = value
                 self.next_token();
                 let type_ = self.parse_type()?;
@@ -213,6 +242,7 @@ impl<'a> Parser<'a> {
                 (true, VariableDeclarationType::ExplicitMutable, Some(type_))
             }
             _ => {
+                println!("DEBUG: Unexpected token in variable declaration: {:?}", self.current_token);
                 return Err(CompileError::SyntaxError(
                     format!("Expected variable declaration operator, got: {:?}", self.current_token),
                     Some(self.current_span.clone())

@@ -54,7 +54,7 @@ fn test_parse_variable_declaration() {
                         type_: Some(AstType::I32),
                         initializer: Some(Expression::Integer32(10)),
                         is_mutable: false,
-                        declaration_type: VariableDeclarationType::ExplicitImmutable,
+                        declaration_type: VariableDeclarationType::InferredImmutable,
                     },
                     Statement::Expression(Expression::Identifier("x".to_string())),
                 ],
