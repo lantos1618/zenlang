@@ -785,7 +785,7 @@ fn test_loop_construct() {
                     declaration_type: VariableDeclarationType::ExplicitImmutable,
                 },
                 Statement::Loop { 
-                    iterator: None, 
+
                     condition: Some(Expression::BinaryOp {
                         left: Box::new(Expression::Identifier("i".to_string())),
                         op: ast::BinaryOperator::LessThan,

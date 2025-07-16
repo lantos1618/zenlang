@@ -38,7 +38,7 @@ fn test_loop_construct() {
                         op: BinaryOperator::LessThan,
                         right: Box::new(Expression::Identifier("n".to_string())),
                     }),
-                    iterator: None,
+
                     label: None,
                     body: vec![
                         Statement::VariableAssignment {
