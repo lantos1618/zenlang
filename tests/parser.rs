@@ -156,7 +156,6 @@ fn test_parse_loop_with_condition() {
                                 },
                             },
                         ],
-                        iterator: None,
                         label: None,
                     },
                 ],
@@ -174,24 +173,8 @@ fn test_parse_loop_with_in() {
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
     
-    // For now, expect parsing to fail since loop with 'in' syntax isn't fully implemented
-    // When the parser is enhanced, this test should be updated to expect success
-    match program {
-        Ok(program) => {
-            // If parsing succeeds, verify the basic structure
-            if program.declarations.len() > 0 {
-                if let Declaration::Function(func) = &program.declarations[0] {
-                    assert_eq!(func.name, "print_names");
-                    assert_eq!(func.return_type, AstType::Void);
-                } else {
-                    panic!("Expected function declaration");
-                }
-            }
-        }
-        Err(_) => {
-            // Expected for now - loop with 'in' syntax not fully implemented
-        }
-    }
+    // Expect parsing to fail since 'in' is no longer a keyword and loop syntax doesn't support iteration
+    assert!(program.is_err());
 }
 
 #[test]
@@ -409,7 +392,6 @@ fn test_parse_loop_with_return() {
                                 },
                             },
                         ],
-                        iterator: None,
                         label: None,
                     },
                 ],

@@ -209,10 +209,9 @@ pub enum Statement {
         pointer: Expression,
         value: Expression,
     },
-    // Enhanced loop construct supporting all iteration patterns
+    // Loop construct for conditional loops only
     Loop {
         condition: Option<Expression>, // None for infinite loops
-        iterator: Option<LoopIterator>, // Some for "loop x in collection"
         label: Option<String>, // For labeled loops
         body: Vec<Statement>,
     },
@@ -238,11 +237,7 @@ pub enum VariableDeclarationType {
     ExplicitMutable,   // :: T =
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct LoopIterator {
-    pub variable: String,
-    pub collection: Expression,
-}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {

@@ -260,33 +260,21 @@ impl<'a> Parser<'a> {
             None
         };
         
-        // Check if this is a "loop x in collection" or "loop condition"
-        let (condition, iterator) = if let Token::Identifier(_) = &self.current_token {
-            // Could be "loop x in collection" or "loop condition"
+        // Parse loop condition (required for non-infinite loops)
+        let condition = if let Token::Identifier(_) = &self.current_token {
+            // This is "loop condition" - for now, just use the identifier as condition
+            // TODO: Implement proper condition parsing
             let first_identifier = if let Token::Identifier(name) = &self.current_token {
                 name.clone()
             } else {
                 unreachable!()
             };
             self.next_token();
-            
-            if self.current_token == Token::Keyword("in".to_string()) {
-                // This is "loop x in collection"
-                self.next_token();
-                let collection = self.parse_expression()?;
-                (None, Some(crate::ast::LoopIterator {
-                    variable: first_identifier,
-                    collection,
-                }))
-            } else {
-                // This is "loop condition" - for now, just use the identifier as condition
-                // TODO: Implement proper condition parsing
-                (Some(Expression::Identifier(first_identifier)), None)
-            }
+            Some(Expression::Identifier(first_identifier))
         } else {
-            // No identifier, must be a condition expression
+            // Parse a condition expression
             let condition = self.parse_expression()?;
-            (Some(condition), None)
+            Some(condition)
         };
         
         // Opening brace
@@ -314,7 +302,6 @@ impl<'a> Parser<'a> {
         
         Ok(Statement::Loop {
             condition,
-            iterator,
             label,
             body,
         })

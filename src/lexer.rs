@@ -260,7 +260,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn is_keyword(&self, ident: &str) -> bool {
-        matches!(ident, "loop" | "in" | "comptime" | "async" | "await" | "behavior" | "impl" | "extern" | "break" | "continue")
+        matches!(ident, "loop" | "comptime" | "async" | "await" | "behavior" | "impl" | "extern" | "break" | "continue")
     }
 
     fn is_symbol(&self, c: char) -> bool {

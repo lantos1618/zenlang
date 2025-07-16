@@ -256,7 +256,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     })
                 }
             }
-            Statement::Loop { condition, body, iterator: _, label: _ } => {
+            Statement::Loop { condition, body, label: _ } => {
                 // Create the loop structure
                 let loop_block = self.context.append_basic_block(self.current_function.unwrap(), "loop");
                 let after_loop_block = self.context.append_basic_block(self.current_function.unwrap(), "after_loop");
