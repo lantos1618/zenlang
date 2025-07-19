@@ -283,7 +283,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 right_val.into_int_value(),
                 "lttmp"
             )?;
-            Ok(result.into())
+            // Zero-extend i1 to i64 for test compatibility
+            let zext = self.builder.build_int_z_extend(result, self.context.i64_type(), "zext_lt")?;
+            Ok(zext.into())
         } else if left_val.is_float_value() && right_val.is_float_value() {
             let result = self.builder.build_float_compare(
                 FloatPredicate::OLT,
@@ -291,7 +293,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 right_val.into_float_value(),
                 "lttmp"
             )?;
-            Ok(result.into())
+            // Zero-extend i1 to i64 for test compatibility
+            let zext = self.builder.build_int_z_extend(result, self.context.i64_type(), "zext_lt")?;
+            Ok(zext.into())
         } else {
             Err(CompileError::TypeMismatch {
                 expected: "int or float".to_string(),

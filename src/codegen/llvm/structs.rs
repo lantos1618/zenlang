@@ -71,70 +71,140 @@ impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_struct_field(&mut self, struct_: &Expression, field: &str) -> Result<BasicValueEnum<'ctx>, CompileError> {
         println!("DEBUG: compile_struct_field called with struct: {:?}, field: {}", struct_, field);
         
-        // Compile the struct expression to get the struct pointer
-        let struct_val = self.compile_expression(struct_)?;
-        println!("DEBUG: struct_val type: {:?}", struct_val.get_type());
-        
-        // Get the struct pointer
-        let struct_ptr = struct_val.into_pointer_value();
-        println!("DEBUG: struct_ptr type: {:?}", struct_ptr.get_type());
-        
-        // Find the struct type info by matching the pointer type
-        let struct_type_info = self.struct_types.values().find(|info| {
-            struct_ptr.get_type().as_type_ref() == info.llvm_type.ptr_type(AddressSpace::default()).as_type_ref()
-        }).ok_or_else(|| CompileError::TypeError("Struct type info not found for pointer type".to_string(), None))?;
-        
-        println!("DEBUG: Found struct type info");
-        
-        let struct_type = struct_type_info.llvm_type;
-        let field_index = struct_type_info.fields.get(field).map(|(index, _)| *index)
-            .ok_or_else(|| CompileError::TypeError(format!("Field '{}' not found in struct", field), None))?;
-        
-        println!("DEBUG: Field index: {}", field_index);
-        
-        // Get the field type
-        let field_type = struct_type_info.fields.get(field).map(|(_, ty)| ty.clone())
-            .ok_or_else(|| CompileError::TypeError(format!("Field '{}' type not found", field), None))?;
-        
-        println!("DEBUG: Field type: {:?}", field_type);
-        
-        // Convert field type to LLVM type
-        let field_llvm_type = self.to_llvm_type(&field_type)?;
-        println!("DEBUG: Field LLVM type: {:?}", field_llvm_type);
-        
-        let field_basic_type = match field_llvm_type {
-            Type::Basic(ty) => ty,
-            Type::Struct(st) => st.as_basic_type_enum(),
-            _ => return Err(CompileError::TypeError(
-                "Unsupported field type in struct".to_string(),
-                None
-            )),
-        };
-        
-        println!("DEBUG: Field basic type: {:?}", field_basic_type);
-        
-        // Get the field pointer using GEP
-        let field_ptr = self.builder.build_struct_gep(
-            struct_type,
-            struct_ptr,
-            field_index as u32,
-            &format!("{}_ptr", field)
-        )?;
-        
-        println!("DEBUG: Field pointer created");
-        
-        // Load the field value
-        match self.builder.build_load(
-            field_basic_type,
-            field_ptr,
-            &format!("{}_val", field)
-        ) {
-            Ok(val) => {
-                println!("DEBUG: compile_struct_field returning value of type: {:?}", val.get_type());
-                Ok(val)
-            },
-            Err(e) => Err(CompileError::InternalError(e.to_string(), None)),
+        // Special handling for identifiers - we need the pointer, not the loaded value
+        if let Expression::Identifier(name) = struct_ {
+            // Get the variable info
+            if let Some((alloca, var_type)) = self.variables.get(name) {
+                if let AstType::Struct { name: struct_name, .. } = var_type {
+                    // Get struct type info
+                    let struct_info = self.struct_types.get(struct_name)
+                        .ok_or_else(|| CompileError::TypeError(
+                            format!("Struct type '{}' not found", struct_name),
+                            None
+                        ))?;
+                    
+                    // Find field index
+                    let field_index = struct_info.fields.get(field)
+                        .map(|(idx, _)| *idx)
+                        .ok_or_else(|| CompileError::TypeError(
+                            format!("Field '{}' not found in struct '{}'", field, struct_name),
+                            None
+                        ))?;
+                    
+                    // Get field type
+                    let field_type = struct_info.fields.get(field)
+                        .map(|(_, ty)| ty.clone())
+                        .unwrap();
+                    
+                    // Build GEP to get field pointer
+                    let indices = vec![
+                        self.context.i32_type().const_zero(),
+                        self.context.i32_type().const_int(field_index as u64, false),
+                    ];
+                    
+                    let field_ptr = unsafe {
+                        self.builder.build_gep(
+                            struct_info.llvm_type,
+                            *alloca,
+                            &indices,
+                            &format!("{}.{}", name, field)
+                        )?
+                    };
+                    
+                    // Load the field value
+                    let field_llvm_type = self.to_llvm_type(&field_type)?;
+                    let basic_type = match field_llvm_type {
+                        Type::Basic(ty) => ty,
+                        Type::Struct(st) => st.as_basic_type_enum(),
+                        _ => return Err(CompileError::TypeError(
+                            "Field type must be basic type".to_string(),
+                            None
+                        )),
+                    };
+                    
+                    let value = self.builder.build_load(basic_type, field_ptr, &format!("load_{}", field))?;
+                    return Ok(value);
+                }
+            }
         }
+        
+        // Handle dereference case - when accessing field of a dereferenced pointer
+        if let Expression::Dereference(inner) = struct_ {
+            // Compile the inner expression to get the pointer
+            let ptr_val = self.compile_expression(inner)?;
+            
+            if let BasicValueEnum::PointerValue(ptr) = ptr_val {
+                // Load the pointer value to get the actual struct pointer
+                let struct_ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
+                let struct_ptr = self.builder.build_load(struct_ptr_type, ptr, "load_struct_ptr")?;
+                let struct_ptr = struct_ptr.into_pointer_value();
+                
+                // Now we need to find the struct type from the pointer
+                // This is a bit tricky - we need to look up the variable type
+                if let Expression::Identifier(ptr_name) = &**inner {
+                    if let Some((_, ptr_type)) = self.variables.get(ptr_name) {
+                        if let AstType::Pointer(inner_type) = ptr_type {
+                            if let AstType::Struct { name: struct_name, .. } = &**inner_type {
+                                // Get struct type info
+                                let struct_info = self.struct_types.get(struct_name)
+                                    .ok_or_else(|| CompileError::TypeError(
+                                        format!("Struct type '{}' not found", struct_name),
+                                        None
+                                    ))?;
+                                
+                                // Find field index
+                                let field_index = struct_info.fields.get(field)
+                                    .map(|(idx, _)| *idx)
+                                    .ok_or_else(|| CompileError::TypeError(
+                                        format!("Field '{}' not found in struct '{}'", field, struct_name),
+                                        None
+                                    ))?;
+                                
+                                // Get field type
+                                let field_type = struct_info.fields.get(field)
+                                    .map(|(_, ty)| ty.clone())
+                                    .unwrap();
+                                
+                                // Build GEP to get field pointer
+                                let indices = vec![
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_int(field_index as u64, false),
+                                ];
+                                
+                                let field_ptr = unsafe {
+                                    self.builder.build_gep(
+                                        struct_info.llvm_type,
+                                        struct_ptr,
+                                        &indices,
+                                        &format!("{}->{}",ptr_name, field)
+                                    )?
+                                };
+                                
+                                // Load the field value
+                                let field_llvm_type = self.to_llvm_type(&field_type)?;
+                                let basic_type = match field_llvm_type {
+                                    Type::Basic(ty) => ty,
+                                    Type::Struct(st) => st.as_basic_type_enum(),
+                                    _ => return Err(CompileError::TypeError(
+                                        "Field type must be basic type".to_string(),
+                                        None
+                                    )),
+                                };
+                                
+                                let value = self.builder.build_load(basic_type, field_ptr, &format!("load_{}", field))?;
+                                return Ok(value);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fallback error
+        Err(CompileError::TypeError(
+            format!("Cannot access field '{}' of expression {:?}", field, struct_),
+            None
+        ))
     }
 
     pub fn compile_struct_field_assignment(&mut self, struct_alloca: inkwell::values::PointerValue<'ctx>, field_name: &str, value: BasicValueEnum<'ctx>) -> Result<(), CompileError> {

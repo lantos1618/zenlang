@@ -58,6 +58,39 @@ impl<'a> Parser<'a> {
                         Some(self.current_span.clone()),
                     ));
                 }
+            } else if let Token::Keyword(keyword) = &self.current_token {
+                if keyword == "comptime" {
+                    // Parse comptime block
+                    self.next_token(); // consume 'comptime'
+                    if self.current_token != Token::Symbol('{') {
+                        return Err(CompileError::SyntaxError(
+                            "Expected '{' after comptime".to_string(),
+                            Some(self.current_span.clone()),
+                        ));
+                    }
+                    self.next_token(); // consume '{'
+                    
+                    let mut statements = vec![];
+                    while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
+                        statements.push(self.parse_statement()?);
+                    }
+                    
+                    if self.current_token != Token::Symbol('}') {
+                        return Err(CompileError::SyntaxError(
+                            "Expected '}' to close comptime block".to_string(),
+                            Some(self.current_span.clone()),
+                        ));
+                    }
+                    self.next_token(); // consume '}'
+                    
+                    // For now, we'll just skip comptime blocks since they're not fully implemented
+                    // TODO: Add proper comptime block support to AST
+                } else {
+                    return Err(CompileError::SyntaxError(
+                        format!("Unexpected keyword at top level: {}", keyword),
+                        Some(self.current_span.clone()),
+                    ));
+                }
             } else {
                 return Err(CompileError::SyntaxError(
                     format!("Unexpected token at top level: {:?}", self.current_token),
@@ -83,6 +116,9 @@ impl<'a> Parser<'a> {
                     Token::Operator(op) if op == "::" => {
                         self.parse_variable_declaration()
                     }
+                    Token::Operator(op) if op == "=" => {
+                        self.parse_variable_assignment()
+                    }
                     _ => {
                         // Not a variable declaration, treat as expression
                         let expr = self.parse_expression()?;
@@ -92,6 +128,14 @@ impl<'a> Parser<'a> {
                         Ok(Statement::Expression(expr))
                     }
                 }
+            }
+            Token::Symbol('?') => {
+                // Parse conditional expression
+                let expr = self.parse_expression()?;
+                if self.current_token == Token::Symbol(';') {
+                    self.next_token();
+                }
+                Ok(Statement::Expression(expr))
             }
             Token::Keyword(keyword) if keyword == "return" => {
                 self.next_token();
@@ -205,26 +249,9 @@ impl<'a> Parser<'a> {
         
         let initializer = self.parse_expression()?;
         
-        // Infer type from initializer if not explicitly specified
-        let inferred_type = if type_.is_none() {
-            match &initializer {
-                Expression::Integer8(_) => Some(AstType::I8),
-                Expression::Integer16(_) => Some(AstType::I16),
-                Expression::Integer32(_) => Some(AstType::I32),
-                Expression::Integer64(_) => Some(AstType::I64),
-                Expression::Unsigned8(_) => Some(AstType::U8),
-                Expression::Unsigned16(_) => Some(AstType::U16),
-                Expression::Unsigned32(_) => Some(AstType::U32),
-                Expression::Unsigned64(_) => Some(AstType::U64),
-                Expression::Float32(_) => Some(AstType::F32),
-                Expression::Float64(_) => Some(AstType::F64),
-                Expression::Boolean(_) => Some(AstType::Bool),
-                Expression::String(_) => Some(AstType::String),
-                _ => None, // Can't infer type for other expressions
-            }
-        } else {
-            type_
-        };
+        // For inferred declarations (:= and ::=), leave type_ as None
+        // For explicit declarations (: T = and :: T =), use the parsed type
+        let final_type = type_;
         
         if self.current_token == Token::Symbol(';') {
             self.next_token();
@@ -232,7 +259,7 @@ impl<'a> Parser<'a> {
         
         Ok(Statement::VariableDeclaration {
             name,
-            type_: inferred_type,
+            type_: final_type,
             initializer: Some(initializer),
             is_mutable,
             declaration_type,
@@ -262,20 +289,16 @@ impl<'a> Parser<'a> {
         
         // Parse loop condition (required for non-infinite loops)
         let condition = if let Token::Identifier(_) = &self.current_token {
-            // This is "loop condition" - for now, just use the identifier as condition
-            // TODO: Implement proper condition parsing
-            let first_identifier = if let Token::Identifier(name) = &self.current_token {
-                name.clone()
-            } else {
-                unreachable!()
-            };
-            self.next_token();
-            Some(Expression::Identifier(first_identifier))
+            // Parse a condition expression starting with an identifier
+            let condition = self.parse_expression()?;
+            Some(condition)
         } else {
             // Parse a condition expression
             let condition = self.parse_expression()?;
             Some(condition)
         };
+        
+
         
         // Opening brace
         if self.current_token != Token::Symbol('{') {
@@ -304,6 +327,34 @@ impl<'a> Parser<'a> {
             condition,
             label,
             body,
+        })
+    }
+    
+    fn parse_variable_assignment(&mut self) -> Result<Statement> {
+        let name = if let Token::Identifier(name) = &self.current_token {
+            name.clone()
+        } else {
+            return Err(CompileError::SyntaxError("Expected variable name".to_string(), Some(self.current_span.clone())));
+        };
+        self.next_token(); // consume identifier
+        
+        // Consume the '=' operator
+        if self.current_token != Token::Operator("=".to_string()) {
+            return Err(CompileError::SyntaxError("Expected '=' for assignment".to_string(), Some(self.current_span.clone())));
+        }
+        self.next_token();
+        
+        // Parse the value expression
+        let value = self.parse_expression()?;
+        
+        // Consume semicolon if present
+        if self.current_token == Token::Symbol(';') {
+            self.next_token();
+        }
+        
+        Ok(Statement::VariableAssignment {
+            name,
+            value,
         })
     }
 }

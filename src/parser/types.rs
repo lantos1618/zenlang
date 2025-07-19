@@ -22,7 +22,7 @@ impl<'a> Parser<'a> {
                     "f32" => Ok(AstType::F32),
                     "f64" => Ok(AstType::F64),
                     "bool" => Ok(AstType::Bool),
-                    "String" => Ok(AstType::String),
+                    "String" | "string" => Ok(AstType::String),
                     "void" => Ok(AstType::Void),
                     _ => {
                         // Could be a custom type (struct, enum, etc.)

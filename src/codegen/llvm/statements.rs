@@ -258,32 +258,47 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
             Statement::Loop { condition, body, label: _ } => {
                 // Create the loop structure
-                let loop_block = self.context.append_basic_block(self.current_function.unwrap(), "loop");
+                let loop_header = self.context.append_basic_block(self.current_function.unwrap(), "loop_header");
+                let loop_body = self.context.append_basic_block(self.current_function.unwrap(), "loop_body");
                 let after_loop_block = self.context.append_basic_block(self.current_function.unwrap(), "after_loop");
                 
-                // Branch to loop block
-                self.builder.build_unconditional_branch(loop_block).map_err(|e| CompileError::from(e))?;
+                // Branch to loop header
+                self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
                 
-                // Emit loop block
-                self.builder.position_at_end(loop_block);
+                // Emit loop header (condition check)
+                self.builder.position_at_end(loop_header);
+                
+                if let Some(cond_expr) = condition {
+                    let cond_value = self.compile_expression(cond_expr)?;
+                    if let BasicValueEnum::IntValue(int_val) = cond_value {
+                        // Compare with zero (non-zero means true)
+                        let zero = self.context.i64_type().const_zero();
+                        let condition = self.builder.build_int_compare(
+                            inkwell::IntPredicate::NE,
+                            int_val,
+                            zero,
+                            "loop_condition"
+                        ).map_err(|e| CompileError::from(e))?;
+                        
+                        self.builder.build_conditional_branch(condition, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
+                    } else {
+                        return Err(CompileError::TypeError("Loop condition must be an integer".to_string(), None));
+                    }
+                } else {
+                    // Infinite loop - just branch to body
+                    self.builder.build_unconditional_branch(loop_body).map_err(|e| CompileError::from(e))?;
+                }
+                
+                // Emit loop body
+                self.builder.position_at_end(loop_body);
                 
                 // Compile loop body
                 for stmt in body {
                     self.compile_statement(stmt)?;
                 }
                 
-                // If there's a condition, check it
-                if let Some(cond_expr) = condition {
-                    let cond_value = self.compile_expression(cond_expr)?;
-                    if let BasicValueEnum::IntValue(int_val) = cond_value {
-                        self.builder.build_conditional_branch(int_val, loop_block, after_loop_block).map_err(|e| CompileError::from(e))?;
-                    } else {
-                        return Err(CompileError::TypeError("Loop condition must be an integer".to_string(), None));
-                    }
-                } else {
-                    // Infinite loop - just branch back
-                    self.builder.build_unconditional_branch(loop_block).map_err(|e| CompileError::from(e))?;
-                }
+                // Branch back to header
+                self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
                 
                 // Position builder at after_loop block
                 self.builder.position_at_end(after_loop_block);

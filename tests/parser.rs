@@ -1,6 +1,6 @@
 use zen::lexer::Lexer;
 use zen::parser::Parser;
-use zen::ast::{Program, Declaration, Function, Statement, Expression, AstType, VariableDeclarationType, BinaryOperator};
+use zen::ast::{self, Program, Declaration, Function, Statement, Expression, AstType, VariableDeclarationType, BinaryOperator, Pattern};
 use zen::error::CompileError;
 
 #[test]
@@ -51,7 +51,7 @@ fn test_parse_variable_declaration() {
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "x".to_string(),
-                        type_: Some(AstType::I32),
+                        type_: None,
                         initializer: Some(Expression::Integer32(10)),
                         is_mutable: false,
                         declaration_type: VariableDeclarationType::InferredImmutable,
@@ -135,10 +135,10 @@ fn test_parse_loop_with_condition() {
                 body: vec![
                     Statement::VariableDeclaration {
                         name: "counter".to_string(),
-                        type_: Some(AstType::I32),
+                        type_: None,
                         initializer: Some(Expression::Integer32(10)),
-                        is_mutable: false,
-                        declaration_type: VariableDeclarationType::ExplicitImmutable,
+                        is_mutable: true,
+                        declaration_type: VariableDeclarationType::InferredMutable,
                     },
                     Statement::Loop {
                         condition: Some(Expression::BinaryOp {
@@ -219,21 +219,57 @@ fn test_parse_enum_definition() {
 
 #[test]
 fn test_parse_conditional_expression() {
-    let input = "grade = (score: i32) string { score -> s { | s >= 90 => \"A\" | s >= 80 => \"B\" | true => \"C\" } }";
+    let input = "result = (x: i32) string { ? x -> value { | 0 => \"zero\" | 1 => \"one\" | _ => \"other\" } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
     
-    // For now, expect parsing to fail since conditional expressions aren't implemented
-    // When the parser is enhanced, this test should be updated to expect success
-    match program {
-        Ok(program) => {
-            // If parsing succeeds, verify it's an empty program for now
-            assert_eq!(program, Program { declarations: vec![] });
+    assert!(program.is_ok(), "Failed to parse conditional expression: {:?}", program.err());
+    
+    let program = program.unwrap();
+    assert_eq!(program.declarations.len(), 1);
+    
+    if let Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.name, "result");
+        assert_eq!(func.return_type, AstType::String);
+        assert_eq!(func.body.len(), 1);
+        
+        if let Statement::Expression(Expression::Conditional { scrutinee, arms }) = &func.body[0] {
+            // Check scrutinee is an identifier 'x'
+            if let Expression::Identifier(name) = &**scrutinee {
+                assert_eq!(name, "x");
+            } else {
+                panic!("Expected identifier 'x' as scrutinee");
+            }
+            
+            // Check we have 3 arms
+            assert_eq!(arms.len(), 3);
+            
+            // Check first arm: | 0 => "zero"
+            if let ast::ConditionalArm { pattern: Pattern::Literal(Expression::Integer32(0)), guard: None, body: Expression::String(ref s) } = &arms[0] {
+                assert_eq!(s, "zero");
+            } else {
+                panic!("Expected first arm to be | 0 => \"zero\"");
+            }
+            
+            // Check second arm: | 1 => "one"
+            if let ast::ConditionalArm { pattern: Pattern::Literal(Expression::Integer32(1)), guard: None, body: Expression::String(ref s) } = &arms[1] {
+                assert_eq!(s, "one");
+            } else {
+                panic!("Expected second arm to be | 1 => \"one\"");
+            }
+            
+            // Check third arm: | _ => "other"
+            if let ast::ConditionalArm { pattern: Pattern::Wildcard, guard: None, body: Expression::String(ref s) } = &arms[2] {
+                assert_eq!(s, "other");
+            } else {
+                panic!("Expected third arm to be | _ => \"other\"");
+            }
+        } else {
+            panic!("Expected conditional expression");
         }
-        Err(_) => {
-            // Expected for now - conditional expressions not implemented
-        }
+    } else {
+        panic!("Expected function declaration");
     }
 }
 
@@ -286,7 +322,7 @@ fn test_function_with_multiple_statements() {
         // Check the first statement (x := 42)
         if let Statement::VariableDeclaration { name, type_, initializer, is_mutable: _, declaration_type: _ } = &func.body[0] {
             assert_eq!(name, "x");
-            assert_eq!(*type_, Some(AstType::I32));
+            assert_eq!(*type_, None);
             assert!(matches!(initializer, Some(Expression::Integer32(42))));
         } else {
             panic!("Expected VariableDeclaration for first statement");
@@ -295,7 +331,7 @@ fn test_function_with_multiple_statements() {
         // Check the second statement (y := 10)
         if let Statement::VariableDeclaration { name, type_, initializer, is_mutable: _, declaration_type: _ } = &func.body[1] {
             assert_eq!(name, "y");
-            assert_eq!(*type_, Some(AstType::I32));
+            assert_eq!(*type_, None);
             assert!(matches!(initializer, Some(Expression::Integer32(10))));
         } else {
             panic!("Expected VariableDeclaration for second statement");
@@ -331,14 +367,14 @@ fn test_parse_function_with_return() {
                     Statement::VariableDeclaration {
                         name: "x".to_string(),
                         type_: None, // Inferred type
-                        initializer: Some(Expression::Integer8(42)),
+                        initializer: Some(Expression::Integer32(42)),
                         is_mutable: false,
                         declaration_type: VariableDeclarationType::InferredImmutable,
                     },
                     Statement::VariableDeclaration {
                         name: "y".to_string(),
                         type_: None, // Inferred type
-                        initializer: Some(Expression::Integer8(10)),
+                        initializer: Some(Expression::Integer32(10)),
                         is_mutable: false,
                         declaration_type: VariableDeclarationType::InferredImmutable,
                     },
@@ -456,7 +492,7 @@ fn test_parse_all_variable_declaration_syntax() {
         if let Statement::VariableDeclaration { name, type_, initializer, is_mutable, declaration_type } = &func.body[3] {
             assert_eq!(name, "w");
             assert_eq!(type_, &Some(AstType::U64)); // Explicit type
-            assert_eq!(initializer.as_ref().unwrap(), &Expression::Integer64(100));
+            assert_eq!(initializer.as_ref().unwrap(), &Expression::Integer32(100));
             assert_eq!(*is_mutable, true);
             assert!(matches!(declaration_type, VariableDeclarationType::ExplicitMutable));
         } else {

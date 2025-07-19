@@ -118,6 +118,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         println!("DEBUG: expect_basic_type called with type: {:?}", t);
         match t {
             Type::Basic(ty) => Ok(ty),
+            Type::Struct(struct_type) => Ok(struct_type.as_basic_type_enum()),
             _ => Err(CompileError::UnsupportedFeature(
                 "Expected basic type, got non-basic type (e.g., function type)".to_string(),
                 None,

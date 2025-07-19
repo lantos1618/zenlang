@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::{Expression, BinaryOperator};
+use crate::ast::{Expression, BinaryOperator, Pattern};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 
@@ -67,8 +67,6 @@ impl<'a> Parser<'a> {
                 // Default to Integer32 unless out of range
                 if value <= i32::MAX as i64 && value >= i32::MIN as i64 {
                     Ok(Expression::Integer32(value as i32))
-                } else if value <= i8::MAX as i64 && value >= i8::MIN as i64 {
-                    Ok(Expression::Integer8(value as i8))
                 } else {
                     Ok(Expression::Integer64(value))
                 }
@@ -91,10 +89,41 @@ impl<'a> Parser<'a> {
             Token::Identifier(name) => {
                 let name = name.clone();
                 self.next_token();
+                let mut expr = Expression::Identifier(name);
+                
+                // Handle member access and function calls
+                while let Token::Symbol('.') = &self.current_token {
+                    self.next_token(); // consume '.'
+                    
+                    if let Token::Identifier(member) = &self.current_token {
+                        let member = member.clone();
+                        self.next_token();
+                        expr = Expression::MemberAccess {
+                            object: Box::new(expr),
+                            member,
+                        };
+                    } else {
+                        return Err(CompileError::SyntaxError(
+                            "Expected identifier after '.'".to_string(),
+                            Some(self.current_span.clone()),
+                        ));
+                    }
+                }
+                
+                // Handle function call if present
                 if self.current_token == Token::Symbol('(') {
-                    self.parse_call_expression(name)
+                    if let Expression::MemberAccess { object, member } = expr {
+                        self.parse_call_expression_with_object(*object, member)
+                    } else if let Expression::Identifier(name) = expr {
+                        self.parse_call_expression(name)
+                    } else {
+                        Err(CompileError::SyntaxError(
+                            "Unexpected expression type for function call".to_string(),
+                            Some(self.current_span.clone()),
+                        ))
+                    }
                 } else {
-                    Ok(Expression::Identifier(name))
+                    Ok(expr)
                 }
             }
             Token::Symbol('(') => {
@@ -114,6 +143,11 @@ impl<'a> Parser<'a> {
                 self.next_token();
                 self.parse_conditional_expression()
             }
+            Token::Symbol('?') => {
+                // Conditional expression: ? expr -> pattern { ... }
+                self.next_token();
+                self.parse_conditional_expression()
+            }
             _ => Err(CompileError::SyntaxError(
                 format!("Unexpected token: {:?}", self.current_token),
                 Some(self.current_span.clone()),
@@ -122,19 +156,34 @@ impl<'a> Parser<'a> {
     }
     
     fn parse_conditional_expression(&mut self) -> Result<Expression> {
-        // Parse conditional expression: expr -> pattern { | pattern => expr | pattern => expr }
+        // Parse conditional expression: expr -> binding_pattern { | pattern => expr | pattern => expr }
         let scrutinee = Box::new(self.parse_expression()?);
+        
+
         
         if self.current_token != Token::Operator("->".to_string()) {
             return Err(CompileError::SyntaxError(
-                "Expected '->' in conditional expression".to_string(),
+                format!("Expected '->' in conditional expression, got {:?}", self.current_token),
                 Some(self.current_span.clone()),
             ));
         }
         self.next_token();
         
-        // Parse binding pattern
-        let binding_pattern = self.parse_binding_pattern()?;
+        // Parse binding pattern (the identifier after ->)
+        let binding_name = if let Token::Identifier(name) = &self.current_token {
+            name.clone()
+        } else {
+            return Err(CompileError::SyntaxError(
+                "Expected identifier for binding pattern".to_string(),
+                Some(self.current_span.clone()),
+            ));
+        };
+        self.next_token();
+        
+        let binding_pattern = Pattern::Binding {
+            name: binding_name.clone(),
+            pattern: Box::new(Pattern::Identifier(binding_name)),
+        };
         
         if self.current_token != Token::Symbol('{') {
             return Err(CompileError::SyntaxError(
@@ -155,7 +204,7 @@ impl<'a> Parser<'a> {
             }
             
             // Each arm starts with |
-            if self.current_token != Token::Operator("|".to_string()) {
+            if self.current_token != Token::Symbol('|') {
                 return Err(CompileError::SyntaxError(
                     "Expected '|' at start of conditional arm".to_string(),
                     Some(self.current_span.clone()),
@@ -222,6 +271,37 @@ impl<'a> Parser<'a> {
         self.next_token(); // consume ')'
         Ok(Expression::FunctionCall {
             name: function_name,
+            args: arguments,
+        })
+    }
+
+    fn parse_call_expression_with_object(&mut self, object: Expression, method_name: String) -> Result<Expression> {
+        self.next_token(); // consume '('
+        let mut arguments = vec![];
+        if self.current_token != Token::Symbol(')') {
+            loop {
+                arguments.push(self.parse_expression()?);
+                if self.current_token == Token::Symbol(')') {
+                    break;
+                }
+                if self.current_token != Token::Symbol(',') {
+                    return Err(CompileError::SyntaxError(
+                        "Expected ',' or ')' in function call".to_string(),
+                        Some(self.current_span.clone()),
+                    ));
+                }
+                self.next_token();
+            }
+        }
+        self.next_token(); // consume ')'
+        Ok(Expression::FunctionCall {
+            name: format!("{}.{}", match &object {
+                Expression::Identifier(name) => name.clone(),
+                _ => return Err(CompileError::SyntaxError(
+                    "Expected identifier for object in method call".to_string(),
+                    Some(self.current_span.clone()),
+                )),
+            }, method_name),
             args: arguments,
         })
     }
