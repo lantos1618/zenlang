@@ -26,7 +26,6 @@ The parser is currently a major bottleneck. Many advanced language features are 
   - [ ] Handle literal patterns and identifier patterns
 
 - [x] **Complete loop syntax parsing**
-  - [x] Parse `loop in` iterable loops
   - [x] Handle loop labels and break/continue
   - [ ] Support range-based loops
   - [x] Parse iterator-based loops

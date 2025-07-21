@@ -1,12 +1,26 @@
 use crate::error::Span;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Keyword {
+    Loop,
+    Comptime,
+    Async,
+    Await,
+    Behavior,
+    Impl,
+    Extern,
+    Break,
+    Continue,
+    Return,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Identifier(String),
     Integer(String),
     Float(String),
     StringLiteral(String),
-    Keyword(String),
+    Keyword(Keyword),
     Symbol(char),
     Operator(String),
     Eof,
@@ -76,10 +90,9 @@ impl<'a> Lexer<'a> {
         let token = match self.current_char {
             Some(c) if c.is_ascii_alphabetic() || c == '_' || c == '@' => {
                 let ident = self.read_identifier();
-                if self.is_keyword(&ident) {
-                    Token::Keyword(ident)
-                } else {
-                    Token::Identifier(ident)
+                match self.str_to_keyword(&ident) {
+                    Some(keyword) => Token::Keyword(keyword),
+                    None => Token::Identifier(ident),
                 }
             }
             Some(c) if c.is_ascii_digit() => {
@@ -249,9 +262,25 @@ impl<'a> Lexer<'a> {
 
     fn read_number(&mut self) -> String {
         let start = self.position;
+        let mut has_dot = false;
+        
         while let Some(c) = self.current_char {
-            if c.is_ascii_digit() || c == '.' {
+            if c.is_ascii_digit() {
                 self.read_char();
+            } else if c == '.' && !has_dot {
+                // Only consume '.' if it's followed by a digit (for floats like 3.14)
+                // This prevents consuming '..' as part of a number
+                if let Some(next_c) = self.peek_char() {
+                    if next_c.is_ascii_digit() {
+                        has_dot = true;
+                        self.read_char();
+                    } else {
+                        // Don't consume '.' if not followed by digit
+                        break;
+                    }
+                } else {
+                    break;
+                }
             } else {
                 break;
             }
@@ -259,8 +288,20 @@ impl<'a> Lexer<'a> {
         self.input[start..self.position].to_string()
     }
 
-    fn is_keyword(&self, ident: &str) -> bool {
-        matches!(ident, "loop" | "comptime" | "async" | "await" | "behavior" | "impl" | "extern" | "break" | "continue")
+    fn str_to_keyword(&self, ident: &str) -> Option<Keyword> {
+        match ident {
+            "loop" => Some(Keyword::Loop),
+            "comptime" => Some(Keyword::Comptime),
+            "async" => Some(Keyword::Async),
+            "await" => Some(Keyword::Await),
+            "behavior" => Some(Keyword::Behavior),
+            "impl" => Some(Keyword::Impl),
+            "extern" => Some(Keyword::Extern),
+            "break" => Some(Keyword::Break),
+            "continue" => Some(Keyword::Continue),
+            "return" => Some(Keyword::Return),
+            _ => None,
+        }
     }
 
     fn is_symbol(&self, c: char) -> bool {
@@ -294,7 +335,7 @@ impl<'a> Lexer<'a> {
         if let Some(second_char) = self.current_char {
             if let Some(third_char) = self.peek_char() {
                 let three_char_op = format!("{}{}{}", first_char, second_char, third_char);
-                if matches!(three_char_op.as_str(), "::=") {
+                if matches!(three_char_op.as_str(), "::=" | "..=") {
                     self.read_char(); // consume second char
                     self.read_char(); // consume third char
                     return three_char_op;
@@ -305,7 +346,7 @@ impl<'a> Lexer<'a> {
         // Handle two-character operators
         if let Some(second_char) = self.current_char {
             let two_char_op = format!("{}{}", first_char, second_char);
-            if matches!(two_char_op.as_str(), "==" | "!=" | "<=" | ">=" | "&&" | "||" | "->" | "=>" | ":=" | "::" | "..") {
+            if matches!(two_char_op.as_str(), "==" | "!=" | "<=" | ">=" | "&&" | "||" | "->" | "=>" | ":=" | "::" | ".." | "..=") {
                 self.read_char();
                 return two_char_op;
             }

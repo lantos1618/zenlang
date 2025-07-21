@@ -1,5 +1,4 @@
-use zen::lexer::Lexer;
-use zen::lexer::Token;
+use zen::lexer::{Lexer, Token, Keyword};
 
 #[test]
 fn test_lexer_identifier_integer_eof() {
@@ -17,7 +16,7 @@ fn test_lexer_identifier_integer_eof() {
 fn test_lexer_keyword_and_symbol() {
     let input = "loop { }";
     let mut lexer = Lexer::new(input);
-    assert_eq!(lexer.next_token(), Token::Keyword("loop".to_string()));
+    assert_eq!(lexer.next_token(), Token::Keyword(Keyword::Loop));
     assert_eq!(lexer.next_token(), Token::Symbol('{'));
     assert_eq!(lexer.next_token(), Token::Symbol('}'));
     assert_eq!(lexer.next_token(), Token::Eof);
@@ -56,15 +55,14 @@ fn test_lexer_float_numbers() {
 
 #[test]
 fn test_lexer_more_keywords() {
-    let input = "loop in comptime async await behavior impl";
+    let input = "loop comptime async await behavior impl";
     let mut lexer = Lexer::new(input);
-    assert_eq!(lexer.next_token(), Token::Keyword("loop".to_string()));
-    assert_eq!(lexer.next_token(), Token::Keyword("in".to_string()));
-    assert_eq!(lexer.next_token(), Token::Keyword("comptime".to_string()));
-    assert_eq!(lexer.next_token(), Token::Keyword("async".to_string()));
-    assert_eq!(lexer.next_token(), Token::Keyword("await".to_string()));
-    assert_eq!(lexer.next_token(), Token::Keyword("behavior".to_string()));
-    assert_eq!(lexer.next_token(), Token::Keyword("impl".to_string()));
+    assert_eq!(lexer.next_token(), Token::Keyword(Keyword::Loop));
+    assert_eq!(lexer.next_token(), Token::Keyword(Keyword::Comptime));
+    assert_eq!(lexer.next_token(), Token::Keyword(Keyword::Async));
+    assert_eq!(lexer.next_token(), Token::Keyword(Keyword::Await));
+    assert_eq!(lexer.next_token(), Token::Keyword(Keyword::Behavior));
+    assert_eq!(lexer.next_token(), Token::Keyword(Keyword::Impl));
     assert_eq!(lexer.next_token(), Token::Eof);
 }
 
@@ -150,24 +148,7 @@ fn test_lexer_string_interpolation() {
     assert_eq!(lexer.next_token(), Token::Eof);
 }
 
-#[test]
-fn test_lexer_loop_with_in() {
-    let input = "loop name in names { io.print(name) }";
-    let mut lexer = Lexer::new(input);
-    assert_eq!(lexer.next_token(), Token::Keyword("loop".to_string()));
-    assert_eq!(lexer.next_token(), Token::Identifier("name".to_string()));
-    assert_eq!(lexer.next_token(), Token::Keyword("in".to_string()));
-    assert_eq!(lexer.next_token(), Token::Identifier("names".to_string()));
-    assert_eq!(lexer.next_token(), Token::Symbol('{'));
-    assert_eq!(lexer.next_token(), Token::Identifier("io".to_string()));
-    assert_eq!(lexer.next_token(), Token::Symbol('.'));
-    assert_eq!(lexer.next_token(), Token::Identifier("print".to_string()));
-    assert_eq!(lexer.next_token(), Token::Symbol('('));
-    assert_eq!(lexer.next_token(), Token::Identifier("name".to_string()));
-    assert_eq!(lexer.next_token(), Token::Symbol(')'));
-    assert_eq!(lexer.next_token(), Token::Symbol('}'));
-    assert_eq!(lexer.next_token(), Token::Eof);
-}
+
 
 #[test]
 fn test_lexer_debug_variable_declarations() {

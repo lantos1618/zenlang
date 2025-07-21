@@ -1,7 +1,7 @@
 use super::core::Parser;
 use crate::ast::{Program, Declaration, Statement, VariableDeclarationType, Expression, AstType};
 use crate::error::{CompileError, Result};
-use crate::lexer::Token;
+use crate::lexer::{self, Token};
 
 impl<'a> Parser<'a> {
     pub fn parse_program(&mut self) -> Result<Program> {
@@ -59,7 +59,7 @@ impl<'a> Parser<'a> {
                     ));
                 }
             } else if let Token::Keyword(keyword) = &self.current_token {
-                if keyword == "comptime" {
+                if matches!(keyword, crate::lexer::Keyword::Comptime) {
                     // Parse comptime block
                     self.next_token(); // consume 'comptime'
                     if self.current_token != Token::Symbol('{') {
@@ -87,7 +87,7 @@ impl<'a> Parser<'a> {
                     // TODO: Add proper comptime block support to AST
                 } else {
                     return Err(CompileError::SyntaxError(
-                        format!("Unexpected keyword at top level: {}", keyword),
+                        format!("Unexpected keyword at top level: {:?}", keyword),
                         Some(self.current_span.clone()),
                     ));
                 }
@@ -137,7 +137,15 @@ impl<'a> Parser<'a> {
                 }
                 Ok(Statement::Expression(expr))
             }
-            Token::Keyword(keyword) if keyword == "return" => {
+            Token::Symbol('(') => {
+                // Parse parenthesized expression as statement
+                let expr = self.parse_expression()?;
+                if self.current_token == Token::Symbol(';') {
+                    self.next_token();
+                }
+                Ok(Statement::Expression(expr))
+            }
+            Token::Keyword(lexer::Keyword::Return) => {
                 self.next_token();
                 let expr = self.parse_expression()?;
                 if self.current_token == Token::Symbol(';') {
@@ -145,10 +153,10 @@ impl<'a> Parser<'a> {
                 }
                 Ok(Statement::Return(expr))
             }
-            Token::Keyword(keyword) if keyword == "loop" => {
+            Token::Keyword(lexer::Keyword::Loop) => {
                 self.parse_loop_statement()
             }
-            Token::Keyword(keyword) if keyword == "break" => {
+            Token::Keyword(lexer::Keyword::Break) => {
                 self.next_token();
                 let label = if let Token::Identifier(label_name) = &self.current_token {
                     let label_name = label_name.clone();
@@ -162,7 +170,7 @@ impl<'a> Parser<'a> {
                 }
                 Ok(Statement::Break { label })
             }
-            Token::Keyword(keyword) if keyword == "continue" => {
+            Token::Keyword(lexer::Keyword::Continue) => {
                 self.next_token();
                 let label = if let Token::Identifier(label_name) = &self.current_token {
                     let label_name = label_name.clone();

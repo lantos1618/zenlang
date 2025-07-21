@@ -16,12 +16,23 @@ impl<'a> Parser<'a> {
             let next_prec = self.get_precedence(&op_clone);
             if next_prec > precedence {
                 self.next_token(); // advance past the operator
-                let right = self.parse_binary_expression(next_prec)?;
-                left = Expression::BinaryOp {
-                    left: Box::new(left),
-                    op: self.token_to_binary_operator(&op_clone)?,
-                    right: Box::new(right),
-                };
+                
+                // Handle range expressions specially
+                if op_clone == ".." || op_clone == "..=" {
+                    let right = self.parse_binary_expression(next_prec)?;
+                    left = Expression::Range {
+                        start: Box::new(left),
+                        end: Box::new(right),
+                        inclusive: op_clone == "..=",
+                    };
+                } else {
+                    let right = self.parse_binary_expression(next_prec)?;
+                    left = Expression::BinaryOp {
+                        left: Box::new(left),
+                        op: self.token_to_binary_operator(&op_clone)?,
+                        right: Box::new(right),
+                    };
+                }
             } else {
                 break;
             }
@@ -95,19 +106,24 @@ impl<'a> Parser<'a> {
                 while let Token::Symbol('.') = &self.current_token {
                     self.next_token(); // consume '.'
                     
-                    if let Token::Identifier(member) = &self.current_token {
-                        let member = member.clone();
-                        self.next_token();
-                        expr = Expression::MemberAccess {
-                            object: Box::new(expr),
-                            member,
-                        };
-                    } else {
-                        return Err(CompileError::SyntaxError(
-                            "Expected identifier after '.'".to_string(),
-                            Some(self.current_span.clone()),
-                        ));
-                    }
+                    let member = match &self.current_token {
+                        Token::Identifier(name) => name.clone(),
+                        Token::Keyword(kw) => {
+                            // Allow keywords as member names (e.g., .loop, .await, etc.)
+                            format!("{:?}", kw).to_lowercase()
+                        }
+                        _ => {
+                            return Err(CompileError::SyntaxError(
+                                "Expected identifier after '.'".to_string(),
+                                Some(self.current_span.clone()),
+                            ));
+                        }
+                    };
+                    self.next_token();
+                    expr = Expression::MemberAccess {
+                        object: Box::new(expr),
+                        member,
+                    };
                 }
                 
                 // Handle function call if present
@@ -128,7 +144,7 @@ impl<'a> Parser<'a> {
             }
             Token::Symbol('(') => {
                 self.next_token();
-                let expr = self.parse_expression()?;
+                let mut expr = self.parse_expression()?;
                 if self.current_token != Token::Symbol(')') {
                     return Err(CompileError::SyntaxError(
                         "Expected closing parenthesis".to_string(),
@@ -136,7 +152,44 @@ impl<'a> Parser<'a> {
                     ));
                 }
                 self.next_token();
-                Ok(expr)
+                
+                // Handle member access after parenthesized expression
+                while let Token::Symbol('.') = &self.current_token {
+                    self.next_token(); // consume '.'
+                    
+                    let member = match &self.current_token {
+                        Token::Identifier(name) => name.clone(),
+                        Token::Keyword(kw) => {
+                            // Allow keywords as member names (e.g., .loop, .await, etc.)
+                            format!("{:?}", kw).to_lowercase()
+                        }
+                        _ => {
+                            return Err(CompileError::SyntaxError(
+                                "Expected identifier after '.'".to_string(),
+                                Some(self.current_span.clone()),
+                            ));
+                        }
+                    };
+                    self.next_token();
+                    expr = Expression::MemberAccess {
+                        object: Box::new(expr),
+                        member,
+                    };
+                }
+                
+                // Handle function call if present
+                if self.current_token == Token::Symbol('(') {
+                    if let Expression::MemberAccess { object, member } = expr {
+                        self.parse_call_expression_with_object(*object, member)
+                    } else {
+                        Err(CompileError::SyntaxError(
+                            "Cannot call non-identifier expression".to_string(),
+                            Some(self.current_span.clone()),
+                        ))
+                    }
+                } else {
+                    Ok(expr)
+                }
             }
             Token::Operator(op) if op == "?" => {
                 // Conditional expression: ? expr -> pattern { ... }
@@ -330,10 +383,11 @@ impl<'a> Parser<'a> {
 
     fn get_precedence(&self, op: &str) -> u8 {
         match op {
-            "==" | "!=" => 1,
-            "<" | "<=" | ">" | ">=" => 2,
-            "+" | "-" => 3,
-            "*" | "/" | "%" => 4,
+            ".." | "..=" => 1,  // Range has lowest precedence
+            "==" | "!=" => 2,
+            "<" | "<=" | ">" | ">=" => 3,
+            "+" | "-" => 4,
+            "*" | "/" | "%" => 5,
             _ => 0,
         }
     }
