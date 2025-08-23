@@ -81,6 +81,12 @@ impl<'a> Parser<'a> {
                 let pointee_type = self.parse_type()?;
                 Ok(AstType::Pointer(Box::new(pointee_type)))
             }
+            Token::Operator(op) if op == "*" => {
+                // Pointer type: *T (operator version)
+                self.next_token();
+                let pointee_type = self.parse_type()?;
+                Ok(AstType::Pointer(Box::new(pointee_type)))
+            }
             Token::Symbol('&') => {
                 // Reference type: &T
                 self.next_token();
