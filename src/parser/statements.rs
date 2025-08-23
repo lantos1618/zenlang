@@ -27,10 +27,67 @@ impl<'a> Parser<'a> {
                     let saved_current_token = self.current_token.clone();
                     let saved_peek_token = self.peek_token.clone();
                     
-                    // If generics, advance to parse_struct
+                    // If generics, need to look ahead to determine struct vs function
                     if self.peek_token == Token::Operator("<".to_string()) {
-                        // Do NOT advance the token; let parse_struct handle the name and generics
-                        declarations.push(Declaration::Struct(self.parse_struct()?));
+                        // Look ahead to see if it's a struct or a function with generics
+                        let saved_position = self.lexer.position;
+                        let saved_read_position = self.lexer.read_position;
+                        let saved_current_char = self.lexer.current_char;
+                        let saved_current = self.current_token.clone();
+                        let saved_peek = self.peek_token.clone();
+                        let saved_span = self.current_span.clone();
+                        let saved_peek_span = self.peek_span.clone();
+                        
+                        // Skip past the generics to see what follows
+                        self.next_token(); // Move to <
+                        self.next_token(); // Move past <
+                        let mut depth = 1;
+                        while depth > 0 && self.current_token != Token::Eof {
+                            if self.current_token == Token::Operator("<".to_string()) {
+                                depth += 1;
+                            } else if self.current_token == Token::Operator(">".to_string()) {
+                                depth -= 1;
+                            }
+                            if depth > 0 {
+                                self.next_token();
+                            }
+                        }
+                        
+                        if depth == 0 {
+                            self.next_token(); // Move past >
+                            
+                            // Check what comes after the generics
+                            let is_struct = self.current_token == Token::Operator("=".to_string()) 
+                                && self.peek_token == Token::Symbol('{');
+                            let is_function = self.current_token == Token::Operator("=".to_string()) 
+                                && self.peek_token == Token::Symbol('(');
+                            
+                            // Restore lexer state
+                            self.lexer.position = saved_position;
+                            self.lexer.read_position = saved_read_position;
+                            self.lexer.current_char = saved_current_char;
+                            self.current_token = saved_current;
+                            self.peek_token = saved_peek;
+                            self.current_span = saved_span;
+                            self.peek_span = saved_peek_span;
+                            
+                            if is_function {
+                                declarations.push(Declaration::Function(self.parse_function()?));
+                            } else {
+                                // Default to struct for backward compatibility
+                                declarations.push(Declaration::Struct(self.parse_struct()?));
+                            }
+                        } else {
+                            // Malformed generics, restore and try to parse as struct
+                            self.lexer.position = saved_position;
+                            self.lexer.read_position = saved_read_position;
+                            self.lexer.current_char = saved_current_char;
+                            self.current_token = saved_current;
+                            self.peek_token = saved_peek;
+                            self.current_span = saved_span;
+                            self.peek_span = saved_peek_span;
+                            declarations.push(Declaration::Struct(self.parse_struct()?));
+                        }
                     } else {
                         // Need to look ahead to determine if it's a struct, enum, or function
                         self.next_token(); // Move to '='

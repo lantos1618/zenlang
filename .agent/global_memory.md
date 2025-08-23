@@ -43,11 +43,13 @@ Lynlang (Zen) is a systems programming language with LLVM backend, written in Ru
 7. **Memory Management** - Allocators, smart references
 
 ## Recent Progress (Current Session)
-- ✅ Added array literal parsing support with tests
-- ✅ Fixed compiler warnings in LSP and test-utils
-- ✅ Verified comptime evaluation engine is working (19 tests pass)
-- ✅ Pattern matching codegen functional (5 tests pass)
-- ✅ 177 total tests passing
+- ✅ Added generic type parsing support (List<T>, Map<K,V>)
+- ✅ Implemented generic function parsing (fn map<T, U>)
+- ✅ Enhanced struct parsing for generic parameters
+- ✅ Fixed parser to distinguish generic functions from structs
+- ✅ Added comprehensive test suite for generics (7 tests)
+- ✅ Fixed pointer type parsing for both Symbol and Operator tokens
+- ✅ All tests passing (171 total)
 
 ## Known Issues
 - Git push timeouts occasionally  

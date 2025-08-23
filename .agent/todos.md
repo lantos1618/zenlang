@@ -66,6 +66,9 @@
 - [x] **Basic C FFI** - External function declarations
 - [x] **Method Definitions** - In structs
 - [x] **Error Recovery** - In parser
+- [x] **Generic Type Parsing** - List<T>, Map<K,V>, nested generics
+- [x] **Generic Functions** - fn map<T, U> syntax
+- [x] **Generic Structs** - struct List<T> with type parameters
 
 ## 📊 Metrics
 - **Tests**: 164/164 passing (100%)
