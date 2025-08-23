@@ -2,9 +2,8 @@ use super::LLVMCompiler;
 use crate::ast::{AstType, Expression};
 use crate::error::CompileError;
 use inkwell::{
-    types::{AsTypeRef, BasicType, BasicTypeEnum},
-    values::{BasicValue, BasicValueEnum, PointerValue},
-    AddressSpace,
+    types::BasicType,
+    values::{BasicValue, BasicValueEnum},
 };
 
 impl<'ctx> LLVMCompiler<'ctx> {
