@@ -71,6 +71,11 @@ impl<'a> Parser<'a> {
                 self.next_token();
                 self.parse_match_expression()
             }
+            Token::Keyword(crate::lexer::Keyword::Comptime) => {
+                self.next_token(); // consume 'comptime'
+                let expr = self.parse_primary_expression()?;
+                Ok(Expression::Comptime(Box::new(expr)))
+            }
             Token::Integer(value_str) => {
                 let value = value_str.parse::<i64>().map_err(|_| {
                     CompileError::SyntaxError(
