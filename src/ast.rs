@@ -289,11 +289,35 @@ pub struct EnumDefinition {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct BehaviorDefinition {
+    pub name: String,
+    pub type_params: Vec<TypeParameter>,
+    pub methods: Vec<BehaviorMethod>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BehaviorMethod {
+    pub name: String,
+    pub params: Vec<Parameter>,
+    pub return_type: AstType,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplBlock {
+    pub type_name: String,
+    pub behavior_name: Option<String>, // None for inherent impls
+    pub type_params: Vec<TypeParameter>,
+    pub methods: Vec<Function>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Declaration {
     Function(Function),
     ExternalFunction(ExternalFunction),
     Struct(StructDefinition),
     Enum(EnumDefinition),
+    Behavior(BehaviorDefinition),
+    Impl(ImplBlock),
     ComptimeBlock(Vec<Statement>),
     ModuleImport {
         alias: String,
