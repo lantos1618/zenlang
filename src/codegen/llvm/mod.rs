@@ -184,7 +184,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 AstType::F32 => self.context.f32_type().as_basic_type_enum(),
                 AstType::F64 => self.context.f64_type().as_basic_type_enum(),
                 AstType::Bool => self.context.bool_type().as_basic_type_enum(),
-                AstType::String => self.context.i8_type().ptr_type(inkwell::AddressSpace::default()).as_basic_type_enum(),
+                AstType::String => self.context.ptr_type(inkwell::AddressSpace::default()).as_basic_type_enum(),
                 AstType::Void => return Err(CompileError::TypeError("Void type not allowed in struct fields".to_string(), None)),
                 AstType::Pointer(inner) => {
                     // For pointer types in struct fields, we'll use a generic pointer type
