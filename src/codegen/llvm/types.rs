@@ -105,13 +105,13 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ], false);
                 Ok(Type::Struct(range_struct))
             },
-            AstType::Generic { name: _, type_args } => {
-                // For now, just use the first type argument or default to i64
-                if let Some(first_arg) = type_args.first() {
-                    self.to_llvm_type(first_arg)
-                } else {
-                    Ok(Type::Basic(self.context.i64_type().into()))
-                }
+            AstType::Generic { name, type_args: _ } => {
+                // After monomorphization, we should not encounter generic types
+                // If we do, it means monomorphization failed to resolve this type
+                Err(CompileError::InternalError(
+                    format!("Unresolved generic type '{}' found after monomorphization. This is a compiler bug.", name),
+                    None
+                ))
             },
         };
         result
