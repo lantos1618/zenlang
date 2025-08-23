@@ -89,7 +89,7 @@ impl<'a> Parser<'a> {
                             declarations.push(Declaration::Struct(self.parse_struct()?));
                         }
                     } else {
-                        // Need to look ahead to determine if it's a struct, enum, or function
+                        // Need to look ahead to determine if it's a struct, enum, behavior, or function
                         self.next_token(); // Move to '='
                         self.next_token(); // Move past '=' to see what comes after
                         
@@ -97,6 +97,7 @@ impl<'a> Parser<'a> {
                         let is_struct = matches!(&self.current_token, Token::Symbol('{'));
                         let is_enum = matches!(&self.current_token, Token::Operator(op) if op == "|");
                         let is_function = matches!(&self.current_token, Token::Symbol('('));
+                        let is_behavior = matches!(&self.current_token, Token::Keyword(lexer::Keyword::Behavior));
 
                         // Restore lexer state
                         self.lexer.position = saved_position;
@@ -105,7 +106,9 @@ impl<'a> Parser<'a> {
                         self.current_token = saved_current_token;
                         self.peek_token = saved_peek_token;
 
-                        if is_struct {
+                        if is_behavior {
+                            declarations.push(Declaration::Behavior(self.parse_behavior()?));
+                        } else if is_struct {
                             declarations.push(Declaration::Struct(self.parse_struct()?));
                         } else if is_enum {
                             declarations.push(Declaration::Enum(self.parse_enum()?));
@@ -115,6 +118,40 @@ impl<'a> Parser<'a> {
                             // Try to parse as function (fallback)
                             declarations.push(Declaration::Function(self.parse_function()?));
                         }
+                    }
+                } else if self.peek_token == Token::Symbol('.') {
+                    // Could be an impl block: Type.impl = { ... }
+                    let type_name = if let Token::Identifier(name) = &self.current_token {
+                        name.clone()
+                    } else {
+                        unreachable!()
+                    };
+                    
+                    // Save state for potential backtrack
+                    let saved_position = self.lexer.position;
+                    let saved_read_position = self.lexer.read_position;
+                    let saved_current_char = self.lexer.current_char;
+                    let saved_current_token = self.current_token.clone();
+                    let saved_peek_token = self.peek_token.clone();
+                    
+                    self.next_token(); // consume type name
+                    self.next_token(); // consume '.'
+                    
+                    if let Token::Keyword(lexer::Keyword::Impl) = self.current_token {
+                        // This is an impl block
+                        declarations.push(Declaration::Impl(self.parse_impl_block_from_type(type_name)?));
+                    } else {
+                        // Not an impl block, restore and error
+                        self.lexer.position = saved_position;
+                        self.lexer.read_position = saved_read_position;
+                        self.lexer.current_char = saved_current_char;
+                        self.current_token = saved_current_token;
+                        self.peek_token = saved_peek_token;
+                        
+                        return Err(CompileError::SyntaxError(
+                            format!("Expected 'impl' after '{}.'", type_name),
+                            Some(self.current_span.clone()),
+                        ));
                     }
                 } else if self.peek_token == Token::Symbol('(') {
                     // Could be an external function declaration
