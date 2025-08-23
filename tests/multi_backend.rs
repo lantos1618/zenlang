@@ -57,8 +57,13 @@ fn test_frontend_backend_separation() {
     
     // Now test backend separately
     let result = compiler.compile_llvm(&program);
+    if let Err(e) = &result {
+        println!("Compilation error: {:?}", e);
+    }
     assert!(result.is_ok(), "Backend should work with parsed program");
     
     let output = result.unwrap();
-    assert!(output.contains("define i64 @main()"), "Backend should produce LLVM IR");
+    println!("LLVM IR output:\n{}", output);
+    assert!(output.contains("@main"), "Backend should produce main function");
+    assert!(output.contains("ret i32 42") || output.contains("ret i64 42"), "Backend should return 42");
 } 

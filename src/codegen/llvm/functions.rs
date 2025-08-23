@@ -202,7 +202,11 @@ impl<'ctx> LLVMCompiler<'ctx> {
                             if !matches!(function.return_type, AstType::Void) {
                                 println!("DEBUG: Compiling trailing expression as return value");
                                 let value = self.compile_expression(expr)?;
-                                self.builder.build_return(Some(&value))?;
+                                // Cast to the correct return type if needed
+                                let return_type = self.to_llvm_type(&function.return_type)?;
+                                let return_basic_type = self.expect_basic_type(return_type)?;
+                                let casted_value = self.cast_value_to_type(value, return_basic_type.as_any_type_enum())?;
+                                self.builder.build_return(Some(&casted_value))?;
                                 println!("DEBUG: Added return statement with value");
                             } else {
                                 // For void functions, just return void
@@ -218,7 +222,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                                     println!("DEBUG: Compiling comptime block with trailing expression as return value");
                                     // Evaluate the comptime expression and return it
                                     let value = self.compile_expression(&ast::Expression::Comptime(Box::new(expr.clone())))?;
-                                    self.builder.build_return(Some(&value))?;
+                                    // Cast to the correct return type if needed
+                                    let return_type = self.to_llvm_type(&function.return_type)?;
+                                    let casted_value = self.cast_value_to_type(value, return_type)?;
+                                    self.builder.build_return(Some(&casted_value))?;
                                     println!("DEBUG: Added return statement with comptime value");
                                 } else {
                                     return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
