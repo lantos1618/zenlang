@@ -201,6 +201,33 @@ impl<'a> Parser<'a> {
                 }
                 Ok(Statement::Expression(expr))
             }
+            Token::Keyword(lexer::Keyword::Comptime) => {
+                // Parse comptime block as statement
+                self.next_token(); // consume 'comptime'
+                if self.current_token != Token::Symbol('{') {
+                    // It's a comptime expression, not a block
+                    let expr = Expression::Comptime(Box::new(self.parse_expression()?));
+                    if self.current_token == Token::Symbol(';') {
+                        self.next_token();
+                    }
+                    return Ok(Statement::Expression(expr));
+                }
+                self.next_token(); // consume '{'
+                
+                let mut statements = vec![];
+                while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
+                    statements.push(self.parse_statement()?);
+                }
+                
+                if self.current_token != Token::Symbol('}') {
+                    return Err(CompileError::SyntaxError(
+                        "Expected '}' to close comptime block".to_string(),
+                        Some(self.current_span.clone()),
+                    ));
+                }
+                self.next_token(); // consume '}'
+                Ok(Statement::ComptimeBlock(statements))
+            }
             // Handle literal expressions as valid statements
             Token::Integer(_) | Token::Float(_) | Token::StringLiteral(_) => {
                 let expr = self.parse_expression()?;
