@@ -1,4 +1,4 @@
-use zen::ast::{Expression, Declaration, Statement, VariableDeclarationType};
+use zen::ast::{Expression, Declaration, Statement};
 use zen::lexer::Lexer;
 use zen::parser::Parser;
 
@@ -13,9 +13,13 @@ fn test_parse_comptime_block() {
     
     if let Declaration::ComptimeBlock(statements) = &program.declarations[0] {
         assert_eq!(statements.len(), 1);
-        if let Statement::VariableDeclaration { name, value, .. } = &statements[0] {
+        if let Statement::VariableDeclaration { name, initializer, .. } = &statements[0] {
             assert_eq!(name, "x");
-            assert!(matches!(value, Expression::Integer32(42)));
+            if let Some(init) = initializer {
+                assert!(matches!(init, Expression::Integer32(42)));
+            } else {
+                panic!("Expected initializer");
+            }
         } else {
             panic!("Expected variable declaration in comptime block");
         }
@@ -35,11 +39,11 @@ fn test_parse_comptime_expression() {
     
     if let Declaration::Function(func) = &program.declarations[0] {
         assert_eq!(func.body.len(), 1);
-        if let Statement::VariableDeclaration { value, .. } = &func.body[0] {
-            if let Expression::Comptime(inner) = value {
+        if let Statement::VariableDeclaration { initializer, .. } = &func.body[0] {
+            if let Some(Expression::Comptime(inner)) = initializer {
                 assert!(matches!(inner.as_ref(), Expression::Integer32(42)));
             } else {
-                panic!("Expected Comptime expression, got {:?}", value);
+                panic!("Expected Comptime expression, got {:?}", initializer);
             }
         } else {
             panic!("Expected variable declaration");
@@ -60,8 +64,8 @@ fn test_parse_comptime_function_call() {
     
     if let Declaration::Function(func) = &program.declarations[0] {
         assert_eq!(func.body.len(), 1);
-        if let Statement::VariableDeclaration { value, .. } = &func.body[0] {
-            if let Expression::Comptime(inner) = value {
+        if let Statement::VariableDeclaration { initializer, .. } = &func.body[0] {
+            if let Some(Expression::Comptime(inner)) = initializer {
                 assert!(matches!(inner.as_ref(), Expression::FunctionCall { name, .. } if name == "calculate"));
             } else {
                 panic!("Expected Comptime expression");
