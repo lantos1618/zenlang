@@ -4,6 +4,7 @@
 use crate::ast::Program;
 use crate::codegen::llvm::LLVMCompiler;
 use crate::error::{CompileError, Result};
+use crate::type_system::monomorphization::Monomorphizer;
 use inkwell::context::Context;
 use inkwell::module::Module;
 
@@ -20,8 +21,12 @@ impl<'ctx> Compiler<'ctx> {
     /// Compiles a program using the LLVM backend.
     /// In the future, this could take a `target` enum.
     pub fn compile_llvm(&self, program: &Program) -> Result<String> {
+        // Monomorphize the program to resolve all generic types
+        let mut monomorphizer = Monomorphizer::new();
+        let monomorphized_program = monomorphizer.monomorphize_program(program)?;
+        
         let mut llvm_compiler = LLVMCompiler::new(self.context);
-        llvm_compiler.compile_program(program)?;
+        llvm_compiler.compile_program(&monomorphized_program)?;
 
         if let Err(e) = llvm_compiler.module.verify() {
             return Err(CompileError::InternalError(
@@ -35,8 +40,12 @@ impl<'ctx> Compiler<'ctx> {
 
     /// Gets the LLVM module after compilation for execution engine creation.
     pub fn get_module(&self, program: &Program) -> Result<Module<'ctx>> {
+        // Monomorphize the program to resolve all generic types
+        let mut monomorphizer = Monomorphizer::new();
+        let monomorphized_program = monomorphizer.monomorphize_program(program)?;
+        
         let mut llvm_compiler = LLVMCompiler::new(self.context);
-        llvm_compiler.compile_program(program)?;
+        llvm_compiler.compile_program(&monomorphized_program)?;
 
         if let Err(e) = llvm_compiler.module.verify() {
             return Err(CompileError::InternalError(

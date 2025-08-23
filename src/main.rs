@@ -11,6 +11,7 @@ mod lexer;
 mod lsp;
 mod parser;
 mod typechecker;
+mod type_system;
 
 use zen::compiler::Compiler;
 use zen::lexer::Lexer;
