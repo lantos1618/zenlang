@@ -128,7 +128,7 @@ impl TypeEnvironment {
             ));
         }
         
-        for (param, arg) in expected.iter().zip(provided.iter()) {
+        for (param, _arg) in expected.iter().zip(provided.iter()) {
             if !param.constraints.is_empty() {
                 // TODO: Check trait bounds when trait system is implemented
             }

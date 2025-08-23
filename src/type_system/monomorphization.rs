@@ -1,4 +1,4 @@
-use crate::ast::{Program, Declaration, Expression, AstType, Function, Statement};
+use crate::ast::{Program, Declaration, Expression, AstType, Function};
 use super::{TypeEnvironment, TypeInstantiator};
 use crate::typechecker::TypeChecker;
 use std::collections::{HashMap, HashSet};
@@ -280,7 +280,7 @@ impl Monomorphizer {
             Expression::Float64(_) => Ok(AstType::F64),
             Expression::Boolean(_) => Ok(AstType::Bool),
             Expression::String(_) => Ok(AstType::String),
-            Expression::Identifier(name) => {
+            Expression::Identifier(_name) => {
                 // Would need access to variable types here
                 // For now, return a placeholder
                 Ok(AstType::I32)
