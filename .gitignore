@@ -1,4 +1,4 @@
 /target
 /venv
 output.o
-.agent
+.agent/claude_output.jsonl
