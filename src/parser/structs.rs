@@ -18,14 +18,14 @@ impl<'a> Parser<'a> {
 
         // Parse generics if present: <T, U, ...>
         let mut generics = Vec::new();
-        if self.current_token == Token::Symbol('<') {
+        if self.current_token == Token::Operator("<".to_string()) {
             self.next_token();
             loop {
                 if let Token::Identifier(gen) = &self.current_token {
                     generics.push(gen.clone());
                     self.next_token();
                     
-                    if self.current_token == Token::Symbol('>') {
+                    if self.current_token == Token::Operator(">".to_string()) {
                         self.next_token();
                         break;
                     } else if self.current_token == Token::Symbol(',') {
@@ -135,12 +135,8 @@ impl<'a> Parser<'a> {
         self.next_token();
 
         // Parse methods (zero or more fn ...)
-        let mut methods = Vec::new();
-        while self.current_token == Token::Identifier("fn".to_string()) {
-            self.next_token();
-            let func = self.parse_method()?;
-            methods.push(func);
-        }
+        // TODO: Implement method parsing with correct syntax
+        let methods = Vec::new();
 
         Ok(StructDefinition { name, generics, fields, methods })
     }
