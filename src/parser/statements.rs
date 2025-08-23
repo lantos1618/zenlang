@@ -1,7 +1,7 @@
 // DO NOT EVER implement 'in'-based loop syntax (e.g., 'for i in ...', 'loop ... in ...').
 // Use explicit, non-dangling, non-tertiary forms only. Prefer 'loop 0..10 { ... }' or C-style loops.
 use super::core::Parser;
-use crate::ast::{Program, Declaration, Statement, VariableDeclarationType, Expression, AstType};
+use crate::ast::{Program, Declaration, Statement, VariableDeclarationType};
 use crate::error::{CompileError, Result};
 use crate::lexer::{self, Token};
 
