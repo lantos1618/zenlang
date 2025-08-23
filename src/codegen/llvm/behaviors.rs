@@ -1,9 +1,8 @@
-use crate::ast::{BehaviorDefinition, ImplBlock, Expression};
+use crate::ast::{ImplBlock, Expression};
 use crate::error::CompileError;
-use crate::typechecker::behaviors::BehaviorResolver;
 use super::LLVMCompiler;
 use inkwell::values::{BasicValueEnum, FunctionValue, PointerValue};
-use inkwell::types::StructType;
+use inkwell::types::BasicMetadataTypeEnum;
 use std::collections::HashMap;
 
 /// Manages behavior/trait implementations and method dispatch in LLVM
@@ -32,10 +31,10 @@ impl<'ctx> BehaviorCodegen<'ctx> {
     ) -> Result<PointerValue<'ctx>, CompileError> {
         // Create vtable type: array of function pointers
         let fn_ptr_type = compiler.context.ptr_type(inkwell::AddressSpace::default());
-        let vtable_type = compiler.context.struct_type(
-            &vec![fn_ptr_type; methods.len()],
-            false,
-        );
+        let field_types: Vec<_> = (0..methods.len())
+            .map(|_| fn_ptr_type.into())
+            .collect();
+        let vtable_type = compiler.context.struct_type(&field_types, false);
 
         // Create global vtable
         let vtable_name = format!("vtable_{}_{}", type_name, behavior_name);
@@ -48,7 +47,11 @@ impl<'ctx> BehaviorCodegen<'ctx> {
             method_ptrs.push(ptr.const_cast(fn_ptr_type));
         }
         
-        let vtable_value = vtable_type.const_named_struct(&method_ptrs);
+        let method_values: Vec<BasicValueEnum> = method_ptrs
+            .into_iter()
+            .map(|ptr| ptr.into())
+            .collect();
+        let vtable_value = vtable_type.const_named_struct(&method_values);
         vtable_global.set_initializer(&vtable_value);
         
         let vtable_ptr = vtable_global.as_pointer_value();
@@ -98,22 +101,33 @@ impl<'ctx> LLVMCompiler<'ctx> {
             let llvm_return_type = self.to_llvm_type(&method.return_type)?;
             
             let mut param_types = Vec::new();
-            for param in &method.params {
-                let param_type = self.to_llvm_type(&param.type_)?;
-                if let Ok(basic_type) = param_type.into_basic_type() {
-                    param_types.push(basic_type);
+            for (_, param_type) in &method.args {
+                let llvm_param_type = self.to_llvm_type(param_type)?;
+                if let Ok(basic_type) = llvm_param_type.into_basic_type() {
+                    param_types.push(BasicMetadataTypeEnum::from(basic_type));
                 }
             }
 
-            let fn_type = match llvm_return_type {
-                super::Type::Void => self.context.void_type().fn_type(&param_types, false),
-                super::Type::Basic(basic_type) => basic_type.fn_type(&param_types, false),
-                _ => {
-                    return Err(CompileError::UnsupportedFeature(
-                        format!("Method return type not yet supported: {:?}", llvm_return_type),
-                        None,
-                    ))
+            let fn_type = if let super::Type::Void = llvm_return_type {
+                self.context.void_type().fn_type(&param_types, false)
+            } else if let super::Type::Basic(basic_type) = llvm_return_type {
+                match basic_type {
+                    inkwell::types::BasicTypeEnum::IntType(int_type) => int_type.fn_type(&param_types, false),
+                    inkwell::types::BasicTypeEnum::FloatType(float_type) => float_type.fn_type(&param_types, false),
+                    inkwell::types::BasicTypeEnum::PointerType(ptr_type) => ptr_type.fn_type(&param_types, false),
+                    inkwell::types::BasicTypeEnum::StructType(struct_type) => struct_type.fn_type(&param_types, false),
+                    _ => {
+                        return Err(CompileError::UnsupportedFeature(
+                            format!("Unsupported method return type: {:?}", basic_type),
+                            None,
+                        ))
+                    }
                 }
+            } else {
+                return Err(CompileError::UnsupportedFeature(
+                    format!("Method return type not yet supported: {:?}", llvm_return_type),
+                    None,
+                ))
             };
 
             let function = self.module.add_function(&mangled_name, fn_type, None);
@@ -127,13 +141,13 @@ impl<'ctx> LLVMCompiler<'ctx> {
             self.current_function = Some(function);
             
             // Add parameters to symbol table
-            self.symbol_table.push_scope();
-            for (i, param) in method.params.iter().enumerate() {
+            self.symbols.enter_scope();
+            for (i, (param_name, _)) in method.args.iter().enumerate() {
                 if i < function.count_params() as usize {
                     let param_value = function.get_nth_param(i as u32).unwrap();
-                    let alloca = self.builder.build_alloca(param_value.get_type(), &param.name)?;
+                    let alloca = self.builder.build_alloca(param_value.get_type(), param_name)?;
                     self.builder.build_store(alloca, param_value)?;
-                    self.symbol_table.insert(param.name.clone(), alloca);
+                    self.symbols.insert(param_name.clone(), super::symbols::Symbol::Variable(alloca));
                 }
             }
             
@@ -143,14 +157,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
             
             // Add implicit return if needed
-            if llvm_return_type == super::Type::Void {
+            if matches!(llvm_return_type, super::Type::Void) {
                 if self.builder.get_insert_block().unwrap().get_terminator().is_none() {
                     self.builder.build_return(None)?;
                 }
             }
             
             // Clean up
-            self.symbol_table.pop_scope();
+            self.symbols.exit_scope();
             self.current_function = prev_function;
             
             // Register the method in our behavior codegen
@@ -228,7 +242,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
         }
         
-        Err(CompileError::UndefinedFunction(
+        Err(CompileError::UndeclaredFunction(
             format!("{}.{}", type_name, method_name),
             None,
         ))
