@@ -77,7 +77,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 let inner_type = self.to_llvm_type(inner)?;
                 match inner_type {
                     Type::Basic(basic_type) => Ok(Type::Basic(basic_type)),
-                    _ => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())),
+                    _ => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
                 }
             },
             AstType::Option(inner) => {
@@ -85,7 +85,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 let inner_type = self.to_llvm_type(inner)?;
                 match inner_type {
                     Type::Basic(basic_type) => Ok(Type::Basic(basic_type)),
-                    _ => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())),
+                    _ => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
                 }
             },
             AstType::Result { ok_type, err_type } => {
@@ -93,7 +93,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 // For now, just use a pointer to represent it
                 let _ok_type = self.to_llvm_type(ok_type)?;
                 let _err_type = self.to_llvm_type(err_type)?;
-                Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into()))
+                Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into()))
             },
             AstType::Range { start_type, end_type, inclusive: _ } => {
                 // Range is represented as a struct with start and end values
