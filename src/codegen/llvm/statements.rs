@@ -344,8 +344,16 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 }
                 Ok(())
             },
-            Statement::ComptimeBlock(_) => {
-                // For now, ignore comptime blocks during codegen
+            Statement::ComptimeBlock(statements) => {
+                // Evaluate comptime blocks during codegen
+                for stmt in statements {
+                    if let Err(e) = self.comptime_evaluator.evaluate_statement(stmt) {
+                        return Err(CompileError::InternalError(
+                            format!("Comptime evaluation error: {}", e),
+                            None
+                        ));
+                    }
+                }
                 Ok(())
             },
             Statement::ModuleImport { .. } => {

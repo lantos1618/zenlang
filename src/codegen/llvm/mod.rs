@@ -62,6 +62,7 @@ pub struct LLVMCompiler<'ctx> {
     pub symbols: symbols::SymbolTable<'ctx>,
     pub struct_types: HashMap<String, StructTypeInfo<'ctx>>,
     pub loop_stack: Vec<(BasicBlock<'ctx>, BasicBlock<'ctx>)>, // (continue_target, break_target)
+    pub comptime_evaluator: comptime::ComptimeEvaluator,
 }
 
 impl<'ctx> LLVMCompiler<'ctx> {
@@ -69,6 +70,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let module = context.create_module("main");
         let builder = context.create_builder();
         let mut symbols = symbols::SymbolTable::new();
+        let comptime_evaluator = comptime::ComptimeEvaluator::new();
         
         let i64_type = context.i64_type();
         let i32_type = context.i32_type();
@@ -90,6 +92,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             symbols,
             struct_types: HashMap::new(),
             loop_stack: Vec::new(),
+            comptime_evaluator,
         }
     }
 
@@ -148,10 +151,13 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ast::Declaration::Enum(_) | ast::Declaration::ModuleImport { .. } => {}
                 ast::Declaration::ComptimeBlock(statements) => {
                     // Evaluate comptime blocks and generate constants
-                    let mut evaluator = comptime::ComptimeEvaluator::new();
+                    println!("Evaluating comptime block with {} statements", statements.len());
                     for stmt in statements {
-                        if let Err(e) = evaluator.evaluate_statement(stmt) {
-                            eprintln!("Comptime evaluation error: {}", e);
+                        if let Err(e) = self.comptime_evaluator.evaluate_statement(stmt) {
+                            return Err(CompileError::InternalError(
+                                format!("Comptime evaluation error: {}", e),
+                                None
+                            ));
                         }
                     }
                 }
