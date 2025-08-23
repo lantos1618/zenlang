@@ -1,10 +1,9 @@
 use super::{LLVMCompiler, Type};
-use crate::ast::{self, AstType, ExternalFunction, Function};
+use crate::ast::{self, AstType};
 use crate::error::CompileError;
 use inkwell::{
     types::{BasicType, BasicTypeEnum, BasicMetadataTypeEnum},
-    values::{BasicValueEnum, FunctionValue, PointerValue},
-    AddressSpace,
+    values::BasicValueEnum,
 };
 use inkwell::module::Linkage;
 
