@@ -31,7 +31,6 @@ impl Monomorphizer {
         for decl in &program.declarations {
             match decl {
                 Declaration::Function(func) if !func.type_params.is_empty() => {
-                    eprintln!("Registering generic function: {}", func.name);
                     self.env.register_generic_function(func.clone());
                 }
                 Declaration::Struct(struct_def) if !struct_def.type_params.is_empty() => {
@@ -62,8 +61,6 @@ impl Monomorphizer {
                     let mut instantiator = TypeInstantiator::new(&mut self.env);
                     let instantiated = instantiator.instantiate_function(&func, type_args)?;
                     
-                    eprintln!("Generated monomorphized function: {}", instantiated.name);
-                    
                     self.collect_instantiations_from_function(&instantiated)?;
                     
                     declarations.push(Declaration::Function(instantiated.clone()));
@@ -80,22 +77,8 @@ impl Monomorphizer {
             }
         }
         
-        eprintln!("Before transformation: {} declarations", declarations.len());
-        for decl in &declarations {
-            if let Declaration::Function(func) = decl {
-                eprintln!("  Function: {}", func.name);
-            }
-        }
-        
         // Transform all function calls to use monomorphized names
         let transformed_declarations = self.transform_declarations(declarations)?;
-        
-        eprintln!("After transformation: {} declarations", transformed_declarations.len());
-        for decl in &transformed_declarations {
-            if let Declaration::Function(func) = decl {
-                eprintln!("  Function: {}", func.name);
-            }
-        }
         
         Ok(Program { declarations: transformed_declarations })
     }
@@ -161,17 +144,12 @@ impl Monomorphizer {
             Expression::FunctionCall { name, args } => {
                 // Check if this is a generic function
                 let base_name = extract_base_name(name);
-                eprintln!("Checking function call: {}, base_name: {}", name, base_name);
                 if let Some(generic_func) = self.env.get_generic_function(&base_name) {
-                    eprintln!("Found generic function {} with {} type params", base_name, generic_func.type_params.len());
                     // Infer type arguments from the call arguments
                     let type_args = self.infer_type_arguments(&generic_func, args)?;
-                    eprintln!("Inferred type args for {}: {:?}", base_name, type_args);
                     if !type_args.is_empty() {
                         self.pending_instantiations.push((base_name, type_args));
                     }
-                } else {
-                    eprintln!("No generic function found for {}", base_name);
                 }
                 
                 for arg in args {
@@ -394,8 +372,6 @@ impl Monomorphizer {
                     
                     // Generate the monomorphized name
                     let instantiated_name = generate_instantiated_name(&base_name, &arg_types);
-                    
-                    eprintln!("Transforming function call from {} to {}", name, instantiated_name);
                     
                     Ok(Expression::FunctionCall {
                         name: instantiated_name,
