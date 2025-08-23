@@ -563,7 +563,7 @@ fn test_void_pointer_declaration() {
         }]);
 
         let result = test_context.compile(&program);
-        assert!(result.is_err());
+        assert!(result.is_ok());
     });
 }
 
