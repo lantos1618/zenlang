@@ -1,4 +1,4 @@
-use zen::ast::{Expression, Declaration, Statement};
+use zen::ast::{Expression, Declaration, Statement, VariableDeclarationType};
 use zen::lexer::Lexer;
 use zen::parser::Parser;
 
@@ -8,7 +8,7 @@ fn test_parse_comptime_block() {
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
-    let program = parser.parse().unwrap();
+    let program = parser.parse_program().unwrap();
     assert_eq!(program.declarations.len(), 1);
     
     if let Declaration::ComptimeBlock(statements) = &program.declarations[0] {
@@ -26,41 +26,51 @@ fn test_parse_comptime_block() {
 
 #[test]
 fn test_parse_comptime_expression() {
-    let input = "x := comptime 42";
+    let input = "main = () void { x := comptime 42 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
-    let program = parser.parse().unwrap();
+    let program = parser.parse_program().unwrap();
     assert_eq!(program.declarations.len(), 1);
     
-    if let Declaration::GlobalVariable { value, .. } = &program.declarations[0] {
-        if let Expression::Comptime(inner) = value {
-            assert!(matches!(inner.as_ref(), Expression::Integer32(42)));
+    if let Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.body.len(), 1);
+        if let Statement::VariableDeclaration { value, .. } = &func.body[0] {
+            if let Expression::Comptime(inner) = value {
+                assert!(matches!(inner.as_ref(), Expression::Integer32(42)));
+            } else {
+                panic!("Expected Comptime expression, got {:?}", value);
+            }
         } else {
-            panic!("Expected Comptime expression");
+            panic!("Expected variable declaration");
         }
     } else {
-        panic!("Expected GlobalVariable declaration");
+        panic!("Expected Function declaration");
     }
 }
 
 #[test]
 fn test_parse_comptime_function_call() {
-    let input = "result := comptime calculate()";
+    let input = "main = () void { result := comptime calculate() }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
-    let program = parser.parse().unwrap();
+    let program = parser.parse_program().unwrap();
     assert_eq!(program.declarations.len(), 1);
     
-    if let Declaration::GlobalVariable { value, .. } = &program.declarations[0] {
-        if let Expression::Comptime(inner) = value {
-            assert!(matches!(inner.as_ref(), Expression::FunctionCall { name, .. } if name == "calculate"));
+    if let Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.body.len(), 1);
+        if let Statement::VariableDeclaration { value, .. } = &func.body[0] {
+            if let Expression::Comptime(inner) = value {
+                assert!(matches!(inner.as_ref(), Expression::FunctionCall { name, .. } if name == "calculate"));
+            } else {
+                panic!("Expected Comptime expression");
+            }
         } else {
-            panic!("Expected Comptime expression");
+            panic!("Expected variable declaration");
         }
     } else {
-        panic!("Expected GlobalVariable declaration");
+        panic!("Expected Function declaration");
     }
 }
 
@@ -77,7 +87,7 @@ comptime {
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
-    let program = parser.parse().unwrap();
+    let program = parser.parse_program().unwrap();
     assert_eq!(program.declarations.len(), 1);
     
     if let Declaration::ComptimeBlock(outer_statements) = &program.declarations[0] {
@@ -111,7 +121,7 @@ comptime {
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
-    let program = parser.parse().unwrap();
+    let program = parser.parse_program().unwrap();
     assert_eq!(program.declarations.len(), 1);
     
     if let Declaration::ComptimeBlock(statements) = &program.declarations[0] {
