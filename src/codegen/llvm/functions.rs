@@ -3,7 +3,7 @@ use crate::ast::{self, AstType};
 use crate::error::CompileError;
 use inkwell::{
     types::{BasicType, BasicTypeEnum, BasicMetadataTypeEnum},
-    values::BasicValueEnum,
+    values::{BasicValueEnum, FunctionValue},
 };
 use inkwell::module::Linkage;
 
@@ -73,7 +73,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     /// Defines and compiles a function in one step
-    pub fn define_and_compile_function(&mut self, function: &ast::Function) -> Result<(), CompileError> {
+    pub fn declare_function(&mut self, function: &ast::Function) -> Result<FunctionValue<'ctx>, CompileError> {
         
         // First, get the return type
         let return_type = self.to_llvm_type(&function.return_type)?;
@@ -137,11 +137,30 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
         };
         
-        // Define the function (this creates a definition, not a declaration)
+        // Check if function already declared
+        if let Some(func) = self.module.get_function(&function.name) {
+            return Ok(func);
+        }
+        
+        // Declare the function (this creates a declaration)
         let function_value = self.module.add_function(&function.name, function_type, None);
         
         // Set the function linkage to external so it can be linked
         function_value.set_linkage(Linkage::External);
+        
+        // Store the function for later use
+        self.functions.insert(function.name.clone(), function_value);
+        
+        Ok(function_value)
+    }
+    
+    pub fn compile_function_body(&mut self, function: &ast::Function) -> Result<(), CompileError> {
+        // Get the already-declared function
+        let function_value = self.module.get_function(&function.name)
+            .ok_or_else(|| CompileError::InternalError(
+                format!("Function {} not declared", function.name),
+                None
+            ))?;
         
         // Set names for all arguments
         for (i, (arg_name, _)) in function.args.iter().enumerate() {
@@ -244,6 +263,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
 
         self.current_function = None;
         Ok(())
+    }
+    
+    // Backward compatibility wrapper
+    pub fn define_and_compile_function(&mut self, function: &ast::Function) -> Result<(), CompileError> {
+        self.declare_function(function)?;
+        self.compile_function_body(function)
     }
 
     pub fn compile_function_call(&mut self, name: &str, args: &[ast::Expression]) -> Result<BasicValueEnum<'ctx>, CompileError> {

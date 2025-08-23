@@ -25,6 +25,13 @@ impl<'ctx> Compiler<'ctx> {
         let mut monomorphizer = Monomorphizer::new();
         let monomorphized_program = monomorphizer.monomorphize_program(program)?;
         
+        eprintln!("Compiler: monomorphized program has {} declarations", monomorphized_program.declarations.len());
+        for decl in &monomorphized_program.declarations {
+            if let crate::ast::Declaration::Function(func) = decl {
+                eprintln!("  -> {}", func.name);
+            }
+        }
+        
         let mut llvm_compiler = LLVMCompiler::new(self.context);
         llvm_compiler.compile_program(&monomorphized_program)?;
 
