@@ -8,28 +8,28 @@ impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_expression(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
         match expr {
             Expression::Integer8(value) => {
-                self.compile_integer_literal(*value as i64)
+                Ok(self.context.i8_type().const_int(*value as u64, true).into())
             }
             Expression::Integer16(value) => {
-                self.compile_integer_literal(*value as i64)
+                Ok(self.context.i16_type().const_int(*value as u64, true).into())
             }
             Expression::Integer32(value) => {
-                self.compile_integer_literal(*value as i64)
+                Ok(self.context.i32_type().const_int(*value as u64, true).into())
             }
             Expression::Integer64(value) => {
-                self.compile_integer_literal(*value)
+                Ok(self.context.i64_type().const_int(*value as u64, true).into())
             }
             Expression::Unsigned8(value) => {
-                self.compile_integer_literal(*value as i64)
+                Ok(self.context.i8_type().const_int(*value as u64, false).into())
             }
             Expression::Unsigned16(value) => {
-                self.compile_integer_literal(*value as i64)
+                Ok(self.context.i16_type().const_int(*value as u64, false).into())
             }
             Expression::Unsigned32(value) => {
-                self.compile_integer_literal(*value as i64)
+                Ok(self.context.i32_type().const_int(*value as u64, false).into())
             }
             Expression::Unsigned64(value) => {
-                self.compile_integer_literal(*value as i64)
+                Ok(self.context.i64_type().const_int(*value, false).into())
             }
             Expression::Float32(value) => {
                 self.compile_float_literal(*value as f64)

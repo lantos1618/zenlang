@@ -27,41 +27,43 @@ Lynlang (Zen) is a systems programming language with LLVM backend, written in Ru
 - Basic types (int, float, string, void, bool)
 - Functions and function calls
 - Binary operations and comparisons
-- Conditional expressions with pattern matching ✅ (fixed today)
+- Conditional expressions with pattern matching ✅
 - Basic struct support
-- String literals
+- String literals  
 - Pointers (basic implementation)
 - FFI declarations (partial)
+- **Comptime evaluation** ✅ (integrated today)
 
 ## Next Priorities (from ROADMAP)
-1. **C FFI Enhancement** - Complete external functions, C compatibility
-2. **Comptime Evaluation Engine** - Build actual compile-time execution
-3. **Enhanced Type System** - Arrays, enums, better structs
+1. **Generic Type Instantiation** ⭐ HIGHEST - Foundation for advanced features
+2. **Trait/Behavior System** - Contract-based polymorphism
+3. **Enhanced Type System** - Arrays with size, enums, type aliases  
 4. **Module System** - Imports, visibility, namespaces
-5. **Loop Constructs** - Unified loop syntax implementation
-6. **Behaviors/Traits** - Contract-based polymorphism
-7. **Memory Management** - Allocators, smart references
+5. **Standard Library** - Core collections and utilities
+6. **Memory Management** - Allocators, smart references
+7. **Async/Await** - Concurrent programming support
 
-## Recent Progress (Current Session)
-- ✅ Added generic type parsing support (List<T>, Map<K,V>)
-- ✅ Implemented generic function parsing (fn map<T, U>)
-- ✅ Enhanced struct parsing for generic parameters
-- ✅ Fixed parser to distinguish generic functions from structs
-- ✅ Added comprehensive test suite for generics (7 tests)
-- ✅ Fixed pointer type parsing for both Symbol and Operator tokens
-- ✅ All tests passing (116 total, verified 2025-08-23)
+## Recent Progress (2025-08-23 Session)
+- ✅ Integrated comptime evaluation engine into compilation pipeline
+- ✅ Made ComptimeEvaluator persistent across compilation phases
+- ✅ Fixed comptime expression and statement evaluation  
+- ✅ Added comptime integration tests (2/4 passing)
+- ✅ Created GitHub issue templates for major features
+- ✅ Updated .agent directory meta information
+- ✅ All core tests still passing (93+ tests total)
 
 ## Known Issues
-- Git push timeouts occasionally  
-- Comptime parser exists but no evaluation engine yet
-- Type system needs major expansion
+- Git push timeouts occasionally
+- Comptime evaluator not fully persistent across declarations
+- Type system needs major expansion (generics, traits)
 - No real module system yet
+- Some comptime tests failing (functions in comptime blocks)
 
 ## Critical Files
 - `/src/codegen/llvm/` - LLVM IR generation
 - `/src/parser/` - Language parser (COMPLETE)
 - `/src/ast.rs` - AST definitions
-- `/src/comptime.rs` - New comptime module (needs implementation)
+- `/src/comptime.rs` - Comptime evaluator (integrated, partial support)
 - `/tests/` - Comprehensive test suite
 - `/ROADMAP.md` - Feature roadmap and priorities
 
