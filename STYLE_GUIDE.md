@@ -7,8 +7,7 @@
   - This is a permanent design decision.
 - Use explicit, non-dangling, non-tertiary forms only.
 - Prefer:
-  - `loop 0..10 { ... }` (range as condition, no variable)
-  - Or C-style: `loop i = 0; i < 10; i += 1 { ... }` 
+  - `loop (0..10) { ... }` (range as condition, no variable)
 
 ## Variable Declaration Philosophy
 
@@ -19,3 +18,6 @@
   - Example:
     - `x := 42` (immutable)
     - `y ::= 10` (mutable) 
+
+## Conditionals
+- DO NOT EVER IMPLEMENT `if`, `match` `switch` `case` `of`
