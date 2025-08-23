@@ -6,8 +6,8 @@ use inkwell::{
     builder::Builder,
     context::Context,
     module::Module,
-    types::{BasicType, BasicTypeEnum, FunctionType, StructType},
-    values::{FunctionValue, PointerValue},
+    types::{BasicType, BasicTypeEnum, FunctionType, StructType, AnyTypeEnum, IntType, FloatType},
+    values::{FunctionValue, PointerValue, BasicValueEnum, IntValue, FloatValue},
 };
 use std::collections::HashMap;
 
@@ -223,5 +223,55 @@ impl<'ctx> LLVMCompiler<'ctx> {
         self.struct_types.insert(struct_def.name.clone(), struct_info);
         
         Ok(())
+    }
+    
+    pub fn cast_value_to_type(&self, value: BasicValueEnum<'ctx>, target_type: AnyTypeEnum<'ctx>) -> Result<BasicValueEnum<'ctx>, CompileError> {
+        // Convert AnyTypeEnum to BasicTypeEnum for comparison
+        let target_basic_type = match target_type {
+            AnyTypeEnum::ArrayType(t) => BasicTypeEnum::ArrayType(t),
+            AnyTypeEnum::FloatType(t) => BasicTypeEnum::FloatType(t),
+            AnyTypeEnum::IntType(t) => BasicTypeEnum::IntType(t),
+            AnyTypeEnum::PointerType(t) => BasicTypeEnum::PointerType(t),
+            AnyTypeEnum::StructType(t) => BasicTypeEnum::StructType(t),
+            AnyTypeEnum::VectorType(t) => BasicTypeEnum::VectorType(t),
+            _ => return Ok(value), // For void and other types, return as is
+        };
+        
+        // If the types already match, no cast is needed
+        if value.get_type() == target_basic_type {
+            return Ok(value);
+        }
+        
+        // Handle casting between integer types
+        if let (BasicValueEnum::IntValue(int_val), BasicTypeEnum::IntType(target_int_type)) = (value, target_basic_type) {
+            let source_width = int_val.get_type().get_bit_width();
+            let target_width = target_int_type.get_bit_width();
+            
+            if source_width < target_width {
+                // Sign extend or zero extend
+                Ok(self.builder.build_int_s_extend(int_val, target_int_type, "cast")?.into())
+            } else if source_width > target_width {
+                // Truncate
+                Ok(self.builder.build_int_truncate(int_val, target_int_type, "cast")?.into())
+            } else {
+                // Same width, just return as is
+                Ok(int_val.into())
+            }
+        } else if let (BasicValueEnum::FloatValue(float_val), BasicTypeEnum::FloatType(target_float_type)) = (value, target_basic_type) {
+            // Handle float casting
+            let source_width = if float_val.get_type() == self.context.f32_type() { 32 } else { 64 };
+            let target_width = if target_float_type == self.context.f32_type() { 32 } else { 64 };
+            
+            if source_width < target_width {
+                Ok(self.builder.build_float_ext(float_val, target_float_type, "cast")?.into())
+            } else if source_width > target_width {
+                Ok(self.builder.build_float_trunc(float_val, target_float_type, "cast")?.into())
+            } else {
+                Ok(float_val.into())
+            }
+        } else {
+            // For other types, return as is for now
+            Ok(value)
+        }
     }
 } 

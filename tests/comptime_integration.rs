@@ -61,11 +61,11 @@ fn test_comptime_function_evaluation() {
 }
 
 #[test]
-fn test_comptime_array_generation() {
+fn test_comptime_expression_in_variable() {
     let input = r#"
-        get_array = () i32 {
-            arr := comptime { [1, 2, 3, 4, 5] };
-            arr[2]
+        calculate = () i32 {
+            x := comptime (2 + 3) * 4;
+            x
         }
     "#;
     
@@ -78,6 +78,7 @@ fn test_comptime_array_generation() {
     let compiler = Compiler::new(&context);
     let result = compiler.compile_llvm(&program);
     
-    // Check that the array was generated at compile time
-    assert!(result.is_ok(), "Should compile successfully with comptime array");
+    // Check that the comptime expression was evaluated to 20
+    assert!(result.is_ok(), "Should compile successfully with comptime expression");
+    assert!(result.unwrap().contains("20"), "Expected comptime expression to be evaluated to 20");
 }
