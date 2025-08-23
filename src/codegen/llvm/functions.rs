@@ -82,7 +82,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let param_basic_types: Result<Vec<BasicTypeEnum>, CompileError> = function
             .args
             .iter()
-            .map(|(name, t)| {
+            .map(|(_name, t)| {
                 self.to_llvm_type(t)
                     .and_then(|lyn_type| {
                         self.expect_basic_type(lyn_type)
@@ -195,7 +195,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             self.variables.insert(name.clone(), (alloca, type_.clone()));
         }
 
-        for (i, statement) in function.body.iter().enumerate() {
+        for statement in &function.body {
             self.compile_statement(statement)?;
         }
 

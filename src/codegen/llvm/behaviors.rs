@@ -252,7 +252,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
     /// Helper to infer type name from an expression (simplified)
     fn infer_type_name(&self, expr: &Expression) -> Result<String, CompileError> {
         match expr {
-            Expression::Identifier(name) => {
+            Expression::Identifier(_name) => {
                 // Look up the variable's type in our type tracking
                 // This is simplified - real implementation would track types properly
                 Ok("UnknownType".to_string())
