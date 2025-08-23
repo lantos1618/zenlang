@@ -67,8 +67,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
         if let (Expression::Identifier(name), Some(ref ast_type)) = (expr, pointed_type.as_ref()) {
             // First load: get the address stored in the pointer variable
             let llvm_ptr_type = match self.to_llvm_type(ast_type)? {
-                super::Type::Basic(basic_type) => basic_type.ptr_type(inkwell::AddressSpace::default()),
-                super::Type::Struct(struct_type) => struct_type.ptr_type(inkwell::AddressSpace::default()),
+                super::Type::Basic(_) => self.context.ptr_type(inkwell::AddressSpace::default()),
+                super::Type::Struct(_) => self.context.ptr_type(inkwell::AddressSpace::default()),
                 _ => return Err(CompileError::TypeError("Cannot dereference non-basic/non-struct pointer type".to_string(), None)),
             };
             let address = self.builder.build_load(llvm_ptr_type, ptr, "deref_ptr_addr")?;
