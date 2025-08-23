@@ -1,6 +1,7 @@
 use crate::ast::{self, AstType};
 use crate::error::CompileError;
 use inkwell::{
+    basic_block::BasicBlock,
     builder::Builder,
     context::Context,
     module::Module,
@@ -58,6 +59,7 @@ pub struct LLVMCompiler<'ctx> {
     pub current_function: Option<FunctionValue<'ctx>>,
     pub symbols: symbols::SymbolTable<'ctx>,
     pub struct_types: HashMap<String, StructTypeInfo<'ctx>>,
+    pub loop_stack: Vec<(BasicBlock<'ctx>, BasicBlock<'ctx>)>, // (continue_target, break_target)
 }
 
 impl<'ctx> LLVMCompiler<'ctx> {
@@ -85,6 +87,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             current_function: None,
             symbols,
             struct_types: HashMap::new(),
+            loop_stack: Vec::new(),
         }
     }
 

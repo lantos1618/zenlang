@@ -90,30 +90,28 @@ fn test_loop_construct() {
         test_context!(|test_context: &mut TestContext| {
             let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
                 name: "main".to_string(),
-                args: vec![
-                    ("n".to_string(), AstType::I64),
-                ],
+                args: vec![],
                 return_type: AstType::I64,
                 body: vec![
                     Statement::VariableDeclaration { 
                         name: "sum".to_string(),
                         type_: Some(AstType::I64),
                         initializer: Some(Expression::Integer64(0)),
-                        is_mutable: false,
-                        declaration_type: VariableDeclarationType::ExplicitImmutable,
+                        is_mutable: true,
+                        declaration_type: VariableDeclarationType::ExplicitMutable,
                     },
                     Statement::VariableDeclaration { 
                         name: "i".to_string(),
                         type_: Some(AstType::I64),
                         initializer: Some(Expression::Integer64(0)),
-                        is_mutable: false,
-                        declaration_type: VariableDeclarationType::ExplicitImmutable,
+                        is_mutable: true,
+                        declaration_type: VariableDeclarationType::ExplicitMutable,
                     },
                     Statement::Loop {
                         condition: Some(Expression::BinaryOp {
                             left: Box::new(Expression::Identifier("i".to_string())),
                             op: BinaryOperator::LessThan,
-                            right: Box::new(Expression::Identifier("n".to_string())),
+                            right: Box::new(Expression::Integer64(5)),
                         }),
 
                         label: None,
