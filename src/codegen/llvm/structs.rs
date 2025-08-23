@@ -3,12 +3,10 @@ use super::{LLVMCompiler, Type};
 use crate::ast::{AstType, Expression};
 use crate::error::CompileError;
 use inkwell::{
-    types::{AsTypeRef, StructType},
+    types::StructType,
     values::BasicValueEnum,
 };
-use inkwell::types::BasicTypeEnum;
 use std::collections::HashMap;
-use inkwell::AddressSpace;
 
 #[derive(Debug, Clone)]
 pub struct StructTypeInfo<'ctx> {
