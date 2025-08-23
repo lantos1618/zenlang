@@ -1,5 +1,5 @@
 use zen::ast::{
-    Program, Declaration, Statement, Expression, ConditionalArm, Pattern, AstType
+    Program, Declaration, Function, Statement, Expression, ConditionalArm, Pattern, AstType, BinaryOp
 };
 use zen::codegen::llvm::LLVMCompiler;
 use inkwell::context::Context;
@@ -11,7 +11,7 @@ fn test_basic_pattern_literal() {
     
     let program = Program {
         declarations: vec![
-            Declaration::Function {
+            Declaration::Function(Function {
                 name: "test_pattern".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
@@ -32,12 +32,12 @@ fn test_basic_pattern_literal() {
                         ],
                     })),
                 ],
-                is_external: false,
-            },
+                is_async: false,
+            }),
         ],
     };
     
-    let result = compiler.compile(&program);
+    let result = compiler.compile_program(&program);
     assert!(result.is_ok());
     
     // Verify the generated IR contains the pattern matching logic
@@ -53,7 +53,7 @@ fn test_pattern_with_binding() {
     
     let program = Program {
         declarations: vec![
-            Declaration::Function {
+            Declaration::Function(Function {
                 name: "test_binding".to_string(),
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
@@ -66,19 +66,19 @@ fn test_pattern_with_binding() {
                                 guard: None,
                                 body: Expression::BinaryOp {
                                     left: Box::new(Expression::Identifier("y".to_string())),
-                                    op: zen::ast::BinaryOp::Add,
+                                    op: BinaryOp::Add,
                                     right: Box::new(Expression::Integer32(10)),
                                 },
                             },
                         ],
                     })),
                 ],
-                is_external: false,
-            },
+                is_async: false,
+            }),
         ],
     };
     
-    let result = compiler.compile(&program);
+    let result = compiler.compile_program(&program);
     assert!(result.is_ok());
 }
 
@@ -89,7 +89,7 @@ fn test_pattern_range() {
     
     let program = Program {
         declarations: vec![
-            Declaration::Function {
+            Declaration::Function(Function {
                 name: "test_range".to_string(),
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
@@ -114,12 +114,12 @@ fn test_pattern_range() {
                         ],
                     })),
                 ],
-                is_external: false,
-            },
+                is_async: false,
+            }),
         ],
     };
     
-    let result = compiler.compile(&program);
+    let result = compiler.compile_program(&program);
     assert!(result.is_ok());
 }
 
@@ -130,7 +130,7 @@ fn test_pattern_with_guard() {
     
     let program = Program {
         declarations: vec![
-            Declaration::Function {
+            Declaration::Function(Function {
                 name: "test_guard".to_string(),
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
@@ -142,7 +142,7 @@ fn test_pattern_with_guard() {
                                 pattern: Pattern::Identifier("y".to_string()),
                                 guard: Some(Expression::BinaryOp {
                                     left: Box::new(Expression::Identifier("y".to_string())),
-                                    op: zen::ast::BinaryOp::Greater,
+                                    op: BinaryOp::Greater,
                                     right: Box::new(Expression::Integer32(0)),
                                 }),
                                 body: Expression::Integer32(100),
@@ -155,12 +155,12 @@ fn test_pattern_with_guard() {
                         ],
                     })),
                 ],
-                is_external: false,
-            },
+                is_async: false,
+            }),
         ],
     };
     
-    let result = compiler.compile(&program);
+    let result = compiler.compile_program(&program);
     assert!(result.is_ok());
 }
 
@@ -171,7 +171,7 @@ fn test_pattern_or() {
     
     let program = Program {
         declarations: vec![
-            Declaration::Function {
+            Declaration::Function(Function {
                 name: "test_or".to_string(),
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
@@ -196,11 +196,11 @@ fn test_pattern_or() {
                         ],
                     })),
                 ],
-                is_external: false,
-            },
+                is_async: false,
+            }),
         ],
     };
     
-    let result = compiler.compile(&program);
+    let result = compiler.compile_program(&program);
     assert!(result.is_ok());
 }
