@@ -57,10 +57,12 @@ impl<'a> Parser<'a> {
                             self.next_token(); // Move past >
                             
                             // Check what comes after the generics
-                            let is_struct = self.current_token == Token::Operator("=".to_string()) 
+                            let _is_struct = self.current_token == Token::Operator("=".to_string()) 
                                 && self.peek_token == Token::Symbol('{');
                             let is_function = self.current_token == Token::Operator("=".to_string()) 
                                 && self.peek_token == Token::Symbol('(');
+                            let is_behavior = self.current_token == Token::Operator("=".to_string()) 
+                                && self.peek_token == Token::Keyword(lexer::Keyword::Behavior);
                             
                             // Restore lexer state
                             self.lexer.position = saved_position;
@@ -71,7 +73,9 @@ impl<'a> Parser<'a> {
                             self.current_span = saved_span;
                             self.peek_span = saved_peek_span;
                             
-                            if is_function {
+                            if is_behavior {
+                                declarations.push(Declaration::Behavior(self.parse_behavior()?));
+                            } else if is_function {
                                 declarations.push(Declaration::Function(self.parse_function()?));
                             } else {
                                 // Default to struct for backward compatibility
@@ -139,6 +143,7 @@ impl<'a> Parser<'a> {
                     
                     if let Token::Keyword(lexer::Keyword::Impl) = self.current_token {
                         // This is an impl block
+                        self.next_token(); // consume 'impl'
                         declarations.push(Declaration::Impl(self.parse_impl_block_from_type(type_name)?));
                     } else {
                         // Not an impl block, restore and error

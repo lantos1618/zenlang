@@ -149,6 +149,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ast::Declaration::Function(_) => {}
                 ast::Declaration::Struct(_) => {} // Already handled above
                 ast::Declaration::Enum(_) | ast::Declaration::ModuleImport { .. } => {}
+                ast::Declaration::Behavior(_) => {} // Behaviors are interface definitions, no codegen needed
+                ast::Declaration::Impl(_) => {} // Impl blocks are handled as part of struct methods
                 ast::Declaration::ComptimeBlock(statements) => {
                     // Evaluate comptime blocks and generate constants
                     println!("Evaluating comptime block with {} statements", statements.len());
