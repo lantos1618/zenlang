@@ -289,6 +289,13 @@ pub struct EnumDefinition {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Parameter {
+    pub name: String,
+    pub type_: AstType,
+    pub is_mutable: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorDefinition {
     pub name: String,
     pub type_params: Vec<TypeParameter>,
