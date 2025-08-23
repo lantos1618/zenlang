@@ -262,6 +262,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 let loop_body = self.context.append_basic_block(self.current_function.unwrap(), "loop_body");
                 let after_loop_block = self.context.append_basic_block(self.current_function.unwrap(), "after_loop");
                 
+                // Push loop context onto stack for break/continue
+                self.loop_stack.push((loop_header, after_loop_block));
+                
                 // Branch to loop header
                 self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
                 
@@ -271,16 +274,22 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 if let Some(cond_expr) = condition {
                     let cond_value = self.compile_expression(cond_expr)?;
                     if let BasicValueEnum::IntValue(int_val) = cond_value {
-                        // Compare with zero (non-zero means true)
-                        let zero = self.context.i64_type().const_zero();
-                        let condition = self.builder.build_int_compare(
-                            inkwell::IntPredicate::NE,
-                            int_val,
-                            zero,
-                            "loop_condition"
-                        ).map_err(|e| CompileError::from(e))?;
-                        
-                        self.builder.build_conditional_branch(condition, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
+                        // Check if this is already a boolean (i1) type
+                        if int_val.get_type().get_bit_width() == 1 {
+                            // It's already a boolean, use it directly
+                            self.builder.build_conditional_branch(int_val, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
+                        } else {
+                            // Compare with zero (non-zero means true)
+                            let zero = int_val.get_type().const_zero();
+                            let condition = self.builder.build_int_compare(
+                                inkwell::IntPredicate::NE,
+                                int_val,
+                                zero,
+                                "loop_condition"
+                            ).map_err(|e| CompileError::from(e))?;
+                            
+                            self.builder.build_conditional_branch(condition, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
+                        }
                     } else {
                         return Err(CompileError::TypeError("Loop condition must be an integer".to_string(), None));
                     }
@@ -297,25 +306,42 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     self.compile_statement(stmt)?;
                 }
                 
-                // Branch back to header
-                self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
+                // Branch back to header only if the current block doesn't have a terminator
+                // (e.g., if there was no break/return/continue in the loop body)
+                let current_block = self.builder.get_insert_block().unwrap();
+                if current_block.get_terminator().is_none() {
+                    self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
+                }
+                
+                // Pop loop context from stack
+                self.loop_stack.pop();
                 
                 // Position builder at after_loop block
                 self.builder.position_at_end(after_loop_block);
                 Ok(())
             },
             Statement::Break { label: _ } => {
-                // For now, just return from the function
-                // TODO: Implement proper break with labels
-                let return_value = self.context.i64_type().const_zero();
-                self.builder.build_return(Some(&return_value)).map_err(|e| CompileError::from(e))?;
+                // Branch to the break target (after_loop block) of the current loop
+                if let Some((_, break_target)) = self.loop_stack.last() {
+                    self.builder.build_unconditional_branch(*break_target).map_err(|e| CompileError::from(e))?;
+                    // Create a new block for any unreachable code after break
+                    let unreachable_block = self.context.append_basic_block(self.current_function.unwrap(), "after_break");
+                    self.builder.position_at_end(unreachable_block);
+                } else {
+                    return Err(CompileError::SyntaxError("Break statement outside of loop".to_string(), None));
+                }
                 Ok(())
             },
             Statement::Continue { label: _ } => {
-                // For now, just skip to next iteration
-                // TODO: Implement proper continue with labels
-                let return_value = self.context.i64_type().const_zero();
-                self.builder.build_return(Some(&return_value)).map_err(|e| CompileError::from(e))?;
+                // Branch to the continue target (loop_header) of the current loop
+                if let Some((continue_target, _)) = self.loop_stack.last() {
+                    self.builder.build_unconditional_branch(*continue_target).map_err(|e| CompileError::from(e))?;
+                    // Create a new block for any unreachable code after continue
+                    let unreachable_block = self.context.append_basic_block(self.current_function.unwrap(), "after_continue");
+                    self.builder.position_at_end(unreachable_block);
+                } else {
+                    return Err(CompileError::SyntaxError("Continue statement outside of loop".to_string(), None));
+                }
                 Ok(())
             },
             Statement::ComptimeBlock(_) => {
