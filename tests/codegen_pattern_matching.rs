@@ -11,7 +11,7 @@ fn test_basic_pattern_literal() {
     
     let program = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "test_pattern".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
@@ -53,7 +53,7 @@ fn test_pattern_with_binding() {
     
     let program = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "test_binding".to_string(),
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
@@ -89,7 +89,7 @@ fn test_pattern_range() {
     
     let program = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "test_range".to_string(),
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
@@ -130,7 +130,7 @@ fn test_pattern_with_guard() {
     
     let program = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "test_guard".to_string(),
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
@@ -171,7 +171,7 @@ fn test_pattern_or() {
     
     let program = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "test_or".to_string(),
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,

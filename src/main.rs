@@ -5,9 +5,12 @@ use std::env;
 mod ast;
 mod codegen;
 mod compiler;
+mod comptime;
 mod error;
 mod lexer;
+mod lsp;
 mod parser;
+mod typechecker;
 
 use zen::compiler::Compiler;
 use zen::lexer::Lexer;

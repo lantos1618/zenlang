@@ -67,14 +67,14 @@ fn test_variable_declaration_ir() {
 fn test_string_literal() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "get_string".to_string(),
                 args: vec![],
                 return_type: AstType::String,
                 body: vec![Statement::Return(Expression::String("Hello, World!".to_string()))],
             },
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "main".to_string(),
                 args: vec![],
@@ -104,7 +104,7 @@ fn test_string_literal() {
 #[test]
 fn test_conditional_expression() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -151,7 +151,7 @@ fn test_variable_declaration() {
 fn test_function_call() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "add".to_string(),
                 args: vec![
@@ -165,7 +165,7 @@ fn test_function_call() {
                     right: Box::new(Expression::Identifier("b".to_string())),
                 })],
             },
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "main".to_string(),
                 args: vec![],
@@ -189,7 +189,7 @@ fn test_function_call() {
 #[test]
 fn test_undefined_variable() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "test_undefined".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -208,7 +208,7 @@ fn test_undefined_variable() {
 #[test]
 fn test_type_mismatch() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "test_type_mismatch".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -234,7 +234,7 @@ fn test_type_mismatch() {
 #[test]
 fn test_undefined_function() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "test_undefined_func".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -256,7 +256,7 @@ fn test_undefined_function() {
 #[test]
 fn test_invalid_function_type() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "test_invalid_type".to_string(),
             args: vec![("x".to_string(), AstType::Function {
                 args: vec![AstType::I64],
@@ -274,7 +274,7 @@ fn test_invalid_function_type() {
 #[test]
 fn test_nested_conditionals() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -310,7 +310,7 @@ fn test_nested_conditionals() {
 fn test_function_pointer() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "add".to_string(),
                 args: vec![
@@ -324,7 +324,7 @@ fn test_function_pointer() {
                     right: Box::new(Expression::Identifier("b".to_string())),
                 })],
             },
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "test_func_ptr".to_string(),
                 args: vec![],
@@ -363,7 +363,7 @@ fn test_function_pointer() {
 fn test_recursive_function() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function { is_async: false, 
+            ast::Function { type_params: vec![], is_async: false, 
                 name: "factorial".to_string(),
                 args: vec![("n".to_string(), AstType::I64)],
                 return_type: AstType::I64,
@@ -402,7 +402,7 @@ fn test_recursive_function() {
                 }),
                 ],
             },
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
@@ -424,7 +424,7 @@ fn test_recursive_function() {
 #[test]
 fn test_pointer_operations() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -455,7 +455,7 @@ fn test_pointer_operations() {
 #[test]
 fn test_pointer_arithmetic() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "test_ptr_arithmetic".to_string(),
             args: vec![("arr".to_string(), AstType::Pointer(Box::new(AstType::I64)))],
             return_type: AstType::I64,
@@ -482,7 +482,7 @@ fn test_pointer_arithmetic() {
 #[test]
 fn test_pointer_assignment() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "test_ptr_assign".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -520,7 +520,7 @@ fn test_pointer_assignment() {
 #[test]
 fn test_invalid_dereferencing_non_pointer() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "test_invalid_deref".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -546,7 +546,7 @@ fn test_void_pointer_declaration() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(
             vec![
-                ast::Function { is_async: false, 
+                ast::Function { type_params: vec![], is_async: false, 
                     name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -572,7 +572,7 @@ fn test_struct_creation_and_access() {
     test_context!(|test_context: &mut TestContext| {
         let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
             name: "Point".to_string(),
-            generics: vec![],
+            type_params: vec![],
             fields: vec![
                 ast::StructField {
                     name: "x".to_string(),
@@ -589,7 +589,7 @@ fn test_struct_creation_and_access() {
             ],
             methods: vec![],
         });
-        let func = ast::Function {
+        let func = ast::Function { type_params: vec![],
             is_async: false,
             name: "main".to_string(),
             args: vec![],
@@ -634,7 +634,7 @@ fn test_struct_pointer() {
     test_context!(|test_context: &mut TestContext| {
         let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
             name: "Point".to_string(),
-            generics: vec![],
+            type_params: vec![],
             fields: vec![
                 ast::StructField {
                     name: "x".to_string(),
@@ -651,7 +651,7 @@ fn test_struct_pointer() {
             ],
             methods: vec![],
         });
-        let func = ast::Function { is_async: false, 
+        let func = ast::Function { type_params: vec![], is_async: false, 
             name: "test_struct_ptr".to_string(),
             args: vec![],
             return_type: ast::AstType::I64,
@@ -708,7 +708,7 @@ fn test_struct_field_assignment() {
     test_context!(|test_context: &mut TestContext| {
         let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
             name: "Point".to_string(),
-            generics: vec![],
+            type_params: vec![],
             fields: vec![
                 ast::StructField {
                     name: "x".to_string(),
@@ -725,7 +725,7 @@ fn test_struct_field_assignment() {
             ],
             methods: vec![],
         });
-        let func = ast::Function { is_async: false, 
+        let func = ast::Function { type_params: vec![], is_async: false, 
             name: "test_struct_assign".to_string(),
             args: vec![],
             return_type: ast::AstType::I64,
@@ -771,7 +771,7 @@ fn test_struct_field_assignment() {
 #[test]
 fn test_loop_construct() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "test_loop".to_string(),
             args: vec![("n".to_string(), AstType::I64)],
             return_type: AstType::I64,
@@ -830,7 +830,7 @@ fn test_loop_construct() {
 fn test_string_concatenation() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function { is_async: false, 
+            ast::Function { type_params: vec![], is_async: false, 
                 name: "concat_strings".to_string(),
                 args: vec![
                     ("s1".to_string(), AstType::String),
@@ -843,7 +843,7 @@ fn test_string_concatenation() {
                     right: Box::new(Expression::Identifier("s2".to_string())),
                 })],
             },
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
@@ -876,7 +876,7 @@ fn test_string_concatenation() {
 fn test_string_comparison() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function { is_async: false, 
+            ast::Function { type_params: vec![], is_async: false, 
                 name: "compare_strings".to_string(),
                 args: vec![
                     ("s1".to_string(), AstType::String),
@@ -889,7 +889,7 @@ fn test_string_comparison() {
                     right: Box::new(Expression::Identifier("s2".to_string())),
                 })],
             },
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
@@ -911,7 +911,7 @@ fn test_string_comparison() {
 
         // Test with different strings
         let program = ast::Program::from_functions(vec![
-            ast::Function { is_async: false, 
+            ast::Function { type_params: vec![], is_async: false, 
                 name: "compare_strings".to_string(),
                 args: vec![
                     ("s1".to_string(), AstType::String),
@@ -924,7 +924,7 @@ fn test_string_comparison() {
                     right: Box::new(Expression::Identifier("s2".to_string())),
                 })],
             },
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
@@ -951,7 +951,7 @@ fn test_string_length() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(
             vec![
-            ast::Function { is_async: false, 
+            ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -974,7 +974,7 @@ fn test_string_length() {
 #[test]
 fn test_string_literal_ir() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,

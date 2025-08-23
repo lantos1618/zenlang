@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::{StructDefinition, StructField, AstType, Function};
+use crate::ast::{StructDefinition, StructField, AstType, Function, TypeParameter};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 
@@ -17,12 +17,15 @@ impl<'a> Parser<'a> {
         self.next_token();
 
         // Parse generics if present: <T, U, ...>
-        let mut generics = Vec::new();
+        let mut type_params = Vec::new();
         if self.current_token == Token::Operator("<".to_string()) {
             self.next_token();
             loop {
                 if let Token::Identifier(gen) = &self.current_token {
-                    generics.push(gen.clone());
+                    type_params.push(TypeParameter {
+                        name: gen.clone(),
+                        constraints: Vec::new(),
+                    });
                     self.next_token();
                     
                     if self.current_token == Token::Operator(">".to_string()) {
@@ -138,7 +141,7 @@ impl<'a> Parser<'a> {
         // TODO: Implement method parsing with correct syntax
         let methods = Vec::new();
 
-        Ok(StructDefinition { name, generics, fields, methods })
+        Ok(StructDefinition { name, type_params, fields, methods })
     }
 
     fn parse_method(&mut self) -> Result<Function> {
@@ -216,6 +219,7 @@ impl<'a> Parser<'a> {
 
         Ok(Function {
             name,
+            type_params: Vec::new(), // TODO: Parse generic type parameters for methods
             args: parameters,
             return_type,
             body,

@@ -96,6 +96,7 @@ impl<'ctx> TestContext<'ctx> {
     pub fn create_simple_program(value: i64) -> ast::Program {
         ast::Program::from_functions(vec![ast::Function {
             name: "main".to_string(),
+            type_params: vec![],
             args: vec![],
             return_type: AstType::I64,
             body: vec![Statement::Return(Expression::Integer64(value))],
@@ -111,6 +112,7 @@ impl<'ctx> TestContext<'ctx> {
     ) -> ast::Program {
         ast::Program::from_functions(vec![ast::Function {
             name: "main".to_string(),
+            type_params: vec![],
             args: vec![],
             return_type: AstType::I64,
             body: vec![Statement::Return(Expression::BinaryOp {
@@ -126,6 +128,7 @@ impl<'ctx> TestContext<'ctx> {
     pub fn create_variable_program(name: &str, value: i64) -> ast::Program {
         ast::Program::from_functions(vec![ast::Function {
             name: "main".to_string(),
+            type_params: vec![],
             args: vec![],
             return_type: AstType::I64,
             body: vec![
@@ -151,6 +154,7 @@ impl<'ctx> TestContext<'ctx> {
         ast::Program::from_functions(vec![
             ast::Function {
                 name: func_name.to_string(),
+                type_params: vec![],
                 args: vec![("arg".to_string(), return_type.clone())],
                 return_type: return_type.clone(),
                 body: vec![Statement::Return(Expression::Identifier("arg".to_string()))],
@@ -158,6 +162,7 @@ impl<'ctx> TestContext<'ctx> {
             },
             ast::Function {
                 name: "main".to_string(),
+                type_params: vec![],
                 args: vec![],
                 return_type: return_type,
                 body: vec![Statement::Return(Expression::FunctionCall {
@@ -173,6 +178,7 @@ impl<'ctx> TestContext<'ctx> {
     pub fn create_function_program(name: &str, return_type: AstType) -> ast::Program {
         ast::Program::from_functions(vec![ast::Function {
             name: name.to_string(),
+            type_params: vec![],
             args: vec![],
             return_type: return_type,
             body: vec![Statement::Return(Expression::Integer64(42))], // Default return value

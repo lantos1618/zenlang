@@ -35,7 +35,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     _ => Err(CompileError::UnsupportedFeature("Unsupported pointer type".to_string(), None)),
                 }
             },
-            AstType::Struct { name, fields } => {
+            AstType::Struct { name, fields: _ } => {
                 let struct_info = self.struct_types.get(name)
                     .ok_or_else(|| CompileError::TypeError(format!("Undefined struct type: {}", name), None))?;
                 Ok(Type::Struct(struct_info.llvm_type))
@@ -67,7 +67,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 };
                 Ok(Type::Function(function_type))
             },
-            AstType::Enum { name, variants: _ } => {
+            AstType::Enum { name: _, variants: _ } => {
                 // Enums are represented as integers for now
                 // TODO: Implement proper enum representation
                 Ok(Type::Basic(self.context.i64_type().into()))
@@ -106,7 +106,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ], false);
                 Ok(Type::Struct(range_struct))
             },
-            AstType::Generic { name, type_args } => {
+            AstType::Generic { name: _, type_args } => {
                 // For now, just use the first type argument or default to i64
                 if let Some(first_arg) = type_args.first() {
                     self.to_llvm_type(first_arg)

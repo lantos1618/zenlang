@@ -11,7 +11,7 @@ use test_utils::test_context;
 #[test]
 fn test_conditional_expression() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,

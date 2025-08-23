@@ -15,7 +15,7 @@ fn test_external_function_declaration() {
                 return_type: AstType::I64,
                 is_varargs: true,
             }),
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
@@ -49,7 +49,7 @@ fn test_float_operations() {
                 return_type: AstType::F64,
                 is_varargs: false,
             }),
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "test_float_math".to_string(),
                 args: vec![("x".to_string(), AstType::F64), ("y".to_string(), AstType::F64)],
                 return_type: AstType::F64,
@@ -90,7 +90,7 @@ fn test_printf() {
                 return_type: AstType::I64,
                 is_varargs: true, // printf is variadic
             }),
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
@@ -124,7 +124,7 @@ fn test_executable_ffi_printf() {
                 return_type: AstType::I64,
                 is_varargs: true, // printf is variadic
             }),
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
@@ -187,7 +187,7 @@ fn test_external_math_function() {
                 return_type: AstType::F64,
                 is_varargs: false,
             }),
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "calculate_distance".to_string(),
                 args: vec![("x".to_string(), AstType::F64), ("y".to_string(), AstType::F64)],
                 return_type: AstType::F64,

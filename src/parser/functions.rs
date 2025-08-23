@@ -101,6 +101,7 @@ impl<'a> Parser<'a> {
         
         Ok(Function {
             name,
+            type_params: Vec::new(), // TODO: Parse generic type parameters
             args,
             return_type,
             body,

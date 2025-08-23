@@ -73,7 +73,7 @@ impl<'a> Parser<'a> {
             }
             Token::Keyword(crate::lexer::Keyword::Comptime) => {
                 self.next_token(); // consume 'comptime'
-                let expr = self.parse_primary_expression()?;
+                let expr = self.parse_expression()?;
                 Ok(Expression::Comptime(Box::new(expr)))
             }
             Token::Integer(value_str) => {
@@ -242,7 +242,7 @@ impl<'a> Parser<'a> {
         };
         self.next_token();
         
-        let binding_pattern = Pattern::Binding {
+        let _binding_pattern = Pattern::Binding {
             name: binding_name.clone(),
             pattern: Box::new(Pattern::Identifier(binding_name)),
         };

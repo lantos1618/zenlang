@@ -21,7 +21,7 @@ fn test_parse_simple_function() {
     
     let expected = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I32,
@@ -44,7 +44,7 @@ fn test_parse_variable_declaration() {
     
     let expected = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I32,
@@ -74,7 +74,7 @@ fn test_parse_binary_expression() {
     
     let expected = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I32,
@@ -128,7 +128,7 @@ fn test_parse_loop_with_condition() {
     
     let expected = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "countdown".to_string(),
                 args: vec![],
                 return_type: AstType::Void,
@@ -189,7 +189,7 @@ fn test_parse_struct_definition() {
     assert_eq!(program.declarations.len(), 1);
     if let zen::ast::Declaration::Struct(def) = &program.declarations[0] {
         assert_eq!(def.name, "Person");
-        assert!(def.generics.is_empty());
+        assert!(def.type_params.is_empty());
         assert_eq!(def.fields.len(), 2);
         
         assert_eq!(def.fields[0].name, "name");
@@ -403,7 +403,7 @@ fn test_parse_function_with_return() {
     
     let expected = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "test".to_string(),
                 args: vec![], // Empty args since input has ()
                 return_type: AstType::I64,
@@ -444,7 +444,7 @@ fn test_parse_loop_with_return() {
     
     let expected = Program {
         declarations: vec![
-            Declaration::Function(Function {
+            Declaration::Function(Function { type_params: vec![],
                 name: "test".to_string(),
                 args: vec![], // Empty args since input has ()
                 return_type: AstType::I64,
@@ -692,7 +692,8 @@ fn test_parse_struct_with_generics() {
     assert_eq!(program.declarations.len(), 1);
     if let zen::ast::Declaration::Struct(def) = &program.declarations[0] {
         assert_eq!(def.name, "Box");
-        assert_eq!(def.generics, vec!["T"]);
+        assert_eq!(def.type_params.len(), 1);
+        assert_eq!(def.type_params[0].name, "T");
         assert_eq!(def.fields.len(), 1);
         assert_eq!(def.fields[0].name, "value");
         assert_eq!(def.fields[0].type_, zen::ast::AstType::Generic { name: "T".to_string(), type_args: vec![] });
@@ -711,7 +712,7 @@ fn test_parse_struct_with_methods() {
     assert_eq!(program.declarations.len(), 1);
     if let zen::ast::Declaration::Struct(def) = &program.declarations[0] {
         assert_eq!(def.name, "Point");
-        assert!(def.generics.is_empty());
+        assert!(def.type_params.is_empty());
         assert_eq!(def.fields.len(), 2);
         assert_eq!(def.methods.len(), 0); // Methods not yet supported in parser
     } else {
@@ -728,7 +729,8 @@ fn test_parse_struct_with_generics_and_methods() {
     assert_eq!(program.declarations.len(), 1);
     if let zen::ast::Declaration::Struct(def) = &program.declarations[0] {
         assert_eq!(def.name, "Wrapper");
-        assert_eq!(def.generics, vec!["T"]);
+        assert_eq!(def.type_params.len(), 1);
+        assert_eq!(def.type_params[0].name, "T");
         assert_eq!(def.fields.len(), 1);
         assert_eq!(def.methods.len(), 0); // Methods not yet supported in parser
     } else {
