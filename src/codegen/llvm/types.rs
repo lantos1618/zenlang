@@ -28,6 +28,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 match inner_type {
                     Type::Basic(basic_type) => Ok(Type::Basic(basic_type.ptr_type(AddressSpace::default()).into())),
                     Type::Struct(struct_type) => Ok(Type::Basic(struct_type.ptr_type(AddressSpace::default()).into())),
+                    Type::Void => {
+                        // For void pointers, use i8* as the LLVM representation
+                        Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into()))
+                    },
                     _ => Err(CompileError::UnsupportedFeature("Unsupported pointer type".to_string(), None)),
                 }
             },
