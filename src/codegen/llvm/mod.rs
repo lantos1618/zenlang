@@ -11,6 +11,7 @@ use inkwell::{
 };
 use std::collections::HashMap;
 
+mod behaviors;
 mod binary_ops;
 mod control_flow;
 mod expressions;
@@ -63,6 +64,8 @@ pub struct LLVMCompiler<'ctx> {
     pub struct_types: HashMap<String, StructTypeInfo<'ctx>>,
     pub loop_stack: Vec<(BasicBlock<'ctx>, BasicBlock<'ctx>)>, // (continue_target, break_target)
     pub comptime_evaluator: comptime::ComptimeEvaluator,
+    pub behavior_codegen: Option<behaviors::BehaviorCodegen<'ctx>>,
+    pub symbol_table: symbols::SymbolTable<'ctx>,
 }
 
 impl<'ctx> LLVMCompiler<'ctx> {
@@ -82,6 +85,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         symbols.insert("f64", symbols::Symbol::Type(float_type.as_basic_type_enum()));
         symbols.insert("bool", symbols::Symbol::Type(bool_type.as_basic_type_enum()));
         
+        let symbol_table = symbols.clone();
         Self {
             context,
             module,
@@ -93,6 +97,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
             struct_types: HashMap::new(),
             loop_stack: Vec::new(),
             comptime_evaluator,
+            behavior_codegen: Some(behaviors::BehaviorCodegen::new()),
+            symbol_table,
         }
     }
 
@@ -150,7 +156,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ast::Declaration::Struct(_) => {} // Already handled above
                 ast::Declaration::Enum(_) | ast::Declaration::ModuleImport { .. } => {}
                 ast::Declaration::Behavior(_) => {} // Behaviors are interface definitions, no codegen needed
-                ast::Declaration::Impl(_) => {} // Impl blocks are handled as part of struct methods
+                ast::Declaration::Impl(impl_block) => {
+                    println!("Compiling impl block for type: {}", impl_block.type_name);
+                    self.compile_impl_block(impl_block)?;
+                }
                 ast::Declaration::ComptimeBlock(statements) => {
                     // Evaluate comptime blocks and generate constants
                     println!("Evaluating comptime block with {} statements", statements.len());

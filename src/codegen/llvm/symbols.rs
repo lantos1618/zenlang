@@ -24,12 +24,14 @@ pub enum Symbol<'ctx> {
 }
 
 /// A scope in the symbol table
+#[derive(Clone)]
 pub struct Scope<'ctx> {
     symbols: HashMap<String, Symbol<'ctx>>,
     parent: Option<usize>,
 }
 
 /// A symbol table that supports scoping
+#[derive(Clone)]
 pub struct SymbolTable<'ctx> {
     scopes: Vec<Scope<'ctx>>,
     current_scope: usize,
