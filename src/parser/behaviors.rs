@@ -5,7 +5,7 @@ use crate::error::{CompileError, Result};
 
 impl<'a> Parser<'a> {
     pub fn parse_behavior(&mut self) -> Result<BehaviorDefinition> {
-        // Parse behavior name (already consumed 'name = ' in parse_program)
+        // Parse behavior name
         let name = if let Token::Identifier(n) = &self.current_token {
             n.clone()
         } else {
