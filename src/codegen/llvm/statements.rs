@@ -53,7 +53,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 let basic_type = match llvm_type {
                     Type::Basic(basic) => basic,
                     Type::Struct(struct_type) => struct_type.as_basic_type_enum(),
-                    Type::Function(fn_type) => fn_type.ptr_type(inkwell::AddressSpace::default()).as_basic_type_enum(),
+                    Type::Function(_) => self.context.ptr_type(inkwell::AddressSpace::default()).as_basic_type_enum(),
                     _ => return Err(CompileError::TypeError("Cannot allocate non-basic or struct type".to_string(), None)),
                 };
 
@@ -243,7 +243,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 if ptr_val.is_pointer_value() {
                     let ptr = ptr_val.into_pointer_value();
                     // Load the address stored in the pointer variable
-                    let address = self.builder.build_load(self.context.i64_type().ptr_type(inkwell::AddressSpace::default()), ptr, "deref_ptr")?;
+                    let address = self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), ptr, "deref_ptr")?;
                     // Store the value at that address
                     let address_ptr = address.into_pointer_value();
                     self.builder.build_store(address_ptr, val)?;
