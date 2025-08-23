@@ -311,11 +311,10 @@ impl<'a> Parser<'a> {
             None
         };
         
-        // Parse loop condition (required for non-infinite loops)
-        let condition = if let Token::Identifier(_) = &self.current_token {
-            // Parse a condition expression starting with an identifier
-            let condition = self.parse_expression()?;
-            Some(condition)
+        // Parse loop condition (optional - if not present, it's an infinite loop)
+        let condition = if self.current_token == Token::Symbol('{') {
+            // No condition - infinite loop
+            None
         } else {
             // Parse a condition expression
             let condition = self.parse_expression()?;
