@@ -134,6 +134,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
 
     pub fn compile_program(&mut self, program: &ast::Program) -> Result<(), CompileError> {
         
+        eprintln!("LLVM compile_program: {} declarations", program.declarations.len());
+        for (i, decl) in program.declarations.iter().enumerate() {
+            match decl {
+                ast::Declaration::Function(f) => eprintln!("  [{}] Function: {}", i, f.name),
+                _ => eprintln!("  [{}] Other declaration", i),
+            }
+        }
+        
         // First pass: register struct types
         for declaration in &program.declarations {
             if let ast::Declaration::Struct(struct_def) = declaration {
@@ -167,11 +175,29 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
         }
         
+        // First pass: Declare all functions
+        eprintln!("First pass: declaring all functions...");
         for declaration in &program.declarations {
             if let ast::Declaration::Function(func) = declaration {
-                self.define_and_compile_function(func)?;
+                eprintln!("  Declaring function: {}", func.name);
+                self.declare_function(func)?;
             }
         }
+        
+        // Second pass: Define and compile all functions
+        eprintln!("Second pass: defining and compiling functions...");
+        for (i, declaration) in program.declarations.iter().enumerate() {
+            eprintln!("  Checking declaration {}", i);
+            if let ast::Declaration::Function(func) = declaration {
+                eprintln!("  -> It's a function: {}", func.name);
+                eprintln!("LLVM: Compiling function {}", func.name);
+                self.compile_function_body(func)?;
+                eprintln!("  -> Compiled successfully");
+            } else {
+                eprintln!("  -> Not a function");
+            }
+        }
+        eprintln!("Function compilation loop complete.");
         
         
         Ok(())
