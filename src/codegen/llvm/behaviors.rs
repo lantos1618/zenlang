@@ -24,21 +24,22 @@ impl<'ctx> BehaviorCodegen<'ctx> {
     /// Generate a vtable for a behavior implementation
     pub fn generate_vtable(
         &mut self,
-        compiler: &mut LLVMCompiler<'ctx>,
+        context: &'ctx inkwell::context::Context,
+        module: &inkwell::module::Module<'ctx>,
         type_name: &str,
         behavior_name: &str,
         methods: &[(&str, FunctionValue<'ctx>)],
     ) -> Result<PointerValue<'ctx>, CompileError> {
         // Create vtable type: array of function pointers
-        let fn_ptr_type = compiler.context.ptr_type(inkwell::AddressSpace::default());
+        let fn_ptr_type = context.ptr_type(inkwell::AddressSpace::default());
         let field_types: Vec<_> = (0..methods.len())
             .map(|_| fn_ptr_type.into())
             .collect();
-        let vtable_type = compiler.context.struct_type(&field_types, false);
+        let vtable_type = context.struct_type(&field_types, false);
 
         // Create global vtable
         let vtable_name = format!("vtable_{}_{}", type_name, behavior_name);
-        let vtable_global = compiler.module.add_global(vtable_type, None, &vtable_name);
+        let vtable_global = module.add_global(vtable_type, None, &vtable_name);
         
         // Initialize vtable with method pointers
         let mut method_ptrs = Vec::new();
@@ -189,7 +190,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
             
             if let Some(ref mut behavior_codegen) = self.behavior_codegen {
-                behavior_codegen.generate_vtable(self, type_name, behavior_name, &methods)?;
+                behavior_codegen.generate_vtable(self.context, &self.module, type_name, behavior_name, &methods)?;
             }
         }
         
