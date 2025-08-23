@@ -36,7 +36,7 @@ fn test_generic_function_monomorphization_and_llvm() {
 #[test]
 fn test_generic_struct_monomorphization_and_llvm() {
     let input = r#"
-        struct Box<T> {
+        Box<T> = {
             value: T
         }
         

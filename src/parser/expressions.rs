@@ -109,6 +109,12 @@ impl<'a> Parser<'a> {
             Token::Identifier(name) => {
                 let name = name.clone();
                 self.next_token();
+                
+                // Check for struct literal syntax: Name { field: value, ... }
+                if self.current_token == Token::Symbol('{') {
+                    return self.parse_struct_literal(name);
+                }
+                
                 let mut expr = Expression::Identifier(name);
                 
                 // Handle member access and function calls
@@ -370,6 +376,51 @@ impl<'a> Parser<'a> {
             }, method_name),
             args: arguments,
         })
+    }
+    
+    fn parse_struct_literal(&mut self, name: String) -> Result<Expression> {
+        self.next_token(); // consume '{'
+        let mut fields = vec![];
+        
+        while self.current_token != Token::Symbol('}') {
+            // Parse field name
+            let field_name = match &self.current_token {
+                Token::Identifier(name) => name.clone(),
+                _ => {
+                    return Err(CompileError::SyntaxError(
+                        "Expected field name in struct literal".to_string(),
+                        Some(self.current_span.clone()),
+                    ));
+                }
+            };
+            self.next_token();
+            
+            // Expect ':'
+            if self.current_token != Token::Symbol(':') {
+                return Err(CompileError::SyntaxError(
+                    "Expected ':' after field name in struct literal".to_string(),
+                    Some(self.current_span.clone()),
+                ));
+            }
+            self.next_token();
+            
+            // Parse field value
+            let field_value = self.parse_expression()?;
+            fields.push((field_name, field_value));
+            
+            // Check for comma or end of struct
+            if self.current_token == Token::Symbol(',') {
+                self.next_token();
+            } else if self.current_token != Token::Symbol('}') {
+                return Err(CompileError::SyntaxError(
+                    "Expected ',' or '}' in struct literal".to_string(),
+                    Some(self.current_span.clone()),
+                ));
+            }
+        }
+        
+        self.next_token(); // consume '}'
+        Ok(Expression::StructLiteral { name, fields })
     }
 
     fn parse_match_expression(&mut self) -> Result<Expression> {
