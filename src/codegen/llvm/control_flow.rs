@@ -2,7 +2,6 @@ use super::LLVMCompiler;
 use crate::ast::Expression;
 use crate::error::CompileError;
 use inkwell::values::BasicValueEnum;
-use inkwell::IntPredicate;
 
 impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_conditional(&mut self, scrutinee: &Expression, arms: &[(Expression, Expression)]) -> Result<BasicValueEnum<'ctx>, CompileError> {
