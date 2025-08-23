@@ -1,10 +1,12 @@
 pub mod types;
 pub mod inference;
 pub mod validation;
+pub mod behaviors;
 
 use crate::ast::{Program, Declaration, Statement, Expression, AstType, Function};
 use crate::error::{CompileError, Result};
 use std::collections::HashMap;
+use behaviors::BehaviorResolver;
 
 pub struct TypeChecker {
     // Symbol table for tracking variable types
@@ -15,6 +17,8 @@ pub struct TypeChecker {
     structs: HashMap<String, StructInfo>,
     // Enum definitions
     enums: HashMap<String, EnumInfo>,
+    // Behavior/trait resolver
+    behavior_resolver: BehaviorResolver,
 }
 
 #[derive(Clone, Debug)]
@@ -41,6 +45,7 @@ impl TypeChecker {
             functions: HashMap::new(),
             structs: HashMap::new(),
             enums: HashMap::new(),
+            behavior_resolver: BehaviorResolver::new(),
         }
     }
 
@@ -100,6 +105,12 @@ impl TypeChecker {
                 };
                 self.enums.insert(enum_def.name.clone(), info);
             }
+            Declaration::Behavior(behavior_def) => {
+                self.behavior_resolver.register_behavior(behavior_def)?;
+            }
+            Declaration::Impl(impl_block) => {
+                self.behavior_resolver.register_impl(impl_block)?;
+            }
             _ => {}
         }
         Ok(())
@@ -116,6 +127,14 @@ impl TypeChecker {
                     self.check_statement(statement)?;
                 }
                 self.exit_scope();
+            }
+            Declaration::Impl(impl_block) => {
+                // Verify that the implementation satisfies the behavior
+                self.behavior_resolver.verify_impl(impl_block)?;
+                // Type check each method in the impl block
+                for method in &impl_block.methods {
+                    self.check_function(method)?;
+                }
             }
             _ => {}
         }
