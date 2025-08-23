@@ -116,12 +116,12 @@ fn test_recursive_function() {
                     }),
                     arms: vec![
                         ast::ConditionalArm { 
-                            pattern: ast::Pattern::Literal(Expression::Integer64(1)), 
+                            pattern: ast::Pattern::Literal(Expression::Boolean(true)), 
                             guard: None, 
                             body: Expression::Integer64(1) 
                         },
                         ast::ConditionalArm { 
-                            pattern: ast::Pattern::Literal(Expression::Integer64(0)), 
+                            pattern: ast::Pattern::Literal(Expression::Boolean(false)), 
                             guard: None, 
                             body: Expression::BinaryOp {
                                 left: Box::new(Expression::Identifier("n".to_string())),

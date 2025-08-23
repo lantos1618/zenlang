@@ -377,13 +377,13 @@ fn test_recursive_function() {
                         }),
                         arms: vec![
                             ConditionalArm { pattern: Pattern::Literal(
-                                Expression::Integer64(1)
+                                Expression::Boolean(true)
                             ), 
                             guard: None, 
                             body: Expression::Integer64(1) 
                         },
                         ConditionalArm { pattern: Pattern::Literal(
-                            Expression::Integer64(0)
+                            Expression::Boolean(false)
                         ), 
                         guard: None, body: Expression::BinaryOp {
                                 left: Box::new(Expression::Identifier("n".to_string())),
