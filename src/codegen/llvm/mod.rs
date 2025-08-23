@@ -15,6 +15,7 @@ mod control_flow;
 mod expressions;
 mod functions;
 mod literals;
+mod patterns;
 mod pointers;
 mod statements;
 mod strings;
