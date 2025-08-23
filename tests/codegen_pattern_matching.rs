@@ -1,5 +1,5 @@
 use zen::ast::{
-    Program, Declaration, Function, Statement, Expression, ConditionalArm, Pattern, AstType, BinaryOp
+    Program, Declaration, Function, Statement, Expression, ConditionalArm, Pattern, AstType, BinaryOperator
 };
 use zen::codegen::llvm::LLVMCompiler;
 use inkwell::context::Context;
@@ -7,7 +7,7 @@ use inkwell::context::Context;
 #[test]
 fn test_basic_pattern_literal() {
     let context = Context::create();
-    let mut compiler = LLVMCompiler::new(&context, "test_module");
+    let mut compiler = LLVMCompiler::new(&context);
     
     let program = Program {
         declarations: vec![
@@ -16,7 +16,7 @@ fn test_basic_pattern_literal() {
                 args: vec![],
                 return_type: AstType::I64,
                 body: vec![
-                    Statement::Return(Some(Expression::Conditional {
+                    Statement::Return(Expression::Conditional {
                         scrutinee: Box::new(Expression::Integer32(5)),
                         arms: vec![
                             ConditionalArm {
@@ -30,7 +30,7 @@ fn test_basic_pattern_literal() {
                                 body: Expression::Integer32(200),
                             },
                         ],
-                    })),
+                    }),
                 ],
                 is_async: false,
             }),
@@ -49,7 +49,7 @@ fn test_basic_pattern_literal() {
 #[test]
 fn test_pattern_with_binding() {
     let context = Context::create();
-    let mut compiler = LLVMCompiler::new(&context, "test_module");
+    let mut compiler = LLVMCompiler::new(&context);
     
     let program = Program {
         declarations: vec![
@@ -58,7 +58,7 @@ fn test_pattern_with_binding() {
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
                 body: vec![
-                    Statement::Return(Some(Expression::Conditional {
+                    Statement::Return(Expression::Conditional {
                         scrutinee: Box::new(Expression::Identifier("x".to_string())),
                         arms: vec![
                             ConditionalArm {
@@ -66,12 +66,12 @@ fn test_pattern_with_binding() {
                                 guard: None,
                                 body: Expression::BinaryOp {
                                     left: Box::new(Expression::Identifier("y".to_string())),
-                                    op: BinaryOp::Add,
+                                    op: BinaryOperator::Add,
                                     right: Box::new(Expression::Integer32(10)),
                                 },
                             },
                         ],
-                    })),
+                    }),
                 ],
                 is_async: false,
             }),
@@ -85,7 +85,7 @@ fn test_pattern_with_binding() {
 #[test]
 fn test_pattern_range() {
     let context = Context::create();
-    let mut compiler = LLVMCompiler::new(&context, "test_module");
+    let mut compiler = LLVMCompiler::new(&context);
     
     let program = Program {
         declarations: vec![
@@ -94,7 +94,7 @@ fn test_pattern_range() {
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
                 body: vec![
-                    Statement::Return(Some(Expression::Conditional {
+                    Statement::Return(Expression::Conditional {
                         scrutinee: Box::new(Expression::Identifier("x".to_string())),
                         arms: vec![
                             ConditionalArm {
@@ -112,7 +112,7 @@ fn test_pattern_range() {
                                 body: Expression::Integer32(200),
                             },
                         ],
-                    })),
+                    }),
                 ],
                 is_async: false,
             }),
@@ -126,7 +126,7 @@ fn test_pattern_range() {
 #[test]
 fn test_pattern_with_guard() {
     let context = Context::create();
-    let mut compiler = LLVMCompiler::new(&context, "test_module");
+    let mut compiler = LLVMCompiler::new(&context);
     
     let program = Program {
         declarations: vec![
@@ -135,14 +135,14 @@ fn test_pattern_with_guard() {
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
                 body: vec![
-                    Statement::Return(Some(Expression::Conditional {
+                    Statement::Return(Expression::Conditional {
                         scrutinee: Box::new(Expression::Identifier("x".to_string())),
                         arms: vec![
                             ConditionalArm {
                                 pattern: Pattern::Identifier("y".to_string()),
                                 guard: Some(Expression::BinaryOp {
                                     left: Box::new(Expression::Identifier("y".to_string())),
-                                    op: BinaryOp::Greater,
+                                    op: BinaryOperator::GreaterThan,
                                     right: Box::new(Expression::Integer32(0)),
                                 }),
                                 body: Expression::Integer32(100),
@@ -153,7 +153,7 @@ fn test_pattern_with_guard() {
                                 body: Expression::Integer32(200),
                             },
                         ],
-                    })),
+                    }),
                 ],
                 is_async: false,
             }),
@@ -167,7 +167,7 @@ fn test_pattern_with_guard() {
 #[test]
 fn test_pattern_or() {
     let context = Context::create();
-    let mut compiler = LLVMCompiler::new(&context, "test_module");
+    let mut compiler = LLVMCompiler::new(&context);
     
     let program = Program {
         declarations: vec![
@@ -176,7 +176,7 @@ fn test_pattern_or() {
                 args: vec![("x".to_string(), AstType::I64)],
                 return_type: AstType::I64,
                 body: vec![
-                    Statement::Return(Some(Expression::Conditional {
+                    Statement::Return(Expression::Conditional {
                         scrutinee: Box::new(Expression::Identifier("x".to_string())),
                         arms: vec![
                             ConditionalArm {
@@ -194,7 +194,7 @@ fn test_pattern_or() {
                                 body: Expression::Integer32(200),
                             },
                         ],
-                    })),
+                    }),
                 ],
                 is_async: false,
             }),
