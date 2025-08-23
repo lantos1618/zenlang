@@ -12,7 +12,7 @@ impl<'a> Parser<'a> {
             // Parse top-level declarations
             if let Token::Identifier(_) = &self.current_token {
                 // Could be a function definition: name = (params) returnType { ... }
-                if self.peek_token == Token::Operator("=".to_string()) || self.peek_token == Token::Symbol('<') {
+                if self.peek_token == Token::Operator("=".to_string()) || self.peek_token == Token::Operator("<".to_string()) {
                     // Check if it's a struct, enum, or function definition
                     let name = if let Token::Identifier(name) = &self.current_token {
                         name.clone()
@@ -28,7 +28,7 @@ impl<'a> Parser<'a> {
                     let saved_peek_token = self.peek_token.clone();
                     
                     // If generics, advance to parse_struct
-                    if self.peek_token == Token::Symbol('<') {
+                    if self.peek_token == Token::Operator("<".to_string()) {
                         // Do NOT advance the token; let parse_struct handle the name and generics
                         declarations.push(Declaration::Struct(self.parse_struct()?));
                     } else {
