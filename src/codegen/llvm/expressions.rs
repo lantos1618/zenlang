@@ -101,46 +101,106 @@ impl<'ctx> LLVMCompiler<'ctx> {
             .ok_or_else(|| CompileError::InternalError("No current function for conditional".to_string(), None))?;
         
         // Compile the scrutinee expression
-        let cond_val = self.compile_expression(scrutinee)?;
+        let scrutinee_val = self.compile_expression(scrutinee)?;
         
-        // Ensure it's a boolean value
-        if !cond_val.is_int_value() || cond_val.into_int_value().get_type().get_bit_width() != 1 {
-            return Err(CompileError::TypeMismatch {
-                expected: "boolean (i1) for conditional expression".to_string(),
-                found: format!("{:?}", cond_val.get_type()),
-                span: None,
-            });
+        // Create the merge block where all arms will jump to
+        let merge_bb = self.context.append_basic_block(parent_function, "match_merge");
+        
+        // We'll collect the values and blocks for the phi node
+        let mut phi_values = Vec::new();
+        
+        // Track the current "next" block for fallthrough
+        let mut _current_block = self.builder.get_insert_block().unwrap();
+        
+        for (i, arm) in arms.iter().enumerate() {
+            let is_last = i == arms.len() - 1;
+            
+            // Test the pattern
+            let (matches, bindings) = self.compile_pattern_test(&scrutinee_val, &arm.pattern)?;
+            
+            // Check guard if present
+            let final_condition = if let Some(guard_expr) = &arm.guard {
+                // Save current variables before applying bindings
+                let saved_vars = self.apply_pattern_bindings(&bindings);
+                
+                // Compile the guard expression
+                let guard_val = self.compile_expression(guard_expr)?;
+                
+                // Restore variables
+                self.restore_variables(saved_vars);
+                
+                // The final condition is: pattern matches AND guard is true
+                if !guard_val.is_int_value() {
+                    return Err(CompileError::TypeMismatch {
+                        expected: "boolean for guard expression".to_string(),
+                        found: format!("{:?}", guard_val.get_type()),
+                        span: None,
+                    });
+                }
+                
+                self.builder.build_and(matches, guard_val.into_int_value(), "guard_and_pattern")?   
+            } else {
+                matches
+            };
+            
+            // Create blocks for this arm
+            let match_bb = self.context.append_basic_block(parent_function, &format!("match_{}", i));
+            let next_bb = if !is_last {
+                self.context.append_basic_block(parent_function, &format!("test_{}", i + 1))
+            } else {
+                // For the last arm, we don't need a "next" block
+                match_bb  // dummy value, won't be used
+            };
+            
+            // Branch based on the condition
+            if !is_last {
+                self.builder.build_conditional_branch(final_condition, match_bb, next_bb)?;
+            } else {
+                // Last arm - if it doesn't match, it's an error (shouldn't happen with wildcard)
+                self.builder.build_conditional_branch(final_condition, match_bb, match_bb)?;
+            }
+            
+            // Generate code for the match block
+            self.builder.position_at_end(match_bb);
+            
+            // Apply pattern bindings
+            let saved_vars = self.apply_pattern_bindings(&bindings);
+            
+            // Compile the arm body
+            let arm_val = self.compile_expression(&arm.body)?;
+            
+            // Restore variables
+            self.restore_variables(saved_vars);
+            
+            // Jump to merge block
+            self.builder.build_unconditional_branch(merge_bb)?;
+            let match_bb_end = self.builder.get_insert_block().unwrap();
+            
+            // Save value and block for phi node
+            phi_values.push((arm_val, match_bb_end));
+            
+            // Position at the next test block for the next iteration
+            if !is_last {
+                self.builder.position_at_end(next_bb);
+                _current_block = next_bb;
+            }
         }
         
-        // Create basic blocks
-        let then_bb = self.context.append_basic_block(parent_function, "then");
-        let else_bb = self.context.append_basic_block(parent_function, "else");
-        let merge_bb = self.context.append_basic_block(parent_function, "ifcont");
-        
-        // Branch based on condition
-        self.builder.build_conditional_branch(cond_val.into_int_value(), then_bb, else_bb)?;
-        
-        // Emit 'then' block
-        self.builder.position_at_end(then_bb);
-        let then_val = self.compile_expression(&arms[0].body)?;
-        self.builder.build_unconditional_branch(merge_bb)?;
-        let then_bb_end = self.builder.get_insert_block().unwrap();
-        
-        // Emit 'else' block
-        self.builder.position_at_end(else_bb);
-        let else_val = self.compile_expression(&arms[1].body)?;
-        self.builder.build_unconditional_branch(merge_bb)?;
-        let else_bb_end = self.builder.get_insert_block().unwrap();
-        
-        // Emit 'merge' block
+        // Position at merge block and create phi node
         self.builder.position_at_end(merge_bb);
-        let phi = self.builder.build_phi(
-            then_val.get_type(),
-            "iftmp"
-        )?;
         
-        // Add incoming values to phi node
-        phi.add_incoming(&[(&then_val, then_bb_end), (&else_val, else_bb_end)]);
+        if phi_values.is_empty() {
+            return Err(CompileError::InternalError("No arms in conditional expression".to_string(), None));
+        }
+        
+        // All values should have the same type
+        let result_type = phi_values[0].0.get_type();
+        let phi = self.builder.build_phi(result_type, "match_result")?;
+        
+        // Add all incoming values
+        for (value, block) in &phi_values {
+            phi.add_incoming(&[(value, *block)]);
+        }
         
         Ok(phi.as_basic_value())
     }
