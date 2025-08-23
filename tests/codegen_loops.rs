@@ -34,7 +34,7 @@ where
 fn test_comparison_operator() {
     run_with_timeout(5, || {
         test_context!(|test_context: &mut TestContext| {
-            let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+            let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
                 name: "main".to_string(),
                 args: vec![
                     ("n".to_string(), AstType::I64),
@@ -61,7 +61,7 @@ fn test_comparison_operator() {
 fn test_simple_binary_op() {
     run_with_timeout(5, || {
         test_context!(|test_context: &mut TestContext| {
-            let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+            let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
                 name: "main".to_string(),
                 args: vec![
                     ("n".to_string(), AstType::I64),
@@ -88,7 +88,7 @@ fn test_simple_binary_op() {
 fn test_loop_construct() {
     run_with_timeout(5, || {
         test_context!(|test_context: &mut TestContext| {
-            let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+            let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,

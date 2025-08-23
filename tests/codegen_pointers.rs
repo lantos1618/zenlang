@@ -21,7 +21,7 @@ fn compile_and_run<'ctx>(test_context: &mut TestContext<'ctx>, program: &ast::Pr
 #[test]
 fn test_pointer_operations() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -53,7 +53,7 @@ fn test_pointer_operations() {
 #[test]
 fn test_pointer_arithmetic() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![
                 ("arr".to_string(), AstType::Pointer(Box::new(AstType::I64))),
@@ -82,7 +82,7 @@ fn test_pointer_arithmetic() {
 #[test]
 fn test_pointer_assignment() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -118,7 +118,7 @@ fn test_pointer_assignment() {
 #[test]
 fn test_invalid_dereferencing_non_pointer() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -148,7 +148,7 @@ fn test_invalid_dereferencing_non_pointer() {
 #[test]
 fn test_void_pointer_declaration() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,

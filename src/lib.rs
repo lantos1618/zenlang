@@ -5,6 +5,7 @@ pub fn add(left: u64, right: u64) -> u64 {
 pub mod ast;
 pub mod codegen;
 pub mod compiler;
+pub mod comptime;
 pub mod error;
 pub mod lexer;
 pub mod parser;

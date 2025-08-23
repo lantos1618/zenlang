@@ -12,7 +12,7 @@ use test_utils::test_context;
 fn test_function_call() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "add".to_string(),
                 args: vec![
@@ -26,7 +26,7 @@ fn test_function_call() {
                     right: Box::new(Expression::Identifier("b".to_string())),
                 })],
             },
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "main".to_string(),
                 args: vec![],
@@ -51,7 +51,7 @@ fn test_function_call() {
 fn test_function_pointer() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "add".to_string(),
                 args: vec![
@@ -65,7 +65,7 @@ fn test_function_pointer() {
                     right: Box::new(Expression::Identifier("b".to_string())),
                 })],
             },
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "main".to_string(),
                 args: vec![],
@@ -101,7 +101,7 @@ fn test_function_pointer() {
 fn test_recursive_function() {
     test_context!(|test_context: &mut TestContext| {
         let program = ast::Program::from_functions(vec![
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "factorial".to_string(),
                 args: vec![
@@ -139,7 +139,7 @@ fn test_recursive_function() {
                     ],
                 })],
             },
-            ast::Function { 
+            ast::Function { type_params: vec![], 
                 is_async: false,
                 name: "main".to_string(),
                 args: vec![],

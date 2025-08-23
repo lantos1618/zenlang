@@ -15,7 +15,7 @@ fn main() {
     // Test 1: Simple arithmetic and function calls
     {
         let mut compiler = Compiler::new(&context);
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![],
             name: "test_arithmetic".to_string(),
             args: vec![("x".to_string(), AstType::I64), ("y".to_string(), AstType::I64)],
             return_type: AstType::I64,
@@ -45,7 +45,7 @@ fn main() {
     // Test 2: String with null terminator
     {
         let mut compiler = Compiler::new(&context);
-        let program = ast::Program::from_functions(vec![ast::Function {
+        let program = ast::Program::from_functions(vec![ast::Function { type_params: vec![],
             name: "test_string".to_string(),
             args: vec![],
             return_type: AstType::String,
@@ -80,7 +80,7 @@ fn main() {
                     return_type: AstType::I64,
                     is_varargs: true, // printf is variadic
                 }),
-                Declaration::Function(Function {
+                Declaration::Function(Function { type_params: vec![],
                     name: "main".to_string(),
                     args: vec![],
                     return_type: AstType::I64,
@@ -123,7 +123,7 @@ fn main() {
                     return_type: AstType::F64,
                     is_varargs: false,
                 }),
-                Declaration::Function(Function {
+                Declaration::Function(Function { type_params: vec![],
                     name: "calculate_distance".to_string(),
                     args: vec![("x".to_string(), AstType::F64), ("y".to_string(), AstType::F64)],
                     return_type: AstType::F64,

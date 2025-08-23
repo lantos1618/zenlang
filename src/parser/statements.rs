@@ -14,7 +14,7 @@ impl<'a> Parser<'a> {
                 // Could be a function definition: name = (params) returnType { ... }
                 if self.peek_token == Token::Operator("=".to_string()) || self.peek_token == Token::Operator("<".to_string()) {
                     // Check if it's a struct, enum, or function definition
-                    let name = if let Token::Identifier(name) = &self.current_token {
+                    let _name = if let Token::Identifier(name) = &self.current_token {
                         name.clone()
                     } else {
                         unreachable!()
@@ -95,6 +95,10 @@ impl<'a> Parser<'a> {
                     
                     // Add comptime block to declarations
                     declarations.push(Declaration::ComptimeBlock(statements));
+                } else if matches!(keyword, crate::lexer::Keyword::Extern) {
+                    // Parse external function declaration
+                    self.next_token(); // consume 'extern'
+                    declarations.push(Declaration::ExternalFunction(self.parse_external_function()?));
                 } else {
                     return Err(CompileError::SyntaxError(
                         format!("Unexpected keyword at top level: {:?}", keyword),

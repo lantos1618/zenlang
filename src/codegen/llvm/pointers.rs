@@ -64,7 +64,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         };
         
         // If expr is an identifier for a pointer variable, load twice
-        if let (Expression::Identifier(name), Some(ref ast_type)) = (expr, pointed_type.as_ref()) {
+        if let (Expression::Identifier(_name), Some(ref ast_type)) = (expr, pointed_type.as_ref()) {
             // First load: get the address stored in the pointer variable
             let llvm_ptr_type = match self.to_llvm_type(ast_type)? {
                 super::Type::Basic(_) => self.context.ptr_type(inkwell::AddressSpace::default()),

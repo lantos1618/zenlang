@@ -23,7 +23,7 @@ fn test_struct_creation_and_access() {
     test_context!(|test_context: &mut TestContext| {
         let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
             name: "Point".to_string(),
-            generics: vec![],
+            type_params: vec![],
             fields: vec![
                 ast::StructField {
                     name: "x".to_string(),
@@ -40,7 +40,7 @@ fn test_struct_creation_and_access() {
             ],
             methods: vec![],
         });
-        let func = ast::Function { is_async: false, 
+        let func = ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -83,7 +83,7 @@ fn test_struct_pointer() {
     test_context!(|test_context: &mut TestContext| {
         let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
             name: "Point".to_string(),
-            generics: vec![],
+            type_params: vec![],
             fields: vec![
                 ast::StructField {
                     name: "x".to_string(),
@@ -100,7 +100,7 @@ fn test_struct_pointer() {
             ],
             methods: vec![],
         });
-        let func = ast::Function { is_async: false, 
+        let func = ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -156,7 +156,7 @@ fn test_struct_field_assignment() {
     test_context!(|test_context: &mut TestContext| {
         let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
             name: "Point".to_string(),
-            generics: vec![],
+            type_params: vec![],
             fields: vec![
                 ast::StructField {
                     name: "x".to_string(),
@@ -173,7 +173,7 @@ fn test_struct_field_assignment() {
             ],
             methods: vec![],
         });
-        let func = ast::Function { is_async: false, 
+        let func = ast::Function { type_params: vec![], is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,

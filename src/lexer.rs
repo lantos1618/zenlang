@@ -141,12 +141,19 @@ impl<'a> Lexer<'a> {
                 Token::Symbol(':')
             }
             Some('.') => {
-                // Check for range operators (.., ..=)
+                // Check for range operators (.., ..=) and varargs (...)
                 if let Some(next) = self.peek_char() {
                     if next == '.' {
                         self.read_char(); // consume first '.'
                         if let Some(next2) = self.peek_char() {
-                            if next2 == '=' {
+                            if next2 == '.' {
+                                self.read_char(); // consume second '.'
+                                self.read_char(); // consume third '.'
+                                return TokenWithSpan {
+                                    token: Token::Operator("...".to_string()),
+                                    span: Span { start: start_pos, end: self.position, line: start_line, column: start_column },
+                                };
+                            } else if next2 == '=' {
                                 self.read_char(); // consume second '.'
                                 self.read_char(); // consume '='
                                 return TokenWithSpan {

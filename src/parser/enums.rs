@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::{EnumDefinition, EnumVariant};
+use crate::ast::{EnumDefinition, EnumVariant, TypeParameter};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 
@@ -80,6 +80,6 @@ impl<'a> Parser<'a> {
             ));
         }
         
-        Ok(EnumDefinition { name, generics: Vec::new(), variants, methods: Vec::new() })
+        Ok(EnumDefinition { name, type_params: Vec::new(), variants, methods: Vec::new() })
     }
 }

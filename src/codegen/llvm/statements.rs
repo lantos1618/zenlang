@@ -79,7 +79,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                             } else {
                                 Err(CompileError::TypeError("Function pointer initializer must be a function name".to_string(), None))
                             }
-                        } else if let AstType::Pointer(inner) = type_ {
+                        } else if let AstType::Pointer(_inner) = type_ {
                             // For pointers, if the initializer is AddressOf, use the pointer inside the alloca
                             let ptr_value = match init_expr {
                                 Expression::AddressOf(inner_expr) => {

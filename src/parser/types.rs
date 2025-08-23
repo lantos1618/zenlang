@@ -24,6 +24,7 @@ impl<'a> Parser<'a> {
                     "bool" => Ok(AstType::Bool),
                     "String" | "string" => Ok(AstType::String),
                     "void" => Ok(AstType::Void),
+                    "ptr" => Ok(AstType::Pointer(Box::new(AstType::Void))),
                     _ => {
                         // Could be a custom type (struct, enum, etc.)
                         // For now, treat as a generic type

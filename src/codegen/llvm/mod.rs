@@ -1,4 +1,5 @@
 use crate::ast::{self, AstType};
+use crate::comptime;
 use crate::error::CompileError;
 use inkwell::{
     basic_block::BasicBlock,
@@ -145,9 +146,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ast::Declaration::Function(_) => {}
                 ast::Declaration::Struct(_) => {} // Already handled above
                 ast::Declaration::Enum(_) | ast::Declaration::ModuleImport { .. } => {}
-                ast::Declaration::ComptimeBlock(_) => {
-                    // For now, ignore comptime blocks during codegen
-                    // TODO: Implement comptime evaluation
+                ast::Declaration::ComptimeBlock(statements) => {
+                    // Evaluate comptime blocks and generate constants
+                    let mut evaluator = comptime::ComptimeEvaluator::new();
+                    for stmt in statements {
+                        if let Err(e) = evaluator.evaluate_statement(stmt) {
+                            eprintln!("Comptime evaluation error: {}", e);
+                        }
+                    }
                 }
             }
         }
@@ -187,7 +193,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 AstType::Bool => self.context.bool_type().as_basic_type_enum(),
                 AstType::String => self.context.ptr_type(inkwell::AddressSpace::default()).as_basic_type_enum(),
                 AstType::Void => return Err(CompileError::TypeError("Void type not allowed in struct fields".to_string(), None)),
-                AstType::Pointer(inner) => {
+                AstType::Pointer(_inner) => {
                     // For pointer types in struct fields, we'll use a generic pointer type
                     // This is a simplification - in a full implementation we'd need to handle nested types
                     self.context.ptr_type(inkwell::AddressSpace::default()).as_basic_type_enum()

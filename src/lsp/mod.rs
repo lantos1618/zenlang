@@ -7,7 +7,7 @@ use tokio::sync::RwLock;
 
 use crate::lexer::Lexer;
 use crate::parser::Parser;
-use crate::ast::{Program, Declaration, Statement, Expression};
+use crate::ast::Program;
 
 #[derive(Debug)]
 pub struct ZenLanguageServer {
@@ -32,7 +32,7 @@ impl ZenLanguageServer {
         let mut parser = Parser::new(lexer);
         
         parser.parse_program()
-            .map_err(|e| tower_lsp::jsonrpc::Error::new(tower_lsp::jsonrpc::ErrorCode::ParseError))
+            .map_err(|_e| tower_lsp::jsonrpc::Error::new(tower_lsp::jsonrpc::ErrorCode::ParseError))
     }
 
     async fn get_diagnostics(&self, uri: &str) -> Vec<Diagnostic> {
@@ -149,11 +149,11 @@ impl LanguageServer for ZenLanguageServer {
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
         let uri = params.text_document_position.text_document.uri.to_string();
-        let position = params.text_document_position.position;
+        let _position = params.text_document_position.position;
         
         // Get document content
         let documents = self.documents.read().await;
-        let content = documents.get(&uri)
+        let _content = documents.get(&uri)
             .ok_or_else(|| tower_lsp::jsonrpc::Error::new(tower_lsp::jsonrpc::ErrorCode::InvalidParams))?;
         
         // Simple completion based on position

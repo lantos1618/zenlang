@@ -58,6 +58,12 @@ pub struct EnumVariant {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeParameter {
+    pub name: String,
+    pub constraints: Vec<String>, // For future trait bounds
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BinaryOperator {
     Add,
     Subtract,
@@ -242,6 +248,7 @@ pub enum VariableDeclarationType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: String,
+    pub type_params: Vec<TypeParameter>,
     pub args: Vec<(String, AstType)>,
     pub return_type: AstType,
     pub body: Vec<Statement>,
@@ -260,7 +267,7 @@ pub struct ExternalFunction {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructDefinition {
     pub name: String,
-    pub generics: Vec<String>,
+    pub type_params: Vec<TypeParameter>,
     pub fields: Vec<StructField>,
     pub methods: Vec<Function>,
 }
@@ -276,7 +283,7 @@ pub struct StructField {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EnumDefinition {
     pub name: String,
-    pub generics: Vec<String>,
+    pub type_params: Vec<TypeParameter>,
     pub variants: Vec<EnumVariant>,
     pub methods: Vec<Function>,
 }

@@ -1,5 +1,6 @@
 use super::LLVMCompiler;
 use crate::ast::Expression;
+use crate::comptime;
 use crate::error::CompileError;
 use inkwell::values::{BasicValueEnum, BasicValue};
 
@@ -209,7 +210,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         // For now, treat all arrays as arrays of i64
         let element_type = self.context.i64_type();
         let array_len = elements.len() as u32;
-        let array_type = element_type.array_type(array_len);
+        let _array_type = element_type.array_type(array_len);
 
         // Allocate the array on the heap (malloc)
         let i64_type = self.context.i64_type();
@@ -273,9 +274,20 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     fn compile_comptime_expression(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // For now, compile comptime expressions the same as regular expressions
-        // In the future, this should evaluate at compile time and return constants
-        self.compile_expression(expr)
+        // Evaluate the expression at compile time and generate a constant
+        let mut evaluator = comptime::ComptimeEvaluator::new();
+        match evaluator.evaluate_expression(expr) {
+            Ok(value) => {
+                // Convert the comptime value to a constant expression and compile it
+                let const_expr = value.to_expression();
+                self.compile_expression(&const_expr)
+            }
+            Err(e) => {
+                eprintln!("Comptime evaluation error: {}", e);
+                // Fall back to runtime evaluation
+                self.compile_expression(expr)
+            }
+        }
     }
 
     fn compile_pattern_match(&mut self, _scrutinee: &Expression, arms: &[crate::ast::PatternArm]) -> Result<BasicValueEnum<'ctx>, CompileError> {
@@ -294,7 +306,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let end_val = self.compile_expression(end)?;
         
         // Create a simple struct type for the range
-        let range_struct_type = self.context.struct_type(&[
+        let _range_struct_type = self.context.struct_type(&[
             start_val.get_type(),
             end_val.get_type(),
             self.context.bool_type().into(),

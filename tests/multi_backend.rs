@@ -15,7 +15,7 @@ fn test_multi_backend_interface() {
     
     // Create a simple test program
     let program = ast::Program::from_functions(vec![
-        ast::Function {
+        ast::Function { type_params: vec![],
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
