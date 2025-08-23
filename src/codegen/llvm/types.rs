@@ -8,7 +8,6 @@ use inkwell::{
 
 impl<'ctx> LLVMCompiler<'ctx> {
     pub fn to_llvm_type(&mut self, type_: &AstType) -> Result<Type<'ctx>, CompileError> {
-        println!("DEBUG: to_llvm_type called with AstType: {:?}", type_);
         let result = match type_ {
             AstType::I8 => Ok(Type::Basic(self.context.i8_type().into())),
             AstType::I16 => Ok(Type::Basic(self.context.i16_type().into())),
@@ -115,11 +114,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 }
             },
         };
-        println!("DEBUG: to_llvm_type returning: {:?}", result);
         result
     }
     pub fn expect_basic_type<'a>(&self, t: Type<'a>) -> Result<BasicTypeEnum<'a>, CompileError> {
-        println!("DEBUG: expect_basic_type called with type: {:?}", t);
         match t {
             Type::Basic(ty) => Ok(ty),
             Type::Struct(struct_type) => Ok(struct_type.as_basic_type_enum()),

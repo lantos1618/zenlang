@@ -340,7 +340,6 @@ impl<'a> Parser<'a> {
                 Ok(Statement::Expression(expr))
             }
             _ => {
-                println!("DEBUG: Unexpected token in statement: {:?} at position {:?}", self.current_token, self.current_span);
                 Err(CompileError::SyntaxError(
                     format!("Unexpected token in statement: {:?}", self.current_token),
                     Some(self.current_span.clone()),
@@ -350,7 +349,6 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_variable_declaration(&mut self) -> Result<Statement> {
-        println!("DEBUG: parse_variable_declaration called with token: {:?}", self.current_token);
         let name = if let Token::Identifier(name) = &self.current_token {
             name.clone()
         } else {
@@ -360,19 +358,16 @@ impl<'a> Parser<'a> {
         
         let (is_mutable, declaration_type, type_) = match &self.current_token {
             Token::Operator(op) if op == ":=" => {
-                println!("DEBUG: Found := operator");
                 // Inferred immutable: name := value
                 self.next_token();
                 (false, VariableDeclarationType::InferredImmutable, None)
             }
             Token::Operator(op) if op == "::=" => {
-                println!("DEBUG: Found ::= operator");
                 // Inferred mutable: name ::= value
                 self.next_token();
                 (true, VariableDeclarationType::InferredMutable, None)
             }
             Token::Symbol(':') => {
-                println!("DEBUG: Found : symbol for explicit type");
                 // Explicit immutable: name : T = value
                 self.next_token();
                 let type_ = self.parse_type()?;
@@ -383,7 +378,6 @@ impl<'a> Parser<'a> {
                 (false, VariableDeclarationType::ExplicitImmutable, Some(type_))
             }
             Token::Operator(op) if op == "::" => {
-                println!("DEBUG: Found :: operator");
                 // Explicit mutable: name :: T = value
                 self.next_token();
                 let type_ = self.parse_type()?;
@@ -394,7 +388,6 @@ impl<'a> Parser<'a> {
                 (true, VariableDeclarationType::ExplicitMutable, Some(type_))
             }
             _ => {
-                println!("DEBUG: Unexpected token in variable declaration: {:?}", self.current_token);
                 return Err(CompileError::SyntaxError(
                     format!("Expected variable declaration operator, got: {:?}", self.current_token),
                     Some(self.current_span.clone())

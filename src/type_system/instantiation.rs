@@ -1,4 +1,4 @@
-use crate::ast::{AstType, Function, StructDefinition, EnumDefinition, Statement, Expression, TypeParameter};
+use crate::ast::{AstType, Function, StructDefinition, EnumDefinition, Statement, Expression};
 use super::{TypeEnvironment, TypeSubstitution};
 
 pub struct TypeInstantiator<'a> {

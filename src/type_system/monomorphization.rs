@@ -1,5 +1,5 @@
 use crate::ast::{Program, Declaration, Expression, AstType, Function};
-use super::{TypeEnvironment, TypeInstantiator, is_generic_type, extract_type_parameters};
+use super::{TypeEnvironment, TypeInstantiator};
 use std::collections::{HashMap, HashSet};
 
 pub struct Monomorphizer {
