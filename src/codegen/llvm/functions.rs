@@ -205,7 +205,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                                 // Cast to the correct return type if needed
                                 let return_type = self.to_llvm_type(&function.return_type)?;
                                 let return_basic_type = self.expect_basic_type(return_type)?;
-                                let casted_value = self.cast_value_to_type(value, return_basic_type.as_any_type_enum())?;
+                                let casted_value = self.cast_value_to_type(value, return_basic_type)?;
                                 self.builder.build_return(Some(&casted_value))?;
                                 println!("DEBUG: Added return statement with value");
                             } else {
@@ -224,7 +224,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                                     let value = self.compile_expression(&ast::Expression::Comptime(Box::new(expr.clone())))?;
                                     // Cast to the correct return type if needed
                                     let return_type = self.to_llvm_type(&function.return_type)?;
-                                    let casted_value = self.cast_value_to_type(value, return_type)?;
+                                    let return_basic_type = self.expect_basic_type(return_type)?;
+                                    let casted_value = self.cast_value_to_type(value, return_basic_type)?;
                                     self.builder.build_return(Some(&casted_value))?;
                                     println!("DEBUG: Added return statement with comptime value");
                                 } else {
