@@ -208,7 +208,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_struct_field_assignment(&mut self, struct_alloca: inkwell::values::PointerValue<'ctx>, field_name: &str, value: BasicValueEnum<'ctx>) -> Result<(), CompileError> {
         // Find the struct type info by trying to match the pointer type with any known struct
         // This is a fallback approach since we can't easily get the element type
-        let struct_type_info = self.struct_types.values().find(|info| {
+        let struct_type_info = self.struct_types.values().find(|_info| {
             // Try to match by checking if this struct type could be the one we're looking for
             // We'll use the first struct type as a reasonable fallback
             true
