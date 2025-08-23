@@ -21,16 +21,16 @@ impl<'ctx> LLVMCompiler<'ctx> {
             AstType::F32 => Ok(Type::Basic(self.context.f32_type().into())),
             AstType::F64 => Ok(Type::Basic(self.context.f64_type().into())),
             AstType::Bool => Ok(Type::Basic(self.context.bool_type().into())),
-            AstType::String => Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into())),
+            AstType::String => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
             AstType::Void => Ok(Type::Void),
             AstType::Pointer(inner) => {
                 let inner_type = self.to_llvm_type(inner)?;
                 match inner_type {
-                    Type::Basic(basic_type) => Ok(Type::Basic(basic_type.ptr_type(AddressSpace::default()).into())),
-                    Type::Struct(struct_type) => Ok(Type::Basic(struct_type.ptr_type(AddressSpace::default()).into())),
+                    Type::Basic(_) => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
+                    Type::Struct(_) => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
                     Type::Void => {
                         // For void pointers, use i8* as the LLVM representation
-                        Ok(Type::Basic(self.context.i8_type().ptr_type(AddressSpace::default()).into()))
+                        Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into()))
                     },
                     _ => Err(CompileError::UnsupportedFeature("Unsupported pointer type".to_string(), None)),
                 }
