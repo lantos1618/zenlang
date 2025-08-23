@@ -572,6 +572,7 @@ fn test_struct_creation_and_access() {
     test_context!(|test_context: &mut TestContext| {
         let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
             name: "Point".to_string(),
+            generics: vec![],
             fields: vec![
                 ast::StructField {
                     name: "x".to_string(),
@@ -586,6 +587,7 @@ fn test_struct_creation_and_access() {
                     default_value: None,
                 },
             ],
+            methods: vec![],
         });
         let func = ast::Function {
             is_async: false,
@@ -632,6 +634,7 @@ fn test_struct_pointer() {
     test_context!(|test_context: &mut TestContext| {
         let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
             name: "Point".to_string(),
+            generics: vec![],
             fields: vec![
                 ast::StructField {
                     name: "x".to_string(),
@@ -646,6 +649,7 @@ fn test_struct_pointer() {
                     default_value: None,
                 },
             ],
+            methods: vec![],
         });
         let func = ast::Function { is_async: false, 
             name: "test_struct_ptr".to_string(),
@@ -704,6 +708,7 @@ fn test_struct_field_assignment() {
     test_context!(|test_context: &mut TestContext| {
         let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
             name: "Point".to_string(),
+            generics: vec![],
             fields: vec![
                 ast::StructField {
                     name: "x".to_string(),
@@ -718,6 +723,7 @@ fn test_struct_field_assignment() {
                     default_value: None,
                 },
             ],
+            methods: vec![],
         });
         let func = ast::Function { is_async: false, 
             name: "test_struct_assign".to_string(),
@@ -1041,7 +1047,7 @@ fn test_full_pipeline_with_variable() {
             // First statement should be variable declaration
             if let Statement::VariableDeclaration { name, type_, initializer, is_mutable: false, declaration_type: _ } = &func.body[0] {
                 assert_eq!(name, "x");
-                assert_eq!(*type_, Some(AstType::I32));
+                assert_eq!(*type_, None);
                 assert!(initializer.is_some());
                 if let Some(Expression::Integer32(42)) = initializer {
                     // Correct

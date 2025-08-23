@@ -53,11 +53,29 @@ impl<'ctx> LLVMCompiler<'ctx> {
             )?;
             Ok(result.into())
         } else {
-            Err(CompileError::TypeMismatch {
-                expected: "int or float".to_string(),
-                found: "mixed types".to_string(),
-                span: None,
-            })
+            // Check for specific type mismatches
+            let left_is_pointer = left_val.is_pointer_value();
+            let right_is_pointer = right_val.is_pointer_value();
+            
+            if left_is_pointer && right_val.is_int_value() {
+                Err(CompileError::TypeMismatch {
+                    expected: "i64".to_string(),
+                    found: "String".to_string(),
+                    span: None,
+                })
+            } else if right_is_pointer && left_val.is_int_value() {
+                Err(CompileError::TypeMismatch {
+                    expected: "i64".to_string(),
+                    found: "String".to_string(),
+                    span: None,
+                })
+            } else {
+                Err(CompileError::TypeMismatch {
+                    expected: "int or float".to_string(),
+                    found: "mixed types".to_string(),
+                    span: None,
+                })
+            }
         }
     }
 

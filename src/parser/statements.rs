@@ -1,3 +1,5 @@
+// DO NOT EVER implement 'in'-based loop syntax (e.g., 'for i in ...', 'loop ... in ...').
+// Use explicit, non-dangling, non-tertiary forms only. Prefer 'loop 0..10 { ... }' or C-style loops.
 use super::core::Parser;
 use crate::ast::{Program, Declaration, Statement, VariableDeclarationType, Expression, AstType};
 use crate::error::{CompileError, Result};
@@ -10,7 +12,7 @@ impl<'a> Parser<'a> {
             // Parse top-level declarations
             if let Token::Identifier(_) = &self.current_token {
                 // Could be a function definition: name = (params) returnType { ... }
-                if self.peek_token == Token::Operator("=".to_string()) {
+                if self.peek_token == Token::Operator("=".to_string()) || self.peek_token == Token::Symbol('<') {
                     // Check if it's a struct, enum, or function definition
                     let name = if let Token::Identifier(name) = &self.current_token {
                         name.clone()
@@ -25,29 +27,36 @@ impl<'a> Parser<'a> {
                     let saved_current_token = self.current_token.clone();
                     let saved_peek_token = self.peek_token.clone();
                     
-                    self.next_token(); // consume '='
-                    
-                    // Check what comes after '='
-                    let is_struct = matches!(&self.current_token, Token::Symbol('{'));
-                    let is_enum = matches!(&self.current_token, Token::Operator(op) if op == "|");
-                    let is_function = matches!(&self.current_token, Token::Symbol('('));
-                    
-                    // Restore lexer state
-                    self.lexer.position = saved_position;
-                    self.lexer.read_position = saved_read_position;
-                    self.lexer.current_char = saved_current_char;
-                    self.current_token = saved_current_token;
-                    self.peek_token = saved_peek_token;
-                    
-                    if is_struct {
+                    // If generics, advance to parse_struct
+                    if self.peek_token == Token::Symbol('<') {
+                        // Do NOT advance the token; let parse_struct handle the name and generics
                         declarations.push(Declaration::Struct(self.parse_struct()?));
-                    } else if is_enum {
-                        declarations.push(Declaration::Enum(self.parse_enum()?));
-                    } else if is_function {
-                        declarations.push(Declaration::Function(self.parse_function()?));
                     } else {
-                        // Try to parse as function (fallback)
-                        declarations.push(Declaration::Function(self.parse_function()?));
+                        // Need to look ahead to determine if it's a struct, enum, or function
+                        self.next_token(); // consume '='
+                        
+                        // Check what comes after '='
+                        let is_struct = matches!(&self.current_token, Token::Symbol('{'));
+                        let is_enum = matches!(&self.current_token, Token::Operator(op) if op == "|");
+                        let is_function = matches!(&self.current_token, Token::Symbol('('));
+
+                        // Restore lexer state
+                        self.lexer.position = saved_position;
+                        self.lexer.read_position = saved_read_position;
+                        self.lexer.current_char = saved_current_char;
+                        self.current_token = saved_current_token;
+                        self.peek_token = saved_peek_token;
+
+                        if is_struct {
+                            declarations.push(Declaration::Struct(self.parse_struct()?));
+                        } else if is_enum {
+                            declarations.push(Declaration::Enum(self.parse_enum()?));
+                        } else if is_function {
+                            declarations.push(Declaration::Function(self.parse_function()?));
+                        } else {
+                            // Try to parse as function (fallback)
+                            declarations.push(Declaration::Function(self.parse_function()?));
+                        }
                     }
                 } else if self.peek_token == Token::Symbol('(') {
                     // Could be an external function declaration
@@ -83,8 +92,8 @@ impl<'a> Parser<'a> {
                     }
                     self.next_token(); // consume '}'
                     
-                    // For now, we'll just skip comptime blocks since they're not fully implemented
-                    // TODO: Add proper comptime block support to AST
+                    // Add comptime block to declarations
+                    declarations.push(Declaration::ComptimeBlock(statements));
                 } else {
                     return Err(CompileError::SyntaxError(
                         format!("Unexpected keyword at top level: {:?}", keyword),
@@ -183,6 +192,13 @@ impl<'a> Parser<'a> {
                     self.next_token();
                 }
                 Ok(Statement::Continue { label })
+            }
+            Token::Keyword(lexer::Keyword::Match) => {
+                let expr = self.parse_expression()?;
+                if self.current_token == Token::Symbol(';') {
+                    self.next_token();
+                }
+                Ok(Statement::Expression(expr))
             }
             // Handle literal expressions as valid statements
             Token::Integer(_) | Token::Float(_) | Token::StringLiteral(_) => {

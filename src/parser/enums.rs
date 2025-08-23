@@ -80,6 +80,6 @@ impl<'a> Parser<'a> {
             ));
         }
         
-        Ok(EnumDefinition { name, variants })
+        Ok(EnumDefinition { name, generics: Vec::new(), variants, methods: Vec::new() })
     }
 }

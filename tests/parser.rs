@@ -280,9 +280,46 @@ fn test_parse_comptime_block() {
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
     
-    // For now, just test that it parses without error
-    // We'll need to add ComptimeBlock to AST later
-    assert_eq!(program, Program { declarations: vec![] });
+    // Verify we have a comptime block declaration
+    assert_eq!(program.declarations.len(), 1);
+    if let Declaration::ComptimeBlock(statements) = &program.declarations[0] {
+        assert_eq!(statements.len(), 2);
+        
+        // Check first statement: build := @std.build
+        if let Statement::VariableDeclaration { name, type_, initializer, is_mutable, declaration_type } = &statements[0] {
+            assert_eq!(name, "build");
+            assert_eq!(type_, &None);
+            assert_eq!(*is_mutable, false);
+            assert!(matches!(declaration_type, VariableDeclarationType::InferredImmutable));
+            if let Some(Expression::MemberAccess { object, member }) = initializer {
+                assert!(matches!(**object, Expression::Identifier(ref name) if name == "@std"));
+                assert_eq!(member, "build");
+            } else {
+                panic!("Expected MemberAccess in build initialization");
+            }
+        } else {
+            panic!("Expected VariableDeclaration for build");
+        }
+        
+        // Check second statement: io := build.import("io")
+        if let Statement::VariableDeclaration { name, type_, initializer, is_mutable, declaration_type } = &statements[1] {
+            assert_eq!(name, "io");
+            assert_eq!(type_, &None);
+            assert_eq!(*is_mutable, false);
+            assert!(matches!(declaration_type, VariableDeclarationType::InferredImmutable));
+            if let Some(Expression::FunctionCall { name, args }) = initializer {
+                assert_eq!(name, "build.import");
+                assert_eq!(args.len(), 1);
+                assert!(matches!(args[0], Expression::String(ref s) if s == "io"));
+            } else {
+                panic!("Expected FunctionCall in io initialization");
+            }
+        } else {
+            panic!("Expected VariableDeclaration for io");
+        }
+    } else {
+        panic!("Expected ComptimeBlock declaration");
+    }
 }
 
 #[test]
@@ -637,4 +674,149 @@ fn test_debug_statement_parsing() {
     let result = parser.parse_statement();
     println!("Statement parsing result: {:?}", result);
     assert!(result.is_ok());
+} 
+
+#[test]
+fn test_parse_struct_with_generics() {
+    let input = "Box<T> = { value: T }";
+    let lexer = zen::lexer::Lexer::new(input);
+    let mut parser = zen::parser::Parser::new(lexer);
+    let program = parser.parse_program().unwrap();
+    assert_eq!(program.declarations.len(), 1);
+    if let zen::ast::Declaration::Struct(def) = &program.declarations[0] {
+        assert_eq!(def.name, "Box");
+        assert_eq!(def.generics, vec!["T"]);
+        assert_eq!(def.fields.len(), 1);
+        assert_eq!(def.fields[0].name, "value");
+        assert_eq!(def.fields[0].type_, zen::ast::AstType::Generic { name: "T".to_string(), type_args: vec![] });
+        assert!(def.methods.is_empty());
+    } else {
+        panic!("Expected struct declaration");
+    }
+}
+
+#[test]
+fn test_parse_struct_with_methods() {
+    let input = r#"Point = { x: i32, y: i32 }
+    fn magnitude(self) f64 { x * x + y * y }"#;
+    let lexer = zen::lexer::Lexer::new(input);
+    let mut parser = zen::parser::Parser::new(lexer);
+    let program = parser.parse_program().unwrap();
+    assert_eq!(program.declarations.len(), 1);
+    if let zen::ast::Declaration::Struct(def) = &program.declarations[0] {
+        assert_eq!(def.name, "Point");
+        assert!(def.generics.is_empty());
+        assert_eq!(def.fields.len(), 2);
+        assert_eq!(def.methods.len(), 1);
+        assert_eq!(def.methods[0].name, "magnitude");
+    } else {
+        panic!("Expected struct declaration");
+    }
+}
+
+#[test]
+fn test_parse_struct_with_generics_and_methods() {
+    let input = r#"Wrapper<T> = { value: T }
+    fn get(self) T { value }"#;
+    let lexer = zen::lexer::Lexer::new(input);
+    let mut parser = zen::parser::Parser::new(lexer);
+    let program = parser.parse_program().unwrap();
+    assert_eq!(program.declarations.len(), 1);
+    if let zen::ast::Declaration::Struct(def) = &program.declarations[0] {
+        assert_eq!(def.name, "Wrapper");
+        assert_eq!(def.generics, vec!["T"]);
+        assert_eq!(def.fields.len(), 1);
+        assert_eq!(def.methods.len(), 1);
+        assert_eq!(def.methods[0].name, "get");
+    } else {
+        panic!("Expected struct declaration");
+    }
+} 
+
+#[test]
+fn test_parse_match_expression() {
+    let input = r#"main = (x: i32) string {
+        match x {
+            | 0 => "zero"
+            | 1 => "one"
+            | _ => "other"
+        }
+    }"#;
+    let lexer = zen::lexer::Lexer::new(input);
+    let mut parser = zen::parser::Parser::new(lexer);
+    let program = parser.parse_program();
+    assert!(program.is_ok(), "Failed to parse match expression: {:?}", program.err());
+    let program = program.unwrap();
+    assert_eq!(program.declarations.len(), 1);
+    if let zen::ast::Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.name, "main");
+        assert_eq!(func.return_type, zen::ast::AstType::String);
+        assert_eq!(func.body.len(), 1);
+        if let zen::ast::Statement::Expression(zen::ast::Expression::PatternMatch { scrutinee, arms }) = &func.body[0] {
+            // Check scrutinee is an identifier 'x'
+            if let zen::ast::Expression::Identifier(name) = &**scrutinee {
+                assert_eq!(name, "x");
+            } else {
+                panic!("Expected identifier 'x' as scrutinee");
+            }
+            // Check we have 3 arms
+            assert_eq!(arms.len(), 3);
+            // Check first arm: | 0 => "zero"
+            if let zen::ast::PatternArm { pattern: zen::ast::Pattern::Literal(zen::ast::Expression::Integer32(0)), guard: None, body: zen::ast::Expression::String(ref s) } = &arms[0] {
+                assert_eq!(s, "zero");
+            } else {
+                panic!("Expected first arm to be | 0 => \"zero\"");
+            }
+            // Check second arm: | 1 => "one"
+            if let zen::ast::PatternArm { pattern: zen::ast::Pattern::Literal(zen::ast::Expression::Integer32(1)), guard: None, body: zen::ast::Expression::String(ref s) } = &arms[1] {
+                assert_eq!(s, "one");
+            } else {
+                panic!("Expected second arm to be | 1 => \"one\"");
+            }
+            // Check third arm: | _ => "other"
+            if let zen::ast::PatternArm { pattern: zen::ast::Pattern::Wildcard, guard: None, body: zen::ast::Expression::String(ref s) } = &arms[2] {
+                assert_eq!(s, "other");
+            } else {
+                panic!("Expected third arm to be | _ => \"other\"");
+            }
+        } else {
+            panic!("Expected PatternMatch expression");
+        }
+    } else {
+        panic!("Expected function declaration");
+    }
+} 
+
+#[test]
+fn test_parse_range_based_loop() {
+    let input = "main = () void { loop 0..10 { x := 1 } }";
+    let lexer = zen::lexer::Lexer::new(input);
+    let mut parser = zen::parser::Parser::new(lexer);
+    let program = parser.parse_program().unwrap();
+    assert_eq!(program.declarations.len(), 1);
+    if let zen::ast::Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.name, "main");
+        assert_eq!(func.return_type, zen::ast::AstType::Void);
+        assert_eq!(func.body.len(), 1);
+        if let zen::ast::Statement::Loop { condition, body, label } = &func.body[0] {
+            assert!(label.is_none());
+            if let Some(zen::ast::Expression::Range { start, end, inclusive }) = condition {
+                assert_eq!(**start, zen::ast::Expression::Integer32(0));
+                assert_eq!(**end, zen::ast::Expression::Integer32(10));
+                assert!(!inclusive);
+            } else {
+                panic!("Expected range expression as loop condition");
+            }
+            assert_eq!(body.len(), 1);
+            if let zen::ast::Statement::VariableDeclaration { name, .. } = &body[0] {
+                assert_eq!(name, "x");
+            } else {
+                panic!("Expected variable declaration in loop body");
+            }
+        } else {
+            panic!("Expected loop statement");
+        }
+    } else {
+        panic!("Expected function declaration");
+    }
 } 

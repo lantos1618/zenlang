@@ -260,7 +260,9 @@ pub struct ExternalFunction {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructDefinition {
     pub name: String,
+    pub generics: Vec<String>,
     pub fields: Vec<StructField>,
+    pub methods: Vec<Function>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -274,7 +276,9 @@ pub struct StructField {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EnumDefinition {
     pub name: String,
+    pub generics: Vec<String>,
     pub variants: Vec<EnumVariant>,
+    pub methods: Vec<Function>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -283,6 +287,7 @@ pub enum Declaration {
     ExternalFunction(ExternalFunction),
     Struct(StructDefinition),
     Enum(EnumDefinition),
+    ComptimeBlock(Vec<Statement>),
     ModuleImport {
         alias: String,
         module_path: String,

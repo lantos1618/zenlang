@@ -12,6 +12,7 @@ pub enum Keyword {
     Break,
     Continue,
     Return,
+    Match,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -183,13 +184,13 @@ impl<'a> Lexer<'a> {
                 self.read_char();
                 Token::Symbol('|')
             }
-            Some(c) if self.is_operator_start(c) => {
-                let op = self.read_operator();
-                Token::Operator(op)
-            }
             Some(c) if self.is_symbol(c) => {
                 self.read_char();
                 Token::Symbol(c)
+            }
+            Some(c) if self.is_operator_start(c) => {
+                let op = self.read_operator();
+                Token::Operator(op)
             }
             None => Token::Eof,
             _ => {
@@ -300,12 +301,13 @@ impl<'a> Lexer<'a> {
             "break" => Some(Keyword::Break),
             "continue" => Some(Keyword::Continue),
             "return" => Some(Keyword::Return),
+            "match" => Some(Keyword::Match),
             _ => None,
         }
     }
 
     fn is_symbol(&self, c: char) -> bool {
-        matches!(c, '{' | '}' | '(' | ')' | '[' | ']' | ';' | ',' | '|' | '&' | '!' | '.' | '?')
+        matches!(c, '{' | '}' | '(' | ')' | '[' | ']' | ';' | ',' | '|' | '&' | '!' | '.' | '?' | '<' | '>')
     }
 
     fn is_operator_start(&self, c: char) -> bool {

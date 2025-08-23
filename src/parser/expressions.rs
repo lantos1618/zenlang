@@ -67,6 +67,10 @@ impl<'a> Parser<'a> {
 
     fn parse_primary_expression(&mut self) -> Result<Expression> {
         match &self.current_token {
+            Token::Keyword(crate::lexer::Keyword::Match) => {
+                self.next_token();
+                self.parse_match_expression()
+            }
             Token::Integer(value_str) => {
                 let value = value_str.parse::<i64>().map_err(|_| {
                     CompileError::SyntaxError(
@@ -356,6 +360,64 @@ impl<'a> Parser<'a> {
                 )),
             }, method_name),
             args: arguments,
+        })
+    }
+
+    fn parse_match_expression(&mut self) -> Result<Expression> {
+        // Parse: match expr { | pattern => expr ... }
+        let scrutinee = Box::new(self.parse_expression()?);
+        if self.current_token != Token::Symbol('{') {
+            return Err(CompileError::SyntaxError(
+                "Expected '{' after match scrutinee".to_string(),
+                Some(self.current_span.clone()),
+            ));
+        }
+        self.next_token();
+        let mut arms = vec![];
+        while self.current_token != Token::Symbol('}') {
+            if self.current_token == Token::Eof {
+                return Err(CompileError::SyntaxError(
+                    "Unexpected end of file in match expression".to_string(),
+                    Some(self.current_span.clone()),
+                ));
+            }
+            // Each arm starts with |
+            if self.current_token != Token::Symbol('|') {
+                return Err(CompileError::SyntaxError(
+                    "Expected '|' at start of match arm".to_string(),
+                    Some(self.current_span.clone()),
+                ));
+            }
+            self.next_token();
+            // Parse pattern
+            let pattern = self.parse_pattern()?;
+            // Optional guard condition
+            let guard = if self.current_token == Token::Operator("->".to_string()) {
+                self.next_token();
+                Some(self.parse_expression()?)
+            } else {
+                None
+            };
+            // =>
+            if self.current_token != Token::Operator("=>".to_string()) {
+                return Err(CompileError::SyntaxError(
+                    "Expected '=>' in match arm".to_string(),
+                    Some(self.current_span.clone()),
+                ));
+            }
+            self.next_token();
+            // Parse body expression
+            let body = self.parse_expression()?;
+            arms.push(crate::ast::PatternArm {
+                pattern,
+                guard,
+                body,
+            });
+        }
+        self.next_token(); // consume '}'
+        Ok(Expression::PatternMatch {
+            scrutinee,
+            arms,
         })
     }
 

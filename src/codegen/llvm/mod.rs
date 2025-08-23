@@ -141,6 +141,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ast::Declaration::Function(_) => {}
                 ast::Declaration::Struct(_) => {} // Already handled above
                 ast::Declaration::Enum(_) | ast::Declaration::ModuleImport { .. } => {}
+                ast::Declaration::ComptimeBlock(_) => {
+                    // For now, ignore comptime blocks during codegen
+                    // TODO: Implement comptime evaluation
+                }
             }
         }
         

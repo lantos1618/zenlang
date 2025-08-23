@@ -21,7 +21,26 @@ fn compile_and_run<'ctx>(test_context: &mut TestContext<'ctx>, program: &ast::Pr
 #[test]
 fn test_struct_creation_and_access() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
+            name: "Point".to_string(),
+            generics: vec![],
+            fields: vec![
+                ast::StructField {
+                    name: "x".to_string(),
+                    type_: ast::AstType::I64,
+                    is_mutable: false,
+                    default_value: None,
+                },
+                ast::StructField {
+                    name: "y".to_string(),
+                    type_: ast::AstType::I64,
+                    is_mutable: false,
+                    default_value: None,
+                },
+            ],
+            methods: vec![],
+        });
+        let func = ast::Function { is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -50,8 +69,10 @@ fn test_struct_creation_and_access() {
                     field: "x".to_string(),
                 }),
             ],
-        }]);
-
+        };
+        let program = ast::Program {
+            declarations: vec![struct_decl, ast::Declaration::Function(func)],
+        };
         let result = test_context.compile(&program);
         assert!(result.is_ok());
     });
@@ -60,7 +81,26 @@ fn test_struct_creation_and_access() {
 #[test]
 fn test_struct_pointer() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
+            name: "Point".to_string(),
+            generics: vec![],
+            fields: vec![
+                ast::StructField {
+                    name: "x".to_string(),
+                    type_: ast::AstType::I64,
+                    is_mutable: false,
+                    default_value: None,
+                },
+                ast::StructField {
+                    name: "y".to_string(),
+                    type_: ast::AstType::I64,
+                    is_mutable: false,
+                    default_value: None,
+                },
+            ],
+            methods: vec![],
+        });
+        let func = ast::Function { is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -102,8 +142,10 @@ fn test_struct_pointer() {
                     field: "x".to_string(),
                 }),
             ],
-        }]);
-
+        };
+        let program = ast::Program {
+            declarations: vec![struct_decl, ast::Declaration::Function(func)],
+        };
         let result = test_context.compile(&program);
         assert!(result.is_ok());
     });
@@ -112,7 +154,26 @@ fn test_struct_pointer() {
 #[test]
 fn test_struct_field_assignment() {
     test_context!(|test_context: &mut TestContext| {
-        let program = ast::Program::from_functions(vec![ast::Function { is_async: false, 
+        let struct_decl = ast::Declaration::Struct(ast::StructDefinition {
+            name: "Point".to_string(),
+            generics: vec![],
+            fields: vec![
+                ast::StructField {
+                    name: "x".to_string(),
+                    type_: ast::AstType::I64,
+                    is_mutable: false,
+                    default_value: None,
+                },
+                ast::StructField {
+                    name: "y".to_string(),
+                    type_: ast::AstType::I64,
+                    is_mutable: false,
+                    default_value: None,
+                },
+            ],
+            methods: vec![],
+        });
+        let func = ast::Function { is_async: false, 
             name: "main".to_string(),
             args: vec![],
             return_type: AstType::I64,
@@ -145,8 +206,10 @@ fn test_struct_field_assignment() {
                     field: "x".to_string(),
                 }),
             ],
-        }]);
-
+        };
+        let program = ast::Program {
+            declarations: vec![struct_decl, ast::Declaration::Function(func)],
+        };
         let result = test_context.compile(&program);
         assert!(result.is_ok());
     });
