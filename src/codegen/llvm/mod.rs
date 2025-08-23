@@ -225,25 +225,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
         Ok(())
     }
     
-    pub fn cast_value_to_type(&self, value: BasicValueEnum<'ctx>, target_type: AnyTypeEnum<'ctx>) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // Convert AnyTypeEnum to BasicTypeEnum for comparison
-        let target_basic_type = match target_type {
-            AnyTypeEnum::ArrayType(t) => BasicTypeEnum::ArrayType(t),
-            AnyTypeEnum::FloatType(t) => BasicTypeEnum::FloatType(t),
-            AnyTypeEnum::IntType(t) => BasicTypeEnum::IntType(t),
-            AnyTypeEnum::PointerType(t) => BasicTypeEnum::PointerType(t),
-            AnyTypeEnum::StructType(t) => BasicTypeEnum::StructType(t),
-            AnyTypeEnum::VectorType(t) => BasicTypeEnum::VectorType(t),
-            _ => return Ok(value), // For void and other types, return as is
-        };
-        
+    pub fn cast_value_to_type(&self, value: BasicValueEnum<'ctx>, target_type: BasicTypeEnum<'ctx>) -> Result<BasicValueEnum<'ctx>, CompileError> {
         // If the types already match, no cast is needed
-        if value.get_type() == target_basic_type {
+        if value.get_type() == target_type {
             return Ok(value);
         }
         
         // Handle casting between integer types
-        if let (BasicValueEnum::IntValue(int_val), BasicTypeEnum::IntType(target_int_type)) = (value, target_basic_type) {
+        if let (BasicValueEnum::IntValue(int_val), BasicTypeEnum::IntType(target_int_type)) = (value, target_type) {
             let source_width = int_val.get_type().get_bit_width();
             let target_width = target_int_type.get_bit_width();
             
@@ -257,7 +246,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 // Same width, just return as is
                 Ok(int_val.into())
             }
-        } else if let (BasicValueEnum::FloatValue(float_val), BasicTypeEnum::FloatType(target_float_type)) = (value, target_basic_type) {
+        } else if let (BasicValueEnum::FloatValue(float_val), BasicTypeEnum::FloatType(target_float_type)) = (value, target_type) {
             // Handle float casting
             let source_width = if float_val.get_type() == self.context.f32_type() { 32 } else { 64 };
             let target_width = if target_float_type == self.context.f32_type() { 32 } else { 64 };
