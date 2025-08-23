@@ -184,16 +184,23 @@ fn test_parse_struct_definition() {
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
     
-    // For now, expect parsing to fail since struct definitions aren't implemented
-    // When the parser is enhanced, this test should be updated to expect success
-    match program {
-        Ok(program) => {
-            // If parsing succeeds, verify it's an empty program for now
-            assert_eq!(program, Program { declarations: vec![] });
-        }
-        Err(_) => {
-            // Expected for now - struct definitions not implemented
-        }
+    // Struct definitions are now implemented
+    let program = program.unwrap();
+    assert_eq!(program.declarations.len(), 1);
+    if let zen::ast::Declaration::Struct(def) = &program.declarations[0] {
+        assert_eq!(def.name, "Person");
+        assert!(def.generics.is_empty());
+        assert_eq!(def.fields.len(), 2);
+        
+        assert_eq!(def.fields[0].name, "name");
+        assert_eq!(def.fields[0].type_, zen::ast::AstType::String);
+        assert!(!def.fields[0].is_mutable);
+        
+        assert_eq!(def.fields[1].name, "age");
+        assert_eq!(def.fields[1].type_, zen::ast::AstType::I32);
+        assert!(!def.fields[1].is_mutable);
+    } else {
+        panic!("Expected struct declaration");
     }
 }
 
