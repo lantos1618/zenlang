@@ -196,25 +196,47 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 println!("DEBUG: No terminator found, adding return statement");
                 // Check if the last statement was an expression that should be returned
                 if let Some(last_stmt) = function.body.last() {
-                    if let ast::Statement::Expression(expr) = last_stmt {
-                        // For non-void functions, treat trailing expressions as return values
-                        if !matches!(function.return_type, AstType::Void) {
-                            println!("DEBUG: Compiling trailing expression as return value");
-                            let value = self.compile_expression(expr)?;
-                            self.builder.build_return(Some(&value))?;
-                            println!("DEBUG: Added return statement with value");
-                        } else {
-                            // For void functions, just return void
-                            self.builder.build_return(None)?;
-                            println!("DEBUG: Added void return statement");
+                    match last_stmt {
+                        ast::Statement::Expression(expr) => {
+                            // For non-void functions, treat trailing expressions as return values
+                            if !matches!(function.return_type, AstType::Void) {
+                                println!("DEBUG: Compiling trailing expression as return value");
+                                let value = self.compile_expression(expr)?;
+                                self.builder.build_return(Some(&value))?;
+                                println!("DEBUG: Added return statement with value");
+                            } else {
+                                // For void functions, just return void
+                                self.builder.build_return(None)?;
+                                println!("DEBUG: Added void return statement");
+                            }
                         }
-                    } else {
-                        // Not a trailing expression, handle normally
-                        if let AstType::Void = function.return_type {
-                            self.builder.build_return(None)?;
-                            println!("DEBUG: Added void return statement (no trailing expr)");
-                        } else {
-                            return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
+                        ast::Statement::ComptimeBlock(statements) => {
+                            // ComptimeBlock with expressions should be treated as a return value
+                            if !matches!(function.return_type, AstType::Void) {
+                                // Find the last expression in the comptime block
+                                if let Some(ast::Statement::Expression(expr)) = statements.last() {
+                                    println!("DEBUG: Compiling comptime block with trailing expression as return value");
+                                    // Evaluate the comptime expression and return it
+                                    let value = self.compile_expression(&ast::Expression::Comptime(Box::new(expr.clone())))?;
+                                    self.builder.build_return(Some(&value))?;
+                                    println!("DEBUG: Added return statement with comptime value");
+                                } else {
+                                    return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
+                                }
+                            } else {
+                                // For void functions, just return void
+                                self.builder.build_return(None)?;
+                                println!("DEBUG: Added void return statement");
+                            }
+                        }
+                        _ => {
+                            // Not a trailing expression, handle normally
+                            if let AstType::Void = function.return_type {
+                                self.builder.build_return(None)?;
+                                println!("DEBUG: Added void return statement (no trailing expr)");
+                            } else {
+                                return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
+                            }
                         }
                     }
                 } else {
