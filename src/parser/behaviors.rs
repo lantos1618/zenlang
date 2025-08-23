@@ -1,8 +1,6 @@
-use crate::ast::{AstType, BehaviorDefinition, BehaviorMethod, ImplBlock, Parameter, TypeParameter, Function};
+use crate::ast::{BehaviorDefinition, BehaviorMethod, ImplBlock, Parameter, TypeParameter};
 use crate::lexer::{Keyword, Token};
 use crate::parser::core::Parser;
-use crate::parser::types::parse_type;
-use crate::parser::functions::parse_function;
 use crate::error::{CompileError, Result};
 
 impl<'a> Parser<'a> {
@@ -137,7 +135,7 @@ impl<'a> Parser<'a> {
         self.next_token();
         
         // Parse return type
-        let return_type = parse_type(self)?;
+        let return_type = self.parse_type()?;
         
         Ok(BehaviorMethod {
             name,
@@ -198,7 +196,7 @@ impl<'a> Parser<'a> {
                 
                 // Parse methods for this behavior
                 while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
-                    let method = parse_function(self)?;
+                    let method = self.parse_function()?;
                     methods.push(method);
                     
                     // Handle comma separator
@@ -225,7 +223,7 @@ impl<'a> Parser<'a> {
                 
                 // Parse inherent methods
                 while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
-                    let method = parse_function(self)?;
+                    let method = self.parse_function()?;
                     methods.push(method);
                     
                     // Handle comma separator
@@ -237,7 +235,7 @@ impl<'a> Parser<'a> {
         } else {
             // Parse inherent methods
             while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
-                let method = parse_function(self)?;
+                let method = self.parse_function()?;
                 methods.push(method);
                 
                 // Handle comma separator
@@ -275,15 +273,24 @@ impl<'a> Parser<'a> {
         };
         self.next_token();
         
-        if self.current_token != Token::Symbol(':') {
-            return Err(CompileError::SyntaxError(
-                format!("Expected ':' after parameter name, got {:?}", self.current_token),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
-        
-        let type_ = parse_type(self)?;
+        // Special case for 'self' parameter - type annotation is optional
+        let type_ = if name == "self" && self.current_token != Token::Symbol(':') {
+            // Infer as pointer to the implementing type (will be resolved later)
+            crate::ast::AstType::Pointer(Box::new(crate::ast::AstType::Generic {
+                name: "Self".to_string(),
+                type_args: Vec::new(),
+            }))
+        } else {
+            if self.current_token != Token::Symbol(':') {
+                return Err(CompileError::SyntaxError(
+                    format!("Expected ':' after parameter name, got {:?}", self.current_token),
+                    Some(self.current_span.clone()),
+                ));
+            }
+            self.next_token();
+            
+            self.parse_type()?
+        };
         
         Ok(Parameter {
             name,

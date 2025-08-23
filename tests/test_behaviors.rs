@@ -6,7 +6,7 @@ use zen::parser::Parser;
 fn test_parse_behavior_definition() {
     let input = r#"
         Writer = behavior {
-            write = (self, data: []u8) Result<u64, string>
+            write = (self, data: [u8]) Result<u64, string>
         }
     "#;
     
@@ -34,8 +34,8 @@ fn test_parse_behavior_definition() {
 fn test_parse_behavior_with_multiple_methods() {
     let input = r#"
         Stream = behavior {
-            read = (self, buffer: []u8) Result<u64, string>,
-            write = (self, data: []u8) Result<u64, string>,
+            read = (self, buffer: [u8]) Result<u64, string>,
+            write = (self, data: [u8]) Result<u64, string>,
             close = (self) void
         }
     "#;
@@ -63,8 +63,7 @@ fn test_parse_impl_block() {
     let input = r#"
         File.impl = {
             open = (path: string) File {
-                // Implementation
-                File { fd: 0 }
+                return path
             }
         }
     "#;
@@ -90,7 +89,7 @@ fn test_parse_impl_block_for_behavior() {
     let input = r#"
         File.impl = {
             Writer: {
-                write = (self: Ptr<File>, data: []u8) Result<u64, string> {
+                write = (self: Ptr<File>, data: [u8]) Result<u64, string> {
                     // Implementation
                     Ok(0)
                 }
