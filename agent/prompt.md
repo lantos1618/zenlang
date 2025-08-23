@@ -9,5 +9,5 @@ notes from Lyndon
 - A good heuristic is to spend 80% of your time on the actual porting, and 20% on the testing.
 - simplicity, elegance, praticality and intelegence
 - you work better at around 40% context window (100K-140k) we can either prime or cull the ctx window
-- you can open and view github issues
-- use frequent git commits and pushes
+- you can open and view github issues (gh-cli)
+- use frequent git commits and pushes 
