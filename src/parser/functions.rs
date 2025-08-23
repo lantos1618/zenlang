@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::{Function, AstType};
+use crate::ast::Function;
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 
