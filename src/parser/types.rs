@@ -26,12 +26,38 @@ impl<'a> Parser<'a> {
                     "void" => Ok(AstType::Void),
                     "ptr" => Ok(AstType::Pointer(Box::new(AstType::Void))),
                     _ => {
-                        // Could be a custom type (struct, enum, etc.)
-                        // For now, treat as a generic type
-                        Ok(AstType::Generic {
-                            name: type_name,
-                            type_args: vec![],
-                        })
+                        // Check for generic type instantiation (e.g., List<T>)
+                        if self.current_token == Token::Operator("<".to_string()) {
+                            self.next_token();
+                            let mut type_args = Vec::new();
+                            
+                            loop {
+                                type_args.push(self.parse_type()?);
+                                
+                                if self.current_token == Token::Operator(">".to_string()) {
+                                    self.next_token();
+                                    break;
+                                } else if self.current_token == Token::Symbol(',') {
+                                    self.next_token();
+                                } else {
+                                    return Err(CompileError::SyntaxError(
+                                        "Expected ',' or '>' in type arguments".to_string(),
+                                        Some(self.current_span.clone()),
+                                    ));
+                                }
+                            }
+                            
+                            Ok(AstType::Generic {
+                                name: type_name,
+                                type_args,
+                            })
+                        } else {
+                            // Could be a custom type (struct, enum, etc.) or type parameter
+                            Ok(AstType::Generic {
+                                name: type_name,
+                                type_args: vec![],
+                            })
+                        }
                     }
                 }
             }
