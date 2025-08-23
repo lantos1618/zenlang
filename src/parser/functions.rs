@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::Function;
+use crate::ast::{Function, TypeParameter};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 
@@ -15,6 +15,38 @@ impl<'a> Parser<'a> {
             ));
         };
         self.next_token();
+        
+        // Parse generic type parameters if present: <T, U, ...>
+        let mut type_params = Vec::new();
+        if self.current_token == Token::Operator("<".to_string()) {
+            self.next_token();
+            loop {
+                if let Token::Identifier(gen) = &self.current_token {
+                    type_params.push(TypeParameter {
+                        name: gen.clone(),
+                        constraints: Vec::new(),
+                    });
+                    self.next_token();
+                    
+                    if self.current_token == Token::Operator(">".to_string()) {
+                        self.next_token();
+                        break;
+                    } else if self.current_token == Token::Symbol(',') {
+                        self.next_token();
+                    } else {
+                        return Err(CompileError::SyntaxError(
+                            "Expected ',' or '>' in generic parameters".to_string(),
+                            Some(self.current_span.clone()),
+                        ));
+                    }
+                } else {
+                    return Err(CompileError::SyntaxError(
+                        "Expected generic parameter name".to_string(),
+                        Some(self.current_span.clone()),
+                    ));
+                }
+            }
+        }
         
         // Skip the '=' operator
         if self.current_token != Token::Operator("=".to_string()) {
@@ -101,7 +133,7 @@ impl<'a> Parser<'a> {
         
         Ok(Function {
             name,
-            type_params: Vec::new(), // TODO: Parse generic type parameters
+            type_params,
             args,
             return_type,
             body,
