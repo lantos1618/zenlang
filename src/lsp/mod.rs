@@ -211,7 +211,7 @@ impl LanguageServer for ZenLanguageServer {
         
         // Get document content
         let documents = self.documents.read().await;
-        let content = documents.get(&uri)
+        let _content = documents.get(&uri)
             .ok_or_else(|| tower_lsp::jsonrpc::Error::new(tower_lsp::jsonrpc::ErrorCode::InvalidParams))?;
         
         // Simple hover information
@@ -223,7 +223,7 @@ impl LanguageServer for ZenLanguageServer {
         }))
     }
 
-    async fn goto_definition(&self, params: GotoDefinitionParams) -> Result<Option<GotoDefinitionResponse>> {
+    async fn goto_definition(&self, _params: GotoDefinitionParams) -> Result<Option<GotoDefinitionResponse>> {
         // For now, return None - we'll implement this later
         Ok(None)
     }

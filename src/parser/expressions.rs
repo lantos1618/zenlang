@@ -210,6 +210,10 @@ impl<'a> Parser<'a> {
                 self.next_token();
                 self.parse_conditional_expression()
             }
+            Token::Symbol('[') => {
+                // Array literal: [expr, expr, ...]
+                self.parse_array_literal()
+            }
             _ => Err(CompileError::SyntaxError(
                 format!("Unexpected token: {:?}", self.current_token),
                 Some(self.current_span.clone()),
@@ -424,6 +428,45 @@ impl<'a> Parser<'a> {
             scrutinee,
             arms,
         })
+    }
+
+    fn parse_array_literal(&mut self) -> Result<Expression> {
+        // Consume '['
+        self.next_token();
+        
+        let mut elements = Vec::new();
+        
+        // Handle empty array
+        if self.current_token == Token::Symbol(']') {
+            self.next_token();
+            return Ok(Expression::ArrayLiteral(elements));
+        }
+        
+        // Parse first element
+        elements.push(self.parse_expression()?);
+        
+        // Parse remaining elements
+        while self.current_token == Token::Symbol(',') {
+            self.next_token(); // consume ','
+            
+            // Allow trailing comma
+            if self.current_token == Token::Symbol(']') {
+                break;
+            }
+            
+            elements.push(self.parse_expression()?);
+        }
+        
+        // Expect closing ']'
+        if self.current_token != Token::Symbol(']') {
+            return Err(CompileError::SyntaxError(
+                format!("Expected ']' in array literal, got {:?}", self.current_token),
+                Some(self.current_span.clone()),
+            ));
+        }
+        self.next_token();
+        
+        Ok(Expression::ArrayLiteral(elements))
     }
 
     fn token_to_binary_operator(&self, op: &str) -> Result<BinaryOperator> {

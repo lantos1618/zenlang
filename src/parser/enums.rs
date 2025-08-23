@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::{EnumDefinition, EnumVariant, TypeParameter};
+use crate::ast::{EnumDefinition, EnumVariant};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 

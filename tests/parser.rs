@@ -790,7 +790,77 @@ fn test_parse_match_expression() {
     } else {
         panic!("Expected function declaration");
     }
-} 
+}
+
+#[test]
+fn test_parse_array_literal() {
+    // Test empty array
+    let input = "main = () void { x := [] }";
+    let lexer = zen::lexer::Lexer::new(input);
+    let mut parser = zen::parser::Parser::new(lexer);
+    let program = parser.parse_program().unwrap();
+    assert_eq!(program.declarations.len(), 1);
+    if let zen::ast::Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.body.len(), 1);
+        if let zen::ast::Statement::VariableDeclaration { name, initializer, .. } = &func.body[0] {
+            assert_eq!(name, "x");
+            if let Some(zen::ast::Expression::ArrayLiteral(elements)) = initializer {
+                assert_eq!(elements.len(), 0);
+            } else {
+                panic!("Expected ArrayLiteral, got {:?}", initializer);
+            }
+        }
+    }
+
+    // Test array with single element
+    let input = "main = () void { x := [42] }";
+    let lexer = zen::lexer::Lexer::new(input);
+    let mut parser = zen::parser::Parser::new(lexer);
+    let program = parser.parse_program().unwrap();
+    if let zen::ast::Declaration::Function(func) = &program.declarations[0] {
+        if let zen::ast::Statement::VariableDeclaration { initializer, .. } = &func.body[0] {
+            if let Some(zen::ast::Expression::ArrayLiteral(elements)) = initializer {
+                assert_eq!(elements.len(), 1);
+                assert_eq!(elements[0], zen::ast::Expression::Integer32(42));
+            } else {
+                panic!("Expected ArrayLiteral");
+            }
+        }
+    }
+
+    // Test array with multiple elements
+    let input = "main = () void { x := [1, 2, 3] }";
+    let lexer = zen::lexer::Lexer::new(input);
+    let mut parser = zen::parser::Parser::new(lexer);
+    let program = parser.parse_program().unwrap();
+    if let zen::ast::Declaration::Function(func) = &program.declarations[0] {
+        if let zen::ast::Statement::VariableDeclaration { initializer, .. } = &func.body[0] {
+            if let Some(zen::ast::Expression::ArrayLiteral(elements)) = initializer {
+                assert_eq!(elements.len(), 3);
+                assert_eq!(elements[0], zen::ast::Expression::Integer32(1));
+                assert_eq!(elements[1], zen::ast::Expression::Integer32(2));
+                assert_eq!(elements[2], zen::ast::Expression::Integer32(3));
+            } else {
+                panic!("Expected ArrayLiteral");
+            }
+        }
+    }
+
+    // Test array with trailing comma
+    let input = "main = () void { x := [1, 2, 3,] }";
+    let lexer = zen::lexer::Lexer::new(input);
+    let mut parser = zen::parser::Parser::new(lexer);
+    let program = parser.parse_program().unwrap();
+    if let zen::ast::Declaration::Function(func) = &program.declarations[0] {
+        if let zen::ast::Statement::VariableDeclaration { initializer, .. } = &func.body[0] {
+            if let Some(zen::ast::Expression::ArrayLiteral(elements)) = initializer {
+                assert_eq!(elements.len(), 3);
+            } else {
+                panic!("Expected ArrayLiteral");
+            }
+        }
+    }
+}
 
 #[test]
 fn test_parse_range_based_loop() {

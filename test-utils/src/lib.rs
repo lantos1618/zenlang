@@ -4,7 +4,6 @@
 use inkwell::context::Context;
 use inkwell::OptimizationLevel;
 use inkwell::execution_engine::JitFunction;
-use inkwell::types::BasicType;
 use zen::ast::{self, AstType, Expression, Statement, BinaryOperator, VariableDeclarationType};
 use zen::compiler::Compiler;
 use zen::codegen::llvm::LLVMCompiler;
