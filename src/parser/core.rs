@@ -1,7 +1,5 @@
 use super::super::lexer::{Lexer, Token};
 use crate::error::Span;
-use crate::ast::Program;
-use crate::error::{CompileError, Result};
 
 pub struct Parser<'a> {
     pub(crate) lexer: Lexer<'a>,
