@@ -6,8 +6,8 @@ use inkwell::{
     builder::Builder,
     context::Context,
     module::Module,
-    types::{BasicType, BasicTypeEnum, FunctionType, StructType, AnyTypeEnum, IntType, FloatType},
-    values::{FunctionValue, PointerValue, BasicValueEnum, IntValue, FloatValue},
+    types::{BasicType, BasicTypeEnum, FunctionType, StructType},
+    values::{FunctionValue, PointerValue, BasicValueEnum},
 };
 use std::collections::HashMap;
 
@@ -133,12 +133,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     pub fn compile_program(&mut self, program: &ast::Program) -> Result<(), CompileError> {
-        println!("Compiling program with {} declarations", program.declarations.len());
         
         // First pass: register struct types
         for declaration in &program.declarations {
             if let ast::Declaration::Struct(struct_def) = declaration {
-                println!("Registering struct type: {}", struct_def.name);
                 self.register_struct_type(struct_def)?;
             }
         }
@@ -146,7 +144,6 @@ impl<'ctx> LLVMCompiler<'ctx> {
         for declaration in &program.declarations {
             match declaration {
                 ast::Declaration::ExternalFunction(ext_func) => {
-                    println!("Declaring external function: {}", ext_func.name);
                     self.declare_external_function(ext_func)?;
                 }
                 ast::Declaration::Function(_) => {}
@@ -154,12 +151,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ast::Declaration::Enum(_) | ast::Declaration::ModuleImport { .. } => {}
                 ast::Declaration::Behavior(_) => {} // Behaviors are interface definitions, no codegen needed
                 ast::Declaration::Impl(impl_block) => {
-                    println!("Compiling impl block for type: {}", impl_block.type_name);
                     self.compile_impl_block(impl_block)?;
                 }
                 ast::Declaration::ComptimeBlock(statements) => {
                     // Evaluate comptime blocks and generate constants
-                    println!("Evaluating comptime block with {} statements", statements.len());
                     for stmt in statements {
                         if let Err(e) = self.comptime_evaluator.evaluate_statement(stmt) {
                             return Err(CompileError::InternalError(
@@ -174,15 +169,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
         
         for declaration in &program.declarations {
             if let ast::Declaration::Function(func) = declaration {
-                println!("Defining and compiling function: {}", func.name);
                 self.define_and_compile_function(func)?;
             }
         }
         
-        println!("Functions in module after compilation:");
-        for func in self.module.get_functions() {
-            println!("  - {}", func.get_name().to_str().unwrap_or("<invalid>"));
-        }
         
         Ok(())
     }

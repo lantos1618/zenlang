@@ -1,99 +1,68 @@
-# Lynlang Implementation Plan
-**Updated**: 2025-08-23 (Current Session)
-**Branch**: ragemode
+# Lynlang Development Plan
 
-## Mission
-Complete the Lynlang compiler to production readiness with focus on core language features, type system, and runtime capabilities.
+## Current Sprint: Type System & LLVM Integration
+**Goal**: Complete the bridge between advanced type features and code generation
 
-## Project Zen Principles
-1. **Simplicity**: Clear, readable code over clever tricks
-2. **Elegance**: Well-structured systems that compose naturally  
-3. **Practicality**: Focus on working features, not perfection
-4. **Intelligence**: Make smart trade-offs, prioritize impact
+### Phase 1: Code Quality & Cleanup (Today)
+1. ✅ Set up .agent meta files
+2. ⏳ Remove debug print statements from functions.rs
+3. ⏳ Address unused code warnings in LLVM modules
+4. ⏳ Verify all tests still pass
 
-## Current Status ✅
-- **164 tests passing** - All green!
-- **Pattern matching**: ✅ COMPLETE (parser and codegen working)
-- **Comptime**: Parser done, evaluator needs integration
-- **C FFI**: Basic support implemented
-- **Array literals**: ✅ COMPLETE
+### Phase 2: Generic Type Integration (Priority 1)
+1. Connect TypeInstantiator to LLVM compiler
+2. Implement generic function compilation in LLVM
+3. Add generic struct compilation support
+4. Create integration tests for generic code generation
+5. Ensure monomorphization works end-to-end
 
-## Sprint Focus (Priority Order)
+### Phase 3: Comptime Pipeline (Priority 2)
+1. Hook ComptimeEvaluator into Compiler::compile
+2. Process comptime blocks before LLVM generation
+3. Cache comptime evaluation results
+4. Add comptime tests to ensure correctness
 
-### 1. 🎯 Generic Type Instantiation
-**Priority**: HIGHEST - Foundation for advanced features
-**Status**: Not started
-- [ ] Design generic type parameter syntax in AST
-- [ ] Implement type parameter parsing
-- [ ] Build type instantiation engine
-- [ ] Add monomorphization in codegen
-- [ ] Create comprehensive test suite
+### Phase 4: Enhanced Type Features (Priority 3)
+1. Implement array types with size `[T; N]`
+2. Improve enum variant handling in codegen
+3. Add type alias support
+4. Create comprehensive type system tests
 
-### 2. 🎯 Trait/Behavior System
-**Priority**: HIGH - Enables polymorphism
-**Status**: Not started
-- [ ] Define trait/behavior syntax
-- [ ] Implement trait parsing
-- [ ] Build trait resolution system
-- [ ] Add trait bounds checking
-- [ ] Implement trait objects
+## Future Milestones
 
-### 3. 🎯 Comptime Evaluation Engine
-**Priority**: HIGH - Already partially implemented
-**Status**: Parser done, evaluator exists but not integrated
-- [ ] Hook evaluator into compilation pipeline
-- [ ] Implement comptime function execution
-- [ ] Add comptime type generation
-- [ ] Enable compile-time assertions
-- [ ] Test with real examples
+### Milestone 1: Module System
+- Design import/export syntax
+- Implement module resolution
+- Add visibility modifiers
+- Create module dependency graph
 
-### 4. Enhanced Type System
-**Status**: Basic types working
-- [ ] Array types with size (`[T; N]`)
-- [ ] Better enum variant handling
-- [ ] Type aliases (`type Name = ...`)
-- [ ] Option/Result improvements
+### Milestone 2: Standard Library Foundation
+- Core collections (Vec, HashMap, String)
+- Basic I/O abstractions
+- Memory allocator interface
+- Common traits/behaviors
 
-### 5. Standard Library
-**Status**: Not started
-- [ ] Core types (Vec, HashMap, String)
-- [ ] I/O operations
-- [ ] Memory management utilities
-- [ ] Collections and iterators
+### Milestone 3: Advanced Features
+- Async/await support
+- Closure implementation
+- Pattern matching in codegen
+- Macro system design
 
-### 6. Module System
-**Status**: Not started
-- [ ] Import/export syntax
-- [ ] Module resolution
-- [ ] Visibility rules
-- [ ] Package management
-
-## Development Strategy
-- **80% implementation, 20% testing** ratio
-- Write tests before implementation when possible
-- Small, incremental changes
-- Clean up as we go
+## Testing Strategy
 - Maintain 100% test pass rate
+- Add integration tests for each new feature
+- Use property-based testing for type system
+- Create end-to-end compilation tests
+
+## Git Workflow
+- Commit after each completed feature
+- Push to GitHub every 2-3 commits
+- Create issues for bugs found during development
+- Use descriptive commit messages
 
 ## Success Metrics
-- All tests passing continuously
-- Generic collections working (Vec<T>, HashMap<K,V>)
-- Trait-based polymorphism functional
-- Comptime reduces runtime overhead
-- Can build real-world applications
-
-## Daily Workflow
-1. Review test status
-2. Pick highest priority task
-3. Write tests first
-4. Implement until tests pass
-5. Refactor and clean up
-6. Update docs and meta files
-7. Commit with clear message
-
-## Session Management
-- Maintain context at ~40% (100-140k tokens)
-- Use .agent directory for state
-- Clean up temporary files
-- Update global_memory.md regularly
-- Track progress in todos.md
+- Zero failing tests
+- No compiler warnings
+- Clean code with no debug statements
+- All features have corresponding tests
+- Documentation for public APIs

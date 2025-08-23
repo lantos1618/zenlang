@@ -74,21 +74,17 @@ impl<'ctx> LLVMCompiler<'ctx> {
 
     /// Defines and compiles a function in one step
     pub fn define_and_compile_function(&mut self, function: &ast::Function) -> Result<(), CompileError> {
-        println!("DEBUG: Starting to define and compile function: {}", function.name);
         
         // First, get the return type
         let return_type = self.to_llvm_type(&function.return_type)?;
-        println!("  Return type: {:?}", return_type);
         
         // Get parameter basic types with their names
         let param_basic_types: Result<Vec<BasicTypeEnum>, CompileError> = function
             .args
             .iter()
             .map(|(name, t)| {
-                println!("  Param: {}: {:?}", name, t);
                 self.to_llvm_type(t)
                     .and_then(|lyn_type| {
-                        println!("    LLVM type: {:?}", lyn_type);
                         self.expect_basic_type(lyn_type)
                     })
             })
@@ -111,7 +107,6 @@ impl<'ctx> LLVMCompiler<'ctx> {
             .collect();
             
         let param_metadata = param_metadata?;
-        println!("  Param metadata types: {:?}", param_metadata);
         
         // Create the function type with the metadata types
         let function_type = match return_type {
@@ -144,7 +139,6 @@ impl<'ctx> LLVMCompiler<'ctx> {
         
         // Define the function (this creates a definition, not a declaration)
         let function_value = self.module.add_function(&function.name, function_type, None);
-        println!("  Defined function: {:?}", function_value);
         
         // Set the function linkage to external so it can be linked
         function_value.set_linkage(Linkage::External);
@@ -166,7 +160,6 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let entry_block = self.context.append_basic_block(function_value, "entry");
         self.builder.position_at_end(entry_block);
         self.current_function = Some(function_value);
-        println!("DEBUG: Created entry block and positioned builder");
 
         // Clear variables from previous function by entering a new scope
         self.symbols.enter_scope();
@@ -178,40 +171,33 @@ impl<'ctx> LLVMCompiler<'ctx> {
             let llvm_type = self.to_llvm_type(type_)?;
             let basic_type = self.expect_basic_type(llvm_type)?;
             let alloca = self.builder.build_alloca(basic_type, name)?;
-            eprintln!("[DEBUG] Storing param '{}' of type {:?} into alloca", name, param.get_type());
             self.builder.build_store(alloca, param)?;
             // Register the parameter in the variables map
             self.variables.insert(name.clone(), (alloca, type_.clone()));
         }
 
-        println!("DEBUG: Compiling {} statements in function body", function.body.len());
         for (i, statement) in function.body.iter().enumerate() {
-            println!("DEBUG: Compiling statement {}: {:?}", i, statement);
             self.compile_statement(statement)?;
         }
 
         // Check if we need to add a return statement
         if let Some(block) = self.builder.get_insert_block() {
             if block.get_terminator().is_none() {
-                println!("DEBUG: No terminator found, adding return statement");
                 // Check if the last statement was an expression that should be returned
                 if let Some(last_stmt) = function.body.last() {
                     match last_stmt {
                         ast::Statement::Expression(expr) => {
                             // For non-void functions, treat trailing expressions as return values
                             if !matches!(function.return_type, AstType::Void) {
-                                println!("DEBUG: Compiling trailing expression as return value");
                                 let value = self.compile_expression(expr)?;
                                 // Cast to the correct return type if needed
                                 let return_type = self.to_llvm_type(&function.return_type)?;
                                 let return_basic_type = self.expect_basic_type(return_type)?;
                                 let casted_value = self.cast_value_to_type(value, return_basic_type)?;
                                 self.builder.build_return(Some(&casted_value))?;
-                                println!("DEBUG: Added return statement with value");
                             } else {
                                 // For void functions, just return void
                                 self.builder.build_return(None)?;
-                                println!("DEBUG: Added void return statement");
                             }
                         }
                         ast::Statement::ComptimeBlock(statements) => {
@@ -219,7 +205,6 @@ impl<'ctx> LLVMCompiler<'ctx> {
                             if !matches!(function.return_type, AstType::Void) {
                                 // Find the last expression in the comptime block
                                 if let Some(ast::Statement::Expression(expr)) = statements.last() {
-                                    println!("DEBUG: Compiling comptime block with trailing expression as return value");
                                     // Evaluate the comptime expression and return it
                                     let value = self.compile_expression(&ast::Expression::Comptime(Box::new(expr.clone())))?;
                                     // Cast to the correct return type if needed
@@ -227,21 +212,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
                                     let return_basic_type = self.expect_basic_type(return_type)?;
                                     let casted_value = self.cast_value_to_type(value, return_basic_type)?;
                                     self.builder.build_return(Some(&casted_value))?;
-                                    println!("DEBUG: Added return statement with comptime value");
                                 } else {
                                     return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
                                 }
                             } else {
                                 // For void functions, just return void
                                 self.builder.build_return(None)?;
-                                println!("DEBUG: Added void return statement");
                             }
                         }
                         _ => {
                             // Not a trailing expression, handle normally
                             if let AstType::Void = function.return_type {
                                 self.builder.build_return(None)?;
-                                println!("DEBUG: Added void return statement (no trailing expr)");
                             } else {
                                 return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
                             }
@@ -251,20 +233,16 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     // No statements in function body
                     if let AstType::Void = function.return_type {
                         self.builder.build_return(None)?;
-                        println!("DEBUG: Added void return statement (empty function)");
                     } else {
                         return Err(CompileError::MissingReturnStatement(function.name.clone(), None));
                     }
                 }
             } else {
-                println!("DEBUG: Block already has terminator");
             }
         } else {
-            println!("DEBUG: No insert block found");
         }
 
         self.current_function = None;
-        println!("DEBUG: Finished defining and compiling function: {}", function.name);
         Ok(())
     }
 

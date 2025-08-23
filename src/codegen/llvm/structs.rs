@@ -67,7 +67,6 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     pub fn compile_struct_field(&mut self, struct_: &Expression, field: &str) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        println!("DEBUG: compile_struct_field called with struct: {:?}, field: {}", struct_, field);
         
         // Special handling for identifiers - we need the pointer, not the loaded value
         if let Expression::Identifier(name) = struct_ {

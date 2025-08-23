@@ -1,4 +1,4 @@
-use crate::ast::{AstType, TypeParameter};
+use crate::ast::AstType;
 use std::collections::HashMap;
 
 pub mod instantiation;

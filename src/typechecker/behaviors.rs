@@ -1,6 +1,6 @@
-use crate::ast::{BehaviorDefinition, ImplBlock, AstType, BehaviorMethod};
+use crate::ast::{BehaviorDefinition, ImplBlock, AstType};
 use crate::error::{CompileError, Result};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// Tracks behaviors, implementations, and provides trait resolution
 pub struct BehaviorResolver {
@@ -228,7 +228,7 @@ impl BehaviorResolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{Function, Parameter, TypeParameter};
+    use crate::ast::{BehaviorMethod, Function, Parameter, TypeParameter};
 
     #[test]
     fn test_register_behavior() {
