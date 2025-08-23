@@ -3,7 +3,7 @@
 //! The `ast` module defines the data structures that represent the code in a structured way.
 //! The parser will produce these structures, and the compiler will consume them.
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AstType {
     I8,
     I16,
@@ -51,13 +51,13 @@ pub enum AstType {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EnumVariant {
     pub name: String,
     pub payload: Option<AstType>, // Some(type) for variants with data, None for unit variants
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeParameter {
     pub name: String,
     pub constraints: Vec<String>, // For future trait bounds

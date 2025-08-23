@@ -11,6 +11,7 @@ pub mod lexer;
 pub mod parser;
 pub mod lsp;
 pub mod typechecker;
+pub mod type_system;
 
 #[cfg(test)]
 mod tests {
