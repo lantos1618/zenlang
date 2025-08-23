@@ -33,7 +33,8 @@ impl<'a> Parser<'a> {
                         declarations.push(Declaration::Struct(self.parse_struct()?));
                     } else {
                         // Need to look ahead to determine if it's a struct, enum, or function
-                        self.next_token(); // consume '='
+                        self.next_token(); // Move to '='
+                        self.next_token(); // Move past '=' to see what comes after
                         
                         // Check what comes after '='
                         let is_struct = matches!(&self.current_token, Token::Symbol('{'));
