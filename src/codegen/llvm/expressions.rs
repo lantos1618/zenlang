@@ -274,18 +274,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     fn compile_comptime_expression(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // Evaluate the expression at compile time and generate a constant
-        let mut evaluator = comptime::ComptimeEvaluator::new();
-        match evaluator.evaluate_expression(expr) {
+        // Evaluate the expression at compile time using the persistent evaluator
+        match self.comptime_evaluator.evaluate_expression(expr) {
             Ok(value) => {
                 // Convert the comptime value to a constant expression and compile it
                 let const_expr = value.to_expression();
                 self.compile_expression(&const_expr)
             }
             Err(e) => {
-                eprintln!("Comptime evaluation error: {}", e);
-                // Fall back to runtime evaluation
-                self.compile_expression(expr)
+                return Err(CompileError::InternalError(
+                    format!("Comptime evaluation error: {}", e),
+                    None
+                ));
             }
         }
     }
