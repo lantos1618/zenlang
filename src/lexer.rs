@@ -202,6 +202,15 @@ impl<'a> Lexer<'a> {
                     Token::Operator(">".to_string())
                 }
             }
+            Some('!') => {
+                self.read_char();
+                if self.current_char == Some('=') {
+                    self.read_char();
+                    Token::Operator("!=".to_string())
+                } else {
+                    Token::Symbol('!')
+                }
+            }
             Some(c) if self.is_symbol(c) => {
                 self.read_char();
                 Token::Symbol(c)
@@ -325,7 +334,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn is_symbol(&self, c: char) -> bool {
-        matches!(c, '{' | '}' | '(' | ')' | '[' | ']' | ';' | ',' | '|' | '&' | '!' | '.' | '?')
+        matches!(c, '{' | '}' | '(' | ')' | '[' | ']' | ';' | ',' | '|' | '&' | '.' | '?')
     }
 
     fn is_operator_start(&self, c: char) -> bool {
