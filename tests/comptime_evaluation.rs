@@ -5,7 +5,7 @@ use zen::parser::Parser;
 
 #[test]
 fn test_comptime_arithmetic() {
-    let input = "main = () i32 { return comptime 10 + 20 }";
+    let input = "main :: () -> i32 { return comptime 10 + 20 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
@@ -26,7 +26,7 @@ fn test_comptime_arithmetic() {
 
 #[test]
 fn test_comptime_array_literal() {
-    let input = "main = () void { arr := comptime [1, 2, 3] }";
+    let input = "main :: () -> void { arr := comptime [1, 2, 3] }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
@@ -49,7 +49,7 @@ fn test_comptime_array_literal() {
 
 #[test]
 fn test_comptime_range() {
-    let input = "main = () void { r := comptime 0..5 }";
+    let input = "main :: () -> void { r := comptime 0..5 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
@@ -81,7 +81,7 @@ fn test_comptime_range() {
 
 #[test]
 fn test_comptime_string() {
-    let input = r#"main = () void { s := comptime "hello world" }"#;
+    let input = r#"main :: () -> void { s := comptime "hello world" }"#;
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
@@ -104,7 +104,7 @@ fn test_comptime_string() {
 
 #[test]
 fn test_comptime_comparison() {
-    let input = "main = () void { b := comptime 10 < 20 }";
+    let input = "main :: () -> void { b := comptime 10 < 20 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
