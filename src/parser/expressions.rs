@@ -425,8 +425,8 @@ impl<'a> Parser<'a> {
 
     fn parse_match_expression(&mut self) -> Result<Expression> {
         // Parse: match expr { | pattern => expr ... }
-        // Use parse_unary_expression to avoid struct literal parsing after identifier
-        let scrutinee = Box::new(self.parse_unary_expression()?);
+        // Parse the scrutinee with higher precedence to avoid struct literal ambiguity
+        let scrutinee = Box::new(self.parse_binary_expression(1)?);
         if self.current_token != Token::Symbol('{') {
             return Err(CompileError::SyntaxError(
                 "Expected '{' after match scrutinee".to_string(),
