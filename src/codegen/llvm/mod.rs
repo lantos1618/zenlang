@@ -141,6 +141,13 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
         }
         
+        // Register enum types
+        for declaration in &program.declarations {
+            if let ast::Declaration::Enum(enum_def) = declaration {
+                self.register_enum_type(enum_def)?;
+            }
+        }
+        
         for declaration in &program.declarations {
             match declaration {
                 ast::Declaration::ExternalFunction(ext_func) => {
@@ -148,7 +155,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 }
                 ast::Declaration::Function(_) => {}
                 ast::Declaration::Struct(_) => {} // Already handled above
-                ast::Declaration::Enum(_) | ast::Declaration::ModuleImport { .. } => {}
+                ast::Declaration::Enum(_) => {} // Already handled above
+                ast::Declaration::ModuleImport { .. } => {}
                 ast::Declaration::Behavior(_) => {} // Behaviors are interface definitions, no codegen needed
                 ast::Declaration::Impl(impl_block) => {
                     self.compile_impl_block(impl_block)?;
@@ -227,6 +235,33 @@ impl<'ctx> LLVMCompiler<'ctx> {
         };
         
         self.struct_types.insert(struct_def.name.clone(), struct_info);
+        
+        Ok(())
+    }
+    
+    pub fn register_enum_type(&mut self, enum_def: &ast::EnumDefinition) -> Result<(), CompileError> {
+        // Create variant index mapping
+        let mut variant_indices = HashMap::new();
+        for (index, variant) in enum_def.variants.iter().enumerate() {
+            variant_indices.insert(variant.name.clone(), index as u64);
+        }
+        
+        // For now, represent enums as a struct { tag: i64, payload: i64 }
+        // In the future, this can be optimized based on the actual payload types
+        let enum_struct_type = self.context.struct_type(&[
+            self.context.i64_type().into(),  // tag
+            self.context.i64_type().into(),  // payload (simplified for now)
+        ], false);
+        
+        // Create enum info
+        let enum_info = symbols::EnumInfo {
+            llvm_type: enum_struct_type,
+            variant_indices,
+            variants: enum_def.variants.clone(),
+        };
+        
+        // Register in symbol table
+        self.symbols.insert(&enum_def.name, symbols::Symbol::EnumType(enum_info));
         
         Ok(())
     }

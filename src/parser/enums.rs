@@ -30,7 +30,7 @@ impl<'a> Parser<'a> {
         // Parse variants
         while self.current_token != Token::Eof {
             // Each variant starts with |
-            if self.current_token != Token::Operator("|".to_string()) {
+            if self.current_token != Token::Symbol('|') {
                 break;
             }
             self.next_token();
@@ -49,6 +49,16 @@ impl<'a> Parser<'a> {
             // Check for payload type
             let payload = if self.current_token == Token::Symbol('(') {
                 self.next_token();
+                
+                // Check if this is a named field (field: type) or just a type
+                if let Token::Identifier(_field_name) = &self.current_token {
+                    // Look ahead to see if there's a colon
+                    if self.peek_token == Token::Symbol(':') {
+                        // Named field syntax - skip the field name for now
+                        self.next_token(); // skip field name
+                        self.next_token(); // skip ':'
+                    }
+                }
                 
                 // Parse payload type
                 let payload_type = self.parse_type()?;
