@@ -391,6 +391,59 @@ impl Monomorphizer {
                     right: Box::new(self.transform_expression(*right)?),
                 })
             }
+            Expression::StructLiteral { name, fields } => {
+                // Transform field expressions
+                let transformed_fields: Vec<(String, Expression)> = fields.into_iter()
+                    .map(|(field_name, field_expr)| {
+                        self.transform_expression(field_expr)
+                            .map(|expr| (field_name, expr))
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                
+                // Check if this is a generic struct that needs monomorphization
+                let base_name = extract_base_name(&name);
+                if self.env.get_generic_struct(&base_name).is_some() {
+                    // Infer types from field values to determine the instantiation
+                    // For now, we'll use a simplified approach that looks for specific patterns
+                    // This should be enhanced with proper type inference
+                    
+                    // Try to infer the type from the fields
+                    if let Some(_struct_def) = self.env.get_generic_struct(&base_name).cloned() {
+                        // Collect type arguments based on field types
+                        let mut type_args = Vec::new();
+                        
+                        // Simple heuristic: infer from field expressions
+                        for (_field_name, field_expr) in &transformed_fields {
+                            if let Ok(field_type) = self.infer_expression_type(field_expr) {
+                                // If this field's type helps determine a type parameter, add it
+                                if !type_args.contains(&field_type) && matches!(field_type, AstType::I32 | AstType::I64 | AstType::F32 | AstType::F64) {
+                                    type_args.push(field_type);
+                                    break; // For now, just take the first concrete type we find
+                                }
+                            }
+                        }
+                        
+                        if !type_args.is_empty() {
+                            let instantiated_name = generate_instantiated_name(&base_name, &type_args);
+                            return Ok(Expression::StructLiteral {
+                                name: instantiated_name,
+                                fields: transformed_fields,
+                            });
+                        }
+                    }
+                }
+                
+                Ok(Expression::StructLiteral {
+                    name,
+                    fields: transformed_fields,
+                })
+            }
+            Expression::MemberAccess { object, member } => {
+                Ok(Expression::MemberAccess {
+                    object: Box::new(self.transform_expression(*object)?),
+                    member,
+                })
+            }
             other => Ok(other),
         }
     }

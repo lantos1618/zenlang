@@ -129,21 +129,43 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     } else {
                         // Type inference case
                         self.builder.build_store(alloca, value).map_err(|e| CompileError::from(e))?;
-                        // For inferred types, we need to determine the type from the value
-                        let inferred_type = match value {
-                            BasicValueEnum::IntValue(int_val) => {
-                                if int_val.get_type().get_bit_width() <= 32 {
-                                    AstType::I32
-                                } else {
-                                    AstType::I64
+                        // For inferred types, we need to determine the type from the value and the expression
+                        let inferred_type = if let Expression::StructLiteral { name: struct_name, .. } = init_expr {
+                            // If initializer is a struct literal, use the struct type
+                            // We need to get the field types from the registered struct
+                            if let Some(struct_info) = self.struct_types.get(struct_name) {
+                                // Reconstruct the AstType::Struct with field information
+                                let mut fields = vec![];
+                                for (field_name, (_, field_type)) in &struct_info.fields {
+                                    fields.push((field_name.clone(), field_type.clone()));
+                                }
+                                AstType::Struct {
+                                    name: struct_name.clone(),
+                                    fields,
+                                }
+                            } else {
+                                // Fallback if struct not found - shouldn't happen in practice
+                                AstType::Struct {
+                                    name: struct_name.clone(),
+                                    fields: vec![],
                                 }
                             }
-                            BasicValueEnum::FloatValue(_) => {
-                                // For now, assume all floats are f64
-                                AstType::F64
+                        } else {
+                            match value {
+                                BasicValueEnum::IntValue(int_val) => {
+                                    if int_val.get_type().get_bit_width() <= 32 {
+                                        AstType::I32
+                                    } else {
+                                        AstType::I64
+                                    }
+                                }
+                                BasicValueEnum::FloatValue(_) => {
+                                    // For now, assume all floats are f64
+                                    AstType::F64
+                                }
+                                BasicValueEnum::PointerValue(_) => AstType::Pointer(Box::new(AstType::I64)), // Assume pointer to i64
+                                _ => AstType::I64, // Default
                             }
-                            BasicValueEnum::PointerValue(_) => AstType::Pointer(Box::new(AstType::I64)), // Assume pointer to i64
-                            _ => AstType::I64, // Default
                         };
                         self.variables.insert(name.clone(), (alloca, inferred_type));
                         Ok(())
