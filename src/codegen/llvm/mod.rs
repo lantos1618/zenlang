@@ -172,6 +172,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         }
                     }
                 }
+                ast::Declaration::TypeAlias(_) => {
+                    // Type aliases are resolved at compile time, no codegen needed
+                }
             }
         }
         

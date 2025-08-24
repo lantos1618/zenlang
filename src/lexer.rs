@@ -13,6 +13,7 @@ pub enum Keyword {
     Continue,
     Return,
     Match,
+    Type,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -336,6 +337,7 @@ impl<'a> Lexer<'a> {
             "continue" => Some(Keyword::Continue),
             "return" => Some(Keyword::Return),
             "match" => Some(Keyword::Match),
+            "type" => Some(Keyword::Type),
             _ => None,
         }
     }

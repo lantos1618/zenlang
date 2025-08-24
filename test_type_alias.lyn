@@ -1,0 +1,10 @@
+// Test type aliases
+type Int = i32
+type IntPtr = *i32
+type IntArray = [i32; 10]
+type Result<T> = T
+
+main :: () -> i32 {
+    x : Int = 42
+    x
+}

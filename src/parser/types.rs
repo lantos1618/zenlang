@@ -133,4 +133,72 @@ impl<'a> Parser<'a> {
             )),
         }
     }
+    
+    pub fn parse_type_alias(&mut self) -> Result<crate::ast::TypeAlias> {
+        use crate::ast::{TypeAlias, TypeParameter};
+        
+        // Skip 'type' keyword
+        self.next_token();
+        
+        // Get alias name
+        let name = if let Token::Identifier(name) = &self.current_token {
+            name.clone()
+        } else {
+            return Err(CompileError::SyntaxError(
+                "Expected type alias name".to_string(),
+                Some(self.current_span.clone()),
+            ));
+        };
+        self.next_token();
+        
+        // Parse optional generic type parameters
+        let mut type_params = Vec::new();
+        if self.current_token == Token::Operator("<".to_string()) {
+            self.next_token();
+            loop {
+                if let Token::Identifier(param_name) = &self.current_token {
+                    type_params.push(TypeParameter {
+                        name: param_name.clone(),
+                        constraints: Vec::new(),
+                    });
+                    self.next_token();
+                    
+                    if self.current_token == Token::Operator(">".to_string()) {
+                        self.next_token();
+                        break;
+                    } else if self.current_token == Token::Symbol(',') {
+                        self.next_token();
+                    } else {
+                        return Err(CompileError::SyntaxError(
+                            "Expected ',' or '>' in type parameters".to_string(),
+                            Some(self.current_span.clone()),
+                        ));
+                    }
+                } else {
+                    return Err(CompileError::SyntaxError(
+                        "Expected type parameter name".to_string(),
+                        Some(self.current_span.clone()),
+                    ));
+                }
+            }
+        }
+        
+        // Expect '='
+        if self.current_token != Token::Operator("=".to_string()) {
+            return Err(CompileError::SyntaxError(
+                "Expected '=' in type alias definition".to_string(),
+                Some(self.current_span.clone()),
+            ));
+        }
+        self.next_token();
+        
+        // Parse the target type
+        let target_type = self.parse_type()?;
+        
+        Ok(TypeAlias {
+            name,
+            type_params,
+            target_type,
+        })
+    }
 }

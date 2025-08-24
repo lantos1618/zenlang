@@ -171,7 +171,10 @@ impl<'a> Parser<'a> {
                     ));
                 }
             } else if let Token::Keyword(keyword) = &self.current_token {
-                if matches!(keyword, crate::lexer::Keyword::Comptime) {
+                if matches!(keyword, crate::lexer::Keyword::Type) {
+                    // Parse type alias: type Name = Type or type Name<T> = Type<T>
+                    declarations.push(Declaration::TypeAlias(self.parse_type_alias()?));
+                } else if matches!(keyword, crate::lexer::Keyword::Comptime) {
                     // Parse comptime block
                     self.next_token(); // consume 'comptime'
                     if self.current_token != Token::Symbol('{') {

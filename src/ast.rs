@@ -259,6 +259,13 @@ pub struct Function {
     pub is_async: bool, // For async functions
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeAlias {
+    pub name: String,
+    pub type_params: Vec<TypeParameter>,
+    pub target_type: AstType,
+}
+
 // For C FFI support
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalFunction {
@@ -334,6 +341,7 @@ pub enum Declaration {
         alias: String,
         module_path: String,
     },
+    TypeAlias(TypeAlias),
 }
 
 #[derive(Debug, Clone, PartialEq)]
