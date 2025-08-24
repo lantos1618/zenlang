@@ -4,7 +4,7 @@ use zen::parser::Parser;
 
 #[test]
 fn test_parse_range_exclusive() {
-    let input = "test = () i32 { x := 0..10; x }";
+    let input = "test :: () -> i32 { x := 0..10; x }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -26,7 +26,7 @@ fn test_parse_range_exclusive() {
 
 #[test]
 fn test_parse_range_inclusive() {
-    let input = "test = () i32 { x := 0..=10; x }";
+    let input = "test :: () -> i32 { x := 0..=10; x }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -48,7 +48,7 @@ fn test_parse_range_inclusive() {
 
 #[test]
 fn test_parse_range_with_expressions() {
-    let input = "test = () i32 { x := 1+2..10*2; x }";
+    let input = "test :: () -> i32 { x := 1+2..10*2; x }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -72,7 +72,7 @@ fn test_parse_range_with_expressions() {
 
 #[test]
 fn test_parse_range_with_method_call() {
-    let input = "test = () void { x := (0..10).loop; x }";
+    let input = "test :: () -> void { x := (0..10).loop; x }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
