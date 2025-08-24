@@ -62,18 +62,52 @@ impl<'a> Parser<'a> {
                 }
             }
             Token::Symbol('[') => {
-                // Array type: [T] (dynamic array)
+                // Array type: [T] (dynamic array) or [T; N] (fixed-size array)
                 self.next_token();
                 let element_type = self.parse_type()?;
                 
-                if self.current_token != Token::Symbol(']') {
-                    return Err(CompileError::SyntaxError(
-                        "Expected ']' in array type".to_string(),
+                // Check for semicolon to determine if it's a fixed-size array
+                if self.current_token == Token::Symbol(';') {
+                    self.next_token();
+                    
+                    // Parse the size (must be an integer literal for now)
+                    match &self.current_token {
+                        Token::Integer(size_str) => {
+                            let size = size_str.parse::<usize>().map_err(|_| {
+                                CompileError::SyntaxError(
+                                    format!("Invalid array size: {}", size_str),
+                                    Some(self.current_span.clone()),
+                                )
+                            })?;
+                            self.next_token();
+                            
+                            if self.current_token != Token::Symbol(']') {
+                                return Err(CompileError::SyntaxError(
+                                    "Expected ']' after array size".to_string(),
+                                    Some(self.current_span.clone()),
+                                ));
+                            }
+                            self.next_token();
+                            Ok(AstType::FixedArray { 
+                                element_type: Box::new(element_type),
+                                size,
+                            })
+                        }
+                        _ => Err(CompileError::SyntaxError(
+                            "Expected integer literal for array size".to_string(),
+                            Some(self.current_span.clone()),
+                        ))
+                    }
+                } else if self.current_token == Token::Symbol(']') {
+                    // Dynamic array [T]
+                    self.next_token();
+                    Ok(AstType::Array(Box::new(element_type)))
+                } else {
+                    Err(CompileError::SyntaxError(
+                        "Expected ']' or ';' in array type".to_string(),
                         Some(self.current_span.clone()),
-                    ));
+                    ))
                 }
-                self.next_token();
-                Ok(AstType::Array(Box::new(element_type)))
             }
             Token::Symbol('*') => {
                 // Pointer type: *T

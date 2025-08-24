@@ -20,6 +20,10 @@ pub enum AstType {
     Void,
     Pointer(Box<AstType>),
     Array(Box<AstType>),
+    FixedArray { 
+        element_type: Box<AstType>,
+        size: usize,
+    },
     Function {
         args: Vec<AstType>,
         return_type: Box<AstType>,
