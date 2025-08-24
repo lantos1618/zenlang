@@ -30,7 +30,7 @@ fn test_parse_comptime_block() {
 
 #[test]
 fn test_parse_comptime_expression() {
-    let input = "main = () void { x := comptime 42 }";
+    let input = "main :: () -> void { x := comptime 42 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
@@ -55,7 +55,7 @@ fn test_parse_comptime_expression() {
 
 #[test]
 fn test_parse_comptime_function_call() {
-    let input = "main = () void { result := comptime calculate() }";
+    let input = "main :: () -> void { result := comptime calculate() }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     

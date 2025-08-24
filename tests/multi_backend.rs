@@ -39,7 +39,7 @@ fn test_frontend_backend_separation() {
     let compiler = Compiler::new(&context);
     
     // Test that frontend (parsing) is completely separate from backend (codegen)
-    let source = "main = () i64 { 42 }";
+    let source = "main :: () -> i64 { 42 }";
     
     // Parse using frontend only
     let lexer = zen::lexer::Lexer::new(source);

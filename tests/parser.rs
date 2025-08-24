@@ -14,7 +14,7 @@ fn test_parse_empty_program() {
 
 #[test]
 fn test_parse_simple_function() {
-    let input = "main = () i32 { 42 }";
+    let input = "main :: () -> i32 { 42 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -37,7 +37,7 @@ fn test_parse_simple_function() {
 
 #[test]
 fn test_parse_variable_declaration() {
-    let input = "main = () i32 { x := 10; x }";
+    let input = "main :: () -> i32 { x := 10; x }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -67,7 +67,7 @@ fn test_parse_variable_declaration() {
 
 #[test]
 fn test_parse_binary_expression() {
-    let input = "main = () i32 { 5 + 3 }";
+    let input = "main :: () -> i32 { 5 + 3 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -94,7 +94,7 @@ fn test_parse_binary_expression() {
 
 #[test]
 fn test_parse_zen_variable_declarations() {
-    let input = "test = () i32 { x := 42; y ::= 10; z: i32 = 5; w:: u64 = 100; x + y }";
+    let input = "test :: () -> i32 { x := 42; y ::= 10; z: i32 = 5; w:: u64 = 100; x + y }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -121,7 +121,7 @@ fn test_parse_zen_variable_declarations() {
 
 #[test]
 fn test_parse_loop_with_condition() {
-    let input = "countdown = () void { counter ::= 10; loop counter > 0 { counter = counter - 1 } }";
+    let input = "countdown :: () -> void { counter ::= 10; loop counter > 0 { counter = counter - 1 } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -168,7 +168,7 @@ fn test_parse_loop_with_condition() {
 
 #[test]
 fn test_parse_loop_with_in() {
-    let input = "print_names = () void { names := [\"Alice\", \"Bob\"]; loop name in names { io.print(name) } }";
+    let input = "print_names :: () -> void { names := [\"Alice\", \"Bob\"]; loop name in names { io.print(name) } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -211,22 +211,24 @@ fn test_parse_enum_definition() {
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
     
-    // For now, expect parsing to fail since enum definitions aren't implemented
-    // When the parser is enhanced, this test should be updated to expect success
-    match program {
-        Ok(program) => {
-            // If parsing succeeds, verify it's an empty program for now
-            assert_eq!(program, Program { declarations: vec![] });
-        }
-        Err(_) => {
-            // Expected for now - enum definitions not implemented
-        }
+    // Enum definitions are now implemented, expect success
+    let program = program.unwrap();
+    assert_eq!(program.declarations.len(), 1);
+    if let Declaration::Enum(enum_def) = &program.declarations[0] {
+        assert_eq!(enum_def.name, "Action");
+        assert_eq!(enum_def.variants.len(), 3);
+        assert_eq!(enum_def.variants[0].name, "Stop");
+        assert_eq!(enum_def.variants[1].name, "Go");
+        assert_eq!(enum_def.variants[2].name, "Wait");
+        assert!(enum_def.variants[2].payload.is_some());
+    } else {
+        panic!("Expected enum declaration");
     }
 }
 
 #[test]
 fn test_parse_conditional_expression() {
-    let input = "result = (x: i32) string { ? x -> value { | 0 => \"zero\" | 1 => \"one\" | _ => \"other\" } }";
+    let input = "result :: (x: i32) -> string { ? x -> value { | 0 => \"zero\" | 1 => \"one\" | _ => \"other\" } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -331,7 +333,7 @@ fn test_parse_comptime_block() {
 
 #[test]
 fn test_parse_member_access() {
-    let input = "main = () void { io.print(\"Hello\") }";
+    let input = "main :: () -> void { io.print(\"Hello\") }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -348,7 +350,7 @@ fn test_parse_member_access() {
 
 #[test]
 fn test_function_with_multiple_statements() {
-    let source = "main = () i32 { x := 42; y := 10; x + y }";
+    let source = "main :: () -> i32 { x := 42; y := 10; x + y }";
     let lexer = Lexer::new(source);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -396,7 +398,7 @@ fn test_function_with_multiple_statements() {
 
 #[test]
 fn test_parse_function_with_return() {
-    let input = "test = () i64 { x := 42; y := 10; x + y }";
+    let input = "test :: () -> i64 { x := 42; y := 10; x + y }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -437,7 +439,7 @@ fn test_parse_function_with_return() {
 
 #[test]
 fn test_parse_loop_with_return() {
-    let input = "test = () i64 { counter ::= 10; loop counter > 0 { counter = counter - 1 } }";
+    let input = "test :: () -> i64 { counter ::= 10; loop counter > 0 { counter = counter - 1 } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -484,7 +486,7 @@ fn test_parse_loop_with_return() {
 
 #[test]
 fn test_parse_all_variable_declaration_syntax() {
-    let input = "test = () i32 { 
+    let input = "test :: () -> i32 { 
         x := 42;           // Inferred immutable
         y ::= 10;          // Inferred mutable  
         z: i32 = 5;        // Explicit immutable
@@ -561,28 +563,28 @@ fn test_parse_variable_declaration_syntax_separately() {
     // Test each syntax variant separately
     
     // Test 1: Inferred immutable (:=)
-    let input1 = "test = () i32 { x := 42; x }";
+    let input1 = "test :: () -> i32 { x := 42; x }";
     let lexer1 = Lexer::new(input1);
     let mut parser1 = Parser::new(lexer1);
     let program1 = parser1.parse_program().unwrap();
     assert_eq!(program1.declarations.len(), 1);
     
     // Test 2: Inferred mutable (::=)
-    let input2 = "test = () i32 { y ::= 10; y }";
+    let input2 = "test :: () -> i32 { y ::= 10; y }";
     let lexer2 = Lexer::new(input2);
     let mut parser2 = Parser::new(lexer2);
     let program2 = parser2.parse_program().unwrap();
     assert_eq!(program2.declarations.len(), 1);
     
     // Test 3: Explicit immutable (: T =)
-    let input3 = "test = () i32 { z: i32 = 5; z }";
+    let input3 = "test :: () -> i32 { z: i32 = 5; z }";
     let lexer3 = Lexer::new(input3);
     let mut parser3 = Parser::new(lexer3);
     let program3 = parser3.parse_program().unwrap();
     assert_eq!(program3.declarations.len(), 1);
     
     // Test 4: Explicit mutable (:: T =)
-    let input4 = "test = () i32 { w:: u64 = 100; w }";
+    let input4 = "test :: () -> i32 { w:: u64 = 100; w }";
     let lexer4 = Lexer::new(input4);
     let mut parser4 = Parser::new(lexer4);
     let program4 = parser4.parse_program().unwrap();
@@ -740,7 +742,7 @@ fn test_parse_struct_with_generics_and_methods() {
 
 #[test]
 fn test_parse_match_expression() {
-    let input = r#"main = (x: i32) string {
+    let input = r#"main :: (x: i32) -> string {
         match x {
             | 0 => "zero"
             | 1 => "one"
@@ -795,7 +797,7 @@ fn test_parse_match_expression() {
 #[test]
 fn test_parse_array_literal() {
     // Test empty array
-    let input = "main = () void { x := [] }";
+    let input = "main :: () -> void { x := [] }";
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -813,7 +815,7 @@ fn test_parse_array_literal() {
     }
 
     // Test array with single element
-    let input = "main = () void { x := [42] }";
+    let input = "main :: () -> void { x := [42] }";
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -829,7 +831,7 @@ fn test_parse_array_literal() {
     }
 
     // Test array with multiple elements
-    let input = "main = () void { x := [1, 2, 3] }";
+    let input = "main :: () -> void { x := [1, 2, 3] }";
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -847,7 +849,7 @@ fn test_parse_array_literal() {
     }
 
     // Test array with trailing comma
-    let input = "main = () void { x := [1, 2, 3,] }";
+    let input = "main :: () -> void { x := [1, 2, 3,] }";
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -864,7 +866,7 @@ fn test_parse_array_literal() {
 
 #[test]
 fn test_parse_range_based_loop() {
-    let input = "main = () void { loop 0..10 { x := 1 } }";
+    let input = "main :: () -> void { loop 0..10 { x := 1 } }";
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
     let program = parser.parse_program().unwrap();
