@@ -5,7 +5,13 @@
 **Date**: 2025-08-24  
 **Test Status**: 204/205 tests passing (99.5% pass rate)
 
-## Completed Today (2025-08-23)
+## Completed Today (2025-08-24)
+✅ Fixed match expression parsing bug
+  - Resolved struct literal ambiguity in match scrutinee parsing
+  - Match expressions now correctly parse identifier patterns without treating them as struct literals
+  - Test `test_parse_match_expression` now passes
+
+## Completed Previously (2025-08-23)
 ✅ Cleaned up all unused imports and warnings
   - Removed unused imports across codegen and parser modules
   - Fixed all compiler warnings
@@ -38,10 +44,11 @@
 - **LSP** (src/lsp/) - Language server support 🔄 Basic implementation
 
 ### Test Coverage
-- Parser tests: 27/28 passing
+- Parser tests: 29/29 passing (all fixed!)
 - Codegen tests: All passing (31 tests)
 - Lexer tests: All passing (15 tests)
 - FFI tests: All passing (5 tests)
+- Generic LLVM integration: 2/3 passing (one test failing with member access on Void type)
 
 ## Critical Features Needing Implementation
 
