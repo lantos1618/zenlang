@@ -8,6 +8,11 @@
 - [x] Implemented fixed-size array types [T; N]
 - [x] Updated parser, codegen, and type checker for fixed arrays
 - [x] Added tests for fixed array parsing (221 tests now passing)
+- [x] Implemented improved enum variant handling with proper index management
+- [x] Added enum variant expression parsing (EnumName::VariantName syntax)
+- [x] Fixed parser to support :: operator for function type annotations
+- [x] Added support for named fields in enum payloads
+- [x] Created comprehensive enum improvement tests (224 tests total)
 
 ## Completed Yesterday (2025-08-23)
 - [x] Integrated generic types with LLVM codegen
@@ -20,9 +25,10 @@
 
 ### High Priority
 - [x] Array types with size [T; N] ✅ DONE
-- [ ] Improved enum variant handling
+- [x] Improved enum variant handling ✅ DONE
 - [ ] Type alias support
 - [ ] Advanced comptime features (type-level programming)
+- [ ] Update all test files to use new :: function syntax
 
 ### Medium Priority
 - [ ] Basic module system design

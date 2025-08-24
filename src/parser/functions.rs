@@ -48,14 +48,17 @@ impl<'a> Parser<'a> {
             }
         }
         
-        // Skip the '=' operator
-        if self.current_token != Token::Operator("=".to_string()) {
+        // Skip the '::' or '=' operator
+        if self.current_token == Token::Operator("::".to_string()) {
+            self.next_token();
+        } else if self.current_token == Token::Operator("=".to_string()) {
+            self.next_token();
+        } else {
             return Err(CompileError::SyntaxError(
-                "Expected '=' after function name".to_string(),
+                "Expected '::' or '=' after function name".to_string(),
                 Some(self.current_span.clone()),
             ));
         }
-        self.next_token();
         
         // Parameters
         if self.current_token != Token::Symbol('(') {
@@ -106,8 +109,14 @@ impl<'a> Parser<'a> {
         }
         self.next_token(); // consume ')'
         
-        // Return type
-        let return_type = self.parse_type()?;
+        // Check for return type arrow
+        let return_type = if self.current_token == Token::Operator("->".to_string()) {
+            self.next_token(); // consume '->'
+            self.parse_type()?
+        } else {
+            // Default to void/unit type if no return type specified
+            crate::ast::AstType::Void
+        };
         
         // Function body
         if self.current_token != Token::Symbol('{') {

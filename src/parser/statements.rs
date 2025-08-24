@@ -11,8 +11,11 @@ impl<'a> Parser<'a> {
         while self.current_token != Token::Eof {
             // Parse top-level declarations
             if let Token::Identifier(_) = &self.current_token {
-                // Could be a function definition: name = (params) returnType { ... }
-                if self.peek_token == Token::Operator("=".to_string()) || self.peek_token == Token::Operator("<".to_string()) {
+                // Could be a function definition: name :: (params) -> returnType { ... } or name = ...
+                if self.peek_token == Token::Operator("::".to_string()) {
+                    // Function with type annotation: name :: (params) -> returnType { ... }
+                    declarations.push(Declaration::Function(self.parse_function()?));
+                } else if self.peek_token == Token::Operator("=".to_string()) || self.peek_token == Token::Operator("<".to_string()) {
                     // Check if it's a struct, enum, or function definition
                     let _name = if let Token::Identifier(name) = &self.current_token {
                         name.clone()
@@ -99,7 +102,7 @@ impl<'a> Parser<'a> {
                         
                         // Check what comes after '='
                         let is_struct = matches!(&self.current_token, Token::Symbol('{'));
-                        let is_enum = matches!(&self.current_token, Token::Operator(op) if op == "|");
+                        let is_enum = matches!(&self.current_token, Token::Symbol('|'));
                         let is_function = matches!(&self.current_token, Token::Symbol('('));
                         let is_behavior = matches!(&self.current_token, Token::Keyword(lexer::Keyword::Behavior));
 

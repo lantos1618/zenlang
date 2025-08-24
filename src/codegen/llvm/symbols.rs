@@ -3,6 +3,18 @@ use inkwell::{
     types::{BasicTypeEnum, FunctionType, StructType},
     values::{FunctionValue, PointerValue},
 };
+use crate::ast::EnumVariant;
+
+/// Information about an enum type
+#[derive(Debug, Clone)]
+pub struct EnumInfo<'ctx> {
+    /// The LLVM struct type used to represent this enum
+    pub llvm_type: StructType<'ctx>,
+    /// Map from variant name to index
+    pub variant_indices: HashMap<String, u64>,
+    /// The enum variants with their payloads
+    pub variants: Vec<EnumVariant>,
+}
 
 /// Represents a symbol in the symbol table, which can be a type, variable, or function
 #[derive(Debug, Clone)]
@@ -12,6 +24,9 @@ pub enum Symbol<'ctx> {
     
     /// A struct type symbol
     StructType(StructType<'ctx>),
+    
+    /// An enum type symbol
+    EnumType(EnumInfo<'ctx>),
     
     /// A function type symbol
     FunctionType(FunctionType<'ctx>),

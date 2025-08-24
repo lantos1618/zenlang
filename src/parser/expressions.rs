@@ -110,6 +110,44 @@ impl<'a> Parser<'a> {
                 let name = name.clone();
                 self.next_token();
                 
+                // Check for enum variant syntax: EnumName::VariantName
+                if self.current_token == Token::Operator("::".to_string()) {
+                    self.next_token(); // consume '::'
+                    
+                    let variant = match &self.current_token {
+                        Token::Identifier(v) => v.clone(),
+                        _ => {
+                            return Err(CompileError::SyntaxError(
+                                "Expected variant name after '::'".to_string(),
+                                Some(self.current_span.clone()),
+                            ));
+                        }
+                    };
+                    self.next_token();
+                    
+                    // Check for variant payload
+                    let payload = if self.current_token == Token::Symbol('(') {
+                        self.next_token(); // consume '('
+                        let expr = self.parse_expression()?;
+                        if self.current_token != Token::Symbol(')') {
+                            return Err(CompileError::SyntaxError(
+                                "Expected ')' after enum variant payload".to_string(),
+                                Some(self.current_span.clone()),
+                            ));
+                        }
+                        self.next_token(); // consume ')'
+                        Some(Box::new(expr))
+                    } else {
+                        None
+                    };
+                    
+                    return Ok(Expression::EnumVariant {
+                        enum_name: name,
+                        variant,
+                        payload,
+                    });
+                }
+                
                 // Check for struct literal syntax: Name { field: value, ... }
                 if self.current_token == Token::Symbol('{') {
                     return self.parse_struct_literal(name);
