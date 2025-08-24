@@ -10,8 +10,8 @@ fn test_comptime_constant_folding() {
             x := 10 + 20;
         }
         
-        main = () i32 {
-            comptime { 5 * 6 }
+        main :: () -> i32 {
+            return comptime 5 * 6
         }
     "#;
     
@@ -35,8 +35,8 @@ fn test_comptime_variable_evaluation() {
             factor := 10;
         }
         
-        calculate = () i32 {
-            comptime { factor * 5 }
+        calculate :: () -> i32 {
+            return comptime factor * 5
         }
     "#;
     
@@ -63,9 +63,9 @@ fn test_comptime_function_evaluation() {
 #[test]
 fn test_comptime_expression_in_variable() {
     let input = r#"
-        calculate = () i32 {
+        calculate :: () -> i32 {
             x := comptime (2 + 3) * 4;
-            x
+            return x
         }
     "#;
     
