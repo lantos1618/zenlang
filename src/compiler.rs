@@ -4,7 +4,7 @@
 use crate::ast::Program;
 use crate::codegen::llvm::LLVMCompiler;
 use crate::error::{CompileError, Result};
-use crate::type_system::monomorphization::Monomorphizer;
+use crate::type_system::Monomorphizer;
 use inkwell::context::Context;
 use inkwell::module::Module;
 
