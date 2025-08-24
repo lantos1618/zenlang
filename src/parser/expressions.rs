@@ -425,8 +425,35 @@ impl<'a> Parser<'a> {
 
     fn parse_match_expression(&mut self) -> Result<Expression> {
         // Parse: match expr { | pattern => expr ... }
-        // Parse the scrutinee with higher precedence to avoid struct literal ambiguity
-        let scrutinee = Box::new(self.parse_binary_expression(1)?);
+        // Parse the scrutinee - need to avoid struct literal ambiguity
+        let scrutinee = match &self.current_token {
+            Token::Identifier(name) => {
+                let name = name.clone();
+                self.next_token();
+                
+                // Handle member access but not struct literals
+                let mut expr = Expression::Identifier(name);
+                while self.current_token == Token::Symbol('.') {
+                    self.next_token(); // consume '.'
+                    if let Token::Identifier(member) = &self.current_token {
+                        let member = member.clone();
+                        self.next_token();
+                        expr = Expression::MemberAccess {
+                            object: Box::new(expr),
+                            member,
+                        };
+                    } else {
+                        return Err(CompileError::SyntaxError(
+                            "Expected identifier after '.'".to_string(),
+                            Some(self.current_span.clone()),
+                        ));
+                    }
+                }
+                expr
+            }
+            _ => self.parse_expression()?
+        };
+        let scrutinee = Box::new(scrutinee);
         if self.current_token != Token::Symbol('{') {
             return Err(CompileError::SyntaxError(
                 "Expected '{' after match scrutinee".to_string(),
