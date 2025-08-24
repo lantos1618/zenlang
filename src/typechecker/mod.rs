@@ -263,6 +263,23 @@ impl TypeChecker {
                 end_type: Box::new(AstType::I32),
                 inclusive: false,
             }),
+            Expression::StructLiteral { name, .. } => {
+                // For struct literals, return the struct type
+                // Check if it's a known struct
+                if let Some(struct_def) = self.structs.get(name) {
+                    Ok(AstType::Struct {
+                        name: name.clone(),
+                        fields: struct_def.fields.clone(),
+                    })
+                } else {
+                    // It might be a generic struct that will be monomorphized
+                    // For now, return a struct type with empty fields
+                    Ok(AstType::Struct {
+                        name: name.clone(),
+                        fields: vec![],
+                    })
+                }
+            }
             _ => Ok(AstType::Void), // Default for unhandled cases
         }
     }
