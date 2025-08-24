@@ -42,8 +42,30 @@ impl<'ctx> LLVMCompiler<'ctx> {
             AstType::Array(inner) => {
                 let inner_type = self.to_llvm_type(inner)?;
                 match inner_type {
-                    Type::Basic(basic_type) => Ok(Type::Basic(basic_type)), // 0 means unknown size
+                    Type::Basic(basic_type) => Ok(Type::Basic(basic_type)), // Dynamic array (pointer)
                     _ => Ok(Type::Basic(self.context.i8_type().array_type(0).into())), // Default to array of bytes
+                }
+            },
+            AstType::FixedArray { element_type, size } => {
+                let elem_type = self.to_llvm_type(element_type)?;
+                match elem_type {
+                    Type::Basic(basic_type) => {
+                        // Create an LLVM array type with the specified size
+                        let array_type = match basic_type {
+                            BasicTypeEnum::IntType(int_type) => int_type.array_type(*size as u32).into(),
+                            BasicTypeEnum::FloatType(float_type) => float_type.array_type(*size as u32).into(),
+                            BasicTypeEnum::PointerType(ptr_type) => ptr_type.array_type(*size as u32).into(),
+                            BasicTypeEnum::StructType(struct_type) => struct_type.array_type(*size as u32).into(),
+                            BasicTypeEnum::ArrayType(arr_type) => arr_type.array_type(*size as u32).into(),
+                            BasicTypeEnum::VectorType(vec_type) => vec_type.array_type(*size as u32).into(),
+                            BasicTypeEnum::ScalableVectorType(_) => {
+                                // For now, use a default array of i8
+                                self.context.i8_type().array_type(*size as u32).into()
+                            }
+                        };
+                        Ok(Type::Basic(array_type))
+                    }
+                    _ => Ok(Type::Basic(self.context.i8_type().array_type(*size as u32).into())), // Default to array of bytes
                 }
             },
             AstType::Function { args, return_type } => {

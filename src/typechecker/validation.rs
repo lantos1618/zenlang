@@ -32,6 +32,10 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
         (AstType::Pointer(expected_inner), AstType::Array(actual_inner)) => {
             types_compatible(expected_inner, actual_inner)
         }
+        // Allow fixed array to decay to pointer
+        (AstType::Pointer(expected_inner), AstType::FixedArray { element_type, .. }) => {
+            types_compatible(expected_inner, element_type)
+        }
         // Check struct compatibility
         (AstType::Struct { name: expected_name, .. }, AstType::Struct { name: actual_name, .. }) => {
             expected_name == actual_name
@@ -94,6 +98,10 @@ pub fn can_implicitly_convert(from: &AstType, to: &AstType) -> bool {
         (from, to),
         (AstType::Array(from_elem), AstType::Pointer(to_elem))
             if types_compatible(from_elem, to_elem)
+    ) || matches!(
+        (from, to),
+        (AstType::FixedArray { element_type: from_elem, .. }, AstType::Pointer(to_elem))
+            if types_compatible(from_elem, to_elem)
     )
 }
 
@@ -120,6 +128,7 @@ pub fn is_valid_condition_type(type_: &AstType) -> bool {
 pub fn can_be_indexed(type_: &AstType) -> Option<AstType> {
     match type_ {
         AstType::Array(elem_type) => Some((**elem_type).clone()),
+        AstType::FixedArray { element_type, .. } => Some((**element_type).clone()),
         AstType::Pointer(elem_type) => Some((**elem_type).clone()),
         AstType::String => Some(AstType::U8), // Indexing string gives bytes
         _ => None,
