@@ -19,8 +19,10 @@ Lynlang is a Rust-inspired systems programming language with:
 ## Recent Achievements (2025-08-24)
 - Fixed all test failures
 - Implemented type alias support
-- All tests passing
+- All tests passing (including comptime evaluation tests)
 - Zero compiler warnings
+- Cleaned up obsolete .agent files
+- Fixed function syntax in comptime tests
 
 ## Next Priorities
 1. Type alias resolution in type checker
