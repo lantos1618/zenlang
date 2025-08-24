@@ -158,15 +158,34 @@ impl Monomorphizer {
                 Ok(())
             }
             Expression::StructLiteral { name, fields } => {
-                if let Some(type_args) = extract_generic_struct_types(name) {
-                    let base_name = extract_base_name(name);
-                    if self.env.get_generic_struct(&base_name).is_some() {
+                // Check if this is a generic struct by checking if it exists in the environment
+                let base_name = extract_base_name(name);
+                if self.env.get_generic_struct(&base_name).is_some() {
+                    // Infer type arguments from field values
+                    let mut type_args = Vec::new();
+                    
+                    for (_, field_expr) in fields {
+                        // First collect instantiations from the field expression
+                        self.collect_instantiations_from_expression(field_expr)?;
+                        
+                        // Then try to infer its type for struct instantiation
+                        if let Ok(field_type) = self.infer_expression_type(field_expr) {
+                            // If this field's type helps determine a type parameter, add it
+                            if !type_args.contains(&field_type) && matches!(field_type, AstType::I32 | AstType::I64 | AstType::F32 | AstType::F64) {
+                                type_args.push(field_type);
+                                break; // For now, just take the first concrete type we find
+                            }
+                        }
+                    }
+                    
+                    if !type_args.is_empty() {
                         self.pending_instantiations.push((base_name, type_args));
                     }
-                }
-                
-                for (_, expr) in fields {
-                    self.collect_instantiations_from_expression(expr)?;
+                } else {
+                    // Not a generic struct, just process field expressions
+                    for (_, expr) in fields {
+                        self.collect_instantiations_from_expression(expr)?;
+                    }
                 }
                 Ok(())
             }
