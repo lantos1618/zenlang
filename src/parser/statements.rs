@@ -62,7 +62,7 @@ impl<'a> Parser<'a> {
                             // Check what comes after the generics
                             let _is_struct = self.current_token == Token::Operator("=".to_string()) 
                                 && self.peek_token == Token::Symbol('{');
-                            let is_function = self.current_token == Token::Operator("=".to_string()) 
+                            let is_function = self.current_token == Token::Operator("::".to_string()) 
                                 && self.peek_token == Token::Symbol('(');
                             let is_behavior = self.current_token == Token::Operator("=".to_string()) 
                                 && self.peek_token == Token::Keyword(lexer::Keyword::Behavior);

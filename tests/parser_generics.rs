@@ -4,7 +4,7 @@ use zen::ast::{AstType, TypeParameter, Program, Declaration, Statement, Function
 
 #[test]
 fn test_parse_generic_type_instantiation() {
-    let input = "main = () void { x: List<i32> = make_list(); }";
+    let input = "main :: () -> void { x: List<i32> = make_list(); }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let result = parser.parse_program();
@@ -35,7 +35,7 @@ fn test_parse_generic_type_instantiation() {
 
 #[test]
 fn test_parse_nested_generic_types() {
-    let input = "main = () void { x: Option<List<i32>> = None; }";
+    let input = "main :: () -> void { x: Option<List<i32>> = None; }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let result = parser.parse_program();
@@ -72,7 +72,7 @@ fn test_parse_nested_generic_types() {
 
 #[test]
 fn test_parse_multiple_type_arguments() {
-    let input = "main = () void { x: Map<String, i32> = make_map(); }";
+    let input = "main :: () -> void { x: Map<String, i32> = make_map(); }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let result = parser.parse_program();
@@ -134,7 +134,7 @@ fn test_parse_generic_struct_declaration() {
 
 #[test]
 fn test_parse_generic_function_declaration() {
-    let input = "map<T, U> = (list: List<T>, f: Function<T, U>) List<U> { list }";
+    let input = "map<T, U> :: (list: List<T>, f: Function<T, U>) -> List<U> { list }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let result = parser.parse_program();
@@ -183,7 +183,7 @@ fn test_parse_generic_function_declaration() {
 
 #[test]
 fn test_parse_generic_with_array() {
-    let input = "main = () void { x: [Option<i32>] = []; }";
+    let input = "main :: () -> void { x: [Option<i32>] = []; }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let result = parser.parse_program();
@@ -217,7 +217,7 @@ fn test_parse_generic_with_array() {
 
 #[test]
 fn test_parse_generic_with_pointer() {
-    let input = "main = () void { x: *List<String> = 0; }";
+    let input = "main :: () -> void { x: *List<String> = 0; }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let result = parser.parse_program();
