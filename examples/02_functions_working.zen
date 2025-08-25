@@ -1,0 +1,25 @@
+// Function examples that currently work
+
+// Simple addition function
+add = (a: i32, b: i32) i32 {
+    return a + b
+}
+
+// Function with local variables
+calculate = (x: i32) i32 {
+    factor := 2
+    offset ::= 10
+    offset = offset + 5
+    
+    result := x * factor + offset
+    return result
+}
+
+// Main entry point
+main = () i32 {
+    sum := add(10, 20)
+    calc_result := calculate(5)
+    
+    total := sum + calc_result
+    return total
+}

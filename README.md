@@ -89,9 +89,9 @@ cargo run --bin zen examples/hello.zen
 ## Quick Start
 
 New to Zen? Start here:
-1. **[`examples/working_hello.zen`](examples/working_hello.zen)** - Simplest working example
-2. **[`examples/working_variables.zen`](examples/working_variables.zen)** - Variables and operations
-3. **[`examples/working_loops.zen`](examples/working_loops.zen)** - Loop constructs
+1. **[`examples/01_basics_working.zen`](examples/01_basics_working.zen)** - Simplest working example
+2. **[`examples/02_functions_working.zen`](examples/02_functions_working.zen)** - Functions and calls
+3. **[`examples/WORKING_FEATURES.md`](examples/WORKING_FEATURES.md)** - What currently works
 4. **[`lang.md`](lang.md)** - Full language specification (v1.0)
 
 ## Examples
@@ -99,10 +99,12 @@ New to Zen? Start here:
 The `examples/` directory contains two categories:
 
 ### Working Examples (Current Implementation)
+- **`01_basics_working.zen`** - Variables and arithmetic
+- **`02_functions_working.zen`** - Function definitions and calls
 - **`working_hello.zen`** - Minimal working program
-- **`working_variables.zen`** - Variable declarations and arithmetic
-- **`working_loops.zen`** - Conditional loops
-- **`working_functions.zen`** - Function definitions (partial)
+- **`working_variables.zen`** - Variable declarations
+- **`working_loops.zen`** - Basic loops
+- **`WORKING_FEATURES.md`** - Complete list of working features
 
 ### Specification Examples (Future Features) 
 - **`zen_spec_showcase.zen`** - Complete language specification demonstration (NEW)

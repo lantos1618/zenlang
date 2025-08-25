@@ -1,0 +1,17 @@
+// Basic zen features that currently work
+// This example demonstrates the subset of zen that is implemented
+
+// Simple function with return type
+main = () i32 {
+    // Immutable variable binding
+    x := 42
+    
+    // Mutable variable binding  
+    count ::= 0
+    count = count + 1
+    
+    // Basic arithmetic
+    result := x + count
+    
+    return result
+}

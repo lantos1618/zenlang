@@ -1,2 +1,0 @@
-// this should put 10 into the operating system as the program's exit status
-main = () i32 { 10 } 
