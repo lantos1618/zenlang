@@ -124,7 +124,7 @@ zenlang/
 - **Parser**: ✅ Complete with all major features
 - **Code Generation**: ✅ Working for core features
 - **Type System**: 🚧 Being separated from codegen
-- **Test Coverage**: ✅ 96% passing (166/172 tests, 23/24 suites)
+- **Test Coverage**: ✅ 96% passing (23/24 test suites, only generics pending)
 - **Documentation**: ✅ Comprehensive guide and examples
 
 ## Contributing
