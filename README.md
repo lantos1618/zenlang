@@ -80,13 +80,22 @@ cargo test
 cargo run --bin zen examples/hello.zen
 ```
 
+## Quick Start
+
+New to Zen? Start here:
+1. **[`ZEN_GUIDE.md`](ZEN_GUIDE.md)** - Complete language guide with all unique features
+2. **[`examples/zen_quickstart.zen`](examples/zen_quickstart.zen)** - Essential features in one file
+3. **[`lang.md`](lang.md)** - Full language specification
+
 ## Examples
 
 See the [`examples/`](examples/) directory for comprehensive examples:
+- `zen_quickstart.zen` - **Start here!** Essential Zen features
 - `hello.zen` - Basic hello world
 - `variables.zen` - Variable declarations and types
 - `pattern_matching.zen` - Pattern matching with the `?` operator
-- `zen_complete_showcase.zen` - Complete demonstration of all language features
+- `lang_spec_demo.zen` - Complete lang.md demonstration
+- `zen_complete_showcase.zen` - All language features
 - `structs_enums.zen` - Data structures and enum variants
 - `loops.zen` - All loop patterns
 - `error_handling.zen` - Result/Option error handling patterns
@@ -115,7 +124,8 @@ zenlang/
 - **Parser**: ✅ Complete with all major features
 - **Code Generation**: ✅ Working for core features
 - **Type System**: 🚧 Being separated from codegen
-- **Test Coverage**: ✅ 95% passing (172 tests across 24 suites)
+- **Test Coverage**: ✅ 96% passing (166/172 tests, 23/24 suites)
+- **Documentation**: ✅ Comprehensive guide and examples
 
 ## Contributing
 

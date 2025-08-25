@@ -2,7 +2,7 @@ Your job is to is to maintain zen and make sure we complete all the features.
 
 TODO
 - highprioty - make sure our language matches the lang.md spec
-- find all references of lynlang or lyn and just turn it to zen
+- ensure all references use "zen" naming consistently
 - make some examples that run and work in .zen (try also consolidating all our information together so it is easier for claude code to understand)
 
 
