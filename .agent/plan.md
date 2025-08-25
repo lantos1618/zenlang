@@ -1,45 +1,75 @@
-# Zen Language Alignment Plan
+# Zen Language Implementation Plan
 
-## High Priority: Language Spec Alignment with lang.md
+## Current Status
+✅ Language specification aligned with lang.md v1.0
+✅ Core parser and lexer implementation complete
+✅ LLVM code generation for basic features
+✅ Test suite passing (96% - 166/172 tests)
+✅ Comprehensive examples created
+✅ Documentation updated
 
-### Critical Differences Found:
-1. **Pattern Matching Syntax**: Parser uses `match` keyword, but lang.md specifies `?` operator
-2. **Function Declaration**: Need to verify `=` syntax for functions is implemented
-3. **Variable Declaration**: Need to verify `::=` for mutable and `:=` for immutable
+## Priority Tasks (High)
 
-### Implementation Tasks:
+### 1. Fix Remaining Test Failures
+- [ ] Fix generic type parsing tests (2 failures)
+- [ ] Ensure 100% test coverage
 
-#### 1. Update Parser for `?` Pattern Matching (HIGH PRIORITY)
-- Replace `match` keyword with `?` operator
-- Implement `scrutinee ? | pattern => expression` syntax
-- Support `->` for destructuring and guards in patterns
-- Update AST to handle new pattern matching syntax
+### 2. Complete Core Language Features
+- [ ] Implement `@std` namespace bootstrapping
+- [ ] Complete pattern matching with `->` destructuring
+- [ ] Implement `comptime` blocks and evaluation
+- [ ] Add behavior (trait) system
 
-#### 2. Verify Function Declaration Syntax
-- Ensure functions use `name = (params) returnType { ... }` syntax
-- No `fn` keyword should exist
+### 3. Type System Improvements
+- [ ] Separate type checking from code generation
+- [ ] Implement generic type instantiation
+- [ ] Add type inference for `::=` declarations
+- [ ] Implement Result<T,E> and Option<T> built-ins
 
-#### 3. Verify Variable Declaration Syntax
-- `:=` for immutable bindings (inferred type)
-- `::=` for mutable bindings (inferred type)  
-- `: T =` for immutable with explicit type
-- `:: T =` for mutable with explicit type
+## Medium Priority
 
-#### 4. Create Working Examples
-- Create .zen example files demonstrating all language features
-- Test pattern matching with `?` operator
-- Test function declarations
-- Test variable declarations
-- Test control flow
+### 4. Standard Library
+- [ ] Implement core module (`@std.core`)
+- [ ] Basic I/O module
+- [ ] Memory management module
+- [ ] Collections (Vec, HashMap)
+- [ ] String utilities
 
-#### 5. Update Tests
-- Update all test files to use new syntax
-- Ensure tests pass with new parser
+### 5. Tooling
+- [ ] Improve error messages with source locations
+- [ ] Complete LSP implementation
+- [ ] Add debugger support
+- [ ] Create build system integration
 
-## Implementation Order:
-1. Update lexer to recognize `?` as operator
-2. Update parser to handle `?` pattern matching
-3. Remove `match` keyword support
-4. Update all tests
-5. Create working examples
-6. Update documentation
+## Low Priority / Future
+
+### 6. Advanced Features
+- [ ] Async/await support
+- [ ] Package management system
+- [ ] Cross-compilation support
+- [ ] Optimization passes
+
+### 7. Documentation
+- [ ] API documentation
+- [ ] Tutorial series
+- [ ] Migration guides
+- [ ] Performance guide
+
+## Code Principles
+- **DRY** - Don't Repeat Yourself
+- **KISS** - Keep It Simple, Stupid
+- **Simplicity** over complexity
+- **Elegance** in design
+- **Practicality** in implementation
+
+## Testing Strategy
+- 80% effort on implementation
+- 20% effort on testing
+- All new features need tests
+- Maintain >95% test coverage
+
+## Git Workflow
+- Frequent commits with clear messages
+- Push regularly to avoid data loss
+- Use descriptive branch names
+- Keep commits atomic and focused

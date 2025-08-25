@@ -1,0 +1,259 @@
+// Complete Zen Language Showcase
+// Demonstrates all major features from lang.md specification v1.0
+
+// 1. Module imports using @std namespace
+comptime {
+    core := @std.core
+    build := @std.build
+    
+    // Import standard library modules
+    io := build.import("io")
+    mem := build.import("mem")
+    math := build.import("math")
+    collections := build.import("collections")
+}
+
+// 2. Data Structures: Structs with mutable/immutable fields
+User = {
+    id: u64,
+    name: string,
+    email: string,
+    score:: i32 = 0,           // Mutable field with default
+    is_active:: bool = true,   // Mutable field
+}
+
+// 3. Enums (Sum Types) with payloads
+Status =
+    | Active
+    | Inactive
+    | Suspended(reason: string, until: i64)
+    | Banned({ reason: string, by_admin: string, permanent: bool })
+
+// 4. Error handling types
+UserError =
+    | NotFound
+    | InvalidEmail(email: string)
+    | DuplicateId(id: u64)
+
+// 5. Namespacing example
+Database = {
+    MAX_CONNECTIONS := 100,
+    
+    Connection = {
+        host: string,
+        port: u16,
+        is_alive:: bool = false,
+    },
+    
+    connect = (conn: Ref<Connection>) Result<void, string> {
+        // Simulated connection logic
+        conn.is_alive = true
+        return .Ok(void)
+    },
+}
+
+// 6. Functions with UFCS support
+validate_email = (email: string) bool {
+    // Simple validation logic
+    return email.contains("@") && email.contains(".")
+}
+
+create_user = (id: u64, name: string, email: string) Result<User, UserError> {
+    // Pattern matching without if/else - using ? operator
+    valid := email.validate_email()
+    
+    result := valid ? | true => .Ok(User{ id: id, name: name, email: email })
+                     | false => .Err(.InvalidEmail(email))
+    
+    return result
+}
+
+// 7. Generic function with comptime parameters
+make_buffer = (comptime T: type, comptime size: usize) [size]T {
+    buffer:: [size]T
+    return buffer
+}
+
+// 8. Behavior (Interface/Trait) definition
+Serializable = behavior {
+    serialize = (self) string,
+    deserialize = (data: string) Result<Self, string>,
+}
+
+// Implement behavior for User
+User.impl = {
+    Serializable: {
+        serialize = (self: User) string {
+            return "User(id:$(self.id),name:$(self.name),email:$(self.email),score:$(self.score))"
+        },
+        
+        deserialize = (data: string) Result<User, string> {
+            // Simplified deserialization
+            return .Err("Not implemented")
+        }
+    }
+}
+
+// 9. Pattern matching showcase
+process_status = (status: Status) string {
+    // Complex pattern matching with destructuring using ->
+    message := status ? | .Active => "User is active"
+                       | .Inactive => "User is inactive"
+                       | .Suspended -> reason, until => "Suspended: $(reason) until $(until)"
+                       | .Banned -> { reason, by_admin, permanent } => {
+                           perm_text := permanent ? | true => "permanently"
+                                                   | false => "temporarily"
+                           "Banned $(perm_text) by $(by_admin): $(reason)"
+                       }
+    
+    return message
+}
+
+// 10. Loop examples
+count_active_users = (users: []User) i32 {
+    count ::= 0
+    
+    // Iterator loop
+    loop user in users {
+        is_active := user.is_active ? | true => 1
+                                      | false => 0
+        count = count + is_active
+    }
+    
+    return count
+}
+
+fibonacci = (n: i32) i32 {
+    a ::= 0
+    b ::= 1
+    counter ::= 0
+    
+    // Conditional loop (while-like)
+    loop counter < n {
+        temp := a + b
+        a = b
+        b = temp
+        counter = counter + 1
+    }
+    
+    return a
+}
+
+// 11. Compile-time computation
+PRIMES := comptime {
+    // Generate first 10 primes at compile time
+    primes:: [10]i32
+    count ::= 0
+    num ::= 2
+    
+    loop count < 10 {
+        is_prime ::= true
+        div ::= 2
+        
+        loop div * div <= num {
+            remainder := num % div
+            is_prime = remainder != 0 ? | true => is_prime
+                                       | false => false
+            div = div + 1
+        }
+        
+        _ = is_prime ? | true => {
+            primes[count] = num
+            count = count + 1
+        } | false => void
+        
+        num = num + 1
+    }
+    
+    primes
+}
+
+// 12. Error propagation and handling
+process_user_request = (user_id: u64, new_email: string) Result<string, UserError> {
+    // Simulated user lookup
+    user_exists := user_id > 0
+    
+    result := user_exists ? | false => .Err(.NotFound)
+                           | true => {
+        // Validate and update
+        valid := new_email.validate_email()
+        valid ? | true => .Ok("Email updated to $(new_email)")
+               | false => .Err(.InvalidEmail(new_email))
+    }
+    
+    return result
+}
+
+// 13. Range expressions
+sum_range = (start: i32, end: i32) i32 {
+    sum ::= 0
+    
+    // Exclusive range
+    loop i in start..end {
+        sum = sum + i
+    }
+    
+    return sum
+}
+
+// 14. Main entry point demonstrating everything
+main = () void {
+    // Variable declarations (immutable and mutable)
+    greeting := "Welcome to Zen!"
+    counter ::= 0
+    
+    io.print("$(greeting)\n")
+    
+    // Create users
+    result1 := create_user(1, "Alice", "alice@example.com")
+    result2 := create_user(2, "Bob", "invalid-email")
+    
+    // Handle results with pattern matching
+    message1 := result1 ? | .Ok -> user => "Created user: $(user.name)"
+                         | .Err -> err => "Failed to create user"
+    
+    io.print("$(message1)\n")
+    
+    // Test status processing
+    status1 := Status.Active
+    status2 := Status.Suspended("Violation of terms", 1234567890)
+    status3 := Status.Banned({ 
+        reason: "Spam", 
+        by_admin: "admin", 
+        permanent: false 
+    })
+    
+    io.print("$(process_status(status1))\n")
+    io.print("$(process_status(status2))\n")
+    io.print("$(process_status(status3))\n")
+    
+    // Demonstrate loops
+    fib10 := fibonacci(10)
+    io.print("10th Fibonacci number: $(fib10)\n")
+    
+    // Use compile-time computed values
+    io.print("First prime: $(PRIMES[0])\n")
+    
+    // Range sum
+    total := sum_range(1, 11)  // Sum 1 to 10
+    io.print("Sum of 1..10: $(total)\n")
+    
+    // Database namespace usage
+    conn := Database.Connection{ 
+        host: "localhost", 
+        port: 5432 
+    }
+    
+    connection_result := Database.connect(conn)
+    status_msg := connection_result ? | .Ok => "Connected"
+                                      | .Err -> msg => "Failed: $(msg)"
+    
+    io.print("Database: $(status_msg)\n")
+    
+    // Generic function usage
+    int_buffer := make_buffer(i32, 16)
+    io.print("Created buffer of size $(core.sizeOf(int_buffer))\n")
+    
+    // Demonstration complete
+    io.print("Zen showcase complete!\n")
+}

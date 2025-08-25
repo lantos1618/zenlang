@@ -1,41 +1,38 @@
 # Zen Language Global Memory
 
 ## Project Overview
-Zen is a modern systems programming language written in Rust. The compiler generates LLVM IR for native code generation.
+- **Language:** Zen - A modern systems programming language
+- **Implementation:** Rust-based compiler with LLVM backend
+- **Specification:** lang.md defines the language spec (v1.0 conceptual)
+- **Current State:** Core features implemented, aligning with lang.md spec
 
-## Key Components
-- **Parser**: Located in `src/parser/` - Implements recursive descent parser
-- **Lexer**: `src/lexer.rs` - Tokenization 
-- **AST**: `src/ast.rs` - Abstract syntax tree definitions
-- **Type System**: `src/type_system/` and `src/typechecker/` - Type checking and inference
-- **Code Generation**: `src/codegen/llvm/` - LLVM backend
-- **Compile-time**: `src/comptime.rs` - Compile-time evaluation
-- **LSP**: `src/lsp/` - Language server protocol support
+## Key Features (from lang.md)
+1. No `if`/`else` keywords - uses `?` operator for all conditionals
+2. Unified declaration syntax with `:=` (immutable) and `::=` (mutable)
+3. Pattern matching with `?` and `->` for destructuring
+4. `@std` namespace for core functionality
+5. Behaviors (traits/interfaces) for polymorphism
+6. Compile-time metaprogramming with `comptime`
+7. Error handling as values (Result/Option types)
+8. Single `loop` keyword for all iteration
 
-## Language Features (from lang.md)
-### Core Syntax
-- **Functions**: `name = (params) ReturnType { }` (NO `fn`, `::`, or `->` keywords)
-- **Variables**: 
-  - Immutable: `name := value` or `name: Type = value`
-  - Mutable: `name ::= value` or `name:: Type = value`
-- **NO if/else**: All conditionals use `?` operator with pattern matching
-- **Pattern matching**: `scrutinee ? | pattern => expression`
-- **Destructuring**: Use `->` in patterns for binding/guards
-- **Single loop construct**: `loop` for all iteration patterns
-- **Comptime**: Compile-time metaprogramming with `comptime` blocks
-- **Errors as values**: `Result<T,E>` and `Option<T>` instead of exceptions
-- **Behaviors**: Traits/interfaces for polymorphism
-- **UFCS**: Uniform function call syntax
+## Project Structure
+- `/src` - Rust compiler implementation
+  - `/lexer.rs` - Tokenization
+  - `/parser.rs` - AST generation
+  - `/typechecker/` - Type checking
+  - `/codegen/` - LLVM code generation
+- `/examples` - Example .zen files
+- `/tests` - Test files
+- `/zen_test` - Additional test cases
 
-## Current Status
-- ✅ Parser fully implements lang.md specification
-- ✅ All lynlang references converted to zen
-- ✅ Examples follow the spec correctly
-- ✅ Tests exist for all major features (145+ tests passing)
+## Recent Work (from git log)
+- Completed zen language maintenance and documentation
+- Aligned implementation with lang.md specification
+- Updated all tests to match spec
+- Added comprehensive implementation plan
 
-## Build Commands
-```bash
-cargo build --release  # Build compiler
-cargo test            # Run tests
-cargo run -- file.zen # Compile a zen file
-```
+## Naming Convention
+- Must use "zen" consistently throughout codebase
+- File extension: `.zen`
+- Entry point: `main` function
