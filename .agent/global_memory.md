@@ -1,76 +1,61 @@
-# Zen Language Global Memory
+# Zen Language - Global Memory
 
 ## Project Overview
-The Zen programming language is a modern systems programming language designed for clarity, performance, and joy. It prioritizes explicit, consistent, and elegant syntax.
+Zen is a modern systems programming language designed for clarity, performance, and joy. It prioritizes explicit, consistent, and elegant syntax that composes into powerful patterns.
 
-## Key Language Features (as per lang.md spec)
+## Current Project State
+- **Language Name**: zen (consistent throughout)
+- **File Extension**: .zen
+- **Package Name**: zen
+- **Binary**: zen compiler, zen-lsp
+- **Working Directory**: /home/ubuntu/zenlang/
 
-### Core Syntax Elements
-1. **NO if/else keywords** - Only uses `?` operator for pattern matching
-2. **Single loop construct** - `loop` keyword for all iteration
-3. **Unified conditional operator** - `?` with `|` for patterns, `->` for destructuring, `=>` for results
-4. **Consistent declarations** - `:=` immutable, `::=` mutable, with explicit type variants
-
-### File Structure
-- Extension: `.zen`
-- Entry point: `main = () void { }`
-- Comments: `// single line`
-- Encoding: UTF-8
-
-### Module System
-- Bootstrap: `@std` namespace (`@std.core`, `@std.build`)
-- Imports: Via `comptime` blocks using `build.import()`
-
-### Type System
-- Basic: `bool`, `void`, `string`, `i8-64`, `u8-64`, `f32/64`, `usize`
-- Pointers: `Ptr<T>` (raw), `Ref<T>` (managed)
-- Collections: Arrays `[N]T`, ranges `start..end` or `start..=end`
-- Special: `type`, `Any`
-
-### Pattern Matching Syntax
-```zen
-value ? | pattern => result
-        | pattern -> binding => result
-        | _ => default
-```
-
-### Error Handling
-- `Result<T, E>` and `Option<T>` types
-- No exceptions, errors as values
-- Pattern matching for handling
-
-### Advanced Features
-- `comptime` for compile-time execution
-- `async`/`await` for concurrency
-- Behaviors (traits/interfaces)
-- UFCS (Uniform Function Call Syntax)
-- String interpolation with `$(expr)`
-
-## Project Status
-- Core parser: ✅ Complete with `?` syntax
-- Type system: ✅ Complete  
-- Pattern matching: ✅ Complete (new `?` syntax implemented in parser/expressions.rs:373-429)
-- Error handling: ✅ Complete
-- Compile-time: 🚧 In progress
-- Async: 📋 Planned
-- Standard library: 🚧 In progress
-
-## File Organization
-```
-/home/ubuntu/zenlang/
-├── src/           - Rust implementation
-├── examples/      - Zen example files
-├── zen_test/      - Test files
-├── .agent/        - Agent meta information
-├── lang.md        - Language specification
-├── README.md      - Project documentation
-└── ZEN_GUIDE.md   - Language guide
-```
+## Core Language Features (from lang.md spec)
+1. **No if/else keywords** - Uses `?` operator for pattern matching
+2. **Single loop keyword** - `loop` for all iterations
+3. **Unified assignment** - `=` for assignment, `:=` for immutable, `::=` for mutable
+4. **@std namespace** - Bootstrap mechanism for compiler intrinsics
+5. **Errors as values** - Result<T,E> and Option<T>
+6. **UFCS** - Uniform Function Call Syntax
+7. **Behaviors** - Traits/Interfaces
+8. **Comptime** - Compile-time metaprogramming
 
 ## Current Implementation Status
-- Language name: Consistently "zen" throughout (verified - no "zena" references)
-- File extension: `.zen` everywhere
-- Examples: 30+ example files demonstrating features
-- Tests: 7 test files for validation
-- Parser: Correctly implements `?` pattern matching at src/parser/expressions.rs:373-429
-- Documentation: Complete specification in lang.md
+### Working Features
+- Basic function declarations
+- Variable declarations (`:=` and `::=`)
+- Basic types (i32, f64, bool, string)
+- Return statements
+- Basic arithmetic operations
+- Function calls
+- Struct definitions (partial)
+- Pattern matching (partial)
+
+### Not Yet Implemented
+- @std namespace and imports
+- Full pattern matching with `?` operator
+- Behaviors/traits
+- Comptime execution
+- Error handling (Result/Option)
+- String interpolation
+- Async/await
+- Memory management/allocators
+
+## Key Files and Directories
+- `/lang.md` - Language specification
+- `/src/` - Compiler source code
+- `/examples/` - Example zen programs
+- `/tests/` - Test suite
+- `/.agent/` - Meta information for maintenance
+
+## Testing Commands
+```bash
+cargo build              # Build compiler
+cargo test              # Run test suite
+./target/debug/zen <file.zen>  # Run zen file
+```
+
+## Important Notes
+- The compiler currently supports a subset of the language spec
+- Working examples are in `examples/working_*.zen`
+- Full spec examples need compiler updates to work

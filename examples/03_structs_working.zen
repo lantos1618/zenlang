@@ -1,0 +1,28 @@
+// Struct examples that currently work
+
+// Simple struct definition
+Point = {
+    x: i32,
+    y: i32,
+}
+
+// Struct with methods (as free functions)
+distance_squared = (p: Point) i32 {
+    return p.x * p.x + p.y * p.y
+}
+
+// Main entry point
+main = () i32 {
+    // Struct instantiation
+    origin := Point{ x: 0, y: 0 }
+    point := Point{ x: 3, y: 4 }
+    
+    // Field access
+    dx := point.x - origin.x
+    dy := point.y - origin.y
+    
+    // Calculate distance squared (3^2 + 4^2 = 25)
+    dist_sq := distance_squared(point)
+    
+    return dist_sq
+}

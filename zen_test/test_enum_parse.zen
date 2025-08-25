@@ -1,6 +1,0 @@
-Color = | Red | Green | Blue
-
-main :: () -> i32 {
-    red := Color::Red
-    0
-}

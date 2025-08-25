@@ -1,77 +1,94 @@
-# Zen Language Implementation Plan
+# Zen Language - Development Plan
 
-## Current Status (2025-08-25)
-✅ Language specification aligned with lang.md v1.0
-✅ Core parser and lexer implementation complete
-✅ Parser correctly implements `?` pattern matching syntax
-✅ LLVM code generation for basic features
-✅ Test suite builds and runs
-✅ 30+ comprehensive examples created
-✅ Documentation fully updated
-✅ No "zena" references (all use "zen" consistently)
+## Current Session Goals (2025-08-25)
+1. ✅ Verify language spec alignment
+2. ✅ Ensure naming consistency
+3. ⏳ Create working examples
+4. ⏳ Consolidate documentation
+5. ⏳ Run comprehensive tests
+6. ⏳ Update README
+7. ⏳ Clean up files
 
-## Priority Tasks (High)
+## Implementation Roadmap
 
-### 1. Fix Remaining Test Failures
-- [ ] Fix generic type parsing tests (2 failures)
-- [ ] Ensure 100% test coverage
+### Phase 1: Core Language (Current)
+**Status**: Partially Complete
+- ✅ Basic syntax parsing
+- ✅ Function declarations
+- ✅ Variable bindings (`:=`, `::=`)
+- ✅ Basic types
+- ⏳ Pattern matching with `?` operator
+- ⏳ Loop constructs
+- ⏳ Error handling (Result/Option)
 
-### 2. Complete Core Language Features
-- [ ] Implement `@std` namespace bootstrapping
-- [ ] Complete pattern matching with `->` destructuring
-- [ ] Implement `comptime` blocks and evaluation
-- [ ] Add behavior (trait) system
+### Phase 2: Type System
+**Status**: In Progress
+- ✅ Basic type checking
+- ⏳ Generic types
+- ⏳ Type inference
+- ⏳ Monomorphization
+- [ ] Type aliases
+- [ ] Associated types
 
-### 3. Type System Improvements
-- [ ] Separate type checking from code generation
-- [ ] Implement generic type instantiation
-- [ ] Add type inference for `::=` declarations
-- [ ] Implement Result<T,E> and Option<T> built-ins
+### Phase 3: Advanced Features
+**Status**: Planning
+- [ ] @std namespace
+- [ ] Behaviors (traits)
+- [ ] Comptime execution
+- [ ] String interpolation
+- [ ] Memory management
 
-## Medium Priority
+### Phase 4: Standard Library
+**Status**: Not Started
+- [ ] Core intrinsics
+- [ ] IO operations
+- [ ] Collections
+- [ ] Memory allocators
+- [ ] Async runtime
 
-### 4. Standard Library
-- [ ] Implement core module (`@std.core`)
-- [ ] Basic I/O module
-- [ ] Memory management module
-- [ ] Collections (Vec, HashMap)
-- [ ] String utilities
+### Phase 5: Tooling
+**Status**: Basic LSP exists
+- ✅ Basic LSP server
+- [ ] Debugger support
+- [ ] Package manager
+- [ ] Documentation generator
+- [ ] Formatter
 
-### 5. Tooling
-- [ ] Improve error messages with source locations
-- [ ] Complete LSP implementation
-- [ ] Add debugger support
-- [ ] Create build system integration
+## Architecture Decisions
 
-## Low Priority / Future
+### Compiler Pipeline
+1. **Lexer** → Tokens
+2. **Parser** → AST
+3. **Type Checker** → Typed AST
+4. **Monomorphization** → Specialized AST
+5. **Code Generator** → LLVM IR
+6. **LLVM** → Machine Code
 
-### 6. Advanced Features
-- [ ] Async/await support
-- [ ] Package management system
-- [ ] Cross-compilation support
-- [ ] Optimization passes
-
-### 7. Documentation
-- [ ] API documentation
-- [ ] Tutorial series
-- [ ] Migration guides
-- [ ] Performance guide
-
-## Code Principles
-- **DRY** - Don't Repeat Yourself
-- **KISS** - Keep It Simple, Stupid
-- **Simplicity** over complexity
-- **Elegance** in design
-- **Practicality** in implementation
+### Key Design Choices
+- **No if/else**: Pattern matching only via `?` operator
+- **Single loop**: All iteration through `loop` keyword
+- **Explicit mutability**: `::=` for mutable, `:=` for immutable
+- **Errors as values**: No exceptions, use Result/Option
+- **UFCS**: Methods as free functions
+- **Comptime**: Compile-time code execution
 
 ## Testing Strategy
-- 80% effort on implementation
-- 20% effort on testing
-- All new features need tests
-- Maintain >95% test coverage
+- Unit tests for each compiler phase
+- Integration tests for language features
+- Example programs as smoke tests
+- Property-based testing for parser
+- Fuzzing for robustness
 
-## Git Workflow
-- Frequent commits with clear messages
-- Push regularly to avoid data loss
-- Use descriptive branch names
-- Keep commits atomic and focused
+## Performance Goals
+- Fast compilation (< 1s for 10K LOC)
+- Zero-cost abstractions
+- Predictable performance
+- Minimal runtime overhead
+- Efficient generic instantiation
+
+## Next Steps
+1. Complete working examples suite
+2. Fix failing generic tests
+3. Implement missing pattern matching features
+4. Add loop variant support
+5. Complete Result/Option types
