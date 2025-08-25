@@ -1,0 +1,149 @@
+// zen_spec_showcase.zen - Complete demonstration of Zen language features
+// This file follows the lang.md specification exactly
+
+// 1. Module imports using comptime
+comptime {
+    core := @std.core
+    build := @std.build
+    
+    // Import standard library modules
+    io := build.import("io")
+    mem := build.import("mem")
+    math := build.import("math")
+    collections := build.import("collections")
+}
+
+// 2. Basic struct definition with mutable field
+Person = {
+    name: string,
+    age: u32,
+    is_active:: bool = true,  // Mutable field with default
+}
+
+// 3. Enum definition with variants
+Status = 
+    | Ready
+    | Working(task: string)
+    | Error({ code: i32, message: string })
+    | Done
+
+// 4. Function using UFCS
+greet = (person: Person) void {
+    io.print("Hello, $(person.name)!")
+}
+
+// 5. Function demonstrating pattern matching WITHOUT if keyword
+get_status_message = (status: Status) string {
+    // Using the ? operator for pattern matching - NO if keyword exists!
+    return status ? | .Ready => "System is ready"
+                   | .Working -> task => "Working on: $(task)"
+                   | .Error -> err => "Error $(err.code): $(err.message)"
+                   | .Done => "Task completed"
+}
+
+// 6. Function with Result type for error handling
+divide = (a: f64, b: f64) Result<f64, string> {
+    // Pattern matching on b value - NO if keyword!
+    return b ? | 0.0 => .Err("Division by zero")
+              | _ => .Ok(a / b)
+}
+
+// 7. Generic function using comptime
+make_pair = (comptime T: type, first: T, second: T) { first: T, second: T } {
+    return { first: first, second: second }
+}
+
+// 8. Behavior (trait) definition
+Printable = behavior {
+    to_string = (self) string,
+}
+
+// 9. Implement behavior for Person
+Person.impl = {
+    Printable: {
+        to_string = (self: Person) string {
+            return "Person: $(self.name), age $(self.age)"
+        }
+    }
+}
+
+// 10. Main entry point demonstrating all features
+main = () void {
+    // Variable declarations using := and ::=
+    PI := 3.14159              // Immutable constant
+    counter ::= 0              // Mutable variable
+    name: string = "Alice"     // Explicit type immutable
+    score:: i32 = 0           // Explicit type mutable
+    
+    // Create instances
+    alice := Person{ name: "Alice", age: 30 }
+    bob := Person{ name: "Bob", age: 25, is_active: false }
+    
+    // UFCS method call
+    alice.greet()  // Calls greet(alice)
+    
+    // Pattern matching on enum - NO if keyword!
+    current_status := Status.Working("compiler optimization")
+    message := get_status_message(current_status)
+    io.print(message)
+    
+    // Error handling with Result and pattern matching
+    result := divide(10.0, 2.0)
+    value := result ? | .Ok -> val => {
+        io.print("Result: $(val)")
+        val
+    }
+    | .Err -> msg => {
+        io.print("Error: $(msg)")
+        0.0
+    }
+    
+    // Loop examples - single loop construct for all iteration
+    
+    // Conditional loop (while-like)
+    loop counter < 5 {
+        io.print("Counter: $(counter)")
+        counter = counter + 1
+    }
+    
+    // Range loop
+    loop i in 0..5 {
+        score = score + i
+    }
+    
+    // Array iteration
+    names := ["Alice", "Bob", "Charlie"]
+    loop name in names {
+        io.print("Hello, $(name)!")
+    }
+    
+    // Pattern matching with ranges and guards
+    grade := score ? | s -> s >= 90 => "A"
+                    | s -> s >= 80 => "B"
+                    | s -> s >= 70 => "C"
+                    | 60..=69 => "D"
+                    | _ => "F"
+    
+    io.print("Final grade: $(grade)")
+    
+    // Compile-time computation
+    LOOKUP_TABLE := comptime {
+        table:: [10]i32
+        loop i in 0..10 {
+            table[i] = i * i
+        }
+        table
+    }
+    
+    // Using compile-time generated data
+    squared := LOOKUP_TABLE[5]
+    io.print("5 squared is $(squared)")
+    
+    // Nested pattern matching
+    maybe_value := Option.Some(42)
+    description := maybe_value ? | .Some -> v -> v > 40 => "Big value: $(v)"
+                                | .Some -> v => "Small value: $(v)"
+                                | .None => "No value"
+    
+    io.print(description)
+}

@@ -27,7 +27,7 @@ A modern systems programming language designed for clarity, performance, and joy
 - LLVM backend for native code generation
 
 ### 🚧 In Progress
-- Pattern matching with unified `?` operator (specified but not fully implemented)
+- Pattern matching with unified `?` operator (parser complete, codegen WIP)
 - Range expressions (`..` and `..=`)
 - String interpolation with `$(expr)` syntax
 - Loop iteration (`loop item in collection`)
@@ -105,7 +105,8 @@ The `examples/` directory contains two categories:
 - **`working_functions.zen`** - Function definitions (partial)
 
 ### Specification Examples (Future Features) 
-- **`zen_master_showcase.zen`** - Complete language specification demonstration
+- **`zen_spec_showcase.zen`** - Complete language specification demonstration (NEW)
+- **`zen_master_showcase.zen`** - Comprehensive feature showcase
 - **`01_hello_world.zen`** - Hello world per spec
 - **`02_variables_and_types.zen`** - Full variable system
 - **`03_pattern_matching.zen`** - Pattern matching with `?` operator
@@ -132,13 +133,14 @@ zen/
 
 ## Development Status
 
-- **Parser**: ✅ Core features implemented
+- **Parser**: ✅ Core features implemented, including `?` pattern matching syntax
 - **Code Generation**: ✅ LLVM backend working for basic features
 - **Type System**: 🚧 Basic type checking, improvements in progress
-- **Pattern Matching**: 🚧 Specified in lang.md, implementation pending
+- **Pattern Matching**: ✅ Parser complete (src/parser/expressions.rs:373-429), 🚧 Codegen WIP
 - **Module System**: 📋 Specified with `@std` namespace, not yet implemented
 - **Documentation**: ✅ Complete specification in lang.md
-- **Examples**: ✅ Working examples for current features, spec examples for future
+- **Examples**: ✅ 30+ example files demonstrating current and future features
+- **Naming**: ✅ Consistently "zen" throughout (no "zena" references)
 
 ## Contributing
 
