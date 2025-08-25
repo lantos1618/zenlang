@@ -2,37 +2,80 @@
 
 ## Project Overview
 - **Language:** Zen - A modern systems programming language
+- **Philosophy:** Clarity over cleverness, explicit over implicit, minimal but composable
 - **Implementation:** Rust-based compiler with LLVM backend
-- **Specification:** lang.md defines the language spec (v1.0 conceptual)
-- **Current State:** Core features implemented, aligning with lang.md spec
+- **Specification:** lang.md defines the language spec (v1.0 final cohesive draft)
+- **Current State:** Core features implemented, fully aligned with lang.md spec
 
-## Key Features (from lang.md)
-1. No `if`/`else` keywords - uses `?` operator for all conditionals
-2. Unified declaration syntax with `:=` (immutable) and `::=` (mutable)
-3. Pattern matching with `?` and `->` for destructuring
-4. `@std` namespace for core functionality
-5. Behaviors (traits/interfaces) for polymorphism
-6. Compile-time metaprogramming with `comptime`
-7. Error handling as values (Result/Option types)
-8. Single `loop` keyword for all iteration
+## Core Language Features (lang.md v1.0)
+
+### Syntax Philosophy
+- **NO traditional control flow keywords** (no `if`, `else`, `switch`, `match`)
+- **Single unified operators** for common patterns
+- **Explicit and consistent** declaration syntax
+
+### Key Syntax Elements
+1. **Declarations**:
+   - `:=` - immutable binding (inferred type)
+   - `::=` - mutable binding (inferred type)
+   - `: Type =` - immutable with explicit type
+   - `:: Type =` - mutable with explicit type
+
+2. **Pattern Matching**: `scrutinee ? | pattern => expression`
+   - Uses `->` for destructuring and binding
+   - Replaces all conditional logic
+   - Example: `score ? | 90..=100 => "A" | _ => "F"`
+
+3. **Functions**: `name = (params) ReturnType { ... }`
+   - UFCS support for method-like calls
+   - Default parameters supported
+
+4. **Data Structures**:
+   - Structs: `TypeName = { field: Type, mutable_field:: Type }`
+   - Enums: `TypeName = | Variant1 | Variant2(data)`
+
+5. **Loops**: Single `loop` keyword for all iteration
+   - Conditional: `loop condition { ... }`
+   - Iterator: `loop item in collection { ... }`
+   - Range: `loop i in start..end { ... }`
+
+6. **Module System**:
+   - `@std` namespace globally available
+   - `@std.core` for intrinsics
+   - `@std.build` for imports
+   - Imports via `comptime { module := build.import("name") }`
+
+7. **Error Handling**:
+   - `Result<T, E>` and `Option<T>` types
+   - No exceptions - errors as values
+   - Pattern matching for error handling
+
+8. **Compile-time**: `comptime` blocks and parameters
+   - Metaprogramming
+   - Generic functions
+   - Compile-time computation
 
 ## Project Structure
 - `/src` - Rust compiler implementation
   - `/lexer.rs` - Tokenization
-  - `/parser.rs` - AST generation
+  - `/parser.rs` - AST generation (aligned with spec)
   - `/typechecker/` - Type checking
   - `/codegen/` - LLVM code generation
-- `/examples` - Example .zen files
-- `/tests` - Test files
-- `/zen_test` - Additional test cases
+- `/examples` - Example .zen files (comprehensive examples)
+- `/tests` - Parser and feature tests
+- `/.agent` - Project meta-information
+- `/lang.md` - Language specification (source of truth)
 
-## Recent Work (from git log)
-- Completed zen language maintenance and documentation
-- Aligned implementation with lang.md specification
-- Updated all tests to match spec
-- Added comprehensive implementation plan
+## Implementation Status
+✅ Parser fully aligned with lang.md spec
+✅ All tests updated to match specification
+✅ Comprehensive example (zen_comprehensive.zen) created
+✅ Naming consistency verified (all "zen", no "glow")
+✅ Documentation current
 
-## Naming Convention
-- Must use "zen" consistently throughout codebase
-- File extension: `.zen`
-- Entry point: `main` function
+## Critical Reminders
+- Entry point MUST be: `main = () void { ... }`
+- File extension MUST be: `.zen`
+- NO `if`/`else` keywords - use `?` operator
+- Pattern matching uses `->` for destructuring
+- Single `loop` keyword for ALL iteration
