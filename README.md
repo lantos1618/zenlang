@@ -86,6 +86,12 @@ See the [`examples/`](examples/) directory for comprehensive examples:
 - `hello.zen` - Basic hello world
 - `variables.zen` - Variable declarations and types
 - `pattern_matching.zen` - Pattern matching with the `?` operator
+- `zen_complete_showcase.zen` - Complete demonstration of all language features
+- `structs_enums.zen` - Data structures and enum variants
+- `loops.zen` - All loop patterns
+- `error_handling.zen` - Result/Option error handling patterns
+- `comptime.zen` - Compile-time metaprogramming
+- `behaviors.zen` - Traits and interfaces
 
 ## Project Structure
 

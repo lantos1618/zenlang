@@ -989,7 +989,7 @@ fn test_string_literal_ir() {
 fn test_full_pipeline_zen_syntax() {
     test_context!(|test_context: &mut TestContext| {
         // Test the full pipeline: Zen source → lexer → parser → codegen
-        let zen_source = "main :: () -> i32 { 42 }";
+        let zen_source = "main = () i32 { 42 }";
         
         // Lex the source
         let lexer = zen::lexer::Lexer::new(zen_source);
@@ -1028,7 +1028,7 @@ fn test_full_pipeline_zen_syntax() {
 fn test_full_pipeline_with_variable() {
     test_context!(|test_context: &mut TestContext| {
         // Test the full pipeline with a variable declaration
-        let zen_source = "main :: () -> i32 { x := 42; x }";
+        let zen_source = "main = () i32 { x := 42; x }";
         
         // Lex the source
         let lexer = zen::lexer::Lexer::new(zen_source);
