@@ -1,0 +1,10 @@
+// hello.zen - Basic hello world example
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+}
+
+main = () void {
+    io.print("Hello, Zen!\n")
+}

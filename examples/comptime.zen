@@ -1,0 +1,80 @@
+// comptime.zen - Compile-time evaluation
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+    math := build.import("math")
+}
+
+// Compile-time constant calculation
+FIBONACCI_10 := comptime {
+    fib :: [10]i32
+    fib[0] = 0
+    fib[1] = 1
+    loop i in 2..10 {
+        fib[i] = fib[i-1] + fib[i-2]
+    }
+    fib[9]  // Result: 34
+}
+
+// Compile-time lookup table generation
+SQUARES := comptime {
+    table :: [100]i32
+    loop i in 0..100 {
+        table[i] = i * i
+    }
+    table
+}
+
+// Generic function with comptime parameters
+make_array = (comptime T: type, comptime N: usize) [N]T {
+    return [N]T{}  // Default-initialized array
+}
+
+// Generic container
+Stack<T> = {
+    items: [1000]T,
+    top:: usize = 0,
+}
+
+// Methods for Stack using UFCS
+push = (stack:: Ptr<Stack<T>>, comptime T: type, item: T) void {
+    stack.items[stack.top] = item
+    stack.top = stack.top + 1
+}
+
+pop = (stack:: Ptr<Stack<T>>, comptime T: type) Option<T> {
+    stack.top == 0 ? | true => Option.None
+                     | false => {
+                         stack.top = stack.top - 1
+                         Option.Some(stack.items[stack.top])
+                     }
+}
+
+main = () void {
+    // Use compile-time constant
+    io.print("10th Fibonacci number: $(FIBONACCI_10)\n")
+    
+    // Use compile-time lookup table
+    io.print("Square of 7: $(SQUARES[7])\n")
+    io.print("Square of 15: $(SQUARES[15])\n")
+    
+    // Use generic function with comptime parameters
+    int_array := make_array(i32, 5)
+    float_array := make_array(f64, 10)
+    
+    // Use generic Stack
+    stack ::= Stack<i32>{}
+    
+    // Push some values
+    stack.push(i32, 10)
+    stack.push(i32, 20)
+    stack.push(i32, 30)
+    
+    // Pop values
+    loop {
+        value := stack.pop(i32)
+        value ? | .Some -> val => io.print("Popped: $(val)\n")
+               | .None => break
+    }
+}

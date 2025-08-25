@@ -1,0 +1,68 @@
+// pattern_matching.zen - Pattern matching with ? operator
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+}
+
+// Enum definition
+Action =
+    | Stop
+    | Go
+    | Wait(duration: i32)
+    | Error({ code: i32, message: string })
+
+// Result type for error handling
+Result<T, E> = 
+    | Ok(T)
+    | Err(E)
+
+// Parse integer function
+parse_int = (s: string) Result<i32, string> {
+    // Simplified example
+    s ? | "42" => .Ok(42)
+        | "0"  => .Ok(0)
+        | _    => .Err("Invalid number")
+}
+
+// Grade calculation with ranges
+calculate_grade = (score: i32) string {
+    score ? | 90..=100 => "A"
+           | 80..=89  => "B"
+           | 70..=79  => "C"
+           | 60..=69  => "D"
+           | _        => "F"
+}
+
+// Handle action with pattern matching
+handle_action = (action: Action) string {
+    action ? | .Stop => "Stopped"
+            | .Go => "Going"
+            | .Wait -> duration => "Waiting $(duration) seconds"
+            | .Error -> err => "Error $(err.code): $(err.message)"
+}
+
+main = () void {
+    // Grade calculation
+    score := 85
+    grade := calculate_grade(score)
+    io.print("Score $(score) = Grade $(grade)\n")
+    
+    // Action handling
+    action1 := Action.Wait(5)
+    action2 := Action.Error({ code: 404, message: "Not found" })
+    
+    io.print("Action 1: $(handle_action(action1))\n")
+    io.print("Action 2: $(handle_action(action2))\n")
+    
+    // Error handling with Result
+    result := parse_int("42")
+    value := result ? | .Ok -> val => {
+                         io.print("Parsed: $(val)\n")
+                         val
+                     }
+                     | .Err -> msg => {
+                         io.print("Error: $(msg)\n")
+                         0
+                     }
+}

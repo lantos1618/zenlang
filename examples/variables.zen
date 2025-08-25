@@ -1,0 +1,28 @@
+// variables.zen - Variable declarations and types
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+}
+
+main = () void {
+    // Immutable bindings (constants)
+    PI := 3.14159
+    MAX_USERS: u32 = 1000
+    name := "Alice"
+    
+    // Mutable bindings (variables)  
+    counter ::= 0
+    temperature:: f64 = 20.5
+    is_active:: bool = true
+    
+    // Mutation
+    counter = counter + 1
+    temperature = temperature + 0.5
+    is_active = false
+    
+    // String interpolation
+    io.print("Counter: $(counter)\n")
+    io.print("Temperature: $(temperature)°C\n")
+    io.print("User: $(name), Max: $(MAX_USERS)\n")
+}

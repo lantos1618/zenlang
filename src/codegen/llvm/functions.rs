@@ -84,8 +84,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
             .iter()
             .map(|(_name, t)| {
                 self.to_llvm_type(t)
-                    .and_then(|lyn_type| {
-                        self.expect_basic_type(lyn_type)
+                    .and_then(|zen_type| {
+                        self.expect_basic_type(zen_type)
                     })
             })
             .collect();

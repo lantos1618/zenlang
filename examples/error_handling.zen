@@ -1,0 +1,120 @@
+// error_handling.zen - Error handling with Result and Option
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+}
+
+// Error types
+ParseError = {
+    message: string,
+    position: usize,
+}
+
+FileError =
+    | NotFound(path: string)
+    | PermissionDenied
+    | IOError(message: string)
+
+// Result type
+Result<T, E> = 
+    | Ok(T)
+    | Err(E)
+
+// Option type
+Option<T> =
+    | Some(T)
+    | None
+
+// Function that can fail
+divide = (a: f64, b: f64) Result<f64, string> {
+    b == 0.0 ? | true => .Err("Division by zero")
+              | false => .Ok(a / b)
+}
+
+// Parse integer with detailed error
+parse_int = (s: string) Result<i32, ParseError> {
+    // Simplified example
+    s ? | "42"  => .Ok(42)
+        | "100" => .Ok(100)
+        | "-5"  => .Ok(-5)
+        | _     => .Err(ParseError{
+                      message: "Invalid integer format",
+                      position: 0,
+                  })
+}
+
+// File operation simulation
+read_file = (path: string) Result<string, FileError> {
+    path ? | "/etc/passwd" => .Err(.PermissionDenied)
+           | "/tmp/test.txt" => .Ok("File contents here")
+           | _ => .Err(.NotFound(path))
+}
+
+// Chain operations that can fail
+process_file = (path: string) Result<i32, string> {
+    // Read file
+    contents := read_file(path) ? | .Ok -> data => data
+                                  | .Err -> .NotFound(p) => {
+                                      return .Err("File not found: $(p)")
+                                  }
+                                  | .Err -> .PermissionDenied => {
+                                      return .Err("Permission denied")
+                                  }
+                                  | .Err -> .IOError(msg) => {
+                                      return .Err("IO error: $(msg)")
+                                  }
+    
+    // Parse the contents (assuming it's a number)
+    value := parse_int(contents) ? | .Ok -> num => num
+                                   | .Err -> err => {
+                                       return .Err("Parse error: $(err.message)")
+                                   }
+    
+    return .Ok(value * 2)
+}
+
+// Function with optional return
+find_user = (id: u32) Option<string> {
+    id ? | 1 => .Some("Alice")
+         | 2 => .Some("Bob")
+         | 3 => .Some("Charlie")
+         | _ => .None
+}
+
+main = () void {
+    // Division example
+    result1 := divide(10.0, 2.0)
+    result2 := divide(10.0, 0.0)
+    
+    result1 ? | .Ok -> val => io.print("10 / 2 = $(val)\n")
+             | .Err -> msg => io.print("Error: $(msg)\n")
+    
+    result2 ? | .Ok -> val => io.print("10 / 0 = $(val)\n")
+             | .Err -> msg => io.print("Error: $(msg)\n")
+    
+    // Parse integer example
+    parse_result := parse_int("not_a_number")
+    parse_result ? | .Ok -> num => io.print("Parsed: $(num)\n")
+                  | .Err -> err => io.print("Parse failed at position $(err.position): $(err.message)\n")
+    
+    // File processing example
+    file_result := process_file("/tmp/test.txt")
+    file_result ? | .Ok -> value => io.print("Processed value: $(value)\n")
+                 | .Err -> msg => io.print("Processing failed: $(msg)\n")
+    
+    // Optional value example
+    user1 := find_user(1)
+    user2 := find_user(99)
+    
+    user1 ? | .Some -> name => io.print("Found user: $(name)\n")
+           | .None => io.print("User not found\n")
+    
+    user2 ? | .Some -> name => io.print("Found user: $(name)\n")
+           | .None => io.print("User not found\n")
+    
+    // Default value for Option
+    username := user2 ? | .Some -> name => name
+                        | .None => "Guest"
+    io.print("Current user: $(username)\n")
+}

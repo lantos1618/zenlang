@@ -1,7 +1,7 @@
-# Lynlang Global Memory
+# Zen Global Memory
 
 ## Project Overview
-Lynlang is a Rust-inspired systems programming language with:
+Zen is a Rust-inspired systems programming language with:
 - Pattern matching
 - Generic types with monomorphization
 - Comptime evaluation
@@ -35,4 +35,4 @@ Lynlang is a Rust-inspired systems programming language with:
 
 ## Testing
 - Run tests: `cargo test`
-- Compile .lyn file: `cargo run --bin zen file.lyn`
+- Compile .zen file: `cargo run --bin zen file.zen`

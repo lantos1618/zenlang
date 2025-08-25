@@ -1,4 +1,4 @@
-# Lynlang Implementation Plan
+# Zen Implementation Plan
 
 ## Project Status
 - **Core Language**: Working (functions, variables, control flow, FFI)

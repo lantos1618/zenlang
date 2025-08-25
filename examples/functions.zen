@@ -1,0 +1,51 @@
+// functions.zen - Function definitions and UFCS
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+    math := build.import("math")
+}
+
+// Simple function
+add = (a: i32, b: i32) i32 {
+    return a + b
+}
+
+// Function with default parameter
+greet = (name: string, prefix: string = "Hello") void {
+    io.print("$(prefix), $(name)!\n")
+}
+
+// Rectangle type
+Rectangle = { width: f64, height: f64 }
+
+// Free function for Rectangle (UFCS)
+area = (rect: Rectangle) f64 {
+    return rect.width * rect.height
+}
+
+perimeter = (rect: Rectangle) f64 {
+    return 2.0 * (rect.width + rect.height)
+}
+
+main = () void {
+    // Basic function calls
+    sum := add(10, 20)
+    io.print("Sum: $(sum)\n")
+    
+    // Function with default parameter
+    greet("Alice")
+    greet("Bob", "Hi")
+    
+    // UFCS demonstration
+    my_rect := Rectangle{ width: 10.0, height: 5.0 }
+    
+    // Standard call
+    area1 := area(my_rect)
+    
+    // UFCS call (method-like syntax)
+    area2 := my_rect.area()
+    perim := my_rect.perimeter()
+    
+    io.print("Rectangle area: $(area2), perimeter: $(perim)\n")
+}
