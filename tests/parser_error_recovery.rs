@@ -4,7 +4,7 @@ use zen::error::CompileError;
 
 #[test]
 fn test_missing_closing_brace() {
-    let input = "main :: () -> void {
+    let input = "main = () void {
         x := 42
         // Missing closing brace
     ";
@@ -26,7 +26,7 @@ fn test_missing_closing_brace() {
 fn test_missing_type_in_declaration() {
     // Parser accepts :: () as shorthand for :: () -> void
     // This is valid syntax, so let's test an actual error case
-    let input = "main :: (x: ) {  // Missing parameter type
+    let input = "main = (x: ) void {  // Missing parameter type
         return 0
     }";
     
@@ -45,7 +45,7 @@ fn test_missing_type_in_declaration() {
 
 #[test]
 fn test_invalid_operator() {
-    let input = "main :: () -> void {
+    let input = "main = () void {
         x := 5 ??? 3  // Invalid operator
     }";
     
@@ -65,7 +65,7 @@ fn test_invalid_operator() {
 
 #[test]
 fn test_unclosed_string_literal() {
-    let input = r#"main :: () -> void {
+    let input = r#"main = () void {
         msg := "Hello, world
     }"#;
     
@@ -79,7 +79,7 @@ fn test_unclosed_string_literal() {
 
 #[test]
 fn test_missing_function_body() {
-    let input = "main :: () -> void";  // Missing function body
+    let input = "main = () void";  // Missing function body
     
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
@@ -96,7 +96,7 @@ fn test_missing_function_body() {
 
 #[test]
 fn test_invalid_variable_declaration() {
-    let input = "main :: () -> void {
+    let input = "main = () void {
         x = 42  // Should be := or ::= for declaration
     }";
     
@@ -111,7 +111,7 @@ fn test_invalid_variable_declaration() {
 
 #[test]
 fn test_mismatched_parentheses() {
-    let input = "main :: () -> void {
+    let input = "main = () void {
         x := (5 + 3))  // Extra closing parenthesis
     }";
     
@@ -153,12 +153,12 @@ fn test_invalid_struct_syntax() {
 fn test_recovery_after_error() {
     let input = r#"
     // First function with error
-    bad_func :: () -> void {
+    bad_func = () void {
         x := 5 ???  // Error here
     }
     
     // Should still parse this function
-    good_func :: () -> void {
+    good_func = () void {
         y := 10
         return
     }
@@ -185,7 +185,7 @@ fn test_helpful_error_for_common_mistake() {
     assert!(result.is_err());
     
     if let Err(CompileError::SyntaxError(msg, _)) = result {
-        // Should suggest Zen syntax: main :: () -> returnType { ... }
+        // Should suggest Zen syntax: main = () returnType { ... }
         assert!(msg.contains("=") || msg.contains("syntax"));
     } else {
         panic!("Expected helpful error for C-style function");
