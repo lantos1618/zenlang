@@ -1,0 +1,215 @@
+// zen_spec_demo.zen - Demonstrates Zen language features according to lang.md spec
+// This file showcases the unified, keyword-minimal syntax
+
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+    mem := build.import("mem")
+}
+
+// ========================================
+// 1. Variables & Constants (Section 4)
+// ========================================
+
+demo_variables = () void {
+    // Immutable bindings (constants)
+    PI := 3.14159                    // Inferred type
+    MAX_USERS: u32 = 1000            // Explicit type
+    
+    // Mutable bindings (variables)  
+    counter ::= 0                    // Mutable, inferred
+    active_users:: u16 = 0           // Mutable, explicit
+    
+    // Mutation
+    counter = counter + 1
+    active_users = active_users + 1
+    
+    // Default initialization
+    score:: i32                      // Initialized to 0
+    name:: string                    // Initialized to ""
+}
+
+// ========================================
+// 2. Data Structures (Section 5)
+// ========================================
+
+// Struct with mutable fields
+Person = {
+    name: string,
+    age: u32,
+    is_active:: bool = true,         // Mutable field with default
+    balance:: f64 = 0.0,             // Mutable field
+}
+
+// Enum (sum type)
+Status = 
+    | Active
+    | Inactive(reason: string)
+    | Suspended({ until: u64, by: string })
+
+// ========================================
+// 3. Functions (Section 7)
+// ========================================
+
+// Simple function
+add = (a: i32, b: i32) i32 {
+    return a + b
+}
+
+// Function with default parameter
+greet = (name: string, title: string = "Hello") void {
+    io.print("$(title), $(name)!\n")
+}
+
+// UFCS example
+Rectangle = { width: f64, height: f64 }
+
+area = (rect: Rectangle) f64 {
+    return rect.width * rect.height
+}
+
+// ========================================
+// 4. Pattern Matching - NO if/else! (Section 8)
+// ========================================
+
+get_grade = (score: i32) string {
+    // Using ? operator for pattern matching
+    return score ? | 90..=100 => "A"
+                  | 80..=89  => "B"  
+                  | 70..=79  => "C"
+                  | 60..=69  => "D"
+                  | _        => "F"
+}
+
+// Pattern matching with destructuring using ->
+handle_status = (status: Status) string {
+    return status ? | .Active => "User is active"
+                   | .Inactive -> reason => "Inactive: $(reason)"
+                   | .Suspended -> { until, by } => "Suspended until $(until) by $(by)"
+}
+
+// Guards with ->
+check_value = (value: i32) string {
+    return value ? | v -> v > 100 => "Too high"
+                  | v -> v < 0   => "Too low"
+                  | v -> v == 50 => "Perfect!"
+                  | _            => "In range"
+}
+
+// ========================================
+// 5. Loops (Section 8)
+// ========================================
+
+demo_loops = () void {
+    // Conditional loop (while-like)
+    count ::= 10
+    loop count > 0 {
+        io.print("$(count)... ")
+        count = count - 1
+    }
+    io.print("Done!\n")
+    
+    // Range iteration
+    loop i in 0..5 {
+        io.print("Index: $(i)\n")
+    }
+    
+    // Inclusive range
+    loop i in 1..=3 {
+        io.print("Number: $(i)\n")
+    }
+}
+
+// ========================================
+// 6. Error Handling (Section 9)
+// ========================================
+
+// Result type for error handling
+divide = (a: f64, b: f64) Result<f64, string> {
+    return b ? | 0.0 => .Err("Division by zero")
+              | _   => .Ok(a / b)
+}
+
+handle_division = (x: f64, y: f64) void {
+    result := divide(x, y)
+    
+    // Pattern matching on Result
+    message := result ? | .Ok -> value => "Result: $(value)"
+                       | .Err -> err => "Error: $(err)"
+    
+    io.print("$(message)\n")
+}
+
+// ========================================
+// 7. Compile-time Evaluation (Section 11)
+// ========================================
+
+// Compile-time computed constant
+LOOKUP_TABLE := comptime {
+    table:: [256]u32
+    loop i in 0..256 {
+        table[i] = i * i
+    }
+    table  // Return the computed table
+}
+
+// Generic function with comptime parameters
+make_array = (comptime T: type, comptime N: usize) [N]T {
+    return [N]T{}  // Default-initialized array
+}
+
+// ========================================
+// Main Entry Point
+// ========================================
+
+main = () void {
+    io.print("=== Zen Language Spec Demo ===\n\n")
+    
+    // 1. Variables demo
+    io.print("1. Variables & Constants:\n")
+    demo_variables()
+    
+    // 2. Structs
+    io.print("\n2. Structs:\n")
+    person ::= Person{ name: "Alice", age: 30 }
+    person.balance = 1000.50
+    io.print("Person: $(person.name), balance: $(person.balance)\n")
+    
+    // 3. Functions & UFCS
+    io.print("\n3. Functions:\n")
+    sum := add(10, 20)
+    io.print("10 + 20 = $(sum)\n")
+    
+    rect := Rectangle{ width: 10.0, height: 5.0 }
+    a := rect.area()  // UFCS call
+    io.print("Rectangle area: $(a)\n")
+    
+    // 4. Pattern matching (no if/else!)
+    io.print("\n4. Pattern Matching:\n")
+    grade := get_grade(85)
+    io.print("Score 85 = Grade $(grade)\n")
+    
+    status := Status.Inactive("On vacation")
+    msg := handle_status(status)
+    io.print("Status: $(msg)\n")
+    
+    // 5. Loops
+    io.print("\n5. Loops:\n")
+    demo_loops()
+    
+    // 6. Error handling
+    io.print("\n6. Error Handling:\n")
+    handle_division(10.0, 2.0)
+    handle_division(10.0, 0.0)
+    
+    // 7. Compile-time
+    io.print("\n7. Compile-time:\n")
+    value := LOOKUP_TABLE[16]
+    io.print("16 squared = $(value)\n")
+    
+    my_array := make_array(i32, 5)
+    io.print("Created array of size $(my_array.len)\n")
+    
+    io.print("\n=== Demo Complete ===\n")
+}

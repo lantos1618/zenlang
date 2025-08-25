@@ -1,26 +1,37 @@
-# Zen Language - Active TODOs
+# Zen Language TODOs
 
-## High Priority
-- [x] Ensure language matches lang.md spec
-- [x] Replace all lynlang/lyn references with zen
-- [x] Create working .zen examples
-- [ ] Implement comptime evaluation engine
-- [ ] Separate type checker from codegen
+## High Priority - Language Spec Alignment
+- [ ] **CRITICAL**: Align parser/codegen with lang.md spec
+  - [ ] Change function syntax from `::` to `=` 
+  - [ ] Implement mutable variables with `::=` operator
+  - [ ] Remove if/else keywords, use only ? operator
+  - [ ] Implement -> for pattern destructuring
+  
+## Current Session Tasks
+1. ✅ Read lang.md spec 
+2. ✅ Search for lynlang references (none found)
+3. 🔄 Review and consolidate project information
+4. [ ] Create working .zen examples matching spec
+5. [ ] Run tests and fix failures
+6. [ ] Update README with accurate syntax
+7. [ ] Clean up unnecessary files
+8. [ ] Git commit and push
 
-## In Progress
-- [ ] Generic type instantiation and monomorphization
-- [ ] Behavior/trait system implementation
-- [ ] Module system with @std namespace
+## Implementation Priorities (80/20 rule)
+1. **Parser Updates (40%)** - Match lang.md syntax exactly
+2. **Codegen Updates (30%)** - Support new syntax in LLVM
+3. **Examples (10%)** - Create clear, working examples
+4. **Testing (20%)** - Ensure everything works
 
-## Next Sprint
-- [ ] Standard library basics (Vec, HashMap)
-- [ ] Memory management interfaces
-- [ ] Improved error messages
-- [ ] Language server improvements
+## Technical Debt
+- Type checker needs separation from codegen
+- Comptime evaluation engine incomplete
+- Generic monomorphization not implemented
+- Behaviors/traits system missing
+- @std namespace bootstrap not implemented
 
-## Completed Today
-- ✅ Updated all lynlang references to zen
-- ✅ Created comprehensive .zen examples
-- ✅ Updated README with accurate information
-- ✅ All tests passing (165/165)
-- ✅ Renamed .lyn files to .zen
+## Notes
+- Keep implementation simple and elegant (KISS/DRY)
+- Work best at 40% context window (100-140k tokens)
+- Use frequent git commits
+- Clean up after completion
