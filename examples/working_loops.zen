@@ -1,0 +1,28 @@
+// Loop examples that work with current parser
+
+main = () i32 {
+    // Conditional loop (while-like)
+    counter ::= 5
+    sum ::= 0
+    
+    loop counter > 0 {
+        sum = sum + counter
+        counter = counter - 1
+    }
+    
+    // Nested loops
+    i ::= 0
+    j ::= 0
+    result ::= 0
+    
+    loop i < 3 {
+        j = 0
+        loop j < 2 {
+            result = result + 1
+            j = j + 1
+        }
+        i = i + 1
+    }
+    
+    return result  // Should be 6 (3 * 2)
+}

@@ -1,0 +1,119 @@
+// Zen Language Example: Structs and Methods
+// Demonstrates struct definitions and UFCS
+
+comptime {
+    build := @std.build
+    io := build.import("io")
+    math := build.import("math")
+}
+
+// Simple struct
+Point = {
+    x: f64,
+    y: f64,
+}
+
+// Struct with mutable fields and defaults
+Player = {
+    name: string,
+    level: u32 = 1,                    // Default value
+    score:: i32 = 0,                   // Mutable with default
+    is_active:: bool = true,           // Mutable boolean
+    position: Point = Point{x: 0, y: 0}, // Nested struct with default
+}
+
+// Rectangle using composition
+Rectangle = {
+    top_left: Point,
+    bottom_right: Point,
+}
+
+// ===== Methods using UFCS =====
+// Functions with first parameter of type T can be called as methods on T
+
+// Method for Point
+distance_from_origin = (p: Point) f64 {
+    return math.sqrt(p.x * p.x + p.y * p.y)
+}
+
+// Another Point method
+translate = (p: Point, dx: f64, dy: f64) Point {
+    return Point{
+        x: p.x + dx,
+        y: p.y + dy,
+    }
+}
+
+// Method for Rectangle
+area = (r: Rectangle) f64 {
+    width := r.bottom_right.x - r.top_left.x
+    height := r.bottom_right.y - r.top_left.y
+    return width * height
+}
+
+contains_point = (r: Rectangle, p: Point) bool {
+    return p.x >= r.top_left.x && 
+           p.x <= r.bottom_right.x &&
+           p.y >= r.top_left.y && 
+           p.y <= r.bottom_right.y
+}
+
+// Method for Player
+level_up = (p: Ptr<Player>) void {
+    p.level = p.level + 1
+    p.score = p.score + 100
+    io.print("$(p.name) leveled up to $(p.level)!\n")
+}
+
+add_score = (p: Ptr<Player>, points: i32) void {
+    p.score = p.score + points
+}
+
+main = () void {
+    io.print("=== Structs and Methods ===\n\n")
+    
+    // Create points
+    p1 := Point{x: 3.0, y: 4.0}
+    p2 := Point{x: 6.0, y: 8.0}
+    
+    // Use methods with UFCS
+    dist := p1.distance_from_origin()  // UFCS call
+    io.print("Point ($(p1.x), $(p1.y)) distance from origin: $(dist)\n")
+    
+    // Method with parameters
+    p3 := p1.translate(10.0, 20.0)
+    io.print("Translated point: ($(p3.x), $(p3.y))\n\n")
+    
+    // Create rectangle
+    rect := Rectangle{
+        top_left: Point{x: 0, y: 0},
+        bottom_right: Point{x: 10, y: 5},
+    }
+    
+    // Rectangle methods
+    rect_area := rect.area()
+    io.print("Rectangle area: $(rect_area)\n")
+    
+    test_point := Point{x: 5, y: 3}
+    inside := rect.contains_point(test_point)
+    io.print("Point ($(test_point.x), $(test_point.y)) inside rectangle: $(inside)\n\n")
+    
+    // Create player with defaults
+    player1 ::= Player{name: "Alice"}  // Other fields use defaults
+    io.print("Player: $(player1.name), Level: $(player1.level), Score: $(player1.score)\n")
+    
+    // Modify mutable fields
+    player1.add_score(50)
+    player1.level_up()
+    io.print("Final score: $(player1.score)\n")
+    
+    // Create player with all fields specified
+    player2 := Player{
+        name: "Bob",
+        level: 5,
+        score: 1000,
+        is_active: true,
+        position: Point{x: 100, y: 200},
+    }
+    io.print("\nPlayer 2: $(player2.name) at level $(player2.level)\n")
+}

@@ -1,0 +1,13 @@
+// Zen Language Example: Hello World
+// The simplest possible Zen program
+
+comptime {
+    // Bootstrap imports
+    build := @std.build
+    io := build.import("io")
+}
+
+// Entry point - every Zen program needs a main function
+main = () void {
+    io.print("Hello, Zen World!\n")
+}

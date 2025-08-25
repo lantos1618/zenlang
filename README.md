@@ -16,29 +16,35 @@ A modern systems programming language designed for clarity, performance, and joy
 - Functions with `=` syntax: `name = (params) ReturnType { }`
 - Variables (mutable/immutable) with `:=` and `::=` operators
 - Basic types (integers, floats, strings, bool, void)
-- Structs and enums with pattern matching
-- Pattern matching with unified `?` operator (no if/else keywords)
-- Loop constructs (conditional and iterative)
+- Structs with mutable fields and defaults
+- Enums with payloads and anonymous structs
+- Conditional loops (`loop condition { }`)
 - Fixed-size arrays `[T; N]` and slices
 - Type aliases (`type Name = Type`)
 - Generic type parsing
-- Range expressions (exclusive `..` and inclusive `..=`)
-- String interpolation with `$(expr)` syntax
-- C FFI (Foreign Function Interface)
+- Basic arithmetic and comparison operators
+- Function calls and returns
 - LLVM backend for native code generation
 
 ### 🚧 In Progress
+- Pattern matching with unified `?` operator (specified but not fully implemented)
+- Range expressions (`..` and `..=`)
+- String interpolation with `$(expr)` syntax
+- Loop iteration (`loop item in collection`)
 - Compile-time evaluation (`comptime`)
-- Type checker (separate from codegen)
+- Type checker improvements
 - Generic type instantiation and monomorphization
 - Behaviors (traits/interfaces)
 - Module system with `@std` namespace
+- UFCS (Uniform Function Call Syntax)
 
 ### 📋 Planned
-- Standard library (Vec, HashMap, etc.)
-- Memory management (allocators, references)
+- Standard library (io, mem, collections, etc.)
+- Memory management (Ptr<T>, Ref<T>, allocators)
+- Error handling (Result<T,E>, Option<T>)
 - Async/await
 - Package management
+- C FFI improvements
 
 ## Unique Syntax
 
@@ -83,24 +89,29 @@ cargo run --bin zen examples/hello.zen
 ## Quick Start
 
 New to Zen? Start here:
-1. **[`examples/quickstart.zen`](examples/quickstart.zen)** - Essential features in one file
-2. **[`examples/complete_showcase.zen`](examples/complete_showcase.zen)** - All language features demonstrated
-3. **[`lang.md`](lang.md)** - Full language specification (v1.0)
+1. **[`examples/working_hello.zen`](examples/working_hello.zen)** - Simplest working example
+2. **[`examples/working_variables.zen`](examples/working_variables.zen)** - Variables and operations
+3. **[`examples/working_loops.zen`](examples/working_loops.zen)** - Loop constructs
+4. **[`lang.md`](lang.md)** - Full language specification (v1.0)
 
 ## Examples
 
-See the [`examples/`](examples/) directory for comprehensive examples:
-- **`quickstart.zen`** - **Start here!** Core Zen features in action
-- **`complete_showcase.zen`** - Comprehensive demonstration of all features
-- `hello.zen` - Simple hello world
-- `variables.zen` - Variable declarations and mutability
-- `pattern_matching.zen` - Pattern matching with the `?` operator
-- `structs_enums.zen` - Data structures and enum variants
-- `loops.zen` - All loop patterns
-- `functions.zen` - Functions and UFCS
-- `error_handling.zen` - Result/Option error handling
-- `comptime.zen` - Compile-time metaprogramming
-- `behaviors.zen` - Traits and interfaces
+The `examples/` directory contains two categories:
+
+### Working Examples (Current Implementation)
+- **`working_hello.zen`** - Minimal working program
+- **`working_variables.zen`** - Variable declarations and arithmetic
+- **`working_loops.zen`** - Conditional loops
+- **`working_functions.zen`** - Function definitions (partial)
+
+### Specification Examples (Future Features) 
+- **`zen_master_showcase.zen`** - Complete language specification demonstration
+- **`01_hello_world.zen`** - Hello world per spec
+- **`02_variables_and_types.zen`** - Full variable system
+- **`03_pattern_matching.zen`** - Pattern matching with `?` operator
+- **`04_loops.zen`** - All loop patterns per spec
+- **`05_structs_and_methods.zen`** - Structs with UFCS
+- Additional examples demonstrating planned features
 
 ## Project Structure
 
@@ -121,11 +132,13 @@ zenlang/
 
 ## Development Status
 
-- **Parser**: ✅ Complete with all major features
-- **Code Generation**: ✅ Working for core features
-- **Type System**: 🚧 Being separated from codegen
-- **Test Coverage**: ✅ 96% passing (23/24 test suites, only generics pending)
-- **Documentation**: ✅ Comprehensive guide and examples
+- **Parser**: ✅ Core features implemented
+- **Code Generation**: ✅ LLVM backend working for basic features
+- **Type System**: 🚧 Basic type checking, improvements in progress
+- **Pattern Matching**: 🚧 Specified in lang.md, implementation pending
+- **Module System**: 📋 Specified with `@std` namespace, not yet implemented
+- **Documentation**: ✅ Complete specification in lang.md
+- **Examples**: ✅ Working examples for current features, spec examples for future
 
 ## Contributing
 

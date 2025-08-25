@@ -1,0 +1,83 @@
+// Zen Language Example: Loops
+// Demonstrates the unified loop construct
+
+comptime {
+    build := @std.build
+    io := build.import("io")
+}
+
+main = () void {
+    io.print("=== Loop Examples ===\n\n")
+    
+    // ===== Conditional Loop (while-like) =====
+    io.print("Countdown:\n")
+    counter ::= 5
+    loop counter > 0 {
+        io.print("  $(counter)...\n")
+        counter = counter - 1
+    }
+    io.print("  Liftoff!\n\n")
+    
+    // ===== Range Loops =====
+    
+    // Exclusive range (0..5 gives 0,1,2,3,4)
+    io.print("Exclusive range 0..5:\n")
+    loop i in 0..5 {
+        io.print("  $(i)")
+    }
+    io.print("\n\n")
+    
+    // Inclusive range (1..=5 gives 1,2,3,4,5)
+    io.print("Inclusive range 1..=5:\n")
+    loop i in 1..=5 {
+        io.print("  $(i)")
+    }
+    io.print("\n\n")
+    
+    // ===== Array Iteration =====
+    io.print("Array iteration:\n")
+    fruits := ["apple", "banana", "orange"]
+    loop fruit in fruits {
+        io.print("  - $(fruit)\n")
+    }
+    io.print("\n")
+    
+    // ===== Loop Control =====
+    io.print("Loop with break and continue:\n")
+    loop i in 0..10 {
+        // Skip even numbers
+        (i % 2 == 0) ? | true => continue
+                      | false => {}
+        
+        // Stop at 7
+        (i == 7) ? | true => break
+                  | false => {}
+        
+        io.print("  $(i)")
+    }
+    io.print("\n\n")
+    
+    // ===== Nested Loops with Labels =====
+    io.print("Nested loops with labels:\n")
+    outer: loop i in 0..3 {
+        inner: loop j in 0..3 {
+            // Break outer loop when i==1 and j==2
+            (i == 1 && j == 2) ? | true => break outer
+                                | false => {}
+            
+            io.print("  ($(i),$(j))")
+        }
+        io.print("\n")
+    }
+    io.print("\n")
+    
+    // ===== Infinite Loop with Break =====
+    io.print("Infinite loop example:\n")
+    n ::= 0
+    loop {
+        io.print("  Iteration $(n)\n")
+        n = n + 1
+        (n >= 3) ? | true => break
+                  | false => {}
+    }
+}
