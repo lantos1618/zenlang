@@ -83,22 +83,22 @@ cargo run --bin zen examples/hello.zen
 ## Quick Start
 
 New to Zen? Start here:
-1. **[`ZEN_GUIDE.md`](ZEN_GUIDE.md)** - Complete language guide with all unique features
-2. **[`examples/zen_quickstart.zen`](examples/zen_quickstart.zen)** - Essential features in one file
-3. **[`lang.md`](lang.md)** - Full language specification
+1. **[`examples/quickstart.zen`](examples/quickstart.zen)** - Essential features in one file
+2. **[`examples/complete_showcase.zen`](examples/complete_showcase.zen)** - All language features demonstrated
+3. **[`lang.md`](lang.md)** - Full language specification (v1.0)
 
 ## Examples
 
 See the [`examples/`](examples/) directory for comprehensive examples:
-- `zen_quickstart.zen` - **Start here!** Essential Zen features
-- `hello.zen` - Basic hello world
-- `variables.zen` - Variable declarations and types
+- **`quickstart.zen`** - **Start here!** Core Zen features in action
+- **`complete_showcase.zen`** - Comprehensive demonstration of all features
+- `hello.zen` - Simple hello world
+- `variables.zen` - Variable declarations and mutability
 - `pattern_matching.zen` - Pattern matching with the `?` operator
-- `lang_spec_demo.zen` - Complete lang.md demonstration
-- `zen_complete_showcase.zen` - All language features
 - `structs_enums.zen` - Data structures and enum variants
 - `loops.zen` - All loop patterns
-- `error_handling.zen` - Result/Option error handling patterns
+- `functions.zen` - Functions and UFCS
+- `error_handling.zen` - Result/Option error handling
 - `comptime.zen` - Compile-time metaprogramming
 - `behaviors.zen` - Traits and interfaces
 
