@@ -1,0 +1,29 @@
+// Functions and basic operations
+
+add = (a: i32, b: i32) i32 {
+    return a + b
+}
+
+multiply = (x: i32, y: i32) i32 {
+    result := x * y
+    return result
+}
+
+factorial = (n: i32) i32 {
+    result ::= 1
+    i ::= 1
+    loop i <= n {
+        result = result * i
+        i = i + 1
+    }
+    return result
+}
+
+main = () i32 {
+    // Call functions
+    sum := add(5, 3)
+    product := multiply(4, 7)
+    fact := factorial(5)
+    
+    return fact  // Returns 120
+}

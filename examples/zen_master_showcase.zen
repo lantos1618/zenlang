@@ -1,0 +1,566 @@
+// Zen Language Master Showcase
+// Demonstrates all language features in accordance with lang.md spec
+
+// ============================================================================
+// 1. Module System and Bootstrap
+// ============================================================================
+
+comptime {
+    // The @std namespace is the bootstrap mechanism
+    core := @std.core
+    build := @std.build
+    
+    // Import standard library modules
+    io := build.import("io")
+    mem := build.import("mem")
+    math := build.import("math")
+    collections := build.import("collections")
+    str_utils := build.import("string")
+}
+
+// ============================================================================
+// 2. Basic Types and Literals
+// ============================================================================
+
+// Type aliases for clarity
+IntType = i32
+FloatType = f64
+CharType = u8
+
+// ============================================================================
+// 3. Variables and Constants (Complete Declaration System)
+// ============================================================================
+
+demo_declarations = () void {
+    // Immutable bindings (constants)
+    PI := 3.14159                    // Type inferred
+    MAX_USERS: u32 = 1000            // Type explicit
+    
+    // Mutable bindings (variables)
+    request_counter ::= 0            // Type inferred
+    active_connections:: u16 = 0     // Type explicit
+    
+    // Default initialization
+    user_score:: i32                 // Initialized to 0
+    is_active:: bool                  // Initialized to false
+    
+    // Assignment to mutable variables
+    request_counter = request_counter + 1
+    active_connections = 5
+}
+
+// ============================================================================
+// 4. Data Structures: Structs
+// ============================================================================
+
+// Simple struct
+Point2D = {
+    x: f64,
+    y: f64,
+}
+
+// Complex struct with mutable fields and defaults
+Person = {
+    name: string,
+    age: u32,
+    is_member:: bool = false,        // Mutable field with default
+    last_login: Option<u64> = None,  // Optional field
+    scores:: [10]i32 = [0; 10],      // Mutable array field
+}
+
+// Nested struct
+Rectangle = {
+    top_left: Point2D,
+    bottom_right: Point2D,
+}
+
+// ============================================================================
+// 5. Data Structures: Enums
+// ============================================================================
+
+// Simple enum
+Color =
+    | Red
+    | Green
+    | Blue
+    | RGB(r: u8, g: u8, b: u8)
+
+// Complex enum with various payload types
+Action =
+    | Stop
+    | Go
+    | Wait(duration: u32)
+    | Move(direction: Point2D)
+    | Error({ code: i32, message: string })
+
+// Result type (fundamental for error handling)
+Result<T, E> =
+    | Ok(T)
+    | Err(E)
+
+// Option type (for nullable values)
+Option<T> =
+    | Some(T)
+    | None
+
+// ============================================================================
+// 6. Namespacing and Code Organization
+// ============================================================================
+
+// Create a namespace using nested definitions
+Geometry = {
+    PI := 3.1415926535,
+    TAU := 6.2831853071,
+    
+    Point3D = {
+        x: f64,
+        y: f64,
+        z: f64,
+    },
+    
+    distance_2d = (p1: Point2D, p2: Point2D) f64 {
+        dx := p1.x - p2.x
+        dy := p1.y - p2.y
+        return math.sqrt(dx*dx + dy*dy)
+    },
+    
+    area_rectangle = (rect: Rectangle) f64 {
+        width := rect.bottom_right.x - rect.top_left.x
+        height := rect.bottom_right.y - rect.top_left.y
+        return width * height
+    },
+}
+
+// ============================================================================
+// 7. Functions and UFCS
+// ============================================================================
+
+// Simple function
+add = (a: i32, b: i32) i32 {
+    return a + b
+}
+
+// Function with default parameters
+greet = (name: string, prefix: string = "Hello") void {
+    io.print("$(prefix), $(name)!\n")
+}
+
+// Function using UFCS (Uniform Function Call Syntax)
+area = (rect: Rectangle) f64 {
+    width := rect.bottom_right.x - rect.top_left.x
+    height := rect.bottom_right.y - rect.top_left.y
+    return width * height
+}
+
+scale = (rect: Rectangle, factor: f64) Rectangle {
+    center_x := (rect.top_left.x + rect.bottom_right.x) / 2.0
+    center_y := (rect.top_left.y + rect.bottom_right.y) / 2.0
+    
+    half_width := (rect.bottom_right.x - rect.top_left.x) / 2.0 * factor
+    half_height := (rect.bottom_right.y - rect.top_left.y) / 2.0 * factor
+    
+    return Rectangle{
+        top_left: Point2D{
+            x: center_x - half_width,
+            y: center_y - half_height,
+        },
+        bottom_right: Point2D{
+            x: center_x + half_width,
+            y: center_y + half_height,
+        },
+    }
+}
+
+// ============================================================================
+// 8. Control Flow: Pattern Matching with ? operator
+// ============================================================================
+
+// Simple value matching
+grade_from_score = (score: i32) string {
+    return score ? | 90..=100 => "A"
+                   | 80..=89  => "B"
+                   | 70..=79  => "C"
+                   | 60..=69  => "D"
+                   | _        => "F"
+}
+
+// Enum destructuring with ->
+handle_action = (action: Action) string {
+    return action ? | .Stop => "Stopping"
+                    | .Go => "Going"
+                    | .Wait -> duration => "Waiting $(duration) ms"
+                    | .Move -> dir => "Moving to ($(dir.x), $(dir.y))"
+                    | .Error -> err => "Error $(err.code): $(err.message)"
+}
+
+// Pattern matching with guards
+categorize_number = (n: i32) string {
+    return n ? | x -> x < 0 => "Negative"
+               | x -> x == 0 => "Zero"
+               | x -> x > 0 && x < 10 => "Small positive"
+               | x -> x >= 10 && x < 100 => "Medium positive"
+               | _ => "Large positive"
+}
+
+// Complex pattern matching with blocks
+process_result = (result: Result<i32, string>) i32 {
+    return result ? | .Ok -> value => {
+                        io.print("Success: got value $(value)\n")
+                        value * 2
+                    }
+                    | .Err -> err => {
+                        io.print("Error: $(err)\n")
+                        -1
+                    }
+}
+
+// ============================================================================
+// 9. Control Flow: Loops
+// ============================================================================
+
+demonstrate_loops = () void {
+    // Conditional loop (while-like)
+    counter ::= 5
+    loop counter > 0 {
+        io.print("Countdown: $(counter)\n")
+        counter = counter - 1
+    }
+    
+    // Range iteration (exclusive)
+    loop i in 0..5 {
+        io.print("Index: $(i)\n")
+    }
+    
+    // Range iteration (inclusive)
+    loop i in 1..=5 {
+        io.print("Number: $(i)\n")
+    }
+    
+    // Array iteration
+    colors := [Color.Red, Color.Green, Color.Blue]
+    loop color in colors {
+        color_str := color ? | .Red => "Red"
+                            | .Green => "Green"
+                            | .Blue => "Blue"
+                            | .RGB(r, g, b) => "RGB($(r),$(g),$(b))"
+        io.print("Color: $(color_str)\n")
+    }
+    
+    // Loop with break and continue
+    loop i in 0..10 {
+        i ? | 3 => continue
+            | 7 => break
+            | _ => io.print("Processing: $(i)\n")
+    }
+    
+    // Labeled loops for nested control
+    outer: loop i in 0..3 {
+        inner: loop j in 0..3 {
+            (i == 1 && j == 1) ? | true => break outer
+                                | false => io.print("($(i), $(j)) ")
+        }
+        io.print("\n")
+    }
+}
+
+// ============================================================================
+// 10. Error Handling
+// ============================================================================
+
+ParseError = {
+    message: string,
+    position: usize,
+}
+
+// Function that returns Result
+parse_int = (s: string) Result<i32, ParseError> {
+    // Simplified example - actual implementation would parse properly
+    str_utils.is_numeric(s) ? | true => Result.Ok(str_utils.to_int(s))
+                              | false => Result.Err(ParseError{
+                                  message: "Invalid integer format",
+                                  position: 0,
+                              })
+}
+
+// Function that uses Option
+find_person = (name: string, people: []Person) Option<Person> {
+    loop person in people {
+        str_utils.equals(person.name, name) ? | true => return Option.Some(person)
+                                              | false => continue
+    }
+    return Option.None
+}
+
+// Error propagation example
+calculate_age_difference = (name1: string, name2: string, people: []Person) Result<i32, string> {
+    person1 := find_person(name1, people) ? | .Some -> p => p
+                                           | .None => return Result.Err("First person not found")
+    
+    person2 := find_person(name2, people) ? | .Some -> p => p
+                                           | .None => return Result.Err("Second person not found")
+    
+    return Result.Ok(person1.age - person2.age)
+}
+
+// ============================================================================
+// 11. Behaviors (Traits/Interfaces)
+// ============================================================================
+
+// Define a behavior
+Drawable = behavior {
+    draw = (self) void,
+    get_bounds = (self) Rectangle,
+}
+
+// Another behavior
+Serializable = behavior {
+    serialize = (self) string,
+    deserialize = (data: string) Result<Self, string>,
+}
+
+// Implement behaviors for Point2D
+Point2D.impl = {
+    Drawable: {
+        draw = (self: Ptr<Point2D>) void {
+            io.print("Drawing point at ($(self.x), $(self.y))\n")
+        },
+        get_bounds = (self: Ptr<Point2D>) Rectangle {
+            return Rectangle{
+                top_left: Point2D{ x: self.x, y: self.y },
+                bottom_right: Point2D{ x: self.x, y: self.y },
+            }
+        },
+    },
+    Serializable: {
+        serialize = (self: Ptr<Point2D>) string {
+            return "Point2D{x:$(self.x),y:$(self.y)}"
+        },
+        deserialize = (data: string) Result<Point2D, string> {
+            // Simplified parsing
+            return Result.Ok(Point2D{ x: 0.0, y: 0.0 })
+        },
+    },
+}
+
+// Generic function using behaviors
+draw_all = (items: []Drawable) void {
+    loop item in items {
+        item.draw()
+    }
+}
+
+// ============================================================================
+// 12. Compile-Time Metaprogramming
+// ============================================================================
+
+// Compile-time constant computation
+FIBONACCI_LOOKUP := comptime {
+    table:: [20]i32
+    table[0] = 0
+    table[1] = 1
+    loop i in 2..20 {
+        table[i] = table[i-1] + table[i-2]
+    }
+    table  // Return the computed table
+}
+
+// Generic function with comptime parameters
+make_array = (comptime T: type, comptime N: usize) [N]T {
+    return [N]T{}  // Default-initialized array
+}
+
+// Type-level programming
+make_result_type = (comptime T: type, comptime E: type) type {
+    return Result<T, E>
+}
+
+// Compile-time type introspection
+print_type_info = (comptime T: type) void {
+    io.print("Type: $(core.type_name(T))\n")
+    io.print("Size: $(core.size_of(T)) bytes\n")
+    io.print("Alignment: $(core.align_of(T)) bytes\n")
+}
+
+// ============================================================================
+// 13. Memory Management
+// ============================================================================
+
+demonstrate_memory = (allocator: mem.Allocator) void {
+    // Allocate memory for a single value
+    ptr := allocator.alloc(Point2D) ? | .Ok -> p => p
+                                      | .Err -> _ => return
+    
+    // Initialize the allocated memory
+    ptr.* = Point2D{ x: 10.0, y: 20.0 }
+    
+    // Allocate an array
+    array_ptr := allocator.alloc_array(i32, 100) ? | .Ok -> p => p
+                                                    | .Err -> _ => return
+    
+    // Use the array
+    loop i in 0..100 {
+        array_ptr[i] = i * i
+    }
+    
+    // Clean up
+    allocator.free(ptr)
+    allocator.free_array(array_ptr, 100)
+}
+
+// Custom allocator example
+StackAllocator = {
+    buffer: [4096]u8,
+    offset:: usize = 0,
+}
+
+StackAllocator.impl = {
+    mem.Allocator: {
+        alloc = (self: Ptr<StackAllocator>, size: usize) Result<Ptr<void>, mem.AllocError> {
+            (self.offset + size > 4096) ? | true => Result.Err(mem.AllocError.OutOfMemory)
+                                         | false => {
+                                             ptr := &self.buffer[self.offset]
+                                             self.offset = self.offset + size
+                                             Result.Ok(ptr)
+                                         }
+        },
+        free = (self: Ptr<StackAllocator>, ptr: Ptr<void>) void {
+            // Stack allocator doesn't free individual allocations
+        },
+    },
+}
+
+// ============================================================================
+// 14. Async/Await (Conceptual)
+// ============================================================================
+
+Task<T> = 
+    | Pending
+    | Ready(T)
+
+// Async function example
+fetch_data = async (url: string) Result<string, string> {
+    // Simulated async operation
+    response := await http.get(url)
+    return response ? | .Ok -> data => Result.Ok(data)
+                     | .Err -> err => Result.Err(err.message)
+}
+
+// ============================================================================
+// 15. String Interpolation
+// ============================================================================
+
+demonstrate_interpolation = () void {
+    name := "Alice"
+    age := 30
+    score := 95.5
+    
+    // Basic interpolation
+    io.print("Hello, $(name)!\n")
+    
+    // Multiple values
+    io.print("$(name) is $(age) years old and scored $(score)%\n")
+    
+    // Expressions in interpolation
+    io.print("Next year, $(name) will be $(age + 1)\n")
+    
+    // Nested structures
+    person := Person{ name: "Bob", age: 25 }
+    io.print("Person: $(person.name), Age: $(person.age)\n")
+}
+
+// ============================================================================
+// Main Entry Point
+// ============================================================================
+
+main = () void {
+    io.print("=== Zen Language Master Showcase ===\n\n")
+    
+    // 1. Demonstrate declarations
+    io.print("1. Variable Declarations:\n")
+    demo_declarations()
+    io.print("\n")
+    
+    // 2. Demonstrate structs
+    io.print("2. Structs:\n")
+    p1 := Point2D{ x: 3.0, y: 4.0 }
+    p2 := Point2D{ x: 6.0, y: 8.0 }
+    dist := Geometry.distance_2d(p1, p2)
+    io.print("Distance between points: $(dist)\n\n")
+    
+    // 3. Demonstrate enums and pattern matching
+    io.print("3. Enums and Pattern Matching:\n")
+    actions := [
+        Action.Stop,
+        Action.Go,
+        Action.Wait(1000),
+        Action.Error({ code: 404, message: "Not found" }),
+    ]
+    loop action in actions {
+        result := handle_action(action)
+        io.print("  $(result)\n")
+    }
+    io.print("\n")
+    
+    // 4. Demonstrate UFCS
+    io.print("4. UFCS (Uniform Function Call Syntax):\n")
+    rect := Rectangle{
+        top_left: Point2D{ x: 0.0, y: 0.0 },
+        bottom_right: Point2D{ x: 10.0, y: 5.0 },
+    }
+    
+    // Both syntaxes work
+    area1 := area(rect)           // Traditional call
+    area2 := rect.area()          // UFCS call
+    scaled := rect.scale(2.0)     // UFCS with parameter
+    io.print("Rectangle area: $(area1) (same as $(area2))\n")
+    io.print("Scaled area: $(scaled.area())\n\n")
+    
+    // 5. Demonstrate loops
+    io.print("5. Loop Constructs:\n")
+    demonstrate_loops()
+    io.print("\n")
+    
+    // 6. Demonstrate error handling
+    io.print("6. Error Handling:\n")
+    parse_results := [
+        parse_int("123"),
+        parse_int("abc"),
+        parse_int("456"),
+    ]
+    
+    loop result in parse_results {
+        value := process_result(result)
+        io.print("  Processed value: $(value)\n")
+    }
+    io.print("\n")
+    
+    // 7. Demonstrate compile-time features
+    io.print("7. Compile-Time Features:\n")
+    io.print("  10th Fibonacci number: $(FIBONACCI_LOOKUP[10])\n")
+    my_array := make_array(f64, 5)
+    io.print("  Created array of $(my_array.length) floats\n")
+    print_type_info(Point2D)
+    io.print("\n")
+    
+    // 8. Demonstrate string interpolation
+    io.print("8. String Interpolation:\n")
+    demonstrate_interpolation()
+    io.print("\n")
+    
+    // 9. Pattern matching examples
+    io.print("9. Advanced Pattern Matching:\n")
+    grades := [95, 85, 75, 65, 55]
+    loop score in grades {
+        grade := grade_from_score(score)
+        io.print("  Score $(score) -> Grade $(grade)\n")
+    }
+    io.print("\n")
+    
+    numbers := [-5, 0, 3, 15, 150]
+    loop n in numbers {
+        category := categorize_number(n)
+        io.print("  $(n) is $(category)\n")
+    }
+    
+    io.print("\n=== Showcase Complete ===\n")
+}

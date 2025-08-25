@@ -1,0 +1,17 @@
+// Variables and basic operations
+
+main = () i32 {
+    // Immutable binding
+    x := 10
+    y := 20
+    
+    // Mutable binding  
+    sum ::= 0
+    sum = x + y
+    
+    // Arithmetic
+    product := x * y
+    difference := y - x
+    
+    return sum
+}

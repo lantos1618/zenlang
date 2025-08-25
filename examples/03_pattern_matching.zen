@@ -1,0 +1,72 @@
+// Zen Language Example: Pattern Matching
+// Demonstrates the unique ? operator for all conditionals
+
+comptime {
+    build := @std.build
+    io := build.import("io")
+}
+
+// Simple value matching
+get_day_type = (day_num: i32) string {
+    return day_num ? | 1..=5 => "Weekday"
+                    | 6..=7 => "Weekend"
+                    | _ => "Invalid day"
+}
+
+// Pattern with guards using ->
+categorize_age = (age: i32) string {
+    return age ? | a -> a < 0 => "Invalid"
+                | a -> a < 13 => "Child"
+                | a -> a < 20 => "Teenager"
+                | a -> a < 60 => "Adult"
+                | _ => "Senior"
+}
+
+// Enum for demonstration
+Status =
+    | Success
+    | Warning(message: string)
+    | Error(code: i32)
+
+// Enum pattern matching with destructuring
+handle_status = (status: Status) string {
+    return status ? | .Success => "All good!"
+                   | .Warning -> msg => "Warning: $(msg)"
+                   | .Error -> code => "Error code: $(code)"
+}
+
+main = () void {
+    io.print("=== Pattern Matching Examples ===\n\n")
+    
+    // Test day types
+    io.print("Day 3: $(get_day_type(3))\n")
+    io.print("Day 6: $(get_day_type(6))\n")
+    io.print("Day 9: $(get_day_type(9))\n\n")
+    
+    // Test age categories
+    ages := [5, 15, 25, 65]
+    loop age in ages {
+        io.print("Age $(age): $(categorize_age(age))\n")
+    }
+    io.print("\n")
+    
+    // Test enum matching
+    statuses := [
+        Status.Success,
+        Status.Warning("Low memory"),
+        Status.Error(404),
+    ]
+    
+    loop status in statuses {
+        io.print("$(handle_status(status))\n")
+    }
+    
+    // Inline pattern matching
+    score := 85
+    grade := score ? | 90..=100 => "A"
+                    | 80..=89 => "B"  
+                    | 70..=79 => "C"
+                    | _ => "F"
+    
+    io.print("\nScore $(score) = Grade $(grade)\n")
+}

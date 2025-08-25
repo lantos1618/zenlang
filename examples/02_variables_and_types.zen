@@ -1,0 +1,49 @@
+// Zen Language Example: Variables and Types
+// Demonstrates the declaration system and basic types
+
+comptime {
+    build := @std.build
+    io := build.import("io")
+}
+
+main = () void {
+    // ===== Immutable Bindings (Constants) =====
+    
+    // Type inference
+    PI := 3.14159              // Inferred as f64
+    MESSAGE := "Hello"          // Inferred as string
+    IS_READY := true           // Inferred as bool
+    
+    // Explicit types
+    MAX_SIZE: u32 = 1000       // Explicitly u32
+    MIN_TEMP: f32 = -273.15    // Explicitly f32
+    
+    // ===== Mutable Bindings (Variables) =====
+    
+    // Type inference
+    counter ::= 0              // Mutable, inferred as i32
+    name ::= "Alice"           // Mutable string
+    
+    // Explicit types  
+    score:: f64 = 95.5         // Mutable f64
+    count:: u16 = 0            // Mutable u16
+    
+    // Default initialization
+    balance:: i32              // Initialized to 0
+    is_active:: bool           // Initialized to false
+    
+    // ===== Using Variables =====
+    
+    io.print("Initial counter: $(counter)\n")
+    counter = counter + 1
+    io.print("Updated counter: $(counter)\n")
+    
+    io.print("Name: $(name)\n")
+    name = "Bob"
+    io.print("Updated name: $(name)\n")
+    
+    // Constants cannot be modified
+    // PI = 3.14  // ERROR: Cannot assign to immutable binding
+    
+    io.print("Constants: PI=$(PI), MAX_SIZE=$(MAX_SIZE)\n")
+}
