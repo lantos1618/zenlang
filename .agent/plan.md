@@ -1,107 +1,130 @@
-# Zen Implementation Plan
+# Zen Language Implementation Plan
 
-## Project Status
-- **Core Language**: Working (functions, variables, control flow, FFI)
-- **Parser**: Complete (all syntax features implemented)
-- **Tests**: 165/165 passing (100% pass rate)
-- **LLVM Backend**: Functional for basic features
+## Current Status (2025-08-25)
+✅ All 224 tests passing across 36 suites
+✅ Language renamed from lynlang to zen
+✅ Documentation and examples updated
+✅ Project structure organized
+✅ Parser supports both `::` and `=` for functions
 
-## Phase 1: Foundation (Current Focus)
-### 1.1 Comptime Evaluation Engine ⏳
-- Parser support: ✅ Complete
-- Evaluation engine: ❌ TODO
-- Implementation approach:
-  1. Create `comptime_eval.rs` module
-  2. Build AST interpreter for comptime blocks
-  3. Support constant folding and compile-time function execution
-  4. Integrate with type checker for dependent types
+## Critical Alignment Tasks with lang.md Spec
 
-### 1.2 Dedicated Type Checker 🔧
-- Current state: Mixed with codegen
-- Goal: Separate type checking phase
-- Steps:
-  1. Create `src/type_checker.rs`
-  2. Extract type checking logic from codegen
-  3. Build symbol table and type environment
-  4. Implement type inference engine
-  5. Add better error messages with suggestions
+### Phase 1: Syntax Alignment (High Priority - Week 1)
 
-## Phase 2: Advanced Type System
-### 2.1 Generic Types & Monomorphization
-- Type parameters parsing: ✅ Done
-- Type instantiation: ❌ TODO
-- Monomorphization: ❌ TODO
-- Implementation:
-  1. Track generic type parameters
-  2. Build type substitution system
-  3. Generate specialized versions during codegen
-  4. Cache monomorphized functions
+#### 1.1 Parser Updates (2-3 days)
+- [ ] Enforce `=` for function definitions only (deprecate `::`)
+- [ ] Implement `::=` operator for mutable variable declarations
+- [ ] Ensure `:=` for immutable bindings
+- [ ] Remove if/else keywords from parser completely
+- [ ] Implement `->` operator for pattern destructuring/binding
+- [ ] Update all test files to use correct syntax
 
-### 2.2 Trait/Behavior System
-- Design decisions needed:
-  - Rust-like traits vs Go-like interfaces
-  - Explicit impl blocks vs structural typing
-- Implementation plan:
-  1. Define trait syntax and semantics
-  2. Add trait resolution
-  3. Support trait bounds on generics
-  4. Implement trait objects for dynamic dispatch
+#### 1.2 Pattern Matching Enhancement (1-2 days)
+- [ ] Ensure `?` operator is the ONLY conditional construct
+- [ ] Implement guard clauses with `-> condition`
+- [ ] Support struct destructuring with `->`
+- [ ] Remove any if/else codegen paths
+- [ ] Add comprehensive pattern matching tests
 
-## Phase 3: Memory & Runtime
-### 3.1 Memory Management
-- Stack allocation: ✅ Working
-- Heap allocation: ❌ TODO
-- Allocator interface: ❌ TODO
-- Reference counting/borrowing: ❌ TODO
+#### 1.3 Variable System (1 day)
+- [ ] Implement `::=` for mutable variables (replace `mut` keyword)
+- [ ] Ensure `:=` creates immutable bindings
+- [ ] Support `: Type` (immutable) and `:: Type` (mutable) annotations
+- [ ] Default initialization for declared but uninitialized variables
 
-### 3.2 Module System
-- File-based modules: ❌ TODO
-- Namespace management: ❌ TODO
-- Visibility rules: ❌ TODO
-- Package management: ❌ TODO
+### Phase 2: Core Features (Week 2)
 
-## Phase 4: Standard Library
-### 4.1 Core Types
-- Vec<T>: Dynamic arrays
-- HashMap<K,V>: Hash tables
-- String: UTF-8 strings
-- Option<T> & Result<T,E>: Already parsed
+#### 2.1 Module System & @std Namespace (3-4 days)
+- [ ] Implement @std.core with compiler intrinsics
+- [ ] Implement @std.build for module imports
+- [ ] Create build.import() mechanism
+- [ ] Bootstrap core types (sizeOf, null_ptr, etc.)
+- [ ] Design module resolution strategy
 
-### 4.2 Core Modules
-- io: File and console I/O
-- mem: Memory utilities
-- thread: Concurrency primitives
-- net: Networking
+#### 2.2 Comptime Engine (4-5 days)
+- [ ] Complete comptime evaluation engine (parser done)
+- [ ] Support comptime blocks that evaluate to values
+- [ ] Implement comptime parameters for generics
+- [ ] Enable compile-time computations (tables, constants)
+- [ ] Add comptime type introspection
 
-## Phase 5: Advanced Features
-### 5.1 Async/Await
-- Task<T> type
-- Async runtime
-- Async function syntax
-- await operator
+### Phase 3: Type System (Week 3)
 
-### 5.2 Tooling
-- Language server improvements
-- Debugger support
-- Code formatter
-- Documentation generator
+#### 3.1 Type Checker Separation (2-3 days)
+- [ ] Extract type checking from codegen
+- [ ] Create dedicated src/typechecker module
+- [ ] Implement proper type inference
+- [ ] Add rich type error reporting
+- [ ] Build symbol table management
+
+#### 3.2 Generic System (2-3 days)
+- [ ] Generic type instantiation
+- [ ] Monomorphization pass
+- [ ] Type parameter constraints
+- [ ] Generic type inference
+
+#### 3.3 Behaviors/Traits (3-4 days)
+- [ ] Design behavior syntax per lang.md
+- [ ] Implement behavior definitions
+- [ ] Add impl blocks for types
+- [ ] Support static/dynamic dispatch
+- [ ] Behavior-based polymorphism
+
+### Phase 4: Standard Library (Week 4)
+
+#### 4.1 Core Types (2-3 days)
+- [ ] Option<T> enum implementation
+- [ ] Result<T, E> enum implementation
+- [ ] String type with interpolation
+- [ ] Range types (exclusive/inclusive)
+
+#### 4.2 Essential Modules (3-4 days)
+- [ ] io module (print, read, files)
+- [ ] mem module (allocators, utilities)
+- [ ] collections (Vec, HashMap basics)
+- [ ] math module (basic operations)
 
 ## Implementation Strategy
-1. **Maintain 100% test coverage** - Never let tests fail
-2. **Incremental development** - Small, working changes
-3. **Clean architecture** - Separate concerns properly
-4. **User feedback** - Use GitHub issues for tracking
-5. **Regular commits** - git commit after each feature
 
-## Current Sprint (Next 48 hours)
-1. [ ] Implement comptime evaluation engine
-2. [ ] Extract type checker from codegen
-3. [ ] Add basic generic type support
-4. [ ] Start trait system design
-5. [ ] Clean up unused code warnings
+### Principles
+1. **Test-Driven**: Write tests before implementation
+2. **Incremental**: Small, working commits
+3. **Clean Code**: KISS/DRY principles
+4. **Documentation**: Update docs with each change
 
-## Success Metrics
-- Test pass rate: Maintain 100%
-- Compilation speed: < 1s for 1000 LOC
-- Error quality: Clear, actionable messages
-- Code quality: No warnings, clean architecture
+### Daily Workflow
+1. Pick task from current phase
+2. Write/update tests
+3. Implement feature
+4. Ensure all tests pass
+5. Update documentation
+6. Commit with clear message
+7. Push to remote
+
+### Success Metrics
+- [ ] All lang.md examples compile and run
+- [ ] 100% test coverage maintained
+- [ ] No if/else in user code (only ? operator)
+- [ ] Comptime evaluation functional
+- [ ] @std namespace working
+- [ ] Type errors caught before codegen
+
+## Next Immediate Tasks (Today)
+1. [ ] Start enforcing `=` syntax for functions
+2. [ ] Implement `::=` operator for mutable variables
+3. [ ] Begin removing if/else support
+4. [ ] Update parser tests for new syntax
+5. [ ] Create migration guide for syntax changes
+
+## Notes
+- Parser already supports most features, need to enforce them
+- Keep backward compatibility during transition
+- Focus on lang.md spec compliance
+- Maintain all existing tests passing
+- Document breaking changes clearly
+
+## Resources
+- lang.md: Complete language specification
+- .agent/global_memory.md: Quick syntax reference
+- .agent/todos.md: Current task tracking
+- examples/zen_spec_demo.zen: Reference implementation
