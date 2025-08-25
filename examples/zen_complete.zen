@@ -1,0 +1,447 @@
+// Complete Zen Language Example
+// This file demonstrates ALL features specified in lang.md
+// Last updated to match lang.md v1.0
+
+// ============================================================================
+// Module System & Bootstrap (Section 2)
+// ============================================================================
+comptime {
+    // The @std namespace provides bootstrap access
+    core := @std.core
+    build := @std.build
+    
+    // Import standard library modules
+    io := build.import("io")
+    mem := build.import("mem")
+    math := build.import("math")
+    collections := build.import("collections")
+}
+
+// ============================================================================
+// Basic Types & Literals (Section 3)
+// ============================================================================
+
+demonstrate_types = () void {
+    // Primitives
+    is_ready: bool = true
+    nothing: void
+    greeting: string = "Hello, Zen!"
+    
+    // Integers
+    tiny: i8 = -128
+    small: i16 = -32768
+    regular: i32 = -2147483648
+    big: i64 = -9223372036854775808
+    
+    unsigned_byte: u8 = 255
+    unsigned_short: u16 = 65535
+    unsigned_int: u32 = 4294967295
+    unsigned_long: u64 = 18446744073709551615
+    pointer_size: usize = 0
+    
+    // Floats
+    single_precision: f32 = 3.14159
+    double_precision: f64 = 2.718281828459045
+    
+    // Ranges
+    exclusive_range := 0..10     // 0 to 9
+    inclusive_range := 0..=10    // 0 to 10
+}
+
+// ============================================================================
+// Variable Declarations (Section 4)
+// ============================================================================
+
+demonstrate_declarations = () void {
+    // Immutable bindings (constants)
+    PI := 3.14159265359          // Inferred type
+    GOLDEN_RATIO: f64 = 1.618     // Explicit type
+    
+    // Mutable bindings (variables)
+    counter ::= 0                 // Inferred type, mutable
+    temperature:: f32 = 20.5      // Explicit type, mutable
+    
+    // Default initialization
+    score:: i32                   // Defaults to 0
+    is_active:: bool              // Defaults to false
+    result:: Option<string>       // Defaults to None
+    
+    // Mutations
+    counter = counter + 1
+    temperature = 25.3
+    is_active = true
+}
+
+// ============================================================================
+// Structs (Section 5)
+// ============================================================================
+
+// Basic struct
+Vec3 = {
+    x: f64,
+    y: f64,
+    z: f64,
+}
+
+// Struct with mutable fields and defaults
+User = {
+    id: u64,
+    username: string,
+    email: string,
+    is_admin:: bool = false,           // Mutable with default
+    login_count:: u32 = 0,             // Mutable with default
+    profile: Option<UserProfile> = None,
+}
+
+UserProfile = {
+    bio: string,
+    avatar_url: string,
+    created_at: u64,
+}
+
+// ============================================================================
+// Enums (Section 5)
+// ============================================================================
+
+// Simple enum
+Direction =
+    | North
+    | South
+    | East
+    | West
+
+// Complex enum with payloads
+Message =
+    | Quit
+    | Move(x: i32, y: i32)
+    | Write(text: string)
+    | ChangeColor(r: u8, g: u8, b: u8)
+    | Transform({ scale: f32, rotation: f32, position: Vec3 })
+
+// Standard Result type for error handling
+Result<T, E> =
+    | Ok(T)
+    | Err(E)
+
+// Standard Option type for nullable values
+Option<T> =
+    | Some(T)
+    | None
+
+// ============================================================================
+// Namespacing (Section 6)
+// ============================================================================
+
+Math = {
+    PI := 3.14159265359,
+    E := 2.718281828459,
+    
+    Circle = {
+        radius: f64,
+    },
+    
+    area = (circle: Circle) f64 {
+        return PI * circle.radius * circle.radius
+    },
+    
+    circumference = (circle: Circle) f64 {
+        return 2.0 * PI * circle.radius
+    },
+}
+
+// ============================================================================
+// Functions (Section 7)
+// ============================================================================
+
+// Basic function
+add = (a: i32, b: i32) i32 {
+    return a + b
+}
+
+// Function with default parameters
+greet = (name: string, prefix: string = "Hello") void {
+    io.print("$(prefix), $(name)!")
+}
+
+// Function returning Result
+divide = (a: f64, b: f64) Result<f64, string> {
+    return b ? | 0.0 => .Err("Division by zero")
+              | _ => .Ok(a / b)
+}
+
+// UFCS Example
+Rectangle = { width: f64, height: f64 }
+
+area = (rect: Rectangle) f64 {
+    return rect.width * rect.height
+}
+
+perimeter = (rect: Rectangle) f64 {
+    return 2.0 * (rect.width + rect.height)
+}
+
+// ============================================================================
+// Control Flow: Pattern Matching (Section 8)
+// ============================================================================
+
+demonstrate_patterns = () void {
+    score := 85
+    
+    // Simple value matching
+    grade := score ? | 90..=100 => "A"
+                    | 80..=89  => "B"
+                    | 70..=79  => "C"
+                    | 60..=69  => "D"
+                    | _        => "F"
+    
+    // Enum destructuring with ->
+    action := Message.Move(10, 20)
+    description := action ? | .Quit => "Quitting"
+                           | .Move -> x, y => "Moving to $(x), $(y)"
+                           | .Write -> text => "Writing: $(text)"
+                           | .ChangeColor -> r, g, b => "RGB($(r), $(g), $(b))"
+                           | .Transform -> t => "Transform at $(t.position.x)"
+    
+    // With guards
+    value := 42
+    category := value ? | v -> v < 0 => "negative"
+                       | v -> v == 0 => "zero"
+                       | v -> v > 0 => "positive"
+    
+    // Complex patterns with blocks
+    result := divide(10.0, 2.0)
+    outcome := result ? | .Ok -> val => {
+        io.print("Success: $(val)")
+        val
+    }
+    | .Err -> msg => {
+        io.print("Error: $(msg)")
+        0.0
+    }
+}
+
+// ============================================================================
+// Control Flow: Loops (Section 8)
+// ============================================================================
+
+demonstrate_loops = () void {
+    // Conditional loop (while-like)
+    counter ::= 10
+    loop counter > 0 {
+        io.print("Countdown: $(counter)")
+        counter = counter - 1
+    }
+    
+    // Range iteration
+    loop i in 0..5 {
+        io.print("Index: $(i)")
+    }
+    
+    // Inclusive range
+    loop i in 1..=3 {
+        io.print("Number: $(i)")
+    }
+    
+    // Collection iteration
+    items := ["apple", "banana", "cherry"]
+    loop item in items {
+        io.print("Fruit: $(item)")
+    }
+    
+    // Nested loops with labels
+    outer: loop i in 0..3 {
+        inner: loop j in 0..3 {
+            i * j > 4 ? | true => break outer
+                      | false => continue inner
+        }
+    }
+}
+
+// ============================================================================
+// Error Handling (Section 9)
+// ============================================================================
+
+ParseError = {
+    message: string,
+    position: usize,
+}
+
+parse_int = (s: string) Result<i32, ParseError> {
+    // Simplified example
+    s ? | "42" => .Ok(42)
+        | "0" => .Ok(0)
+        | _ => .Err(ParseError{ message: "Invalid integer", position: 0 })
+}
+
+handle_errors = () void {
+    input := "42"
+    
+    // Pattern matching for error handling
+    value := parse_int(input) ? | .Ok -> n => {
+        io.print("Parsed: $(n)")
+        n
+    }
+    | .Err -> e => {
+        io.print("Parse error: $(e.message) at position $(e.position)")
+        -1
+    }
+    
+    // Option handling
+    maybe_value: Option<i32> = .Some(100)
+    unwrapped := maybe_value ? | .Some -> v => v
+                              | .None => 0
+}
+
+// ============================================================================
+// Behaviors/Traits (Section 10)
+// ============================================================================
+
+// Define a behavior
+Drawable = behavior {
+    draw = (self) void,
+    get_bounds = (self) Rectangle,
+}
+
+// Implement behavior for a type
+Circle = {
+    center: Vec3,
+    radius: f64,
+}
+
+Circle.impl = {
+    Drawable: {
+        draw = (self: Ptr<Circle>) void {
+            io.print("Drawing circle at ($(self.center.x), $(self.center.y))")
+        },
+        
+        get_bounds = (self: Ptr<Circle>) Rectangle {
+            return Rectangle{
+                width: self.radius * 2.0,
+                height: self.radius * 2.0,
+            }
+        },
+    },
+}
+
+// ============================================================================
+// Compile-Time Metaprogramming (Section 11)
+// ============================================================================
+
+// Compile-time computed constant
+FIBONACCI_TABLE := comptime {
+    table:: [20]i32
+    table[0] = 0
+    table[1] = 1
+    loop i in 2..20 {
+        table[i] = table[i-1] + table[i-2]
+    }
+    table
+}
+
+// Generic function with comptime parameters
+create_array = (comptime T: type, comptime N: usize, default_val: T) [N]T {
+    result:: [N]T
+    loop i in 0..N {
+        result[i] = default_val
+    }
+    return result
+}
+
+// Type generation at compile time
+make_pair = (comptime T1: type, comptime T2: type) type {
+    return comptime {
+        Pair = {
+            first: T1,
+            second: T2,
+        }
+        Pair
+    }
+}
+
+// ============================================================================
+// Memory Management (Section 13)
+// ============================================================================
+
+demonstrate_memory = (allocator: mem.Allocator) void {
+    // Raw pointer
+    raw_ptr: Ptr<i32> = allocator.alloc(i32)
+    defer allocator.free(raw_ptr)
+    
+    // Managed reference
+    managed_ref: Ref<User> = Ref.new(User{
+        id: 1,
+        username: "alice",
+        email: "alice@zen.org",
+    })
+    
+    // Using allocator for dynamic data structures
+    list := collections.List<string>.new(allocator)
+    list.append("first")
+    list.append("second")
+}
+
+// ============================================================================
+// String Interpolation (Section 14)
+// ============================================================================
+
+demonstrate_strings = () void {
+    name := "Zen"
+    version := 1.0
+    count := 42
+    
+    // Basic interpolation
+    message := "Welcome to $(name) v$(version)!"
+    
+    // Complex expressions
+    result := "The answer is $(count * 2 - 42)"
+    
+    // Nested interpolation
+    status := "Status: $(count > 0 ? | true => "Active ($(count) items)"
+                                    | false => "Empty")"
+}
+
+// ============================================================================
+// Main Entry Point (Section 15)
+// ============================================================================
+
+main = () void {
+    io.print("=== Zen Language Complete Example ===\n")
+    
+    // Test basic features
+    demonstrate_types()
+    demonstrate_declarations()
+    
+    // Test control flow
+    demonstrate_patterns()
+    demonstrate_loops()
+    
+    // Test error handling
+    handle_errors()
+    
+    // Test string interpolation
+    demonstrate_strings()
+    
+    // Test UFCS
+    rect := Rectangle{ width: 10.0, height: 5.0 }
+    a1 := area(rect)          // Normal call
+    a2 := rect.area()         // UFCS call
+    p := rect.perimeter()     // UFCS call
+    
+    // Test namespace access
+    circle := Math.Circle{ radius: 5.0 }
+    circle_area := Math.area(circle)
+    
+    // Test compile-time features
+    fib10 := FIBONACCI_TABLE[10]
+    io.print("10th Fibonacci number: $(fib10)")
+    
+    // Test generic instantiation
+    int_array := create_array(i32, 5, 0)
+    float_array := create_array(f64, 3, 1.0)
+    
+    // Create a pair type at compile time
+    IntStringPair := make_pair(i32, string)
+    pair := IntStringPair{ first: 42, second: "answer" }
+    
+    io.print("\n=== All features demonstrated successfully! ===")
+}

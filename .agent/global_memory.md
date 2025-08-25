@@ -57,7 +57,7 @@ value ? | pattern => result
 
 ## File Organization
 ```
-/home/ubuntu/zenlang/
+/home/ubuntu/zen/
 ├── src/           - Rust implementation
 ├── examples/      - Zen example files
 ├── zen_test/      - Test files

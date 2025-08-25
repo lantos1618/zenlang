@@ -10,12 +10,12 @@ use crate::parser::Parser;
 use crate::ast::Program;
 
 #[derive(Debug)]
-pub struct ZenLanguageServer {
+pub struct ZenServer {
     client: Client,
     documents: Arc<RwLock<HashMap<String, String>>>,
 }
 
-impl ZenLanguageServer {
+impl ZenServer {
     pub fn new(client: Client) -> Self {
         Self {
             client,
@@ -63,7 +63,7 @@ impl ZenLanguageServer {
 }
 
 #[tower_lsp::async_trait]
-impl LanguageServer for ZenLanguageServer {
+impl LanguageServer for ZenServer {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
         Ok(InitializeResult {
             server_info: Some(ServerInfo {
@@ -233,6 +233,6 @@ pub async fn run_lsp_server() {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
-    let (service, socket) = LspService::new(|client| ZenLanguageServer::new(client));
+    let (service, socket) = LspService::new(|client| ZenServer::new(client));
     Server::new(stdin, stdout, socket).serve(service).await;
 } 
