@@ -1,0 +1,332 @@
+// Comprehensive Zen Language Showcase
+// This file demonstrates ALL major language features from lang.md
+
+// ============================================================================
+// 1. Module Bootstrapping with @std
+// ============================================================================
+comptime {
+    core := @std.core
+    build := @std.build
+    
+    // Import standard library modules
+    io := build.import("io")
+    mem := build.import("mem")
+    math := build.import("math")
+    collections := build.import("collections")
+}
+
+// ============================================================================
+// 2. Basic Types & Literals
+// ============================================================================
+demonstrate_types = () void {
+    // Primitive types
+    flag: bool = true
+    nothing: void = void
+    greeting: string = "Hello, Zen!"
+    
+    // Integer types
+    tiny: i8 = -128
+    small: i16 = -32768
+    normal: i32 = -2147483648
+    big: i64 = -9223372036854775808
+    
+    byte: u8 = 255
+    word: u16 = 65535
+    dword: u32 = 4294967295
+    qword: u64 = 18446744073709551615
+    size: usize = 1024
+    
+    // Float types
+    single: f32 = 3.14159
+    double: f64 = 2.718281828459045
+    
+    // Range expressions
+    exclusive_range := 0..5     // 0, 1, 2, 3, 4
+    inclusive_range := 0..=5    // 0, 1, 2, 3, 4, 5
+}
+
+// ============================================================================
+// 3. Variable & Constant Declarations
+// ============================================================================
+demonstrate_declarations = () void {
+    // Immutable bindings (Constants)
+    PI := 3.14159                    // Inferred type
+    MAX_USERS: u32 = 1000            // Explicit type
+    
+    // Mutable bindings (Variables)
+    counter ::= 0                    // Inferred type
+    connections:: u16 = 0            // Explicit type
+    
+    // Assignment to mutable variable
+    counter = counter + 1
+    connections = connections + 1
+    
+    // Default initialization
+    score:: i32                      // Initialized to 0
+    maybe_user:: Option<User>        // Initialized to None
+}
+
+// ============================================================================
+// 4. Structs (Product Types)
+// ============================================================================
+Person = {
+    name: string,
+    age: int,
+    email: string,
+    is_premium:: bool = false,       // Mutable field with default
+    last_seen: Option<int> = None,   // Optional field
+}
+
+// Methods via UFCS
+greet = (person: Person) string {
+    return "Hello, $(person.name)!"
+}
+
+// ============================================================================
+// 5. Enums (Sum Types / Tagged Unions)
+// ============================================================================
+Status =
+    | Idle
+    | Running(pid: u32)
+    | Sleeping(duration: f64)
+    | Error({ code: int, message: string, recoverable: bool })
+
+// Nested enum for results
+ParseResult<T> =
+    | Success(value: T)
+    | Failure(error: string)
+
+// ============================================================================
+// 6. Pattern Matching (NO if/else keywords!)
+// ============================================================================
+process_status = (status: Status) string {
+    // The ONLY way to do conditionals in Zen: the ? operator
+    return status ? | .Idle => "Process is idle"
+                   | .Running -> pid => "Process running with PID $(pid)"
+                   | .Sleeping -> duration => "Sleeping for $(duration) seconds"
+                   | .Error -> err => {
+                       err.recoverable ? | true => "Recoverable error: $(err.message)"
+                                        | false => "Fatal error $(err.code): $(err.message)"
+                   }
+}
+
+// Guards in pattern matching
+categorize_age = (age: int) string {
+    return age ? | a -> a < 0 => "Invalid age"
+                | 0..=12 => "Child"
+                | 13..=19 => "Teenager"
+                | 20..=64 => "Adult"
+                | _ => "Senior"
+}
+
+// ============================================================================
+// 7. Loops (ONLY loop keyword, no for/while)
+// ============================================================================
+demonstrate_loops = () void {
+    // Conditional loop (while-like)
+    countdown ::= 10
+    loop countdown > 0 {
+        io.print("$(countdown)...")
+        countdown = countdown - 1
+    }
+    io.print("Liftoff!\n")
+    
+    // Iterator loop (for-each like)
+    fruits := ["apple", "banana", "orange"]
+    loop fruit in fruits {
+        io.print("I like $(fruit)\n")
+    }
+    
+    // Infinite loop with break
+    attempts ::= 0
+    loop {
+        attempts = attempts + 1
+        success := try_operation()
+        success ? | true => break
+                 | false => {
+                     attempts >= 3 ? | true => break
+                                    | false => continue
+                 }
+    }
+    
+    // Labeled loops for nested control
+    outer: loop y in 0..3 {
+        inner: loop x in 0..3 {
+            sum := x + y
+            sum > 3 ? | true => break outer
+                     | false => io.print("($(x),$(y)) ")
+        }
+    }
+}
+
+// ============================================================================
+// 8. Error Handling (Errors as Values)
+// ============================================================================
+divide = (a: f64, b: f64) Result<f64, string> {
+    return b == 0.0 ? | true => .Err("Division by zero")
+                     | false => .Ok(a / b)
+}
+
+safe_divide = (a: f64, b: f64) f64 {
+    result := divide(a, b)
+    return result ? | .Ok -> value => value
+                   | .Err -> _ => 0.0  // Default on error
+}
+
+// ============================================================================
+// 9. Behaviors (Traits/Interfaces)
+// ============================================================================
+Drawable = behavior {
+    draw = (self) void,
+    get_bounds = (self) Rectangle,
+}
+
+Circle = {
+    center: Point,
+    radius: f64,
+}
+
+Circle.impl = {
+    Drawable: {
+        draw = (self: Circle) void {
+            io.print("Drawing circle at ($(self.center.x), $(self.center.y))\n")
+        },
+        get_bounds = (self: Circle) Rectangle {
+            return Rectangle{
+                x: self.center.x - self.radius,
+                y: self.center.y - self.radius,
+                width: self.radius * 2.0,
+                height: self.radius * 2.0,
+            }
+        },
+    }
+}
+
+// ============================================================================
+// 10. Compile-Time Metaprogramming
+// ============================================================================
+// Compile-time computed constant
+FIBONACCI_TABLE := comptime {
+    table:: [20]int
+    table[0] = 0
+    table[1] = 1
+    loop i in 2..20 {
+        table[i] = table[i-1] + table[i-2]
+    }
+    table  // Return the computed table
+}
+
+// Generic function with compile-time parameters
+create_array = (comptime T: type, comptime N: usize, default: T) [N]T {
+    result:: [N]T
+    loop i in 0..N {
+        result[i] = default
+    }
+    return result
+}
+
+// ============================================================================
+// 11. Namespacing & Code Organization
+// ============================================================================
+Math = {
+    PI := 3.14159265359,
+    E := 2.71828182846,
+    
+    Point = { x: f64, y: f64 },
+    Rectangle = { x: f64, y: f64, width: f64, height: f64 },
+    
+    distance = (p1: Point, p2: Point) f64 {
+        dx := p1.x - p2.x
+        dy := p1.y - p2.y
+        return math.sqrt(dx*dx + dy*dy)
+    },
+    
+    area = (rect: Rectangle) f64 {
+        return rect.width * rect.height
+    },
+}
+
+// ============================================================================
+// 12. String Interpolation
+// ============================================================================
+format_report = (name: string, score: int, passed: bool) string {
+    status := passed ? | true => "PASSED"
+                      | false => "FAILED"
+    return "Student: $(name), Score: $(score)/100, Status: $(status)"
+}
+
+// ============================================================================
+// 13. Memory Management & Allocators
+// ============================================================================
+create_buffer = (allocator: mem.Allocator, size: usize) Ptr<u8> {
+    buffer := allocator.alloc(u8, size)
+    // Initialize buffer
+    loop i in 0..size {
+        buffer[i] = 0
+    }
+    return buffer
+}
+
+// ============================================================================
+// 14. Async/Await (conceptual)
+// ============================================================================
+fetch_data = async (url: string) Result<string, Error> {
+    // Async operation
+    response := await http.get(url)
+    return response ? | .Ok -> data => .Ok(data.body)
+                     | .Err -> err => .Err(err)
+}
+
+// ============================================================================
+// MAIN ENTRY POINT
+// ============================================================================
+main = () void {
+    io.print("=== Zen Language Feature Showcase ===\n\n")
+    
+    // Test pattern matching
+    io.print("Pattern Matching Examples:\n")
+    status1 := Status.Running(1234)
+    status2 := Status.Error({ code: 404, message: "Not found", recoverable: true })
+    io.print("  $(process_status(status1))\n")
+    io.print("  $(process_status(status2))\n")
+    
+    // Test age categorization
+    ages := [5, 15, 25, 70]
+    loop age in ages {
+        io.print("  Age $(age): $(categorize_age(age))\n")
+    }
+    
+    // Test error handling
+    io.print("\nError Handling:\n")
+    result1 := divide(10.0, 2.0)
+    result2 := divide(10.0, 0.0)
+    
+    result1 ? | .Ok -> val => io.print("  10/2 = $(val)\n")
+             | .Err -> err => io.print("  Error: $(err)\n")
+    
+    result2 ? | .Ok -> val => io.print("  10/0 = $(val)\n")
+             | .Err -> err => io.print("  Error: $(err)\n")
+    
+    // Test UFCS
+    io.print("\nUFCS Example:\n")
+    alice := Person{ name: "Alice", age: 30, email: "alice@example.com" }
+    io.print("  $(alice.greet())\n")  // UFCS call
+    
+    // Test compile-time table
+    io.print("\nCompile-time Fibonacci:\n")
+    io.print("  10th Fibonacci number: $(FIBONACCI_TABLE[10])\n")
+    
+    // Test namespaced code
+    p1 := Math.Point{ x: 0.0, y: 0.0 }
+    p2 := Math.Point{ x: 3.0, y: 4.0 }
+    dist := Math.distance(p1, p2)
+    io.print("\nDistance between points: $(dist)\n")
+    
+    io.print("\n=== All features demonstrated successfully! ===\n")
+}
+
+// Helper function for loop demo
+try_operation = () bool {
+    // Simulated operation that might fail
+    return math.random() > 0.7
+}

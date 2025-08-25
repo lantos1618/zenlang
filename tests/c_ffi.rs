@@ -69,7 +69,7 @@ fn test_extern_with_function_call() {
     let input = r#"
 extern puts = (ptr) i32
 
-main :: () -> i32 {
+main = () i32 {
     puts("Hello from C!")
     return 0
 }
