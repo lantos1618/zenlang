@@ -47,9 +47,9 @@ value ? | pattern => result
 - String interpolation with `$(expr)`
 
 ## Project Status
-- Core parser: ✅ Complete
+- Core parser: ✅ Complete with `?` syntax
 - Type system: ✅ Complete  
-- Pattern matching: ✅ Complete (new `?` syntax)
+- Pattern matching: ✅ Complete (new `?` syntax implemented in parser/expressions.rs:373-429)
 - Error handling: ✅ Complete
 - Compile-time: 🚧 In progress
 - Async: 📋 Planned
@@ -57,7 +57,7 @@ value ? | pattern => result
 
 ## File Organization
 ```
-/home/ubuntu/zen/
+/home/ubuntu/zenlang/
 ├── src/           - Rust implementation
 ├── examples/      - Zen example files
 ├── zen_test/      - Test files
@@ -68,8 +68,9 @@ value ? | pattern => result
 ```
 
 ## Current Implementation Status
-- Language name: Consistently "zen" throughout
+- Language name: Consistently "zen" throughout (verified - no "zena" references)
 - File extension: `.zen` everywhere
-- Examples: 19+ example files demonstrating features
+- Examples: 30+ example files demonstrating features
 - Tests: 7 test files for validation
+- Parser: Correctly implements `?` pattern matching at src/parser/expressions.rs:373-429
 - Documentation: Complete specification in lang.md
