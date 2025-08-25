@@ -1,4 +1,4 @@
-# Lynlang Progress Report - August 23, 2025 (Evening)
+# Zen Progress Report - August 23, 2025 (Evening)
 
 ## Summary
 Significant progress made on parser completion and code cleanup. All major parser features are now implemented and tested.
@@ -77,5 +77,5 @@ All major parser features are now implemented:
 - Code quality improved with warning cleanup
 
 ## Repository
-https://github.com/lantos1618/lynlang
+https://github.com/lantos1618/zenlang
 Branch: ragemode

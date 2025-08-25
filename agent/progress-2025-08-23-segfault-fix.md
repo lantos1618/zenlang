@@ -16,8 +16,8 @@ Changed pattern literals from integers to booleans:
 - `Pattern::Literal(Expression::Integer64(0))` → `Pattern::Literal(Expression::Boolean(false))`
 
 ## Files Modified
-1. `/home/ubuntu/lynlang/tests/codegen.rs` - Fixed recursive function test
-2. `/home/ubuntu/lynlang/tests/codegen_functions.rs` - Fixed duplicate test
+1. `/home/ubuntu/zenlang/tests/codegen.rs` - Fixed recursive function test
+2. `/home/ubuntu/zenlang/tests/codegen_functions.rs` - Fixed duplicate test
 
 ## Test Results
 - `test_recursive_function` now passes successfully

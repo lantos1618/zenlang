@@ -1,4 +1,4 @@
-# Lynlang Project Plan
+# Zen Project Plan
 
 ## Project Status
 **Current Status**: Parser match expression fixed, 204/205 tests passing  
