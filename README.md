@@ -13,8 +13,8 @@ A modern systems programming language designed for clarity, performance, and joy
 ## Key Features
 
 ### ✅ Implemented
-- Functions with :: and -> syntax
-- Variables (mutable/immutable) with := and ::= operators
+- Functions with `=` syntax: `name = (params) ReturnType { }`
+- Variables (mutable/immutable) with `:=` and `::=` operators
 - Basic types (integers, floats, strings, bool, void)
 - Structs and enums with pattern matching
 - Pattern matching with unified `?` operator (no if/else keywords)
@@ -83,6 +83,7 @@ cargo run --bin zen examples/hello.zen
 ## Examples
 
 See the [`examples/`](examples/) directory for comprehensive examples:
+- `zen_spec_demo.zen` - Complete demonstration of lang.md specification
 - `hello.zen` - Basic hello world
 - `variables.zen` - Variable declarations
 - `functions.zen` - Functions and UFCS
@@ -115,7 +116,7 @@ zenlang/
 - **Parser**: ✅ Complete with all major features
 - **Code Generation**: ✅ Working for core features
 - **Type System**: 🚧 Being separated from codegen
-- **Test Coverage**: ✅ 100% passing (165+ tests)
+- **Test Coverage**: ✅ 100% passing (224 tests across 36 suites)
 
 ## Contributing
 
