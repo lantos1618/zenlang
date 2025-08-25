@@ -1,0 +1,537 @@
+// Zen Language Comprehensive Example
+// Fully aligned with lang.md specification v1.0
+// This file demonstrates all core language features
+
+// ============================================================================
+// Section 1: Module Setup and Imports
+// ============================================================================
+
+comptime {
+    // The @std namespace is globally available - our bootstrap mechanism
+    core := @std.core
+    build := @std.build
+    
+    // Import standard library modules
+    io := build.import("io")
+    mem := build.import("mem")
+    math := build.import("math")
+    collections := build.import("collections")
+}
+
+// ============================================================================
+// Section 2: Basic Types and Declarations
+// ============================================================================
+
+// Constants (immutable bindings)
+PI := 3.14159265359
+MAX_BUFFER_SIZE: u32 = 8192
+APP_NAME := "Zen Demo"
+
+// Variables (mutable bindings)
+global_counter ::= 0
+active_sessions:: u16 = 0
+
+// Type aliases
+UserId = u64
+Score = i32
+
+// ============================================================================
+// Section 3: Data Structures - Structs
+// ============================================================================
+
+// Simple struct with mixed mutability
+Point2D = {
+    x: f64,
+    y: f64,
+}
+
+// Complex struct with defaults and mutable fields
+User = {
+    id: UserId,
+    username: string,
+    email: string,
+    score:: Score = 0,              // Mutable with default
+    is_verified:: bool = false,     // Mutable with default
+    created_at: i64,
+    metadata: Option<string> = None, // Optional field
+}
+
+// Nested struct
+Rectangle = {
+    top_left: Point2D,
+    bottom_right: Point2D,
+}
+
+// ============================================================================
+// Section 4: Data Structures - Enums (Sum Types)
+// ============================================================================
+
+// Simple enum
+Color =
+    | Red
+    | Green
+    | Blue
+    | Custom(r: u8, g: u8, b: u8)
+
+// Complex enum with various payload types
+Message =
+    | Text(content: string)
+    | Number(value: f64)
+    | Binary(data: []u8)
+    | Structured({ 
+        type: string, 
+        payload: string,
+        timestamp: i64 
+    })
+    | Empty
+
+// Error type enum
+DatabaseError =
+    | ConnectionFailed(host: string, port: u16)
+    | QueryError(message: string)
+    | Timeout(duration_ms: u32)
+    | NotFound
+
+// ============================================================================
+// Section 5: Functions and UFCS
+// ============================================================================
+
+// Simple function
+add = (a: f64, b: f64) f64 {
+    return a + b
+}
+
+// Function with default parameter
+greet = (name: string, prefix: string = "Hello") void {
+    io.print("$(prefix), $(name)!\n")
+}
+
+// Function returning Result type for error handling
+divide = (a: f64, b: f64) Result<f64, string> {
+    result := b != 0.0 ? | true => .Ok(a / b)
+                        | false => .Err("Division by zero")
+    return result
+}
+
+// UFCS example - method-like function for Point2D
+distance_from_origin = (p: Point2D) f64 {
+    return math.sqrt(p.x * p.x + p.y * p.y)
+}
+
+// UFCS for Rectangle
+area = (rect: Rectangle) f64 {
+    width := rect.bottom_right.x - rect.top_left.x
+    height := rect.bottom_right.y - rect.top_left.y
+    return width * height
+}
+
+// ============================================================================
+// Section 6: Pattern Matching with ? Operator
+// ============================================================================
+
+// NO if/else keywords - all conditionals use ?
+classify_score = (score: Score) string {
+    // Direct value matching with ranges
+    grade := score ? | 90..=100 => "A"
+                    | 80..=89  => "B"
+                    | 70..=79  => "C"
+                    | 60..=69  => "D"
+                    | _        => "F"
+    return grade
+}
+
+// Pattern matching with enum destructuring using ->
+process_message = (msg: Message) string {
+    result := msg ? | .Text -> content => "Text: $(content)"
+                   | .Number -> value => "Number: $(value)"
+                   | .Binary -> data => "Binary data of $(data.length) bytes"
+                   | .Structured -> { type, payload, timestamp } => {
+                       "Structured message: type=$(type), time=$(timestamp)"
+                   }
+                   | .Empty => "Empty message"
+    return result
+}
+
+// Pattern matching with guards using ->
+categorize_number = (n: i32) string {
+    category := n ? | x -> x < 0 => "negative"
+                   | x -> x == 0 => "zero"
+                   | x -> x > 0 && x <= 10 => "small positive"
+                   | x -> x > 10 && x <= 100 => "medium positive"
+                   | _ => "large positive"
+    return category
+}
+
+// ============================================================================
+// Section 7: Error Handling with Result and Option
+// ============================================================================
+
+find_user = (id: UserId) Result<User, DatabaseError> {
+    // Simulated database lookup
+    found := id > 0 && id < 1000
+    
+    result := found ? | true => .Ok(User{
+                           id: id,
+                           username: "user_$(id)",
+                           email: "user$(id)@example.com",
+                           created_at: 1234567890,
+                       })
+                     | false => .Err(.NotFound)
+    return result
+}
+
+// Chaining error handling
+update_user_score = (id: UserId, new_score: Score) Result<string, DatabaseError> {
+    user_result := find_user(id)
+    
+    final_result := user_result ? | .Ok -> user => {
+                                      // Update logic here
+                                      .Ok("Updated user $(user.username) score to $(new_score)")
+                                  }
+                                | .Err -> err => .Err(err)
+    
+    return final_result
+}
+
+// ============================================================================
+// Section 8: Loops - Single loop keyword for all iteration
+// ============================================================================
+
+// Conditional loop (while-like)
+count_down = (start: i32) void {
+    n ::= start
+    loop n > 0 {
+        io.print("$(n)... ")
+        n = n - 1
+    }
+    io.print("Liftoff!\n")
+}
+
+// Iterator loop (for-each)
+sum_array = (numbers: []i32) i32 {
+    total ::= 0
+    loop num in numbers {
+        total = total + num
+    }
+    return total
+}
+
+// Range loop with exclusive range
+print_range = (start: i32, end: i32) void {
+    loop i in start..end {
+        io.print("$(i) ")
+    }
+    io.print("\n")
+}
+
+// Range loop with inclusive range
+factorial = (n: i32) i64 {
+    result ::= 1i64
+    loop i in 1..=n {
+        result = result * i
+    }
+    return result
+}
+
+// Nested loops with labels
+find_pair = (target: i32, nums: []i32) Option<{a: i32, b: i32}> {
+    outer: loop i in 0..nums.length {
+        loop j in (i+1)..nums.length {
+            sum := nums[i] + nums[j]
+            found := sum == target
+            _ = found ? | true => {
+                          return .Some({ a: nums[i], b: nums[j] })
+                      }
+                      | false => continue
+        }
+    }
+    return .None
+}
+
+// ============================================================================
+// Section 9: Behaviors (Traits/Interfaces)
+// ============================================================================
+
+// Define a behavior
+Drawable = behavior {
+    draw = (self) void,
+    get_bounds = (self) Rectangle,
+}
+
+// Another behavior
+Serializable = behavior {
+    serialize = (self) string,
+    deserialize = (data: string) Result<Self, string>,
+}
+
+// Implement behaviors for Point2D
+Point2D.impl = {
+    Drawable: {
+        draw = (self: Point2D) void {
+            io.print("Drawing point at ($(self.x), $(self.y))\n")
+        },
+        
+        get_bounds = (self: Point2D) Rectangle {
+            return Rectangle{
+                top_left: self,
+                bottom_right: self,
+            }
+        }
+    },
+    
+    Serializable: {
+        serialize = (self: Point2D) string {
+            return "Point2D($(self.x),$(self.y))"
+        },
+        
+        deserialize = (data: string) Result<Point2D, string> {
+            // Simplified parsing
+            return .Ok(Point2D{ x: 0.0, y: 0.0 })
+        }
+    }
+}
+
+// Generic function using behaviors
+draw_all = (items: []Drawable) void {
+    loop item in items {
+        item.draw()
+    }
+}
+
+// ============================================================================
+// Section 10: Compile-time Metaprogramming
+// ============================================================================
+
+// Compile-time constant computation
+LOOKUP_TABLE := comptime {
+    // Generate a lookup table at compile time
+    table:: [256]u8
+    loop i in 0..256 {
+        // Simple transformation
+        table[i] = (i * 2) % 256
+    }
+    table
+}
+
+// Generic function with comptime parameters
+create_matrix = (comptime T: type, comptime rows: usize, comptime cols: usize) [rows][cols]T {
+    matrix:: [rows][cols]T
+    return matrix
+}
+
+// Compile-time type checking
+safe_cast = (comptime From: type, comptime To: type, value: From) Result<To, string> {
+    can_convert := comptime {
+        // Check if conversion is safe at compile time
+        from_size := core.sizeOf(From)
+        to_size := core.sizeOf(To)
+        from_size <= to_size
+    }
+    
+    result := can_convert ? | true => .Ok(value as To)
+                          | false => .Err("Unsafe cast")
+    return result
+}
+
+// ============================================================================
+// Section 11: Namespacing and Organization
+// ============================================================================
+
+Math = {
+    // Constants
+    PI := 3.14159265359,
+    E := 2.71828182846,
+    
+    // Nested types
+    Vector3 = {
+        x: f64,
+        y: f64,
+        z: f64,
+    },
+    
+    // Functions
+    dot_product = (v1: Vector3, v2: Vector3) f64 {
+        return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z
+    },
+    
+    magnitude = (v: Vector3) f64 {
+        return math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+    },
+}
+
+// ============================================================================
+// Section 12: Memory Management
+// ============================================================================
+
+// Function using allocator
+create_buffer = (allocator: mem.Allocator, size: usize) Result<Ptr<u8>, string> {
+    ptr := allocator.alloc(u8, size)
+    
+    result := ptr != core.null_ptr<u8>() ? | true => .Ok(ptr)
+                                          | false => .Err("Allocation failed")
+    return result
+}
+
+// RAII-style resource management
+FileHandle = {
+    fd: i32,
+    path: string,
+}
+
+open_file = (path: string) Result<FileHandle, string> {
+    // Simulated file opening
+    fd := 42  // Would be actual system call
+    return .Ok(FileHandle{ fd: fd, path: path })
+}
+
+close_file = (handle: FileHandle) void {
+    // Cleanup resources
+    io.print("Closing file: $(handle.path)\n")
+}
+
+// ============================================================================
+// Section 13: Advanced Pattern Matching
+// ============================================================================
+
+// Complex nested pattern matching
+analyze_result = (r: Result<Option<i32>, DatabaseError>) string {
+    analysis := r ? | .Ok -> .Some -> value => "Success with value: $(value)"
+                   | .Ok -> .None => "Success but no value"
+                   | .Err -> .NotFound => "Database: not found"
+                   | .Err -> .ConnectionFailed -> host, port => {
+                       "Failed to connect to $(host):$(port)"
+                   }
+                   | .Err -> .QueryError -> msg => "Query failed: $(msg)"
+                   | .Err -> .Timeout -> duration => "Timed out after $(duration)ms"
+    
+    return analysis
+}
+
+// ============================================================================
+// Section 14: String Interpolation Examples
+// ============================================================================
+
+format_user_info = (user: User) string {
+    // Complex string interpolation
+    verified_text := user.is_verified ? | true => "✓ Verified"
+                                       | false => "✗ Not Verified"
+    
+    info := "User #$(user.id): $(user.username) <$(user.email)> " +
+            "[Score: $(user.score)] $(verified_text)"
+    
+    return info
+}
+
+// ============================================================================
+// Section 15: Main Entry Point - Putting It All Together
+// ============================================================================
+
+main = () void {
+    io.print("=== Zen Language Comprehensive Demo ===\n\n")
+    
+    // Section 1: Basic operations
+    io.print("1. Basic Operations:\n")
+    result := divide(10.0, 3.0)
+    quotient := result ? | .Ok -> val => val
+                        | .Err -> msg => 0.0
+    io.print("   10 ÷ 3 = $(quotient)\n")
+    
+    // Section 2: Data structures
+    io.print("\n2. Data Structures:\n")
+    point := Point2D{ x: 3.0, y: 4.0 }
+    dist := point.distance_from_origin()
+    io.print("   Point (3,4) distance from origin: $(dist)\n")
+    
+    rect := Rectangle{
+        top_left: Point2D{ x: 0.0, y: 10.0 },
+        bottom_right: Point2D{ x: 20.0, y: 0.0 }
+    }
+    io.print("   Rectangle area: $(rect.area())\n")
+    
+    // Section 3: Pattern matching
+    io.print("\n3. Pattern Matching:\n")
+    scores := [95, 82, 73, 65, 45]
+    loop score in scores {
+        grade := classify_score(score)
+        io.print("   Score $(score) = Grade $(grade)\n")
+    }
+    
+    // Section 4: Enums and messages
+    io.print("\n4. Message Processing:\n")
+    messages := [
+        Message.Text("Hello, Zen!"),
+        Message.Number(42.0),
+        Message.Structured({ 
+            type: "alert", 
+            payload: "System update", 
+            timestamp: 1234567890 
+        }),
+    ]
+    
+    loop msg in messages {
+        processed := process_message(msg)
+        io.print("   $(processed)\n")
+    }
+    
+    // Section 5: Error handling
+    io.print("\n5. Error Handling:\n")
+    user_ids := [1, 500, 9999]
+    loop id in user_ids {
+        user_result := find_user(id)
+        message := user_result ? | .Ok -> user => "Found: $(user.username)"
+                                | .Err -> .NotFound => "User $(id) not found"
+                                | .Err -> err => "Error retrieving user $(id)"
+        io.print("   $(message)\n")
+    }
+    
+    // Section 6: Loops and ranges
+    io.print("\n6. Loops and Ranges:\n")
+    io.print("   Countdown: ")
+    count_down(5)
+    
+    io.print("   Range 1..5: ")
+    print_range(1, 5)
+    
+    fact5 := factorial(5)
+    io.print("   5! = $(fact5)\n")
+    
+    // Section 7: Compile-time features
+    io.print("\n7. Compile-time Features:\n")
+    matrix := create_matrix(f32, 3, 3)
+    io.print("   Created 3x3 matrix (size: $(core.sizeOf(matrix)) bytes)\n")
+    io.print("   Lookup table entry [42]: $(LOOKUP_TABLE[42])\n")
+    
+    // Section 8: Namespacing
+    io.print("\n8. Namespaced Math:\n")
+    v1 := Math.Vector3{ x: 1.0, y: 2.0, z: 3.0 }
+    v2 := Math.Vector3{ x: 4.0, y: 5.0, z: 6.0 }
+    dot := Math.dot_product(v1, v2)
+    mag := Math.magnitude(v1)
+    io.print("   v1·v2 = $(dot)\n")
+    io.print("   |v1| = $(mag)\n")
+    
+    // Section 9: Complex patterns
+    io.print("\n9. Advanced Patterns:\n")
+    test_results := [
+        Result.Ok(Option.Some(42)),
+        Result.Ok(Option.None),
+        Result.Err(DatabaseError.NotFound),
+        Result.Err(DatabaseError.ConnectionFailed("localhost", 5432)),
+    ]
+    
+    loop test_result in test_results {
+        analysis := analyze_result(test_result)
+        io.print("   $(analysis)\n")
+    }
+    
+    // Section 10: Finding pairs
+    io.print("\n10. Algorithm Example:\n")
+    numbers := [2, 7, 11, 15, 3, 6]
+    target := 9
+    pair_result := find_pair(target, numbers)
+    pair_msg := pair_result ? | .Some -> { a, b } => "Found pair: $(a) + $(b) = $(target)"
+                             | .None => "No pair found for target $(target)"
+    io.print("   $(pair_msg)\n")
+    
+    io.print("\n=== Demo Complete ===\n")
+}
