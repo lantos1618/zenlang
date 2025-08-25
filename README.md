@@ -116,7 +116,7 @@ The `examples/` directory contains two categories:
 ## Project Structure
 
 ```
-zenlang/
+zen/
 ├── src/
 │   ├── ast.rs              # Abstract syntax tree
 │   ├── parser/             # Parser implementation
@@ -143,7 +143,7 @@ zenlang/
 ## Contributing
 
 We welcome contributions! Check out:
-- [GitHub Issues](https://github.com/anthropics/zenlang/issues) for bug reports and features
+- [GitHub Issues](https://github.com/anthropics/zen/issues) for bug reports and features
 - `ROADMAP.md` for development priorities
 - `STYLE_GUIDE.md` for code style guidelines
 
@@ -161,4 +161,4 @@ See [`lang.md`](lang.md) for the complete language specification including:
 
 ## Contact
 
-Report issues at: https://github.com/anthropics/zenlang/issues
+Report issues at: https://github.com/anthropics/zen/issues
