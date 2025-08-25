@@ -1,0 +1,63 @@
+// loops.zen - Loop constructs
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+}
+
+main = () void {
+    // Conditional loop (while-like)
+    counter ::= 10
+    io.print("Countdown: ")
+    loop counter > 0 {
+        io.print("$(counter) ")
+        counter = counter - 1
+    }
+    io.print("Liftoff!\n")
+    
+    // Range-based iteration
+    io.print("Range 0..5: ")
+    loop i in 0..5 {
+        io.print("$(i) ")
+    }
+    io.print("\n")
+    
+    // Inclusive range
+    io.print("Range 1..=3: ")
+    loop i in 1..=3 {
+        io.print("$(i) ")
+    }
+    io.print("\n")
+    
+    // Array iteration
+    fruits := ["apple", "banana", "orange"]
+    io.print("Fruits: ")
+    loop fruit in fruits {
+        io.print("$(fruit) ")
+    }
+    io.print("\n")
+    
+    // Loop with break and continue
+    io.print("Even numbers: ")
+    loop n in 0..10 {
+        n % 2 != 0 ? | true => continue
+                    | false => {}
+        
+        io.print("$(n) ")
+        
+        n >= 6 ? | true => break
+                | false => {}
+    }
+    io.print("\n")
+    
+    // Nested loops with labels
+    outer: loop i in 0..3 {
+        loop j in 0..3 {
+            io.print("($(i),$(j)) ")
+            
+            (i == 1 && j == 1) ? | true => break outer
+                                 | false => {}
+        }
+    }
+    io.print("\n")
+}

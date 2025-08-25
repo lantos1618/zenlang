@@ -1,0 +1,86 @@
+// structs_enums.zen - Data structures
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+}
+
+// Struct with default values and mutable fields
+Person = {
+    name: string,
+    age: i32,
+    email: Option<string> = None,
+    score:: i32 = 0,  // Mutable field with default
+}
+
+// Nested struct
+Address = {
+    street: string,
+    city: string,
+    zip: string,
+}
+
+Employee = {
+    person: Person,
+    address: Address,
+    employee_id: u32,
+}
+
+// Option type (common enum)
+Option<T> = 
+    | Some(T)
+    | None
+
+// Complex enum with various variant types
+Status =
+    | Active
+    | Inactive
+    | Pending(since: i64)
+    | Error({ code: i32, message: string, recoverable: bool })
+
+main = () void {
+    // Create person with defaults
+    alice := Person{ 
+        name: "Alice", 
+        age: 30 
+    }
+    
+    // Mutate mutable field
+    alice.score = 100
+    
+    // Person with optional email
+    bob := Person{
+        name: "Bob",
+        age: 25,
+        email: Option.Some("bob@example.com"),
+    }
+    
+    // Nested struct creation
+    employee := Employee{
+        person: Person{ name: "Charlie", age: 35 },
+        address: Address{
+            street: "123 Main St",
+            city: "Springfield",
+            zip: "12345",
+        },
+        employee_id: 1001,
+    }
+    
+    // Enum usage
+    status1 := Status.Active
+    status2 := Status.Pending(1234567890)
+    status3 := Status.Error({ 
+        code: 500, 
+        message: "Internal error", 
+        recoverable: true 
+    })
+    
+    // Pattern match on status
+    message := status3 ? | .Active => "System is active"
+                        | .Inactive => "System is inactive"
+                        | .Pending -> since => "Pending since $(since)"
+                        | .Error -> err => "Error $(err.code): $(err.message)"
+    
+    io.print("Status: $(message)\n")
+    io.print("Employee: $(employee.person.name) in $(employee.address.city)\n")
+}

@@ -1,0 +1,118 @@
+// behaviors.zen - Traits/Interfaces
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+}
+
+// Define behaviors (traits/interfaces)
+Drawable = behavior {
+    draw = (self) void,
+}
+
+Movable = behavior {
+    move = (self, dx: f64, dy: f64) void,
+}
+
+Serializable = behavior {
+    serialize = (self) string,
+}
+
+// Point type
+Point = {
+    x:: f64,
+    y:: f64,
+}
+
+// Circle type
+Circle = {
+    center: Point,
+    radius:: f64,
+}
+
+// Rectangle type
+Rectangle = {
+    top_left: Point,
+    width:: f64,
+    height:: f64,
+}
+
+// Implement behaviors for Point
+Point.impl = {
+    Drawable: {
+        draw = (self: Ptr<Point>) void {
+            io.print("Drawing point at ($(self.x), $(self.y))\n")
+        }
+    },
+    Movable: {
+        move = (self:: Ptr<Point>, dx: f64, dy: f64) void {
+            self.x = self.x + dx
+            self.y = self.y + dy
+        }
+    },
+    Serializable: {
+        serialize = (self: Ptr<Point>) string {
+            return "Point{x:$(self.x),y:$(self.y)}"
+        }
+    }
+}
+
+// Implement behaviors for Circle
+Circle.impl = {
+    Drawable: {
+        draw = (self: Ptr<Circle>) void {
+            io.print("Drawing circle at ($(self.center.x), $(self.center.y)) with radius $(self.radius)\n")
+        }
+    },
+    Movable: {
+        move = (self:: Ptr<Circle>, dx: f64, dy: f64) void {
+            self.center.x = self.center.x + dx
+            self.center.y = self.center.y + dy
+        }
+    },
+    Serializable: {
+        serialize = (self: Ptr<Circle>) string {
+            return "Circle{center:$(self.center.serialize()),radius:$(self.radius)}"
+        }
+    }
+}
+
+// Generic function using behaviors
+draw_all = (items: []Drawable) void {
+    loop item in items {
+        item.draw()
+    }
+}
+
+// Function accepting any Serializable
+save_to_file = (item: Serializable, filename: string) void {
+    data := item.serialize()
+    io.print("Saving to $(filename): $(data)\n")
+}
+
+main = () void {
+    // Create shapes
+    point ::= Point{ x: 10.0, y: 20.0 }
+    circle ::= Circle{
+        center: Point{ x: 50.0, y: 50.0 },
+        radius: 25.0,
+    }
+    
+    // Use behaviors
+    point.draw()
+    point.move(5.0, 5.0)
+    point.draw()
+    
+    circle.draw()
+    circle.move(10.0, 0.0)
+    circle.draw()
+    
+    // Serialize
+    save_to_file(point, "point.json")
+    save_to_file(circle, "circle.json")
+    
+    // Polymorphic array
+    drawables: []Drawable = [point, circle]
+    io.print("\nDrawing all shapes:\n")
+    draw_all(drawables)
+}
