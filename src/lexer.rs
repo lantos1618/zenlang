@@ -12,7 +12,6 @@ pub enum Keyword {
     Break,
     Continue,
     Return,
-    Match,
     Type,
 }
 
@@ -336,7 +335,6 @@ impl<'a> Lexer<'a> {
             "break" => Some(Keyword::Break),
             "continue" => Some(Keyword::Continue),
             "return" => Some(Keyword::Return),
-            "match" => Some(Keyword::Match),
             "type" => Some(Keyword::Type),
             _ => None,
         }

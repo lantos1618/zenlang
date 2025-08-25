@@ -303,13 +303,6 @@ impl<'a> Parser<'a> {
                 }
                 Ok(Statement::Continue { label })
             }
-            Token::Keyword(lexer::Keyword::Match) => {
-                let expr = self.parse_expression()?;
-                if self.current_token == Token::Symbol(';') {
-                    self.next_token();
-                }
-                Ok(Statement::Expression(expr))
-            }
             Token::Keyword(lexer::Keyword::Comptime) => {
                 // Parse comptime block as statement
                 self.next_token(); // consume 'comptime'

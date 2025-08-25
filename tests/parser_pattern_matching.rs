@@ -4,7 +4,7 @@ use zen::parser::Parser;
 
 #[test]
 fn test_parse_conditional_expression_basic() {
-    let input = "? x -> val { | 0 => \"zero\" | 1 => \"one\" }";
+    let input = "x ? | 0 => \"zero\" | 1 => \"one\"";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
@@ -30,7 +30,7 @@ fn test_parse_conditional_expression_basic() {
 
 #[test]
 fn test_parse_conditional_with_wildcard() {
-    let input = "? score -> s { | 100 => \"perfect\" | _ => \"other\" }";
+    let input = "score ? | 100 => \"perfect\" | _ => \"other\"";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
@@ -50,7 +50,7 @@ fn test_parse_conditional_with_wildcard() {
 #[test]
 fn test_parse_conditional_with_guard() {
     // Test with guard conditions (if supported)
-    let input = "? n -> x { | val -> val > 10 => \"big\" | _ => \"small\" }";
+    let input = "n ? | val -> val > 10 => \"big\" | _ => \"small\"";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
@@ -69,7 +69,7 @@ fn test_parse_conditional_with_guard() {
 
 #[test]
 fn test_parse_nested_conditional() {
-    let input = "? x -> val { | 0 => ? y -> y2 { | 1 => \"one\" | _ => \"other\" } | _ => \"default\" }";
+    let input = "x ? | 0 => (y ? | 1 => \"one\" | _ => \"other\") | _ => \"default\"";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
@@ -87,7 +87,7 @@ fn test_parse_nested_conditional() {
 
 #[test]
 fn test_parse_conditional_with_complex_patterns() {
-    let input = "? result -> r { | \"success\" => 200 | \"error\" => 500 }";
+    let input = "result ? | \"success\" => 200 | \"error\" => 500";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     

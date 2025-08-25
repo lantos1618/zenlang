@@ -61,16 +61,30 @@ impl<'a> Parser<'a> {
                     args: vec![expr],
                 })
             }
-            _ => self.parse_primary_expression(),
+            _ => self.parse_postfix_expression(),
         }
+    }
+
+    fn parse_postfix_expression(&mut self) -> Result<Expression> {
+        let mut expr = self.parse_primary_expression()?;
+        
+        // Handle postfix operators
+        loop {
+            match &self.current_token {
+                Token::Symbol('?') => {
+                    // Pattern matching: scrutinee ? | pattern => expression
+                    self.next_token(); // consume '?'
+                    expr = self.parse_pattern_match(expr)?;
+                }
+                _ => break,
+            }
+        }
+        
+        Ok(expr)
     }
 
     fn parse_primary_expression(&mut self) -> Result<Expression> {
         match &self.current_token {
-            Token::Keyword(crate::lexer::Keyword::Match) => {
-                self.next_token();
-                self.parse_match_expression()
-            }
             Token::Keyword(crate::lexer::Keyword::Comptime) => {
                 self.next_token(); // consume 'comptime'
                 let expr = self.parse_expression()?;
@@ -244,16 +258,6 @@ impl<'a> Parser<'a> {
                     Ok(expr)
                 }
             }
-            Token::Operator(op) if op == "?" => {
-                // Conditional expression: ? expr -> pattern { ... }
-                self.next_token();
-                self.parse_conditional_expression()
-            }
-            Token::Symbol('?') => {
-                // Conditional expression: ? expr -> pattern { ... }
-                self.next_token();
-                self.parse_conditional_expression()
-            }
             Token::Symbol('[') => {
                 // Array literal: [expr, expr, ...]
                 self.parse_array_literal()
@@ -263,101 +267,6 @@ impl<'a> Parser<'a> {
                 Some(self.current_span.clone()),
             )),
         }
-    }
-    
-    fn parse_conditional_expression(&mut self) -> Result<Expression> {
-        // Parse conditional expression: expr -> binding_pattern { | pattern => expr | pattern => expr }
-        let scrutinee = Box::new(self.parse_expression()?);
-        
-
-        
-        if self.current_token != Token::Operator("->".to_string()) {
-            return Err(CompileError::SyntaxError(
-                format!("Expected '->' in conditional expression, got {:?}", self.current_token),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
-        
-        // Parse binding pattern (the identifier after ->)
-        let binding_name = if let Token::Identifier(name) = &self.current_token {
-            name.clone()
-        } else {
-            return Err(CompileError::SyntaxError(
-                "Expected identifier for binding pattern".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        };
-        self.next_token();
-        
-        let _binding_pattern = Pattern::Binding {
-            name: binding_name.clone(),
-            pattern: Box::new(Pattern::Identifier(binding_name)),
-        };
-        
-        if self.current_token != Token::Symbol('{') {
-            return Err(CompileError::SyntaxError(
-                "Expected '{' after binding pattern".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
-        
-        let mut arms = vec![];
-        
-        while self.current_token != Token::Symbol('}') {
-            if self.current_token == Token::Eof {
-                return Err(CompileError::SyntaxError(
-                    "Unexpected end of file in conditional expression".to_string(),
-                    Some(self.current_span.clone()),
-                ));
-            }
-            
-            // Each arm starts with |
-            if self.current_token != Token::Symbol('|') {
-                return Err(CompileError::SyntaxError(
-                    "Expected '|' at start of conditional arm".to_string(),
-                    Some(self.current_span.clone()),
-                ));
-            }
-            self.next_token();
-            
-            // Parse pattern
-            let pattern = self.parse_pattern()?;
-            
-            // Optional guard condition
-            let guard = if self.current_token == Token::Operator("->".to_string()) {
-                self.next_token();
-                Some(self.parse_expression()?)
-            } else {
-                None
-            };
-            
-            // =>
-            if self.current_token != Token::Operator("=>".to_string()) {
-                return Err(CompileError::SyntaxError(
-                    "Expected '=>' in conditional arm".to_string(),
-                    Some(self.current_span.clone()),
-                ));
-            }
-            self.next_token();
-            
-            // Parse body expression
-            let body = self.parse_expression()?;
-            
-            arms.push(crate::ast::ConditionalArm {
-                pattern,
-                guard,
-                body,
-            });
-        }
-        
-        self.next_token(); // consume '}'
-        
-        Ok(Expression::Conditional {
-            scrutinee,
-            arms,
-        })
     }
 
     fn parse_call_expression(&mut self, function_name: String) -> Result<Expression> {
@@ -461,87 +370,60 @@ impl<'a> Parser<'a> {
         Ok(Expression::StructLiteral { name, fields })
     }
 
-    fn parse_match_expression(&mut self) -> Result<Expression> {
-        // Parse: match expr { | pattern => expr ... }
-        // Parse the scrutinee - need to avoid struct literal ambiguity
-        let scrutinee = match &self.current_token {
-            Token::Identifier(name) => {
-                let name = name.clone();
-                self.next_token();
-                
-                // Handle member access but not struct literals
-                let mut expr = Expression::Identifier(name);
-                while self.current_token == Token::Symbol('.') {
-                    self.next_token(); // consume '.'
-                    if let Token::Identifier(member) = &self.current_token {
-                        let member = member.clone();
-                        self.next_token();
-                        expr = Expression::MemberAccess {
-                            object: Box::new(expr),
-                            member,
-                        };
-                    } else {
-                        return Err(CompileError::SyntaxError(
-                            "Expected identifier after '.'".to_string(),
-                            Some(self.current_span.clone()),
-                        ));
-                    }
-                }
-                expr
-            }
-            _ => self.parse_expression()?
-        };
+    fn parse_pattern_match(&mut self, scrutinee: Expression) -> Result<Expression> {
+        // Parse: scrutinee ? | pattern => expr | pattern => expr ...
         let scrutinee = Box::new(scrutinee);
-        if self.current_token != Token::Symbol('{') {
+        // Expect first arm to start with |
+        if self.current_token != Token::Symbol('|') {
             return Err(CompileError::SyntaxError(
-                "Expected '{' after match scrutinee".to_string(),
+                "Expected '|' to start pattern matching arms".to_string(),
                 Some(self.current_span.clone()),
             ));
         }
-        self.next_token();
+        
         let mut arms = vec![];
-        while self.current_token != Token::Symbol('}') {
-            if self.current_token == Token::Eof {
-                return Err(CompileError::SyntaxError(
-                    "Unexpected end of file in match expression".to_string(),
-                    Some(self.current_span.clone()),
-                ));
-            }
-            // Each arm starts with |
-            if self.current_token != Token::Symbol('|') {
-                return Err(CompileError::SyntaxError(
-                    "Expected '|' at start of match arm".to_string(),
-                    Some(self.current_span.clone()),
-                ));
-            }
-            self.next_token();
+        
+        // Parse arms: | pattern => expr | pattern => expr ...
+        while self.current_token == Token::Symbol('|') {
+            self.next_token(); // consume '|'
+            
             // Parse pattern
             let pattern = self.parse_pattern()?;
-            // Optional guard condition
+            
+            // Check for destructuring/guard with ->
             let guard = if self.current_token == Token::Operator("->".to_string()) {
                 self.next_token();
+                // TODO: Properly handle destructuring vs guards
+                // For now, treat it as a guard
                 Some(self.parse_expression()?)
             } else {
                 None
             };
-            // =>
+            
+            // Expect =>
             if self.current_token != Token::Operator("=>".to_string()) {
                 return Err(CompileError::SyntaxError(
-                    "Expected '=>' in match arm".to_string(),
+                    "Expected '=>' after pattern in match arm".to_string(),
                     Some(self.current_span.clone()),
                 ));
             }
-            self.next_token();
-            // Parse body expression
+            self.next_token(); // consume '=>'
+            
+            // Parse the result expression
             let body = self.parse_expression()?;
-            arms.push(crate::ast::PatternArm {
+            
+            arms.push(crate::ast::ConditionalArm {
                 pattern,
                 guard,
                 body,
             });
+            
+            // Check if there are more arms
+            if self.current_token != Token::Symbol('|') {
+                break;
+            }
         }
-        self.next_token(); // consume '}'
-        Ok(Expression::PatternMatch {
+        Ok(Expression::Conditional {
             scrutinee,
             arms,
         })

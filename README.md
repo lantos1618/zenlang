@@ -83,16 +83,9 @@ cargo run --bin zen examples/hello.zen
 ## Examples
 
 See the [`examples/`](examples/) directory for comprehensive examples:
-- `zen_spec_demo.zen` - Complete demonstration of lang.md specification
 - `hello.zen` - Basic hello world
-- `variables.zen` - Variable declarations
-- `functions.zen` - Functions and UFCS
-- `pattern_matching.zen` - Pattern matching with `?`
-- `structs_enums.zen` - Data structures
-- `loops.zen` - Loop constructs
-- `comptime.zen` - Compile-time evaluation
-- `behaviors.zen` - Traits/interfaces
-- `error_handling.zen` - Result/Option types
+- `variables.zen` - Variable declarations and types
+- `pattern_matching.zen` - Pattern matching with the `?` operator
 
 ## Project Structure
 

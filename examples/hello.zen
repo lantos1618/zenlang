@@ -1,4 +1,6 @@
-// hello.zen - Basic hello world example
+// Hello World example in Zen
+// Demonstrates basic function declaration and string output
+
 comptime {
     core := @std.core
     build := @std.build

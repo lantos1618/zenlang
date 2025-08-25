@@ -1,4 +1,6 @@
-// variables.zen - Variable declarations and types
+// Variable declarations in Zen
+// Demonstrates different ways to declare variables and constants
+
 comptime {
     core := @std.core
     build := @std.build
@@ -7,22 +9,26 @@ comptime {
 
 main = () void {
     // Immutable bindings (constants)
-    PI := 3.14159
-    MAX_USERS: u32 = 1000
-    name := "Alice"
+    pi := 3.14159                    // Inferred type
+    max_users: u32 = 1000            // Explicit type
+    greeting := "Welcome to Zen!"    // String constant
     
-    // Mutable bindings (variables)  
-    counter ::= 0
-    temperature:: f64 = 20.5
-    is_active:: bool = true
+    // Mutable bindings (variables)
+    counter ::= 0                    // Inferred mutable
+    temperature:: f64 = 20.5         // Explicit mutable
+    is_active ::= true               // Boolean mutable
     
-    // Mutation
+    // Mutating variables
     counter = counter + 1
-    temperature = temperature + 0.5
+    temperature = temperature + 2.3
     is_active = false
     
+    // Default initialization
+    score:: i32                      // Initialized to 0
+    name:: string                    // Initialized to ""
+    
     // String interpolation
+    io.print("PI value: $(pi)\n")
     io.print("Counter: $(counter)\n")
     io.print("Temperature: $(temperature)°C\n")
-    io.print("User: $(name), Max: $(MAX_USERS)\n")
 }
