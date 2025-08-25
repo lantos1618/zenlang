@@ -14,7 +14,7 @@ fn test_parse_empty_program() {
 
 #[test]
 fn test_parse_simple_function() {
-    let input = "main :: () -> i32 { 42 }";
+    let input = "main = () i32 { 42 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -37,7 +37,7 @@ fn test_parse_simple_function() {
 
 #[test]
 fn test_parse_variable_declaration() {
-    let input = "main :: () -> i32 { x := 10; x }";
+    let input = "main = () i32 { x := 10; x }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -67,7 +67,7 @@ fn test_parse_variable_declaration() {
 
 #[test]
 fn test_parse_binary_expression() {
-    let input = "main :: () -> i32 { 5 + 3 }";
+    let input = "main = () i32 { 5 + 3 }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -94,7 +94,7 @@ fn test_parse_binary_expression() {
 
 #[test]
 fn test_parse_zen_variable_declarations() {
-    let input = "test :: () -> i32 { x := 42; y ::= 10; z: i32 = 5; w:: u64 = 100; x + y }";
+    let input = "test = () i32 { x := 42; y ::= 10; z: i32 = 5; w:: u64 = 100; x + y }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -121,7 +121,7 @@ fn test_parse_zen_variable_declarations() {
 
 #[test]
 fn test_parse_loop_with_condition() {
-    let input = "countdown :: () -> void { counter ::= 10; loop counter > 0 { counter = counter - 1 } }";
+    let input = "countdown = () void { counter ::= 10; loop counter > 0 { counter = counter - 1 } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -168,7 +168,7 @@ fn test_parse_loop_with_condition() {
 
 #[test]
 fn test_parse_loop_with_in() {
-    let input = "print_names :: () -> void { names := [\"Alice\", \"Bob\"]; loop name in names { io.print(name) } }";
+    let input = "print_names = () void { names := [\"Alice\", \"Bob\"]; loop name in names { io.print(name) } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -228,7 +228,7 @@ fn test_parse_enum_definition() {
 
 #[test]
 fn test_parse_conditional_expression() {
-    let input = "result :: (x: i32) -> string { ? x -> value { | 0 => \"zero\" | 1 => \"one\" | _ => \"other\" } }";
+    let input = "result = (x: i32) string { x ? | 0 => \"zero\" | 1 => \"one\" | _ => \"other\" }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
@@ -333,7 +333,7 @@ fn test_parse_comptime_block() {
 
 #[test]
 fn test_parse_member_access() {
-    let input = "main :: () -> void { io.print(\"Hello\") }";
+    let input = "main = () void { io.print(\"Hello\") }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -350,7 +350,7 @@ fn test_parse_member_access() {
 
 #[test]
 fn test_function_with_multiple_statements() {
-    let source = "main :: () -> i32 { x := 42; y := 10; x + y }";
+    let source = "main = () i32 { x := 42; y := 10; x + y }";
     let lexer = Lexer::new(source);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -398,7 +398,7 @@ fn test_function_with_multiple_statements() {
 
 #[test]
 fn test_parse_function_with_return() {
-    let input = "test :: () -> i64 { x := 42; y := 10; x + y }";
+    let input = "test = () i64 { x := 42; y := 10; x + y }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -439,7 +439,7 @@ fn test_parse_function_with_return() {
 
 #[test]
 fn test_parse_loop_with_return() {
-    let input = "test :: () -> i64 { counter ::= 10; loop counter > 0 { counter = counter - 1 } }";
+    let input = "test = () i64 { counter ::= 10; loop counter > 0 { counter = counter - 1 } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -486,7 +486,7 @@ fn test_parse_loop_with_return() {
 
 #[test]
 fn test_parse_all_variable_declaration_syntax() {
-    let input = "test :: () -> i32 { 
+    let input = "test = () i32 { 
         x := 42;           // Inferred immutable
         y ::= 10;          // Inferred mutable  
         z: i32 = 5;        // Explicit immutable
@@ -563,28 +563,28 @@ fn test_parse_variable_declaration_syntax_separately() {
     // Test each syntax variant separately
     
     // Test 1: Inferred immutable (:=)
-    let input1 = "test :: () -> i32 { x := 42; x }";
+    let input1 = "test = () i32 { x := 42; x }";
     let lexer1 = Lexer::new(input1);
     let mut parser1 = Parser::new(lexer1);
     let program1 = parser1.parse_program().unwrap();
     assert_eq!(program1.declarations.len(), 1);
     
     // Test 2: Inferred mutable (::=)
-    let input2 = "test :: () -> i32 { y ::= 10; y }";
+    let input2 = "test = () i32 { y ::= 10; y }";
     let lexer2 = Lexer::new(input2);
     let mut parser2 = Parser::new(lexer2);
     let program2 = parser2.parse_program().unwrap();
     assert_eq!(program2.declarations.len(), 1);
     
     // Test 3: Explicit immutable (: T =)
-    let input3 = "test :: () -> i32 { z: i32 = 5; z }";
+    let input3 = "test = () i32 { z: i32 = 5; z }";
     let lexer3 = Lexer::new(input3);
     let mut parser3 = Parser::new(lexer3);
     let program3 = parser3.parse_program().unwrap();
     assert_eq!(program3.declarations.len(), 1);
     
     // Test 4: Explicit mutable (:: T =)
-    let input4 = "test :: () -> i32 { w:: u64 = 100; w }";
+    let input4 = "test = () i32 { w:: u64 = 100; w }";
     let lexer4 = Lexer::new(input4);
     let mut parser4 = Parser::new(lexer4);
     let program4 = parser4.parse_program().unwrap();
@@ -742,12 +742,10 @@ fn test_parse_struct_with_generics_and_methods() {
 
 #[test]
 fn test_parse_match_expression() {
-    let input = r#"main :: (x: i32) -> string {
-        match x {
-            | 0 => "zero"
+    let input = r#"main = (x: i32) string {
+        x ? | 0 => "zero"
             | 1 => "one"
             | _ => "other"
-        }
     }"#;
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
@@ -759,7 +757,7 @@ fn test_parse_match_expression() {
         assert_eq!(func.name, "main");
         assert_eq!(func.return_type, zen::ast::AstType::String);
         assert_eq!(func.body.len(), 1);
-        if let zen::ast::Statement::Expression(zen::ast::Expression::PatternMatch { scrutinee, arms }) = &func.body[0] {
+        if let zen::ast::Statement::Expression(zen::ast::Expression::Conditional { scrutinee, arms }) = &func.body[0] {
             // Check scrutinee is an identifier 'x'
             if let zen::ast::Expression::Identifier(name) = &**scrutinee {
                 assert_eq!(name, "x");
@@ -769,25 +767,25 @@ fn test_parse_match_expression() {
             // Check we have 3 arms
             assert_eq!(arms.len(), 3);
             // Check first arm: | 0 => "zero"
-            if let zen::ast::PatternArm { pattern: zen::ast::Pattern::Literal(zen::ast::Expression::Integer32(0)), guard: None, body: zen::ast::Expression::String(ref s) } = &arms[0] {
+            if let zen::ast::ConditionalArm { pattern: zen::ast::Pattern::Literal(zen::ast::Expression::Integer32(0)), guard: None, body: zen::ast::Expression::String(ref s) } = &arms[0] {
                 assert_eq!(s, "zero");
             } else {
                 panic!("Expected first arm to be | 0 => \"zero\"");
             }
             // Check second arm: | 1 => "one"
-            if let zen::ast::PatternArm { pattern: zen::ast::Pattern::Literal(zen::ast::Expression::Integer32(1)), guard: None, body: zen::ast::Expression::String(ref s) } = &arms[1] {
+            if let zen::ast::ConditionalArm { pattern: zen::ast::Pattern::Literal(zen::ast::Expression::Integer32(1)), guard: None, body: zen::ast::Expression::String(ref s) } = &arms[1] {
                 assert_eq!(s, "one");
             } else {
                 panic!("Expected second arm to be | 1 => \"one\"");
             }
             // Check third arm: | _ => "other"
-            if let zen::ast::PatternArm { pattern: zen::ast::Pattern::Wildcard, guard: None, body: zen::ast::Expression::String(ref s) } = &arms[2] {
+            if let zen::ast::ConditionalArm { pattern: zen::ast::Pattern::Wildcard, guard: None, body: zen::ast::Expression::String(ref s) } = &arms[2] {
                 assert_eq!(s, "other");
             } else {
                 panic!("Expected third arm to be | _ => \"other\"");
             }
         } else {
-            panic!("Expected PatternMatch expression");
+            panic!("Expected Conditional expression");
         }
     } else {
         panic!("Expected function declaration");
@@ -797,7 +795,7 @@ fn test_parse_match_expression() {
 #[test]
 fn test_parse_array_literal() {
     // Test empty array
-    let input = "main :: () -> void { x := [] }";
+    let input = "main = () void { x := [] }";
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -815,7 +813,7 @@ fn test_parse_array_literal() {
     }
 
     // Test array with single element
-    let input = "main :: () -> void { x := [42] }";
+    let input = "main = () void { x := [42] }";
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -831,7 +829,7 @@ fn test_parse_array_literal() {
     }
 
     // Test array with multiple elements
-    let input = "main :: () -> void { x := [1, 2, 3] }";
+    let input = "main = () void { x := [1, 2, 3] }";
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -849,7 +847,7 @@ fn test_parse_array_literal() {
     }
 
     // Test array with trailing comma
-    let input = "main :: () -> void { x := [1, 2, 3,] }";
+    let input = "main = () void { x := [1, 2, 3,] }";
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
     let program = parser.parse_program().unwrap();
@@ -866,7 +864,7 @@ fn test_parse_array_literal() {
 
 #[test]
 fn test_parse_range_based_loop() {
-    let input = "main :: () -> void { loop 0..10 { x := 1 } }";
+    let input = "main = () void { loop 0..10 { x := 1 } }";
     let lexer = zen::lexer::Lexer::new(input);
     let mut parser = zen::parser::Parser::new(lexer);
     let program = parser.parse_program().unwrap();

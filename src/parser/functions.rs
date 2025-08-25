@@ -48,17 +48,14 @@ impl<'a> Parser<'a> {
             }
         }
         
-        // Skip the '::' or '=' operator
-        if self.current_token == Token::Operator("::".to_string()) {
-            self.next_token();
-        } else if self.current_token == Token::Operator("=".to_string()) {
-            self.next_token();
-        } else {
+        // Expect '=' operator for function declaration
+        if self.current_token != Token::Operator("=".to_string()) {
             return Err(CompileError::SyntaxError(
-                "Expected '::' or '=' after function name".to_string(),
+                "Expected '=' after function name".to_string(),
                 Some(self.current_span.clone()),
             ));
         }
+        self.next_token();
         
         // Parameters
         if self.current_token != Token::Symbol('(') {
@@ -109,13 +106,13 @@ impl<'a> Parser<'a> {
         }
         self.next_token(); // consume ')'
         
-        // Check for return type arrow
-        let return_type = if self.current_token == Token::Operator("->".to_string()) {
-            self.next_token(); // consume '->'
-            self.parse_type()?
-        } else {
-            // Default to void/unit type if no return type specified
+        // Parse return type (required in zen, comes directly after parentheses)
+        let return_type = if self.current_token == Token::Symbol('{') {
+            // If we see '{' immediately, default to void
             crate::ast::AstType::Void
+        } else {
+            // Parse the return type
+            self.parse_type()?
         };
         
         // Function body
