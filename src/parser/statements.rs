@@ -466,14 +466,19 @@ impl<'a> Parser<'a> {
                 };
                 
                 // Check for range syntax (.. or ..=)
-                if self.current_token == Token::Operator("..".to_string()) {
-                    self.next_token(); // consume '..'
-                    let inclusive = if self.current_token == Token::Operator("=".to_string()) {
-                        self.next_token(); // consume '='
-                        true
-                    } else {
-                        false
-                    };
+                let (is_range, inclusive) = match &self.current_token {
+                    Token::Operator(op) if op == ".." => {
+                        self.next_token(); // consume '..'
+                        (true, false)
+                    }
+                    Token::Operator(op) if op == "..=" => {
+                        self.next_token(); // consume '..='
+                        (true, true)
+                    }
+                    _ => (false, false)
+                };
+                
+                if is_range {
                     let end_expr = self.parse_expression()?;
                     
                     LoopKind::Range {
