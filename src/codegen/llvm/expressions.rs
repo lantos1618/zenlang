@@ -84,6 +84,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
             Expression::StringLength(expr) => {
                 self.compile_string_length(expr)
             }
+            Expression::StringInterpolation { parts } => {
+                self.compile_string_interpolation(parts)
+            }
             Expression::Comptime(expr) => {
                 self.compile_comptime_expression(expr)
             }

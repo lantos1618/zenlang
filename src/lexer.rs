@@ -350,14 +350,36 @@ impl<'a> Lexer<'a> {
 
     fn read_string(&mut self) -> String {
         self.read_char(); // consume opening quote
-        let start = self.position;
+        let mut result = String::new();
+        let mut escape_next = false;
+        
         while let Some(c) = self.current_char {
-            if c == '"' {
+            if escape_next {
+                // Handle escape sequences
+                match c {
+                    'n' => result.push('\n'),
+                    't' => result.push('\t'),
+                    'r' => result.push('\r'),
+                    '\\' => result.push('\\'),
+                    '"' => result.push('"'),
+                    '$' => result.push('$'), // Allow escaping $ for literal $
+                    _ => {
+                        result.push('\\');
+                        result.push(c);
+                    }
+                }
+                escape_next = false;
+                self.read_char();
+            } else if c == '\\' {
+                escape_next = true;
+                self.read_char();
+            } else if c == '"' {
                 break;
+            } else {
+                result.push(c);
+                self.read_char();
             }
-            self.read_char();
         }
-        let result = self.input[start..self.position].to_string();
         self.read_char(); // consume closing quote
         result
     }

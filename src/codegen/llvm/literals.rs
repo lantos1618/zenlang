@@ -62,4 +62,76 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
         }
     }
+    
+    pub fn compile_string_interpolation(&mut self, parts: &[crate::ast::StringPart]) -> Result<BasicValueEnum<'ctx>, CompileError> {
+        use crate::ast::StringPart;
+        use inkwell::AddressSpace;
+        use inkwell::values::BasicMetadataValueEnum;
+        
+        // First, calculate the total size needed for the string
+        // For now, we'll use a simple approach with sprintf for numeric values
+        
+        // Declare sprintf if not already declared
+        let sprintf_fn = self.module.get_function("sprintf").unwrap_or_else(|| {
+            let i32_type = self.context.i32_type();
+            let ptr_type = self.context.ptr_type(AddressSpace::default());
+            let fn_type = i32_type.fn_type(&[ptr_type.into(), ptr_type.into()], true);
+            self.module.add_function("sprintf", fn_type, None)
+        });
+        
+        // Build the format string and collect interpolated values
+        let mut format_string = String::new();
+        let mut values: Vec<BasicMetadataValueEnum> = Vec::new();
+        
+        for part in parts {
+            match part {
+                StringPart::Literal(s) => {
+                    format_string.push_str(s);
+                }
+                StringPart::Interpolation(expr) => {
+                    let val = self.compile_expression(expr)?;
+                    
+                    // Determine the format specifier based on the expression type
+                    let format_spec = match expr {
+                        crate::ast::Expression::Integer32(_) | 
+                        crate::ast::Expression::Identifier(_) => "%d",  // For i32 values
+                        crate::ast::Expression::Integer64(_) => "%lld", // For i64 values
+                        crate::ast::Expression::Float32(_) |
+                        crate::ast::Expression::Float64(_) => "%.6f", // For float values
+                        crate::ast::Expression::Boolean(_) => "%d", // Bool as int
+                        crate::ast::Expression::String(_) => "%s", // String values
+                        _ => "%s", // Default to string for complex expressions
+                    };
+                    
+                    format_string.push_str(format_spec);
+                    values.push(val.into());
+                }
+            }
+        }
+        
+        // Allocate buffer for the result (using a reasonable max size)
+        let buffer_size = 1024;
+        let buffer_type = self.context.i8_type().array_type(buffer_size);
+        let buffer = self.builder.build_alloca(buffer_type, "str_buffer")?;
+        let buffer_ptr = self.builder.build_pointer_cast(
+            buffer, 
+            self.context.ptr_type(AddressSpace::default()),
+            "buffer_ptr"
+        )?;
+        
+        // Build the format string
+        let format_ptr = self.builder.build_global_string_ptr(&format_string, "format")?;
+        
+        // Build the sprintf call with all arguments
+        let mut sprintf_args: Vec<BasicMetadataValueEnum> = vec![
+            buffer_ptr.into(),
+            format_ptr.as_pointer_value().into(),
+        ];
+        sprintf_args.extend(values);
+        
+        self.builder.build_call(sprintf_fn, &sprintf_args, "sprintf_call")?;
+        
+        // Return the buffer pointer
+        Ok(buffer_ptr.into())
+    }
 } 
