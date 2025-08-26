@@ -67,7 +67,6 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     pub fn compile_struct_field(&mut self, struct_: &Expression, field: &str) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        
         // Special handling for identifiers - we need the pointer, not the loaded value
         if let Expression::Identifier(name) = struct_ {
             // Get the variable info
@@ -197,13 +196,163 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
         }
         
-        // Fallback error
+        // For any other expression type, we need to:
+        // 1. Compile the expression to get a struct value
+        // 2. Store it in a temporary alloca  
+        // 3. Access the field from there
+        
+        // First compile the struct expression
+        let struct_val = self.compile_expression(struct_)?;
+        
+        // Infer the struct type from the value
+        let struct_name = self.infer_struct_type_from_value(&struct_val, struct_)?;
+        
+        // Get struct type info (clone to avoid borrow checker issues)
+        let (llvm_type, field_index, field_type) = {
+            let struct_info = self.struct_types.get(&struct_name)
+                .ok_or_else(|| CompileError::TypeError(
+                    format!("Struct type '{}' not found", struct_name),
+                    None
+                ))?;
+            
+            // Find field index and type
+            let field_index = struct_info.fields.get(field)
+                .map(|(idx, _)| *idx)
+                .ok_or_else(|| CompileError::TypeError(
+                    format!("Field '{}' not found in struct '{}'", field, struct_name),
+                    None
+                ))?;
+            
+            let field_type = struct_info.fields.get(field)
+                .map(|(_, ty)| ty.clone())
+                .unwrap();
+            
+            (struct_info.llvm_type, field_index, field_type)
+        };
+        
+        // Create a temporary alloca to store the struct
+        let temp_alloca = self.builder.build_alloca(
+            llvm_type,
+            &format!("temp_struct_{}", struct_name)
+        )?;
+        
+        // Store the struct value
+        self.builder.build_store(temp_alloca, struct_val)?;
+        
+        // Build GEP to access the field
+        let indices = vec![
+            self.context.i32_type().const_zero(),
+            self.context.i32_type().const_int(field_index as u64, false),
+        ];
+        
+        let field_ptr = unsafe {
+            self.builder.build_gep(
+                llvm_type,
+                temp_alloca,
+                &indices,
+                &format!("field_{}_ptr", field)
+            )?
+        };
+        
+        // Load the field value
+        let field_llvm_type = self.to_llvm_type(&field_type)?;
+        let basic_type = match field_llvm_type {
+            Type::Basic(ty) => ty,
+            Type::Struct(st) => st.as_basic_type_enum(),
+            _ => return Err(CompileError::TypeError(
+                "Field type must be basic type".to_string(),
+                None
+            )),
+        };
+        
+        let value = self.builder.build_load(basic_type, field_ptr, &format!("load_{}", field))?;
+        Ok(value)
+    }
+    
+    // Helper function to handle field access from a compiled value
+    fn compile_struct_field_from_value(&mut self, _struct_val: BasicValueEnum<'ctx>, _field: &str, original_expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
+        // This is a placeholder for handling nested struct field access
+        // In a complete implementation, we'd need to track the type of struct_val
+        // For now, return an error
         Err(CompileError::TypeError(
-            format!("Cannot access field '{}' of expression {:?}", field, struct_),
+            format!("Nested struct field access not yet fully implemented for expression: {:?}", original_expr),
             None
         ))
     }
 
+    /// Infer struct type name from a compiled value and the original expression
+    pub fn infer_struct_type_from_value(&mut self, _val: &BasicValueEnum<'ctx>, expr: &Expression) -> Result<String, CompileError> {
+        match expr {
+            Expression::Identifier(name) => {
+                // Look up the variable type
+                if let Some((_, var_type)) = self.variables.get(name) {
+                    if let AstType::Struct { name: struct_name, .. } = var_type {
+                        Ok(struct_name.clone())
+                    } else {
+                        Err(CompileError::TypeError(
+                            format!("Variable '{}' is not a struct type", name),
+                            None
+                        ))
+                    }
+                } else {
+                    Err(CompileError::TypeError(
+                        format!("Unknown variable '{}'", name),
+                        None
+                    ))
+                }
+            }
+            Expression::StructLiteral { name, .. } => Ok(name.clone()),
+            Expression::FunctionCall { name, .. } => {
+                // Look up function return type
+                if let Some(func_type) = self.function_types.get(name) {
+                    if let AstType::Struct { name: struct_name, .. } = func_type {
+                        Ok(struct_name.clone())
+                    } else {
+                        Err(CompileError::TypeError(
+                            format!("Function '{}' does not return a struct", name),
+                            None
+                        ))
+                    }
+                } else {
+                    Err(CompileError::TypeError(
+                        format!("Unknown function '{}'", name),
+                        None
+                    ))
+                }
+            }
+            Expression::StructField { struct_, field } => {
+                // For nested field access, recursively get the field type
+                let parent_struct_name = self.infer_struct_type_from_value(_val, struct_)?;
+                if let Some(struct_info) = self.struct_types.get(&parent_struct_name) {
+                    if let Some((_, field_type)) = struct_info.fields.get(field) {
+                        if let AstType::Struct { name: field_struct_name, .. } = field_type {
+                            Ok(field_struct_name.clone())
+                        } else {
+                            Err(CompileError::TypeError(
+                                format!("Field '{}' is not a struct type", field),
+                                None
+                            ))
+                        }
+                    } else {
+                        Err(CompileError::TypeError(
+                            format!("Field '{}' not found in struct '{}'", field, parent_struct_name),
+                            None
+                        ))
+                    }
+                } else {
+                    Err(CompileError::TypeError(
+                        format!("Struct type '{}' not found", parent_struct_name),
+                        None
+                    ))
+                }
+            }
+            _ => Err(CompileError::TypeError(
+                format!("Cannot infer struct type from expression: {:?}", expr),
+                None
+            ))
+        }
+    }
+    
     pub fn compile_struct_field_assignment(&mut self, struct_alloca: inkwell::values::PointerValue<'ctx>, field_name: &str, value: BasicValueEnum<'ctx>) -> Result<(), CompileError> {
         // Find the struct type info by trying to match the pointer type with any known struct
         // This is a fallback approach since we can't easily get the element type

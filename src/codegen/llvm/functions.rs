@@ -57,11 +57,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     None,
                 ));
             }
-            Type::Struct(_) => {
-                return Err(CompileError::UnsupportedFeature(
-                    "Cannot use struct type as function return type".to_string(),
-                    None,
-                ));
+            Type::Struct(st) => {
+                st.fn_type(&param_metadata, false)
             }
         };
 
@@ -129,11 +126,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     None,
                 ));
             }
-            Type::Struct(_) => {
-                return Err(CompileError::UnsupportedFeature(
-                    "Cannot use struct type as function return type".to_string(),
-                    None,
-                ));
+            Type::Struct(st) => {
+                st.fn_type(&param_metadata, false)
             }
         };
         
@@ -150,6 +144,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
         
         // Store the function for later use
         self.functions.insert(function.name.clone(), function_value);
+        // Store the return type for type inference
+        self.function_types.insert(function.name.clone(), function.return_type.clone());
         
         Ok(function_value)
     }

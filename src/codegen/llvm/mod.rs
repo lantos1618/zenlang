@@ -59,6 +59,7 @@ pub struct LLVMCompiler<'ctx> {
     pub builder: Builder<'ctx>,
     pub variables: HashMap<String, (PointerValue<'ctx>, AstType)>,
     pub functions: HashMap<String, FunctionValue<'ctx>>,
+    pub function_types: HashMap<String, AstType>,  // Track function return types
     pub current_function: Option<FunctionValue<'ctx>>,
     pub symbols: symbols::SymbolTable<'ctx>,
     pub struct_types: HashMap<String, StructTypeInfo<'ctx>>,
@@ -90,6 +91,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             builder,
             variables: HashMap::new(),
             functions: HashMap::new(),
+            function_types: HashMap::new(),
             current_function: None,
             symbols,
             struct_types: HashMap::new(),
@@ -220,6 +222,17 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     // For pointer types in struct fields, we'll use a generic pointer type
                     // This is a simplification - in a full implementation we'd need to handle nested types
                     self.context.ptr_type(inkwell::AddressSpace::default()).as_basic_type_enum()
+                },
+                AstType::Struct { name, .. } => {
+                    // Look up the previously registered struct type
+                    if let Some(struct_info) = self.struct_types.get(name) {
+                        struct_info.llvm_type.as_basic_type_enum()
+                    } else {
+                        return Err(CompileError::TypeError(
+                            format!("Struct '{}' not yet defined. Structs must be defined before use in fields", name),
+                            None
+                        ))
+                    }
                 },
                 _ => return Err(CompileError::TypeError(format!("Unsupported type in struct: {:?}", field.type_), None)),
             };
