@@ -1,5 +1,5 @@
 use super::LLVMCompiler;
-use crate::ast::AstType;
+use crate::ast::{AstType, Expression};
 use crate::error::CompileError;
 use inkwell::values::{BasicValueEnum, BasicValue};
 
@@ -91,7 +91,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 StringPart::Interpolation(expr) => {
                     let val = self.compile_expression(expr)?;
                     
-                    // Determine the format specifier based on the actual value type
+                    // Determine the format specifier based on the value type
                     let format_spec = if val.is_int_value() {
                         let int_val = val.into_int_value();
                         match int_val.get_type().get_bit_width() {
@@ -102,7 +102,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     } else if val.is_float_value() {
                         "%.6f"
                     } else if val.is_pointer_value() {
-                        // Pointer could be a string - use %s
+                        // Pointer values are strings - use %s
                         "%s"
                     } else {
                         // Default to string format

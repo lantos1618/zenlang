@@ -17,7 +17,8 @@
 - Result<T,E> and Option<T> types
 
 ## Critical Issues to Fix
-1. **Printf/puts tests**: Not actually verifying console output, just running without checking side effects
+1. **Printf/puts tests**: RESOLVED - test_output_verification.rs properly captures output using ExecutionHelper/lli
+   - Some older tests (ffi.rs) still use JIT without verification
 2. **String interpolation**: $(expr) syntax parsed but not generating code
 3. **Loop syntax**: Using old syntax instead of spec-compliant "loop condition" and "loop i in"
 
