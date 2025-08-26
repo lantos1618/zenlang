@@ -1,4 +1,4 @@
-use super::LLVMCompiler;
+use super::{LLVMCompiler, symbols};
 use crate::ast::Pattern;
 use crate::error::CompileError;
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
@@ -167,11 +167,109 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 sub_match
             }
             
-            Pattern::Struct { .. } | Pattern::EnumVariant { .. } => {
+            Pattern::Struct { .. } => {
                 return Err(CompileError::UnsupportedFeature(
-                    "Struct and enum patterns not yet implemented".to_string(),
+                    "Struct patterns not yet implemented".to_string(),
                     None
                 ));
+            }
+            
+            Pattern::EnumVariant { enum_name, variant, payload } => {
+                // Get the enum type info
+                let enum_info = match self.symbols.lookup(enum_name) {
+                    Some(symbols::Symbol::EnumType(info)) => info.clone(),
+                    _ => {
+                        return Err(CompileError::UndeclaredVariable(
+                            format!("Enum '{}' not found", enum_name),
+                            None
+                        ));
+                    }
+                };
+                
+                // Get the expected discriminant value for this variant
+                let expected_tag = enum_info.variant_indices.get(variant)
+                    .copied()
+                    .ok_or_else(|| CompileError::UndeclaredVariable(
+                        format!("Unknown variant '{}' for enum '{}'", variant, enum_name),
+                        None
+                    ))?;
+                
+                // For now, we need to handle enum values as regular values, not pointers
+                // Check if scrutinee is a pointer or direct value
+                let discriminant = if scrutinee_val.is_pointer_value() {
+                    // Extract discriminant from pointer
+                    let enum_struct_type = enum_info.llvm_type;
+                    let discriminant_gep = self.builder.build_struct_gep(
+                        enum_struct_type,
+                        scrutinee_val.into_pointer_value(),
+                        0,
+                        "discriminant_ptr"
+                    )?;
+                    self.builder.build_load(
+                        self.context.i64_type(), 
+                        discriminant_gep,
+                        "discriminant"
+                    )?
+                } else if scrutinee_val.is_struct_value() {
+                    // Extract discriminant from struct value
+                    let struct_val = scrutinee_val.into_struct_value();
+                    self.builder.build_extract_value(struct_val, 0, "discriminant")?
+                } else {
+                    // Fallback to treating as integer
+                    *scrutinee_val
+                };
+                
+                // Compare discriminant with expected value
+                let expected_tag_val = self.context.i64_type().const_int(expected_tag, false);
+                let matches = self.builder.build_int_compare(
+                    inkwell::IntPredicate::EQ,
+                    discriminant.into_int_value(),
+                    expected_tag_val,
+                    "enum_variant_match"
+                )?;
+                
+                // Handle payload pattern if present
+                if let Some(payload_pattern) = payload {
+                    // Extract the payload value
+                    let payload_val = if scrutinee_val.is_pointer_value() {
+                        let enum_struct_type = enum_info.llvm_type;
+                        let payload_gep = self.builder.build_struct_gep(
+                            enum_struct_type,
+                            scrutinee_val.into_pointer_value(),
+                            1,
+                            "payload_ptr"
+                        )?;
+                        self.builder.build_load(
+                            self.context.i64_type(),
+                            payload_gep,
+                            "payload"
+                        )?
+                    } else if scrutinee_val.is_struct_value() {
+                        let struct_val = scrutinee_val.into_struct_value();
+                        self.builder.build_extract_value(struct_val, 1, "payload")?
+                    } else {
+                        // No payload available
+                        self.context.i64_type().const_int(0, false).into()
+                    };
+                    
+                    // Recursively match the payload pattern
+                    let (payload_match, mut payload_bindings) = self.compile_pattern_test(
+                        &payload_val,
+                        payload_pattern
+                    )?;
+                    
+                    // Combine the discriminant match with payload match
+                    let combined_match = self.builder.build_and(
+                        matches,
+                        payload_match,
+                        "enum_full_match"
+                    )?;
+                    
+                    bindings.append(&mut payload_bindings);
+                    combined_match
+                } else {
+                    matches
+                }
             }
         };
         

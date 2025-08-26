@@ -1,4 +1,4 @@
-use super::{LLVMCompiler, Type};
+use super::{LLVMCompiler, Type, symbols};
 use crate::ast::AstType;
 use crate::error::CompileError;
 use inkwell::{
@@ -88,10 +88,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 };
                 Ok(Type::Function(function_type))
             },
-            AstType::Enum { name: _, variants: _ } => {
-                // Enums are represented as integers for now
-                // TODO: Implement proper enum representation
-                Ok(Type::Basic(self.context.i64_type().into()))
+            AstType::Enum { name, variants: _ } => {
+                // Look up the registered enum type
+                if let Some(symbols::Symbol::EnumType(enum_info)) = self.symbols.lookup(name) {
+                    Ok(Type::Struct(enum_info.llvm_type))
+                } else {
+                    // Fallback to a default enum structure if not registered
+                    let enum_struct_type = self.context.struct_type(&[
+                        self.context.i64_type().into(),  // discriminant/tag
+                        self.context.i64_type().into(),  // payload (simplified)
+                    ], false);
+                    Ok(Type::Struct(enum_struct_type))
+                }
             },
             AstType::Ref(inner) => {
                 // Ref<T> is represented as a pointer to T
