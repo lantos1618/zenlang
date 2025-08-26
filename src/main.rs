@@ -10,6 +10,7 @@ mod error;
 mod lexer;
 mod lsp;
 mod parser;
+mod stdlib;
 mod typechecker;
 mod type_system;
 

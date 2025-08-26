@@ -157,6 +157,10 @@ pub enum Expression {
         scrutinee: Box<Expression>,
         arms: Vec<PatternArm>,
     },
+    // Standard library module reference
+    StdModule(String),
+    // Generic module reference
+    Module(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]

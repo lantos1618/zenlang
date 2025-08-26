@@ -12,6 +12,7 @@ pub mod error;
 pub mod lexer;
 pub mod parser;
 pub mod lsp;
+pub mod stdlib;
 pub mod typechecker;
 pub mod type_system;
 

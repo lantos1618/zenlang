@@ -93,6 +93,16 @@ impl<'ctx> LLVMCompiler<'ctx> {
             Expression::PatternMatch { scrutinee, arms } => {
                 self.compile_pattern_match(scrutinee, arms)
             }
+            Expression::StdModule(_module) => {
+                // For now, std modules return a placeholder value
+                // This will be expanded when we implement the module system
+                Ok(self.context.i32_type().const_int(0, false).into())
+            }
+            Expression::Module(_module) => {
+                // For now, modules return a placeholder value
+                // This will be expanded when we implement the module system  
+                Ok(self.context.i32_type().const_int(0, false).into())
+            }
         }
     }
 
