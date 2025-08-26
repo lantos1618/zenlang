@@ -373,9 +373,30 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         let start_val = self.compile_expression(start)?;
                         let end_val = self.compile_expression(end)?;
                         
+                        // Convert both to i64 to ensure type consistency
+                        let start_i64 = if let BasicValueEnum::IntValue(int_val) = start_val {
+                            if int_val.get_type().get_bit_width() != 64 {
+                                self.builder.build_int_s_extend(int_val, self.context.i64_type(), "start_ext").map_err(|e| CompileError::from(e))?.into()
+                            } else {
+                                start_val
+                            }
+                        } else {
+                            start_val
+                        };
+                        
+                        let end_i64 = if let BasicValueEnum::IntValue(int_val) = end_val {
+                            if int_val.get_type().get_bit_width() != 64 {
+                                self.builder.build_int_s_extend(int_val, self.context.i64_type(), "end_ext").map_err(|e| CompileError::from(e))?.into()
+                            } else {
+                                end_val
+                            }
+                        } else {
+                            end_val
+                        };
+                        
                         // Allocate loop variable
                         let loop_var_alloca = self.builder.build_alloca(self.context.i64_type(), variable).map_err(|e| CompileError::from(e))?;
-                        self.builder.build_store(loop_var_alloca, start_val).map_err(|e| CompileError::from(e))?;
+                        self.builder.build_store(loop_var_alloca, start_i64).map_err(|e| CompileError::from(e))?;
                         self.variables.insert(variable.clone(), (loop_var_alloca, AstType::I64));
                         
                         // Jump to loop header
@@ -389,7 +410,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         } else {
                             inkwell::IntPredicate::SLT
                         };
-                        let condition = self.builder.build_int_compare(cmp_op, current_val.into_int_value(), end_val.into_int_value(), "loop_cond").map_err(|e| CompileError::from(e))?;
+                        let condition = self.builder.build_int_compare(cmp_op, current_val.into_int_value(), end_i64.into_int_value(), "loop_cond").map_err(|e| CompileError::from(e))?;
                         self.builder.build_conditional_branch(condition, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
                         
                         // Compile loop body
