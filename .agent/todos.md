@@ -1,69 +1,160 @@
-# Zen Language TODOs
+# Zen Compiler Development - Prioritized Task List
 
-## ✅ Completed (Sessions: 2025-08-25, 2025-08-26)
+## Immediate Priority (Self-Hosting Critical Path)
 
-### High Priority - All Complete
-1. ✅ Language fully matches lang.md specification v1.0
-2. ✅ All "zen" naming consistent throughout codebase
-3. ✅ Created comprehensive working examples (zen_comprehensive.zen)
-4. ✅ Consolidated documentation for clarity
-5. ✅ Test suite verified (35/35 test suites passing - 100%)
-6. ✅ README reflects current features
+### Phase 1: Language Foundation Completion
+**Estimated Timeline: 2-3 months**
 
-### Documentation & Examples
-- ✅ `ZEN_GUIDE.md` - Complete language guide
-- ✅ `examples/zen_quickstart.zen` - Essential features demo
-- ✅ `examples/zen_comprehensive.zen` - Full feature showcase aligned with lang.md
-- ✅ `examples/complete_showcase.zen` - Additional comprehensive examples
-- ✅ Updated README with Quick Start section
+#### P0 - Critical Missing Language Features
+1. **Complete Struct Codegen** - Currently parsing works but codegen incomplete
+   - Struct instantiation: `Person{ name: "Alice", age: 30 }`
+   - Field access: `person.name`, `person.age`
+   - Mutable field modification: `person.email = Some("alice@example.com")`
+   
+2. **Complete Pattern Matching Codegen** - Parser done, codegen WIP
+   - Implement `?` operator for all patterns
+   - Support destructuring: `point ? | { x, y } => use(x, y)`
+   - Enum pattern matching: `result ? | .Ok -> value => process(value)`
 
-## Current Status
+3. **Generic Instantiation/Monomorphization** - Critical for standard library
+   - Complete type instantiation for `Array<T>`, `Option<T>`, `Result<T,E>`
+   - Proper monomorphization of generic functions
+   - Generic struct/enum support
 
-### Test Results (Updated: 2025-08-26)
-- **Passing:** 35 out of 35 test suites ✅
-- **Failing:** 0 suites
-- **Total:** 100% pass rate achieved
-- All parser_generics tests now passing
+4. **String Interpolation** - `$(expr)` syntax missing
+   - Parser support for embedded expressions
+   - Codegen for string formatting
+   - Integration with ToString behavior
 
-### Code Quality
-- ✅ No lynlang/lyn references remain
-- ✅ All files use .zen extension
-- ✅ Consistent "zen" naming throughout
-- ✅ Examples align with lang.md spec
+5. **Module Import System** - Essential for larger programs
+   - `build.import("module")` functionality
+   - Module resolution and loading
+   - Proper namespace isolation
 
-## Future Development Tasks
+#### P1 - Enhanced Language Features  
+6. **Complete Loop Implementation** - Make spec-compliant
+   - `loop condition { }` (while-like)
+   - `loop item in collection { }` (iteration)
+   - `loop i in 0..10 { }` (range-based)
+   - Loop control: `break`, `continue`
 
-### Bug Fixes (High Priority)
-- [x] ✅ Fix 6 failing tests in parser_generics suite (Completed 2025-08-26)
-- [x] ✅ Complete generic type parsing implementation (Completed 2025-08-26)
-- [x] ✅ Fix all test syntax issues - migrated from :: to = syntax (Completed 2025-08-26)
-- [x] ✅ Pattern matching codegen verified working (Completed 2025-08-26)
+7. **Complete Enum Implementation** - Sum types essential
+   - Enum definition parsing and codegen
+   - Variant construction: `.Ok(value)`, `.Err(error)`
+   - Memory layout optimization
 
-### Core Implementation (Medium Priority)
-- [ ] Complete type checker separation from codegen
-- [ ] Implement generic type instantiation/monomorphization
-- [ ] Finish comptime evaluation engine
-- [ ] Implement behaviors/traits system
-- [x] ✅ Add @std namespace bootstrap (Completed 2025-08-26)
+### Phase 2: Standard Library Development  
+**Estimated Timeline: 1-2 months**
 
-### Standard Library (In Progress)
-- [x] ✅ Implement core module (@std.core) - basic structure done (2025-08-26)
-- [x] ✅ Add build module (@std.build) - basic structure done (2025-08-26)
-- [x] ✅ Add Result and Option types (2025-08-26)
-- [ ] Create io module
-- [ ] Add collections module
-- [ ] Implement memory management module
+#### P0 - Essential Standard Library Components
+8. **Memory Management** - Foundation for all data structures
+   - Implement `Ptr<T>` and `Ref<T>` types
+   - Basic allocator interface
+   - Stack vs heap allocation decisions
 
-### Language Features (Future)
-- [ ] Async/await support
-- [ ] Advanced pattern matching features
-- [ ] Compile-time type reflection
-- [ ] Package management system
-- [ ] Documentation generation
+9. **Collections Library** - Arrays, Lists, Maps
+   - `Array<T>` with bounds checking
+   - Dynamic `List<T>` (Vec equivalent)
+   - `Map<K,V>` hash table implementation
+   - Iterator support for all collections
 
-## Maintenance Principles
-- Keep implementation simple and elegant (KISS/DRY)
-- Maintain 80/20 rule: 80% implementation, 20% testing
-- Use frequent git commits
-- Follow lang.md specification exactly
-- Clean, well-documented code
+10. **Enhanced IO Module** - Beyond basic console/file operations
+    - Formatted output (printf-style)
+    - Buffered IO operations
+    - Error handling for IO operations
+    - Path manipulation utilities
+
+11. **String Utilities** - Essential for compiler work
+    - String slicing and manipulation
+    - String building/concatenation
+    - UTF-8 handling
+    - Regular expression support (basic)
+
+#### P1 - System Integration
+12. **OS Interface** - Needed for build tools and file operations
+    - Process spawning and management
+    - Environment variables
+    - File system operations
+    - Signal handling
+
+13. **Error Handling Utilities** - Improve Result/Option ergonomics
+    - Error chaining and context
+    - Common error types
+    - Debugging utilities (stack traces)
+
+### Phase 3: Advanced Language Features
+**Estimated Timeline: 2-3 months**
+
+#### P0 - Compiler Prerequisites
+14. **Behaviors (Trait System)** - Polymorphism for compiler abstractions
+    - Behavior definitions and implementations
+    - Static dispatch (monomorphization)  
+    - Dynamic dispatch capability
+    - Built-in behaviors (ToString, Clone, etc.)
+
+15. **Complete Comptime System** - Metaprogramming for code generation
+    - `comptime` block execution
+    - Compile-time function evaluation
+    - Type-level programming
+    - Code generation capabilities
+
+16. **UFCS Implementation** - Clean API design
+    - Method-style syntax: `value.method()`
+    - Integration with behaviors
+    - Proper precedence and overloading
+
+#### P1 - Advanced Features
+17. **Build System Integration** - Project management
+    - Package/module management
+    - Dependency resolution
+    - Build configuration
+    - Testing framework integration
+
+18. **LLVM Integration** - Backend flexibility
+    - Either complete FFI bindings to LLVM
+    - Or custom Zen backend
+    - Optimization pass integration
+    - Debug information generation
+
+## Self-Hosting Milestone Criteria
+
+### Minimum Viable Self-Hosting Compiler
+To write a basic Zen compiler in Zen, we need:
+- ✅ Functions, variables, basic types (DONE)
+- 🚧 Structs and enums with full codegen
+- 🚧 Pattern matching for control flow  
+- 🚧 Generic instantiation
+- ❌ Module system for code organization
+- ❌ Collections (Array, List, Map)
+- ❌ String manipulation
+- ❌ File IO operations
+- ❌ Basic memory management
+
+### Full Feature Parity  
+For complete self-hosting with all features:
+- ❌ Complete comptime system
+- ❌ Behaviors/trait system
+- ❌ UFCS
+- ❌ Async/await
+- ❌ Advanced optimizations
+
+## Development Strategy
+
+### Incremental Approach
+1. **Test-First Development**: Each feature needs passing tests before merge
+2. **Working Examples**: Create .zen examples that demonstrate each feature
+3. **Bootstrap Gradually**: Start with minimal self-hosted compiler, add features incrementally
+4. **Maintain Compatibility**: Keep existing working features functional
+
+### Risk Mitigation
+- **Parallel Development**: Some features can be developed in parallel branches
+- **Fallback Plan**: Current Rust compiler remains functional during transition
+- **Feature Flags**: New features behind compile-time flags until stable
+- **Incremental Migration**: Port compiler modules one at a time to Zen
+
+## Next Immediate Action
+**Start with P0 Item #1**: Complete struct codegen
+- High impact (enables data structures)
+- Well-defined scope
+- Foundation for many other features
+- Has working parser implementation to build on
