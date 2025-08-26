@@ -188,6 +188,15 @@ impl ComptimeInterpreter {
         interpreter
     }
     
+    // Helper methods for testing
+    pub fn set_variable(&mut self, name: String, value: ComptimeValue) {
+        self.env.variables.borrow_mut().insert(name, value);
+    }
+    
+    pub fn get_variable(&self, name: &str) -> Option<ComptimeValue> {
+        self.env.variables.borrow().get(name).cloned()
+    }
+    
     fn init_builtins(&mut self) {
         // @std namespace
         self.modules.insert("@std".to_string(), ComptimeValue::Struct {
@@ -241,9 +250,9 @@ impl ComptimeInterpreter {
                 Ok(None)
             }
             
-            Statement::Assignment { target, value } => {
+            Statement::VariableAssignment { name, value } => {
                 let val = self.evaluate_expression(value)?;
-                self.env.set(target, val)?;
+                self.env.set(name, val)?;
                 Ok(None)
             }
             
@@ -348,12 +357,12 @@ impl ComptimeInterpreter {
                             Ok(ComptimeValue::I32(l / r))
                         }
                     }
-                    BinaryOperator::Equal => Ok(ComptimeValue::Bool(l == r)),
-                    BinaryOperator::NotEqual => Ok(ComptimeValue::Bool(l != r)),
+                    BinaryOperator::Equals => Ok(ComptimeValue::Bool(l == r)),
+                    BinaryOperator::NotEquals => Ok(ComptimeValue::Bool(l != r)),
                     BinaryOperator::LessThan => Ok(ComptimeValue::Bool(l < r)),
-                    BinaryOperator::LessThanOrEqual => Ok(ComptimeValue::Bool(l <= r)),
+                    BinaryOperator::LessThanEquals => Ok(ComptimeValue::Bool(l <= r)),
                     BinaryOperator::GreaterThan => Ok(ComptimeValue::Bool(l > r)),
-                    BinaryOperator::GreaterThanOrEqual => Ok(ComptimeValue::Bool(l >= r)),
+                    BinaryOperator::GreaterThanEquals => Ok(ComptimeValue::Bool(l >= r)),
                     _ => Err(CompileError::ComptimeError(
                         format!("Unsupported operation {:?} for I32", op)
                     ))
@@ -362,10 +371,10 @@ impl ComptimeInterpreter {
             
             (ComptimeValue::Bool(l), ComptimeValue::Bool(r)) => {
                 match op {
-                    BinaryOperator::LogicalAnd => Ok(ComptimeValue::Bool(l && r)),
-                    BinaryOperator::LogicalOr => Ok(ComptimeValue::Bool(l || r)),
-                    BinaryOperator::Equal => Ok(ComptimeValue::Bool(l == r)),
-                    BinaryOperator::NotEqual => Ok(ComptimeValue::Bool(l != r)),
+                    BinaryOperator::And => Ok(ComptimeValue::Bool(l && r)),
+                    BinaryOperator::Or => Ok(ComptimeValue::Bool(l || r)),
+                    BinaryOperator::Equals => Ok(ComptimeValue::Bool(l == r)),
+                    BinaryOperator::NotEquals => Ok(ComptimeValue::Bool(l != r)),
                     _ => Err(CompileError::ComptimeError(
                         format!("Unsupported operation {:?} for Bool", op)
                     ))
@@ -374,8 +383,8 @@ impl ComptimeInterpreter {
             
             (ComptimeValue::String(l), ComptimeValue::String(r)) => {
                 match op {
-                    BinaryOperator::Equal => Ok(ComptimeValue::Bool(l == r)),
-                    BinaryOperator::NotEqual => Ok(ComptimeValue::Bool(l != r)),
+                    BinaryOperator::Equals => Ok(ComptimeValue::Bool(l == r)),
+                    BinaryOperator::NotEquals => Ok(ComptimeValue::Bool(l != r)),
                     _ => Err(CompileError::ComptimeError(
                         format!("Unsupported operation {:?} for String", op)
                     ))

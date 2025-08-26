@@ -320,7 +320,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         match self.comptime_evaluator.evaluate_expression(expr) {
             Ok(value) => {
                 // Convert the comptime value to a constant expression and compile it
-                let const_expr = value.to_expression();
+                let const_expr = value.to_expression()?;
                 self.compile_expression(&const_expr)
             }
             Err(e) => {

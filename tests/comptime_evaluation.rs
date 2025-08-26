@@ -1,4 +1,4 @@
-use zen::comptime::ComptimeEvaluator;
+use zen::comptime::ComptimeInterpreter;
 use zen::ast::*;
 use zen::lexer::Lexer;
 use zen::parser::Parser;
@@ -13,10 +13,10 @@ fn test_comptime_arithmetic() {
     if let Declaration::Function(func) = &program.declarations[0] {
         if let Statement::Return(expr) = &func.body[0] {
             if let Expression::Comptime(inner) = expr {
-                let mut evaluator = ComptimeEvaluator::new();
+                let mut evaluator = ComptimeInterpreter::new();
                 let result = evaluator.evaluate_expression(inner).unwrap();
                 match result {
-                    zen::comptime::ComptimeValue::Integer32(30) => {},
+                    zen::comptime::ComptimeValue::I32(30) => {},
                     _ => panic!("Expected Integer32(30), got {:?}", result)
                 }
             }
@@ -34,7 +34,7 @@ fn test_comptime_array_literal() {
     if let Declaration::Function(func) = &program.declarations[0] {
         if let Statement::VariableDeclaration { initializer, .. } = &func.body[0] {
             if let Some(Expression::Comptime(inner)) = initializer {
-                let mut evaluator = ComptimeEvaluator::new();
+                let mut evaluator = ComptimeInterpreter::new();
                 let result = evaluator.evaluate_expression(inner).unwrap();
                 match result {
                     zen::comptime::ComptimeValue::Array(values) => {
@@ -57,7 +57,7 @@ fn test_comptime_range() {
     if let Declaration::Function(func) = &program.declarations[0] {
         if let Statement::VariableDeclaration { initializer, .. } = &func.body[0] {
             if let Some(Expression::Comptime(inner)) = initializer {
-                let mut evaluator = ComptimeEvaluator::new();
+                let mut evaluator = ComptimeInterpreter::new();
                 let result = evaluator.evaluate_expression(inner).unwrap();
                 match result {
                     zen::comptime::ComptimeValue::Array(values) => {
@@ -65,7 +65,7 @@ fn test_comptime_range() {
                         // Check it contains [0, 1, 2, 3, 4]
                         for i in 0..5 {
                             match &values[i] {
-                                zen::comptime::ComptimeValue::Integer32(val) => {
+                                zen::comptime::ComptimeValue::I32(val) => {
                                     assert_eq!(*val, i as i32);
                                 },
                                 _ => panic!("Expected Integer32 in range")
@@ -89,7 +89,7 @@ fn test_comptime_string() {
     if let Declaration::Function(func) = &program.declarations[0] {
         if let Statement::VariableDeclaration { initializer, .. } = &func.body[0] {
             if let Some(Expression::Comptime(inner)) = initializer {
-                let mut evaluator = ComptimeEvaluator::new();
+                let mut evaluator = ComptimeInterpreter::new();
                 let result = evaluator.evaluate_expression(inner).unwrap();
                 match result {
                     zen::comptime::ComptimeValue::String(s) => {
@@ -112,7 +112,7 @@ fn test_comptime_comparison() {
     if let Declaration::Function(func) = &program.declarations[0] {
         if let Statement::VariableDeclaration { initializer, .. } = &func.body[0] {
             if let Some(Expression::Comptime(inner)) = initializer {
-                let mut evaluator = ComptimeEvaluator::new();
+                let mut evaluator = ComptimeInterpreter::new();
                 let result = evaluator.evaluate_expression(inner).unwrap();
                 match result {
                     zen::comptime::ComptimeValue::Boolean(true) => {},
@@ -125,10 +125,10 @@ fn test_comptime_comparison() {
 
 #[test]
 fn test_comptime_with_variables() {
-    let mut evaluator = ComptimeEvaluator::new();
+    let mut evaluator = ComptimeInterpreter::new();
     
     // Set up a variable in the comptime context
-    evaluator.variables.insert("x".to_string(), zen::comptime::ComptimeValue::Integer32(10));
+    evaluator.set_variable("x".to_string(), zen::comptime::ComptimeValue::I32(10));
     
     // Create an expression that uses the variable
     let expr = Expression::BinaryOp {
@@ -139,7 +139,7 @@ fn test_comptime_with_variables() {
     
     let result = evaluator.evaluate_expression(&expr).unwrap();
     match result {
-        zen::comptime::ComptimeValue::Integer32(50) => {},
+        zen::comptime::ComptimeValue::I32(50) => {},
         _ => panic!("Expected Integer32(50), got {:?}", result)
     }
 }
@@ -158,24 +158,24 @@ comptime {
     
     let program = parser.parse_program().unwrap();
     if let Declaration::ComptimeBlock(statements) = &program.declarations[0] {
-        let mut evaluator = ComptimeEvaluator::new();
+        let mut evaluator = ComptimeInterpreter::new();
         
         // Evaluate all statements in the block
         for stmt in statements {
-            evaluator.evaluate_statement(stmt).unwrap();
+            evaluator.execute_statement(stmt).unwrap();
         }
         
         // Check the final values
-        match evaluator.variables.get("x") {
-            Some(zen::comptime::ComptimeValue::Integer32(10)) => {},
+        match evaluator.get_variable("x") {
+            Some(zen::comptime::ComptimeValue::I32(10)) => {},
             _ => panic!("Expected x = 10")
         }
-        match evaluator.variables.get("y") {
-            Some(zen::comptime::ComptimeValue::Integer32(20)) => {},
+        match evaluator.get_variable("y") {
+            Some(zen::comptime::ComptimeValue::I32(20)) => {},
             _ => panic!("Expected y = 20")
         }
-        match evaluator.variables.get("z") {
-            Some(zen::comptime::ComptimeValue::Integer32(25)) => {},
+        match evaluator.get_variable("z") {
+            Some(zen::comptime::ComptimeValue::I32(25)) => {},
             _ => panic!("Expected z = 25")
         }
     }

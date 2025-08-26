@@ -583,7 +583,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             Statement::ComptimeBlock(statements) => {
                 // Evaluate comptime blocks during codegen
                 for stmt in statements {
-                    if let Err(e) = self.comptime_evaluator.evaluate_statement(stmt) {
+                    if let Err(e) = self.comptime_evaluator.execute_statement(stmt) {
                         return Err(CompileError::InternalError(
                             format!("Comptime evaluation error: {}", e),
                             None
