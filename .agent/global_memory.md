@@ -5,8 +5,8 @@
 - **Language**: Rust-based compiler targeting LLVM
 - **Location**: /home/ubuntu/zenlang
 - **Branch**: ragemode
-- **Test Status**: 285 tests passing (100% pass rate)
-- **Recent Focus**: Completing core language features for self-hosting
+- **Test Status**: 281/285 tests passing (98.5% pass rate - 4 parsing tests failing)
+- **Recent Focus**: Starting self-hosting with lexer port to Zen
 
 ## Key Features Working
 - Basic types, functions, variables (mutable/immutable)
