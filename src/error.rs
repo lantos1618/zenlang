@@ -27,6 +27,7 @@ pub enum CompileError {
     TypeError(String, Option<Span>),
     FileNotFound(String, Option<String>),
     ParseError(String, Option<Span>),
+    ComptimeError(String),
 }
 
 impl From<BuilderError> for CompileError {
@@ -61,6 +62,7 @@ impl fmt::Display for CompileError {
             CompileError::TypeError(msg, span) => write!(f, "Type error: {}{}", msg, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
             CompileError::FileNotFound(path, detail) => write!(f, "File not found: {}{}", path, detail.as_ref().map(|d| format!(" ({})", d)).unwrap_or_default()),
             CompileError::ParseError(msg, span) => write!(f, "Parse error: {}{}", msg, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
+            CompileError::ComptimeError(msg) => write!(f, "Compile-time error: {}", msg),
         }
     }
 }
