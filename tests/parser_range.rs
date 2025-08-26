@@ -73,7 +73,7 @@ fn test_parse_range_with_expressions() {
 #[test]
 fn test_parse_range_in_loop() {
     // Test range in a loop context inside a function
-    let input = "test_func :: () -> void { loop 0..10 { x := 1; } }";
+    let input = "test_func = () void { loop 0..10 { x := 1; } }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     
