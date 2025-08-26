@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub mod core;
 pub mod build;
 pub mod result;
+pub mod io;
 
 /// The @std namespace provides built-in compiler intrinsics and standard library access
 pub struct StdNamespace {
@@ -13,6 +14,7 @@ pub struct StdNamespace {
 pub enum StdModule {
     Core(core::CoreModule),
     Build(build::BuildModule),
+    IO(io::IOModule),
 }
 
 impl StdNamespace {
@@ -21,6 +23,7 @@ impl StdNamespace {
         
         modules.insert("core".to_string(), StdModule::Core(core::CoreModule::new()));
         modules.insert("build".to_string(), StdModule::Build(build::BuildModule::new()));
+        modules.insert("io".to_string(), StdModule::IO(io::IOModule::new()));
         
         StdNamespace { modules }
     }
@@ -39,6 +42,7 @@ impl StdNamespace {
         match module_name {
             "core" => Some(Expression::StdModule("core".to_string())),
             "build" => Some(Expression::StdModule("build".to_string())),
+            "io" => Some(Expression::StdModule("io".to_string())),
             _ => None,
         }
     }
