@@ -44,11 +44,12 @@
 - [ ] Implement generic type instantiation/monomorphization
 - [ ] Finish comptime evaluation engine
 - [ ] Implement behaviors/traits system
-- [ ] Add @std namespace bootstrap
+- [x] ✅ Add @std namespace bootstrap (Completed 2025-08-26)
 
-### Standard Library (Low Priority)
-- [ ] Implement core module (@std.core)
-- [ ] Add build module (@std.build)
+### Standard Library (In Progress)
+- [x] ✅ Implement core module (@std.core) - basic structure done (2025-08-26)
+- [x] ✅ Add build module (@std.build) - basic structure done (2025-08-26)
+- [x] ✅ Add Result and Option types (2025-08-26)
 - [ ] Create io module
 - [ ] Add collections module
 - [ ] Implement memory management module
