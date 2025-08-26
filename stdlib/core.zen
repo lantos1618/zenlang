@@ -1,0 +1,80 @@
+// Zen Standard Library: Core Module
+// Essential types and utilities for the Zen language
+
+// Type aliases for clarity
+type size = i64
+type index = i64
+type byte = i8
+
+// Memory allocation result
+Result<T, E> = 
+    | Ok(value: T)
+    | Err(error: E)
+
+// Optional type
+Option<T> = 
+    | Some(value: T)
+    | None
+
+// Basic error types
+Error = 
+    | OutOfMemory
+    | InvalidArgument(msg: string)
+    | IndexOutOfBounds(index: i64, len: i64)
+    | NullPointer
+    | SystemError(code: i32)
+
+// Memory operations (will be implemented with comptime/intrinsics)
+extern malloc(size: i64) *void
+extern free(ptr: *void) void
+extern memcpy(dest: *void, src: *void, n: i64) *void
+extern memset(ptr: *void, value: i32, n: i64) *void
+
+// Assertion for debugging
+assert = (condition: bool, message: string) void {
+    condition ? | false => {
+        // In the future, this would panic with the message
+        // For now, we'll use a placeholder
+        extern exit(code: i32) void
+        exit(1)
+    }
+    | true => {}
+}
+
+// Min/max functions
+min = (a: i64, b: i64) i64 {
+    a < b ? | true => a | false => b
+}
+
+max = (a: i64, b: i64) i64 {
+    a > b ? | true => a | false => b
+}
+
+// Absolute value
+abs = (n: i64) i64 {
+    n < 0 ? | true => -n | false => n
+}
+
+// Swap two values (when we have references)
+swap = (a: *i64, b: *i64) void {
+    temp := *a
+    *a = *b
+    *b = temp
+}
+
+// Range type for iteration
+Range = {
+    start: i64,
+    end: i64,
+    step: i64,
+}
+
+// Create a range
+range = (start: i64, end: i64) Range {
+    return Range { start: start, end: end, step: 1 }
+}
+
+// Create a range with custom step
+range_step = (start: i64, end: i64, step: i64) Range {
+    return Range { start: start, end: end, step: step }
+}

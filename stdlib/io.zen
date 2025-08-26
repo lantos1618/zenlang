@@ -1,0 +1,108 @@
+// Zen Standard Library: IO Module
+// Input/Output operations
+
+comptime {
+    core := @std.core
+}
+
+// File descriptor constants
+STDIN :: 0
+STDOUT :: 1
+STDERR :: 2
+
+// File modes
+FileMode = 
+    | ReadOnly
+    | WriteOnly
+    | ReadWrite
+    | Append
+
+// IO Result type
+IOResult<T> = core.Result<T, IOError>
+
+// IO-specific errors
+IOError = 
+    | FileNotFound(path: string)
+    | PermissionDenied(path: string)
+    | AlreadyExists(path: string)
+    | BrokenPipe
+    | UnexpectedEof
+    | InvalidInput(msg: string)
+    | WriteZero
+    | Other(msg: string)
+
+// External C functions for IO
+extern printf(format: *u8, ...) i32
+extern puts(str: *u8) i32
+extern getchar() i32
+extern fopen(filename: *u8, mode: *u8) *void
+extern fclose(file: *void) i32
+extern fread(buffer: *void, size: i64, count: i64, file: *void) i64
+extern fwrite(buffer: *void, size: i64, count: i64, file: *void) i64
+extern feof(file: *void) i32
+extern ferror(file: *void) i32
+
+// Print string to stdout
+print = (message: string) void {
+    puts(message)
+}
+
+// Print formatted string (basic version)
+print_fmt = (format: string, value: i64) void {
+    // This would need proper formatting in a real implementation
+    printf(format, value)
+}
+
+// Print to stderr
+eprint = (message: string) void {
+    // Would write to stderr
+    puts(message)
+}
+
+// Read a line from stdin (simplified)
+read_line = () IOResult<string> {
+    // Simplified implementation - would need proper buffering
+    c := getchar()
+    c == -1 ? | true => IOResult::Err(IOError::UnexpectedEof)
+             | false => IOResult::Ok("")  // Placeholder
+}
+
+// File handle type
+File = {
+    handle: *void,
+    path: string,
+    mode: FileMode,
+}
+
+// Open a file
+open = (path: string, mode: FileMode) IOResult<File> {
+    mode_str := mode ? | .ReadOnly => "r"
+                      | .WriteOnly => "w"
+                      | .ReadWrite => "r+"
+                      | .Append => "a"
+    
+    handle := fopen(path, mode_str)
+    handle == 0 ? | true => IOResult::Err(IOError::FileNotFound(path))
+                 | false => IOResult::Ok(File { handle: handle, path: path, mode: mode })
+}
+
+// Close a file
+close = (file: File) IOResult<void> {
+    result := fclose(file.handle)
+    result == 0 ? | true => IOResult::Ok({})
+                 | false => IOResult::Err(IOError::Other("Failed to close file"))
+}
+
+// Write bytes to a file
+write = (file: File, data: *u8, len: i64) IOResult<i64> {
+    written := fwrite(data, 1, len, file.handle)
+    written == len ? | true => IOResult::Ok(written)
+                    | false => IOResult::Err(IOError::Other("Write error"))
+}
+
+// Read bytes from a file
+read = (file: File, buffer: *u8, len: i64) IOResult<i64> {
+    bytes_read := fread(buffer, 1, len, file.handle)
+    ferror(file.handle) != 0 ? | true => IOResult::Err(IOError::Other("Read error"))
+                               | false => IOResult::Ok(bytes_read)
+}

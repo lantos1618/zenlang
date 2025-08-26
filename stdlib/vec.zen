@@ -1,0 +1,200 @@
+// Zen Standard Library: Vector (Dynamic Array) Implementation
+// A growable array type
+
+comptime {
+    core := @std.core
+}
+
+// Vector structure - dynamic array
+Vec<T> = {
+    data: *T,           // Pointer to the data
+    len: i64,           // Current number of elements
+    capacity: i64,      // Total allocated capacity
+}
+
+// Create a new empty vector
+vec_new<T> = () Vec<T> {
+    return Vec<T> {
+        data: 0,
+        len: 0,
+        capacity: 0,
+    }
+}
+
+// Create a vector with initial capacity
+vec_with_capacity<T> = (capacity: i64) core.Result<Vec<T>, core.Error> {
+    capacity <= 0 ? | true => {
+        return core.Result::Err(core.Error::InvalidArgument("Capacity must be positive"))
+    } | false => {}
+    
+    data := core.malloc(capacity * sizeof(T))
+    data == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    return core.Result::Ok(Vec<T> {
+        data: data,
+        len: 0,
+        capacity: capacity,
+    })
+}
+
+// Push element to the vector
+vec_push<T> = (vec: *Vec<T>, value: T) core.Result<void, core.Error> {
+    // Check if we need to grow
+    vec.len >= vec.capacity ? | true => {
+        new_capacity := vec.capacity == 0 ? | true => 8
+                                           | false => vec.capacity * 2
+        
+        result := vec_grow(vec, new_capacity)
+        result ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> _ => {}
+    } | false => {}
+    
+    // Add the element
+    vec.data[vec.len] = value
+    vec.len = vec.len + 1
+    return core.Result::Ok({})
+}
+
+// Pop element from the vector
+vec_pop<T> = (vec: *Vec<T>) core.Option<T> {
+    vec.len == 0 ? | true => return core.Option::None
+                   | false => {}
+    
+    vec.len = vec.len - 1
+    return core.Option::Some(vec.data[vec.len])
+}
+
+// Get element at index
+vec_get<T> = (vec: *Vec<T>, index: i64) core.Result<T, core.Error> {
+    index < 0 || index >= vec.len ? | true => {
+        return core.Result::Err(core.Error::IndexOutOfBounds(index, vec.len))
+    } | false => {}
+    
+    return core.Result::Ok(vec.data[index])
+}
+
+// Set element at index
+vec_set<T> = (vec: *Vec<T>, index: i64, value: T) core.Result<void, core.Error> {
+    index < 0 || index >= vec.len ? | true => {
+        return core.Result::Err(core.Error::IndexOutOfBounds(index, vec.len))
+    } | false => {}
+    
+    vec.data[index] = value
+    return core.Result::Ok({})
+}
+
+// Get vector length
+vec_len<T> = (vec: *Vec<T>) i64 {
+    return vec.len
+}
+
+// Check if vector is empty
+vec_is_empty<T> = (vec: *Vec<T>) bool {
+    return vec.len == 0
+}
+
+// Clear the vector (remove all elements but keep capacity)
+vec_clear<T> = (vec: *Vec<T>) void {
+    vec.len = 0
+}
+
+// Grow the vector's capacity
+vec_grow<T> = (vec: *Vec<T>, new_capacity: i64) core.Result<void, core.Error> {
+    new_capacity <= vec.capacity ? | true => {
+        return core.Result::Ok({})
+    } | false => {}
+    
+    new_data := core.malloc(new_capacity * sizeof(T))
+    new_data == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    // Copy existing data
+    vec.len > 0 ? | true => {
+        core.memcpy(new_data, vec.data, vec.len * sizeof(T))
+    } | false => {}
+    
+    // Free old data if it exists
+    vec.data != 0 ? | true => {
+        core.free(vec.data)
+    } | false => {}
+    
+    vec.data = new_data
+    vec.capacity = new_capacity
+    return core.Result::Ok({})
+}
+
+// Free the vector's memory
+vec_free<T> = (vec: *Vec<T>) void {
+    vec.data != 0 ? | true => {
+        core.free(vec.data)
+    } | false => {}
+    
+    vec.data = 0
+    vec.len = 0
+    vec.capacity = 0
+}
+
+// Insert element at position
+vec_insert<T> = (vec: *Vec<T>, index: i64, value: T) core.Result<void, core.Error> {
+    index < 0 || index > vec.len ? | true => {
+        return core.Result::Err(core.Error::IndexOutOfBounds(index, vec.len))
+    } | false => {}
+    
+    // Ensure capacity
+    vec.len >= vec.capacity ? | true => {
+        new_capacity := vec.capacity == 0 ? | true => 8
+                                           | false => vec.capacity * 2
+        result := vec_grow(vec, new_capacity)
+        result ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> _ => {}
+    } | false => {}
+    
+    // Shift elements to the right
+    i ::= vec.len
+    loop i > index {
+        vec.data[i] = vec.data[i - 1]
+        i = i - 1
+    }
+    
+    vec.data[index] = value
+    vec.len = vec.len + 1
+    return core.Result::Ok({})
+}
+
+// Remove element at position
+vec_remove<T> = (vec: *Vec<T>, index: i64) core.Result<T, core.Error> {
+    index < 0 || index >= vec.len ? | true => {
+        return core.Result::Err(core.Error::IndexOutOfBounds(index, vec.len))
+    } | false => {}
+    
+    removed := vec.data[index]
+    
+    // Shift elements to the left
+    i ::= index
+    loop i < vec.len - 1 {
+        vec.data[i] = vec.data[i + 1]
+        i = i + 1
+    }
+    
+    vec.len = vec.len - 1
+    return core.Result::Ok(removed)
+}
+
+// Create vector from array
+vec_from_array<T> = (array: [T], len: i64) core.Result<Vec<T>, core.Error> {
+    vec := vec_with_capacity(len)
+    vec ? | .Err -> e => return core.Result::Err(e)
+         | .Ok -> v => {
+        i ::= 0
+        loop i < len {
+            result := vec_push(&v, array[i])
+            result ? | .Err -> e => return core.Result::Err(e)
+                    | .Ok -> _ => {}
+            i = i + 1
+        }
+        return core.Result::Ok(v)
+    }
+}
