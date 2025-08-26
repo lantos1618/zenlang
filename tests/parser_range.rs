@@ -1,4 +1,4 @@
-use zen::ast::Expression;
+use zen::ast::{Expression, LoopKind};
 use zen::lexer::Lexer;
 use zen::parser::Parser;
 
@@ -85,10 +85,13 @@ fn test_parse_range_in_loop() {
         assert_eq!(func.name, "test_func");
         assert!(!func.body.is_empty());
         // The first statement should be a loop with a range condition
-        if let zen::ast::Statement::Loop { condition, .. } = &func.body[0] {
-            assert!(condition.is_some());
-            if let Some(cond) = condition {
-                assert!(matches!(cond, Expression::Range { .. }));
+        if let zen::ast::Statement::Loop { kind, .. } = &func.body[0] {
+            if let LoopKind::Condition(Expression::Range { start, end, inclusive }) = kind {
+                assert!(matches!(**start, Expression::Integer32(0)));
+                assert!(matches!(**end, Expression::Integer32(10)));
+                assert!(!inclusive);
+            } else {
+                panic!("Expected LoopKind::Condition with Range expression");
             }
         } else {
             panic!("Expected Loop statement");

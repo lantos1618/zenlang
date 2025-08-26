@@ -440,12 +440,111 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         Ok(())
                     }
                     LoopKind::Iterator { variable, iterable } => {
-                        // For now, only support arrays
-                        // TODO: Expand to support other iterables
-                        return Err(CompileError::InternalError(
-                            "Iterator loops not yet fully implemented".to_string(),
-                            None
-                        ));
+                        // Implementation for iterating over arrays
+                        // For now, only support array literals
+                        
+                        let loop_header = self.context.append_basic_block(self.current_function.unwrap(), "iter_loop_header");
+                        let loop_body = self.context.append_basic_block(self.current_function.unwrap(), "iter_loop_body");
+                        let loop_increment = self.context.append_basic_block(self.current_function.unwrap(), "iter_loop_increment");
+                        let after_loop_block = self.context.append_basic_block(self.current_function.unwrap(), "after_iter_loop");
+                        
+                        // Add to loop stack for break/continue
+                        self.loop_stack.push((loop_header, after_loop_block));
+                        
+                        // Compile the iterable expression (expecting an array)
+                        let array_ptr = if let Expression::ArrayLiteral(ref elements) = iterable {
+                            // Get the array length
+                            let array_len = elements.len() as u64;
+                            
+                            // First compile the array
+                            let array_val = self.compile_expression(iterable)?;
+                            
+                            // Allocate loop index variable (i)
+                            let index_alloca = self.builder.build_alloca(self.context.i64_type(), "iter_index").map_err(|e| CompileError::from(e))?;
+                            self.builder.build_store(index_alloca, self.context.i64_type().const_int(0, false)).map_err(|e| CompileError::from(e))?;
+                            
+                            // Allocate the loop variable to hold current element
+                            let element_alloca = self.builder.build_alloca(self.context.i64_type(), variable).map_err(|e| CompileError::from(e))?;
+                            self.variables.insert(variable.clone(), (element_alloca, AstType::I64));
+                            
+                            // Jump to loop header
+                            self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
+                            self.builder.position_at_end(loop_header);
+                            
+                            // Check if index < array_len
+                            let current_index = self.builder.build_load(self.context.i64_type(), index_alloca, "current_index").map_err(|e| CompileError::from(e))?;
+                            let array_len_val = self.context.i64_type().const_int(array_len, false);
+                            let condition = self.builder.build_int_compare(
+                                inkwell::IntPredicate::ULT, 
+                                current_index.into_int_value(), 
+                                array_len_val, 
+                                "iter_cond"
+                            ).map_err(|e| CompileError::from(e))?;
+                            self.builder.build_conditional_branch(condition, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
+                            
+                            // Load current element in loop body
+                            self.builder.position_at_end(loop_body);
+                            let array_ptr = array_val.into_pointer_value();
+                            let element_type = self.context.i64_type();
+                            let gep = unsafe {
+                                self.builder.build_gep(
+                                    element_type, 
+                                    array_ptr, 
+                                    &[current_index.into_int_value()], 
+                                    "iter_elem_ptr"
+                                ).map_err(|e| CompileError::from(e))?
+                            };
+                            let element_val = self.builder.build_load(element_type, gep, "iter_elem_val").map_err(|e| CompileError::from(e))?;
+                            self.builder.build_store(element_alloca, element_val).map_err(|e| CompileError::from(e))?;
+                            
+                            // Compile loop body statements
+                            for stmt in body {
+                                self.compile_statement(stmt)?;
+                            }
+                            
+                            // Jump to increment block
+                            let current_block = self.builder.get_insert_block().unwrap();
+                            if current_block.get_terminator().is_none() {
+                                self.builder.build_unconditional_branch(loop_increment).map_err(|e| CompileError::from(e))?;
+                            }
+                            
+                            // Increment index
+                            self.builder.position_at_end(loop_increment);
+                            let current_index = self.builder.build_load(self.context.i64_type(), index_alloca, "current_index").map_err(|e| CompileError::from(e))?;
+                            let one = self.context.i64_type().const_int(1, false);
+                            let next_index = self.builder.build_int_add(current_index.into_int_value(), one, "next_index").map_err(|e| CompileError::from(e))?;
+                            self.builder.build_store(index_alloca, next_index).map_err(|e| CompileError::from(e))?;
+                            self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
+                            
+                            array_val.into_pointer_value()
+                        } else if let Expression::Identifier(name) = iterable {
+                            // Support iterating over array variables
+                            if let Some((var_ptr, var_type)) = self.variables.get(name) {
+                                // Assume it's an array pointer
+                                let array_ptr = self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), *var_ptr, "array_var").map_err(|e| CompileError::from(e))?.into_pointer_value();
+                                
+                                // We need to know the array length - for now assume a fixed size or error
+                                // In a real implementation, we'd store array length metadata
+                                return Err(CompileError::InternalError(
+                                    "Iterator loops over array variables not fully supported yet (need length metadata)".to_string(),
+                                    None
+                                ));
+                            } else {
+                                return Err(CompileError::UndeclaredVariable(name.clone(), None));
+                            }
+                        } else {
+                            return Err(CompileError::InternalError(
+                                format!("Iterator loops only support array literals for now, got {:?}", iterable),
+                                None
+                            ));
+                        };
+                        
+                        // Clean up and position at exit  
+                        self.loop_stack.pop();
+                        self.variables.remove(variable); // Remove loop variable from scope
+                        self.builder.position_at_end(after_loop_block);
+                        
+                        Ok(())
                     }
                 }
             },

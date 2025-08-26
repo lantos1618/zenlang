@@ -1,4 +1,4 @@
-use zen::ast::{self, AstType, Expression, Statement, BinaryOperator, ConditionalArm, Pattern, VariableDeclarationType};
+use zen::ast::{self, AstType, Expression, Statement, BinaryOperator, ConditionalArm, Pattern, VariableDeclarationType, LoopKind};
 use test_utils::TestContext;
 use zen::error::CompileError;
 use inkwell::context::Context;
@@ -791,8 +791,7 @@ fn test_loop_construct() {
                     declaration_type: VariableDeclarationType::ExplicitImmutable,
                 },
                 Statement::Loop { 
-
-                    condition: Some(Expression::BinaryOp {
+                    kind: LoopKind::Condition(Expression::BinaryOp {
                         left: Box::new(Expression::Identifier("i".to_string())),
                         op: ast::BinaryOperator::LessThan,
                         right: Box::new(Expression::Identifier("n".to_string())),
