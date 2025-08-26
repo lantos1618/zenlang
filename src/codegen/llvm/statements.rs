@@ -278,69 +278,155 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     })
                 }
             }
-            Statement::Loop { condition, body, label: _ } => {
-                // Create the loop structure
-                let loop_header = self.context.append_basic_block(self.current_function.unwrap(), "loop_header");
-                let loop_body = self.context.append_basic_block(self.current_function.unwrap(), "loop_body");
-                let after_loop_block = self.context.append_basic_block(self.current_function.unwrap(), "after_loop");
+            Statement::Loop { kind, body, label: _ } => {
+                use crate::ast::LoopKind;
                 
-                // Push loop context onto stack for break/continue
-                self.loop_stack.push((loop_header, after_loop_block));
-                
-                // Branch to loop header
-                self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
-                
-                // Emit loop header (condition check)
-                self.builder.position_at_end(loop_header);
-                
-                if let Some(cond_expr) = condition {
-                    let cond_value = self.compile_expression(cond_expr)?;
-                    if let BasicValueEnum::IntValue(int_val) = cond_value {
-                        // Check if this is already a boolean (i1) type
-                        if int_val.get_type().get_bit_width() == 1 {
-                            // It's already a boolean, use it directly
-                            self.builder.build_conditional_branch(int_val, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
-                        } else {
-                            // Compare with zero (non-zero means true)
-                            let zero = int_val.get_type().const_zero();
-                            let condition = self.builder.build_int_compare(
-                                inkwell::IntPredicate::NE,
-                                int_val,
-                                zero,
-                                "loop_condition"
-                            ).map_err(|e| CompileError::from(e))?;
-                            
-                            self.builder.build_conditional_branch(condition, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
+                match kind {
+                    LoopKind::Infinite => {
+                        // Create blocks for infinite loop
+                        let loop_body = self.context.append_basic_block(self.current_function.unwrap(), "loop_body");
+                        let after_loop_block = self.context.append_basic_block(self.current_function.unwrap(), "after_loop");
+                        
+                        // Push loop context for break/continue
+                        self.loop_stack.push((loop_body, after_loop_block));
+                        
+                        // Jump to loop body
+                        self.builder.build_unconditional_branch(loop_body).map_err(|e| CompileError::from(e))?;
+                        self.builder.position_at_end(loop_body);
+                        
+                        // Compile body
+                        for stmt in body {
+                            self.compile_statement(stmt)?;
                         }
-                    } else {
-                        return Err(CompileError::TypeError("Loop condition must be an integer".to_string(), None));
+                        
+                        // Loop back if no terminator
+                        let current_block = self.builder.get_insert_block().unwrap();
+                        if current_block.get_terminator().is_none() {
+                            self.builder.build_unconditional_branch(loop_body).map_err(|e| CompileError::from(e))?;
+                        }
+                        
+                        self.loop_stack.pop();
+                        self.builder.position_at_end(after_loop_block);
+                        Ok(())
                     }
-                } else {
-                    // Infinite loop - just branch to body
-                    self.builder.build_unconditional_branch(loop_body).map_err(|e| CompileError::from(e))?;
+                    LoopKind::Condition(cond_expr) => {
+                        // Create blocks
+                        let loop_header = self.context.append_basic_block(self.current_function.unwrap(), "loop_header");
+                        let loop_body = self.context.append_basic_block(self.current_function.unwrap(), "loop_body");
+                        let after_loop_block = self.context.append_basic_block(self.current_function.unwrap(), "after_loop");
+                        
+                        self.loop_stack.push((loop_header, after_loop_block));
+                        
+                        // Jump to header
+                        self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
+                        self.builder.position_at_end(loop_header);
+                        
+                        // Evaluate condition
+                        let cond_value = self.compile_expression(cond_expr)?;
+                        if let BasicValueEnum::IntValue(int_val) = cond_value {
+                            if int_val.get_type().get_bit_width() == 1 {
+                                self.builder.build_conditional_branch(int_val, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
+                            } else {
+                                let zero = int_val.get_type().const_zero();
+                                let condition = self.builder.build_int_compare(
+                                    inkwell::IntPredicate::NE,
+                                    int_val,
+                                    zero,
+                                    "loop_condition"
+                                ).map_err(|e| CompileError::from(e))?;
+                                self.builder.build_conditional_branch(condition, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
+                            }
+                        } else {
+                            return Err(CompileError::TypeError("Loop condition must be an integer".to_string(), None));
+                        }
+                        
+                        // Compile body
+                        self.builder.position_at_end(loop_body);
+                        for stmt in body {
+                            self.compile_statement(stmt)?;
+                        }
+                        
+                        // Loop back to header
+                        let current_block = self.builder.get_insert_block().unwrap();
+                        if current_block.get_terminator().is_none() {
+                            self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
+                        }
+                        
+                        self.loop_stack.pop();
+                        self.builder.position_at_end(after_loop_block);
+                        Ok(())
+                    }
+                    LoopKind::Range { variable, start, end, inclusive } => {
+                        // Create blocks
+                        let loop_init = self.context.append_basic_block(self.current_function.unwrap(), "loop_init");
+                        let loop_header = self.context.append_basic_block(self.current_function.unwrap(), "loop_header");
+                        let loop_body = self.context.append_basic_block(self.current_function.unwrap(), "loop_body");
+                        let loop_increment = self.context.append_basic_block(self.current_function.unwrap(), "loop_increment");
+                        let after_loop_block = self.context.append_basic_block(self.current_function.unwrap(), "after_loop");
+                        
+                        self.loop_stack.push((loop_increment, after_loop_block));
+                        
+                        // Initialize loop variable
+                        self.builder.build_unconditional_branch(loop_init).map_err(|e| CompileError::from(e))?;
+                        self.builder.position_at_end(loop_init);
+                        
+                        let start_val = self.compile_expression(start)?;
+                        let end_val = self.compile_expression(end)?;
+                        
+                        // Allocate loop variable
+                        let loop_var_alloca = self.builder.build_alloca(self.context.i64_type(), variable).map_err(|e| CompileError::from(e))?;
+                        self.builder.build_store(loop_var_alloca, start_val).map_err(|e| CompileError::from(e))?;
+                        self.variables.insert(variable.clone(), (loop_var_alloca, AstType::I64));
+                        
+                        // Jump to loop header
+                        self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
+                        self.builder.position_at_end(loop_header);
+                        
+                        // Check if we've reached the end
+                        let current_val = self.builder.build_load(self.context.i64_type(), loop_var_alloca, "loop_var").map_err(|e| CompileError::from(e))?;
+                        let cmp_op = if *inclusive {
+                            inkwell::IntPredicate::SLE
+                        } else {
+                            inkwell::IntPredicate::SLT
+                        };
+                        let condition = self.builder.build_int_compare(cmp_op, current_val.into_int_value(), end_val.into_int_value(), "loop_cond").map_err(|e| CompileError::from(e))?;
+                        self.builder.build_conditional_branch(condition, loop_body, after_loop_block).map_err(|e| CompileError::from(e))?;
+                        
+                        // Compile loop body
+                        self.builder.position_at_end(loop_body);
+                        for stmt in body {
+                            self.compile_statement(stmt)?;
+                        }
+                        
+                        // Jump to increment block
+                        let current_block = self.builder.get_insert_block().unwrap();
+                        if current_block.get_terminator().is_none() {
+                            self.builder.build_unconditional_branch(loop_increment).map_err(|e| CompileError::from(e))?;
+                        }
+                        
+                        // Increment loop variable
+                        self.builder.position_at_end(loop_increment);
+                        let current_val = self.builder.build_load(self.context.i64_type(), loop_var_alloca, "loop_var").map_err(|e| CompileError::from(e))?;
+                        let one = self.context.i64_type().const_int(1, false);
+                        let next_val = self.builder.build_int_add(current_val.into_int_value(), one, "next_val").map_err(|e| CompileError::from(e))?;
+                        self.builder.build_store(loop_var_alloca, next_val).map_err(|e| CompileError::from(e))?;
+                        self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
+                        
+                        // Clean up and position at exit
+                        self.loop_stack.pop();
+                        self.variables.remove(variable); // Remove loop variable from scope
+                        self.builder.position_at_end(after_loop_block);
+                        Ok(())
+                    }
+                    LoopKind::Iterator { variable, iterable } => {
+                        // For now, only support arrays
+                        // TODO: Expand to support other iterables
+                        return Err(CompileError::InternalError(
+                            "Iterator loops not yet fully implemented".to_string(),
+                            None
+                        ));
+                    }
                 }
-                
-                // Emit loop body
-                self.builder.position_at_end(loop_body);
-                
-                // Compile loop body
-                for stmt in body {
-                    self.compile_statement(stmt)?;
-                }
-                
-                // Branch back to header only if the current block doesn't have a terminator
-                // (e.g., if there was no break/return/continue in the loop body)
-                let current_block = self.builder.get_insert_block().unwrap();
-                if current_block.get_terminator().is_none() {
-                    self.builder.build_unconditional_branch(loop_header).map_err(|e| CompileError::from(e))?;
-                }
-                
-                // Pop loop context from stack
-                self.loop_stack.pop();
-                
-                // Position builder at after_loop block
-                self.builder.position_at_end(after_loop_block);
-                Ok(())
             },
             Statement::Break { label: _ } => {
                 // Branch to the break target (after_loop block) of the current loop

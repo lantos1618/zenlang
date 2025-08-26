@@ -233,9 +233,9 @@ pub enum Statement {
         pointer: Expression,
         value: Expression,
     },
-    // Loop construct for conditional loops only
+    // Loop construct supporting all Zen loop variations
     Loop {
-        condition: Option<Expression>, // None for infinite loops
+        kind: LoopKind,
         label: Option<String>, // For labeled loops
         body: Vec<Statement>,
     },
@@ -259,6 +259,26 @@ pub enum VariableDeclarationType {
     InferredMutable,   // ::=
     ExplicitImmutable, // : T =
     ExplicitMutable,   // :: T =
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LoopKind {
+    // loop { } - infinite loop
+    Infinite,
+    // loop condition { } - while-like loop
+    Condition(Expression),
+    // loop i in 0..10 { } - range iteration
+    Range {
+        variable: String,
+        start: Expression,
+        end: Expression,
+        inclusive: bool,
+    },
+    // loop item in items { } - collection iteration
+    Iterator {
+        variable: String,
+        iterable: Expression,
+    },
 }
 
 
