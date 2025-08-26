@@ -449,8 +449,21 @@ impl<'a> Parser<'a> {
                 // It's an iteration loop
                 self.next_token(); // consume 'in'
                 
-                // Check if it's a range or an iterable  
-                let start_expr = self.parse_expression()?;
+                // Parse the start value - use a simpler approach to avoid consuming ".."
+                // First parse just a simple term (number or identifier)
+                let start_expr = match &self.current_token {
+                    Token::Integer(n) => {
+                        let val = n.parse::<i32>().unwrap_or(0);
+                        self.next_token();
+                        Expression::Integer32(val)
+                    }
+                    Token::Identifier(name) => {
+                        let name = name.clone();
+                        self.next_token();
+                        Expression::Identifier(name)
+                    }
+                    _ => self.parse_expression()?
+                };
                 
                 // Check for range syntax (.. or ..=)
                 if self.current_token == Token::Operator("..".to_string()) {
