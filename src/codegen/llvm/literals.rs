@@ -91,16 +91,22 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 StringPart::Interpolation(expr) => {
                     let val = self.compile_expression(expr)?;
                     
-                    // Determine the format specifier based on the expression type
-                    let format_spec = match expr {
-                        crate::ast::Expression::Integer32(_) | 
-                        crate::ast::Expression::Identifier(_) => "%d",  // For i32 values
-                        crate::ast::Expression::Integer64(_) => "%lld", // For i64 values
-                        crate::ast::Expression::Float32(_) |
-                        crate::ast::Expression::Float64(_) => "%.6f", // For float values
-                        crate::ast::Expression::Boolean(_) => "%d", // Bool as int
-                        crate::ast::Expression::String(_) => "%s", // String values
-                        _ => "%s", // Default to string for complex expressions
+                    // Determine the format specifier based on the actual value type
+                    let format_spec = if val.is_int_value() {
+                        let int_val = val.into_int_value();
+                        match int_val.get_type().get_bit_width() {
+                            32 => "%d",
+                            64 => "%lld",
+                            _ => "%d",
+                        }
+                    } else if val.is_float_value() {
+                        "%.6f"
+                    } else if val.is_pointer_value() {
+                        // Pointer could be a string - use %s
+                        "%s"
+                    } else {
+                        // Default to string format
+                        "%s"
                     };
                     
                     format_string.push_str(format_spec);
