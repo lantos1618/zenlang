@@ -144,6 +144,10 @@ pub enum Expression {
         member: String,
     },
     StringLength(Box<Expression>),
+    // String interpolation: "Hello $(name)!"
+    StringInterpolation {
+        parts: Vec<StringPart>,
+    },
     // For comptime expressions
     Comptime(Box<Expression>),
     // Range expressions
@@ -161,6 +165,12 @@ pub enum Expression {
     StdModule(String),
     // Generic module reference
     Module(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum StringPart {
+    Literal(String),
+    Interpolation(Expression),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,102 +1,53 @@
-# Zen Language Project - Global Memory
+# Zen Language Global Memory
 
 ## Project Overview
-**Zen** is a modern systems programming language that aims to replace traditional languages like C/C++/Rust with a more elegant, composable syntax. The project consists of a compiler written in Rust that targets LLVM IR.
+- **Language**: Zen - A modern systems programming language
+- **Philosophy**: No keywords, pattern matching everything, explicit error handling
+- **Current Status**: 50-55% complete
+- **Goal**: Self-hosted compiler by 2026
+- **Lines of Code**: ~5,450 Rust LOC across 29 files
+- **Test Coverage**: 36 test files, 100% pass rate
 
-## Current Implementation Status (August 2025)
+## Architecture
+- **Components**: Lexer → Parser → AST → Type Checker → LLVM Codegen
+- **Backend**: LLVM for native code generation
+- **Testing**: Comprehensive unit and integration tests
 
-### What Works (Can compile and run) ✅
-- **Basic Compiler**: 45-50% complete, ~10,500 lines of Rust code across 50 files
-- **Core Language Features**:
-  - Function declarations with `=` syntax: `add = (a: i32, b: i32) i32 { a + b }`
-  - Variable declarations: `:=` (immutable), `::=` (mutable)
-  - Basic types: i32, i64, f32, f64, bool
-  - Arithmetic and comparison operators
-  - Function calls and returns
-  - LLVM code generation working
-- **Test Suite**: 35 test suites, 100% pass rate
-- **Standard Library Foundation**: @std namespace, Result<T,E>, Option<T>, basic IO module
+## Key Features Working
+- Functions, variables, basic types
+- Pattern matching with ? operator
+- Structs with field access
+- Arrays (fixed-size)
+- Pointer operations
+- @std namespace foundation
+- Result<T,E> and Option<T> types
+- IO module with file operations
 
-### Partially Working 🚧
-- **Structs**: Parser complete, codegen incomplete
-- **Pattern Matching**: Parser complete, codegen work in progress  
-- **Loops**: Basic version works, spec-compliant version WIP
-- **Type Checking**: Basic implementation exists
-- **Generics**: Parsing works, instantiation/monomorphization incomplete
+## Critical Missing Features
+1. String interpolation $(expr)
+2. Complete enum codegen
+3. Module import system
+4. Spec-compliant loops
+5. Break/continue statements
+6. Advanced generics
+7. Collections library
+8. Memory management system
+9. Behaviors/traits
+10. Comptime evaluation
 
-### Major Missing Features ❌
-- **String interpolation**: `$(expr)` syntax not implemented
-- **Full comptime system**: Partial implementation only
-- **Behaviors**: Trait/interface system not implemented
-- **UFCS**: Uniform Function Call Syntax missing
-- **Memory management**: Ptr<T>, Ref<T>, allocators not implemented
-- **Async/await**: Not implemented
-- **Module system**: Import system incomplete
-- **Complete standard library**: Only basic modules exist
+## Testing Issue to Fix
+- External function calls (printf/puts) generate correct LLVM IR but aren't actually executed/verified in tests
+- Need to add integration tests that capture and verify stdout output
 
-## Architecture Overview
+## Self-Hosting Requirements
+- Port 5,450 lines of Rust compiler to Zen
+- LLVM FFI bindings
+- Complete standard library
+- Bootstrap process
 
-### Compiler Structure (src/)
-```
-parser/      - 12 files, parsing all language constructs
-codegen/     - LLVM IR generation (15 files)
-typechecker/ - Type system and inference (5 files)
-stdlib/      - @std namespace implementation (4 files)
-ast.rs       - Abstract Syntax Tree definitions
-compiler.rs  - Main compiler driver
-lexer.rs     - Tokenization
-```
-
-### Key Design Principles
-1. **Minimal Keywords**: Uses `?` for all conditionals, `=` for functions, `:=` family for variables
-2. **Explicit Error Handling**: No exceptions, Result<T,E> and Option<T> types
-3. **Compile-time Everything**: Heavy use of `comptime` for metaprogramming
-4. **@std Bootstrap**: Special `@std.core` and `@std.build` provide compiler intrinsics
-
-## Self-Hosting Requirements Analysis
-
-### What's Needed for Basic Self-Hosting
-A self-hosted Zen compiler needs to compile itself. Current Rust implementation is ~10,500 lines, so Zen version would need similar functionality:
-
-1. **Complete Language Implementation**: All syntax from lang.md must work
-2. **Module System**: Must be able to import/organize large codebases
-3. **Standard Library**: Collections, memory management, IO, OS interface
-4. **LLVM Integration**: Either FFI to LLVM or custom backend
-5. **Build System**: Equivalent to Cargo for managing projects
-
-### Critical Path Analysis
-The path to self-hosting involves three major phases:
-
-**Phase 1 - Language Completion** (foundational features)
-- Complete structs, enums, pattern matching codegen
-- Full generic instantiation and monomorphization
-- String interpolation
-- Module import system
-- Basic collections (Array, Map)
-
-**Phase 2 - Standard Library** (essential for real programs)
-- Memory management and allocators  
-- File/IO operations
-- String manipulation
-- Error handling utilities
-- System interface (process, environment)
-
-**Phase 3 - Advanced Features** (needed for compiler complexity)
-- Complete comptime system
-- Behaviors (trait system)
-- UFCS for clean APIs
-- Async/await for build tools
-
-## Development History
-- Started as systems language experiment
-- Evolved through multiple syntax iterations
-- Recently achieved 100% test pass rate
-- Added @std namespace and Result/Option types
-- Now approaching feature completeness for basic programs
-
-## Team/Maintainer Context
-- Single maintainer project currently
-- Uses test-driven development approach
-- All features tested before merging
-- Follows incremental implementation strategy
-- Focus on correctness over speed of development
+## Code Principles
+- DRY (Don't Repeat Yourself)
+- KISS (Keep It Simple, Stupid)
+- Test-driven development
+- Frequent git commits
+- Clean up after completion
