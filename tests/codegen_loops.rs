@@ -1,6 +1,6 @@
 extern crate test_utils;
 
-use zen::ast::{self, AstType, Expression, Statement, BinaryOperator, VariableDeclarationType};
+use zen::ast::{self, AstType, Expression, Statement, BinaryOperator, VariableDeclarationType, LoopKind};
 use test_utils::TestContext;
 use zen::error::CompileError;
 use inkwell::context::Context;
@@ -108,12 +108,11 @@ fn test_loop_construct() {
                         declaration_type: VariableDeclarationType::ExplicitMutable,
                     },
                     Statement::Loop {
-                        condition: Some(Expression::BinaryOp {
+                        kind: LoopKind::Condition(Expression::BinaryOp {
                             left: Box::new(Expression::Identifier("i".to_string())),
                             op: BinaryOperator::LessThan,
                             right: Box::new(Expression::Integer64(5)),
                         }),
-
                         label: None,
                         body: vec![
                             Statement::VariableAssignment {

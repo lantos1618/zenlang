@@ -1,6 +1,6 @@
 use zen::lexer::Lexer;
 use zen::parser::Parser;
-use zen::ast::{self, Program, Declaration, Function, Statement, Expression, AstType, VariableDeclarationType, BinaryOperator, Pattern};
+use zen::ast::{self, Program, Declaration, Function, Statement, Expression, AstType, VariableDeclarationType, BinaryOperator, Pattern, LoopKind};
 use zen::error::CompileError;
 
 #[test]
@@ -141,7 +141,7 @@ fn test_parse_loop_with_condition() {
                         declaration_type: VariableDeclarationType::InferredMutable,
                     },
                     Statement::Loop {
-                        condition: Some(Expression::BinaryOp {
+                        kind: LoopKind::Condition(Expression::BinaryOp {
                             left: Box::new(Expression::Identifier("counter".to_string())),
                             op: BinaryOperator::GreaterThan,
                             right: Box::new(Expression::Integer32(0)),
@@ -173,8 +173,25 @@ fn test_parse_loop_with_in() {
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program();
     
-    // Expect parsing to fail since 'in' is no longer a keyword and loop syntax doesn't support iteration
-    assert!(program.is_err());
+    // Iterator syntax is now supported, expect success
+    assert!(program.is_ok());
+    let program = program.unwrap();
+    assert_eq!(program.declarations.len(), 1);
+    if let zen::ast::Declaration::Function(func) = &program.declarations[0] {
+        assert_eq!(func.body.len(), 2); // Variable declaration + loop
+        if let zen::ast::Statement::Loop { kind, .. } = &func.body[1] {
+            if let LoopKind::Iterator { variable, iterable } = kind {
+                assert_eq!(variable, "name");
+                assert!(matches!(iterable, Expression::Identifier(ref name) if name == "names"));
+            } else {
+                panic!("Expected LoopKind::Iterator");
+            }
+        } else {
+            panic!("Expected Loop statement");
+        }
+    } else {
+        panic!("Expected Function declaration");
+    }
 }
 
 #[test]
@@ -459,7 +476,7 @@ fn test_parse_loop_with_return() {
                         declaration_type: VariableDeclarationType::InferredMutable,
                     },
                     Statement::Loop {
-                        condition: Some(Expression::BinaryOp {
+                        kind: LoopKind::Condition(Expression::BinaryOp {
                             left: Box::new(Expression::Identifier("counter".to_string())),
                             op: BinaryOperator::GreaterThan,
                             right: Box::new(Expression::Integer32(0)),
@@ -873,14 +890,14 @@ fn test_parse_range_based_loop() {
         assert_eq!(func.name, "main");
         assert_eq!(func.return_type, zen::ast::AstType::Void);
         assert_eq!(func.body.len(), 1);
-        if let zen::ast::Statement::Loop { condition, body, label } = &func.body[0] {
+        if let zen::ast::Statement::Loop { kind, body, label } = &func.body[0] {
             assert!(label.is_none());
-            if let Some(zen::ast::Expression::Range { start, end, inclusive }) = condition {
+            if let LoopKind::Condition(zen::ast::Expression::Range { start, end, inclusive }) = kind {
                 assert_eq!(**start, zen::ast::Expression::Integer32(0));
                 assert_eq!(**end, zen::ast::Expression::Integer32(10));
                 assert!(!inclusive);
             } else {
-                panic!("Expected range expression as loop condition");
+                panic!("Expected LoopKind::Condition with Range expression");
             }
             assert_eq!(body.len(), 1);
             if let zen::ast::Statement::VariableDeclaration { name, .. } = &body[0] {
