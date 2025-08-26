@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 pub mod core;
 pub mod build;
+pub mod result;
 
 /// The @std namespace provides built-in compiler intrinsics and standard library access
 pub struct StdNamespace {
