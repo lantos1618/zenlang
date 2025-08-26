@@ -10,6 +10,7 @@ pub mod compiler;
 pub mod comptime;
 pub mod error;
 pub mod lexer;
+pub mod module_system;
 pub mod parser;
 pub mod lsp;
 pub mod stdlib;

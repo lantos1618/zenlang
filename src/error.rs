@@ -25,6 +25,8 @@ pub enum CompileError {
     InternalError(String, Option<Span>),
     UnsupportedFeature(String, Option<Span>),
     TypeError(String, Option<Span>),
+    FileNotFound(String, Option<String>),
+    ParseError(String, Option<Span>),
 }
 
 impl From<BuilderError> for CompileError {
@@ -57,6 +59,8 @@ impl fmt::Display for CompileError {
             CompileError::InternalError(msg, span) => write!(f, "Internal Compiler Error: {}{}", msg, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
             CompileError::UnsupportedFeature(msg, _) => write!(f, "Unsupported feature: {}", msg),
             CompileError::TypeError(msg, span) => write!(f, "Type error: {}{}", msg, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
+            CompileError::FileNotFound(path, detail) => write!(f, "File not found: {}{}", path, detail.as_ref().map(|d| format!(" ({})", d)).unwrap_or_default()),
+            CompileError::ParseError(msg, span) => write!(f, "Parse error: {}{}", msg, span.as_ref().map(|s| format!(" at line {} column {}", s.line, s.column)).unwrap_or_default()),
         }
     }
 }
