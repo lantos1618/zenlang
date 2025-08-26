@@ -1,0 +1,584 @@
+// Zen Parser - Self-hosted parser implementation
+// This is a port of the Rust parser to Zen language
+
+// Import lexer types
+// In a real implementation, these would be imported from the lexer module
+
+// AST Node Types
+AstType = 
+    | I8
+    | I16
+    | I32
+    | I64
+    | U8
+    | U16
+    | U32
+    | U64
+    | F32
+    | F64
+    | Bool
+    | String
+    | Void
+    | Pointer(inner: AstType)
+    | Array(element: AstType)
+    | FixedArray(element: AstType, size: i32)
+    | Struct(name: string)
+    | Generic(name: string)
+
+Expression = 
+    | Integer32(value: i32)
+    | Integer64(value: i64)
+    | Float32(value: f32)
+    | Float64(value: f64)
+    | Boolean(value: bool)
+    | StringLiteral(value: string)
+    | Identifier(name: string)
+    | BinaryOp(left: Expression, op: BinaryOperator, right: Expression)
+    | FunctionCall(name: string, args: Vec<Expression>)
+    | StructLiteral(name: string, fields: Vec<FieldInit>)
+    | FieldAccess(object: Expression, field: string)
+    | ArrayLiteral(elements: Vec<Expression>)
+    | ArrayIndex(array: Expression, index: Expression)
+    | Conditional(scrutinee: Expression, arms: Vec<ConditionalArm>)
+
+BinaryOperator = 
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+    | Modulo
+    | Equal
+    | NotEqual
+    | LessThan
+    | LessThanOrEqual
+    | GreaterThan
+    | GreaterThanOrEqual
+    | LogicalAnd
+    | LogicalOr
+
+Statement = 
+    | Expression(expr: Expression)
+    | VariableDeclaration(name: string, type_: Option<AstType>, init: Expression, is_mutable: bool)
+    | Assignment(target: string, value: Expression)
+    | Return(value: Option<Expression>)
+    | Loop(condition: Option<Expression>, body: Vec<Statement>)
+    | Break
+    | Continue
+
+Function = {
+    name: string,
+    params: Vec<Parameter>,
+    return_type: AstType,
+    body: Vec<Statement>,
+}
+
+Parameter = {
+    name: string,
+    type_: AstType,
+    default_value: Option<Expression>,
+}
+
+StructDefinition = {
+    name: string,
+    fields: Vec<StructField>,
+}
+
+StructField = {
+    name: string,
+    type_: AstType,
+    is_mutable: bool,
+}
+
+FieldInit = {
+    name: string,
+    value: Expression,
+}
+
+ConditionalArm = {
+    pattern: Pattern,
+    guard: Option<Expression>,
+    body: Vec<Statement>,
+}
+
+Pattern = 
+    | Wildcard
+    | Literal(value: Expression)
+    | Variable(name: string)
+    | Struct(name: string, fields: Vec<string>)
+
+Declaration = 
+    | Function(func: Function)
+    | Struct(struct_def: StructDefinition)
+    | ExternalFunction(name: string, params: Vec<AstType>, return_type: AstType, is_varargs: bool)
+
+Program = {
+    declarations: Vec<Declaration>,
+}
+
+// Parser state
+Parser = {
+    lexer: Lexer,
+    current_token: Token,
+}
+
+// Create new parser
+parser_new = (lexer: Lexer) Parser {
+    // Get first token
+    result := lexer_next_token(lexer)
+    lexer = result.0
+    token := result.1
+    
+    return Parser {
+        lexer: lexer,
+        current_token: token,
+    }
+}
+
+// Advance to next token
+parser_advance = (p: Parser) Parser {
+    result := lexer_next_token(p.lexer)
+    p.lexer = result.0
+    p.current_token = result.1
+    return p
+}
+
+// Check if current token matches expected
+parser_expect = (p: Parser, expected: TokenType) bool {
+    token_equals(p.current_token.token_type, expected)
+}
+
+// Parse identifier
+parser_parse_identifier = (p: Parser) (Parser, string) {
+    p.current_token.token_type ?
+        | Identifier(name) => {
+            p = parser_advance(p)
+            return (p, name)
+        }
+        | _ => {
+            // Error: expected identifier
+            return (p, "")
+        }
+}
+
+// Parse type
+parser_parse_type = (p: Parser) (Parser, AstType) {
+    p.current_token.token_type ?
+        | Identifier(type_name) => {
+            p = parser_advance(p)
+            
+            // Check for basic types
+            type_name == "i8" ? | true => return (p, AstType::I8) | false => {}
+            type_name == "i16" ? | true => return (p, AstType::I16) | false => {}
+            type_name == "i32" ? | true => return (p, AstType::I32) | false => {}
+            type_name == "i64" ? | true => return (p, AstType::I64) | false => {}
+            type_name == "u8" ? | true => return (p, AstType::U8) | false => {}
+            type_name == "u16" ? | true => return (p, AstType::U16) | false => {}
+            type_name == "u32" ? | true => return (p, AstType::U32) | false => {}
+            type_name == "u64" ? | true => return (p, AstType::U64) | false => {}
+            type_name == "f32" ? | true => return (p, AstType::F32) | false => {}
+            type_name == "f64" ? | true => return (p, AstType::F64) | false => {}
+            type_name == "bool" ? | true => return (p, AstType::Bool) | false => {}
+            type_name == "string" ? | true => return (p, AstType::String) | false => {}
+            type_name == "void" ? | true => return (p, AstType::Void) | false => {}
+            
+            // Check for pointer type
+            p.current_token.token_type ?
+                | Symbol(42) => {  // '*'
+                    p = parser_advance(p)
+                    result := parser_parse_type(p)
+                    p = result.0
+                    inner_type := result.1
+                    return (p, AstType::Pointer(inner_type))
+                }
+                | _ => {
+                    // Assume it's a struct or generic type
+                    return (p, AstType::Struct(type_name))
+                }
+        }
+        | Symbol(42) => {  // '*' for pointer
+            p = parser_advance(p)
+            result := parser_parse_type(p)
+            p = result.0
+            inner_type := result.1
+            return (p, AstType::Pointer(inner_type))
+        }
+        | _ => {
+            // Error: expected type
+            return (p, AstType::Void)
+        }
+}
+
+// Parse expression
+parser_parse_expression = (p: Parser) (Parser, Expression) {
+    // Parse primary expression
+    p.current_token.token_type ?
+        | Integer(value) => {
+            p = parser_advance(p)
+            val := string_to_i32(value)
+            expr := Expression::Integer32(val)
+            return parser_parse_binary_op(p, expr, 0)
+        }
+        | Float(value) => {
+            p = parser_advance(p)
+            val := string_to_f32(value)
+            expr := Expression::Float32(val)
+            return parser_parse_binary_op(p, expr, 0)
+        }
+        | StringLiteral(value) => {
+            p = parser_advance(p)
+            expr := Expression::StringLiteral(value)
+            return parser_parse_binary_op(p, expr, 0)
+        }
+        | Identifier(name) => {
+            p = parser_advance(p)
+            
+            // Check for function call
+            p.current_token.token_type ?
+                | Symbol(40) => {  // '('
+                    p = parser_advance(p)
+                    result := parser_parse_arguments(p)
+                    p = result.0
+                    args := result.1
+                    expr := Expression::FunctionCall(name, args)
+                    return parser_parse_binary_op(p, expr, 0)
+                }
+                | Symbol(123) => {  // '{' for struct literal
+                    p = parser_advance(p)
+                    result := parser_parse_struct_fields(p)
+                    p = result.0
+                    fields := result.1
+                    expr := Expression::StructLiteral(name, fields)
+                    return parser_parse_binary_op(p, expr, 0)
+                }
+                | _ => {
+                    expr := Expression::Identifier(name)
+                    return parser_parse_binary_op(p, expr, 0)
+                }
+        }
+        | Keyword(kw) => {
+            kw ?
+                | True => {
+                    p = parser_advance(p)
+                    expr := Expression::Boolean(true)
+                    return parser_parse_binary_op(p, expr, 0)
+                }
+                | False => {
+                    p = parser_advance(p)
+                    expr := Expression::Boolean(false)
+                    return parser_parse_binary_op(p, expr, 0)
+                }
+                | _ => {
+                    // Error: unexpected keyword
+                    return (p, Expression::Integer32(0))
+                }
+        }
+        | Symbol(40) => {  // '(' for grouped expression
+            p = parser_advance(p)
+            result := parser_parse_expression(p)
+            p = result.0
+            expr := result.1
+            
+            // Expect closing ')'
+            p.current_token.token_type ?
+                | Symbol(41) => { p = parser_advance(p) }
+                | _ => {}  // Error: expected ')'
+            
+            return parser_parse_binary_op(p, expr, 0)
+        }
+        | Symbol(91) => {  // '[' for array literal
+            p = parser_advance(p)
+            result := parser_parse_array_elements(p)
+            p = result.0
+            elements := result.1
+            expr := Expression::ArrayLiteral(elements)
+            return parser_parse_binary_op(p, expr, 0)
+        }
+        | _ => {
+            // Error: unexpected token
+            return (p, Expression::Integer32(0))
+        }
+}
+
+// Parse binary operator expression with precedence
+parser_parse_binary_op = (p: Parser, left: Expression, min_precedence: i32) (Parser, Expression) {
+    loop true {
+        // Check if current token is a binary operator
+        op_precedence := parser_get_operator_precedence(p.current_token)
+        
+        op_precedence < min_precedence ?
+            | true => return (p, left)
+            | false => {}
+        
+        op := parser_token_to_operator(p.current_token)
+        p = parser_advance(p)
+        
+        // Parse right side
+        result := parser_parse_expression_primary(p)
+        p = result.0
+        right := result.1
+        
+        // Check for higher precedence operator
+        next_precedence := parser_get_operator_precedence(p.current_token)
+        next_precedence > op_precedence ?
+            | true => {
+                result2 := parser_parse_binary_op(p, right, op_precedence + 1)
+                p = result2.0
+                right = result2.1
+            }
+            | false => {}
+        
+        left = Expression::BinaryOp(left, op, right)
+    }
+}
+
+// Parse function arguments
+parser_parse_arguments = (p: Parser) (Parser, Vec<Expression>) {
+    args := vec_new<Expression>()
+    
+    // Check for empty argument list
+    p.current_token.token_type ?
+        | Symbol(41) => {  // ')'
+            p = parser_advance(p)
+            return (p, args)
+        }
+        | _ => {}
+    
+    loop true {
+        result := parser_parse_expression(p)
+        p = result.0
+        arg := result.1
+        args = vec_push(args, arg)
+        
+        p.current_token.token_type ?
+            | Symbol(44) => {  // ','
+                p = parser_advance(p)
+            }
+            | Symbol(41) => {  // ')'
+                p = parser_advance(p)
+                return (p, args)
+            }
+            | _ => {
+                // Error: expected ',' or ')'
+                return (p, args)
+            }
+    }
+}
+
+// Parse statement
+parser_parse_statement = (p: Parser) (Parser, Statement) {
+    p.current_token.token_type ?
+        | Keyword(kw) => {
+            kw ?
+                | Return => {
+                    p = parser_advance(p)
+                    
+                    // Check for return value
+                    is_end_of_statement(p.current_token) ?
+                        | true => {
+                            return (p, Statement::Return(Option::None))
+                        }
+                        | false => {
+                            result := parser_parse_expression(p)
+                            p = result.0
+                            expr := result.1
+                            return (p, Statement::Return(Option::Some(expr)))
+                        }
+                }
+                | Loop => {
+                    p = parser_advance(p)
+                    result := parser_parse_loop(p)
+                    p = result.0
+                    stmt := result.1
+                    return (p, stmt)
+                }
+                | Break => {
+                    p = parser_advance(p)
+                    return (p, Statement::Break)
+                }
+                | Continue => {
+                    p = parser_advance(p)
+                    return (p, Statement::Continue)
+                }
+                | _ => {}
+        }
+        | Identifier(name) => {
+            p = parser_advance(p)
+            
+            // Check for variable declaration or assignment
+            p.current_token.token_type ?
+                | Operator(":=") => {
+                    p = parser_advance(p)
+                    result := parser_parse_expression(p)
+                    p = result.0
+                    init := result.1
+                    return (p, Statement::VariableDeclaration(name, Option::None, init, false))
+                }
+                | Operator("::=") => {
+                    p = parser_advance(p)
+                    result := parser_parse_expression(p)
+                    p = result.0
+                    init := result.1
+                    return (p, Statement::VariableDeclaration(name, Option::None, init, true))
+                }
+                | Symbol(58) => {  // ':'
+                    p = parser_advance(p)
+                    
+                    // Parse type
+                    type_result := parser_parse_type(p)
+                    p = type_result.0
+                    type_ := type_result.1
+                    
+                    // Expect '='
+                    p.current_token.token_type ?
+                        | Symbol(61) => { p = parser_advance(p) }
+                        | _ => {}  // Error
+                    
+                    result := parser_parse_expression(p)
+                    p = result.0
+                    init := result.1
+                    return (p, Statement::VariableDeclaration(name, Option::Some(type_), init, false))
+                }
+                | Symbol(61) => {  // '='
+                    p = parser_advance(p)
+                    result := parser_parse_expression(p)
+                    p = result.0
+                    value := result.1
+                    return (p, Statement::Assignment(name, value))
+                }
+                | _ => {
+                    // It's an expression statement
+                    // Need to backtrack - put identifier back as expression
+                    expr := Expression::Identifier(name)
+                    result := parser_parse_binary_op(p, expr, 0)
+                    p = result.0
+                    expr = result.1
+                    return (p, Statement::Expression(expr))
+                }
+        }
+        | _ => {
+            // Parse as expression statement
+            result := parser_parse_expression(p)
+            p = result.0
+            expr := result.1
+            return (p, Statement::Expression(expr))
+        }
+}
+
+// Parse function
+parser_parse_function = (p: Parser) (Parser, Function) {
+    // Parse function name
+    name_result := parser_parse_identifier(p)
+    p = name_result.0
+    name := name_result.1
+    
+    // Expect '='
+    p.current_token.token_type ?
+        | Symbol(61) => { p = parser_advance(p) }
+        | _ => {}  // Error: expected '='
+    
+    // Parse parameters
+    p.current_token.token_type ?
+        | Symbol(40) => { p = parser_advance(p) }
+        | _ => {}  // Error: expected '('
+    
+    params_result := parser_parse_parameters(p)
+    p = params_result.0
+    params := params_result.1
+    
+    // Parse return type
+    type_result := parser_parse_type(p)
+    p = type_result.0
+    return_type := type_result.1
+    
+    // Parse body
+    p.current_token.token_type ?
+        | Symbol(123) => { p = parser_advance(p) }
+        | _ => {}  // Error: expected '{'
+    
+    body := vec_new<Statement>()
+    
+    loop p.current_token.token_type != TokenType::Symbol(125) {  // '}'
+        stmt_result := parser_parse_statement(p)
+        p = stmt_result.0
+        stmt := stmt_result.1
+        body = vec_push(body, stmt)
+    }
+    
+    p = parser_advance(p)  // consume '}'
+    
+    func := Function {
+        name: name,
+        params: params,
+        return_type: return_type,
+        body: body,
+    }
+    
+    return (p, func)
+}
+
+// Parse program
+parser_parse_program = (p: Parser) Program {
+    declarations := vec_new<Declaration>()
+    
+    loop p.current_token.token_type != TokenType::Eof {
+        // Determine declaration type
+        p.current_token.token_type ?
+            | Keyword(Extern) => {
+                p = parser_advance(p)
+                result := parser_parse_extern(p)
+                p = result.0
+                extern_func := result.1
+                declarations = vec_push(declarations, Declaration::ExternalFunction(extern_func))
+            }
+            | Identifier(_) => {
+                // Could be function or struct
+                // Look ahead to determine
+                peek_result := parser_peek_ahead(p)
+                
+                peek_result.is_struct ?
+                    | true => {
+                        result := parser_parse_struct(p)
+                        p = result.0
+                        struct_def := result.1
+                        declarations = vec_push(declarations, Declaration::Struct(struct_def))
+                    }
+                    | false => {
+                        result := parser_parse_function(p)
+                        p = result.0
+                        func := result.1
+                        declarations = vec_push(declarations, Declaration::Function(func))
+                    }
+            }
+            | _ => {
+                // Skip unexpected token
+                p = parser_advance(p)
+            }
+    }
+    
+    return Program {
+        declarations: declarations,
+    }
+}
+
+// Helper functions (would need to be implemented)
+extern string_to_i32 = (*i8) i32
+extern string_to_f32 = (*i8) f32
+extern vec_new<T> = () Vec<T>
+extern vec_push<T> = (Vec<T>, T) Vec<T>
+extern token_equals = (TokenType, TokenType) bool
+
+// Vector type (simplified)
+Vec<T> = {
+    data: *T,
+    len: i32,
+    capacity: i32,
+}
+
+// Test the parser
+extern printf = (*i8, ...) i32
+
+main = () i32 {
+    printf("Zen parser implementation demonstration\n")
+    printf("This shows how Zen can be used for self-hosting\n")
+    return 0
+}

@@ -1,0 +1,483 @@
+// Zen Standard Library - Core implementations
+// This demonstrates how the standard library could be written in Zen itself
+
+// ==========================================
+// Memory Management
+// ==========================================
+
+extern malloc = (size: i64) *void
+extern free = (ptr: *void) void
+extern memcpy = (dest: *void, src: *void, size: i64) void
+extern memset = (ptr: *void, value: i32, size: i64) void
+
+// Memory allocator interface
+Allocator = {
+    alloc: (*void, i64) *void,
+    free: (*void, *void) void,
+    realloc: (*void, *void, i64) *void,
+    context: *void,
+}
+
+// Default system allocator
+system_allocator = () Allocator {
+    return Allocator {
+        alloc: system_alloc,
+        free: system_free,
+        realloc: system_realloc,
+        context: 0,
+    }
+}
+
+system_alloc = (ctx: *void, size: i64) *void {
+    return malloc(size)
+}
+
+system_free = (ctx: *void, ptr: *void) void {
+    free(ptr)
+}
+
+system_realloc = (ctx: *void, ptr: *void, new_size: i64) *void {
+    // Simple realloc implementation
+    new_ptr := malloc(new_size)
+    new_ptr != 0 && ptr != 0 ?
+        | true => {
+            memcpy(new_ptr, ptr, new_size)
+            free(ptr)
+        }
+        | false => {}
+    return new_ptr
+}
+
+// ==========================================
+// Dynamic Array (Vec)
+// ==========================================
+
+Vec<T> = {
+    data: *T,
+    len: i64,
+    capacity: i64,
+    allocator: Allocator,
+}
+
+vec_new<T> = () Vec<T> {
+    return Vec<T> {
+        data: 0,
+        len: 0,
+        capacity: 0,
+        allocator: system_allocator(),
+    }
+}
+
+vec_with_capacity<T> = (capacity: i64) Vec<T> {
+    allocator := system_allocator()
+    data := allocator.alloc(allocator.context, capacity * sizeof<T>())
+    
+    return Vec<T> {
+        data: data,
+        len: 0,
+        capacity: capacity,
+        allocator: allocator,
+    }
+}
+
+vec_push<T> = (vec: *Vec<T>, value: T) void {
+    // Check if we need to grow
+    vec.len >= vec.capacity ?
+        | true => {
+            new_capacity := vec.capacity == 0 ? 
+                | true => 8
+                | false => vec.capacity * 2
+            vec_grow(vec, new_capacity)
+        }
+        | false => {}
+    
+    // Add element
+    vec.data[vec.len] = value
+    vec.len = vec.len + 1
+}
+
+vec_pop<T> = (vec: *Vec<T>) Option<T> {
+    vec.len > 0 ?
+        | true => {
+            vec.len = vec.len - 1
+            return Option::Some(vec.data[vec.len])
+        }
+        | false => {
+            return Option::None
+        }
+}
+
+vec_get<T> = (vec: *Vec<T>, index: i64) Option<T> {
+    index >= 0 && index < vec.len ?
+        | true => return Option::Some(vec.data[index])
+        | false => return Option::None
+}
+
+vec_set<T> = (vec: *Vec<T>, index: i64, value: T) bool {
+    index >= 0 && index < vec.len ?
+        | true => {
+            vec.data[index] = value
+            return true
+        }
+        | false => {
+            return false
+        }
+}
+
+vec_grow<T> = (vec: *Vec<T>, new_capacity: i64) void {
+    new_capacity <= vec.capacity ?
+        | true => return
+        | false => {}
+    
+    new_data := vec.allocator.realloc(
+        vec.allocator.context,
+        vec.data,
+        new_capacity * sizeof<T>()
+    )
+    
+    vec.data = new_data
+    vec.capacity = new_capacity
+}
+
+vec_clear<T> = (vec: *Vec<T>) void {
+    vec.len = 0
+}
+
+vec_free<T> = (vec: *Vec<T>) void {
+    vec.data != 0 ?
+        | true => {
+            vec.allocator.free(vec.allocator.context, vec.data)
+            vec.data = 0
+            vec.len = 0
+            vec.capacity = 0
+        }
+        | false => {}
+}
+
+// Iterator support for Vec
+vec_iter<T> = (vec: *Vec<T>, func: (T) void) void {
+    i ::= 0
+    loop i < vec.len {
+        func(vec.data[i])
+        i = i + 1
+    }
+}
+
+// ==========================================
+// HashMap
+// ==========================================
+
+HashEntry<K, V> = {
+    key: K,
+    value: V,
+    hash: i64,
+    occupied: bool,
+}
+
+HashMap<K, V> = {
+    buckets: *HashEntry<K, V>,
+    size: i64,
+    capacity: i64,
+    allocator: Allocator,
+}
+
+hashmap_new<K, V> = () HashMap<K, V> {
+    initial_capacity := 16
+    allocator := system_allocator()
+    buckets := allocator.alloc(allocator.context, initial_capacity * sizeof<HashEntry<K, V>>())
+    
+    // Initialize buckets
+    memset(buckets, 0, initial_capacity * sizeof<HashEntry<K, V>>())
+    
+    return HashMap<K, V> {
+        buckets: buckets,
+        size: 0,
+        capacity: initial_capacity,
+        allocator: allocator,
+    }
+}
+
+hashmap_hash<K> = (key: K) i64 {
+    // Simple hash function - would be specialized per type
+    // This is a placeholder
+    return 0
+}
+
+hashmap_insert<K, V> = (map: *HashMap<K, V>, key: K, value: V) void {
+    // Check load factor
+    map.size * 4 >= map.capacity * 3 ?
+        | true => hashmap_resize(map, map.capacity * 2)
+        | false => {}
+    
+    hash := hashmap_hash(key)
+    index := hash % map.capacity
+    
+    // Linear probing for collision resolution
+    loop map.buckets[index].occupied {
+        map.buckets[index].key == key ?
+            | true => {
+                // Update existing key
+                map.buckets[index].value = value
+                return
+            }
+            | false => {}
+        
+        index = (index + 1) % map.capacity
+    }
+    
+    // Insert new entry
+    map.buckets[index] = HashEntry<K, V> {
+        key: key,
+        value: value,
+        hash: hash,
+        occupied: true,
+    }
+    map.size = map.size + 1
+}
+
+hashmap_get<K, V> = (map: *HashMap<K, V>, key: K) Option<V> {
+    hash := hashmap_hash(key)
+    index := hash % map.capacity
+    
+    loop map.buckets[index].occupied {
+        map.buckets[index].key == key ?
+            | true => return Option::Some(map.buckets[index].value)
+            | false => {}
+        
+        index = (index + 1) % map.capacity
+        
+        // Check if we've wrapped around
+        index == hash % map.capacity ?
+            | true => break
+            | false => {}
+    }
+    
+    return Option::None
+}
+
+hashmap_remove<K, V> = (map: *HashMap<K, V>, key: K) Option<V> {
+    hash := hashmap_hash(key)
+    index := hash % map.capacity
+    
+    loop map.buckets[index].occupied {
+        map.buckets[index].key == key ?
+            | true => {
+                value := map.buckets[index].value
+                map.buckets[index].occupied = false
+                map.size = map.size - 1
+                
+                // Reinsert subsequent entries to maintain probing chain
+                hashmap_reinsert_chain(map, index)
+                
+                return Option::Some(value)
+            }
+            | false => {}
+        
+        index = (index + 1) % map.capacity
+    }
+    
+    return Option::None
+}
+
+hashmap_resize<K, V> = (map: *HashMap<K, V>, new_capacity: i64) void {
+    old_buckets := map.buckets
+    old_capacity := map.capacity
+    
+    // Allocate new buckets
+    map.buckets = map.allocator.alloc(map.allocator.context, new_capacity * sizeof<HashEntry<K, V>>())
+    memset(map.buckets, 0, new_capacity * sizeof<HashEntry<K, V>>())
+    map.capacity = new_capacity
+    map.size = 0
+    
+    // Reinsert all entries
+    i ::= 0
+    loop i < old_capacity {
+        old_buckets[i].occupied ?
+            | true => hashmap_insert(map, old_buckets[i].key, old_buckets[i].value)
+            | false => {}
+        i = i + 1
+    }
+    
+    // Free old buckets
+    map.allocator.free(map.allocator.context, old_buckets)
+}
+
+// ==========================================
+// String Operations
+// ==========================================
+
+extern strlen = (str: *i8) i64
+extern strcmp = (s1: *i8, s2: *i8) i32
+extern strcpy = (dest: *i8, src: *i8) *i8
+extern strcat = (dest: *i8, src: *i8) *i8
+
+String = {
+    data: *i8,
+    len: i64,
+    capacity: i64,
+    allocator: Allocator,
+}
+
+string_new = () String {
+    return String {
+        data: 0,
+        len: 0,
+        capacity: 0,
+        allocator: system_allocator(),
+    }
+}
+
+string_from_cstr = (cstr: *i8) String {
+    len := strlen(cstr)
+    capacity := len + 1
+    allocator := system_allocator()
+    data := allocator.alloc(allocator.context, capacity)
+    strcpy(data, cstr)
+    
+    return String {
+        data: data,
+        len: len,
+        capacity: capacity,
+        allocator: allocator,
+    }
+}
+
+string_append = (s: *String, other: *i8) void {
+    other_len := strlen(other)
+    new_len := s.len + other_len
+    
+    new_len >= s.capacity ?
+        | true => {
+            new_capacity := new_len * 2
+            new_data := s.allocator.realloc(s.allocator.context, s.data, new_capacity)
+            s.data = new_data
+            s.capacity = new_capacity
+        }
+        | false => {}
+    
+    strcpy(s.data + s.len, other)
+    s.len = new_len
+}
+
+string_equals = (s1: String, s2: String) bool {
+    s1.len != s2.len ?
+        | true => return false
+        | false => {}
+    
+    return strcmp(s1.data, s2.data) == 0
+}
+
+string_free = (s: *String) void {
+    s.data != 0 ?
+        | true => {
+            s.allocator.free(s.allocator.context, s.data)
+            s.data = 0
+            s.len = 0
+            s.capacity = 0
+        }
+        | false => {}
+}
+
+// ==========================================
+// Result and Option Types
+// ==========================================
+
+Option<T> = 
+    | Some(value: T)
+    | None
+
+Result<T, E> = 
+    | Ok(value: T)
+    | Err(error: E)
+
+option_is_some<T> = (opt: Option<T>) bool {
+    opt ?
+        | Some(_) => return true
+        | None => return false
+}
+
+option_is_none<T> = (opt: Option<T>) bool {
+    return !option_is_some(opt)
+}
+
+option_unwrap<T> = (opt: Option<T>) T {
+    opt ?
+        | Some(value) => return value
+        | None => panic("Attempted to unwrap None")
+}
+
+option_unwrap_or<T> = (opt: Option<T>, default: T) T {
+    opt ?
+        | Some(value) => return value
+        | None => return default
+}
+
+result_is_ok<T, E> = (res: Result<T, E>) bool {
+    res ?
+        | Ok(_) => return true
+        | Err(_) => return false
+}
+
+result_is_err<T, E> = (res: Result<T, E>) bool {
+    return !result_is_ok(res)
+}
+
+result_unwrap<T, E> = (res: Result<T, E>) T {
+    res ?
+        | Ok(value) => return value
+        | Err(_) => panic("Attempted to unwrap Err")
+}
+
+result_unwrap_err<T, E> = (res: Result<T, E>) E {
+    res ?
+        | Ok(_) => panic("Attempted to unwrap_err on Ok")
+        | Err(error) => return error
+}
+
+// ==========================================
+// Helper Functions
+// ==========================================
+
+extern panic = (msg: *i8) void
+extern sizeof<T> = () i64
+
+// Test the standard library
+extern printf = (*i8, ...) i32
+
+test_stdlib = () void {
+    printf("Testing Zen standard library...\n")
+    
+    // Test Vec
+    v := vec_new<i32>()
+    vec_push(&v, 10)
+    vec_push(&v, 20)
+    vec_push(&v, 30)
+    
+    printf("Vec length: %ld\n", v.len)
+    
+    // Test Option
+    opt := vec_pop(&v)
+    opt ?
+        | Some(val) => printf("Popped: %d\n", val)
+        | None => printf("Vec was empty\n")
+    
+    // Test HashMap
+    map := hashmap_new<i32, i32>()
+    hashmap_insert(&map, 1, 100)
+    hashmap_insert(&map, 2, 200)
+    
+    result := hashmap_get(&map, 1)
+    result ?
+        | Some(val) => printf("Found value: %d\n", val)
+        | None => printf("Key not found\n")
+    
+    // Cleanup
+    vec_free(&v)
+    
+    printf("Standard library tests complete!\n")
+}
+
+main = () i32 {
+    test_stdlib()
+    return 0
+}
