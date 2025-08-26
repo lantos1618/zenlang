@@ -1,16 +1,18 @@
 # Zen Language - TODO List
 
-## Immediate Priority (This Session)
-- [x] Verify printf/puts test output capture
-- [x] Implement string interpolation $(expr) syntax codegen - DONE!
-- [x] Fix loop syntax to match specification - Already compliant!
-- [ ] Complete enum codegen (parsing works, need full codegen)
+## Immediate Priority (Next Session)
+- [x] Verify printf/puts test output capture - COMPLETE
+- [x] Implement string interpolation $(expr) syntax codegen - COMPLETE
+- [x] Fix loop syntax to match specification - COMPLETE
+- [x] Zen standard library foundation - COMPLETE
+- [ ] Port lexer to Zen language
+- [ ] Port parser to Zen language
 
 ## Short-term (Next Few Sessions)
 - [ ] Implement comptime execution framework
-- [ ] Expand standard library:
-  - [ ] collections module (Vec, HashMap, etc.)
-  - [ ] mem module (allocators)
+- [x] Expand standard library:
+  - [x] collections module (Vec, HashMap) - COMPLETE
+  - [x] mem module (allocators, pools) - COMPLETE
   - [ ] net module (TCP/UDP)
 - [ ] Implement behaviors (trait/interface system)
 - [ ] Complete UFCS (Uniform Function Call Syntax)
