@@ -1,8 +1,9 @@
 please work out this porject and then keep completing things.
 
-at some point we want to be self hosted and have a good STD
+at some point we want to be self hosted and have a good STD (witten in zen lang)
 
 use .agent/zen_language_reference.md for guidance
+
 
 notes from Lyndon
 - read the .agent folder to help you
@@ -16,3 +17,5 @@ notes from Lyndon
 - you work better at around 40% context window (100K-140k) we can either prime or cull the ctx window
 - use frequent git commits and pushes 
 - code principles DRY & KISS
+- merge to main when you think it is smart to
+- git commit frequently 

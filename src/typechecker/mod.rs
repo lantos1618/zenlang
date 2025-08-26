@@ -5,6 +5,7 @@ pub mod behaviors;
 
 use crate::ast::{Program, Declaration, Statement, Expression, AstType, Function};
 use crate::error::{CompileError, Result};
+use crate::stdlib::StdNamespace;
 use std::collections::HashMap;
 use behaviors::BehaviorResolver;
 
@@ -19,6 +20,8 @@ pub struct TypeChecker {
     enums: HashMap<String, EnumInfo>,
     // Behavior/trait resolver
     behavior_resolver: BehaviorResolver,
+    // Standard library namespace
+    std_namespace: StdNamespace,
 }
 
 #[derive(Clone, Debug)]
@@ -46,6 +49,7 @@ impl TypeChecker {
             structs: HashMap::new(),
             enums: HashMap::new(),
             behavior_resolver: BehaviorResolver::new(),
+            std_namespace: StdNamespace::new(),
         }
     }
 
@@ -254,6 +258,16 @@ impl TypeChecker {
                 }
             }
             Expression::MemberAccess { object, member } => {
+                // Check if accessing @std namespace
+                if let Expression::Identifier(name) = &**object {
+                    if StdNamespace::is_std_reference(name) {
+                        // Resolve @std.module access
+                        return Ok(AstType::Generic {
+                            name: format!("StdModule::{}", member),
+                            type_args: vec![],
+                        });
+                    }
+                }
                 let object_type = self.infer_expression_type(object)?;
                 inference::infer_member_type(&object_type, member, &self.structs)
             }
@@ -279,6 +293,20 @@ impl TypeChecker {
                         fields: vec![],
                     })
                 }
+            }
+            Expression::StdModule(module) => {
+                // Return a type representing the std module
+                Ok(AstType::Generic {
+                    name: format!("StdModule::{}", module),
+                    type_args: vec![],
+                })
+            }
+            Expression::Module(module) => {
+                // Return a type representing a module
+                Ok(AstType::Generic {
+                    name: format!("Module::{}", module),
+                    type_args: vec![],
+                })
             }
             _ => Ok(AstType::Void), // Default for unhandled cases
         }
