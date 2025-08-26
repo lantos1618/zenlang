@@ -96,6 +96,26 @@ pub fn infer_member_type(
                 ), None))
             }
         }
+        // Handle Generic types that represent structs
+        AstType::Generic { name, .. } => {
+            // Try to look up the struct info by name
+            if let Some(struct_info) = structs.get(name) {
+                for (field_name, field_type) in &struct_info.fields {
+                    if field_name == member {
+                        return Ok(field_type.clone());
+                    }
+                }
+                Err(CompileError::TypeError(format!(
+                    "Struct '{}' has no field '{}'",
+                    name, member
+                ), None))
+            } else {
+                Err(CompileError::TypeError(format!(
+                    "Type '{}' is not a struct or is not defined",
+                    name
+                ), None))
+            }
+        }
         _ => Err(CompileError::TypeError(format!(
             "Cannot access member '{}' on type {:?}",
             member, object_type
