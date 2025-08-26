@@ -60,8 +60,10 @@ impl<'a> Parser<'a> {
                             self.next_token(); // Move past >
                             
                             // Check what comes after the generics
-                            let _is_struct = self.current_token == Token::Operator("=".to_string()) 
+                            let is_struct = self.current_token == Token::Operator("=".to_string()) 
                                 && self.peek_token == Token::Symbol('{');
+                            let is_enum = self.current_token == Token::Operator("=".to_string())
+                                && self.peek_token == Token::Symbol('|');
                             let is_function = self.current_token == Token::Operator("=".to_string()) 
                                 && self.peek_token == Token::Symbol('(');
                             let is_behavior = self.current_token == Token::Operator("=".to_string()) 
@@ -78,8 +80,12 @@ impl<'a> Parser<'a> {
                             
                             if is_behavior {
                                 declarations.push(Declaration::Behavior(self.parse_behavior()?));
+                            } else if is_enum {
+                                declarations.push(Declaration::Enum(self.parse_enum()?));
                             } else if is_function {
                                 declarations.push(Declaration::Function(self.parse_function()?));
+                            } else if is_struct {
+                                declarations.push(Declaration::Struct(self.parse_struct()?));
                             } else {
                                 // Default to struct for backward compatibility
                                 declarations.push(Declaration::Struct(self.parse_struct()?));

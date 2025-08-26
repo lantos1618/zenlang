@@ -11,6 +11,46 @@ impl<'a> Parser<'a> {
                 let expr = self.parse_expression()?;
                 Ok(Pattern::Literal(expr))
             }
+            Token::Symbol('.') => {
+                // Shorthand enum variant pattern: .Variant or .Variant(payload)
+                self.next_token();
+                
+                let variant_name = if let Token::Identifier(variant) = &self.current_token {
+                    variant.clone()
+                } else {
+                    return Err(CompileError::SyntaxError(
+                        "Expected variant name after '.'".to_string(),
+                        Some(self.current_span.clone()),
+                    ));
+                };
+                self.next_token();
+                
+                // Check for payload pattern with arrow syntax: .Ok -> val
+                let payload = if self.current_token == Token::Operator("->".to_string()) {
+                    self.next_token();
+                    Some(Box::new(self.parse_pattern()?))
+                } else if self.current_token == Token::Symbol('(') {
+                    // Alternative syntax: .Variant(pattern)
+                    self.next_token();
+                    let payload_pattern = self.parse_pattern()?;
+                    if self.current_token != Token::Symbol(')') {
+                        return Err(CompileError::SyntaxError(
+                            "Expected ')' after variant payload".to_string(),
+                            Some(self.current_span.clone()),
+                        ));
+                    }
+                    self.next_token();
+                    Some(Box::new(payload_pattern))
+                } else {
+                    None
+                };
+                
+                return Ok(Pattern::EnumVariant {
+                    enum_name: String::new(), // Will be inferred from context
+                    variant: variant_name,
+                    payload,
+                });
+            }
             Token::Identifier(name) => {
                 let name = name.clone();
                 self.next_token();

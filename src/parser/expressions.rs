@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::{Expression, BinaryOperator};
+use crate::ast::{Expression, BinaryOperator, Pattern};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 
@@ -129,6 +129,13 @@ impl<'a> Parser<'a> {
             Token::Identifier(name) => {
                 let name = name.clone();
                 self.next_token();
+                
+                // Check for boolean literals
+                if name == "true" {
+                    return Ok(Expression::Boolean(true));
+                } else if name == "false" {
+                    return Ok(Expression::Boolean(false));
+                }
                 
                 // Check for enum variant syntax: EnumName::VariantName
                 if self.current_token == Token::Operator("::".to_string()) {
@@ -393,8 +400,24 @@ impl<'a> Parser<'a> {
         while self.current_token == Token::Symbol('|') {
             self.next_token(); // consume '|'
             
-            // Parse pattern
-            let pattern = self.parse_pattern()?;
+            // Parse pattern - could be single or multiple (or patterns)
+            let mut patterns = vec![self.parse_pattern()?];
+            
+            // Check for additional patterns separated by |
+            while self.current_token == Token::Symbol('|') && 
+                  self.peek_token != Token::Symbol('|') && // Not start of next arm
+                  self.peek_token != Token::Eof {
+                // This is an or pattern - consume the | and parse the next pattern
+                self.next_token();
+                patterns.push(self.parse_pattern()?);
+            }
+            
+            // Create the final pattern
+            let pattern = if patterns.len() == 1 {
+                patterns.remove(0)
+            } else {
+                Pattern::Or(patterns)
+            };
             
             // Check for destructuring/guard with ->
             let guard = if self.current_token == Token::Operator("->".to_string()) {
