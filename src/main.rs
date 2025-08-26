@@ -9,6 +9,7 @@ mod comptime;
 mod error;
 mod lexer;
 mod lsp;
+mod module_system;
 mod parser;
 mod stdlib;
 mod typechecker;
