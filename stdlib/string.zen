@@ -1,0 +1,304 @@
+// Zen Standard Library: String Utilities
+// String manipulation and utility functions
+
+comptime {
+    core := @std.core
+    mem := @std.mem
+}
+
+// String builder for efficient string concatenation
+StringBuilder = {
+    buffer: *u8,
+    length: i64,
+    capacity: i64,
+}
+
+// Create a new string builder
+string_builder_new = () StringBuilder {
+    return StringBuilder {
+        buffer: 0,
+        length: 0,
+        capacity: 0,
+    }
+}
+
+// Create string builder with initial capacity
+string_builder_with_capacity = (capacity: i64) core.Result<StringBuilder, core.Error> {
+    capacity <= 0 ? | true => {
+        return core.Result::Err(core.Error::InvalidArgument("Capacity must be positive"))
+    } | false => {}
+    
+    buffer := mem.alloc(capacity)
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        return core.Result::Ok(StringBuilder {
+            buffer: buf,
+            length: 0,
+            capacity: capacity,
+        })
+    }
+}
+
+// Append string to builder
+string_builder_append = (builder: *StringBuilder, str: string) core.Result<void, core.Error> {
+    str_len := string_len(str)
+    new_len := builder.length + str_len
+    
+    // Check if resize needed
+    new_len > builder.capacity ? | true => {
+        new_capacity := builder.capacity == 0 ? | true => 16
+                                                | false => builder.capacity * 2
+        
+        // Ensure sufficient capacity
+        loop new_capacity < new_len {
+            new_capacity = new_capacity * 2
+        }
+        
+        result := string_builder_resize(builder, new_capacity)
+        result ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> _ => {}
+    } | false => {}
+    
+    // Copy string data
+    mem.copy(builder.buffer + builder.length, str as *u8, str_len)
+    builder.length = new_len
+    
+    return core.Result::Ok({})
+}
+
+// Resize string builder buffer
+string_builder_resize = (builder: *StringBuilder, new_capacity: i64) core.Result<void, core.Error> {
+    new_buffer := mem.realloc(builder.buffer, builder.capacity, new_capacity)
+    new_buffer ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> buf => {
+        builder.buffer = buf
+        builder.capacity = new_capacity
+        return core.Result::Ok({})
+    }
+}
+
+// Convert builder to string
+string_builder_to_string = (builder: *StringBuilder) string {
+    // Add null terminator
+    builder.buffer[builder.length] = 0
+    return builder.buffer as string
+}
+
+// Clear string builder
+string_builder_clear = (builder: *StringBuilder) void {
+    builder.length = 0
+}
+
+// Free string builder
+string_builder_free = (builder: *StringBuilder) void {
+    builder.buffer != 0 ? | true => {
+        mem.dealloc(builder.buffer, builder.capacity)
+    } | false => {}
+    
+    builder.buffer = 0
+    builder.length = 0
+    builder.capacity = 0
+}
+
+// Get string length (simplified - assumes null-terminated)
+string_len = (str: string) i64 {
+    len ::= 0i64
+    ptr := str as *u8
+    
+    loop ptr[len] != 0 {
+        len = len + 1
+    }
+    
+    return len
+}
+
+// String comparison
+string_equal = (a: string, b: string) bool {
+    a_len := string_len(a)
+    b_len := string_len(b)
+    
+    a_len != b_len ? | true => return false
+                    | false => {}
+    
+    return mem.compare(a as *void, b as *void, a_len) == 0
+}
+
+// String copy
+string_copy = (dest: *u8, src: string, max_len: i64) i64 {
+    src_len := string_len(src)
+    copy_len := core.min(src_len, max_len - 1)
+    
+    mem.copy(dest as *void, src as *void, copy_len)
+    dest[copy_len] = 0  // Null terminate
+    
+    return copy_len
+}
+
+// String concatenation (creates new string)
+string_concat = (a: string, b: string) core.Result<string, core.Error> {
+    a_len := string_len(a)
+    b_len := string_len(b)
+    total_len := a_len + b_len
+    
+    buffer := mem.alloc(total_len + 1)
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        mem.copy(buf, a as *void, a_len)
+        mem.copy(buf + a_len, b as *void, b_len)
+        (buf as *u8)[total_len] = 0  // Null terminate
+        
+        return core.Result::Ok(buf as string)
+    }
+}
+
+// Find substring
+string_find = (haystack: string, needle: string) i64 {
+    haystack_len := string_len(haystack)
+    needle_len := string_len(needle)
+    
+    needle_len == 0 ? | true => return 0
+                      | false => {}
+    
+    needle_len > haystack_len ? | true => return -1
+                               | false => {}
+    
+    i ::= 0i64
+    loop i <= haystack_len - needle_len {
+        j ::= 0i64
+        loop j < needle_len && (haystack as *u8)[i + j] == (needle as *u8)[j] {
+            j = j + 1
+        }
+        
+        j == needle_len ? | true => return i
+                         | false => {}
+        
+        i = i + 1
+    }
+    
+    return -1
+}
+
+// Check if string starts with prefix
+string_starts_with = (str: string, prefix: string) bool {
+    prefix_len := string_len(prefix)
+    str_len := string_len(str)
+    
+    prefix_len > str_len ? | true => return false
+                          | false => {}
+    
+    return mem.compare(str as *void, prefix as *void, prefix_len) == 0
+}
+
+// Check if string ends with suffix
+string_ends_with = (str: string, suffix: string) bool {
+    suffix_len := string_len(suffix)
+    str_len := string_len(str)
+    
+    suffix_len > str_len ? | true => return false
+                         | false => {}
+    
+    str_start := (str as *u8) + (str_len - suffix_len)
+    return mem.compare(str_start as *void, suffix as *void, suffix_len) == 0
+}
+
+// Convert integer to string (simplified)
+int_to_string = (value: i64) core.Result<string, core.Error> {
+    // Maximum i64 has 20 digits (including sign)
+    buffer := mem.alloc(21)
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        ptr := buf as *u8
+        i ::= 0i64
+        negative := value < 0
+        
+        // Handle negative
+        negative ? | true => {
+            ptr[0] = '-' as u8
+            i = 1
+            value = -value
+        } | false => {}
+        
+        // Convert digits (simplified - would need proper implementation)
+        value == 0 ? | true => {
+            ptr[i] = '0' as u8
+            i = i + 1
+        } | false => {
+            // Would implement proper digit conversion here
+            // For now, placeholder
+            ptr[i] = '0' as u8
+            i = i + 1
+        }
+        
+        ptr[i] = 0  // Null terminate
+        return core.Result::Ok(buf as string)
+    }
+}
+
+// String trimming
+string_trim = (str: string) string {
+    len := string_len(str)
+    start ::= 0i64
+    end ::= len
+    
+    // Trim leading whitespace
+    loop start < len && is_whitespace((str as *u8)[start]) {
+        start = start + 1
+    }
+    
+    // Trim trailing whitespace
+    loop end > start && is_whitespace((str as *u8)[end - 1]) {
+        end = end - 1
+    }
+    
+    // Return trimmed substring (would need proper implementation)
+    return str
+}
+
+// Check if character is whitespace
+is_whitespace = (c: u8) bool {
+    return c == ' ' as u8 || c == '\t' as u8 || c == '\n' as u8 || c == '\r' as u8
+}
+
+// Convert string to uppercase (simplified for ASCII)
+string_to_upper = (str: string) core.Result<string, core.Error> {
+    len := string_len(str)
+    buffer := mem.alloc(len + 1)
+    
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        i ::= 0i64
+        loop i < len {
+            c := (str as *u8)[i]
+            c >= 'a' as u8 && c <= 'z' as u8 ? | true => {
+                (buf as *u8)[i] = c - 32
+            } | false => {
+                (buf as *u8)[i] = c
+            }
+            i = i + 1
+        }
+        (buf as *u8)[len] = 0
+        return core.Result::Ok(buf as string)
+    }
+}
+
+// Convert string to lowercase (simplified for ASCII)
+string_to_lower = (str: string) core.Result<string, core.Error> {
+    len := string_len(str)
+    buffer := mem.alloc(len + 1)
+    
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        i ::= 0i64
+        loop i < len {
+            c := (str as *u8)[i]
+            c >= 'A' as u8 && c <= 'Z' as u8 ? | true => {
+                (buf as *u8)[i] = c + 32
+            } | false => {
+                (buf as *u8)[i] = c
+            }
+            i = i + 1
+        }
+        (buf as *u8)[len] = 0
+        return core.Result::Ok(buf as string)
+    }
+}

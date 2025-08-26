@@ -1,0 +1,260 @@
+// Zen Standard Library: HashMap Implementation
+// A hash table implementation with linear probing
+
+comptime {
+    core := @std.core
+}
+
+// Hash map entry
+Entry<K, V> = {
+    key: K,
+    value: V,
+    occupied: bool,
+    deleted: bool,
+}
+
+// HashMap structure
+HashMap<K, V> = {
+    buckets: *Entry<K, V>,
+    size: i64,          // Number of key-value pairs
+    capacity: i64,      // Total bucket capacity
+    load_factor: f64,   // Maximum load factor before resize
+}
+
+// Default hash function for integers
+hash_i64 = (key: i64) i64 {
+    // Simple hash function - can be improved
+    x ::= key
+    x = ((x >> 16) ^ x) * 0x45d9f3b
+    x = ((x >> 16) ^ x) * 0x45d9f3b
+    x = (x >> 16) ^ x
+    return x
+}
+
+// Hash function for strings (simplified)
+hash_string = (key: string) i64 {
+    hash ::= 5381i64
+    i ::= 0
+    // Would iterate through string characters
+    // For now, using a simplified version
+    return hash
+}
+
+// Create new hashmap
+hashmap_new<K, V> = () HashMap<K, V> {
+    return HashMap<K, V> {
+        buckets: 0,
+        size: 0,
+        capacity: 0,
+        load_factor: 0.75,
+    }
+}
+
+// Create hashmap with initial capacity
+hashmap_with_capacity<K, V> = (capacity: i64) core.Result<HashMap<K, V>, core.Error> {
+    capacity <= 0 ? | true => {
+        return core.Result::Err(core.Error::InvalidArgument("Capacity must be positive"))
+    } | false => {}
+    
+    // Allocate buckets
+    bucket_size := sizeof(Entry<K, V>)
+    buckets := core.malloc(capacity * bucket_size)
+    buckets == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    // Initialize buckets as empty
+    i ::= 0
+    loop i < capacity {
+        buckets[i] = Entry<K, V> {
+            key: {},
+            value: {},
+            occupied: false,
+            deleted: false,
+        }
+        i = i + 1
+    }
+    
+    return core.Result::Ok(HashMap<K, V> {
+        buckets: buckets,
+        size: 0,
+        capacity: capacity,
+        load_factor: 0.75,
+    })
+}
+
+// Find bucket index for a key
+find_bucket<K, V> = (map: *HashMap<K, V>, key: K, hash_func: (K) i64) i64 {
+    map.capacity == 0 ? | true => return -1
+                        | false => {}
+    
+    hash := hash_func(key)
+    index ::= core.abs(hash) % map.capacity
+    
+    // Linear probing to find key or empty slot
+    loop {
+        bucket := map.buckets[index]
+        
+        // Found empty slot or matching key
+        !bucket.occupied || (bucket.occupied && !bucket.deleted && bucket.key == key) ? 
+            | true => return index
+            | false => {}
+        
+        // Continue probing
+        index = (index + 1) % map.capacity
+    }
+}
+
+// Insert key-value pair
+hashmap_insert<K, V> = (map: *HashMap<K, V>, key: K, value: V, hash_func: (K) i64) core.Result<void, core.Error> {
+    // Check if resize needed
+    map.capacity == 0 || (map.size as f64) >= (map.capacity as f64) * map.load_factor ? | true => {
+        new_capacity := map.capacity == 0 ? | true => 16
+                                           | false => map.capacity * 2
+        result := hashmap_resize(map, new_capacity, hash_func)
+        result ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> _ => {}
+    } | false => {}
+    
+    index := find_bucket(map, key, hash_func)
+    index == -1 ? | true => {
+        return core.Result::Err(core.Error::InvalidArgument("Invalid bucket index"))
+    } | false => {}
+    
+    bucket := &map.buckets[index]
+    
+    // Update size if inserting new key
+    !bucket.occupied || bucket.deleted ? | true => {
+        map.size = map.size + 1
+    } | false => {}
+    
+    bucket.key = key
+    bucket.value = value
+    bucket.occupied = true
+    bucket.deleted = false
+    
+    return core.Result::Ok({})
+}
+
+// Get value for key
+hashmap_get<K, V> = (map: *HashMap<K, V>, key: K, hash_func: (K) i64) core.Option<V> {
+    map.capacity == 0 ? | true => return core.Option::None
+                        | false => {}
+    
+    index := find_bucket(map, key, hash_func)
+    index == -1 ? | true => return core.Option::None
+                 | false => {}
+    
+    bucket := map.buckets[index]
+    bucket.occupied && !bucket.deleted ? | true => return core.Option::Some(bucket.value)
+                                        | false => return core.Option::None
+}
+
+// Remove key-value pair
+hashmap_remove<K, V> = (map: *HashMap<K, V>, key: K, hash_func: (K) i64) core.Option<V> {
+    map.capacity == 0 ? | true => return core.Option::None
+                        | false => {}
+    
+    index := find_bucket(map, key, hash_func)
+    index == -1 ? | true => return core.Option::None
+                 | false => {}
+    
+    bucket := &map.buckets[index]
+    bucket.occupied && !bucket.deleted ? | true => {
+        value := bucket.value
+        bucket.deleted = true
+        map.size = map.size - 1
+        return core.Option::Some(value)
+    } | false => {
+        return core.Option::None
+    }
+}
+
+// Check if key exists
+hashmap_contains<K, V> = (map: *HashMap<K, V>, key: K, hash_func: (K) i64) bool {
+    result := hashmap_get(map, key, hash_func)
+    return result ? | .Some -> _ => true
+                   | .None => false
+}
+
+// Get hashmap size
+hashmap_len<K, V> = (map: *HashMap<K, V>) i64 {
+    return map.size
+}
+
+// Check if hashmap is empty
+hashmap_is_empty<K, V> = (map: *HashMap<K, V>) bool {
+    return map.size == 0
+}
+
+// Clear hashmap
+hashmap_clear<K, V> = (map: *HashMap<K, V>) void {
+    i ::= 0
+    loop i < map.capacity {
+        map.buckets[i].occupied = false
+        map.buckets[i].deleted = false
+        i = i + 1
+    }
+    map.size = 0
+}
+
+// Resize hashmap
+hashmap_resize<K, V> = (map: *HashMap<K, V>, new_capacity: i64, hash_func: (K) i64) core.Result<void, core.Error> {
+    // Save old buckets
+    old_buckets := map.buckets
+    old_capacity := map.capacity
+    
+    // Allocate new buckets
+    bucket_size := sizeof(Entry<K, V>)
+    new_buckets := core.malloc(new_capacity * bucket_size)
+    new_buckets == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    // Initialize new buckets
+    i ::= 0
+    loop i < new_capacity {
+        new_buckets[i] = Entry<K, V> {
+            key: {},
+            value: {},
+            occupied: false,
+            deleted: false,
+        }
+        i = i + 1
+    }
+    
+    // Update map
+    map.buckets = new_buckets
+    map.capacity = new_capacity
+    map.size = 0
+    
+    // Rehash all entries
+    i = 0
+    loop i < old_capacity {
+        entry := old_buckets[i]
+        entry.occupied && !entry.deleted ? | true => {
+            result := hashmap_insert(map, entry.key, entry.value, hash_func)
+            result ? | .Err -> _ => {} // Ignore errors during rehashing
+                    | .Ok -> _ => {}
+        } | false => {}
+        i = i + 1
+    }
+    
+    // Free old buckets
+    old_buckets != 0 ? | true => {
+        core.free(old_buckets)
+    } | false => {}
+    
+    return core.Result::Ok({})
+}
+
+// Free hashmap memory
+hashmap_free<K, V> = (map: *HashMap<K, V>) void {
+    map.buckets != 0 ? | true => {
+        core.free(map.buckets)
+    } | false => {}
+    
+    map.buckets = 0
+    map.size = 0
+    map.capacity = 0
+}
