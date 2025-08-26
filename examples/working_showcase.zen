@@ -1,0 +1,164 @@
+// Comprehensive showcase of working Zen features
+// This example demonstrates all currently functioning capabilities
+
+// 1. Function declarations with = syntax
+add = (a: i32, b: i32) i32 { a + b }
+subtract = (a: i32, b: i32) i32 { a - b }
+multiply = (a: i32, b: i32) i32 { a * b }
+divide = (a: i32, b: i32) i32 { a / b }
+
+// 2. Variable declarations - immutable and mutable
+calculate = () i32 {
+    x := 10        // Immutable
+    y ::= 20       // Mutable
+    y = y + 5      // Mutation
+    result := x + y
+    result
+}
+
+// 3. Struct definitions with fields and access
+Point = {
+    x: i32,
+    y: i32,
+}
+
+Rectangle = {
+    topLeft: Point,
+    width: i32,
+    height: i32,
+}
+
+// Function returning a struct
+makePoint = (x: i32, y: i32) Point {
+    Point { x: x, y: y }
+}
+
+// 4. Nested struct field access
+getAreaFromRect = () i32 {
+    p := Point { x: 0, y: 0 }
+    rect := Rectangle {
+        topLeft: p,
+        width: 100,
+        height: 50,
+    }
+    // Accessing nested struct fields
+    area := rect.width * rect.height
+    area
+}
+
+// 5. Pattern matching with conditional operator
+checkValue = (n: i32) i32 {
+    n ? 
+    | 0 => 100
+    | 1 => 200
+    | 2 => 300
+    | _ => 999
+}
+
+// 6. Pattern matching with ranges
+categorizeAge = (age: i32) i32 {
+    age ?
+    | 0..18 => 1      // Child
+    | 18..65 => 2     // Adult
+    | _ => 3          // Senior
+}
+
+// 7. Boolean operations and comparisons
+testConditions = () i32 {
+    a := 10
+    b := 20
+    
+    result := if a < b {
+        if a == 10 {
+            100
+        } else {
+            200
+        }
+    } else {
+        300
+    }
+    result
+}
+
+// 8. Loop constructs
+sumToN = (n: i32) i32 {
+    sum ::= 0
+    i ::= 1
+    loop {
+        if i > n {
+            break
+        }
+        sum = sum + i
+        i = i + 1
+    }
+    sum
+}
+
+// 9. Array operations
+arraySum = () i32 {
+    // Fixed-size array
+    arr := [1, 2, 3, 4, 5]
+    sum ::= 0
+    i ::= 0
+    loop {
+        if i >= 5 {
+            break
+        }
+        sum = sum + arr[i]
+        i = i + 1
+    }
+    sum
+}
+
+// 10. Pointer operations
+pointerTest = () i32 {
+    value := 42
+    ptr := &value
+    result := *ptr
+    result
+}
+
+// 11. Main entry point demonstrating all features
+main = () i32 {
+    // Test arithmetic
+    sum := add(10, 20)
+    diff := subtract(50, 15)
+    prod := multiply(3, 7)
+    quot := divide(100, 4)
+    
+    // Test variable operations
+    calc_result := calculate()
+    
+    // Test struct operations
+    point := makePoint(100, 200)
+    x_coord := point.x
+    y_coord := point.y
+    
+    // Test nested struct access
+    area := getAreaFromRect()
+    
+    // Test pattern matching
+    check1 := checkValue(0)
+    check2 := checkValue(1)
+    check_default := checkValue(99)
+    
+    // Test range patterns
+    child := categorizeAge(10)
+    adult := categorizeAge(30)
+    senior := categorizeAge(70)
+    
+    // Test conditions
+    cond_result := testConditions()
+    
+    // Test loops
+    loop_sum := sumToN(10)  // 1+2+...+10 = 55
+    
+    // Test arrays
+    arr_sum := arraySum()  // 1+2+3+4+5 = 15
+    
+    // Test pointers
+    ptr_result := pointerTest()
+    
+    // Return final result
+    sum + diff + x_coord + check1 + loop_sum
+}

@@ -4,6 +4,8 @@ at some point we want to be self hosted and have a good STD (witten in zen lang)
 
 use .agent/zen_language_reference.md for guidance
 
+Message from lyndon > "you are doing like tests that are doing external calls to printf but aren't actually capturing this or testing this, you just run but don't confirm the side affect happens like, printf or puts thish should put something to console but are running this in rust testing how can you be sure that the thiing put "hi" to the console?, you can delete this message after you fix this problem" 
+
 
 notes from Lyndon
 - read the .agent folder to help you
