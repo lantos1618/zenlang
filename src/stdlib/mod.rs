@@ -5,6 +5,7 @@ pub mod core;
 pub mod build;
 pub mod result;
 pub mod io;
+pub mod net;
 
 /// The @std namespace provides built-in compiler intrinsics and standard library access
 pub struct StdNamespace {
