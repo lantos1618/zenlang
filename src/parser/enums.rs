@@ -16,6 +16,13 @@ impl<'a> Parser<'a> {
         };
         self.next_token();
         
+        // Parse optional type parameters
+        let type_params = if self.current_token == Token::Operator("<".to_string()) {
+            self.parse_type_parameters()?
+        } else {
+            Vec::new()
+        };
+        
         // Skip the '=' operator
         if self.current_token != Token::Operator("=".to_string()) {
             return Err(CompileError::SyntaxError(
@@ -90,6 +97,6 @@ impl<'a> Parser<'a> {
             ));
         }
         
-        Ok(EnumDefinition { name, type_params: Vec::new(), variants, methods: Vec::new() })
+        Ok(EnumDefinition { name, type_params, variants, methods: Vec::new() })
     }
 }
