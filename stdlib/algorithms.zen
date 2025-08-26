@@ -1,0 +1,606 @@
+// Zen Standard Library: Algorithms Module
+// Common algorithms for searching, sorting, and manipulation
+
+comptime {
+    core := @std.core
+    math := @std.math
+}
+
+// ============================================================================
+// Searching Algorithms
+// ============================================================================
+
+// Linear search - find first occurrence
+linear_search<T> = (arr: *T, len: i64, target: T) i64 {
+    i ::= 0i64
+    loop i < len {
+        arr[i] == target ? | true => return i
+                         | false => {}
+        i = i + 1
+    }
+    return -1  // Not found
+}
+
+// Binary search - array must be sorted
+binary_search<T> = (arr: *T, len: i64, target: T) i64 {
+    left ::= 0i64
+    right ::= len - 1
+    
+    loop left <= right {
+        mid := left + (right - left) / 2
+        
+        arr[mid] == target ? | true => return mid
+                           | false => {}
+        
+        arr[mid] < target ? | true => {
+            left = mid + 1
+        } | false => {
+            right = mid - 1
+        }
+    }
+    
+    return -1  // Not found
+}
+
+// Find minimum element
+find_min<T> = (arr: *T, len: i64) core.Option<T> {
+    len <= 0 ? | true => return core.Option::None
+              | false => {}
+    
+    min := arr[0]
+    i ::= 1i64
+    
+    loop i < len {
+        arr[i] < min ? | true => {
+            min = arr[i]
+        } | false => {}
+        i = i + 1
+    }
+    
+    return core.Option::Some(min)
+}
+
+// Find maximum element
+find_max<T> = (arr: *T, len: i64) core.Option<T> {
+    len <= 0 ? | true => return core.Option::None
+              | false => {}
+    
+    max := arr[0]
+    i ::= 1i64
+    
+    loop i < len {
+        arr[i] > max ? | true => {
+            max = arr[i]
+        } | false => {}
+        i = i + 1
+    }
+    
+    return core.Option::Some(max)
+}
+
+// Count occurrences of a value
+count<T> = (arr: *T, len: i64, target: T) i64 {
+    count ::= 0i64
+    i ::= 0i64
+    
+    loop i < len {
+        arr[i] == target ? | true => {
+            count = count + 1
+        } | false => {}
+        i = i + 1
+    }
+    
+    return count
+}
+
+// ============================================================================
+// Sorting Algorithms
+// ============================================================================
+
+// Bubble sort - simple but inefficient O(n²)
+bubble_sort<T> = (arr: *T, len: i64) void {
+    i ::= 0i64
+    loop i < len - 1 {
+        j ::= 0i64
+        swapped := false
+        
+        loop j < len - i - 1 {
+            arr[j] > arr[j + 1] ? | true => {
+                // Swap
+                temp := arr[j]
+                arr[j] = arr[j + 1]
+                arr[j + 1] = temp
+                swapped = true
+            } | false => {}
+            j = j + 1
+        }
+        
+        !swapped ? | true => return  // Already sorted
+                 | false => {}
+        i = i + 1
+    }
+}
+
+// Selection sort - simple O(n²)
+selection_sort<T> = (arr: *T, len: i64) void {
+    i ::= 0i64
+    loop i < len - 1 {
+        min_idx := i
+        j ::= i + 1
+        
+        loop j < len {
+            arr[j] < arr[min_idx] ? | true => {
+                min_idx = j
+            } | false => {}
+            j = j + 1
+        }
+        
+        min_idx != i ? | true => {
+            // Swap
+            temp := arr[i]
+            arr[i] = arr[min_idx]
+            arr[min_idx] = temp
+        } | false => {}
+        
+        i = i + 1
+    }
+}
+
+// Insertion sort - efficient for small datasets O(n²)
+insertion_sort<T> = (arr: *T, len: i64) void {
+    i ::= 1i64
+    loop i < len {
+        key := arr[i]
+        j ::= i - 1
+        
+        loop j >= 0 && arr[j] > key {
+            arr[j + 1] = arr[j]
+            j = j - 1
+        }
+        
+        arr[j + 1] = key
+        i = i + 1
+    }
+}
+
+// Quick sort partition helper
+partition<T> = (arr: *T, low: i64, high: i64) i64 {
+    pivot := arr[high]
+    i ::= low - 1
+    j ::= low
+    
+    loop j < high {
+        arr[j] <= pivot ? | true => {
+            i = i + 1
+            // Swap arr[i] and arr[j]
+            temp := arr[i]
+            arr[i] = arr[j]
+            arr[j] = temp
+        } | false => {}
+        j = j + 1
+    }
+    
+    // Place pivot in correct position
+    temp := arr[i + 1]
+    arr[i + 1] = arr[high]
+    arr[high] = temp
+    
+    return i + 1
+}
+
+// Quick sort - efficient average case O(n log n)
+quick_sort_range<T> = (arr: *T, low: i64, high: i64) void {
+    low < high ? | true => {
+        pi := partition(arr, low, high)
+        quick_sort_range(arr, low, pi - 1)
+        quick_sort_range(arr, pi + 1, high)
+    } | false => {}
+}
+
+quick_sort<T> = (arr: *T, len: i64) void {
+    len > 1 ? | true => {
+        quick_sort_range(arr, 0, len - 1)
+    } | false => {}
+}
+
+// Merge helper for merge sort
+merge<T> = (arr: *T, left: i64, mid: i64, right: i64) core.Result<void, core.Error> {
+    n1 := mid - left + 1
+    n2 := right - mid
+    
+    // Create temp arrays
+    left_arr := core.malloc(n1 * sizeof(T)) as *T
+    right_arr := core.malloc(n2 * sizeof(T)) as *T
+    
+    left_arr == 0 || right_arr == 0 ? | true => {
+        left_arr != 0 ? | true => core.free(left_arr) | false => {}
+        right_arr != 0 ? | true => core.free(right_arr) | false => {}
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    // Copy data to temp arrays
+    i ::= 0i64
+    loop i < n1 {
+        left_arr[i] = arr[left + i]
+        i = i + 1
+    }
+    
+    j ::= 0i64
+    loop j < n2 {
+        right_arr[j] = arr[mid + 1 + j]
+        j = j + 1
+    }
+    
+    // Merge temp arrays back
+    i = 0
+    j = 0
+    k ::= left
+    
+    loop i < n1 && j < n2 {
+        left_arr[i] <= right_arr[j] ? | true => {
+            arr[k] = left_arr[i]
+            i = i + 1
+        } | false => {
+            arr[k] = right_arr[j]
+            j = j + 1
+        }
+        k = k + 1
+    }
+    
+    // Copy remaining elements
+    loop i < n1 {
+        arr[k] = left_arr[i]
+        i = i + 1
+        k = k + 1
+    }
+    
+    loop j < n2 {
+        arr[k] = right_arr[j]
+        j = j + 1
+        k = k + 1
+    }
+    
+    core.free(left_arr)
+    core.free(right_arr)
+    
+    return core.Result::Ok({})
+}
+
+// Merge sort - stable O(n log n) but uses extra memory
+merge_sort_range<T> = (arr: *T, left: i64, right: i64) core.Result<void, core.Error> {
+    left < right ? | true => {
+        mid := left + (right - left) / 2
+        
+        result := merge_sort_range(arr, left, mid)
+        result ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> _ => {}
+        
+        result = merge_sort_range(arr, mid + 1, right)
+        result ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> _ => {}
+        
+        return merge(arr, left, mid, right)
+    } | false => {}
+    
+    return core.Result::Ok({})
+}
+
+merge_sort<T> = (arr: *T, len: i64) core.Result<void, core.Error> {
+    len > 1 ? | true => {
+        return merge_sort_range(arr, 0, len - 1)
+    } | false => {
+        return core.Result::Ok({})
+    }
+}
+
+// ============================================================================
+// Array Manipulation
+// ============================================================================
+
+// Reverse array in place
+reverse<T> = (arr: *T, len: i64) void {
+    left ::= 0i64
+    right ::= len - 1
+    
+    loop left < right {
+        // Swap
+        temp := arr[left]
+        arr[left] = arr[right]
+        arr[right] = temp
+        
+        left = left + 1
+        right = right - 1
+    }
+}
+
+// Rotate array left by k positions
+rotate_left<T> = (arr: *T, len: i64, k: i64) void {
+    k <= 0 || len <= 1 ? | true => return
+                        | false => {}
+    
+    k := k % len  // Handle k > len
+    
+    // Reverse first k elements
+    reverse_range(arr, 0, k - 1)
+    // Reverse remaining elements
+    reverse_range(arr, k, len - 1)
+    // Reverse entire array
+    reverse_range(arr, 0, len - 1)
+}
+
+// Rotate array right by k positions
+rotate_right<T> = (arr: *T, len: i64, k: i64) void {
+    rotate_left(arr, len, len - (k % len))
+}
+
+// Helper: Reverse a range within array
+reverse_range<T> = (arr: *T, start: i64, end: i64) void {
+    left ::= start
+    right ::= end
+    
+    loop left < right {
+        temp := arr[left]
+        arr[left] = arr[right]
+        arr[right] = temp
+        
+        left = left + 1
+        right = right - 1
+    }
+}
+
+// Shuffle array (Fisher-Yates algorithm)
+// Note: Needs proper random number generator
+shuffle<T> = (arr: *T, len: i64, seed: i64) void {
+    i ::= len - 1
+    
+    // Simple LCG for pseudo-random numbers (not cryptographically secure)
+    rand ::= seed
+    
+    loop i > 0 {
+        // Generate random index from 0 to i
+        rand = (rand * 1103515245 + 12345) & 0x7fffffff
+        j := rand % (i + 1)
+        
+        // Swap arr[i] and arr[j]
+        temp := arr[i]
+        arr[i] = arr[j]
+        arr[j] = temp
+        
+        i = i - 1
+    }
+}
+
+// Check if array is sorted
+is_sorted<T> = (arr: *T, len: i64) bool {
+    i ::= 1i64
+    loop i < len {
+        arr[i - 1] > arr[i] ? | true => return false
+                            | false => {}
+        i = i + 1
+    }
+    return true
+}
+
+// Partition array based on predicate
+// Returns index where false values start
+partition_by<T> = (arr: *T, len: i64, predicate: (T) bool) i64 {
+    left ::= 0i64
+    right ::= len - 1
+    
+    loop left <= right {
+        // Find first false from left
+        loop left <= right && predicate(arr[left]) {
+            left = left + 1
+        }
+        
+        // Find first true from right
+        loop left <= right && !predicate(arr[right]) {
+            right = right - 1
+        }
+        
+        left < right ? | true => {
+            // Swap
+            temp := arr[left]
+            arr[left] = arr[right]
+            arr[right] = temp
+            
+            left = left + 1
+            right = right - 1
+        } | false => {}
+    }
+    
+    return left
+}
+
+// ============================================================================
+// Functional-style Operations
+// ============================================================================
+
+// Apply function to each element
+map<T, U> = (arr: *T, len: i64, f: (T) U, out: *U) void {
+    i ::= 0i64
+    loop i < len {
+        out[i] = f(arr[i])
+        i = i + 1
+    }
+}
+
+// Filter elements based on predicate
+filter<T> = (arr: *T, len: i64, predicate: (T) bool, out: *T) i64 {
+    count ::= 0i64
+    i ::= 0i64
+    
+    loop i < len {
+        predicate(arr[i]) ? | true => {
+            out[count] = arr[i]
+            count = count + 1
+        } | false => {}
+        i = i + 1
+    }
+    
+    return count
+}
+
+// Reduce array to single value
+reduce<T, U> = (arr: *T, len: i64, initial: U, f: (U, T) U) U {
+    result ::= initial
+    i ::= 0i64
+    
+    loop i < len {
+        result = f(result, arr[i])
+        i = i + 1
+    }
+    
+    return result
+}
+
+// Check if all elements satisfy predicate
+all<T> = (arr: *T, len: i64, predicate: (T) bool) bool {
+    i ::= 0i64
+    loop i < len {
+        !predicate(arr[i]) ? | true => return false
+                           | false => {}
+        i = i + 1
+    }
+    return true
+}
+
+// Check if any element satisfies predicate
+any<T> = (arr: *T, len: i64, predicate: (T) bool) bool {
+    i ::= 0i64
+    loop i < len {
+        predicate(arr[i]) ? | true => return true
+                         | false => {}
+        i = i + 1
+    }
+    return false
+}
+
+// Find first element satisfying predicate
+find_if<T> = (arr: *T, len: i64, predicate: (T) bool) core.Option<T> {
+    i ::= 0i64
+    loop i < len {
+        predicate(arr[i]) ? | true => return core.Option::Some(arr[i])
+                         | false => {}
+        i = i + 1
+    }
+    return core.Option::None
+}
+
+// ============================================================================
+// Numeric Algorithms
+// ============================================================================
+
+// Sum of array elements (for numeric types)
+sum_i64 = (arr: *i64, len: i64) i64 {
+    sum ::= 0i64
+    i ::= 0i64
+    
+    loop i < len {
+        sum = sum + arr[i]
+        i = i + 1
+    }
+    
+    return sum
+}
+
+// Product of array elements
+product_i64 = (arr: *i64, len: i64) i64 {
+    len == 0 ? | true => return 0
+              | false => {}
+    
+    product ::= 1i64
+    i ::= 0i64
+    
+    loop i < len {
+        product = product * arr[i]
+        i = i + 1
+    }
+    
+    return product
+}
+
+// Average of array elements
+average_f64 = (arr: *f64, len: i64) f64 {
+    len == 0 ? | true => return 0.0
+              | false => {}
+    
+    sum ::= 0.0f64
+    i ::= 0i64
+    
+    loop i < len {
+        sum = sum + arr[i]
+        i = i + 1
+    }
+    
+    return sum / (len as f64)
+}
+
+// ============================================================================
+// Set Operations (on sorted arrays)
+// ============================================================================
+
+// Union of two sorted arrays
+union_sorted<T> = (arr1: *T, len1: i64, arr2: *T, len2: i64, out: *T) i64 {
+    i ::= 0i64
+    j ::= 0i64
+    k ::= 0i64
+    
+    loop i < len1 && j < len2 {
+        arr1[i] < arr2[j] ? | true => {
+            out[k] = arr1[i]
+            i = i + 1
+        } | false => {
+            arr1[i] > arr2[j] ? | true => {
+                out[k] = arr2[j]
+                j = j + 1
+            } | false => {
+                // Equal - take only one
+                out[k] = arr1[i]
+                i = i + 1
+                j = j + 1
+            }
+        }
+        k = k + 1
+    }
+    
+    // Copy remaining
+    loop i < len1 {
+        out[k] = arr1[i]
+        i = i + 1
+        k = k + 1
+    }
+    
+    loop j < len2 {
+        out[k] = arr2[j]
+        j = j + 1
+        k = k + 1
+    }
+    
+    return k
+}
+
+// Intersection of two sorted arrays
+intersection_sorted<T> = (arr1: *T, len1: i64, arr2: *T, len2: i64, out: *T) i64 {
+    i ::= 0i64
+    j ::= 0i64
+    k ::= 0i64
+    
+    loop i < len1 && j < len2 {
+        arr1[i] < arr2[j] ? | true => {
+            i = i + 1
+        } | false => {
+            arr1[i] > arr2[j] ? | true => {
+                j = j + 1
+            } | false => {
+                // Equal - include in result
+                out[k] = arr1[i]
+                k = k + 1
+                i = i + 1
+                j = j + 1
+            }
+        }
+    }
+    
+    return k
+}
