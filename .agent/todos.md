@@ -2,9 +2,9 @@
 
 ## Immediate Priority (This Session)
 - [x] Verify printf/puts test output capture
-- [ ] Implement string interpolation $(expr) syntax codegen
-- [ ] Fix loop syntax to match specification
-- [ ] Complete enum codegen
+- [x] Implement string interpolation $(expr) syntax codegen - DONE!
+- [x] Fix loop syntax to match specification - Already compliant!
+- [ ] Complete enum codegen (parsing works, need full codegen)
 
 ## Short-term (Next Few Sessions)
 - [ ] Implement comptime execution framework
