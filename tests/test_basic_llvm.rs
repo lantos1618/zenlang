@@ -6,11 +6,11 @@ use inkwell::context::Context;
 #[test]
 fn test_non_generic_function_still_works() {
     let input = r#"
-        add :: (a: i32, b: i32) -> i32 {
+        add = (a: i32, b: i32) i32 {
             a + b
         }
         
-        main :: () -> i32 {
+        main = () i32 {
             result := add(10, 20);
             result
         }
@@ -34,7 +34,7 @@ fn test_non_generic_function_still_works() {
 #[test]
 fn test_simple_main_function() {
     let input = r#"
-        main :: () -> i32 {
+        main = () i32 {
             42
         }
     "#;

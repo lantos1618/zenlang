@@ -94,14 +94,9 @@ loop condition {
     // body
 }
 
-// Iterator loop (for-each)
-loop item in collection {
-    // body
-}
-
 // Range loops
-loop i in 0..10 { }      // Exclusive: 0-9
-loop i in 0..=10 { }     // Inclusive: 0-10
+loop (0..10 ){ }      // Exclusive: 0-9
+loop (0..=10) { }     // Inclusive: 0-10
 ```
 
 ### 8. Error Handling
@@ -140,6 +135,12 @@ TABLE := comptime {
 
 // Generic functions
 make_array = (comptime T: type, comptime N: usize) [N]T {
+    // if comptime we can traverse
+    // T.params, which is a list of args
+    // T.body, which is the body ast
+    // T.name, which is the name of the AST
+    // T.type, struct, enum, function...
+
     return [N]T{}
 }
 ```
@@ -158,7 +159,8 @@ io.print("User: $(name), Score: $(score)")
 3. **No for/while**: Single `loop` construct
 4. **No exceptions**: Errors as values (Result/Option)
 5. **No implicit conversions**: Everything explicit
-6. **Pattern matching everywhere**: Unified `?` operator
+6. **No in**: Loops are only loop(...)
+7. **Pattern matching everywhere**: Unified `?` operator
 
 ## Standard Library Modules
 

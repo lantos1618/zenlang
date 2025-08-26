@@ -6,11 +6,11 @@ use inkwell::context::Context;
 #[test]
 fn test_generic_function_monomorphization_and_llvm() {
     let input = r#"
-        identity<T> :: (x: T) -> T {
+        identity<T> = (x: T) T {
             x
         }
         
-        main :: () -> i32 {
+        main = () i32 {
             a := identity(42);
             b := identity(3.14);
             a
@@ -40,7 +40,7 @@ fn test_generic_struct_monomorphization_and_llvm() {
             value: T
         }
         
-        main :: () -> i32 {
+        main = () i32 {
             box1 := Box { value: 42 };
             box2 := Box { value: 3.14 };
             box1.value
@@ -65,11 +65,11 @@ fn test_generic_struct_monomorphization_and_llvm() {
 #[test]
 fn test_nested_generic_monomorphization() {
     let input = r#"
-        pair<T, U> :: (a: T, b: U) -> T {
+        pair<T, U> = (a: T, b: U) T {
             a
         }
         
-        main :: () -> i32 {
+        main = () i32 {
             result := pair(10, 20.5);
             result
         }

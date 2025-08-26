@@ -9,7 +9,7 @@ fn test_enum_variant_indices() {
     let input = r#"
 Color = | Red | Green | Blue
 
-main :: () -> i32 {
+main = () i32 {
     red_color := Color::Red
     green_color := Color::Green
     blue_color := Color::Blue
@@ -39,7 +39,7 @@ fn test_enum_with_payload() {
     let input = r#"
 Message = | Text(content: *u8) | Number(value: i64) | Empty
 
-main :: () -> i32 {
+main = () i32 {
     msg := Message::Number(42)
     empty := Message::Empty
     0
@@ -67,7 +67,7 @@ fn test_enum_variant_index_ordering() {
     let input = r#"
 Status = | Pending | Processing | Completed | Failed
 
-main :: () -> i32 {
+main = () i32 {
     s1 := Status::Pending
     s2 := Status::Processing  
     s3 := Status::Completed
