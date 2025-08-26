@@ -4,5 +4,5 @@ while :; do
           tee -a .agent/claude_output.jsonl | \
           bun agent/visualize.ts --debug;
   echo -e "===SLEEP===\n===SLEEP===\n"; echo 'looping';
-sleep 10;
+sleep 1;
 done 
