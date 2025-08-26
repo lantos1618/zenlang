@@ -3,6 +3,7 @@ use crate::error::Span;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
     Loop,
+    In,  // for loop i in range
     Comptime,
     Async,
     Await,
@@ -326,6 +327,7 @@ impl<'a> Lexer<'a> {
     fn str_to_keyword(&self, ident: &str) -> Option<Keyword> {
         match ident {
             "loop" => Some(Keyword::Loop),
+            "in" => Some(Keyword::In),
             "comptime" => Some(Keyword::Comptime),
             "async" => Some(Keyword::Async),
             "await" => Some(Keyword::Await),

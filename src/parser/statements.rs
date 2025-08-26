@@ -414,6 +414,8 @@ impl<'a> Parser<'a> {
     }
     
     fn parse_loop_statement(&mut self) -> Result<Statement> {
+        use crate::ast::LoopKind;
+        
         // Skip 'loop' keyword
         self.next_token();
         
@@ -434,17 +436,71 @@ impl<'a> Parser<'a> {
             None
         };
         
-        // Parse loop condition (optional - if not present, it's an infinite loop)
-        let condition = if self.current_token == Token::Symbol('{') {
-            // No condition - infinite loop
-            None
+        // Determine the loop kind
+        let kind = if self.current_token == Token::Symbol('{') {
+            // No condition - infinite loop: loop { }
+            LoopKind::Infinite
+        } else if let Token::Identifier(var_name) = &self.current_token {
+            // Might be: loop i in ... { }
+            let var_name = var_name.clone();
+            self.next_token();
+            
+            if self.current_token == Token::Keyword(lexer::Keyword::In) {
+                // It's an iteration loop
+                self.next_token(); // consume 'in'
+                
+                // Check if it's a range or an iterable  
+                let start_expr = self.parse_expression()?;
+                
+                // Check for range syntax (.. or ..=)
+                if self.current_token == Token::Operator("..".to_string()) {
+                    self.next_token(); // consume '..'
+                    let inclusive = if self.current_token == Token::Operator("=".to_string()) {
+                        self.next_token(); // consume '='
+                        true
+                    } else {
+                        false
+                    };
+                    let end_expr = self.parse_expression()?;
+                    
+                    LoopKind::Range {
+                        variable: var_name,
+                        start: start_expr,
+                        end: end_expr,
+                        inclusive,
+                    }
+                } else {
+                    // It's a collection iteration
+                    LoopKind::Iterator {
+                        variable: var_name,
+                        iterable: start_expr,
+                    }
+                }
+            } else {
+                // Not an 'in' loop, must be a condition loop
+                // We already consumed the identifier, need to build expression starting from it
+                let mut expr = Expression::Identifier(var_name);
+                
+                // Continue parsing the rest of the expression as binary operations
+                // We need to manually reconstruct the expression parsing here
+                while let Token::Operator(op) = &self.current_token {
+                    let op_str = op.clone();
+                    self.next_token();
+                    let right = self.parse_expression()?;
+                    expr = Expression::BinaryOp {
+                        left: Box::new(expr),
+                        op: self.token_to_binary_operator(&op_str)?,
+                        right: Box::new(right),
+                    };
+                }
+                
+                LoopKind::Condition(expr)
+            }
         } else {
-            // Parse a condition expression
+            // Parse a general condition expression
             let condition = self.parse_expression()?;
-            Some(condition)
+            LoopKind::Condition(condition)
         };
-        
-
         
         // Opening brace
         if self.current_token != Token::Symbol('{') {
@@ -470,7 +526,7 @@ impl<'a> Parser<'a> {
         self.next_token();
         
         Ok(Statement::Loop {
-            condition,
+            kind,
             label,
             body,
         })

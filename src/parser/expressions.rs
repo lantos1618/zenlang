@@ -474,7 +474,7 @@ impl<'a> Parser<'a> {
         Ok(Expression::ArrayLiteral(elements))
     }
 
-    fn token_to_binary_operator(&self, op: &str) -> Result<BinaryOperator> {
+    pub(crate) fn token_to_binary_operator(&self, op: &str) -> Result<BinaryOperator> {
         match op {
             "+" => Ok(BinaryOperator::Add),
             "-" => Ok(BinaryOperator::Subtract),

@@ -126,9 +126,20 @@ impl Monomorphizer {
                 }
                 Ok(())
             }
-            crate::ast::Statement::Loop { condition, body, .. } => {
-                if let Some(cond) = condition {
-                    self.collect_instantiations_from_expression(cond)?;
+            crate::ast::Statement::Loop { kind, body, .. } => {
+                use crate::ast::LoopKind;
+                match kind {
+                    LoopKind::Condition(expr) => {
+                        self.collect_instantiations_from_expression(expr)?;
+                    }
+                    LoopKind::Range { start, end, .. } => {
+                        self.collect_instantiations_from_expression(start)?;
+                        self.collect_instantiations_from_expression(end)?;
+                    }
+                    LoopKind::Iterator { iterable, .. } => {
+                        self.collect_instantiations_from_expression(iterable)?;
+                    }
+                    LoopKind::Infinite => {}
                 }
                 for stmt in body {
                     self.collect_instantiations_from_statement(stmt)?;

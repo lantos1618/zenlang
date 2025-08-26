@@ -169,9 +169,24 @@ impl<'a> TypeInstantiator<'a> {
             Statement::Return(expr) => {
                 Ok(Statement::Return(self.instantiate_expression(expr, substitution)))
             }
-            Statement::Loop { condition, label, body } => {
+            Statement::Loop { kind, label, body } => {
+                use crate::ast::LoopKind;
+                let new_kind = match kind {
+                    LoopKind::Infinite => LoopKind::Infinite,
+                    LoopKind::Condition(expr) => LoopKind::Condition(self.instantiate_expression(expr, substitution)),
+                    LoopKind::Range { variable, start, end, inclusive } => LoopKind::Range {
+                        variable: variable.clone(),
+                        start: self.instantiate_expression(start, substitution),
+                        end: self.instantiate_expression(end, substitution),
+                        inclusive: *inclusive,
+                    },
+                    LoopKind::Iterator { variable, iterable } => LoopKind::Iterator {
+                        variable: variable.clone(),
+                        iterable: self.instantiate_expression(iterable, substitution),
+                    },
+                };
                 Ok(Statement::Loop {
-                    condition: condition.as_ref().map(|c| self.instantiate_expression(c, substitution)),
+                    kind: new_kind,
                     label: label.clone(),
                     body: self.instantiate_statements(body, substitution)?,
                 })
