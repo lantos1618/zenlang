@@ -52,7 +52,7 @@ impl<'a> Parser<'a> {
     /// Check if we're in a comptime context and handle accordingly
     pub fn parse_comptime(&mut self) -> Result<Statement> {
         // Check what follows 'comptime'
-        if self.peek_token() == Some(Token::Symbol('{')) {
+        if self.peek_token == Token::Symbol('{') {
             self.next_token(); // consume 'comptime'
             self.parse_comptime_block()
         } else {

@@ -265,7 +265,7 @@ fn create_tcp_functions() -> Vec<Declaration> {
             type_params: vec![],
             name: "tcp_listen".to_string(),
             args: vec![
-                ("port".to_string(), AstType::U16, None),
+                ("port".to_string(), AstType::U16),
             ],
             return_type: AstType::Struct {
                 name: "Result".to_string(),
@@ -306,7 +306,7 @@ fn create_tcp_functions() -> Vec<Declaration> {
                 ("listener".to_string(), AstType::Pointer(Box::new(AstType::Struct {
                     name: "TcpSocket".to_string(),
                     fields: vec![],
-                })), None),
+                }))),
             ],
             return_type: AstType::Struct {
                 name: "Result".to_string(),
@@ -327,8 +327,8 @@ fn create_tcp_functions() -> Vec<Declaration> {
             type_params: vec![],
             name: "tcp_connect".to_string(),
             args: vec![
-                ("host".to_string(), AstType::String, None),
-                ("port".to_string(), AstType::U16, None),
+                ("host".to_string(), AstType::String),
+                ("port".to_string(), AstType::U16),
             ],
             return_type: AstType::Struct {
                 name: "Result".to_string(),
@@ -352,9 +352,9 @@ fn create_tcp_functions() -> Vec<Declaration> {
                 ("socket".to_string(), AstType::Pointer(Box::new(AstType::Struct {
                     name: "TcpSocket".to_string(),
                     fields: vec![],
-                })), None),
-                ("data".to_string(), AstType::Pointer(Box::new(AstType::U8)), None),
-                ("len".to_string(), AstType::U64, None),
+                }))),
+                ("data".to_string(), AstType::Pointer(Box::new(AstType::U8))),
+                ("len".to_string(), AstType::U64),
             ],
             return_type: AstType::I64, // bytes sent
             body: vec![
@@ -384,9 +384,9 @@ fn create_tcp_functions() -> Vec<Declaration> {
                 ("socket".to_string(), AstType::Pointer(Box::new(AstType::Struct {
                     name: "TcpSocket".to_string(),
                     fields: vec![],
-                })), None),
-                ("buffer".to_string(), AstType::Pointer(Box::new(AstType::U8)), None),
-                ("len".to_string(), AstType::U64, None),
+                }))),
+                ("buffer".to_string(), AstType::Pointer(Box::new(AstType::U8))),
+                ("len".to_string(), AstType::U64),
             ],
             return_type: AstType::I64, // bytes received
             body: vec![
@@ -454,8 +454,8 @@ fn create_udp_functions() -> Vec<Declaration> {
                 ("socket".to_string(), AstType::Pointer(Box::new(AstType::Struct {
                     name: "UdpSocket".to_string(),
                     fields: vec![],
-                })), None),
-                ("port".to_string(), AstType::U16, None),
+                }))),
+                ("port".to_string(), AstType::U16),
             ],
             return_type: AstType::I32,
             body: vec![
@@ -473,11 +473,11 @@ fn create_udp_functions() -> Vec<Declaration> {
                 ("socket".to_string(), AstType::Pointer(Box::new(AstType::Struct {
                     name: "UdpSocket".to_string(),
                     fields: vec![],
-                })), None),
-                ("data".to_string(), AstType::Pointer(Box::new(AstType::U8)), None),
-                ("len".to_string(), AstType::U64, None),
-                ("host".to_string(), AstType::String, None),
-                ("port".to_string(), AstType::U16, None),
+                }))),
+                ("data".to_string(), AstType::Pointer(Box::new(AstType::U8))),
+                ("len".to_string(), AstType::U64),
+                ("host".to_string(), AstType::String),
+                ("port".to_string(), AstType::U16),
             ],
             return_type: AstType::I64,
             body: vec![
@@ -495,9 +495,9 @@ fn create_udp_functions() -> Vec<Declaration> {
                 ("socket".to_string(), AstType::Pointer(Box::new(AstType::Struct {
                     name: "UdpSocket".to_string(),
                     fields: vec![],
-                })), None),
-                ("buffer".to_string(), AstType::Pointer(Box::new(AstType::U8)), None),
-                ("len".to_string(), AstType::U64, None),
+                }))),
+                ("buffer".to_string(), AstType::Pointer(Box::new(AstType::U8))),
+                ("len".to_string(), AstType::U64),
             ],
             return_type: AstType::Struct {
                 name: "RecvResult".to_string(),
@@ -522,7 +522,7 @@ fn create_helper_functions() -> Vec<Declaration> {
             type_params: vec![],
             name: "socket_close".to_string(),
             args: vec![
-                ("fd".to_string(), AstType::I32, None),
+                ("fd".to_string(), AstType::I32),
             ],
             return_type: AstType::I32,
             body: vec![
@@ -539,8 +539,8 @@ fn create_helper_functions() -> Vec<Declaration> {
             type_params: vec![],
             name: "make_sockaddr".to_string(),
             args: vec![
-                ("host".to_string(), AstType::String, None),
-                ("port".to_string(), AstType::U16, None),
+                ("host".to_string(), AstType::String),
+                ("port".to_string(), AstType::U16),
             ],
             return_type: AstType::Struct {
                 name: "SockAddr".to_string(),
