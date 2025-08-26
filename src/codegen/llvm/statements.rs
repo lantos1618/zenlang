@@ -39,7 +39,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                                     Type::Basic(self.context.f64_type().into())
                                 }
                                 BasicValueEnum::PointerValue(_) => {
-                                    Type::Basic(self.context.i64_type().into()) // Assume pointer-sized
+                                    // For pointers (including strings), use ptr type
+                                    Type::Basic(self.context.ptr_type(inkwell::AddressSpace::default()).into())
                                 }
                                 _ => Type::Basic(self.context.i64_type().into()), // Default to i64
                             }
@@ -163,7 +164,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
                                     // For now, assume all floats are f64
                                     AstType::F64
                                 }
-                                BasicValueEnum::PointerValue(_) => AstType::Pointer(Box::new(AstType::I64)), // Assume pointer to i64
+                                BasicValueEnum::PointerValue(_) => {
+                                    // For pointers, check if the initializer is a string literal
+                                    if matches!(init_expr, Expression::String(_)) {
+                                        AstType::String
+                                    } else {
+                                        AstType::Pointer(Box::new(AstType::I8)) // Generic pointer type
+                                    }
+                                }
                                 _ => AstType::I64, // Default
                             }
                         };
