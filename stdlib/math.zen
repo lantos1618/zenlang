@@ -1,0 +1,322 @@
+// Zen Standard Library: Math Module
+// Mathematical functions and constants
+
+comptime {
+    core := @std.core
+}
+
+// Mathematical constants
+PI := 3.14159265358979323846f64
+E := 2.71828182845904523536f64
+TAU := 6.28318530717958647692f64  // 2 * PI
+SQRT2 := 1.41421356237309504880f64
+SQRT_HALF := 0.70710678118654752440f64  // sqrt(1/2)
+LN2 := 0.69314718055994530941f64
+LN10 := 2.30258509299404568401f64
+
+// Basic math functions
+
+// Absolute value for integers
+abs_i64 = (n: i64) i64 {
+    n < 0 ? | true => -n | false => n
+}
+
+abs_i32 = (n: i32) i32 {
+    n < 0 ? | true => -n | false => n
+}
+
+// Absolute value for floats
+abs_f64 = (n: f64) f64 {
+    n < 0.0 ? | true => -n | false => n
+}
+
+abs_f32 = (n: f32) f32 {
+    n < 0.0 ? | true => -n | false => n
+}
+
+// Min/max functions
+min_i64 = (a: i64, b: i64) i64 {
+    a < b ? | true => a | false => b
+}
+
+max_i64 = (a: i64, b: i64) i64 {
+    a > b ? | true => a | false => b
+}
+
+min_f64 = (a: f64, b: f64) f64 {
+    a < b ? | true => a | false => b
+}
+
+max_f64 = (a: f64, b: f64) f64 {
+    a > b ? | true => a | false => b
+}
+
+// Clamp value between min and max
+clamp_i64 = (value: i64, min: i64, max: i64) i64 {
+    value < min ? | true => min
+                 | false => value > max ? | true => max
+                                         | false => value
+}
+
+clamp_f64 = (value: f64, min: f64, max: f64) f64 {
+    value < min ? | true => min
+                 | false => value > max ? | true => max
+                                         | false => value
+}
+
+// Sign function
+sign_i64 = (n: i64) i32 {
+    n < 0 ? | true => -1
+           | false => n > 0 ? | true => 1
+                            | false => 0
+}
+
+sign_f64 = (n: f64) i32 {
+    n < 0.0 ? | true => -1
+             | false => n > 0.0 ? | true => 1
+                                | false => 0
+}
+
+// Power function for integers (simplified)
+pow_i64 = (base: i64, exp: i64) i64 {
+    exp < 0 ? | true => 0  // Integer division would result in 0
+             | false => {}
+    
+    exp == 0 ? | true => return 1
+              | false => {}
+    
+    result ::= 1i64
+    i ::= 0i64
+    loop i < exp {
+        result = result * base
+        i = i + 1
+    }
+    return result
+}
+
+// Square root approximation using Newton's method
+sqrt_f64 = (x: f64) f64 {
+    x < 0.0 ? | true => return 0.0 / 0.0  // NaN
+             | false => {}
+    
+    x == 0.0 ? | true => return 0.0
+              | false => {}
+    
+    // Initial guess
+    guess ::= x
+    epsilon := 0.00001f64
+    
+    // Newton-Raphson iteration
+    loop true {
+        next := 0.5 * (guess + x / guess)
+        
+        abs_f64(next - guess) < epsilon ? | true => return next
+                                         | false => {}
+        guess = next
+    }
+    
+    return guess  // Unreachable
+}
+
+// Check if number is even
+is_even = (n: i64) bool {
+    return (n & 1) == 0
+}
+
+// Check if number is odd
+is_odd = (n: i64) bool {
+    return (n & 1) == 1
+}
+
+// Greatest common divisor (Euclidean algorithm)
+gcd = (a: i64, b: i64) i64 {
+    a := abs_i64(a)
+    b := abs_i64(b)
+    
+    loop b != 0 {
+        temp := b
+        b = a % b
+        a = temp
+    }
+    
+    return a
+}
+
+// Least common multiple
+lcm = (a: i64, b: i64) i64 {
+    a == 0 || b == 0 ? | true => return 0
+                      | false => {}
+    
+    return abs_i64(a * b) / gcd(a, b)
+}
+
+// Factorial
+factorial = (n: i64) core.Result<i64, core.Error> {
+    n < 0 ? | true => {
+        return core.Result::Err(core.Error::InvalidArgument("Factorial of negative number"))
+    } | false => {}
+    
+    n > 20 ? | true => {
+        return core.Result::Err(core.Error::InvalidArgument("Factorial too large for i64"))
+    } | false => {}
+    
+    result ::= 1i64
+    i ::= 2i64
+    loop i <= n {
+        result = result * i
+        i = i + 1
+    }
+    
+    return core.Result::Ok(result)
+}
+
+// Linear interpolation
+lerp = (a: f64, b: f64, t: f64) f64 {
+    return a + (b - a) * t
+}
+
+// Inverse linear interpolation
+inverse_lerp = (a: f64, b: f64, value: f64) f64 {
+    a == b ? | true => return 0.0
+            | false => {}
+    
+    return (value - a) / (b - a)
+}
+
+// Check if float is NaN
+is_nan_f64 = (x: f64) bool {
+    return x != x  // NaN is not equal to itself
+}
+
+// Check if float is infinite
+is_inf_f64 = (x: f64) bool {
+    return x == 1.0/0.0 || x == -1.0/0.0
+}
+
+// Check if float is finite
+is_finite_f64 = (x: f64) bool {
+    return !is_nan_f64(x) && !is_inf_f64(x)
+}
+
+// Modulo that always returns positive result
+mod_positive = (a: i64, b: i64) i64 {
+    result := a % b
+    result < 0 ? | true => result + abs_i64(b)
+                | false => result
+}
+
+// Round float to nearest integer
+round_f64 = (x: f64) i64 {
+    x >= 0.0 ? | true => (x + 0.5) as i64
+              | false => (x - 0.5) as i64
+}
+
+// Floor function
+floor_f64 = (x: f64) i64 {
+    result := x as i64
+    x < 0.0 && x != result as f64 ? | true => result - 1
+                                   | false => result
+}
+
+// Ceiling function
+ceil_f64 = (x: f64) i64 {
+    result := x as i64
+    x > 0.0 && x != result as f64 ? | true => result + 1
+                                  | false => result
+}
+
+// Truncate (remove fractional part)
+trunc_f64 = (x: f64) i64 {
+    return x as i64
+}
+
+// Get fractional part
+fract_f64 = (x: f64) f64 {
+    return x - (x as i64) as f64
+}
+
+// Wrap angle to [-PI, PI]
+wrap_angle = (angle: f64) f64 {
+    a ::= angle
+    loop a > PI {
+        a = a - TAU
+    }
+    loop a < -PI {
+        a = a + TAU
+    }
+    return a
+}
+
+// Degrees to radians
+deg_to_rad = (degrees: f64) f64 {
+    return degrees * PI / 180.0
+}
+
+// Radians to degrees
+rad_to_deg = (radians: f64) f64 {
+    return radians * 180.0 / PI
+}
+
+// Fast inverse square root (Quake algorithm approximation)
+// Note: This is a simplified version
+fast_inv_sqrt = (x: f32) f32 {
+    x_half := 0.5f32 * x
+    // Would need proper bit manipulation support
+    // For now, use regular calculation
+    return 1.0 / sqrt_f64(x as f64) as f32
+}
+
+// Map value from one range to another
+map_range = (value: f64, from_min: f64, from_max: f64, to_min: f64, to_max: f64) f64 {
+    normalized := (value - from_min) / (from_max - from_min)
+    return lerp(to_min, to_max, normalized)
+}
+
+// Smoothstep interpolation
+smoothstep = (edge0: f64, edge1: f64, x: f64) f64 {
+    t := clamp_f64((x - edge0) / (edge1 - edge0), 0.0, 1.0)
+    return t * t * (3.0 - 2.0 * t)
+}
+
+// Check if number is prime (simple trial division)
+is_prime = (n: i64) bool {
+    n <= 1 ? | true => return false
+            | false => {}
+    
+    n <= 3 ? | true => return true
+            | false => {}
+    
+    n % 2 == 0 || n % 3 == 0 ? | true => return false
+                               | false => {}
+    
+    i ::= 5i64
+    loop i * i <= n {
+        n % i == 0 || n % (i + 2) == 0 ? | true => return false
+                                        | false => {}
+        i = i + 6
+    }
+    
+    return true
+}
+
+// Compute nth Fibonacci number
+fibonacci = (n: i64) i64 {
+    n < 0 ? | true => return 0
+           | false => {}
+    
+    n <= 1 ? | true => return n
+            | false => {}
+    
+    a ::= 0i64
+    b ::= 1i64
+    i ::= 2i64
+    
+    loop i <= n {
+        temp := a + b
+        a = b
+        b = temp
+        i = i + 1
+    }
+    
+    return b
+}

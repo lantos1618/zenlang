@@ -1,0 +1,611 @@
+// Zen Standard Library: Collections Module
+// Advanced data structures
+
+comptime {
+    core := @std.core
+    mem := @std.mem
+}
+
+// ============================================================================
+// Stack (LIFO)
+// ============================================================================
+
+Stack<T> = {
+    data: *T,
+    top: i64,
+    capacity: i64,
+}
+
+stack_new<T> = () Stack<T> {
+    return Stack<T> {
+        data: 0,
+        top: -1,
+        capacity: 0,
+    }
+}
+
+stack_with_capacity<T> = (capacity: i64) core.Result<Stack<T>, core.Error> {
+    capacity <= 0 ? | true => {
+        return core.Result::Err(core.Error::InvalidArgument("Capacity must be positive"))
+    } | false => {}
+    
+    data := core.malloc(capacity * sizeof(T))
+    data == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    return core.Result::Ok(Stack<T> {
+        data: data,
+        top: -1,
+        capacity: capacity,
+    })
+}
+
+stack_push<T> = (stack: *Stack<T>, value: T) core.Result<void, core.Error> {
+    // Check if full
+    stack.top >= stack.capacity - 1 ? | true => {
+        // Need to grow
+        new_capacity := stack.capacity == 0 ? | true => 8
+                                            | false => stack.capacity * 2
+        
+        new_data := core.malloc(new_capacity * sizeof(T))
+        new_data == 0 ? | true => {
+            return core.Result::Err(core.Error::OutOfMemory)
+        } | false => {}
+        
+        // Copy existing data
+        stack.capacity > 0 ? | true => {
+            core.memcpy(new_data, stack.data, (stack.top + 1) * sizeof(T))
+            core.free(stack.data)
+        } | false => {}
+        
+        stack.data = new_data
+        stack.capacity = new_capacity
+    } | false => {}
+    
+    stack.top = stack.top + 1
+    stack.data[stack.top] = value
+    return core.Result::Ok({})
+}
+
+stack_pop<T> = (stack: *Stack<T>) core.Option<T> {
+    stack.top < 0 ? | true => return core.Option::None
+                   | false => {}
+    
+    value := stack.data[stack.top]
+    stack.top = stack.top - 1
+    return core.Option::Some(value)
+}
+
+stack_peek<T> = (stack: *Stack<T>) core.Option<T> {
+    stack.top < 0 ? | true => return core.Option::None
+                   | false => return core.Option::Some(stack.data[stack.top])
+}
+
+stack_is_empty<T> = (stack: *Stack<T>) bool {
+    return stack.top < 0
+}
+
+stack_size<T> = (stack: *Stack<T>) i64 {
+    return stack.top + 1
+}
+
+stack_clear<T> = (stack: *Stack<T>) void {
+    stack.top = -1
+}
+
+stack_free<T> = (stack: *Stack<T>) void {
+    stack.data != 0 ? | true => {
+        core.free(stack.data)
+    } | false => {}
+    
+    stack.data = 0
+    stack.top = -1
+    stack.capacity = 0
+}
+
+// ============================================================================
+// Queue (FIFO)
+// ============================================================================
+
+Queue<T> = {
+    data: *T,
+    front: i64,
+    rear: i64,
+    size: i64,
+    capacity: i64,
+}
+
+queue_new<T> = () Queue<T> {
+    return Queue<T> {
+        data: 0,
+        front: 0,
+        rear: -1,
+        size: 0,
+        capacity: 0,
+    }
+}
+
+queue_with_capacity<T> = (capacity: i64) core.Result<Queue<T>, core.Error> {
+    capacity <= 0 ? | true => {
+        return core.Result::Err(core.Error::InvalidArgument("Capacity must be positive"))
+    } | false => {}
+    
+    data := core.malloc(capacity * sizeof(T))
+    data == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    return core.Result::Ok(Queue<T> {
+        data: data,
+        front: 0,
+        rear: -1,
+        size: 0,
+        capacity: capacity,
+    })
+}
+
+queue_enqueue<T> = (queue: *Queue<T>, value: T) core.Result<void, core.Error> {
+    // Check if full
+    queue.size >= queue.capacity ? | true => {
+        // Need to grow
+        new_capacity := queue.capacity == 0 ? | true => 8
+                                            | false => queue.capacity * 2
+        
+        new_data := core.malloc(new_capacity * sizeof(T))
+        new_data == 0 ? | true => {
+            return core.Result::Err(core.Error::OutOfMemory)
+        } | false => {}
+        
+        // Copy existing data in correct order
+        queue.size > 0 ? | true => {
+            i ::= 0i64
+            loop i < queue.size {
+                idx := (queue.front + i) % queue.capacity
+                new_data[i] = queue.data[idx]
+                i = i + 1
+            }
+            core.free(queue.data)
+            queue.front = 0
+            queue.rear = queue.size - 1
+        } | false => {}
+        
+        queue.data = new_data
+        queue.capacity = new_capacity
+    } | false => {}
+    
+    queue.rear = (queue.rear + 1) % queue.capacity
+    queue.data[queue.rear] = value
+    queue.size = queue.size + 1
+    return core.Result::Ok({})
+}
+
+queue_dequeue<T> = (queue: *Queue<T>) core.Option<T> {
+    queue.size == 0 ? | true => return core.Option::None
+                     | false => {}
+    
+    value := queue.data[queue.front]
+    queue.front = (queue.front + 1) % queue.capacity
+    queue.size = queue.size - 1
+    
+    // Reset indices when empty
+    queue.size == 0 ? | true => {
+        queue.front = 0
+        queue.rear = -1
+    } | false => {}
+    
+    return core.Option::Some(value)
+}
+
+queue_peek<T> = (queue: *Queue<T>) core.Option<T> {
+    queue.size == 0 ? | true => return core.Option::None
+                     | false => return core.Option::Some(queue.data[queue.front])
+}
+
+queue_is_empty<T> = (queue: *Queue<T>) bool {
+    return queue.size == 0
+}
+
+queue_size<T> = (queue: *Queue<T>) i64 {
+    return queue.size
+}
+
+queue_clear<T> = (queue: *Queue<T>) void {
+    queue.front = 0
+    queue.rear = -1
+    queue.size = 0
+}
+
+queue_free<T> = (queue: *Queue<T>) void {
+    queue.data != 0 ? | true => {
+        core.free(queue.data)
+    } | false => {}
+    
+    queue.data = 0
+    queue.front = 0
+    queue.rear = -1
+    queue.size = 0
+    queue.capacity = 0
+}
+
+// ============================================================================
+// Deque (Double-ended queue)
+// ============================================================================
+
+Deque<T> = {
+    data: *T,
+    front: i64,
+    rear: i64,
+    size: i64,
+    capacity: i64,
+}
+
+deque_new<T> = () Deque<T> {
+    return Deque<T> {
+        data: 0,
+        front: 0,
+        rear: 0,
+        size: 0,
+        capacity: 0,
+    }
+}
+
+deque_push_front<T> = (deque: *Deque<T>, value: T) core.Result<void, core.Error> {
+    // Ensure capacity
+    deque.size >= deque.capacity ? | true => {
+        result := deque_grow(deque)
+        result ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> _ => {}
+    } | false => {}
+    
+    deque.size == 0 ? | true => {
+        deque.data[deque.front] = value
+    } | false => {
+        deque.front = (deque.front - 1 + deque.capacity) % deque.capacity
+        deque.data[deque.front] = value
+    }
+    
+    deque.size = deque.size + 1
+    return core.Result::Ok({})
+}
+
+deque_push_back<T> = (deque: *Deque<T>, value: T) core.Result<void, core.Error> {
+    // Ensure capacity
+    deque.size >= deque.capacity ? | true => {
+        result := deque_grow(deque)
+        result ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> _ => {}
+    } | false => {}
+    
+    deque.size == 0 ? | true => {
+        deque.data[deque.rear] = value
+    } | false => {
+        deque.rear = (deque.rear + 1) % deque.capacity
+        deque.data[deque.rear] = value
+    }
+    
+    deque.size = deque.size + 1
+    return core.Result::Ok({})
+}
+
+deque_pop_front<T> = (deque: *Deque<T>) core.Option<T> {
+    deque.size == 0 ? | true => return core.Option::None
+                     | false => {}
+    
+    value := deque.data[deque.front]
+    
+    deque.size > 1 ? | true => {
+        deque.front = (deque.front + 1) % deque.capacity
+    } | false => {}
+    
+    deque.size = deque.size - 1
+    return core.Option::Some(value)
+}
+
+deque_pop_back<T> = (deque: *Deque<T>) core.Option<T> {
+    deque.size == 0 ? | true => return core.Option::None
+                     | false => {}
+    
+    value := deque.data[deque.rear]
+    
+    deque.size > 1 ? | true => {
+        deque.rear = (deque.rear - 1 + deque.capacity) % deque.capacity
+    } | false => {}
+    
+    deque.size = deque.size - 1
+    return core.Option::Some(value)
+}
+
+deque_grow<T> = (deque: *Deque<T>) core.Result<void, core.Error> {
+    new_capacity := deque.capacity == 0 ? | true => 8
+                                        | false => deque.capacity * 2
+    
+    new_data := core.malloc(new_capacity * sizeof(T))
+    new_data == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    // Copy existing data in order
+    deque.size > 0 ? | true => {
+        i ::= 0i64
+        loop i < deque.size {
+            idx := (deque.front + i) % deque.capacity
+            new_data[i] = deque.data[idx]
+            i = i + 1
+        }
+        core.free(deque.data)
+        deque.front = 0
+        deque.rear = deque.size - 1
+    } | false => {
+        deque.front = 0
+        deque.rear = 0
+    }
+    
+    deque.data = new_data
+    deque.capacity = new_capacity
+    return core.Result::Ok({})
+}
+
+// ============================================================================
+// Linked List Node
+// ============================================================================
+
+ListNode<T> = {
+    value: T,
+    next: *ListNode<T>,
+}
+
+LinkedList<T> = {
+    head: *ListNode<T>,
+    tail: *ListNode<T>,
+    size: i64,
+}
+
+list_new<T> = () LinkedList<T> {
+    return LinkedList<T> {
+        head: 0,
+        tail: 0,
+        size: 0,
+    }
+}
+
+list_push_front<T> = (list: *LinkedList<T>, value: T) core.Result<void, core.Error> {
+    node := core.malloc(sizeof(ListNode<T>)) as *ListNode<T>
+    node == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    node.value = value
+    node.next = list.head
+    
+    list.head = node
+    list.tail == 0 ? | true => {
+        list.tail = node
+    } | false => {}
+    
+    list.size = list.size + 1
+    return core.Result::Ok({})
+}
+
+list_push_back<T> = (list: *LinkedList<T>, value: T) core.Result<void, core.Error> {
+    node := core.malloc(sizeof(ListNode<T>)) as *ListNode<T>
+    node == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    node.value = value
+    node.next = 0
+    
+    list.tail != 0 ? | true => {
+        list.tail.next = node
+    } | false => {
+        list.head = node
+    }
+    
+    list.tail = node
+    list.size = list.size + 1
+    return core.Result::Ok({})
+}
+
+list_pop_front<T> = (list: *LinkedList<T>) core.Option<T> {
+    list.head == 0 ? | true => return core.Option::None
+                    | false => {}
+    
+    node := list.head
+    value := node.value
+    
+    list.head = node.next
+    list.head == 0 ? | true => {
+        list.tail = 0
+    } | false => {}
+    
+    core.free(node)
+    list.size = list.size - 1
+    
+    return core.Option::Some(value)
+}
+
+list_size<T> = (list: *LinkedList<T>) i64 {
+    return list.size
+}
+
+list_is_empty<T> = (list: *LinkedList<T>) bool {
+    return list.size == 0
+}
+
+list_clear<T> = (list: *LinkedList<T>) void {
+    loop list.head != 0 {
+        node := list.head
+        list.head = node.next
+        core.free(node)
+    }
+    
+    list.tail = 0
+    list.size = 0
+}
+
+// ============================================================================
+// Binary Search Tree Node
+// ============================================================================
+
+TreeNode<K, V> = {
+    key: K,
+    value: V,
+    left: *TreeNode<K, V>,
+    right: *TreeNode<K, V>,
+}
+
+BinarySearchTree<K, V> = {
+    root: *TreeNode<K, V>,
+    size: i64,
+}
+
+bst_new<K, V> = () BinarySearchTree<K, V> {
+    return BinarySearchTree<K, V> {
+        root: 0,
+        size: 0,
+    }
+}
+
+// Note: Would need proper comparison function for generic K
+// For now, this is a template that assumes K has < operator
+
+bst_insert<K, V> = (tree: *BinarySearchTree<K, V>, key: K, value: V) core.Result<void, core.Error> {
+    new_node := core.malloc(sizeof(TreeNode<K, V>)) as *TreeNode<K, V>
+    new_node == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    new_node.key = key
+    new_node.value = value
+    new_node.left = 0
+    new_node.right = 0
+    
+    tree.root == 0 ? | true => {
+        tree.root = new_node
+        tree.size = tree.size + 1
+        return core.Result::Ok({})
+    } | false => {}
+    
+    current := tree.root
+    loop true {
+        key < current.key ? | true => {
+            current.left == 0 ? | true => {
+                current.left = new_node
+                tree.size = tree.size + 1
+                return core.Result::Ok({})
+            } | false => {
+                current = current.left
+            }
+        } | false => {
+            current.right == 0 ? | true => {
+                current.right = new_node
+                tree.size = tree.size + 1
+                return core.Result::Ok({})
+            } | false => {
+                current = current.right
+            }
+        }
+    }
+    
+    return core.Result::Ok({})  // Unreachable
+}
+
+// ============================================================================
+// Set (using simple array for now)
+// ============================================================================
+
+Set<T> = {
+    data: *T,
+    size: i64,
+    capacity: i64,
+}
+
+set_new<T> = () Set<T> {
+    return Set<T> {
+        data: 0,
+        size: 0,
+        capacity: 0,
+    }
+}
+
+// Note: Requires equality comparison for T
+set_contains<T> = (set: *Set<T>, value: T) bool {
+    i ::= 0i64
+    loop i < set.size {
+        set.data[i] == value ? | true => return true
+                              | false => {}
+        i = i + 1
+    }
+    return false
+}
+
+set_add<T> = (set: *Set<T>, value: T) core.Result<bool, core.Error> {
+    // Check if already exists
+    set_contains(set, value) ? | true => {
+        return core.Result::Ok(false)  // Already exists
+    } | false => {}
+    
+    // Ensure capacity
+    set.size >= set.capacity ? | true => {
+        new_capacity := set.capacity == 0 ? | true => 8
+                                          | false => set.capacity * 2
+        
+        new_data := core.malloc(new_capacity * sizeof(T))
+        new_data == 0 ? | true => {
+            return core.Result::Err(core.Error::OutOfMemory)
+        } | false => {}
+        
+        set.size > 0 ? | true => {
+            core.memcpy(new_data, set.data, set.size * sizeof(T))
+            core.free(set.data)
+        } | false => {}
+        
+        set.data = new_data
+        set.capacity = new_capacity
+    } | false => {}
+    
+    set.data[set.size] = value
+    set.size = set.size + 1
+    return core.Result::Ok(true)  // Added successfully
+}
+
+set_remove<T> = (set: *Set<T>, value: T) bool {
+    i ::= 0i64
+    loop i < set.size {
+        set.data[i] == value ? | true => {
+            // Shift remaining elements
+            j ::= i
+            loop j < set.size - 1 {
+                set.data[j] = set.data[j + 1]
+                j = j + 1
+            }
+            set.size = set.size - 1
+            return true
+        } | false => {}
+        i = i + 1
+    }
+    return false
+}
+
+set_size<T> = (set: *Set<T>) i64 {
+    return set.size
+}
+
+set_is_empty<T> = (set: *Set<T>) bool {
+    return set.size == 0
+}
+
+set_clear<T> = (set: *Set<T>) void {
+    set.size = 0
+}
+
+set_free<T> = (set: *Set<T>) void {
+    set.data != 0 ? | true => {
+        core.free(set.data)
+    } | false => {}
+    
+    set.data = 0
+    set.size = 0
+    set.capacity = 0
+}
