@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::{Expression, BinaryOperator, Pattern};
+use crate::ast::{Expression, BinaryOperator};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 
