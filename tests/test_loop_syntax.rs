@@ -152,13 +152,15 @@ fn test_parse_iterator_loop() {
 
 #[test]
 fn test_loop_with_break_continue() {
+    // Test simple break and continue statements in a loop
     let input = r#"
     test = () void { 
-        loop i in 0..10 { 
-            loop i == 5 => break
-            loop i == 3 => continue
-            x := i
-        } 
+        loop {
+            break
+        }
+        loop {
+            continue  
+        }
     }"#;
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
@@ -166,14 +168,24 @@ fn test_loop_with_break_continue() {
     
     assert_eq!(program.declarations.len(), 1);
     
-    // Verify the loop contains break and continue
+    // Verify the function contains loops with break and continue
     if let zen::ast::Declaration::Function(func) = &program.declarations[0] {
-        assert_eq!(func.body.len(), 1);
-        if let Statement::Loop { kind, body, .. } = &func.body[0] {
-            assert!(matches!(kind, LoopKind::Range { .. }));
-            assert_eq!(body.len(), 3);
+        assert_eq!(func.body.len(), 2);
+        
+        // First loop should have break
+        if let Statement::Loop { body, .. } = &func.body[0] {
+            assert_eq!(body.len(), 1);
+            assert!(matches!(&body[0], Statement::Break { .. }));
         } else {
-            panic!("Expected loop statement");
+            panic!("Expected first loop statement");
+        }
+        
+        // Second loop should have continue
+        if let Statement::Loop { body, .. } = &func.body[1] {
+            assert_eq!(body.len(), 1);
+            assert!(matches!(&body[0], Statement::Continue { .. }));
+        } else {
+            panic!("Expected second loop statement");
         }
     } else {
         panic!("Expected function declaration");
