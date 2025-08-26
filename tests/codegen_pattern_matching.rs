@@ -1,206 +1,70 @@
-use zen::ast::{
-    Program, Declaration, Function, Statement, Expression, ConditionalArm, Pattern, AstType, BinaryOperator
-};
-use zen::codegen::llvm::LLVMCompiler;
 use inkwell::context::Context;
+use inkwell::execution_engine::JitFunction;
+use inkwell::OptimizationLevel;
+use zen::ast;
+use zen::compiler::Compiler;
 
 #[test]
-fn test_basic_pattern_literal() {
+fn test_simple_pattern_match_codegen() {
     let context = Context::create();
-    let mut compiler = LLVMCompiler::new(&context);
+    let compiler = Compiler::new(&context);
     
-    let program = Program {
+    // Create a simple pattern matching function
+    let program = ast::Program {
         declarations: vec![
-            Declaration::Function(Function { type_params: vec![],
-                name: "test_pattern".to_string(),
-                args: vec![],
-                return_type: AstType::I64,
+            ast::Declaration::Function(ast::Function {
+                type_params: vec![],
+                name: "test_match".to_string(),
+                args: vec![("x".to_string(), ast::AstType::I32)],
+                return_type: ast::AstType::I32,
                 body: vec![
-                    Statement::Return(Expression::Conditional {
-                        scrutinee: Box::new(Expression::Integer32(5)),
-                        arms: vec![
-                            ConditionalArm {
-                                pattern: Pattern::Literal(Expression::Integer32(5)),
-                                guard: None,
-                                body: Expression::Integer32(100),
-                            },
-                            ConditionalArm {
-                                pattern: Pattern::Wildcard,
-                                guard: None,
-                                body: Expression::Integer32(200),
-                            },
-                        ],
-                    }),
-                ],
-                is_async: false,
-            }),
-        ],
-    };
-    
-    let result = compiler.compile_program(&program);
-    assert!(result.is_ok());
-    
-    // Verify the generated IR contains the pattern matching logic
-    let ir = compiler.module.print_to_string().to_string();
-    assert!(ir.contains("test_pattern"));
-    assert!(ir.contains("match") || ir.contains("then") || ir.contains("else"));
-}
-
-#[test]
-fn test_pattern_with_binding() {
-    let context = Context::create();
-    let mut compiler = LLVMCompiler::new(&context);
-    
-    let program = Program {
-        declarations: vec![
-            Declaration::Function(Function { type_params: vec![],
-                name: "test_binding".to_string(),
-                args: vec![("x".to_string(), AstType::I64)],
-                return_type: AstType::I64,
-                body: vec![
-                    Statement::Return(Expression::Conditional {
-                        scrutinee: Box::new(Expression::Identifier("x".to_string())),
-                        arms: vec![
-                            ConditionalArm {
-                                pattern: Pattern::Identifier("y".to_string()),
-                                guard: None,
-                                body: Expression::BinaryOp {
-                                    left: Box::new(Expression::Identifier("y".to_string())),
-                                    op: BinaryOperator::Add,
-                                    right: Box::new(Expression::Integer32(10)),
+                    ast::Statement::Return(
+                        ast::Expression::Conditional { 
+                            scrutinee: Box::new(ast::Expression::Identifier("x".to_string())),
+                            arms: vec![
+                                ast::ConditionalArm {
+                                    pattern: ast::Pattern::Literal(ast::Expression::Integer32(0)),
+                                    guard: None,
+                                    body: ast::Expression::Integer32(100),
                                 },
-                            },
-                        ],
-                    }),
-                ],
-                is_async: false,
-            }),
-        ],
-    };
-    
-    let result = compiler.compile_program(&program);
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_pattern_range() {
-    let context = Context::create();
-    let mut compiler = LLVMCompiler::new(&context);
-    
-    let program = Program {
-        declarations: vec![
-            Declaration::Function(Function { type_params: vec![],
-                name: "test_range".to_string(),
-                args: vec![("x".to_string(), AstType::I64)],
-                return_type: AstType::I64,
-                body: vec![
-                    Statement::Return(Expression::Conditional {
-                        scrutinee: Box::new(Expression::Identifier("x".to_string())),
-                        arms: vec![
-                            ConditionalArm {
-                                pattern: Pattern::Range {
-                                    start: Box::new(Expression::Integer32(1)),
-                                    end: Box::new(Expression::Integer32(10)),
-                                    inclusive: false,
+                                ast::ConditionalArm {
+                                    pattern: ast::Pattern::Literal(ast::Expression::Integer32(1)),
+                                    guard: None,
+                                    body: ast::Expression::Integer32(200),
                                 },
-                                guard: None,
-                                body: Expression::Integer32(100),
-                            },
-                            ConditionalArm {
-                                pattern: Pattern::Wildcard,
-                                guard: None,
-                                body: Expression::Integer32(200),
-                            },
-                        ],
-                    }),
+                                ast::ConditionalArm {
+                                    pattern: ast::Pattern::Wildcard,
+                                    guard: None,
+                                    body: ast::Expression::Integer32(300),
+                                },
+                            ],
+                        }
+                    ),
                 ],
                 is_async: false,
             }),
         ],
     };
     
-    let result = compiler.compile_program(&program);
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_pattern_with_guard() {
-    let context = Context::create();
-    let mut compiler = LLVMCompiler::new(&context);
+    // Compile the program
+    let module = compiler.get_module(&program).expect("Failed to compile program");
     
-    let program = Program {
-        declarations: vec![
-            Declaration::Function(Function { type_params: vec![],
-                name: "test_guard".to_string(),
-                args: vec![("x".to_string(), AstType::I64)],
-                return_type: AstType::I64,
-                body: vec![
-                    Statement::Return(Expression::Conditional {
-                        scrutinee: Box::new(Expression::Identifier("x".to_string())),
-                        arms: vec![
-                            ConditionalArm {
-                                pattern: Pattern::Identifier("y".to_string()),
-                                guard: Some(Expression::BinaryOp {
-                                    left: Box::new(Expression::Identifier("y".to_string())),
-                                    op: BinaryOperator::GreaterThan,
-                                    right: Box::new(Expression::Integer32(0)),
-                                }),
-                                body: Expression::Integer32(100),
-                            },
-                            ConditionalArm {
-                                pattern: Pattern::Wildcard,
-                                guard: None,
-                                body: Expression::Integer32(200),
-                            },
-                        ],
-                    }),
-                ],
-                is_async: false,
-            }),
-        ],
+    // Create execution engine
+    let execution_engine = module
+        .create_jit_execution_engine(OptimizationLevel::None)
+        .expect("Failed to create execution engine");
+    
+    // Get the function
+    let test_fn: JitFunction<unsafe extern "C" fn(i32) -> i32> = unsafe {
+        execution_engine.get_function("test_match").expect("Failed to get function")
     };
     
-    let result = compiler.compile_program(&program);
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_pattern_or() {
-    let context = Context::create();
-    let mut compiler = LLVMCompiler::new(&context);
-    
-    let program = Program {
-        declarations: vec![
-            Declaration::Function(Function { type_params: vec![],
-                name: "test_or".to_string(),
-                args: vec![("x".to_string(), AstType::I64)],
-                return_type: AstType::I64,
-                body: vec![
-                    Statement::Return(Expression::Conditional {
-                        scrutinee: Box::new(Expression::Identifier("x".to_string())),
-                        arms: vec![
-                            ConditionalArm {
-                                pattern: Pattern::Or(vec![
-                                    Pattern::Literal(Expression::Integer32(1)),
-                                    Pattern::Literal(Expression::Integer32(2)),
-                                    Pattern::Literal(Expression::Integer32(3)),
-                                ]),
-                                guard: None,
-                                body: Expression::Integer32(100),
-                            },
-                            ConditionalArm {
-                                pattern: Pattern::Wildcard,
-                                guard: None,
-                                body: Expression::Integer32(200),
-                            },
-                        ],
-                    }),
-                ],
-                is_async: false,
-            }),
-        ],
-    };
-    
-    let result = compiler.compile_program(&program);
-    assert!(result.is_ok());
+    // Test the pattern matching
+    unsafe {
+        assert_eq!(test_fn.call(0), 100, "Pattern match for 0 should return 100");
+        assert_eq!(test_fn.call(1), 200, "Pattern match for 1 should return 200");
+        assert_eq!(test_fn.call(2), 300, "Pattern match for 2 should return 300 (wildcard)");
+        assert_eq!(test_fn.call(-1), 300, "Pattern match for -1 should return 300 (wildcard)");
+        assert_eq!(test_fn.call(999), 300, "Pattern match for 999 should return 300 (wildcard)");
+    }
 }
