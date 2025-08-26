@@ -5,7 +5,7 @@ use zen::ast::{AstType, Declaration, Statement};
 #[test]
 fn test_parse_fixed_array_type() {
     let input = r#"
-        test_arrays :: () -> void {
+        test_arrays = () void {
             arr1: [i32; 10] = 0;
             arr2: [f64; 5] = 0.0;
             arr3: [[u8; 3]; 4] = 0;
@@ -78,7 +78,7 @@ fn test_parse_fixed_array_type() {
 #[test]
 fn test_fixed_array_vs_dynamic_array() {
     let input = r#"
-        test_arrays :: () -> void {
+        test_arrays = () void {
             fixed: [i32; 10] = 0;
             dynamic: [i32] = 0;
         }
