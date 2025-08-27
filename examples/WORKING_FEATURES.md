@@ -117,10 +117,10 @@ vec_push<T> = (vec: *Vec<T>, item: T) void {
 
 ### Loop Variations
 ```zen
-// Range loop
-loop i in 0..10 {
+// Functional range iteration
+range(0, 10).loop(i -> {
     printf("i = %d\n", i)
-}
+})
 
 // Conditional loop
 counter ::= 0
