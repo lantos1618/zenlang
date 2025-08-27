@@ -120,8 +120,14 @@ lexer_skip_whitespace = (l: Lexer) Lexer {
     return l
 }
 
+// Result type for functions that return Lexer and string
+LexerStringResult = {
+    lexer: Lexer,
+    str: string,
+}
+
 // Skip single-line comment
-lexer_skip_line_comment = (l: Lexer) (Lexer, string) {
+lexer_skip_line_comment = (l: Lexer) LexerStringResult {
     start := l.position + 2  // Skip "//"
     l = lexer_read_char(l)  // Skip first /
     l = lexer_read_char(l)  // Skip second /
@@ -131,11 +137,11 @@ lexer_skip_line_comment = (l: Lexer) (Lexer, string) {
     }
     
     comment := string_substring(l.input, start, l.position)
-    return (l, comment)
+    return LexerStringResult { lexer: l, str: comment }
 }
 
 // Skip multi-line comment
-lexer_skip_block_comment = (l: Lexer) (Lexer, string) {
+lexer_skip_block_comment = (l: Lexer) LexerStringResult {
     start := l.position + 2  // Skip "/*"
     l = lexer_read_char(l)  // Skip /
     l = lexer_read_char(l)  // Skip *
@@ -154,7 +160,7 @@ lexer_skip_block_comment = (l: Lexer) (Lexer, string) {
     
     end := l.position - 2  // Exclude "*/"
     comment := string_substring(l.input, start, end)
-    return (l, comment)
+    return LexerStringResult { lexer: l, str: comment }
 }
 
 // Character classification functions
@@ -190,7 +196,7 @@ is_operator_char = (c: i8) bool {
 }
 
 // Read identifier or keyword
-lexer_read_identifier = (l: Lexer) (Lexer, string) {
+lexer_read_identifier = (l: Lexer) LexerStringResult {
     start_pos := l.position
     
     // Handle @ prefix for namespaces
@@ -211,11 +217,18 @@ lexer_read_identifier = (l: Lexer) (Lexer, string) {
     }
     
     ident := string_substring(l.input, start_pos, l.position)
-    return (l, ident)
+    return LexerStringResult { lexer: l, str: ident }
+}
+
+// Result type for number reading
+LexerNumberResult = {
+    lexer: Lexer,
+    str: string,
+    is_float: bool,
 }
 
 // Read number (integer or float)
-lexer_read_number = (l: Lexer) (Lexer, string, bool) {
+lexer_read_number = (l: Lexer) LexerNumberResult {
     start_pos := l.position
     is_float := false
     
@@ -269,11 +282,11 @@ lexer_read_number = (l: Lexer) (Lexer, string, bool) {
         | false => {}
     
     num := string_substring(l.input, start_pos, l.position)
-    return (l, num, is_float)
+    return LexerNumberResult { lexer: l, str: num, is_float: is_float }
 }
 
 // Read string literal with escape sequences
-lexer_read_string = (l: Lexer) (Lexer, string) {
+lexer_read_string = (l: Lexer) LexerStringResult {
     l = lexer_read_char(l)  // Skip opening quote
     start_pos := l.position
     
@@ -296,11 +309,11 @@ lexer_read_string = (l: Lexer) (Lexer, string) {
         | true => { l = lexer_read_char(l) }  // Skip closing quote
         | false => {}
     
-    return (l, str)
+    return LexerStringResult { lexer: l, str: str }
 }
 
 // Read operator (handles multi-character operators)
-lexer_read_operator = (l: Lexer) (Lexer, string) {
+lexer_read_operator = (l: Lexer) LexerStringResult {
     start_pos := l.position
     c1 := l.current_char
     c2 := lexer_peek_char(l)
@@ -312,7 +325,7 @@ lexer_read_operator = (l: Lexer) (Lexer, string) {
             l = lexer_read_char(l)
             l = lexer_read_char(l)
             l = lexer_read_char(l)
-            return (l, "::=")
+            return LexerStringResult { lexer: l, str: "::=" }
         }
         | false => {}
     
@@ -321,7 +334,7 @@ lexer_read_operator = (l: Lexer) (Lexer, string) {
             l = lexer_read_char(l)
             l = lexer_read_char(l)
             l = lexer_read_char(l)
-            return (l, "..=")
+            return LexerStringResult { lexer: l, str: "..=" }
         }
         | false => {}
     
@@ -345,14 +358,14 @@ lexer_read_operator = (l: Lexer) (Lexer, string) {
         | true => {
             l = lexer_read_char(l)
             l = lexer_read_char(l)
-            return (l, op2)
+            return LexerStringResult { lexer: l, str: op2 }
         }
         | false => {}
     
     // Single-character operators
     l = lexer_read_char(l)
     op := string_substring(l.input, start_pos, l.position)
-    return (l, op)
+    return LexerStringResult { lexer: l, str: op }
 }
 
 // Convert string to keyword if applicable
@@ -376,8 +389,14 @@ string_to_keyword = (s: string) Option<KeywordType> {
     return Option::None
 }
 
+// Result type for next token
+LexerTokenResult = {
+    lexer: Lexer,
+    token: Token,
+}
+
 // Get next token - main lexer function
-lexer_next_token = (l: Lexer) (Lexer, Token) {
+lexer_next_token = (l: Lexer) LexerTokenResult {
     l = lexer_skip_whitespace(l)
     
     start_pos := l.position
@@ -400,23 +419,23 @@ lexer_next_token = (l: Lexer) (Lexer, Token) {
                     next == 47 ?  // "//"
                         | true => {
                             result := lexer_skip_line_comment(l)
-                            l = result.0
-                            comment := result.1
+                            l = result.lexer
+                            comment := result.str
                             token_type = TokenType::Comment(comment)
                         }
                         | false => {
                             next == 42 ?  // "/*"
                                 | true => {
                                     result := lexer_skip_block_comment(l)
-                                    l = result.0
-                                    comment := result.1
+                                    l = result.lexer
+                                    comment := result.str
                                     token_type = TokenType::Comment(comment)
                                 }
                                 | false => {
                                     // Just a division operator
                                     result := lexer_read_operator(l)
-                                    l = result.0
-                                    op := result.1
+                                    l = result.lexer
+                                    op := result.str
                                     token_type = TokenType::Operator(op)
                                 }
                         }
@@ -427,8 +446,8 @@ lexer_next_token = (l: Lexer) (Lexer, Token) {
             token_type == TokenType::Eof && (is_alpha(l.current_char) || l.current_char == 64) ?  // @ symbol
                 | true => {
                     result := lexer_read_identifier(l)
-                    l = result.0
-                    ident := result.1
+                    l = result.lexer
+                    ident := result.str
                     
                     keyword_opt := string_to_keyword(ident)
                     keyword_opt ?
@@ -441,9 +460,9 @@ lexer_next_token = (l: Lexer) (Lexer, Token) {
             token_type == TokenType::Eof && is_digit(l.current_char) ?
                 | true => {
                     result := lexer_read_number(l)
-                    l = result.0
-                    num := result.1
-                    is_float := result.2
+                    l = result.lexer
+                    num := result.str
+                    is_float := result.is_float
                     
                     is_float ?
                         | true => { token_type = TokenType::Float(num) }
@@ -455,8 +474,8 @@ lexer_next_token = (l: Lexer) (Lexer, Token) {
             token_type == TokenType::Eof && l.current_char == 34 ?  // '"'
                 | true => {
                     result := lexer_read_string(l)
-                    l = result.0
-                    str := result.1
+                    l = result.lexer
+                    str := result.str
                     token_type = TokenType::StringLiteral(str)
                 }
                 | false => {}
@@ -474,8 +493,8 @@ lexer_next_token = (l: Lexer) (Lexer, Token) {
             token_type == TokenType::Eof && is_operator_char(l.current_char) ?
                 | true => {
                     result := lexer_read_operator(l)
-                    l = result.0
-                    op := result.1
+                    l = result.lexer
+                    op := result.str
                     token_type = TokenType::Operator(op)
                 }
                 | false => {}
@@ -498,7 +517,7 @@ lexer_next_token = (l: Lexer) (Lexer, Token) {
         end: l.position,
     }
     
-    return (l, token)
+    return LexerTokenResult { lexer: l, token: token }
 }
 
 // Tokenize entire input
@@ -508,8 +527,8 @@ lexer_tokenize_all = (input: string) Vec<Token> {
     
     loop {
         result := lexer_next_token(lexer)
-        lexer = result.0
-        token := result.1
+        lexer = result.lexer
+        token := result.token
         
         vec_push(&tokens, token)
         

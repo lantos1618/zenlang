@@ -112,6 +112,39 @@ string_len = (str: string) i64 {
     return len
 }
 
+// Get character at position
+string_char_at = (str: string, pos: i64) i8 {
+    len := string_len(str)
+    pos >= len ? | true => return -1  // EOF
+                | false => return (str as *u8)[pos] as i8
+}
+
+// Extract substring
+string_substring = (str: string, start: i64, end: i64) string {
+    len := string_len(str)
+    
+    // Bounds checking
+    start < 0 ? | true => { start = 0 } | false => {}
+    end > len ? | true => { end = len } | false => {}
+    start >= end ? | true => return "" | false => {}
+    
+    substr_len := end - start
+    buffer := mem.alloc(substr_len + 1)
+    
+    buffer ? | .Ok -> buf => {
+        mem.copy(buf, (str as *u8) + start, substr_len)
+        (buf as *u8)[substr_len] = 0
+        return buf as string
+    } | .Err -> _ => {
+        return ""
+    }
+}
+
+// String comparison (alias for consistency with lexer)
+string_equals = (a: string, b: string) bool {
+    return string_equal(a, b)
+}
+
 // String comparison
 string_equal = (a: string, b: string) bool {
     a_len := string_len(a)
