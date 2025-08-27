@@ -1,21 +1,29 @@
-// Minimal Zen Lexer - Self-hosted lexer implementation that can parse
-// This is a simplified version to test parser compatibility
+// Zen Language Self-hosted Lexer
+// A complete lexer implementation for tokenizing Zen source code
 
-// Token types - simplified version
+// Import required external functions
+extern malloc = (size: i64) *void
+extern memcpy = (dest: *void, src: *void, size: i64) *void
+extern strlen = (str: *i8) i64
+extern strcmp = (s1: *i8, s2: *i8) i32
+
+// Token types
 TokenType = 
     | Identifier
     | Integer
     | Float
-    | StringLiteral
+    | StringLiteral  
+    | CharLiteral
     | Keyword
     | Symbol
     | Operator
     | Comment
     | Eof
 
-// Token with position information
+// Token with value and position
 Token = {
     token_type: TokenType,
+    value: *i8,        // Token text
     line: i32,
     column: i32,
     start: i32,
@@ -25,6 +33,7 @@ Token = {
 // Lexer state
 Lexer = {
     input: *i8,
+    input_len: i32,
     position: i32,
     read_position: i32,
     current_char: i8,
@@ -34,42 +43,63 @@ Lexer = {
 
 // Create a new lexer
 lexer_new = (input: *i8) Lexer {
+    len := strlen(input) as i32
     lexer := Lexer {
         input: input,
+        input_len: len,
         position: 0,
-        read_position: 0,
-        current_char: 0,
+        read_position: 1,
+        current_char: len > 0 ? | true => input[0] | false => 0,
         line: 1,
         column: 1,
     }
-    
     return lexer
 }
 
 // Read next character
-lexer_read_char = (l: Lexer) Lexer {
+lexer_read_char = (l:: Lexer) void {
+    l.current_char = l.read_position >= l.input_len ? 
+        | true => 0 
+        | false => l.input[l.read_position]
+    
     l.position = l.read_position
     l.read_position = l.read_position + 1
     
-    // Simple EOF check - would need proper string length check
-    l.current_char = 0
-    
-    return l
+    l.current_char == 10 ? // newline
+        | true => {
+            l.line = l.line + 1
+            l.column = 1
+        }
+        | false => {
+            l.column = l.column + 1
+        }
 }
 
 // Peek at next character without advancing
 lexer_peek_char = (l: Lexer) i8 {
-    return 0
+    return l.read_position >= l.input_len ? | true => 0 | false => l.input[l.read_position]
 }
 
 // Skip whitespace
-lexer_skip_whitespace = (l: Lexer) Lexer {
-    // For now, just return the lexer unchanged
-    // TODO: Implement proper whitespace skipping when loop syntax is stabilized
-    return l
+lexer_skip_whitespace = (l:: Lexer) void {
+    loop {
+        is_ws := l.current_char == 32 || l.current_char == 9 || 
+                 l.current_char == 10 || l.current_char == 13
+        is_ws ? | false => break | true => {}
+        lexer_read_char(l)
+    }
 }
 
-// Character classification functions
+// Skip line comment
+lexer_skip_line_comment = (l:: Lexer) void {
+    // Skip until newline or EOF
+    loop {
+        l.current_char == 0 || l.current_char == 10 ? | true => break | false => {}
+        lexer_read_char(l)
+    }
+}
+
+// Character classification
 is_whitespace = (c: i8) bool {
     return c == 32 || c == 9 || c == 10 || c == 13
 }
@@ -82,46 +112,180 @@ is_digit = (c: i8) bool {
     return c >= 48 && c <= 57
 }
 
-// Get next token - simplified version
-lexer_next_token = (l: Lexer) Token {
-    l = lexer_skip_whitespace(l)
+is_alphanumeric = (c: i8) bool {
+    return is_alpha(c) || is_digit(c)
+}
+
+// Read identifier or keyword
+lexer_read_identifier = (l:: Lexer) *i8 {
+    start := l.position
+    
+    loop {
+        is_alphanumeric(l.current_char) ? | false => break | true => {}
+        lexer_read_char(l)
+    }
+    
+    len := l.position - start
+    result := malloc((len + 1) as i64) as *i8
+    memcpy(result as *void, (l.input + start) as *void, len as i64)
+    result[len] = 0 // null terminate
+    
+    return result
+}
+
+// Read number (integer or float)
+lexer_read_number = (l:: Lexer) (*i8, bool) {
+    start := l.position
+    is_float := false
+    
+    // Read integer part
+    loop {
+        is_digit(l.current_char) ? | false => break | true => {}
+        lexer_read_char(l)
+    }
+    
+    // Check for decimal point
+    l.current_char == 46 && is_digit(lexer_peek_char(l)) ?
+        | true => {
+            is_float = true
+            lexer_read_char(l) // consume '.'
+            loop {
+                is_digit(l.current_char) ? | false => break | true => {}
+                lexer_read_char(l)
+            }
+        }
+        | false => {}
+    
+    len := l.position - start
+    result := malloc((len + 1) as i64) as *i8
+    memcpy(result as *void, (l.input + start) as *void, len as i64)
+    result[len] = 0
+    
+    return (result, is_float)
+}
+
+// Read string literal
+lexer_read_string = (l:: Lexer) *i8 {
+    lexer_read_char(l) // skip opening quote
+    start := l.position
+    
+    loop {
+        l.current_char == 0 || l.current_char == 34 ? | true => break | false => {}
+        
+        // Handle escape sequences
+        l.current_char == 92 ? // backslash
+            | true => {
+                lexer_read_char(l)
+                lexer_read_char(l) // skip escaped char
+            }
+            | false => {
+                lexer_read_char(l)
+            }
+    }
+    
+    len := l.position - start
+    result := malloc((len + 1) as i64) as *i8
+    memcpy(result as *void, (l.input + start) as *void, len as i64)
+    result[len] = 0
+    
+    l.current_char == 34 ? | true => lexer_read_char(l) | false => {} // skip closing quote
+    
+    return result
+}
+
+// Check if identifier is a keyword
+is_keyword = (ident: *i8) bool {
+    // Check for each keyword using strcmp
+    strcmp(ident, "comptime") == 0 ? | true => { return true } | false => {}
+    strcmp(ident, "extern") == 0 ? | true => { return true } | false => {}
+    strcmp(ident, "return") == 0 ? | true => { return true } | false => {}
+    strcmp(ident, "loop") == 0 ? | true => { return true } | false => {}
+    strcmp(ident, "break") == 0 ? | true => { return true } | false => {}
+    strcmp(ident, "continue") == 0 ? | true => { return true } | false => {}
+    strcmp(ident, "true") == 0 ? | true => { return true } | false => {}
+    strcmp(ident, "false") == 0 ? | true => { return true } | false => {}
+    strcmp(ident, "as") == 0 ? | true => { return true } | false => {}
+    
+    return false
+}
+
+// Get next token
+lexer_next_token = (l:: Lexer) Token {
+    lexer_skip_whitespace(l)
     
     start_pos := l.position
     start_line := l.line
     start_column := l.column
     
-    // Default to EOF
     token_type := TokenType::Eof
+    value := "" as *i8
     
-    // Check for EOF
+    // Handle EOF
     l.current_char == 0 ?
         | true => {
             token_type = TokenType::Eof
         }
         | false => {
-            // Check for identifier
-            is_id_start := is_alpha(l.current_char)
-            is_id_start ?
+            // Comments
+            l.current_char == 47 && lexer_peek_char(l) == 47 ? // "//"
                 | true => {
-                    // Read identifier - simplified without loop
-                    l = lexer_read_char(l)
-                    token_type = TokenType::Identifier
+                    lexer_skip_line_comment(l)
+                    return lexer_next_token(l) // Recursive call to get next token
                 }
                 | false => {}
             
-            // Check for number
-            is_num := is_digit(l.current_char)
-            is_num ?
+            // Identifiers and keywords
+            is_alpha(l.current_char) ?
                 | true => {
-                    // Read number - simplified without loop
-                    l = lexer_read_char(l)
-                    token_type = TokenType::Integer
+                    value = lexer_read_identifier(l)
+                    token_type = is_keyword(value) ? 
+                        | true => TokenType::Keyword 
+                        | false => TokenType::Identifier
+                }
+                | false => {}
+            
+            // Numbers
+            is_digit(l.current_char) ?
+                | true => {
+                    num_result := lexer_read_number(l)
+                    value = num_result.0
+                    token_type = num_result.1 ? 
+                        | true => TokenType::Float 
+                        | false => TokenType::Integer
+                }
+                | false => {}
+            
+            // Strings
+            l.current_char == 34 ? // double quote
+                | true => {
+                    value = lexer_read_string(l)
+                    token_type = TokenType::StringLiteral
+                }
+                | false => {}
+            
+            // Single character tokens and operators
+            token_type == TokenType::Eof ?
+                | true => {
+                    ch := l.current_char
+                    lexer_read_char(l)
+                    
+                    // Create single char string
+                    value = malloc(2) as *i8
+                    value[0] = ch
+                    value[1] = 0
+                    
+                    // Classify character
+                    ch == 40 || ch == 41 || ch == 123 || ch == 125 || 
+                    ch == 91 || ch == 93 || ch == 44 || ch == 58 || ch == 59 ?
+                        | true => { token_type = TokenType::Symbol }
+                        | false => { token_type = TokenType::Operator }
                 }
                 | false => {}
         }
     
     token := Token {
         token_type: token_type,
+        value: value,
         line: start_line,
         column: start_column,
         start: start_pos,
@@ -134,13 +298,4 @@ lexer_next_token = (l: Lexer) Token {
 // Helper to check if we reached EOF
 lexer_is_eof = (l: Lexer) bool {
     return l.current_char == 0
-}
-
-// Main function for testing
-main = () i32 {
-    // Simple test
-    test_lexer := lexer_new("hello")
-    token := lexer_next_token(test_lexer)
-    
-    return 0
 }
