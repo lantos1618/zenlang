@@ -225,3 +225,159 @@ Iterator<T>.enumerate = (self: Iterator<T>) Iterator<Pair<i64, T>> {
         current: 0,
     }
 }
+
+// Additional functional operations
+
+// Flat map - map and flatten results
+Iterator<T>.flat_map<U> = (self: Iterator<T>, f: (T) Iterator<U>) Iterator<U> {
+    // Conceptual implementation - would need dynamic allocation
+    return Iterator<U> {
+        data: 0 as *U,
+        size: 0,
+        current: 0,
+    }
+}
+
+// Partition iterator into two based on predicate
+Iterator<T>.partition = (self:: *Iterator<T>, predicate: (T) bool) (Iterator<T>, Iterator<T>) {
+    // Would split into (matching, non-matching)
+    matching := Iterator<T> { data: 0 as *T, size: 0, current: 0 }
+    non_matching := Iterator<T> { data: 0 as *T, size: 0, current: 0 }
+    return (matching, non_matching)
+}
+
+// Collect iterator into a Vec
+Iterator<T>.collect = (self:: *Iterator<T>) Vec<T> {
+    result := Vec<T>::new()
+    self.loop(item -> {
+        result.push(item)
+    })
+    return result
+}
+
+// Find the maximum element (for comparable types)
+Iterator<T>.max = (self:: *Iterator<T>, compare: (T, T) i32) Option<T> {
+    self.size == 0 ? | true => return Option<T>::None
+                     | false => {}
+    
+    max_val ::= Option<T>::None
+    self.loop(value -> {
+        max_val ? | .None => max_val = Option<T>::Some(value)
+                 | .Some -> current => {
+                     compare(value, current) > 0 ?
+                         | true => max_val = Option<T>::Some(value)
+                         | false => {}
+                 }
+    })
+    return max_val
+}
+
+// Find the minimum element (for comparable types)
+Iterator<T>.min = (self:: *Iterator<T>, compare: (T, T) i32) Option<T> {
+    self.size == 0 ? | true => return Option<T>::None
+                     | false => {}
+    
+    min_val ::= Option<T>::None
+    self.loop(value -> {
+        min_val ? | .None => min_val = Option<T>::Some(value)
+                 | .Some -> current => {
+                     compare(value, current) < 0 ?
+                         | true => min_val = Option<T>::Some(value)
+                         | false => {}
+                 }
+    })
+    return min_val
+}
+
+// Reverse the iterator
+Iterator<T>.reverse = (self: Iterator<T>) Iterator<T> {
+    // Would need to reverse the underlying data
+    return Iterator<T> {
+        data: self.data,
+        size: self.size,
+        current: 0,
+    }
+}
+
+// Cycle through iterator infinitely
+Iterator<T>.cycle = (self: Iterator<T>) Iterator<T> {
+    // Would create an infinite iterator
+    return Iterator<T> {
+        data: self.data,
+        size: -1,  // Special marker for infinite
+        current: 0,
+    }
+}
+
+// Peek at next element without consuming
+Iterator<T>.peek = (self: Iterator<T>) Option<T> {
+    self.current >= self.size ?
+        | true => return Option<T>::None
+        | false => {
+            // Return current element without advancing
+            return Option<T>::Some(self.data[self.current])
+        }
+}
+
+// Step by n elements
+Iterator<T>.step_by = (self: Iterator<T>, n: i64) Iterator<T> {
+    // Would skip n-1 elements between each yield
+    return Iterator<T> {
+        data: self.data,
+        size: (self.size + n - 1) / n,  // Ceiling division
+        current: 0,
+    }
+}
+
+// Window sliding iterator
+Iterator<T>.windows = (self: Iterator<T>, window_size: i64) Iterator<[]T> {
+    // Would yield overlapping windows of size window_size
+    return Iterator<[]T> {
+        data: 0 as *[]T,
+        size: self.size > window_size ? | true => self.size - window_size + 1
+                                        | false => 0,
+        current: 0,
+    }
+}
+
+// Chunks iterator - non-overlapping groups
+Iterator<T>.chunks = (self: Iterator<T>, chunk_size: i64) Iterator<[]T> {
+    // Would yield non-overlapping chunks
+    return Iterator<[]T> {
+        data: 0 as *[]T,
+        size: (self.size + chunk_size - 1) / chunk_size,
+        current: 0,
+    }
+}
+
+// Intersperse elements between iterator items
+Iterator<T>.intersperse = (self: Iterator<T>, separator: T) Iterator<T> {
+    // Would insert separator between elements
+    new_size := self.size > 0 ? | true => self.size * 2 - 1
+                                | false => 0
+    return Iterator<T> {
+        data: self.data,
+        size: new_size,
+        current: 0,
+    }
+}
+
+// Group consecutive equal elements
+Iterator<T>.group_by<K> = (self: Iterator<T>, key_fn: (T) K) Iterator<(K, []T)> {
+    // Would group consecutive elements with same key
+    return Iterator<(K, []T)> {
+        data: 0 as *(K, []T),
+        size: 0,
+        current: 0,
+    }
+}
+
+// Scan - like reduce but yields intermediate results
+Iterator<T>.scan<S> = (self: Iterator<T>, initial: S, f: (S, T) S) Iterator<S> {
+    // Would yield accumulated values at each step
+    return Iterator<S> {
+        data: 0 as *S,
+        size: self.size,
+        current: 0,
+    }
+}
