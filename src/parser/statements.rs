@@ -244,8 +244,8 @@ impl<'a> Parser<'a> {
                     Token::Operator(op) if op == "=" => {
                         self.parse_variable_assignment()
                     }
-                    Token::Symbol('.') => {
-                        // Could be member access followed by assignment
+                    Token::Symbol('.') | Token::Symbol('[') => {
+                        // Could be member access or array indexing followed by assignment
                         // Parse the left-hand side expression first
                         let lhs = self.parse_expression()?;
                         
@@ -256,7 +256,7 @@ impl<'a> Parser<'a> {
                             if self.current_token == Token::Symbol(';') {
                                 self.next_token();
                             }
-                            // Use PointerAssignment for member field assignments
+                            // Use PointerAssignment for member field assignments and array element assignments
                             Ok(Statement::PointerAssignment {
                                 pointer: lhs,
                                 value,

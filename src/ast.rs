@@ -28,6 +28,10 @@ pub enum AstType {
         args: Vec<AstType>,
         return_type: Box<AstType>,
     },
+    FunctionPointer {
+        param_types: Vec<AstType>,
+        return_type: Box<AstType>,
+    },
     Struct {
         name: String,
         fields: Vec<(String, AstType)>,
@@ -169,6 +173,11 @@ pub enum Expression {
     Block(Vec<Statement>),
     // Return expression - for early returns in pattern match arms
     Return(Box<Expression>),
+    // Type cast expression: expr as Type
+    TypeCast {
+        expr: Box<Expression>,
+        target_type: AstType,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

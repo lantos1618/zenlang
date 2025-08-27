@@ -126,6 +126,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 // but we need to return something for the type system
                 Ok(return_val)
             }
+            Expression::TypeCast { expr, target_type } => {
+                self.compile_type_cast(expr, target_type)
+            }
         }
     }
 
@@ -481,5 +484,79 @@ impl<'ctx> LLVMCompiler<'ctx> {
         ], false);
         
         Ok(range_struct.as_basic_value_enum())
+    }
+    
+    fn compile_type_cast(&mut self, expr: &Expression, target_type: &crate::ast::AstType) -> Result<BasicValueEnum<'ctx>, CompileError> {
+        use inkwell::values::{IntValue, FloatValue, PointerValue};
+        use crate::ast::AstType;
+        
+        let value = self.compile_expression(expr)?;
+        let target_llvm_type = self.to_llvm_type(target_type)?;
+        
+        // Handle pointer casts
+        if matches!(target_type, AstType::Pointer(_)) {
+            // Cast to pointer type
+            if let Ok(ptr_val) = value.try_into() {
+                let ptr_val: PointerValue = ptr_val;
+                let casted = self.builder.build_pointer_cast(
+                    ptr_val,
+                    self.context.ptr_type(inkwell::AddressSpace::default()),
+                    "cast"
+                )?;
+                return Ok(casted.as_basic_value_enum());
+            } else if let Ok(int_val) = value.try_into() {
+                // Integer to pointer cast
+                let int_val: IntValue = int_val;
+                let ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
+                let casted = self.builder.build_int_to_ptr(int_val, ptr_type, "inttoptr")?;
+                return Ok(casted.as_basic_value_enum());
+            }
+        }
+        
+        // Handle integer casts
+        match (value, target_type) {
+            (BasicValueEnum::IntValue(int_val), AstType::I8 | AstType::U8) => {
+                let target = self.context.i8_type();
+                let casted = self.builder.build_int_cast(int_val, target, "cast")?;
+                Ok(casted.as_basic_value_enum())
+            }
+            (BasicValueEnum::IntValue(int_val), AstType::I16 | AstType::U16) => {
+                let target = self.context.i16_type();
+                let casted = self.builder.build_int_cast(int_val, target, "cast")?;
+                Ok(casted.as_basic_value_enum())
+            }
+            (BasicValueEnum::IntValue(int_val), AstType::I32 | AstType::U32) => {
+                let target = self.context.i32_type();
+                let casted = self.builder.build_int_cast(int_val, target, "cast")?;
+                Ok(casted.as_basic_value_enum())
+            }
+            (BasicValueEnum::IntValue(int_val), AstType::I64 | AstType::U64) => {
+                let target = self.context.i64_type();
+                let casted = self.builder.build_int_cast(int_val, target, "cast")?;
+                Ok(casted.as_basic_value_enum())
+            }
+            // Float to int casts
+            (BasicValueEnum::FloatValue(float_val), AstType::I32 | AstType::U32) => {
+                let target = self.context.i32_type();
+                let casted = self.builder.build_float_to_signed_int(float_val, target, "fptosi")?;
+                Ok(casted.as_basic_value_enum())
+            }
+            // Int to float casts
+            (BasicValueEnum::IntValue(int_val), AstType::F32) => {
+                let target = self.context.f32_type();
+                let casted = self.builder.build_signed_int_to_float(int_val, target, "sitofp")?;
+                Ok(casted.as_basic_value_enum())
+            }
+            (BasicValueEnum::IntValue(int_val), AstType::F64) => {
+                let target = self.context.f64_type();
+                let casted = self.builder.build_signed_int_to_float(int_val, target, "sitofp")?;
+                Ok(casted.as_basic_value_enum())
+            }
+            _ => {
+                // For unhandled casts, just return the value as-is
+                // This could be improved with better type checking
+                Ok(value)
+            }
+        }
     }
 } 

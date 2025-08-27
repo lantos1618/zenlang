@@ -110,16 +110,84 @@ impl<'a> Parser<'a> {
                 }
             }
             Token::Symbol('*') => {
-                // Pointer type: *T
+                // Pointer type: *T or function pointer *(params) return_type
                 self.next_token();
-                let pointee_type = self.parse_type()?;
-                Ok(AstType::Pointer(Box::new(pointee_type)))
+                
+                // Check if it's a function pointer
+                if self.current_token == Token::Symbol('(') {
+                    // Function pointer: *(param_types) return_type
+                    self.next_token();
+                    let mut param_types = Vec::new();
+                    
+                    // Parse parameter types
+                    while self.current_token != Token::Symbol(')') {
+                        param_types.push(self.parse_type()?);
+                        
+                        if self.current_token == Token::Symbol(',') {
+                            self.next_token();
+                        } else if self.current_token != Token::Symbol(')') {
+                            return Err(CompileError::SyntaxError(
+                                "Expected ',' or ')' in function pointer parameters".to_string(),
+                                Some(self.current_span.clone()),
+                            ));
+                        }
+                    }
+                    
+                    // Skip ')'
+                    self.next_token();
+                    
+                    // Parse return type
+                    let return_type = self.parse_type()?;
+                    
+                    Ok(AstType::FunctionPointer {
+                        param_types,
+                        return_type: Box::new(return_type),
+                    })
+                } else {
+                    // Regular pointer
+                    let pointee_type = self.parse_type()?;
+                    Ok(AstType::Pointer(Box::new(pointee_type)))
+                }
             }
             Token::Operator(op) if op == "*" => {
                 // Pointer type: *T (operator version)
                 self.next_token();
-                let pointee_type = self.parse_type()?;
-                Ok(AstType::Pointer(Box::new(pointee_type)))
+                
+                // Check if it's a function pointer
+                if self.current_token == Token::Symbol('(') {
+                    // Function pointer: *(param_types) return_type
+                    self.next_token();
+                    let mut param_types = Vec::new();
+                    
+                    // Parse parameter types
+                    while self.current_token != Token::Symbol(')') {
+                        param_types.push(self.parse_type()?);
+                        
+                        if self.current_token == Token::Symbol(',') {
+                            self.next_token();
+                        } else if self.current_token != Token::Symbol(')') {
+                            return Err(CompileError::SyntaxError(
+                                "Expected ',' or ')' in function pointer parameters".to_string(),
+                                Some(self.current_span.clone()),
+                            ));
+                        }
+                    }
+                    
+                    // Skip ')'
+                    self.next_token();
+                    
+                    // Parse return type
+                    let return_type = self.parse_type()?;
+                    
+                    Ok(AstType::FunctionPointer {
+                        param_types,
+                        return_type: Box::new(return_type),
+                    })
+                } else {
+                    // Regular pointer
+                    let pointee_type = self.parse_type()?;
+                    Ok(AstType::Pointer(Box::new(pointee_type)))
+                }
             }
             Token::Symbol('&') => {
                 // Reference type: &T
