@@ -198,3 +198,249 @@ vec_from_array<T> = (array: [T], len: i64) core.Result<Vec<T>, core.Error> {
         return core.Result::Ok(v)
     }
 }
+
+// ===== Additional Vec Methods =====
+
+// Reserve capacity for at least n additional elements
+vec_reserve<T> = (vec: *Vec<T>, additional: i64) core.Result<void, core.Error> {
+    required_capacity := vec.len + additional
+    required_capacity > vec.capacity ? | true => {
+        return vec_grow(vec, required_capacity)
+    } | false => {
+        return core.Result::Ok({})
+    }
+}
+
+// Shrink capacity to fit current length
+vec_shrink_to_fit<T> = (vec: *Vec<T>) core.Result<void, core.Error> {
+    vec.capacity == vec.len ? | true => return core.Result::Ok({}) | false => {}
+    vec.len == 0 ? | true => {
+        vec_free(vec)
+        return core.Result::Ok({})
+    } | false => {}
+    
+    new_data := core.malloc(vec.len * sizeof(T))
+    new_data == 0 ? | true => {
+        return core.Result::Err(core.Error::OutOfMemory)
+    } | false => {}
+    
+    core.memcpy(new_data, vec.data, vec.len * sizeof(T))
+    core.free(vec.data)
+    vec.data = new_data
+    vec.capacity = vec.len
+    return core.Result::Ok({})
+}
+
+// Swap remove - O(1) removal by swapping with last element
+vec_swap_remove<T> = (vec: *Vec<T>, index: i64) core.Result<T, core.Error> {
+    index < 0 || index >= vec.len ? | true => {
+        return core.Result::Err(core.Error::IndexOutOfBounds(index, vec.len))
+    } | false => {}
+    
+    removed := vec.data[index]
+    vec.len = vec.len - 1
+    
+    index < vec.len ? | true => {
+        vec.data[index] = vec.data[vec.len]
+    } | false => {}
+    
+    return core.Result::Ok(removed)
+}
+
+// Extend vector with elements from another vector
+vec_extend<T> = (vec: *Vec<T>, other: *Vec<T>) core.Result<void, core.Error> {
+    required_capacity := vec.len + other.len
+    required_capacity > vec.capacity ? | true => {
+        result := vec_grow(vec, required_capacity)
+        result ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> _ => {}
+    } | false => {}
+    
+    i ::= 0
+    loop i < other.len {
+        vec.data[vec.len + i] = other.data[i]
+        i = i + 1
+    }
+    vec.len = vec.len + other.len
+    return core.Result::Ok({})
+}
+
+// Truncate vector to specified length
+vec_truncate<T> = (vec: *Vec<T>, len: i64) void {
+    len < vec.len ? | true => {
+        vec.len = len
+    } | false => {}
+}
+
+// Split off vector at index, returns new vector with elements from index
+vec_split_off<T> = (vec: *Vec<T>, at: i64) core.Result<Vec<T>, core.Error> {
+    at > vec.len ? | true => {
+        return core.Result::Err(core.Error::IndexOutOfBounds(at, vec.len))
+    } | false => {}
+    
+    split_len := vec.len - at
+    split_vec := vec_with_capacity(split_len)
+    split_vec ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> new_vec => {
+        i ::= 0
+        loop i < split_len {
+            new_vec.data[i] = vec.data[at + i]
+            i = i + 1
+        }
+        new_vec.len = split_len
+        vec.len = at
+        return core.Result::Ok(new_vec)
+    }
+}
+
+// Reverse the vector in place
+vec_reverse<T> = (vec: *Vec<T>) void {
+    i ::= 0
+    j ::= vec.len - 1
+    loop i < j {
+        temp := vec.data[i]
+        vec.data[i] = vec.data[j]
+        vec.data[j] = temp
+        i = i + 1
+        j = j - 1
+    }
+}
+
+// Find first element matching predicate
+vec_find<T> = (vec: *Vec<T>, predicate: (T) bool) core.Option<T> {
+    i ::= 0
+    loop i < vec.len {
+        predicate(vec.data[i]) ? | true => {
+            return core.Option::Some(vec.data[i])
+        } | false => {}
+        i = i + 1
+    }
+    return core.Option::None
+}
+
+// Find index of first element matching predicate
+vec_find_index<T> = (vec: *Vec<T>, predicate: (T) bool) core.Option<i64> {
+    i ::= 0
+    loop i < vec.len {
+        predicate(vec.data[i]) ? | true => {
+            return core.Option::Some(i)
+        } | false => {}
+        i = i + 1
+    }
+    return core.Option::None
+}
+
+// Check if any element matches predicate
+vec_any<T> = (vec: *Vec<T>, predicate: (T) bool) bool {
+    i ::= 0
+    loop i < vec.len {
+        predicate(vec.data[i]) ? | true => return true | false => {}
+        i = i + 1
+    }
+    return false
+}
+
+// Check if all elements match predicate
+vec_all<T> = (vec: *Vec<T>, predicate: (T) bool) bool {
+    i ::= 0
+    loop i < vec.len {
+        predicate(vec.data[i]) ? | false => return false | true => {}
+        i = i + 1
+    }
+    return true
+}
+
+// Count elements matching predicate
+vec_count<T> = (vec: *Vec<T>, predicate: (T) bool) i64 {
+    count ::= 0
+    i ::= 0
+    loop i < vec.len {
+        predicate(vec.data[i]) ? | true => { count = count + 1 } | false => {}
+        i = i + 1
+    }
+    return count
+}
+
+// Apply function to each element
+vec_for_each<T> = (vec: *Vec<T>, f: (T) void) void {
+    i ::= 0
+    loop i < vec.len {
+        f(vec.data[i])
+        i = i + 1
+    }
+}
+
+// Map elements to new vector
+vec_map<T, U> = (vec: *Vec<T>, transform: (T) U) core.Result<Vec<U>, core.Error> {
+    result := vec_with_capacity<U>(vec.len)
+    result ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> new_vec => {
+        i ::= 0
+        loop i < vec.len {
+            push_result := vec_push(&new_vec, transform(vec.data[i]))
+            push_result ? | .Err -> e => return core.Result::Err(e)
+                         | .Ok -> _ => {}
+            i = i + 1
+        }
+        return core.Result::Ok(new_vec)
+    }
+}
+
+// Filter elements into new vector
+vec_filter<T> = (vec: *Vec<T>, predicate: (T) bool) core.Result<Vec<T>, core.Error> {
+    result := vec_new<T>()
+    
+    i ::= 0
+    loop i < vec.len {
+        predicate(vec.data[i]) ? | true => {
+            push_result := vec_push(&result, vec.data[i])
+            push_result ? | .Err -> e => return core.Result::Err(e)
+                         | .Ok -> _ => {}
+        } | false => {}
+        i = i + 1
+    }
+    return core.Result::Ok(result)
+}
+
+// Get first element
+vec_first<T> = (vec: *Vec<T>) core.Option<T> {
+    vec.len > 0 ? | true => return core.Option::Some(vec.data[0])
+                 | false => return core.Option::None
+}
+
+// Get last element
+vec_last<T> = (vec: *Vec<T>) core.Option<T> {
+    vec.len > 0 ? | true => return core.Option::Some(vec.data[vec.len - 1])
+                 | false => return core.Option::None
+}
+
+// Clone vector
+vec_clone<T> = (vec: *Vec<T>) core.Result<Vec<T>, core.Error> {
+    new_vec := vec_with_capacity<T>(vec.capacity)
+    new_vec ? | .Err -> e => return core.Result::Err(e)
+             | .Ok -> cloned => {
+        core.memcpy(cloned.data, vec.data, vec.len * sizeof(T))
+        cloned.len = vec.len
+        return core.Result::Ok(cloned)
+    }
+}
+
+// Check if vector contains element
+vec_contains<T> = (vec: *Vec<T>, value: T, equals: (T, T) bool) bool {
+    i ::= 0
+    loop i < vec.len {
+        equals(vec.data[i], value) ? | true => return true | false => {}
+        i = i + 1
+    }
+    return false
+}
+
+// Get capacity
+vec_capacity<T> = (vec: *Vec<T>) i64 {
+    return vec.capacity
+}
+
+// Get slice as pointer and length  
+vec_as_slice<T> = (vec: *Vec<T>) (*T, i64) {
+    return (vec.data, vec.len)
+}

@@ -258,3 +258,221 @@ hashmap_free<K, V> = (map: *HashMap<K, V>) void {
     map.size = 0
     map.capacity = 0
 }
+
+// ===== Additional HashMap Methods =====
+
+// Get or insert with default value
+hashmap_get_or_insert<K, V> = (map: *HashMap<K, V>, key: K, default: V, hash_func: (K) i64) core.Result<V, core.Error> {
+    existing := hashmap_get(map, key, hash_func)
+    existing ? | .Some -> value => return core.Result::Ok(value)
+              | .None => {
+        result := hashmap_insert(map, key, default, hash_func)
+        result ? | .Err -> e => return core.Result::Err(e)
+                | .Ok -> _ => return core.Result::Ok(default)
+    }
+}
+
+// Update value if key exists
+hashmap_update<K, V> = (map: *HashMap<K, V>, key: K, updater: (V) V, hash_func: (K) i64) bool {
+    map.capacity == 0 ? | true => return false | false => {}
+    
+    index := find_bucket(map, key, hash_func)
+    index == -1 ? | true => return false | false => {}
+    
+    bucket := &map.buckets[index]
+    bucket.occupied && !bucket.deleted ? | true => {
+        bucket.value = updater(bucket.value)
+        return true
+    } | false => {
+        return false
+    }
+}
+
+// Get all keys
+hashmap_keys<K, V> = (map: *HashMap<K, V>) core.Result<core.Vec<K>, core.Error> {
+    keys := core.vec_with_capacity<K>(map.size)
+    keys ? | .Err -> e => return core.Result::Err(e)
+          | .Ok -> vec => {
+        i ::= 0
+        loop i < map.capacity {
+            entry := map.buckets[i]
+            entry.occupied && !entry.deleted ? | true => {
+                result := core.vec_push(&vec, entry.key)
+                result ? | .Err -> e => return core.Result::Err(e)
+                        | .Ok -> _ => {}
+            } | false => {}
+            i = i + 1
+        }
+        return core.Result::Ok(vec)
+    }
+}
+
+// Get all values
+hashmap_values<K, V> = (map: *HashMap<K, V>) core.Result<core.Vec<V>, core.Error> {
+    values := core.vec_with_capacity<V>(map.size)
+    values ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> vec => {
+        i ::= 0
+        loop i < map.capacity {
+            entry := map.buckets[i]
+            entry.occupied && !entry.deleted ? | true => {
+                result := core.vec_push(&vec, entry.value)
+                result ? | .Err -> e => return core.Result::Err(e)
+                        | .Ok -> _ => {}
+            } | false => {}
+            i = i + 1
+        }
+        return core.Result::Ok(vec)
+    }
+}
+
+// Apply function to each key-value pair
+hashmap_for_each<K, V> = (map: *HashMap<K, V>, f: (K, V) void) void {
+    i ::= 0
+    loop i < map.capacity {
+        entry := map.buckets[i]
+        entry.occupied && !entry.deleted ? | true => {
+            f(entry.key, entry.value)
+        } | false => {}
+        i = i + 1
+    }
+}
+
+// Count entries matching predicate
+hashmap_count<K, V> = (map: *HashMap<K, V>, predicate: (K, V) bool) i64 {
+    count ::= 0
+    i ::= 0
+    loop i < map.capacity {
+        entry := map.buckets[i]
+        entry.occupied && !entry.deleted ? | true => {
+            predicate(entry.key, entry.value) ? | true => {
+                count = count + 1
+            } | false => {}
+        } | false => {}
+        i = i + 1
+    }
+    return count
+}
+
+// Filter entries into new hashmap
+hashmap_filter<K, V> = (map: *HashMap<K, V>, predicate: (K, V) bool, hash_func: (K) i64) core.Result<HashMap<K, V>, core.Error> {
+    filtered := hashmap_new<K, V>()
+    
+    i ::= 0
+    loop i < map.capacity {
+        entry := map.buckets[i]
+        entry.occupied && !entry.deleted ? | true => {
+            predicate(entry.key, entry.value) ? | true => {
+                result := hashmap_insert(&filtered, entry.key, entry.value, hash_func)
+                result ? | .Err -> e => return core.Result::Err(e)
+                        | .Ok -> _ => {}
+            } | false => {}
+        } | false => {}
+        i = i + 1
+    }
+    return core.Result::Ok(filtered)
+}
+
+// Merge two hashmaps (values from other override values in self)
+hashmap_merge<K, V> = (map: *HashMap<K, V>, other: *HashMap<K, V>, hash_func: (K) i64) core.Result<void, core.Error> {
+    i ::= 0
+    loop i < other.capacity {
+        entry := other.buckets[i]
+        entry.occupied && !entry.deleted ? | true => {
+            result := hashmap_insert(map, entry.key, entry.value, hash_func)
+            result ? | .Err -> e => return core.Result::Err(e)
+                    | .Ok -> _ => {}
+        } | false => {}
+        i = i + 1
+    }
+    return core.Result::Ok({})
+}
+
+// Clone hashmap
+hashmap_clone<K, V> = (map: *HashMap<K, V>, hash_func: (K) i64) core.Result<HashMap<K, V>, core.Error> {
+    cloned := hashmap_with_capacity<K, V>(map.capacity)
+    cloned ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> new_map => {
+        i ::= 0
+        loop i < map.capacity {
+            entry := map.buckets[i]
+            entry.occupied && !entry.deleted ? | true => {
+                result := hashmap_insert(&new_map, entry.key, entry.value, hash_func)
+                result ? | .Err -> e => return core.Result::Err(e)
+                        | .Ok -> _ => {}
+            } | false => {}
+            i = i + 1
+        }
+        return core.Result::Ok(new_map)
+    }
+}
+
+// Get capacity
+hashmap_capacity<K, V> = (map: *HashMap<K, V>) i64 {
+    return map.capacity
+}
+
+// Set load factor
+hashmap_set_load_factor<K, V> = (map: *HashMap<K, V>, load_factor: f64) void {
+    load_factor > 0.0 && load_factor < 1.0 ? | true => {
+        map.load_factor = load_factor
+    } | false => {}
+}
+
+// Compute with entry (for complex updates)
+hashmap_compute<K, V> = (map: *HashMap<K, V>, key: K, computer: (core.Option<V>) core.Option<V>, hash_func: (K) i64) core.Result<void, core.Error> {
+    current := hashmap_get(map, key, hash_func)
+    new_value := computer(current)
+    
+    new_value ? | .Some -> value => {
+        return hashmap_insert(map, key, value, hash_func)
+    } | .None => {
+        current ? | .Some -> _ => {
+            hashmap_remove(map, key, hash_func)
+            return core.Result::Ok({})
+        } | .None => {
+            return core.Result::Ok({})
+        }
+    }
+}
+
+// Check if any entry matches predicate
+hashmap_any<K, V> = (map: *HashMap<K, V>, predicate: (K, V) bool) bool {
+    i ::= 0
+    loop i < map.capacity {
+        entry := map.buckets[i]
+        entry.occupied && !entry.deleted ? | true => {
+            predicate(entry.key, entry.value) ? | true => return true | false => {}
+        } | false => {}
+        i = i + 1
+    }
+    return false
+}
+
+// Check if all entries match predicate
+hashmap_all<K, V> = (map: *HashMap<K, V>, predicate: (K, V) bool) bool {
+    i ::= 0
+    loop i < map.capacity {
+        entry := map.buckets[i]
+        entry.occupied && !entry.deleted ? | true => {
+            predicate(entry.key, entry.value) ? | false => return false | true => {}
+        } | false => {}
+        i = i + 1
+    }
+    return true
+}
+
+// Find first entry matching predicate
+hashmap_find<K, V> = (map: *HashMap<K, V>, predicate: (K, V) bool) core.Option<(K, V)> {
+    i ::= 0
+    loop i < map.capacity {
+        entry := map.buckets[i]
+        entry.occupied && !entry.deleted ? | true => {
+            predicate(entry.key, entry.value) ? | true => {
+                return core.Option::Some((entry.key, entry.value))
+            } | false => {}
+        } | false => {}
+        i = i + 1
+    }
+    return core.Option::None
+}
