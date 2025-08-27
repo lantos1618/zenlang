@@ -4,11 +4,10 @@ at some point we want to be self hosted and have a good STD (witten in zen lang)
 
 use .agent/zen_language_reference.md for guidance
 
-remove all ```
-loop i in 0..10 { }           // Range iteration
-loop condition { }             // While-like
-loop item in items { }         // For-each
-```
+remove all the old loop syntax:
+// OLD - DO NOT USE:
+// loop i in 0..10 { }           // Range iteration
+// loop item in items { }         // For-each
 
 we should only have simple loops like 
 ```

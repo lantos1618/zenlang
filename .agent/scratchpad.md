@@ -210,11 +210,7 @@ This project represents a significant achievement in language implementation wit
 
 ### Loop Syntax Examples
 ```zen
-// Old Style (Remove these)
-loop i in 0..10 { }
-loop item in items { }
-
-// New Functional Style  
+// Functional Style (Current)
 range(0, 10).loop(i -> { ... })     // Range iteration
 items.loop(item -> { ... })         // Collection iteration
 loop condition { ... }              // While-like

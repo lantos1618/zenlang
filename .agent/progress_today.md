@@ -35,9 +35,10 @@ Successfully simplified the Zen language loop syntax by removing range and itera
 
 ### Removed (no longer supported):
 ```zen
-loop i in 0..10 { }        // Range iteration
-loop item in items { }      // For-each iteration
-loop i in 1..=5 { }        // Inclusive range
+// Old syntax - DO NOT USE:
+// loop i in 0..10 { }        // Range iteration
+// loop item in items { }      // For-each iteration
+// loop i in 1..=5 { }        // Inclusive range
 ```
 
 ### Current Supported Syntax:
