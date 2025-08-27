@@ -57,7 +57,7 @@ lexer_new = (input: *i8) Lexer {
 }
 
 // Read next character
-lexer_read_char = (l:: Lexer) void {
+lexer_read_char = (l: *Lexer) void {
     l.current_char = l.read_position >= l.input_len ? 
         | true => 0 
         | false => l.input[l.read_position]
@@ -81,20 +81,20 @@ lexer_peek_char = (l: Lexer) i8 {
 }
 
 // Skip whitespace
-lexer_skip_whitespace = (l:: Lexer) void {
+lexer_skip_whitespace = (l: *Lexer) void {
     loop {
         is_ws := l.current_char == 32 || l.current_char == 9 || 
                  l.current_char == 10 || l.current_char == 13
-        is_ws ? | false => break | true => {}
+        is_ws ? | false => { break } | true => {}
         lexer_read_char(l)
     }
 }
 
 // Skip line comment
-lexer_skip_line_comment = (l:: Lexer) void {
+lexer_skip_line_comment = (l: *Lexer) void {
     // Skip until newline or EOF
     loop {
-        l.current_char == 0 || l.current_char == 10 ? | true => break | false => {}
+        l.current_char == 0 || l.current_char == 10 ? | true => { break } | false => {}
         lexer_read_char(l)
     }
 }
@@ -117,11 +117,11 @@ is_alphanumeric = (c: i8) bool {
 }
 
 // Read identifier or keyword
-lexer_read_identifier = (l:: Lexer) *i8 {
+lexer_read_identifier = (l: *Lexer) *i8 {
     start := l.position
     
     loop {
-        is_alphanumeric(l.current_char) ? | false => break | true => {}
+        is_alphanumeric(l.current_char) ? | false => { break } | true => {}
         lexer_read_char(l)
     }
     
@@ -134,13 +134,13 @@ lexer_read_identifier = (l:: Lexer) *i8 {
 }
 
 // Read number (integer or float)
-lexer_read_number = (l:: Lexer) (*i8, bool) {
+lexer_read_number = (l: *Lexer) (*i8, bool) {
     start := l.position
     is_float := false
     
     // Read integer part
     loop {
-        is_digit(l.current_char) ? | false => break | true => {}
+        is_digit(l.current_char) ? | false => { break } | true => {}
         lexer_read_char(l)
     }
     
@@ -150,7 +150,7 @@ lexer_read_number = (l:: Lexer) (*i8, bool) {
             is_float = true
             lexer_read_char(l) // consume '.'
             loop {
-                is_digit(l.current_char) ? | false => break | true => {}
+                is_digit(l.current_char) ? | false => { break } | true => {}
                 lexer_read_char(l)
             }
         }
@@ -165,12 +165,12 @@ lexer_read_number = (l:: Lexer) (*i8, bool) {
 }
 
 // Read string literal
-lexer_read_string = (l:: Lexer) *i8 {
+lexer_read_string = (l: *Lexer) *i8 {
     lexer_read_char(l) // skip opening quote
     start := l.position
     
     loop {
-        l.current_char == 0 || l.current_char == 34 ? | true => break | false => {}
+        l.current_char == 0 || l.current_char == 34 ? | true => { break } | false => {}
         
         // Handle escape sequences
         l.current_char == 92 ? // backslash
@@ -210,7 +210,7 @@ is_keyword = (ident: *i8) bool {
 }
 
 // Get next token
-lexer_next_token = (l:: Lexer) Token {
+lexer_next_token = (l: *Lexer) Token {
     lexer_skip_whitespace(l)
     
     start_pos := l.position

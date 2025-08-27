@@ -174,16 +174,6 @@ impl<'a> TypeInstantiator<'a> {
                 let new_kind = match kind {
                     LoopKind::Infinite => LoopKind::Infinite,
                     LoopKind::Condition(expr) => LoopKind::Condition(self.instantiate_expression(expr, substitution)),
-                    LoopKind::Range { variable, start, end, inclusive } => LoopKind::Range {
-                        variable: variable.clone(),
-                        start: self.instantiate_expression(start, substitution),
-                        end: self.instantiate_expression(end, substitution),
-                        inclusive: *inclusive,
-                    },
-                    LoopKind::Iterator { variable, iterable } => LoopKind::Iterator {
-                        variable: variable.clone(),
-                        iterable: self.instantiate_expression(iterable, substitution),
-                    },
                 };
                 Ok(Statement::Loop {
                     kind: new_kind,

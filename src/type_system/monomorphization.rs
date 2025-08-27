@@ -132,13 +132,6 @@ impl Monomorphizer {
                     LoopKind::Condition(expr) => {
                         self.collect_instantiations_from_expression(expr)?;
                     }
-                    LoopKind::Range { start, end, .. } => {
-                        self.collect_instantiations_from_expression(start)?;
-                        self.collect_instantiations_from_expression(end)?;
-                    }
-                    LoopKind::Iterator { iterable, .. } => {
-                        self.collect_instantiations_from_expression(iterable)?;
-                    }
                     LoopKind::Infinite => {}
                 }
                 for stmt in body {

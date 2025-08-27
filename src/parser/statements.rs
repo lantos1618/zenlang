@@ -1,5 +1,5 @@
-// DO NOT EVER implement 'in'-based loop syntax (e.g., 'for i in ...', 'loop ... in ...').
-// Use explicit, non-dangling, non-tertiary forms only. Prefer 'loop 0..10 { ... }' or C-style loops.
+// Loop syntax is simplified - only conditional and infinite loops are supported.
+// Range and iterator loops have been removed in favor of functional iteration.
 use super::core::Parser;
 use crate::ast::{Program, Declaration, Statement, VariableDeclarationType, Expression};
 use crate::error::{CompileError, Result};
@@ -467,84 +467,10 @@ impl<'a> Parser<'a> {
             None
         };
         
-        // Determine the loop kind
+        // Determine the loop kind - only support infinite and condition loops now
         let kind = if self.current_token == Token::Symbol('{') {
             // No condition - infinite loop: loop { }
             LoopKind::Infinite
-        } else if let Token::Identifier(var_name) = &self.current_token {
-            // Might be: loop i in ... { }
-            let var_name = var_name.clone();
-            self.next_token();
-            
-            if self.current_token == Token::Keyword(lexer::Keyword::In) {
-                // It's an iteration loop
-                self.next_token(); // consume 'in'
-                
-                // Parse the start value - use a simpler approach to avoid consuming ".."
-                // First parse just a simple term (number or identifier)
-                let start_expr = match &self.current_token {
-                    Token::Integer(n) => {
-                        let val = n.parse::<i32>().unwrap_or(0);
-                        self.next_token();
-                        Expression::Integer32(val)
-                    }
-                    Token::Identifier(name) => {
-                        let name = name.clone();
-                        self.next_token();
-                        Expression::Identifier(name)
-                    }
-                    _ => self.parse_expression()?
-                };
-                
-                // Check for range syntax (.. or ..=)
-                let (is_range, inclusive) = match &self.current_token {
-                    Token::Operator(op) if op == ".." => {
-                        self.next_token(); // consume '..'
-                        (true, false)
-                    }
-                    Token::Operator(op) if op == "..=" => {
-                        self.next_token(); // consume '..='
-                        (true, true)
-                    }
-                    _ => (false, false)
-                };
-                
-                if is_range {
-                    let end_expr = self.parse_expression()?;
-                    
-                    LoopKind::Range {
-                        variable: var_name,
-                        start: start_expr,
-                        end: end_expr,
-                        inclusive,
-                    }
-                } else {
-                    // It's a collection iteration
-                    LoopKind::Iterator {
-                        variable: var_name,
-                        iterable: start_expr,
-                    }
-                }
-            } else {
-                // Not an 'in' loop, must be a condition loop
-                // We already consumed the identifier, need to build expression starting from it
-                let mut expr = Expression::Identifier(var_name);
-                
-                // Continue parsing the rest of the expression as binary operations
-                // We need to manually reconstruct the expression parsing here
-                while let Token::Operator(op) = &self.current_token {
-                    let op_str = op.clone();
-                    self.next_token();
-                    let right = self.parse_expression()?;
-                    expr = Expression::BinaryOp {
-                        left: Box::new(expr),
-                        op: self.token_to_binary_operator(&op_str)?,
-                        right: Box::new(right),
-                    };
-                }
-                
-                LoopKind::Condition(expr)
-            }
         } else {
             // Parse a general condition expression
             let condition = self.parse_expression()?;

@@ -210,10 +210,12 @@ test_symbols = () bool {
     symbols := "(){}[];,|&.?"
     lex := lexer::lexer_new(symbols)
     
-    loop _ in 0..string_len(symbols) {
+    i ::= 0
+    loop i < string_len(symbols) {
         result := lexer::lexer_next_token(lex)
         lex = result.0
         token := result.1
+        i = i + 1
         
         token.token_type ?
             | Symbol(_) => {}
@@ -313,8 +315,10 @@ vec_push<T> = (vec: *Vec<T>, item: T) void {
     has_generic := false
     has_pattern := false
     
-    loop i in 0..vec_len(&tokens) {
+    i ::= 0
+    loop i < vec_len(&tokens) {
         token_opt := vec_get(&tokens, i)
+        i = i + 1
         token_opt ?
             | Some(token) => {
                 token.token_type ?

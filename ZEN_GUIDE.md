@@ -76,19 +76,10 @@ loop condition {
     // body
 }
 
-// Range (exclusive)
-loop i in 0..10 {  // 0 to 9
+// Infinite loop
+loop {
     // body
-}
-
-// Range (inclusive)
-loop i in 0..=10 {  // 0 to 10
-    // body
-}
-
-// Collection iteration
-loop item in items {
-    // body
+    break  // Exit condition
 }
 ```
 
