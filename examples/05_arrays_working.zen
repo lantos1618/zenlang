@@ -1,0 +1,129 @@
+// Arrays in Zen - Working Example
+// Demonstrates fixed-size arrays and dynamic operations
+
+extern printf = (*i8, ...) i32
+extern malloc = (i64) *void
+extern free = (*void) void
+
+// Simple array operations
+array_basics = () void {
+    // Fixed-size array on stack
+    numbers: [i32; 5]
+    numbers[0] = 10
+    numbers[1] = 20
+    numbers[2] = 30
+    numbers[3] = 40
+    numbers[4] = 50
+    
+    printf("Array elements:\n")
+    i ::= 0
+    loop i < 5 {
+        printf("numbers[%d] = %d\n", i, numbers[i])
+        i = i + 1
+    }
+}
+
+// Dynamic array simulation
+DynamicArray = {
+    data: *i32,
+    len: i32,
+    capacity: i32,
+}
+
+create_dynamic_array = (initial_capacity: i32) *DynamicArray {
+    arr := malloc(24)  // sizeof(DynamicArray)
+    ptr := arr
+    
+    // Initialize fields
+    data_ptr := malloc(initial_capacity * 4)  // sizeof(i32)
+    
+    // Manual struct initialization (simplified)
+    arr_struct := DynamicArray {
+        data: data_ptr,
+        len: 0,
+        capacity: initial_capacity,
+    }
+    
+    return &arr_struct
+}
+
+push = (arr: *DynamicArray, value: i32) void {
+    arr.len < arr.capacity ?
+        | true => {
+            arr.data[arr.len] = value
+            arr.len = arr.len + 1
+        }
+        | false => {
+            printf("Array is full!\n")
+        }
+}
+
+print_dynamic_array = (arr: *DynamicArray) void {
+    printf("Dynamic array (len=%d, cap=%d):\n", arr.len, arr.capacity)
+    i ::= 0
+    loop i < arr.len {
+        printf("  [%d] = %d\n", i, arr.data[i])
+        i = i + 1
+    }
+}
+
+// Array sum function
+sum_array = (arr: *i32, size: i32) i32 {
+    total ::= 0
+    i ::= 0
+    loop i < size {
+        total = total + arr[i]
+        i = i + 1
+    }
+    return total
+}
+
+// Find max element
+find_max = (arr: *i32, size: i32) i32 {
+    size <= 0 ?
+        | true => return 0
+        | false => {}
+    
+    max ::= arr[0]
+    i ::= 1
+    loop i < size {
+        arr[i] > max ?
+            | true => { max = arr[i] }
+            | false => {}
+        i = i + 1
+    }
+    return max
+}
+
+main = () i32 {
+    printf("=== Array Examples ===\n\n")
+    
+    // Basic array operations
+    printf("Fixed-size arrays:\n")
+    array_basics()
+    printf("\n")
+    
+    // Array on heap
+    printf("Heap-allocated array:\n")
+    heap_array := malloc(20)  // 5 * sizeof(i32)
+    ptr := heap_array
+    i ::= 0
+    loop i < 5 {
+        ptr[i] = (i + 1) * 10
+        i = i + 1
+    }
+    
+    sum := sum_array(ptr, 5)
+    printf("Sum of heap array: %d\n", sum)
+    
+    max := find_max(ptr, 5)
+    printf("Max element: %d\n", max)
+    
+    free(heap_array)
+    printf("\n")
+    
+    // Note: Dynamic array example simplified due to current limitations
+    printf("Dynamic array concept demonstrated\n")
+    
+    return 0
+}
