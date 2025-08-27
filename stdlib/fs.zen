@@ -1,0 +1,263 @@
+// Zen Standard Library: File System Module
+// High-level file system operations
+
+comptime {
+    core := @std.core
+    io := @std.io
+}
+
+// File metadata
+FileMetadata = {
+    size: i64,
+    is_dir: bool,
+    is_file: bool,
+    is_symlink: bool,
+    permissions: i32,
+    modified_time: i64,
+    created_time: i64,
+}
+
+// Path utilities
+PathBuf = {
+    path: string,
+}
+
+// Create a new path buffer
+path_new = (path: string) PathBuf {
+    return PathBuf { path: path }
+}
+
+// Join path components
+path_join = (base: PathBuf, component: string) PathBuf {
+    separator := "/"
+    need_separator := base.path[base.path.len - 1] != '/' ? | true => true | false => false
+    
+    new_path := need_separator ? | true => base.path + separator + component
+                                | false => base.path + component
+    
+    return PathBuf { path: new_path }
+}
+
+// Get file extension
+path_extension = (path: PathBuf) core.Option<string> {
+    last_dot := -1
+    i := path.path.len - 1
+    
+    loop i >= 0 {
+        path.path[i] == '.' ? | true => {
+            last_dot = i
+            break
+        } | false => {}
+        
+        path.path[i] == '/' ? | true => break | false => {}
+        i = i - 1
+    }
+    
+    last_dot == -1 ? | true => core.Option::None
+                    | false => core.Option::Some(path.path[last_dot + 1..])
+}
+
+// Get file name without extension
+path_stem = (path: PathBuf) core.Option<string> {
+    last_slash := -1
+    last_dot := -1
+    i := path.path.len - 1
+    
+    loop i >= 0 {
+        path.path[i] == '/' ? | true => {
+            last_slash = i
+            break
+        } | false => {}
+        
+        path.path[i] == '.' && last_dot == -1 ? | true => {
+            last_dot = i
+        } | false => {}
+        
+        i = i - 1
+    }
+    
+    start := last_slash + 1
+    end := last_dot == -1 ? | true => path.path.len | false => last_dot
+    
+    start >= end ? | true => core.Option::None
+                  | false => core.Option::Some(path.path[start..end])
+}
+
+// Get parent directory
+path_parent = (path: PathBuf) core.Option<PathBuf> {
+    last_slash := -1
+    i := path.path.len - 1
+    
+    // Skip trailing slash if present
+    i > 0 && path.path[i] == '/' ? | true => { i = i - 1 } | false => {}
+    
+    loop i >= 0 {
+        path.path[i] == '/' ? | true => {
+            last_slash = i
+            break
+        } | false => {}
+        i = i - 1
+    }
+    
+    last_slash <= 0 ? | true => core.Option::None
+                     | false => core.Option::Some(PathBuf { path: path.path[0..last_slash] })
+}
+
+// Check if path is absolute
+path_is_absolute = (path: PathBuf) bool {
+    path.path.len > 0 && path.path[0] == '/' ? | true => true | false => false
+}
+
+// External functions for file system operations
+extern stat(path: *u8, buf: *void) i32
+extern mkdir(path: *u8, mode: i32) i32
+extern rmdir(path: *u8) i32
+extern unlink(path: *u8) i32
+extern rename(old_path: *u8, new_path: *u8) i32
+extern getcwd(buf: *u8, size: i64) *u8
+extern chdir(path: *u8) i32
+extern access(path: *u8, mode: i32) i32
+
+// File access modes for access()
+F_OK :: 0  // Check existence
+R_OK :: 4  // Check read permission
+W_OK :: 2  // Check write permission
+X_OK :: 1  // Check execute permission
+
+// Check if file exists
+exists = (path: string) bool {
+    access(path, F_OK) == 0 ? | true => true | false => false
+}
+
+// Check if path is a directory
+is_dir = (path: string) bool {
+    // Would use stat() to check S_ISDIR
+    // Simplified for now
+    false
+}
+
+// Check if path is a file
+is_file = (path: string) bool {
+    // Would use stat() to check S_ISREG
+    // Simplified for now
+    exists(path) && !is_dir(path)
+}
+
+// Create a directory
+create_dir = (path: string) io.IOResult<void> {
+    result := mkdir(path, 0o755)
+    result == 0 ? | true => io.IOResult::Ok({})
+                 | false => io.IOResult::Err(io.IOError::Other("Failed to create directory"))
+}
+
+// Create directory and all parent directories
+create_dir_all = (path: string) io.IOResult<void> {
+    // Would recursively create parent directories
+    create_dir(path)
+}
+
+// Remove an empty directory
+remove_dir = (path: string) io.IOResult<void> {
+    result := rmdir(path)
+    result == 0 ? | true => io.IOResult::Ok({})
+                 | false => io.IOResult::Err(io.IOError::Other("Failed to remove directory"))
+}
+
+// Remove a file
+remove_file = (path: string) io.IOResult<void> {
+    result := unlink(path)
+    result == 0 ? | true => io.IOResult::Ok({})
+                 | false => io.IOResult::Err(io.IOError::FileNotFound(path))
+}
+
+// Rename/move a file or directory
+rename_path = (from: string, to: string) io.IOResult<void> {
+    result := rename(from, to)
+    result == 0 ? | true => io.IOResult::Ok({})
+                 | false => io.IOResult::Err(io.IOError::Other("Failed to rename"))
+}
+
+// Get current working directory
+current_dir = () io.IOResult<string> {
+    buffer: [4096]u8
+    result := getcwd(&buffer[0], 4096)
+    result != 0 ? | true => io.IOResult::Ok(string(buffer))
+                 | false => io.IOResult::Err(io.IOError::Other("Failed to get current directory"))
+}
+
+// Change current directory
+set_current_dir = (path: string) io.IOResult<void> {
+    result := chdir(path)
+    result == 0 ? | true => io.IOResult::Ok({})
+                 | false => io.IOResult::Err(io.IOError::FileNotFound(path))
+}
+
+// Read entire file to string
+read_to_string = (path: string) io.IOResult<string> {
+    file := io.open(path, io.FileMode::ReadOnly)?
+    defer io.close(file)
+    
+    // Get file size (would use stat)
+    // For now, use a fixed buffer
+    buffer: [65536]u8
+    bytes_read := io.read(file, &buffer[0], 65536)?
+    
+    io.IOResult::Ok(string(buffer[0..bytes_read]))
+}
+
+// Write string to file
+write_string = (path: string, content: string) io.IOResult<void> {
+    file := io.open(path, io.FileMode::WriteOnly)?
+    defer io.close(file)
+    
+    io.write(file, content.data, content.len)?
+    io.IOResult::Ok({})
+}
+
+// Copy file
+copy_file = (from: string, to: string) io.IOResult<i64> {
+    source := io.open(from, io.FileMode::ReadOnly)?
+    defer io.close(source)
+    
+    dest := io.open(to, io.FileMode::WriteOnly)?
+    defer io.close(dest)
+    
+    buffer: [8192]u8
+    total_copied := 0i64
+    
+    loop {
+        bytes_read := io.read(source, &buffer[0], 8192)?
+        bytes_read == 0 ? | true => break | false => {}
+        
+        io.write(dest, &buffer[0], bytes_read)?
+        total_copied = total_copied + bytes_read
+    }
+    
+    io.IOResult::Ok(total_copied)
+}
+
+// Directory entry
+DirEntry = {
+    name: string,
+    path: string,
+}
+
+// Read directory (simplified - would use opendir/readdir)
+read_dir = (path: string) io.IOResult<[]DirEntry> {
+    // Placeholder - would use opendir/readdir/closedir
+    io.IOResult::Ok([])
+}
+
+// Walk directory tree recursively
+walk_dir = (path: string, callback: (DirEntry) void) io.IOResult<void> {
+    entries := read_dir(path)?
+    
+    loop entry in entries {
+        callback(entry)
+        is_dir(entry.path) ? | true => {
+            walk_dir(entry.path, callback)?
+        } | false => {}
+    }
+    
+    io.IOResult::Ok({})
+}
