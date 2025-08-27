@@ -114,7 +114,8 @@ lexer_peek_char2 = (l: Lexer) i8 {
 
 // Skip whitespace
 lexer_skip_whitespace = (l: Lexer) Lexer {
-    loop is_whitespace(l.current_char) {
+    // Check if whitespace: space (32), tab (9), newline (10), carriage return (13)
+    loop l.current_char == 32 || l.current_char == 9 || l.current_char == 10 || l.current_char == 13 {
         l = lexer_read_char(l)
     }
     return l
@@ -204,14 +205,38 @@ lexer_read_identifier = (l: Lexer) LexerStringResult {
         | true => { l = lexer_read_char(l) }
         | false => {}
     
-    loop is_alpha(l.current_char) || is_digit(l.current_char) {
+    // Read identifier characters (A-Z, a-z, _, 0-9)
+    loop {
+        is_id_char := (l.current_char >= 65 && l.current_char <= 90) || // A-Z
+                      (l.current_char >= 97 && l.current_char <= 122) || // a-z
+                      l.current_char == 95 || // _
+                      (l.current_char >= 48 && l.current_char <= 57)  // 0-9
+        
+        is_id_char ? | false => break | true => {}
         l = lexer_read_char(l)
     }
     
     // Handle dot for namespace paths (e.g., @std.core)
-    loop l.current_char == 46 && is_alpha(lexer_peek_char(l)) {  // '.'
+    loop {
+        l.current_char != 46 ? | true => break | false => {} // not '.'
+        
+        next := lexer_peek_char(l)
+        is_next_alpha := (next >= 65 && next <= 90) || // A-Z
+                        (next >= 97 && next <= 122) || // a-z
+                        next == 95  // _
+        
+        is_next_alpha ? | false => break | true => {}
+        
         l = lexer_read_char(l)  // consume '.'
-        loop is_alpha(l.current_char) || is_digit(l.current_char) {
+        
+        // Read the next identifier part
+        loop {
+            is_id_char := (l.current_char >= 65 && l.current_char <= 90) || // A-Z
+                          (l.current_char >= 97 && l.current_char <= 122) || // a-z
+                          l.current_char == 95 || // _
+                          (l.current_char >= 48 && l.current_char <= 57)  // 0-9
+            
+            is_id_char ? | false => break | true => {}
             l = lexer_read_char(l)
         }
     }
@@ -237,22 +262,27 @@ lexer_read_number = (l: Lexer) LexerNumberResult {
         | true => {
             l = lexer_read_char(l)  // consume '0'
             l = lexer_read_char(l)  // consume 'x'
-            loop is_hex_digit(l.current_char) {
+            // Read hex digits (0-9, A-F, a-f)
+            loop (l.current_char >= 48 && l.current_char <= 57) || (l.current_char >= 65 && l.current_char <= 70) || (l.current_char >= 97 && l.current_char <= 102) {
                 l = lexer_read_char(l)
             }
         }
         | false => {
             // Regular decimal number
-            loop is_digit(l.current_char) {
+            // Read decimal digits
+            loop l.current_char >= 48 && l.current_char <= 57 {
                 l = lexer_read_char(l)
             }
             
             // Check for decimal point
-            l.current_char == 46 && is_digit(lexer_peek_char(l)) ?  // '.'
+            // Check if decimal point followed by digit
+            next_char := lexer_peek_char(l)
+            l.current_char == 46 && (next_char >= 48 && next_char <= 57) ?  // '.'
                 | true => {
                     is_float = true
                     l = lexer_read_char(l)  // consume '.'
-                    loop is_digit(l.current_char) {
+                    // Read decimal digits
+            loop l.current_char >= 48 && l.current_char <= 57 {
                         l = lexer_read_char(l)
                     }
                     
@@ -263,7 +293,8 @@ lexer_read_number = (l: Lexer) LexerNumberResult {
                             (l.current_char == 43 || l.current_char == 45) ?  // '+' or '-'
                                 | true => { l = lexer_read_char(l) }
                                 | false => {}
-                            loop is_digit(l.current_char) {
+                            // Read decimal digits
+            loop l.current_char >= 48 && l.current_char <= 57 {
                                 l = lexer_read_char(l)
                             }
                         }
@@ -275,7 +306,8 @@ lexer_read_number = (l: Lexer) LexerNumberResult {
     // Handle type suffixes (i8, i16, i32, i64, u8, u16, u32, u64, f32, f64)
     (l.current_char == 105 || l.current_char == 117 || l.current_char == 102) ?  // 'i', 'u', 'f'
         | true => {
-            loop is_alpha(l.current_char) || is_digit(l.current_char) {
+            // Read type suffix characters
+            loop (l.current_char >= 65 && l.current_char <= 90) || (l.current_char >= 97 && l.current_char <= 122) || l.current_char == 95 || (l.current_char >= 48 && l.current_char <= 57) {
                 l = lexer_read_char(l)
             }
         }
@@ -443,7 +475,9 @@ lexer_next_token = (l: Lexer) LexerTokenResult {
                 | false => {}
             
             // Identifier or keyword
-            token_type == TokenType::Eof && (is_alpha(l.current_char) || l.current_char == 64) ?  // @ symbol
+            // Check for identifier or keyword (starts with letter, _, or @)
+            is_id_start := (l.current_char >= 65 && l.current_char <= 90) || (l.current_char >= 97 && l.current_char <= 122) || l.current_char == 95 || l.current_char == 64
+            token_type == TokenType::Eof && is_id_start ?
                 | true => {
                     result := lexer_read_identifier(l)
                     l = result.lexer
@@ -457,7 +491,8 @@ lexer_next_token = (l: Lexer) LexerTokenResult {
                 | false => {}
             
             // Number
-            token_type == TokenType::Eof && is_digit(l.current_char) ?
+            // Check for number
+            token_type == TokenType::Eof && (l.current_char >= 48 && l.current_char <= 57) ?
                 | true => {
                     result := lexer_read_number(l)
                     l = result.lexer
@@ -481,7 +516,14 @@ lexer_next_token = (l: Lexer) LexerTokenResult {
                 | false => {}
             
             // Symbols
-            token_type == TokenType::Eof && is_symbol(l.current_char) ?
+            // Check for symbol
+            is_sym := l.current_char == 40 || l.current_char == 41 || // ( )
+                     l.current_char == 123 || l.current_char == 125 || // { }
+                     l.current_char == 91 || l.current_char == 93 || // [ ]
+                     l.current_char == 59 || l.current_char == 44 || // ; ,
+                     l.current_char == 124 || l.current_char == 38 || // | &
+                     l.current_char == 46 || l.current_char == 63 // . ?
+            token_type == TokenType::Eof && is_sym ?
                 | true => {
                     c := l.current_char
                     l = lexer_read_char(l)
@@ -490,7 +532,11 @@ lexer_next_token = (l: Lexer) LexerTokenResult {
                 | false => {}
             
             // Operators
-            token_type == TokenType::Eof && is_operator_char(l.current_char) ?
+            // Check for operator
+            is_op := l.current_char == 43 || l.current_char == 45 || l.current_char == 42 || l.current_char == 47 || // + - * /
+                    l.current_char == 61 || l.current_char == 33 || l.current_char == 60 || l.current_char == 62 || // = ! < >
+                    l.current_char == 38 || l.current_char == 124 || l.current_char == 58 // & | :
+            token_type == TokenType::Eof && is_op ?
                 | true => {
                     result := lexer_read_operator(l)
                     l = result.lexer

@@ -124,15 +124,15 @@ string_substring = (str: string, start: i64, end: i64) string {
     len := string_len(str)
     
     // Bounds checking
-    start < 0 ? | true => { start = 0 } | false => {}
-    end > len ? | true => { end = len } | false => {}
-    start >= end ? | true => return "" | false => {}
+    actual_start := start < 0 ? | true => 0 | false => start
+    actual_end := end > len ? | true => len | false => end
+    actual_start >= actual_end ? | true => return "" | false => {}
     
-    substr_len := end - start
+    substr_len := actual_end - actual_start
     buffer := mem.alloc(substr_len + 1)
     
     buffer ? | .Ok -> buf => {
-        mem.copy(buf, (str as *u8) + start, substr_len)
+        mem.copy(buf, (str as *u8) + actual_start, substr_len)
         (buf as *u8)[substr_len] = 0
         return buf as string
     } | .Err -> _ => {
