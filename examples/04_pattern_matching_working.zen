@@ -1,0 +1,65 @@
+// Pattern Matching in Zen - Working Example
+// Demonstrates the ? operator for pattern matching
+
+extern printf = (*i8, ...) i32
+
+// Simple enum-like pattern matching using integers  
+classify_number = (n: i32) void {
+    n > 0 ? 
+        | true => printf("Positive: %d\n", n)
+        | false => printf("Not positive: %d\n", n)
+}
+
+// Pattern matching with multiple conditions
+check_range = (x: i32) void {
+    x < 10 ?
+        | true => printf("%d is single digit\n", x)
+        | false => printf("%d is double digit or larger\n", x)
+}
+
+// Pattern matching with struct fields
+Point = {
+    x: i32,
+    y: i32,
+}
+
+describe_point = (p: *Point) void {
+    p.x == 0 ?
+        | true => printf("On Y-axis at y=%d\n", p.y)
+        | false => printf("Point at (%d, %d)\n", p.x, p.y)
+}
+
+main = () i32 {
+    printf("=== Pattern Matching Examples ===\n\n")
+    
+    // Test number classification
+    printf("Number classification:\n")
+    classify_number(42)
+    classify_number(-17)
+    classify_number(0)
+    printf("\n")
+    
+    // Test range checking
+    printf("Range checking:\n")
+    check_range(-5)
+    check_range(7)
+    check_range(42)
+    check_range(150)
+    printf("\n")
+    
+    // Test point description
+    printf("Point description:\n")
+    origin := Point { x: 0, y: 0 }
+    describe_point(&origin)
+    
+    y_axis := Point { x: 0, y: 10 }
+    describe_point(&y_axis)
+    
+    x_axis := Point { x: 5, y: 0 }
+    describe_point(&x_axis)
+    
+    quadrant := Point { x: 3, y: 4 }
+    describe_point(&quadrant)
+    
+    return 0
+}
