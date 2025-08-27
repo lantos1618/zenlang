@@ -1,0 +1,465 @@
+// Async/Await Runtime Foundation for Zen
+// Provides async programming primitives and task management
+
+comptime {
+    core := @std.core
+    thread := @std.build.import("thread")
+    collections := @std.build.import("collections_ext")
+}
+
+// Task state enum
+TaskState = 
+    | Pending
+    | Running
+    | Completed(value: Any)
+    | Failed(error: string)
+    | Cancelled
+
+// Future/Promise type for async operations
+Future<T> = {
+    state:: TaskState,
+    value:: Option<T>,
+    error:: Option<string>,
+    callbacks:: Vec<(T) void>,
+    error_callbacks:: Vec<(string) void>,
+}
+
+Future<T>.impl = {
+    // Create a new pending future
+    new = () Future<T> {
+        return Future<T> {
+            state: TaskState::Pending,
+            value: Option<T>::None,
+            error: Option<string>::None,
+            callbacks: Vec<(T) void>::new(),
+            error_callbacks: Vec<(string) void>::new(),
+        }
+    }
+    
+    // Create a completed future with value
+    resolved = (value: T) Future<T> {
+        return Future<T> {
+            state: TaskState::Completed(value),
+            value: Option<T>::Some(value),
+            error: Option<string>::None,
+            callbacks: Vec<(T) void>::new(),
+            error_callbacks: Vec<(string) void>::new(),
+        }
+    }
+    
+    // Create a failed future with error
+    rejected = (error: string) Future<T> {
+        return Future<T> {
+            state: TaskState::Failed(error),
+            value: Option<T>::None,
+            error: Option<string>::Some(error),
+            callbacks: Vec<(T) void>::new(),
+            error_callbacks: Vec<(string) void>::new(),
+        }
+    }
+    
+    // Check if future is complete
+    is_ready = (self: Future<T>) bool {
+        self.state ? | .Completed -> _ => true
+                    | .Failed -> _ => true
+                    | _ => false
+    }
+    
+    // Get result (blocks if not ready)
+    await = (self:: *Future<T>) Result<T, string> {
+        loop !self.is_ready() {
+            // Yield to scheduler
+            thread.yield()
+        }
+        
+        self.state ? | .Completed -> value => Result<T, string>::Ok(value)
+                    | .Failed -> error => Result<T, string>::Err(error)
+                    | _ => Result<T, string>::Err("Future in invalid state")
+    }
+    
+    // Non-blocking poll
+    poll = (self: Future<T>) Option<Result<T, string>> {
+        self.state ? | .Completed -> value => Option::Some(Result::Ok(value))
+                    | .Failed -> error => Option::Some(Result::Err(error))
+                    | _ => Option::None
+    }
+    
+    // Chain futures with then
+    then<U> = (self:: *Future<T>, f: (T) Future<U>) Future<U> {
+        result := Future<U>::new()
+        
+        self.callbacks.push(value -> {
+            next := f(value)
+            next.callbacks.push(u_value -> {
+                result.resolve(u_value)
+            })
+            next.error_callbacks.push(error -> {
+                result.reject(error)
+            })
+        })
+        
+        self.error_callbacks.push(error -> {
+            result.reject(error)
+        })
+        
+        // If already complete, execute immediately
+        self.is_ready() ? | true => self.trigger_callbacks()
+                         | false => {}
+        
+        return result
+    }
+    
+    // Map future value
+    map<U> = (self:: *Future<T>, f: (T) U) Future<U> {
+        return self.then(value -> Future<U>::resolved(f(value)))
+    }
+    
+    // Handle errors
+    catch = (self:: *Future<T>, handler: (string) T) Future<T> {
+        result := Future<T>::new()
+        
+        self.callbacks.push(value -> {
+            result.resolve(value)
+        })
+        
+        self.error_callbacks.push(error -> {
+            recovered := handler(error)
+            result.resolve(recovered)
+        })
+        
+        return result
+    }
+    
+    // Internal: resolve the future
+    resolve = (self:: *Future<T>, value: T) void {
+        self.state ? | .Pending => {
+            self.state = TaskState::Completed(value)
+            self.value = Option<T>::Some(value)
+            self.trigger_callbacks()
+        }
+        | _ => core.panic("Future already resolved")
+    }
+    
+    // Internal: reject the future
+    reject = (self:: *Future<T>, error: string) void {
+        self.state ? | .Pending => {
+            self.state = TaskState::Failed(error)
+            self.error = Option<string>::Some(error)
+            self.trigger_error_callbacks()
+        }
+        | _ => core.panic("Future already resolved")
+    }
+    
+    // Internal: trigger success callbacks
+    trigger_callbacks = (self:: *Future<T>) void {
+        self.value ? | .Some -> val => {
+            self.callbacks.iter().loop(callback -> {
+                callback(val)
+            })
+        }
+        | .None => {}
+    }
+    
+    // Internal: trigger error callbacks
+    trigger_error_callbacks = (self:: *Future<T>) void {
+        self.error ? | .Some -> err => {
+            self.error_callbacks.iter().loop(callback -> {
+                callback(err)
+            })
+        }
+        | .None => {}
+    }
+}
+
+// Task represents an async computation
+Task<T> = {
+    id: i64,
+    future: Future<T>,
+    computation: () T,
+    priority: i32,
+}
+
+// Async runtime executor
+AsyncRuntime = {
+    task_queue:: collections.BinaryHeap<Task<Any>>,
+    running_tasks:: HashMap<i64, Task<Any>>,
+    next_task_id:: i64,
+    worker_threads: Vec<thread.Thread>,
+    shutdown:: bool,
+}
+
+// Global runtime instance
+RUNTIME ::= AsyncRuntime {
+    task_queue: collections.BinaryHeap<Task<Any>>::new((a, b) -> a.priority - b.priority),
+    running_tasks: HashMap<i64, Task<Any>>::new(),
+    next_task_id: 0,
+    worker_threads: Vec<thread.Thread>::new(),
+    shutdown: false,
+}
+
+AsyncRuntime.impl = {
+    // Spawn a new async task
+    spawn<T> = (self:: *AsyncRuntime, computation: () T) Future<T> {
+        task_id := self.next_task_id
+        self.next_task_id = self.next_task_id + 1
+        
+        future := Future<T>::new()
+        
+        task := Task<T> {
+            id: task_id,
+            future: future,
+            computation: computation,
+            priority: 0,
+        }
+        
+        self.task_queue.push(task)
+        self.wake_worker()
+        
+        return future
+    }
+    
+    // Spawn with priority
+    spawn_priority<T> = (self:: *AsyncRuntime, computation: () T, priority: i32) Future<T> {
+        task_id := self.next_task_id
+        self.next_task_id = self.next_task_id + 1
+        
+        future := Future<T>::new()
+        
+        task := Task<T> {
+            id: task_id,
+            future: future,
+            computation: computation,
+            priority: priority,
+        }
+        
+        self.task_queue.push(task)
+        self.wake_worker()
+        
+        return future
+    }
+    
+    // Run the runtime event loop
+    run = (self:: *AsyncRuntime) void {
+        loop !self.shutdown {
+            self.task_queue.pop() ? | .Some -> task => {
+                self.execute_task(task)
+            }
+            | .None => {
+                // No tasks, yield
+                thread.yield()
+            }
+        }
+    }
+    
+    // Execute a single task
+    execute_task<T> = (self:: *AsyncRuntime, task: Task<T>) void {
+        self.running_tasks.insert(task.id, task)
+        
+        // Try to execute the computation
+        result := core.try(() -> Result<T, string> {
+            value := task.computation()
+            return Result<T, string>::Ok(value)
+        })
+        
+        result ? | .Ok -> value => task.future.resolve(value)
+                | .Err -> error => task.future.reject(error)
+        
+        self.running_tasks.remove(task.id)
+    }
+    
+    // Wake a worker thread
+    wake_worker = (self:: *AsyncRuntime) void {
+        // Signal worker threads that work is available
+        // Implementation depends on threading primitives
+    }
+    
+    // Shutdown the runtime
+    shutdown = (self:: *AsyncRuntime) void {
+        self.shutdown = true
+        
+        // Cancel all pending tasks
+        loop self.task_queue.pop() ? | .Some -> task => {
+            task.future.reject("Runtime shutdown")
+        }
+        | .None => break
+    }
+}
+
+// Async utilities
+
+// Run async function and block until complete
+async_run<T> = (f: () Future<T>) Result<T, string> {
+    future := f()
+    return future.await()
+}
+
+// Join multiple futures
+join_all<T> = (futures: []Future<T>) Future<[]T> {
+    result := Future<[]T>::new()
+    values ::= Vec<T>::new()
+    completed ::= 0
+    total := futures.len()
+    
+    futures.iter().enumerate().loop((idx, future) -> {
+        future.then(value -> {
+            values[idx] = value
+            completed = completed + 1
+            
+            completed == total ? | true => result.resolve(values.to_array())
+                                | false => {}
+            
+            return Future<void>::resolved(void)
+        })
+    })
+    
+    return result
+}
+
+// Race multiple futures (first to complete wins)
+race<T> = (futures: []Future<T>) Future<T> {
+    result := Future<T>::new()
+    completed ::= false
+    
+    futures.iter().loop(future -> {
+        future.then(value -> {
+            !completed ? | true => {
+                completed = true
+                result.resolve(value)
+            }
+            | false => {}
+            
+            return Future<void>::resolved(void)
+        })
+        
+        future.catch(error -> {
+            !completed ? | true => {
+                completed = true
+                result.reject(error)
+            }
+            | false => {}
+            
+            return default_value  // Type-specific default
+        })
+    })
+    
+    return result
+}
+
+// Select - wait for first ready future
+select<T> = (futures: []Future<T>) (i64, Result<T, string>) {
+    loop {
+        futures.iter().enumerate().loop((idx, future) -> {
+            future.poll() ? | .Some -> result => return (idx, result)
+                          | .None => {}
+        })
+        
+        thread.yield()
+    }
+}
+
+// Timeout a future
+timeout<T> = (future: Future<T>, duration_ms: i64) Future<T> {
+    timer_future := spawn_timer(duration_ms)
+    
+    return race([
+        future,
+        timer_future.map(_ -> core.panic("Timeout"))
+    ])
+}
+
+// Create a timer future
+spawn_timer = (duration_ms: i64) Future<void> {
+    return RUNTIME.spawn(() -> {
+        thread.sleep_ms(duration_ms)
+        return void
+    })
+}
+
+// Async sleep
+async_sleep = (duration_ms: i64) Future<void> {
+    return spawn_timer(duration_ms)
+}
+
+// Channel for async communication
+Channel<T> = {
+    queue:: collections.Deque<T>,
+    receivers:: Vec<Future<T>>,
+    closed:: bool,
+}
+
+Channel<T>.impl = {
+    // Create new channel
+    new = () Channel<T> {
+        return Channel<T> {
+            queue: collections.Deque<T>::new(),
+            receivers: Vec<Future<T>>::new(),
+            closed: false,
+        }
+    }
+    
+    // Send value to channel
+    send = (self:: *Channel<T>, value: T) Result<void, string> {
+        self.closed ? | true => return Result::Err("Channel closed")
+                     | false => {}
+        
+        // If receiver waiting, deliver immediately
+        !self.receivers.is_empty() ? | true => {
+            receiver := self.receivers.pop_front()
+            receiver.resolve(value)
+            return Result::Ok(void)
+        }
+        | false => {}
+        
+        // Otherwise queue the value
+        self.queue.push_back(value)
+        return Result::Ok(void)
+    }
+    
+    // Receive value from channel
+    receive = (self:: *Channel<T>) Future<T> {
+        // If value available, return immediately
+        !self.queue.is_empty() ? | true => {
+            value := self.queue.pop_front()
+            return Future<T>::resolved(value)
+        }
+        | false => {}
+        
+        // If channel closed and empty
+        self.closed && self.queue.is_empty() ? 
+            | true => return Future<T>::rejected("Channel closed")
+            | false => {}
+        
+        // Otherwise wait for value
+        future := Future<T>::new()
+        self.receivers.push(future)
+        return future
+    }
+    
+    // Close the channel
+    close = (self:: *Channel<T>) void {
+        self.closed = true
+        
+        // Reject all waiting receivers
+        self.receivers.iter().loop(receiver -> {
+            receiver.reject("Channel closed")
+        })
+        
+        self.receivers.clear()
+    }
+}
+
+// Async macro simulation for syntactic sugar
+// In real implementation, this would be a compiler feature
+// Usage: async { computation } returns Future<T>
+async_block<T> = (computation: () T) Future<T> {
+    return RUNTIME.spawn(computation)
+}
+
+// Await macro simulation  
+// In real implementation, this would be a compiler feature
+// Usage: await future returns T or propagates error
+await_value<T> = (future: Future<T>) T {
+    result := future.await()
+    result ? | .Ok -> value => return value
+            | .Err -> error => core.panic(error)
+}

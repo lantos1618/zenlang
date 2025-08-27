@@ -1,0 +1,596 @@
+// Extended Testing Framework for Zen
+// Provides comprehensive testing utilities and assertions
+
+comptime {
+    core := @std.core
+    io := @std.build.import("io")
+    string := @std.build.import("string")
+}
+
+// Test result types
+TestResult = 
+    | Passed
+    | Failed(message: string)
+    | Skipped(reason: string)
+    | Timeout
+
+// Test case structure
+TestCase = {
+    name: string,
+    test_fn: () TestResult,
+    timeout_ms: Option<i64>,
+    tags: []string,
+}
+
+// Test suite structure
+TestSuite = {
+    name: string,
+    tests: Vec<TestCase>,
+    setup: Option<() void>,
+    teardown: Option<() void>,
+    before_each: Option<() void>,
+    after_each: Option<() void>,
+}
+
+// Test runner statistics
+TestStats = {
+    total: i64,
+    passed: i64,
+    failed: i64,
+    skipped: i64,
+    duration_ms: i64,
+    failures: Vec<(string, string)>,  // (test_name, failure_message)
+}
+
+// Global test registry
+TEST_REGISTRY ::= Vec<TestSuite>::new()
+
+// Test suite builder
+TestSuiteBuilder = {
+    suite:: TestSuite,
+}
+
+TestSuiteBuilder.impl = {
+    // Create new test suite
+    new = (name: string) TestSuiteBuilder {
+        return TestSuiteBuilder {
+            suite: TestSuite {
+                name: name,
+                tests: Vec<TestCase>::new(),
+                setup: Option::None,
+                teardown: Option::None,
+                before_each: Option::None,
+                after_each: Option::None,
+            }
+        }
+    }
+    
+    // Add a test case
+    test = (self:: *TestSuiteBuilder, name: string, test_fn: () void) TestSuiteBuilder {
+        test_case := TestCase {
+            name: name,
+            test_fn: () -> {
+                core.try(test_fn) ? | .Ok -> _ => TestResult::Passed
+                                   | .Err -> msg => TestResult::Failed(msg)
+            },
+            timeout_ms: Option::None,
+            tags: []string{},
+        }
+        
+        self.suite.tests.push(test_case)
+        return self
+    }
+    
+    // Add test with timeout
+    test_with_timeout = (self:: *TestSuiteBuilder, name: string, timeout_ms: i64, test_fn: () void) TestSuiteBuilder {
+        test_case := TestCase {
+            name: name,
+            test_fn: () -> {
+                core.try(test_fn) ? | .Ok -> _ => TestResult::Passed
+                                   | .Err -> msg => TestResult::Failed(msg)
+            },
+            timeout_ms: Option::Some(timeout_ms),
+            tags: []string{},
+        }
+        
+        self.suite.tests.push(test_case)
+        return self
+    }
+    
+    // Add test with tags
+    test_with_tags = (self:: *TestSuiteBuilder, name: string, tags: []string, test_fn: () void) TestSuiteBuilder {
+        test_case := TestCase {
+            name: name,
+            test_fn: () -> {
+                core.try(test_fn) ? | .Ok -> _ => TestResult::Passed
+                                   | .Err -> msg => TestResult::Failed(msg)
+            },
+            timeout_ms: Option::None,
+            tags: tags,
+        }
+        
+        self.suite.tests.push(test_case)
+        return self
+    }
+    
+    // Skip a test
+    skip = (self:: *TestSuiteBuilder, name: string, reason: string) TestSuiteBuilder {
+        test_case := TestCase {
+            name: name,
+            test_fn: () -> TestResult::Skipped(reason),
+            timeout_ms: Option::None,
+            tags: []string{"skip"},
+        }
+        
+        self.suite.tests.push(test_case)
+        return self
+    }
+    
+    // Set suite setup
+    setup = (self:: *TestSuiteBuilder, setup_fn: () void) TestSuiteBuilder {
+        self.suite.setup = Option::Some(setup_fn)
+        return self
+    }
+    
+    // Set suite teardown
+    teardown = (self:: *TestSuiteBuilder, teardown_fn: () void) TestSuiteBuilder {
+        self.suite.teardown = Option::Some(teardown_fn)
+        return self
+    }
+    
+    // Set before each test
+    before_each = (self:: *TestSuiteBuilder, before_fn: () void) TestSuiteBuilder {
+        self.suite.before_each = Option::Some(before_fn)
+        return self
+    }
+    
+    // Set after each test
+    after_each = (self:: *TestSuiteBuilder, after_fn: () void) TestSuiteBuilder {
+        self.suite.after_each = Option::Some(after_fn)
+        return self
+    }
+    
+    // Register the suite
+    build = (self: TestSuiteBuilder) void {
+        TEST_REGISTRY.push(self.suite)
+    }
+}
+
+// Enhanced assertion functions
+Assertions = {
+    // Basic assertions
+    assert_true = (condition: bool, message: string = "") void {
+        !condition ? | true => core.panic(message.is_empty() ? 
+            | true => "Expected true, got false"
+            | false => message)
+        | false => {}
+    }
+    
+    assert_false = (condition: bool, message: string = "") void {
+        condition ? | true => core.panic(message.is_empty() ?
+            | true => "Expected false, got true"
+            | false => message)
+        | false => {}
+    }
+    
+    assert_eq<T> = (actual: T, expected: T, message: string = "") void {
+        actual != expected ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected $(expected), got $(actual)"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_ne<T> = (actual: T, expected: T, message: string = "") void {
+        actual == expected ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected values to be different, both were $(actual)"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_gt<T> = (actual: T, expected: T, message: string = "") void {
+        actual <= expected ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected $(actual) > $(expected)"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_ge<T> = (actual: T, expected: T, message: string = "") void {
+        actual < expected ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected $(actual) >= $(expected)"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_lt<T> = (actual: T, expected: T, message: string = "") void {
+        actual >= expected ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected $(actual) < $(expected)"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_le<T> = (actual: T, expected: T, message: string = "") void {
+        actual > expected ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected $(actual) <= $(expected)"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    // String assertions
+    assert_contains = (haystack: string, needle: string, message: string = "") void {
+        !haystack.contains(needle) ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected '$(haystack)' to contain '$(needle)'"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_starts_with = (str: string, prefix: string, message: string = "") void {
+        !str.starts_with(prefix) ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected '$(str)' to start with '$(prefix)'"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_ends_with = (str: string, suffix: string, message: string = "") void {
+        !str.ends_with(suffix) ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected '$(str)' to end with '$(suffix)'"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_matches = (str: string, pattern: string, message: string = "") void {
+        // Would use regex matching
+        !regex.match(str, pattern) ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected '$(str)' to match pattern '$(pattern)'"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    // Collection assertions
+    assert_empty<T> = (collection: []T, message: string = "") void {
+        collection.len() != 0 ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected collection to be empty, had $(collection.len()) elements"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_not_empty<T> = (collection: []T, message: string = "") void {
+        collection.len() == 0 ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected collection to not be empty"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_len<T> = (collection: []T, expected: i64, message: string = "") void {
+        collection.len() != expected ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected length $(expected), got $(collection.len())"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_in<T> = (value: T, collection: []T, message: string = "") void {
+        found ::= false
+        collection.iter().loop(item -> {
+            item == value ? | true => found = true
+                          | false => {}
+        })
+        
+        !found ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected $(value) to be in collection"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    // Option/Result assertions
+    assert_some<T> = (opt: Option<T>, message: string = "") T {
+        opt ? | .Some -> value => return value
+             | .None => {
+                 msg := message.is_empty() ?
+                     | true => "Expected Some, got None"
+                     | false => message
+                 core.panic(msg)
+             }
+    }
+    
+    assert_none<T> = (opt: Option<T>, message: string = "") void {
+        opt ? | .Some -> _ => {
+            msg := message.is_empty() ?
+                | true => "Expected None, got Some"
+                | false => message
+            core.panic(msg)
+        }
+        | .None => {}
+    }
+    
+    assert_ok<T, E> = (result: Result<T, E>, message: string = "") T {
+        result ? | .Ok -> value => return value
+                | .Err -> error => {
+                    msg := message.is_empty() ?
+                        | true => "Expected Ok, got Err($(error))"
+                        | false => message
+                    core.panic(msg)
+                }
+    }
+    
+    assert_err<T, E> = (result: Result<T, E>, message: string = "") E {
+        result ? | .Ok -> _ => {
+            msg := message.is_empty() ?
+                | true => "Expected Err, got Ok"
+                | false => message
+            core.panic(msg)
+        }
+        | .Err -> error => return error
+    }
+    
+    // Panic assertions
+    assert_panics = (f: () void, message: string = "") void {
+        panicked ::= false
+        
+        core.try(f) ? | .Ok -> _ => {}
+                     | .Err -> _ => panicked = true
+        
+        !panicked ? | true => {
+            msg := message.is_empty() ?
+                | true => "Expected function to panic"
+                | false => message
+            core.panic(msg)
+        }
+        | false => {}
+    }
+    
+    assert_no_panic = (f: () void, message: string = "") void {
+        core.try(f) ? | .Ok -> _ => {}
+                     | .Err -> panic_msg => {
+                         msg := message.is_empty() ?
+                             | true => "Expected no panic, but got: $(panic_msg)"
+                             | false => message
+                         core.panic(msg)
+                     }
+    }
+}
+
+// Test runner
+TestRunner = {
+    stats: TestStats,
+    filter_tags: Option<[]string>,
+    verbose: bool,
+}
+
+TestRunner.impl = {
+    // Create new test runner
+    new = () TestRunner {
+        return TestRunner {
+            stats: TestStats {
+                total: 0,
+                passed: 0,
+                failed: 0,
+                skipped: 0,
+                duration_ms: 0,
+                failures: Vec<(string, string)>::new(),
+            },
+            filter_tags: Option::None,
+            verbose: false,
+        }
+    }
+    
+    // Set verbose mode
+    with_verbose = (self:: *TestRunner, verbose: bool) TestRunner {
+        self.verbose = verbose
+        return self
+    }
+    
+    // Filter by tags
+    with_tags = (self:: *TestRunner, tags: []string) TestRunner {
+        self.filter_tags = Option::Some(tags)
+        return self
+    }
+    
+    // Run all test suites
+    run_all = (self:: *TestRunner) TestStats {
+        start_time := core.time_now_ms()
+        
+        TEST_REGISTRY.iter().loop(suite -> {
+            self.run_suite(suite)
+        })
+        
+        self.stats.duration_ms = core.time_now_ms() - start_time
+        self.print_summary()
+        
+        return self.stats
+    }
+    
+    // Run a single suite
+    run_suite = (self:: *TestRunner, suite: TestSuite) void {
+        self.verbose ? | true => io.println("Running suite: $(suite.name)")
+                      | false => {}
+        
+        // Run suite setup
+        suite.setup ? | .Some -> setup_fn => setup_fn()
+                     | .None => {}
+        
+        // Run each test
+        suite.tests.iter().loop(test -> {
+            self.run_test(test, suite.before_each, suite.after_each)
+        })
+        
+        // Run suite teardown
+        suite.teardown ? | .Some -> teardown_fn => teardown_fn()
+                        | .None => {}
+    }
+    
+    // Run a single test
+    run_test = (self:: *TestRunner, test: TestCase, before: Option<() void>, after: Option<() void>) void {
+        // Check tag filter
+        self.should_skip_test(test) ? | true => {
+            self.stats.skipped = self.stats.skipped + 1
+            self.stats.total = self.stats.total + 1
+            self.verbose ? | true => io.println("  ⊘ $(test.name) - SKIPPED")
+                          | false => {}
+            return
+        }
+        | false => {}
+        
+        // Run before hook
+        before ? | .Some -> before_fn => before_fn()
+                | .None => {}
+        
+        // Run test with timeout if specified
+        result := test.timeout_ms ? 
+            | .Some -> timeout => self.run_with_timeout(test.test_fn, timeout)
+            | .None => test.test_fn()
+        
+        // Run after hook
+        after ? | .Some -> after_fn => after_fn()
+               | .None => {}
+        
+        // Update stats
+        self.stats.total = self.stats.total + 1
+        
+        result ? | .Passed => {
+            self.stats.passed = self.stats.passed + 1
+            self.verbose ? | true => io.println("  ✓ $(test.name)")
+                          | false => io.print(".")
+        }
+        | .Failed -> msg => {
+            self.stats.failed = self.stats.failed + 1
+            self.stats.failures.push((test.name, msg))
+            self.verbose ? | true => io.println("  ✗ $(test.name): $(msg)")
+                          | false => io.print("F")
+        }
+        | .Skipped -> reason => {
+            self.stats.skipped = self.stats.skipped + 1
+            self.verbose ? | true => io.println("  ⊘ $(test.name): $(reason)")
+                          | false => io.print("S")
+        }
+        | .Timeout => {
+            self.stats.failed = self.stats.failed + 1
+            self.stats.failures.push((test.name, "Test timeout"))
+            self.verbose ? | true => io.println("  ⏱ $(test.name): TIMEOUT")
+                          | false => io.print("T")
+        }
+    }
+    
+    // Check if test should be skipped
+    should_skip_test = (self: TestRunner, test: TestCase) bool {
+        // Check if test has skip tag
+        test.tags.contains("skip") ? | true => return true
+                                     | false => {}
+        
+        // Check tag filter
+        self.filter_tags ? | .Some -> tags => {
+            has_tag ::= false
+            tags.iter().loop(tag -> {
+                test.tags.contains(tag) ? | true => has_tag = true
+                                         | false => {}
+            })
+            return !has_tag
+        }
+        | .None => return false
+    }
+    
+    // Run test with timeout
+    run_with_timeout = (self: TestRunner, test_fn: () TestResult, timeout_ms: i64) TestResult {
+        // Would use async/threading for actual timeout
+        // For now, just run the test
+        return test_fn()
+    }
+    
+    // Print test summary
+    print_summary = (self: TestRunner) void {
+        !self.verbose ? | true => io.println("")  // Newline after dots
+                       | false => {}
+        
+        io.println("\n" + "=" * 60)
+        io.println("Test Summary")
+        io.println("=" * 60)
+        
+        io.println("Total:   $(self.stats.total)")
+        io.println("Passed:  $(self.stats.passed) ($(self.stats.passed * 100 / self.stats.total)%)")
+        io.println("Failed:  $(self.stats.failed)")
+        io.println("Skipped: $(self.stats.skipped)")
+        io.println("Time:    $(self.stats.duration_ms)ms")
+        
+        !self.stats.failures.is_empty() ? | true => {
+            io.println("\nFailures:")
+            self.stats.failures.iter().loop((test_name, message) -> {
+                io.println("  • $(test_name): $(message)")
+            })
+        }
+        | false => {}
+        
+        self.stats.failed == 0 ? 
+            | true => io.println("\n✅ All tests passed!")
+            | false => io.println("\n❌ $(self.stats.failed) test(s) failed")
+    }
+}
+
+// Macro-like test definition helpers
+describe = (name: string) TestSuiteBuilder {
+    return TestSuiteBuilder::new(name)
+}
+
+// Run all tests
+run_tests = () i32 {
+    runner := TestRunner::new().with_verbose(true)
+    stats := runner.run_all()
+    
+    return stats.failed > 0 ? | true => 1 | false => 0
+}
+
+// Benchmark utilities
+benchmark = (name: string, iterations: i64, f: () void) void {
+    start := core.time_now_ms()
+    
+    range(0, iterations).loop(_ -> {
+        f()
+    })
+    
+    elapsed := core.time_now_ms() - start
+    avg := elapsed / iterations
+    
+    io.println("Benchmark '$(name)':")
+    io.println("  Iterations: $(iterations)")
+    io.println("  Total time: $(elapsed)ms")
+    io.println("  Average:    $(avg)ms")
+}
