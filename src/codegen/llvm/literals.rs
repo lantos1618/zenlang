@@ -31,48 +31,35 @@ impl<'ctx> LLVMCompiler<'ctx> {
             // It's a variable, get the pointer
             let (ptr, ast_type) = self.get_variable(name)?;
             
-            // Load the value from the alloca
-            let loaded: BasicValueEnum = match &ast_type {
-                AstType::Pointer(inner) => {
-                    // For pointer types, load the pointer value from the alloca
-                    // This is different from the pointer itself (ptr is the alloca, we load the stored pointer)
-                    if matches!(**inner, AstType::Function { .. }) {
-                        // Function pointer
-                        match self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), ptr, name) {
-                            Ok(val) => val.into(),
-                            Err(e) => return Err(CompileError::InternalError(e.to_string(), None)),
-                        }
-                    } else {
-                        // Regular pointer (including string pointers)
+            // For pointer types, return the pointer directly
+            if matches!(ast_type, AstType::Pointer(_)) {
+                Ok(ptr.as_basic_value_enum())
+            } else {
+                // For non-pointer types, load the value
+                let loaded: BasicValueEnum = match &ast_type {
+                    AstType::Pointer(inner) if matches!(**inner, AstType::Function { .. }) => {
                         match self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), ptr, name) {
                             Ok(val) => val.into(),
                             Err(e) => return Err(CompileError::InternalError(e.to_string(), None)),
                         }
                     }
-                }
-                AstType::String => {
-                    // String type - load the pointer value
-                    match self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), ptr, name) {
-                        Ok(val) => val.into(),
-                        Err(e) => return Err(CompileError::InternalError(e.to_string(), None)),
+                    AstType::Function { .. } => {
+                        match self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), ptr, name) {
+                            Ok(val) => val.into(),
+                            Err(e) => return Err(CompileError::InternalError(e.to_string(), None)),
+                        }
                     }
-                }
-                AstType::Function { .. } => {
-                    match self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), ptr, name) {
-                        Ok(val) => val.into(),
-                        Err(e) => return Err(CompileError::InternalError(e.to_string(), None)),
+                    _ => {
+                        let elem_type = self.to_llvm_type(&ast_type)?;
+                        let basic_type = self.expect_basic_type(elem_type)?;
+                        match self.builder.build_load(basic_type, ptr, name) {
+                            Ok(val) => val.into(),
+                            Err(e) => return Err(CompileError::InternalError(e.to_string(), None)),
+                        }
                     }
-                }
-                _ => {
-                    let elem_type = self.to_llvm_type(&ast_type)?;
-                    let basic_type = self.expect_basic_type(elem_type)?;
-                    match self.builder.build_load(basic_type, ptr, name) {
-                        Ok(val) => val.into(),
-                        Err(e) => return Err(CompileError::InternalError(e.to_string(), None)),
-                    }
-                }
-            };
-            Ok(loaded)
+                };
+                Ok(loaded)
+            }
         }
     }
     
