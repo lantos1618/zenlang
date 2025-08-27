@@ -1,7 +1,7 @@
 use super::{LLVMCompiler, symbols};
 use crate::ast::Expression;
 use crate::error::CompileError;
-use inkwell::values::{BasicValueEnum, BasicValue};
+use inkwell::values::{BasicValueEnum, BasicValue, PointerValue};
 
 impl<'ctx> LLVMCompiler<'ctx> {
     pub fn compile_expression(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
@@ -268,15 +268,41 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     fn compile_array_index(&mut self, array: &Expression, index: &Expression) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // For now, treat all arrays as arrays of i64
-        let element_type = self.context.i64_type();
-        let array_ptr = self.compile_expression(array)?.into_pointer_value();
+        // Get the address of the indexed element
+        let gep = self.compile_array_index_address(array, index)?;
+        
+        // For now, use i32 as default element type
+        // TODO: Proper type inference for array elements
+        let element_type = self.context.i32_type();
+        
+        // Load the value from the address
+        let loaded = self.builder.build_load(element_type, gep, "arrayload")?;
+        Ok(loaded)
+    }
+    
+    pub fn compile_array_index_address(&mut self, array: &Expression, index: &Expression) -> Result<PointerValue<'ctx>, CompileError> {
+        // Compile array expression - should be a pointer
+        let array_val = self.compile_expression(array)?;
+        
+        // Get the actual pointer value
+        let array_ptr = if array_val.is_pointer_value() {
+            array_val.into_pointer_value()
+        } else {
+            return Err(CompileError::TypeError(
+                format!("Array indexing requires pointer type, got {:?}", array_val.get_type()),
+                None
+            ));
+        };
+        
+        // For now, use i32 as default element type
+        // TODO: Proper type inference for array elements
+        let element_type = self.context.i32_type();
+        
         let index_val = self.compile_expression(index)?;
         let gep = unsafe {
             self.builder.build_gep(element_type, array_ptr, &[index_val.into_int_value()], "arrayidx")?
         };
-        let loaded = self.builder.build_load(element_type, gep, "arrayload")?;
-        Ok(loaded)
+        Ok(gep)
     }
 
     fn compile_enum_variant(&mut self, enum_name: &str, variant: &str, payload: &Option<Box<Expression>>) -> Result<BasicValueEnum<'ctx>, CompileError> {

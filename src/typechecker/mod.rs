@@ -364,6 +364,120 @@ impl TypeChecker {
                 // String interpolation always returns a string (pointer to char)
                 Ok(AstType::Pointer(Box::new(AstType::I8)))
             }
+            Expression::ArrayIndex { array, .. } => {
+                // Array indexing returns the element type
+                let array_type = self.infer_expression_type(array)?;
+                match array_type {
+                    AstType::Pointer(elem_type) => Ok(*elem_type),
+                    AstType::Array(elem_type) => Ok(*elem_type),
+                    _ => Err(CompileError::TypeError(
+                        format!("Cannot index type {:?}", array_type),
+                        None
+                    ))
+                }
+            }
+            Expression::AddressOf(inner) => {
+                let inner_type = self.infer_expression_type(inner)?;
+                Ok(AstType::Pointer(Box::new(inner_type)))
+            }
+            Expression::Dereference(inner) => {
+                let inner_type = self.infer_expression_type(inner)?;
+                match inner_type {
+                    AstType::Pointer(elem_type) => Ok(*elem_type),
+                    _ => Err(CompileError::TypeError(
+                        format!("Cannot dereference non-pointer type {:?}", inner_type),
+                        None
+                    ))
+                }
+            }
+            Expression::PointerOffset { pointer, .. } => {
+                // Pointer offset returns the same pointer type
+                self.infer_expression_type(pointer)
+            }
+            Expression::StructField { struct_, field } => {
+                let struct_type = self.infer_expression_type(struct_)?;
+                match struct_type {
+                    AstType::Pointer(inner) => {
+                        // Handle pointer to struct - automatically dereference
+                        match *inner {
+                            AstType::Struct { name, .. } => {
+                                inference::infer_member_type(&AstType::Struct { name, fields: vec![] }, field, &self.structs)
+                            }
+                            AstType::Generic { ref name, .. } => {
+                                // Handle pointer to generic struct
+                                inference::infer_member_type(&AstType::Generic { name: name.clone(), type_args: vec![] }, field, &self.structs)
+                            }
+                            _ => Err(CompileError::TypeError(
+                                format!("Cannot access field '{}' on non-struct pointer type", field),
+                                None
+                            ))
+                        }
+                    }
+                    AstType::Struct { .. } | AstType::Generic { .. } => {
+                        inference::infer_member_type(&struct_type, field, &self.structs)
+                    }
+                    _ => Err(CompileError::TypeError(
+                        format!("Cannot access field '{}' on type {:?}", field, struct_type),
+                        None
+                    ))
+                }
+            }
+            Expression::Integer8(_) => Ok(AstType::I8),
+            Expression::Integer16(_) => Ok(AstType::I16),
+            Expression::Unsigned8(_) => Ok(AstType::U8),
+            Expression::Unsigned16(_) => Ok(AstType::U16),
+            Expression::Unsigned32(_) => Ok(AstType::U32),
+            Expression::Unsigned64(_) => Ok(AstType::U64),
+            Expression::ArrayLiteral(elements) => {
+                // Infer type from first element
+                if elements.is_empty() {
+                    Ok(AstType::Array(Box::new(AstType::Void)))
+                } else {
+                    let elem_type = self.infer_expression_type(&elements[0])?;
+                    Ok(AstType::Array(Box::new(elem_type)))
+                }
+            }
+            Expression::TypeCast { target_type, .. } => {
+                Ok(target_type.clone())
+            }
+            Expression::Conditional { arms, .. } => {
+                // Return type of first arm's body
+                if arms.is_empty() {
+                    Ok(AstType::Void)
+                } else {
+                    self.infer_expression_type(&arms[0].body)
+                }
+            }
+            Expression::PatternMatch { arms, .. } => {
+                // Return type of first arm's body
+                if arms.is_empty() {
+                    Ok(AstType::Void)
+                } else {
+                    self.infer_expression_type(&arms[0].body)
+                }
+            }
+            Expression::Block(statements) => {
+                // Return type of last statement if it's an expression
+                for stmt in statements {
+                    if let Statement::Expression(expr) = stmt {
+                        // This is just a simple approximation - last expression in block
+                        if statements.last() == Some(stmt) {
+                            return self.infer_expression_type(expr);
+                        }
+                    }
+                }
+                Ok(AstType::Void)
+            }
+            Expression::Return(expr) => {
+                self.infer_expression_type(expr)
+            }
+            Expression::EnumVariant { .. } => {
+                // TODO: Implement enum variant type inference
+                Ok(AstType::Void)
+            }
+            Expression::StringLength(_) => {
+                Ok(AstType::I64)
+            }
             _ => Ok(AstType::Void), // Default for unhandled cases
         }
     }
