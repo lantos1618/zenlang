@@ -1,0 +1,468 @@
+// Regular Expression Module for Zen
+// Provides basic regex pattern matching capabilities
+
+extern malloc = (size: i64) *void
+extern free = (ptr: *void) void
+extern strlen = (str: *i8) i64
+
+// Regex pattern types
+RegexNode = 
+    | Literal(ch: i8)
+    | Dot                           // . matches any character
+    | CharClass(chars: *i8, negated: bool)  // [abc] or [^abc]
+    | Star(child: *RegexNode)       // * zero or more
+    | Plus(child: *RegexNode)       // + one or more
+    | Question(child: *RegexNode)   // ? zero or one
+    | Sequence(nodes: *RegexNode, count: i32)
+    | Alternation(left: *RegexNode, right: *RegexNode)  // |
+    | Group(child: *RegexNode, capturing: bool)
+    | Anchor(start: bool)           // ^ or $
+
+// Compiled regex pattern
+Regex = {
+    pattern: *i8,
+    root: *RegexNode,
+    group_count: i32,
+}
+
+// Match result
+RegexMatch = {
+    matched: bool,
+    start: i32,
+    end: i32,
+    groups: *RegexGroup,
+    group_count: i32,
+}
+
+RegexGroup = {
+    start: i32,
+    end: i32,
+    text: *i8,
+}
+
+// Regex parser state
+RegexParser = {
+    pattern: *i8,
+    position: i32,
+    length: i32,
+    group_count: i32,
+}
+
+// Create a new regex parser
+regex_parser_new = (pattern: *i8) RegexParser {
+    return RegexParser {
+        pattern: pattern,
+        position: 0,
+        length: strlen(pattern) as i32,
+        group_count: 0,
+    }
+}
+
+// Parse a single character
+regex_parse_char = (parser: *RegexParser) *RegexNode {
+    ch := parser.pattern[parser.position]
+    parser.position = parser.position + 1
+    
+    // Handle escape sequences
+    ch == 92 ? | true => { // backslash
+        parser.position < parser.length ? | true => {
+            escaped := parser.pattern[parser.position]
+            parser.position = parser.position + 1
+            
+            // Common escape sequences
+            escaped == 110 ? | true => { // \n
+                node := RegexNode::Literal(10)
+                result := malloc(@sizeof(RegexNode)) as *RegexNode
+                *result = node
+                return result
+            } | false => {}
+            
+            escaped == 116 ? | true => { // \t
+                node := RegexNode::Literal(9)
+                result := malloc(@sizeof(RegexNode)) as *RegexNode
+                *result = node
+                return result
+            } | false => {}
+            
+            // Default: treat as literal
+            node := RegexNode::Literal(escaped)
+            result := malloc(@sizeof(RegexNode)) as *RegexNode
+            *result = node
+            return result
+        } | false => {
+            node := RegexNode::Literal(ch)
+            result := malloc(@sizeof(RegexNode)) as *RegexNode
+            *result = node
+            return result
+        }
+    } | false => {}
+    
+    // Dot metacharacter
+    ch == 46 ? | true => { // .
+        node := RegexNode::Dot
+        result := malloc(@sizeof(RegexNode)) as *RegexNode
+        *result = node
+        return result
+    } | false => {}
+    
+    // Start anchor
+    ch == 94 ? | true => { // ^
+        node := RegexNode::Anchor(true)
+        result := malloc(@sizeof(RegexNode)) as *RegexNode
+        *result = node
+        return result
+    } | false => {}
+    
+    // End anchor
+    ch == 36 ? | true => { // $
+        node := RegexNode::Anchor(false)
+        result := malloc(@sizeof(RegexNode)) as *RegexNode
+        *result = node
+        return result
+    } | false => {}
+    
+    // Character class
+    ch == 91 ? | true => { // [
+        return regex_parse_char_class(parser)
+    } | false => {}
+    
+    // Group
+    ch == 40 ? | true => { // (
+        parser.group_count = parser.group_count + 1
+        child := regex_parse_sequence(parser)
+        parser.position = parser.position + 1 // Skip )
+        
+        node := RegexNode::Group(child, true)
+        result := malloc(@sizeof(RegexNode)) as *RegexNode
+        *result = node
+        return result
+    } | false => {}
+    
+    // Literal character
+    node := RegexNode::Literal(ch)
+    result := malloc(@sizeof(RegexNode)) as *RegexNode
+    *result = node
+    return result
+}
+
+// Parse character class [abc] or [^abc]
+regex_parse_char_class = (parser: *RegexParser) *RegexNode {
+    chars := malloc(256 as i64) as *i8
+    char_count := 0
+    negated := false
+    
+    // Check for negation
+    parser.pattern[parser.position] == 94 ? | true => { // ^
+        negated = true
+        parser.position = parser.position + 1
+    } | false => {}
+    
+    // Collect characters
+    loop {
+        parser.position >= parser.length ? | true => { break } | false => {}
+        
+        ch := parser.pattern[parser.position]
+        ch == 93 ? | true => { // ]
+            parser.position = parser.position + 1
+            break
+        } | false => {}
+        
+        // Handle range a-z
+        parser.position + 2 < parser.length && 
+        parser.pattern[parser.position + 1] == 45 ? | true => { // -
+            start := ch
+            end := parser.pattern[parser.position + 2]
+            
+            range(start as i32, (end + 1) as i32).loop(i -> {
+                chars[char_count] = i as i8
+                char_count = char_count + 1
+            })
+            
+            parser.position = parser.position + 3
+        } | false => {
+            chars[char_count] = ch
+            char_count = char_count + 1
+            parser.position = parser.position + 1
+        }
+    }
+    
+    chars[char_count] = 0
+    
+    node := RegexNode::CharClass(chars, negated)
+    result := malloc(@sizeof(RegexNode)) as *RegexNode
+    *result = node
+    return result
+}
+
+// Parse sequence of nodes
+regex_parse_sequence = (parser: *RegexParser) *RegexNode {
+    nodes := malloc(256 * @sizeof(RegexNode)) as *RegexNode
+    node_count := 0
+    
+    loop {
+        parser.position >= parser.length ? | true => { break } | false => {}
+        
+        ch := parser.pattern[parser.position]
+        
+        // End of group or alternation
+        ch == 41 || ch == 124 ? | true => { // ) or |
+            break
+        } | false => {}
+        
+        // Parse atom
+        atom := regex_parse_char(parser)
+        
+        // Check for quantifiers
+        parser.position < parser.length ? | true => {
+            quant := parser.pattern[parser.position]
+            
+            quant == 42 ? | true => { // *
+                node := RegexNode::Star(atom)
+                atom = malloc(@sizeof(RegexNode)) as *RegexNode
+                *atom = node
+                parser.position = parser.position + 1
+            } | false => {}
+            
+            quant == 43 ? | true => { // +
+                node := RegexNode::Plus(atom)
+                atom = malloc(@sizeof(RegexNode)) as *RegexNode
+                *atom = node
+                parser.position = parser.position + 1
+            } | false => {}
+            
+            quant == 63 ? | true => { // ?
+                node := RegexNode::Question(atom)
+                atom = malloc(@sizeof(RegexNode)) as *RegexNode
+                *atom = node
+                parser.position = parser.position + 1
+            } | false => {}
+        } | false => {}
+        
+        nodes[node_count] = *atom
+        node_count = node_count + 1
+    }
+    
+    node_count == 1 ? | true => {
+        return &nodes[0]
+    } | false => {
+        node := RegexNode::Sequence(nodes, node_count)
+        result := malloc(@sizeof(RegexNode)) as *RegexNode
+        *result = node
+        return result
+    }
+}
+
+// Compile regex pattern
+regex_compile = (pattern: *i8) Regex {
+    parser := regex_parser_new(pattern)
+    root := regex_parse_sequence(&parser)
+    
+    return Regex {
+        pattern: pattern,
+        root: root,
+        group_count: parser.group_count,
+    }
+}
+
+// Match a single node at position
+regex_match_node = (node: *RegexNode, text: *i8, pos: i32, length: i32) (bool, i32) {
+    pos >= length ? | true => {
+        // Check if node can match empty
+        node ?
+            | Star(_) => { return (true, pos) }
+            | Question(_) => { return (true, pos) }
+            | Anchor(false) => { return (true, pos) } // $ at end
+            | _ => { return (false, pos) }
+    } | false => {}
+    
+    node ?
+        | Literal(ch) => {
+            text[pos] == ch ? | true => {
+                return (true, pos + 1)
+            } | false => {
+                return (false, pos)
+            }
+        }
+        | Dot => {
+            text[pos] != 10 ? | true => { // Not newline
+                return (true, pos + 1)
+            } | false => {
+                return (false, pos)
+            }
+        }
+        | CharClass(chars, negated) => {
+            // Check if character is in class
+            found := false
+            i := 0
+            loop {
+                chars[i] == 0 ? | true => { break } | false => {}
+                chars[i] == text[pos] ? | true => {
+                    found = true
+                    break
+                } | false => {}
+                i = i + 1
+            }
+            
+            match := negated ? | true => !found | false => found
+            match ? | true => {
+                return (true, pos + 1)
+            } | false => {
+                return (false, pos)
+            }
+        }
+        | Star(child) => {
+            // Try to match zero or more
+            new_pos := pos
+            loop {
+                result := regex_match_node(child, text, new_pos, length)
+                result.0 ? | true => {
+                    new_pos = result.1
+                } | false => {
+                    break
+                }
+            }
+            return (true, new_pos)
+        }
+        | Plus(child) => {
+            // Must match at least once
+            result := regex_match_node(child, text, pos, length)
+            result.0 ? | false => {
+                return (false, pos)
+            } | true => {}
+            
+            // Match more if possible
+            new_pos := result.1
+            loop {
+                result2 := regex_match_node(child, text, new_pos, length)
+                result2.0 ? | true => {
+                    new_pos = result2.1
+                } | false => {
+                    break
+                }
+            }
+            return (true, new_pos)
+        }
+        | Question(child) => {
+            // Try to match, but ok if it doesn't
+            result := regex_match_node(child, text, pos, length)
+            result.0 ? | true => {
+                return (true, result.1)
+            } | false => {
+                return (true, pos)
+            }
+        }
+        | Sequence(nodes, count) => {
+            new_pos := pos
+            range(0, count).loop(i -> {
+                result := regex_match_node(&nodes[i], text, new_pos, length)
+                result.0 ? | true => {
+                    new_pos = result.1
+                } | false => {
+                    return (false, pos)
+                }
+            })
+            return (true, new_pos)
+        }
+        | Group(child, _) => {
+            return regex_match_node(child, text, pos, length)
+        }
+        | Anchor(start) => {
+            start ? | true => {
+                pos == 0 ? | true => {
+                    return (true, pos)
+                } | false => {
+                    return (false, pos)
+                }
+            } | false => {
+                pos == length ? | true => {
+                    return (true, pos)
+                } | false => {
+                    return (false, pos)
+                }
+            }
+        }
+        | Alternation(left, right) => {
+            // Try left first
+            result := regex_match_node(left, text, pos, length)
+            result.0 ? | true => {
+                return result
+            } | false => {
+                // Try right
+                return regex_match_node(right, text, pos, length)
+            }
+        }
+}
+
+// Match regex against text
+regex_match = (regex: Regex, text: *i8) RegexMatch {
+    length := strlen(text) as i32
+    
+    // Try matching at each position
+    range(0, length + 1).loop(start -> {
+        result := regex_match_node(regex.root, text, start, length)
+        result.0 ? | true => {
+            return RegexMatch {
+                matched: true,
+                start: start,
+                end: result.1,
+                groups: 0 as *RegexGroup,
+                group_count: 0,
+            }
+        } | false => {}
+    })
+    
+    return RegexMatch {
+        matched: false,
+        start: 0,
+        end: 0,
+        groups: 0 as *RegexGroup,
+        group_count: 0,
+    }
+}
+
+// Test if pattern matches text
+regex_test = (pattern: *i8, text: *i8) bool {
+    regex := regex_compile(pattern)
+    match := regex_match(regex, text)
+    return match.matched
+}
+
+// Replace first match
+regex_replace = (pattern: *i8, text: *i8, replacement: *i8) *i8 {
+    regex := regex_compile(pattern)
+    match := regex_match(regex, text)
+    
+    match.matched ? | false => {
+        return text
+    } | true => {}
+    
+    text_len := strlen(text) as i32
+    repl_len := strlen(replacement) as i32
+    new_len := text_len - (match.end - match.start) + repl_len
+    
+    result := malloc((new_len + 1) as i64) as *i8
+    
+    // Copy before match
+    range(0, match.start).loop(i -> {
+        result[i] = text[i]
+    })
+    
+    // Copy replacement
+    range(0, repl_len).loop(i -> {
+        result[match.start + i] = replacement[i]
+    })
+    
+    // Copy after match
+    range(match.end, text_len).loop(i -> {
+        result[match.start + repl_len + (i - match.end)] = text[i]
+    })
+    
+    result[new_len] = 0
+    return result
+}
+
+// Free regex
+regex_free = (regex: *Regex) void {
+    // Would need to recursively free nodes
+    free(regex.root as *void)
+}

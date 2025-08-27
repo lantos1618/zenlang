@@ -1,0 +1,311 @@
+// HTTP Client and Server utilities for Zen
+// Provides basic HTTP functionality
+
+extern malloc = (size: i64) *void
+extern free = (ptr: *void) void
+extern memcpy = (dest: *void, src: *void, size: i64) *void
+extern strlen = (str: *i8) i64
+extern sprintf = (buffer: *i8, format: *i8, ...) i32
+
+// HTTP Methods
+HttpMethod = 
+    | GET
+    | POST
+    | PUT
+    | DELETE
+    | HEAD
+    | OPTIONS
+    | PATCH
+
+// HTTP Status codes
+HttpStatus = 
+    | OK                    // 200
+    | Created              // 201
+    | Accepted             // 202
+    | NoContent            // 204
+    | MovedPermanently     // 301
+    | Found                // 302
+    | NotModified          // 304
+    | BadRequest           // 400
+    | Unauthorized         // 401
+    | Forbidden            // 403
+    | NotFound             // 404
+    | MethodNotAllowed     // 405
+    | InternalServerError  // 500
+    | NotImplemented       // 501
+    | BadGateway          // 502
+    | ServiceUnavailable   // 503
+
+// HTTP Header
+HttpHeader = {
+    name: *i8,
+    value: *i8,
+}
+
+// HTTP Request
+HttpRequest = {
+    method: HttpMethod,
+    url: *i8,
+    headers: *HttpHeader,
+    header_count: i32,
+    body: *i8,
+    body_length: i32,
+}
+
+// HTTP Response
+HttpResponse = {
+    status: HttpStatus,
+    status_code: i32,
+    headers: *HttpHeader,
+    header_count: i32,
+    body: *i8,
+    body_length: i32,
+}
+
+// Create a new HTTP request
+http_request_new = (method: HttpMethod, url: *i8) HttpRequest {
+    return HttpRequest {
+        method: method,
+        url: url,
+        headers: malloc(32 * @sizeof(HttpHeader)) as *HttpHeader,
+        header_count: 0,
+        body: 0 as *i8,
+        body_length: 0,
+    }
+}
+
+// Add header to request
+http_request_add_header = (req: *HttpRequest, name: *i8, value: *i8) void {
+    req.headers[req.header_count] = HttpHeader {
+        name: name,
+        value: value,
+    }
+    req.header_count = req.header_count + 1
+}
+
+// Set request body
+http_request_set_body = (req: *HttpRequest, body: *i8) void {
+    req.body = body
+    req.body_length = strlen(body) as i32
+}
+
+// Get status code from status enum
+http_status_code = (status: HttpStatus) i32 {
+    status ?
+        | OK => { return 200 }
+        | Created => { return 201 }
+        | Accepted => { return 202 }
+        | NoContent => { return 204 }
+        | MovedPermanently => { return 301 }
+        | Found => { return 302 }
+        | NotModified => { return 304 }
+        | BadRequest => { return 400 }
+        | Unauthorized => { return 401 }
+        | Forbidden => { return 403 }
+        | NotFound => { return 404 }
+        | MethodNotAllowed => { return 405 }
+        | InternalServerError => { return 500 }
+        | NotImplemented => { return 501 }
+        | BadGateway => { return 502 }
+        | ServiceUnavailable => { return 503 }
+}
+
+// Get status from code
+http_status_from_code = (code: i32) HttpStatus {
+    code == 200 ? | true => { return HttpStatus::OK } | false => {}
+    code == 201 ? | true => { return HttpStatus::Created } | false => {}
+    code == 202 ? | true => { return HttpStatus::Accepted } | false => {}
+    code == 204 ? | true => { return HttpStatus::NoContent } | false => {}
+    code == 301 ? | true => { return HttpStatus::MovedPermanently } | false => {}
+    code == 302 ? | true => { return HttpStatus::Found } | false => {}
+    code == 304 ? | true => { return HttpStatus::NotModified } | false => {}
+    code == 400 ? | true => { return HttpStatus::BadRequest } | false => {}
+    code == 401 ? | true => { return HttpStatus::Unauthorized } | false => {}
+    code == 403 ? | true => { return HttpStatus::Forbidden } | false => {}
+    code == 404 ? | true => { return HttpStatus::NotFound } | false => {}
+    code == 405 ? | true => { return HttpStatus::MethodNotAllowed } | false => {}
+    code == 500 ? | true => { return HttpStatus::InternalServerError } | false => {}
+    code == 501 ? | true => { return HttpStatus::NotImplemented } | false => {}
+    code == 502 ? | true => { return HttpStatus::BadGateway } | false => {}
+    code == 503 ? | true => { return HttpStatus::ServiceUnavailable } | false => {}
+    return HttpStatus::InternalServerError
+}
+
+// Method to string
+http_method_to_string = (method: HttpMethod) *i8 {
+    method ?
+        | GET => { return "GET" as *i8 }
+        | POST => { return "POST" as *i8 }
+        | PUT => { return "PUT" as *i8 }
+        | DELETE => { return "DELETE" as *i8 }
+        | HEAD => { return "HEAD" as *i8 }
+        | OPTIONS => { return "OPTIONS" as *i8 }
+        | PATCH => { return "PATCH" as *i8 }
+}
+
+// Parse HTTP response (simplified)
+http_parse_response = (data: *i8) HttpResponse {
+    // This is a simplified parser
+    // Real implementation would need proper HTTP parsing
+    
+    response := HttpResponse {
+        status: HttpStatus::OK,
+        status_code: 200,
+        headers: malloc(32 * @sizeof(HttpHeader)) as *HttpHeader,
+        header_count: 0,
+        body: 0 as *i8,
+        body_length: 0,
+    }
+    
+    // Find status line
+    position := 0
+    loop {
+        data[position] == 0 || data[position] == 10 ? | true => { break } | false => {}
+        position = position + 1
+    }
+    
+    // Skip to headers
+    position = position + 1
+    
+    // Parse headers (simplified)
+    loop {
+        data[position] == 0 || data[position] == 10 ? | true => { break } | false => {}
+        
+        // Find colon
+        colon_pos := position
+        loop {
+            data[colon_pos] == 0 || data[colon_pos] == 58 ? | true => { break } | false => {}
+            colon_pos = colon_pos + 1
+        }
+        
+        data[colon_pos] == 58 ? | true => {
+            // Extract header name and value
+            // This would need proper string extraction
+            response.header_count = response.header_count + 1
+        } | false => {}
+        
+        // Move to next line
+        loop {
+            data[position] == 0 || data[position] == 10 ? | true => { break } | false => {}
+            position = position + 1
+        }
+        position = position + 1
+    }
+    
+    // Body starts after empty line
+    response.body = data + position + 1
+    response.body_length = strlen(response.body) as i32
+    
+    return response
+}
+
+// Build HTTP request string
+http_build_request = (req: HttpRequest) *i8 {
+    // Allocate buffer for request
+    buffer := malloc(4096 as i64) as *i8
+    position := 0
+    
+    // Add request line
+    method_str := http_method_to_string(req.method)
+    method_len := strlen(method_str) as i32
+    memcpy((buffer + position) as *void, method_str as *void, method_len as i64)
+    position = position + method_len
+    
+    buffer[position] = 32 // space
+    position = position + 1
+    
+    url_len := strlen(req.url) as i32
+    memcpy((buffer + position) as *void, req.url as *void, url_len as i64)
+    position = position + url_len
+    
+    // Add HTTP version
+    version := " HTTP/1.1\r\n" as *i8
+    version_len := strlen(version) as i32
+    memcpy((buffer + position) as *void, version as *void, version_len as i64)
+    position = position + version_len
+    
+    // Add headers
+    range(0, req.header_count).loop(i -> {
+        header := req.headers[i]
+        
+        name_len := strlen(header.name) as i32
+        memcpy((buffer + position) as *void, header.name as *void, name_len as i64)
+        position = position + name_len
+        
+        buffer[position] = 58 // ':'
+        position = position + 1
+        buffer[position] = 32 // space
+        position = position + 1
+        
+        value_len := strlen(header.value) as i32
+        memcpy((buffer + position) as *void, header.value as *void, value_len as i64)
+        position = position + value_len
+        
+        buffer[position] = 13 // '\r'
+        position = position + 1
+        buffer[position] = 10 // '\n'
+        position = position + 1
+    })
+    
+    // Add empty line
+    buffer[position] = 13
+    position = position + 1
+    buffer[position] = 10
+    position = position + 1
+    
+    // Add body if present
+    req.body_length > 0 ? | true => {
+        memcpy((buffer + position) as *void, req.body as *void, req.body_length as i64)
+        position = position + req.body_length
+    } | false => {}
+    
+    buffer[position] = 0
+    
+    return buffer
+}
+
+// URL encoding
+http_url_encode = (str: *i8) *i8 {
+    // Simplified URL encoding
+    // Real implementation would handle all special characters
+    return str
+}
+
+// Query string builder
+http_build_query_string = (params: *HttpHeader, count: i32) *i8 {
+    buffer := malloc(1024 as i64) as *i8
+    position := 0
+    
+    range(0, count).loop(i -> {
+        i > 0 ? | true => {
+            buffer[position] = 38 // '&'
+            position = position + 1
+        } | false => {}
+        
+        name_len := strlen(params[i].name) as i32
+        memcpy((buffer + position) as *void, params[i].name as *void, name_len as i64)
+        position = position + name_len
+        
+        buffer[position] = 61 // '='
+        position = position + 1
+        
+        value_len := strlen(params[i].value) as i32
+        memcpy((buffer + position) as *void, params[i].value as *void, value_len as i64)
+        position = position + value_len
+    })
+    
+    buffer[position] = 0
+    return buffer
+}
+
+// Free request
+http_request_free = (req: *HttpRequest) void {
+    free(req.headers as *void)
+    req.body ? | 0 as *i8 => {} | _ => { free(req.body as *void) }
+}
+
+// Free response
+http_response_free = (res: *HttpResponse) void {
+    free(res.headers as *void)
+    res.body ? | 0 as *i8 => {} | _ => { free(res.body as *void) }
+}

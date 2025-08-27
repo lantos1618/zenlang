@@ -1,0 +1,296 @@
+// JSON Parser and Serializer for Zen
+// Provides JSON parsing and serialization capabilities
+
+extern malloc = (size: i64) *void
+extern free = (ptr: *void) void
+extern memcpy = (dest: *void, src: *void, size: i64) *void
+extern strlen = (str: *i8) i64
+
+// JSON Value types
+JsonValue = 
+    | Null
+    | Boolean(value: bool)
+    | Number(value: f64)
+    | String(value: *i8)
+    | Array(elements: *JsonValue, count: i32)
+    | Object(pairs: *JsonPair, count: i32)
+
+JsonPair = {
+    key: *i8,
+    value: *JsonValue,
+}
+
+// JSON Parser state
+JsonParser = {
+    input: *i8,
+    position: i32,
+    length: i32,
+}
+
+// Create a new JSON parser
+json_parser_new = (input: *i8) JsonParser {
+    return JsonParser {
+        input: input,
+        position: 0,
+        length: strlen(input) as i32,
+    }
+}
+
+// Skip whitespace in parser
+json_skip_whitespace = (parser: *JsonParser) void {
+    loop {
+        parser.position >= parser.length ? | true => { break } | false => {}
+        
+        ch := parser.input[parser.position]
+        is_ws := ch == 32 || ch == 9 || ch == 10 || ch == 13
+        is_ws ? | false => { break } | true => {}
+        
+        parser.position = parser.position + 1
+    }
+}
+
+// Parse a JSON string
+json_parse_string = (parser: *JsonParser) *i8 {
+    // Skip opening quote
+    parser.position = parser.position + 1
+    
+    start := parser.position
+    length := 0
+    
+    loop {
+        parser.position >= parser.length ? | true => { break } | false => {}
+        
+        ch := parser.input[parser.position]
+        ch == 34 ? | true => { break } | false => {} // Found closing quote
+        
+        ch == 92 ? | true => { // Escape character
+            parser.position = parser.position + 2
+            length = length + 1
+        } | false => {
+            parser.position = parser.position + 1
+            length = length + 1
+        }
+    }
+    
+    // Allocate and copy string
+    result := malloc((length + 1) as i64) as *i8
+    memcpy(result as *void, (parser.input + start) as *void, length as i64)
+    result[length] = 0
+    
+    // Skip closing quote
+    parser.position = parser.position + 1
+    
+    return result
+}
+
+// Parse a JSON number
+json_parse_number = (parser: *JsonParser) f64 {
+    start := parser.position
+    has_decimal := false
+    
+    // Handle negative sign
+    parser.input[parser.position] == 45 ? | true => { // '-'
+        parser.position = parser.position + 1
+    } | false => {}
+    
+    // Parse digits
+    loop {
+        parser.position >= parser.length ? | true => { break } | false => {}
+        
+        ch := parser.input[parser.position]
+        
+        ch >= 48 && ch <= 57 ? | true => { // '0' to '9'
+            parser.position = parser.position + 1
+        } | false => {
+            ch == 46 ? | true => { // '.'
+                has_decimal ? | true => { break } | false => {}
+                has_decimal = true
+                parser.position = parser.position + 1
+            } | false => { break }
+        }
+    }
+    
+    // Convert string to number (simplified)
+    // In a real implementation, we'd use proper string-to-float conversion
+    return 0.0
+}
+
+// Parse a JSON value
+json_parse_value = (parser: *JsonParser) *JsonValue {
+    json_skip_whitespace(parser)
+    
+    parser.position >= parser.length ? | true => {
+        return &JsonValue::Null
+    } | false => {}
+    
+    ch := parser.input[parser.position]
+    
+    // Null
+    ch == 110 ? | true => { // 'n'
+        parser.position = parser.position + 4 // Skip "null"
+        return &JsonValue::Null
+    } | false => {}
+    
+    // Boolean true
+    ch == 116 ? | true => { // 't'
+        parser.position = parser.position + 4 // Skip "true"
+        value := JsonValue::Boolean(true)
+        result := malloc(@sizeof(JsonValue)) as *JsonValue
+        *result = value
+        return result
+    } | false => {}
+    
+    // Boolean false
+    ch == 102 ? | true => { // 'f'
+        parser.position = parser.position + 5 // Skip "false"
+        value := JsonValue::Boolean(false)
+        result := malloc(@sizeof(JsonValue)) as *JsonValue
+        *result = value
+        return result
+    } | false => {}
+    
+    // String
+    ch == 34 ? | true => { // '"'
+        str := json_parse_string(parser)
+        value := JsonValue::String(str)
+        result := malloc(@sizeof(JsonValue)) as *JsonValue
+        *result = value
+        return result
+    } | false => {}
+    
+    // Number
+    ch == 45 || (ch >= 48 && ch <= 57) ? | true => { // '-' or digit
+        num := json_parse_number(parser)
+        value := JsonValue::Number(num)
+        result := malloc(@sizeof(JsonValue)) as *JsonValue
+        *result = value
+        return result
+    } | false => {}
+    
+    // Array
+    ch == 91 ? | true => { // '['
+        parser.position = parser.position + 1
+        return json_parse_array(parser)
+    } | false => {}
+    
+    // Object
+    ch == 123 ? | true => { // '{'
+        parser.position = parser.position + 1
+        return json_parse_object(parser)
+    } | false => {}
+    
+    return &JsonValue::Null
+}
+
+// Parse JSON array
+json_parse_array = (parser: *JsonParser) *JsonValue {
+    elements := malloc(1024 as i64) as *JsonValue
+    count := 0
+    
+    loop {
+        json_skip_whitespace(parser)
+        
+        parser.position >= parser.length ? | true => { break } | false => {}
+        parser.input[parser.position] == 93 ? | true => { // ']'
+            parser.position = parser.position + 1
+            break
+        } | false => {}
+        
+        count > 0 ? | true => {
+            parser.input[parser.position] == 44 ? | true => { // ','
+                parser.position = parser.position + 1
+            } | false => {}
+        } | false => {}
+        
+        element := json_parse_value(parser)
+        elements[count] = *element
+        count = count + 1
+    }
+    
+    value := JsonValue::Array(elements, count)
+    result := malloc(@sizeof(JsonValue)) as *JsonValue
+    *result = value
+    return result
+}
+
+// Parse JSON object
+json_parse_object = (parser: *JsonParser) *JsonValue {
+    pairs := malloc(1024 as i64) as *JsonPair
+    count := 0
+    
+    loop {
+        json_skip_whitespace(parser)
+        
+        parser.position >= parser.length ? | true => { break } | false => {}
+        parser.input[parser.position] == 125 ? | true => { // '}'
+            parser.position = parser.position + 1
+            break
+        } | false => {}
+        
+        count > 0 ? | true => {
+            parser.input[parser.position] == 44 ? | true => { // ','
+                parser.position = parser.position + 1
+                json_skip_whitespace(parser)
+            } | false => {}
+        } | false => {}
+        
+        // Parse key
+        key := json_parse_string(parser)
+        
+        json_skip_whitespace(parser)
+        
+        // Skip colon
+        parser.input[parser.position] == 58 ? | true => { // ':'
+            parser.position = parser.position + 1
+        } | false => {}
+        
+        // Parse value
+        value := json_parse_value(parser)
+        
+        pairs[count] = JsonPair { key: key, value: value }
+        count = count + 1
+    }
+    
+    value := JsonValue::Object(pairs, count)
+    result := malloc(@sizeof(JsonValue)) as *JsonValue
+    *result = value
+    return result
+}
+
+// Main parse function
+json_parse = (input: *i8) *JsonValue {
+    parser := json_parser_new(input)
+    return json_parse_value(&parser)
+}
+
+// Stringify a JSON value (simplified)
+json_stringify = (value: *JsonValue) *i8 {
+    value ? 
+        | Null => { return "null" as *i8 }
+        | Boolean(b) => { return b ? | true => "true" as *i8 | false => "false" as *i8 }
+        | Number(n) => { return "0" as *i8 } // Would need proper number-to-string
+        | String(s) => { return s }
+        | Array(elements, count) => { return "[]" as *i8 } // Simplified
+        | Object(pairs, count) => { return "{}" as *i8 } // Simplified
+}
+
+// Free JSON value memory
+json_free = (value: *JsonValue) void {
+    value ? 
+        | String(s) => { free(s as *void) }
+        | Array(elements, count) => {
+            range(0, count).loop(i -> {
+                json_free(&elements[i])
+            })
+            free(elements as *void)
+        }
+        | Object(pairs, count) => {
+            range(0, count).loop(i -> {
+                free(pairs[i].key as *void)
+                json_free(pairs[i].value)
+            })
+            free(pairs as *void)
+        }
+        | _ => {}
+    free(value as *void)
+}
