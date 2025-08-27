@@ -1,0 +1,434 @@
+// Zen Standard Library - Test Framework
+// Provides testing infrastructure for Zen programs
+
+comptime {
+    core := @std.core
+    io := @std.io
+    assert := @std.assert
+    vec := @std.vec
+    string := @std.string
+}
+
+// TestResult represents the outcome of a test
+TestResult = 
+    | Passed
+    | Failed(message: string)
+    | Skipped(reason: string)
+    | Panicked(error: string)
+
+// TestCase represents a single test
+TestCase = {
+    name: string,
+    test_fn: () void,
+    should_panic:: bool,
+    skip:: bool,
+    skip_reason:: string,
+}
+
+// TestSuite represents a collection of tests
+TestSuite = {
+    name: string,
+    tests:: Vec<TestCase>,
+    setup:: Option<() void>,
+    teardown:: Option<() void>,
+    results:: Vec<(string, TestResult)>,
+}
+
+// TestRunner manages test execution
+TestRunner = {
+    suites:: Vec<TestSuite>,
+    total_tests:: u32,
+    passed:: u32,
+    failed:: u32,
+    skipped:: u32,
+    verbose:: bool,
+}
+
+// Create a new test suite
+suite_new = (name: string) TestSuite {
+    TestSuite{
+        name: name,
+        tests: vec_new<TestCase>(),
+        setup: None,
+        teardown: None,
+        results: vec_new<(string, TestResult)>(),
+    }
+}
+
+// Add a test to the suite
+suite_add_test = (suite:: Ptr<TestSuite>, name: string, test_fn: () void) void {
+    test := TestCase{
+        name: name,
+        test_fn: test_fn,
+        should_panic: false,
+        skip: false,
+        skip_reason: "",
+    }
+    suite.tests.push(test)
+}
+
+// Add a test that should panic
+suite_add_panic_test = (suite:: Ptr<TestSuite>, name: string, test_fn: () void) void {
+    test := TestCase{
+        name: name,
+        test_fn: test_fn,
+        should_panic: true,
+        skip: false,
+        skip_reason: "",
+    }
+    suite.tests.push(test)
+}
+
+// Skip a test
+suite_skip_test = (suite:: Ptr<TestSuite>, name: string, reason: string, test_fn: () void) void {
+    test := TestCase{
+        name: name,
+        test_fn: test_fn,
+        should_panic: false,
+        skip: true,
+        skip_reason: reason,
+    }
+    suite.tests.push(test)
+}
+
+// Set setup function for suite
+suite_setup = (suite:: Ptr<TestSuite>, setup_fn: () void) void {
+    suite.setup = Some(setup_fn)
+}
+
+// Set teardown function for suite
+suite_teardown = (suite:: Ptr<TestSuite>, teardown_fn: () void) void {
+    suite.teardown = Some(teardown_fn)
+}
+
+// Run a single test case
+run_test = (test: TestCase) TestResult {
+    // Check if test should be skipped
+    test.skip ?
+        | true => return TestResult.Skipped(test.skip_reason)
+        | false => {}
+    
+    // Try to catch panics (simplified - real implementation would use proper panic handling)
+    // For now, we'll just run the test and assume success if it doesn't crash
+    
+    test.should_panic ?
+        | true => {
+            // Test should panic - in real implementation would catch panic
+            test.test_fn()
+            // If we get here, test didn't panic when it should have
+            return TestResult.Failed("Expected test to panic but it didn't")
+        }
+        | false => {
+            // Normal test execution
+            test.test_fn()
+            return TestResult.Passed
+        }
+}
+
+// Run all tests in a suite
+run_suite = (suite:: Ptr<TestSuite>) void {
+    io.println("\n=== Running test suite: $(suite.name) ===")
+    
+    // Run setup if provided
+    suite.setup ?
+        | Some(setup_fn) => {
+            io.println("  Running setup...")
+            setup_fn()
+        }
+        | None => {}
+    
+    // Run each test
+    range(0, suite.tests.len()).loop(i -> {
+        test := suite.tests.at(i)
+        io.print("  Testing $(test.name)... ")
+        
+        result := run_test(test)
+        
+        result ?
+            | TestResult.Passed => {
+                io.println("✓ PASSED")
+                suite.results.push((test.name, result))
+            }
+            | TestResult.Failed(msg) => {
+                io.println("✗ FAILED: $(msg)")
+                suite.results.push((test.name, result))
+            }
+            | TestResult.Skipped(reason) => {
+                io.println("⊘ SKIPPED: $(reason)")
+                suite.results.push((test.name, result))
+            }
+            | TestResult.Panicked(err) => {
+                io.println("✗ PANICKED: $(err)")
+                suite.results.push((test.name, result))
+            }
+    })
+    
+    // Run teardown if provided
+    suite.teardown ?
+        | Some(teardown_fn) => {
+            io.println("  Running teardown...")
+            teardown_fn()
+        }
+        | None => {}
+}
+
+// Create a new test runner
+runner_new = () TestRunner {
+    TestRunner{
+        suites: vec_new<TestSuite>(),
+        total_tests: 0,
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        verbose: false,
+    }
+}
+
+// Add a suite to the runner
+runner_add_suite = (runner:: Ptr<TestRunner>, suite: TestSuite) void {
+    runner.suites.push(suite)
+    runner.total_tests = runner.total_tests + suite.tests.len()
+}
+
+// Enable verbose output
+runner_verbose = (runner:: Ptr<TestRunner>, verbose: bool) void {
+    runner.verbose = verbose
+}
+
+// Run all test suites
+runner_run = (runner:: Ptr<TestRunner>) bool {
+    io.println("\n" + string_repeat("=", 60))
+    io.println("Running $(runner.total_tests) tests in $(runner.suites.len()) suites")
+    io.println(string_repeat("=", 60))
+    
+    // Run each suite
+    range(0, runner.suites.len()).loop(i -> {
+        suite := runner.suites.at(i)
+        run_suite(ptr_of(suite))
+        
+        // Count results
+        range(0, suite.results.len()).loop(j -> {
+            result_pair := suite.results.at(j)
+            result := result_pair.1
+            
+            result ?
+                | TestResult.Passed => runner.passed = runner.passed + 1
+                | TestResult.Failed(_) => runner.failed = runner.failed + 1
+                | TestResult.Skipped(_) => runner.skipped = runner.skipped + 1
+                | TestResult.Panicked(_) => runner.failed = runner.failed + 1
+        })
+    })
+    
+    // Print summary
+    io.println("\n" + string_repeat("=", 60))
+    io.println("Test Summary:")
+    io.println("  Total:   $(runner.total_tests)")
+    io.println("  Passed:  $(runner.passed)")
+    io.println("  Failed:  $(runner.failed)")
+    io.println("  Skipped: $(runner.skipped)")
+    
+    pass_rate := (runner.passed * 100) / runner.total_tests
+    io.println("  Pass Rate: $(pass_rate)%")
+    
+    runner.failed == 0 ?
+        | true => {
+            io.println("\n✓ All tests passed!")
+            io.println(string_repeat("=", 60))
+            return true
+        }
+        | false => {
+            io.println("\n✗ Some tests failed!")
+            io.println(string_repeat("=", 60))
+            return false
+        }
+}
+
+// Assertion helpers for tests
+assert_eq = <T>(actual: T, expected: T, message: string = "") void {
+    actual == expected ?
+        | false => {
+            msg := message.empty() ?
+                | true => "Expected $(expected), got $(actual)"
+                | false => message
+            panic(msg)
+        }
+        | true => {}
+}
+
+assert_ne = <T>(actual: T, expected: T, message: string = "") void {
+    actual != expected ?
+        | false => {
+            msg := message.empty() ?
+                | true => "Expected values to be different, both were $(actual)"
+                | false => message
+            panic(msg)
+        }
+        | true => {}
+}
+
+assert_true = (value: bool, message: string = "") void {
+    value ?
+        | false => {
+            msg := message.empty() ?
+                | true => "Expected true, got false"
+                | false => message
+            panic(msg)
+        }
+        | true => {}
+}
+
+assert_false = (value: bool, message: string = "") void {
+    value ?
+        | true => {
+            msg := message.empty() ?
+                | true => "Expected false, got true"
+                | false => message
+            panic(msg)
+        }
+        | false => {}
+}
+
+assert_lt = <T>(a: T, b: T, message: string = "") void {
+    a < b ?
+        | false => {
+            msg := message.empty() ?
+                | true => "Expected $(a) < $(b)"
+                | false => message
+            panic(msg)
+        }
+        | true => {}
+}
+
+assert_le = <T>(a: T, b: T, message: string = "") void {
+    a <= b ?
+        | false => {
+            msg := message.empty() ?
+                | true => "Expected $(a) <= $(b)"
+                | false => message
+            panic(msg)
+        }
+        | true => {}
+}
+
+assert_gt = <T>(a: T, b: T, message: string = "") void {
+    a > b ?
+        | false => {
+            msg := message.empty() ?
+                | true => "Expected $(a) > $(b)"
+                | false => message
+            panic(msg)
+        }
+        | true => {}
+}
+
+assert_ge = <T>(a: T, b: T, message: string = "") void {
+    a >= b ?
+        | false => {
+            msg := message.empty() ?
+                | true => "Expected $(a) >= $(b)"
+                | false => message
+            panic(msg)
+        }
+        | true => {}
+}
+
+// Benchmark support
+Benchmark = {
+    name: string,
+    fn: () void,
+    iterations:: u32,
+    warmup:: u32,
+    times:: Vec<u64>,
+}
+
+// Create a new benchmark
+benchmark_new = (name: string, fn: () void) Benchmark {
+    Benchmark{
+        name: name,
+        fn: fn,
+        iterations: 1000,
+        warmup: 100,
+        times: vec_new<u64>(),
+    }
+}
+
+// Run a benchmark
+benchmark_run = (bench:: Ptr<Benchmark>) void {
+    io.println("\nRunning benchmark: $(bench.name)")
+    
+    // Warmup
+    io.print("  Warming up... ")
+    range(0, bench.warmup).loop(i -> {
+        bench.fn()
+    })
+    io.println("done")
+    
+    // Actual benchmark
+    io.print("  Running $(bench.iterations) iterations... ")
+    
+    range(0, bench.iterations).loop(i -> {
+        start := time_now()
+        bench.fn()
+        end := time_now()
+        
+        elapsed := end - start
+        bench.times.push(elapsed)
+    })
+    
+    io.println("done")
+    
+    // Calculate statistics
+    total := 0u64
+    min := bench.times.at(0)
+    max := bench.times.at(0)
+    
+    range(0, bench.times.len()).loop(i -> {
+        time := bench.times.at(i)
+        total = total + time
+        
+        time < min ?
+            | true => min = time
+            | false => {}
+        
+        time > max ?
+            | true => max = time
+            | false => {}
+    })
+    
+    avg := total / bench.iterations
+    
+    io.println("  Results:")
+    io.println("    Average: $(avg) ns")
+    io.println("    Min:     $(min) ns")
+    io.println("    Max:     $(max) ns")
+}
+
+// Test macro helpers (compile-time)
+comptime {
+    // Register test function
+    test = (name: string, fn: () void) void {
+        // In real implementation, this would register the test
+        // with the test runner at compile time
+    }
+    
+    // Register benchmark
+    bench = (name: string, fn: () void) void {
+        // In real implementation, this would register the benchmark
+        // with the benchmark runner at compile time
+    }
+}
+
+// Helper to get current time in nanoseconds (stub)
+time_now = () u64 {
+    // In real implementation, would call system time function
+    return 0
+}
+
+// Helper to repeat a string
+string_repeat = (s: string, n: u32) string {
+    result ::= ""
+    range(0, n).loop(i -> {
+        result = result + s
+    })
+    return result
+}

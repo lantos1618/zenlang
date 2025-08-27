@@ -1,0 +1,327 @@
+// Zen Standard Library - Async/Await Module
+// Provides async programming support with Task<T> and Future<T> types
+
+comptime {
+    core := @std.core
+    mem := @std.mem
+    thread := @std.thread
+}
+
+// Task represents an async computation that produces a value of type T
+Task<T> = {
+    state:: TaskState,
+    result:: Option<T>,
+    error:: Option<Error>,
+    continuation:: Option<Ptr<() void>>,
+    executor:: Ptr<Executor>,
+}
+
+// TaskState represents the state of an async task
+TaskState = 
+    | Pending
+    | Running
+    | Completed
+    | Failed
+    | Cancelled
+
+// Future represents a value that will be available in the future
+Future<T> = {
+    task:: Ptr<Task<T>>,
+    callback:: Option<(T) void>,
+}
+
+// Executor manages the execution of async tasks
+Executor = {
+    tasks:: Vec<Ptr<Task>>,
+    thread_pool:: Ptr<ThreadPool>,
+    running:: bool,
+}
+
+// Create a new async task
+task_new = <T>(compute: () T, executor: Ptr<Executor>) Task<T> {
+    task := Task<T>{
+        state: TaskState.Pending,
+        result: None,
+        error: None,
+        continuation: None,
+        executor: executor,
+    }
+    
+    // Add to executor queue
+    executor.tasks.push(ptr_of(task))
+    
+    return task
+}
+
+// Await a task's completion
+await = <T>(task: Task<T>) T {
+    // If already completed, return result
+    task.state ? 
+        | TaskState.Completed => {
+            task.result ? 
+                | Some(val) => return val
+                | None => panic("Task completed but no result")
+        }
+        | TaskState.Failed => {
+            task.error ?
+                | Some(err) => panic(err.message)
+                | None => panic("Task failed with unknown error")
+        }
+        | _ => {}
+    
+    // Block until task completes
+    loop task.state != TaskState.Completed && task.state != TaskState.Failed {
+        thread.yield()
+    }
+    
+    // Return result or panic on error
+    task.state ?
+        | TaskState.Completed => {
+            task.result ?
+                | Some(val) => return val
+                | None => panic("Task completed but no result")
+        }
+        | TaskState.Failed => {
+            task.error ?
+                | Some(err) => panic(err.message)
+                | None => panic("Task failed with unknown error")
+        }
+        | _ => panic("Unexpected task state after await")
+}
+
+// Create a future from a task
+future_from = <T>(task: Task<T>) Future<T> {
+    Future<T>{
+        task: ptr_of(task),
+        callback: None,
+    }
+}
+
+// Set a callback for when future completes
+future_then = <T, U>(future: Future<T>, callback: (T) U) Future<U> {
+    new_task := task_new(() U {
+        result := await(deref(future.task))
+        return callback(result)
+    }, future.task.executor)
+    
+    return future_from(new_task)
+}
+
+// Wait for multiple futures to complete
+future_all = <T>(futures: Vec<Future<T>>) Future<Vec<T>> {
+    futures.empty() ? 
+        | true => panic("future_all called with empty vector")
+        | false => {}
+    
+    executor := futures.at(0).task.executor
+    
+    new_task := task_new(() Vec<T> {
+        results := vec_new<T>()
+        
+        range(0, futures.len()).loop(i -> {
+            future := futures.at(i)
+            result := await(deref(future.task))
+            results.push(result)
+        })
+        
+        return results
+    }, executor)
+    
+    return future_from(new_task)
+}
+
+// Wait for first future to complete
+future_race = <T>(futures: Vec<Future<T>>) Future<T> {
+    futures.empty() ?
+        | true => panic("future_race called with empty vector")
+        | false => {}
+    
+    executor := futures.at(0).task.executor
+    
+    new_task := task_new(() T {
+        // Poll all futures until one completes
+        loop {
+            range(0, futures.len()).loop(i -> {
+                future := futures.at(i)
+                task := deref(future.task)
+                
+                task.state ?
+                    | TaskState.Completed => {
+                        task.result ?
+                            | Some(val) => return val
+                            | None => {}
+                    }
+                    | TaskState.Failed => {
+                        task.error ?
+                            | Some(err) => panic(err.message)
+                            | None => {}
+                    }
+                    | _ => {}
+            })
+            
+            thread.yield()
+        }
+    }, executor)
+    
+    return future_from(new_task)
+}
+
+// Create an executor with thread pool
+executor_new = (num_threads: usize) Executor {
+    Executor{
+        tasks: vec_new<Ptr<Task>>(),
+        thread_pool: thread_pool_new(num_threads),
+        running: false,
+    }
+}
+
+// Start the executor
+executor_start = (executor:: Ptr<Executor>) void {
+    executor.running = true
+    
+    // Main executor loop
+    loop executor.running {
+        executor.tasks.empty() ?
+            | true => {
+                thread.yield()
+                continue
+            }
+            | false => {}
+        
+        // Get next pending task
+        task := executor.tasks.pop_front()
+        task ? 
+            | Some(t) => {
+                // Execute task in thread pool
+                thread_pool_execute(executor.thread_pool, t)
+            }
+            | None => thread.yield()
+    }
+}
+
+// Stop the executor
+executor_stop = (executor:: Ptr<Executor>) void {
+    executor.running = false
+    thread_pool_shutdown(executor.thread_pool)
+}
+
+// Async function helper - marks a function as async
+async = <T>(fn: () T) Task<T> {
+    // Get default executor or create one
+    executor := get_default_executor()
+    return task_new(fn, executor)
+}
+
+// Get or create default executor
+get_default_executor = () Ptr<Executor> {
+    // In a real implementation, this would be a global singleton
+    // For now, create a new one
+    executor := executor_new(4)
+    executor_start(ptr_of(executor))
+    return ptr_of(executor)
+}
+
+// Sleep for specified milliseconds
+async_sleep = (ms: u64) Task<void> {
+    async(() void {
+        thread.sleep(ms)
+    })
+}
+
+// Run async code in parallel
+parallel = <T>(tasks: Vec<() T>) Vec<T> {
+    futures := vec_new<Future<T>>()
+    
+    range(0, tasks.len()).loop(i -> {
+        task_fn := tasks.at(i)
+        task := async(task_fn)
+        future := future_from(task)
+        futures.push(future)
+    })
+    
+    all_future := future_all(futures)
+    return await(deref(all_future.task))
+}
+
+// Channel for async communication
+Channel<T> = {
+    buffer:: Vec<T>,
+    capacity:: usize,
+    senders:: u32,
+    receivers:: u32,
+    mutex:: Mutex,
+}
+
+// Create a new channel
+channel_new = <T>(capacity: usize) Channel<T> {
+    Channel<T>{
+        buffer: vec_new<T>(),
+        capacity: capacity,
+        senders: 0,
+        receivers: 0,
+        mutex: mutex_new(),
+    }
+}
+
+// Send value to channel (async)
+channel_send = <T>(ch:: Ptr<Channel<T>>, value: T) Task<void> {
+    async(() void {
+        mutex_lock(ch.mutex)
+        
+        // Wait if buffer is full
+        loop ch.buffer.len() >= ch.capacity {
+            mutex_unlock(ch.mutex)
+            thread.yield()
+            mutex_lock(ch.mutex)
+        }
+        
+        ch.buffer.push(value)
+        mutex_unlock(ch.mutex)
+    })
+}
+
+// Receive value from channel (async)
+channel_recv = <T>(ch:: Ptr<Channel<T>>) Task<T> {
+    async(() T {
+        mutex_lock(ch.mutex)
+        
+        // Wait if buffer is empty
+        loop ch.buffer.empty() {
+            mutex_unlock(ch.mutex)
+            thread.yield()
+            mutex_lock(ch.mutex)
+        }
+        
+        value := ch.buffer.pop_front()
+        mutex_unlock(ch.mutex)
+        
+        value ?
+            | Some(val) => return val
+            | None => panic("Failed to receive from channel")
+    })
+}
+
+// Select from multiple channels
+select = <T>(channels: Vec<Ptr<Channel<T>>>) Task<(usize, T)> {
+    async(() (usize, T) {
+        loop {
+            range(0, channels.len()).loop(i -> {
+                ch := channels.at(i)
+                mutex_lock(ch.mutex)
+                
+                ch.buffer.empty() ?
+                    | false => {
+                        value := ch.buffer.pop_front()
+                        mutex_unlock(ch.mutex)
+                        
+                        value ?
+                            | Some(val) => return (i, val)
+                            | None => {}
+                    }
+                    | true => mutex_unlock(ch.mutex)
+            })
+            
+            thread.yield()
+        }
+    })
+}
