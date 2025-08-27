@@ -163,7 +163,7 @@ pool_new<T> = (block_count: i64) core.Result<Pool<T>, core.Error> {
         } | .Ok -> list => {
             // Initialize free list
             i ::= 0
-            loop i < block_count {
+            loop (i < block_count) {
                 list[i] = i
                 i = i + 1
             }
@@ -244,7 +244,7 @@ set = (ptr: *void, value: i32, size: i64) void {
 // Compare memory
 compare = (a: *void, b: *void, size: i64) i32 {
     i ::= 0
-    loop i < size {
+    loop (i < size) {
         byte_a := (a as *i8)[i]
         byte_b := (b as *i8)[i]
         

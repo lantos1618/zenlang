@@ -87,7 +87,7 @@ pow_i64 = (base: i64, exp: i64) i64 {
     
     result ::= 1i64
     i ::= 0i64
-    loop i < exp {
+    loop (i < exp) {
         result = result * base
         i = i + 1
     }
@@ -107,7 +107,7 @@ sqrt_f64 = (x: f64) f64 {
     epsilon := 0.00001f64
     
     // Newton-Raphson iteration
-    loop true {
+    loop (true) {
         next := 0.5 * (guess + x / guess)
         
         abs_f64(next - guess) < epsilon ? | true => return next
@@ -133,7 +133,7 @@ gcd = (a: i64, b: i64) i64 {
     a := abs_i64(a)
     b := abs_i64(b)
     
-    loop b != 0 {
+    loop (b != 0) {
         temp := b
         b = a % b
         a = temp
@@ -162,7 +162,7 @@ factorial = (n: i64) core.Result<i64, core.Error> {
     
     result ::= 1i64
     i ::= 2i64
-    loop i <= n {
+    loop (i <= n) {
         result = result * i
         i = i + 1
     }
@@ -238,10 +238,10 @@ fract_f64 = (x: f64) f64 {
 // Wrap angle to [-PI, PI]
 wrap_angle = (angle: f64) f64 {
     a ::= angle
-    loop a > PI {
+    loop (a > PI) {
         a = a - TAU
     }
-    loop a < -PI {
+    loop (a < -PI) {
         a = a + TAU
     }
     return a
@@ -290,7 +290,7 @@ is_prime = (n: i64) bool {
                                | false => {}
     
     i ::= 5i64
-    loop i * i <= n {
+    loop (i * i <= n) {
         n % i == 0 || n % (i + 2) == 0 ? | true => return false
                                         | false => {}
         i = i + 6
@@ -311,7 +311,7 @@ fibonacci = (n: i64) i64 {
     b ::= 1i64
     i ::= 2i64
     
-    loop i <= n {
+    loop (i <= n) {
         temp := a + b
         a = b
         b = temp

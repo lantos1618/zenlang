@@ -13,9 +13,13 @@ fn test_mutable_loop_variable() {
         
         main = () i32 {
             sum :: i64 = 0
-            loop i in 0..10 {
+            i :: i64 = 0
+            ten :: i64 = 10
+            one :: i64 = 1
+            loop (i < ten) {
                 sum = sum + i
                 printf("i=%lld, sum=%lld\n", i, sum)
+                i = i + one
             }
             printf("Final sum: %lld\n", sum)
             return 0
@@ -80,11 +84,16 @@ fn test_nested_loops_with_mutation() {
         main = () i32 {
             total :: i64 = 0
             one :: i64 = 1
-            loop i in 0..3 {
-                loop j in 0..3 {
+            i :: i64 = 0
+            three :: i64 = 3
+            loop (i < three) {
+                j :: i64 = 0
+                loop (j < three) {
                     total = total + one
                     printf("i=%lld, j=%lld, total=%lld\n", i, j, total)
+                    j = j + one
                 }
+                i = i + one
             }
             printf("Total iterations: %lld\n", total)
             return 0

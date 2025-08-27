@@ -43,7 +43,7 @@ path_extension = (path: PathBuf) core.Option<string> {
     last_dot := -1
     i := path.path.len - 1
     
-    loop i >= 0 {
+    loop (i >= 0) {
         path.path[i] == '.' ? | true => {
             last_dot = i
             break
@@ -63,7 +63,7 @@ path_stem = (path: PathBuf) core.Option<string> {
     last_dot := -1
     i := path.path.len - 1
     
-    loop i >= 0 {
+    loop (i >= 0) {
         path.path[i] == '/' ? | true => {
             last_slash = i
             break
@@ -91,7 +91,7 @@ path_parent = (path: PathBuf) core.Option<PathBuf> {
     // Skip trailing slash if present
     i > 0 && path.path[i] == '/' ? | true => { i = i - 1 } | false => {}
     
-    loop i >= 0 {
+    loop (i >= 0) {
         path.path[i] == '/' ? | true => {
             last_slash = i
             break
@@ -225,7 +225,7 @@ copy_file = (from: string, to: string) io.IOResult<i64> {
     buffer: [8192]u8
     total_copied := 0i64
     
-    loop {
+    loop (true) {
         bytes_read := io.read(source, &buffer[0], 8192)?
         bytes_read == 0 ? | true => break | false => {}
         
@@ -256,7 +256,7 @@ walk_dir = (path: string, callback: (DirEntry) void) io.IOResult<void> {
     // Would be: array_iter(entries).loop(entry -> { callback(entry); ... })
     // For now, using index-based iteration
     i ::= 0
-    loop i < entries.len {
+    loop (i < entries.len) {
         entry := entries[i]
         callback(entry)
         is_dir(entry.path) ? | true => {
