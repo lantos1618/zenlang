@@ -1,47 +1,8 @@
 use zen::ast::{Declaration, ExternalFunction, Function, Statement, Expression, AstType, LoopKind, VariableDeclarationType};
 use zen::compiler::Compiler;
-use std::process::Command;
-use std::fs;
-use tempfile::TempDir;
 
-/// Helper to compile and run Zen code
-struct ExecutionHelper {
-    temp_dir: TempDir,
-}
-
-impl ExecutionHelper {
-    fn new() -> Self {
-        ExecutionHelper {
-            temp_dir: TempDir::new().expect("Failed to create temp dir"),
-        }
-    }
-
-    fn compile_and_run(&self, program: &zen::ast::Program) -> Result<i64, String> {
-        let context = inkwell::context::Context::create();
-        let compiler = Compiler::new(&context);
-
-        // Compile to LLVM IR
-        let ir = compiler
-            .compile_llvm(program)
-            .map_err(|e| format!("Compilation failed: {:?}", e))?;
-
-        // Write IR to file
-        let ir_path = self.temp_dir.path().join("test.ll");
-        fs::write(&ir_path, ir).map_err(|e| format!("Failed to write IR: {}", e))?;
-
-        // Try to run with lli
-        let lli_commands = ["lli-18", "lli-17", "lli-20", "lli"];
-        
-        for lli_cmd in &lli_commands {
-            if let Ok(output) = Command::new(lli_cmd).arg(&ir_path).output() {
-                let exit_code = output.status.code().unwrap_or(-1) as i64;
-                return Ok(exit_code);
-            }
-        }
-        
-        Err("No working lli found".to_string())
-    }
-}
+mod common;
+use common::{ExecutionHelper, CapturedOutput};
 
 #[test]
 fn test_loop_iterator_array_literal() {
@@ -105,9 +66,9 @@ fn test_loop_iterator_array_literal() {
         declarations: vec![malloc_decl, Declaration::Function(main_function)],
     };
     
-    let result = helper.compile_and_run(&program);
-    assert!(result.is_ok(), "Failed to compile: {:?}", result.err());
-    assert_eq!(result.unwrap(), 15); // 1+2+3+4+5 = 15
+    let output = helper.compile_ast_and_run(&program)
+        .expect("Failed to compile and run iterator loop test");
+    output.assert_exit_code(15); // 1+2+3+4+5 = 15
 }
 
 #[test]
@@ -166,9 +127,9 @@ fn test_loop_iterator_empty_array() {
         declarations: vec![malloc_decl, Declaration::Function(main_function)],
     };
     
-    let result = helper.compile_and_run(&program);
-    assert!(result.is_ok(), "Failed to compile: {:?}", result.err());
-    assert_eq!(result.unwrap(), 0); // Should not enter loop body
+    let output = helper.compile_ast_and_run(&program)
+        .expect("Failed to compile and run empty iterator loop test");
+    output.assert_exit_code(0); // Should not enter loop body
 }
 
 #[test]
@@ -232,7 +193,13 @@ fn test_loop_iterator_with_printf() {
         declarations: vec![malloc_decl, printf_decl, Declaration::Function(main_function)],
     };
     
-    // Just verify it compiles - we're not checking output in this test
-    let result = helper.compile_and_run(&program);
-    assert!(result.is_ok(), "Failed to compile: {:?}", result.err());
+    // Compile and verify output
+    let output = helper.compile_ast_and_run(&program)
+        .expect("Failed to compile and run iterator loop with printf");
+    
+    // Verify all values are printed
+    output.assert_stdout_contains("value: 10");
+    output.assert_stdout_contains("value: 20");
+    output.assert_stdout_contains("value: 30");
+    output.assert_exit_code(0);
 }
