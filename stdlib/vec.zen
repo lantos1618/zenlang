@@ -27,8 +27,8 @@ vec_with_capacity<T> = (capacity: i64) core.Result<Vec<T>, core.Error> {
         return core.Result::Err(core.Error::InvalidArgument("Capacity must be positive"))
     } | false => {}
     
-    data := core.malloc(capacity * sizeof(T))
-    data == 0 ? | true => {
+    data := core.malloc(capacity * sizeof(T)) as *T
+    data == null ? | true => {
         return core.Result::Err(core.Error::OutOfMemory)
     } | false => {}
     
@@ -47,7 +47,7 @@ vec_push<T> = (vec: *Vec<T>, value: T) core.Result<void, core.Error> {
                                            | false => vec.capacity * 2
         
         result := vec_grow(vec, new_capacity)
-        result ? | .Err -> e => return core.Result::Err(e)
+        result ? | core.Result::Err(e) => return core.Result::Err(e)
                 | .Ok -> _ => {}
     } | false => {}
     
