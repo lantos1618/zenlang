@@ -192,6 +192,21 @@ impl<'a> Lexer<'a> {
                 self.read_char();
                 Token::Symbol('|')
             }
+            Some('&') => {
+                // Check for '&&' operator
+                if let Some(next) = self.peek_char() {
+                    if next == '&' {
+                        self.read_char(); // consume '&'
+                        self.read_char(); // consume second '&'
+                        return TokenWithSpan {
+                            token: Token::Operator("&&".to_string()),
+                            span: Span { start: start_pos, end: self.position, line: start_line, column: start_column },
+                        };
+                    }
+                }
+                self.read_char();
+                Token::Symbol('&')
+            }
             Some('<') => {
                 self.read_char();
                 if self.current_char == Some('=') {

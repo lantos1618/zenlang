@@ -115,7 +115,7 @@ fn test_comptime_comparison() {
                 let mut evaluator = ComptimeInterpreter::new();
                 let result = evaluator.evaluate_expression(inner).unwrap();
                 match result {
-                    zen::comptime::ComptimeValue::Boolean(true) => {},
+                    zen::comptime::ComptimeValue::Bool(true) => {},
                     _ => panic!("Expected Boolean(true), got {:?}", result)
                 }
             }

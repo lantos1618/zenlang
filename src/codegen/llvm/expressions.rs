@@ -106,6 +106,16 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 // This will be expanded when we implement the module system  
                 Ok(self.context.i32_type().const_int(0, false).into())
             }
+            Expression::Block(statements) => {
+                // Compile block expression - evaluates to last expression or void
+                for stmt in statements {
+                    // Note: compile_statement returns (), we need to handle this differently
+                    self.compile_statement(stmt)?;
+                    // For now, blocks evaluate to void (i32 0)
+                }
+                // For now, blocks always return void
+                Ok(self.context.i32_type().const_int(0, false).into())
+            }
         }
     }
 

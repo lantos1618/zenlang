@@ -165,6 +165,8 @@ pub enum Expression {
     StdModule(String),
     // Generic module reference
     Module(String),
+    // Block expression - evaluates to the last expression or void
+    Block(Vec<Statement>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

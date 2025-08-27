@@ -1,0 +1,100 @@
+warning: unused import: `Expression`
+ --> src/codegen/llvm/literals.rs:2:27
+  |
+2 | use crate::ast::{AstType, Expression};
+  |                           ^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `Program`
+ --> src/comptime/mod.rs:4:69
+  |
+4 | use crate::ast::{self, AstType, Expression, Statement, Declaration, Program};
+  |                                                                     ^^^^^^^
+
+warning: unused import: `Path`
+ --> src/module_system/mod.rs:4:17
+  |
+4 | use std::path::{Path, PathBuf};
+  |                 ^^^^
+
+warning: unused import: `Keyword`
+ --> src/parser/comptime.rs:4:27
+  |
+4 | use crate::lexer::{Token, Keyword};
+  |                           ^^^^^^^
+
+warning: unused import: `Expression`
+ --> src/stdlib/io.rs:1:27
+  |
+1 | use crate::ast::{AstType, Expression};
+  |                           ^^^^^^^^^^
+
+warning: unused import: `crate::error::Result`
+ --> src/stdlib/net.rs:6:5
+  |
+6 | use crate::error::Result;
+  |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `array_ptr`
+   --> src/codegen/llvm/statements.rs:463:29
+    |
+463 |                         let array_ptr = if let Expression::ArrayLiteral(ref elements) = iterable {
+    |                             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_array_ptr`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `var_type`
+   --> src/codegen/llvm/statements.rs:530:51
+    |
+530 | ...                   if let Some((var_ptr, var_type)) = self.variables.get(name) {
+    |                                             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_var_type`
+
+warning: unused variable: `array_ptr`
+   --> src/codegen/llvm/statements.rs:532:37
+    |
+532 | ...   let array_ptr = self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), *var_ptr, "array_var").map_err(|e|...
+    |           ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_array_ptr`
+
+warning: unused variable: `t`
+  --> src/comptime/mod.rs:66:33
+   |
+66 |             ComptimeValue::Type(t) => {
+   |                                 ^ help: if this is intentional, prefix it with an underscore: `_t`
+
+warning: variable does not need to be mutable
+  --> src/module_system/mod.rs:67:13
+   |
+67 |         let mut processed_program = program.clone();
+   |             ----^^^^^^^^^^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` on by default
+
+warning: `zen` (lib) generated 11 warnings (run `cargo fix --lib -p zen` to apply 7 suggestions)
+warning: unused import: `TypeParameter`
+   --> src/typechecker/behaviors.rs:231:59
+    |
+231 |     use crate::ast::{BehaviorMethod, Function, Parameter, TypeParameter};
+    |                                                           ^^^^^^^^^^^^^
+
+warning: `zen` (lib test) generated 12 warnings (11 duplicates) (run `cargo fix --lib -p zen --tests` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+     Running unittests src/lib.rs (target/debug/deps/zen-2ee0139d69dc9195)
+
+running 11 tests
+test module_system::resolver::tests::test_is_exported ... ok
+test module_system::resolver::tests::test_resolve_qualified_name ... ok
+test module_system::tests::test_add_search_path ... ok
+test codegen::llvm::symbols::tests::test_symbol_table_scoping ... ok
+test tests::it_works ... ok
+test module_system::tests::test_module_system_creation ... ok
+test typechecker::behaviors::tests::test_method_resolution ... ok
+test typechecker::behaviors::tests::test_register_behavior ... ok
+test typechecker::behaviors::tests::test_register_impl ... ok
+test typechecker::tests::test_type_mismatch_error ... ok
+test typechecker::tests::test_basic_type_checking ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -244,6 +244,31 @@ impl<'a> Parser<'a> {
                     Token::Operator(op) if op == "=" => {
                         self.parse_variable_assignment()
                     }
+                    Token::Symbol('.') => {
+                        // Could be member access followed by assignment
+                        // Parse the left-hand side expression first
+                        let lhs = self.parse_expression()?;
+                        
+                        // Check if it's followed by an assignment
+                        if self.current_token == Token::Operator("=".to_string()) {
+                            self.next_token(); // consume '='
+                            let value = self.parse_expression()?;
+                            if self.current_token == Token::Symbol(';') {
+                                self.next_token();
+                            }
+                            // Use PointerAssignment for member field assignments
+                            Ok(Statement::PointerAssignment {
+                                pointer: lhs,
+                                value,
+                            })
+                        } else {
+                            // Just an expression statement
+                            if self.current_token == Token::Symbol(';') {
+                                self.next_token();
+                            }
+                            Ok(Statement::Expression(lhs))
+                        }
+                    }
                     _ => {
                         // Not a variable declaration, treat as expression
                         let expr = self.parse_expression()?;

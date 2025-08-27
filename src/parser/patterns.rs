@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::Pattern;
+use crate::ast::{Pattern, Expression};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 
@@ -58,6 +58,11 @@ impl<'a> Parser<'a> {
                 // Check if it's a wildcard pattern
                 if name == "_" {
                     return Ok(Pattern::Wildcard);
+                }
+                
+                // Check if it's a boolean literal pattern
+                if name == "true" || name == "false" {
+                    return Ok(Pattern::Literal(Expression::Boolean(name == "true")));
                 }
                 
                 // Check if it's a struct pattern: StructName { field: pattern, ... }
