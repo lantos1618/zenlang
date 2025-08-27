@@ -1,0 +1,273 @@
+// Zen Parser - Self-hosted parser implementation
+// Works with the self-hosted lexer to parse Zen code
+
+// AST Node Types
+AstType = 
+    | I8
+    | I16
+    | I32
+    | I64
+    | U8
+    | U16
+    | U32
+    | U64
+    | F32
+    | F64
+    | Bool
+    | String
+    | Void
+    | Pointer(inner: *AstType)
+    | Array(element_type: *AstType, size: i32)
+    | Custom(name: *i8)
+
+Expression = 
+    | Integer32(value: i32)
+    | Integer64(value: i64)
+    | Float32(value: f32)
+    | Float64(value: f64)
+    | Boolean(value: bool)
+    | StringLit(value: *i8)
+    | Identifier(name: *i8)
+    | BinaryOp(left: *Expression, op: BinaryOperator, right: *Expression)
+    | UnaryOp(op: UnaryOperator, operand: *Expression)
+    | FunctionCall(name: *i8, args: *Expression, arg_count: i32)
+    | FieldAccess(object: *Expression, field: *i8)
+    | ArrayAccess(array: *Expression, index: *Expression)
+    | StructLiteral(name: *i8, fields: *FieldInit, field_count: i32)
+    | ArrayLiteral(elements: *Expression, element_count: i32)
+
+BinaryOperator = 
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+    | Modulo
+    | Equal
+    | NotEqual
+    | LessThan
+    | GreaterThan
+    | LessThanOrEqual
+    | GreaterThanOrEqual
+    | LogicalAnd
+    | LogicalOr
+    | BitwiseAnd
+    | BitwiseOr
+    | BitwiseXor
+
+UnaryOperator = 
+    | Negate
+    | LogicalNot
+    | BitwiseNot
+    | AddressOf
+    | Dereference
+
+FieldInit = {
+    name: *i8,
+    value: *Expression,
+}
+
+Statement = 
+    | Expression(expr: *Expression)
+    | VariableDeclaration(name: *i8, type_: *AstType, initializer: *Expression, is_mutable: bool)
+    | VariableAssignment(name: *i8, value: *Expression)
+    | Return(value: *Expression)
+    | If(condition: *Expression, then_body: *Statement, else_body: *Statement)
+    | Loop(body: *Statement)
+    | Block(statements: *Statement, statement_count: i32)
+
+Declaration = 
+    | Function(func: *Function)
+    | Struct(struct_: *Struct)
+    | Enum(enum_: *Enum)
+    | ExternalFunction(ext_func: *ExternalFunction)
+
+Function = {
+    name: *i8,
+    args: *FunctionArg,
+    arg_count: i32,
+    return_type: *AstType,
+    body: *Statement,
+    body_count: i32,
+}
+
+FunctionArg = {
+    name: *i8,
+    type_: *AstType,
+}
+
+Struct = {
+    name: *i8,
+    fields: *StructField,
+    field_count: i32,
+}
+
+StructField = {
+    name: *i8,
+    type_: *AstType,
+    is_mutable: bool,
+}
+
+Enum = {
+    name: *i8,
+    variants: *EnumVariant,
+    variant_count: i32,
+}
+
+EnumVariant = {
+    name: *i8,
+    fields: *StructField,
+    field_count: i32,
+}
+
+ExternalFunction = {
+    name: *i8,
+    args: *AstType,
+    arg_count: i32,
+    return_type: *AstType,
+    is_varargs: bool,
+}
+
+Program = {
+    declarations: *Declaration,
+    declaration_count: i32,
+}
+
+// Parser state
+Parser = {
+    tokens: *Token,
+    token_count: i32,
+    current: i32,
+}
+
+// Create a new parser
+parser_new = (tokens: *Token, count: i32) Parser {
+    return Parser {
+        tokens: tokens,
+        token_count: count,
+        current: 0,
+    }
+}
+
+// Check if at end of tokens
+parser_is_at_end = (p: Parser) bool {
+    return p.current >= p.token_count
+}
+
+// Get current token
+parser_current_token = (p: Parser) Token {
+    idx := p.current
+    idx >= p.token_count ?
+        | true => {
+            // Return EOF token
+            return Token {
+                token_type: TokenType::Eof,
+                line: 0,
+                column: 0,
+                start: 0,
+                end: 0,
+            }
+        }
+        | false => {
+            // TODO: Array access when implemented
+            // For now, return placeholder
+            return Token {
+                token_type: TokenType::Eof,
+                line: 0,
+                column: 0,
+                start: 0,
+                end: 0,
+            }
+        }
+}
+
+// Advance to next token
+parser_advance = (p: Parser) Parser {
+    p.current = p.current + 1
+    return p
+}
+
+// Parse identifier
+parser_parse_identifier = (p: Parser) *i8 {
+    // TODO: Implement when we have proper token access
+    p = parser_advance(p)
+    return "placeholder"
+}
+
+// Parse type
+parser_parse_type = (p: Parser) *AstType {
+    // TODO: Implement type parsing
+    // For now, return i32 as default
+    p = parser_advance(p)
+    return &AstType::I32
+}
+
+// Parse expression
+parser_parse_expression = (p: Parser) *Expression {
+    // TODO: Implement expression parsing
+    // For now, return integer literal
+    p = parser_advance(p)
+    return &Expression::Integer32(0)
+}
+
+// Parse statement
+parser_parse_statement = (p: Parser) *Statement {
+    // TODO: Implement statement parsing
+    // For now, return expression statement
+    expr := parser_parse_expression(p)
+    return &Statement::Expression(expr)
+}
+
+// Parse function
+parser_parse_function = (p: Parser) *Function {
+    // Skip 'fn' or function name
+    name := parser_parse_identifier(p)
+    
+    // TODO: Parse parameters
+    p = parser_advance(p) // Skip '('
+    p = parser_advance(p) // Skip ')'
+    
+    // Parse return type
+    return_type := parser_parse_type(p)
+    
+    // TODO: Parse body
+    p = parser_advance(p) // Skip '{'
+    p = parser_advance(p) // Skip '}'
+    
+    return &Function {
+        name: name,
+        args: 0,
+        arg_count: 0,
+        return_type: return_type,
+        body: 0,
+        body_count: 0,
+    }
+}
+
+// Parse declaration
+parser_parse_declaration = (p: Parser) *Declaration {
+    // TODO: Determine declaration type
+    // For now, assume function
+    func := parser_parse_function(p)
+    return &Declaration::Function(func)
+}
+
+// Parse program
+parser_parse_program = (p: Parser) Program {
+    // TODO: Parse all declarations
+    // For now, return empty program
+    return Program {
+        declarations: 0,
+        declaration_count: 0,
+    }
+}
+
+// Main entry point for testing
+main = () i32 {
+    // Create empty parser for testing
+    parser := parser_new(0, 0)
+    
+    // Try to parse a program
+    program := parser_parse_program(parser)
+    
+    return 0
+}
