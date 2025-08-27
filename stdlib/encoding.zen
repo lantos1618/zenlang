@@ -1,0 +1,290 @@
+// Encoding and decoding utilities for Zen
+
+comptime {
+    std := @std
+    core := std.core
+    string := std.string
+}
+
+// Base64 encoding table
+BASE64_CHARS := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+BASE64_PAD := '='
+
+// Hex encoding
+hex_chars := "0123456789abcdef"
+HEX_CHARS := "0123456789ABCDEF"
+
+// Encode bytes to hex string (lowercase)
+encode_hex = (data: []u8, len: usize) string {
+    result ::= ""
+    i ::= 0: usize
+    loop i < len {
+        byte := data[i]
+        high := (byte >> 4) & 0x0F
+        low := byte & 0x0F
+        result = result + hex_chars[high: usize] + hex_chars[low: usize]
+        i = i + 1
+    }
+    result
+}
+
+// Encode bytes to hex string (uppercase)
+encode_hex_upper = (data: []u8, len: usize) string {
+    result ::= ""
+    i ::= 0: usize
+    loop i < len {
+        byte := data[i]
+        high := (byte >> 4) & 0x0F
+        low := byte & 0x0F
+        result = result + HEX_CHARS[high: usize] + HEX_CHARS[low: usize]
+        i = i + 1
+    }
+    result
+}
+
+// Decode hex character to value
+hex_char_to_value = (c: char) Option<u8> {
+    c >= '0' && c <= '9' ? | true => Some((c - '0'): u8)
+                          | false => {
+        c >= 'a' && c <= 'f' ? | true => Some((c - 'a' + 10): u8)
+                              | false => {
+            c >= 'A' && c <= 'F' ? | true => Some((c - 'A' + 10): u8)
+                                  | false => None
+        }
+    }
+}
+
+// Decode hex string to bytes
+decode_hex = (hex: string) Result<Vec<u8>, string> {
+    len := string.len(hex)
+    len % 2 != 0 ? | true => Err("hex string must have even length")
+                   | false => {
+        result := vec_new<u8>()
+        i ::= 0: usize
+        loop i < len {
+            high_char := hex[i]
+            low_char := hex[i + 1]
+            
+            high_val := hex_char_to_value(high_char)
+            low_val := hex_char_to_value(low_char)
+            
+            high_val ? | Some(h) => {
+                low_val ? | Some(l) => {
+                    byte := (h << 4) | l
+                    vec_push(&result, byte)
+                    i = i + 2
+                }
+                | None => return Err("invalid hex character")
+            }
+            | None => return Err("invalid hex character")
+        }
+        Ok(result)
+    }
+}
+
+// Base64 encode bytes
+encode_base64 = (data: []u8, len: usize) string {
+    result ::= ""
+    i ::= 0: usize
+    
+    // Process 3 bytes at a time
+    loop i + 2 < len {
+        b1 := data[i]
+        b2 := data[i + 1]
+        b3 := data[i + 2]
+        
+        // Extract 6-bit groups
+        idx1 := (b1 >> 2): usize
+        idx2 := (((b1 & 0x03) << 4) | (b2 >> 4)): usize
+        idx3 := (((b2 & 0x0F) << 2) | (b3 >> 6)): usize
+        idx4 := (b3 & 0x3F): usize
+        
+        result = result + BASE64_CHARS[idx1] + BASE64_CHARS[idx2] + 
+                 BASE64_CHARS[idx3] + BASE64_CHARS[idx4]
+        i = i + 3
+    }
+    
+    // Handle remaining bytes
+    remaining := len - i
+    remaining == 1 ? | true => {
+        b1 := data[i]
+        idx1 := (b1 >> 2): usize
+        idx2 := ((b1 & 0x03) << 4): usize
+        result = result + BASE64_CHARS[idx1] + BASE64_CHARS[idx2] + "=="
+    }
+    | false => {
+        remaining == 2 ? | true => {
+            b1 := data[i]
+            b2 := data[i + 1]
+            idx1 := (b1 >> 2): usize
+            idx2 := (((b1 & 0x03) << 4) | (b2 >> 4)): usize
+            idx3 := ((b2 & 0x0F) << 2): usize
+            result = result + BASE64_CHARS[idx1] + BASE64_CHARS[idx2] + 
+                     BASE64_CHARS[idx3] + "="
+        }
+        | false => {}
+    }
+    
+    result
+}
+
+// Get base64 character index
+base64_char_index = (c: char) Option<u8> {
+    c >= 'A' && c <= 'Z' ? | true => Some((c - 'A'): u8)
+                          | false => {
+        c >= 'a' && c <= 'z' ? | true => Some((c - 'a' + 26): u8)
+                              | false => {
+            c >= '0' && c <= '9' ? | true => Some((c - '0' + 52): u8)
+                                  | false => {
+                c == '+' ? | true => Some(62: u8)
+                         | false => {
+                    c == '/' ? | true => Some(63: u8)
+                             | false => {
+                        c == '=' ? | true => Some(255: u8)  // Padding
+                                 | false => None
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Decode base64 string
+decode_base64 = (encoded: string) Result<Vec<u8>, string> {
+    result := vec_new<u8>()
+    len := string.len(encoded)
+    
+    // Must be multiple of 4
+    len % 4 != 0 ? | true => return Err("invalid base64 length")
+                   | false => {}
+    
+    i ::= 0: usize
+    loop i < len {
+        // Get 4 characters
+        c1 := encoded[i]
+        c2 := encoded[i + 1]
+        c3 := encoded[i + 2]
+        c4 := encoded[i + 3]
+        
+        // Convert to indices
+        idx1 := base64_char_index(c1)
+        idx2 := base64_char_index(c2)
+        idx3 := base64_char_index(c3)
+        idx4 := base64_char_index(c4)
+        
+        idx1 ? | Some(i1) => {
+            idx2 ? | Some(i2) => {
+                // First two characters are always valid
+                i1 == 255 || i2 == 255 ? | true => return Err("invalid base64 character")
+                                        | false => {}
+                
+                // Decode first byte
+                byte1 := (i1 << 2) | (i2 >> 4)
+                vec_push(&result, byte1)
+                
+                idx3 ? | Some(i3) => {
+                    i3 != 255 ? | true => {
+                        // Decode second byte
+                        byte2 := ((i2 & 0x0F) << 4) | (i3 >> 2)
+                        vec_push(&result, byte2)
+                        
+                        idx4 ? | Some(i4) => {
+                            i4 != 255 ? | true => {
+                                // Decode third byte
+                                byte3 := ((i3 & 0x03) << 6) | i4
+                                vec_push(&result, byte3)
+                            }
+                            | false => {}  // Padding
+                        }
+                        | None => return Err("invalid base64 character")
+                    }
+                    | false => {}  // Padding
+                }
+                | None => return Err("invalid base64 character")
+            }
+            | None => return Err("invalid base64 character")
+        }
+        | None => return Err("invalid base64 character")
+        
+        i = i + 4
+    }
+    
+    Ok(result)
+}
+
+// URL-safe base64 encoding (using - and _ instead of + and /)
+encode_base64_url = (data: []u8, len: usize) string {
+    result := encode_base64(data, len)
+    // Replace characters for URL safety
+    result = string.replace_all(result, "+", "-")
+    result = string.replace_all(result, "/", "_")
+    // Remove padding
+    loop string.ends_with(result, "=") {
+        result = string.substring(result, 0, string.len(result) - 1)
+    }
+    result
+}
+
+// UTF-8 encoding utilities
+is_utf8_continuation = (byte: u8) bool {
+    (byte & 0xC0) == 0x80
+}
+
+utf8_decode_char = (data: []u8, idx: usize) Result<(char, usize), string> {
+    len := vec_len(data)
+    idx >= len ? | true => return Err("index out of bounds")
+                | false => {}
+    
+    first := data[idx]
+    
+    // Single byte (ASCII)
+    first < 0x80 ? | true => Ok((first: char, 1: usize))
+                  | false => {
+        // Two-byte sequence
+        (first & 0xE0) == 0xC0 ? | true => {
+            idx + 1 >= len ? | true => return Err("incomplete UTF-8 sequence")
+                            | false => {}
+            second := data[idx + 1]
+            !is_utf8_continuation(second) ? | true => return Err("invalid UTF-8 sequence")
+                                           | false => {}
+            value := ((first & 0x1F): u32 << 6) | (second & 0x3F): u32
+            Ok((value: char, 2: usize))
+        }
+        | false => {
+            // Three-byte sequence
+            (first & 0xF0) == 0xE0 ? | true => {
+                idx + 2 >= len ? | true => return Err("incomplete UTF-8 sequence")
+                                | false => {}
+                second := data[idx + 1]
+                third := data[idx + 2]
+                !is_utf8_continuation(second) || !is_utf8_continuation(third) ? 
+                    | true => return Err("invalid UTF-8 sequence")
+                    | false => {}
+                value := ((first & 0x0F): u32 << 12) | 
+                        ((second & 0x3F): u32 << 6) | 
+                        (third & 0x3F): u32
+                Ok((value: char, 3: usize))
+            }
+            | false => {
+                // Four-byte sequence
+                (first & 0xF8) == 0xF0 ? | true => {
+                    idx + 3 >= len ? | true => return Err("incomplete UTF-8 sequence")
+                                    | false => {}
+                    second := data[idx + 1]
+                    third := data[idx + 2]
+                    fourth := data[idx + 3]
+                    !is_utf8_continuation(second) || !is_utf8_continuation(third) || 
+                    !is_utf8_continuation(fourth) ? 
+                        | true => return Err("invalid UTF-8 sequence")
+                        | false => {}
+                    value := ((first & 0x07): u32 << 18) | 
+                            ((second & 0x3F): u32 << 12) | 
+                            ((third & 0x3F): u32 << 6) | 
+                            (fourth & 0x3F): u32
+                    Ok((value: char, 4: usize))
+                }
+                | false => Err("invalid UTF-8 start byte")
+            }
+        }
+    }
+}
