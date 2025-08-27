@@ -1,0 +1,223 @@
+// Simplified self-hosted test suite for Zen
+// Tests core stdlib functionality written in Zen
+
+comptime {
+    core := @std.core
+    vec := @std.vec 
+    hashmap := @std.hashmap
+}
+
+// External functions
+extern printf = (format: *i8, ...) i32
+extern puts = (str: *i8) i32
+
+// Test helper
+assert_eq = (actual: i64, expected: i64, test_name: string) bool {
+    actual == expected ? | true => {
+        printf("[PASS] %s\n", test_name)
+        return true
+    } | false => {
+        printf("[FAIL] %s: expected %d, got %d\n", test_name, expected, actual)
+        return false  
+    }
+}
+
+// Test basic loops
+test_loops = () bool {
+    puts("\nTesting Loops...")
+    passed ::= true
+    
+    // Test conditional loop
+    counter ::= 5
+    sum ::= 0
+    loop counter > 0 {
+        sum = sum + counter
+        counter = counter - 1
+    }
+    passed = passed && assert_eq(sum, 15, "Conditional loop sum")
+    
+    // Test Range with callback
+    range_sum ::= 0
+    idx ::= 1
+    loop idx < 6 {
+        range_sum = range_sum + idx
+        idx = idx + 1
+    }
+    passed = passed && assert_eq(range_sum, 15, "Range loop sum")
+    
+    // Test nested loops
+    product ::= 0
+    i ::= 1
+    loop i <= 3 {
+        j ::= 1
+        loop j <= 3 {
+            product = product + (i * j)
+            j = j + 1
+        }
+        i = i + 1
+    }
+    passed = passed && assert_eq(product, 36, "Nested loops product")
+    
+    return passed
+}
+
+// Test Vec operations
+test_vec = () bool {
+    puts("\nTesting Vec...")
+    passed ::= true
+    
+    // Create and populate vec
+    v := vec.vec_new<i64>()
+    vec.vec_push(&v, 10)
+    vec.vec_push(&v, 20)
+    vec.vec_push(&v, 30)
+    
+    passed = passed && assert_eq(vec.vec_len(&v), 3, "Vec length after push")
+    
+    // Get element
+    elem := vec.vec_get(&v, 1)
+    elem ? | core.Option::Some(val) => {
+        passed = passed && assert_eq(val, 20, "Vec get element")
+    } | core.Option::None => {
+        passed = false
+        puts("[FAIL] Vec get returned None")
+    }
+    
+    // Pop element  
+    popped := vec.vec_pop(&v)
+    popped ? | core.Option::Some(val) => {
+        passed = passed && assert_eq(val, 30, "Vec pop value")
+        passed = passed && assert_eq(vec.vec_len(&v), 2, "Vec length after pop")
+    } | core.Option::None => {
+        passed = false
+        puts("[FAIL] Vec pop returned None")
+    }
+    
+    vec.vec_free(&v)
+    return passed
+}
+
+// Test HashMap operations
+test_hashmap = () bool {
+    puts("\nTesting HashMap...")
+    passed ::= true
+    
+    // Create hashmap
+    map := hashmap.hashmap_new<i64, i64>(hashmap.hash_i64, hashmap.eq_i64)
+    
+    // Insert values
+    hashmap.hashmap_insert(&map, 1, 100)
+    hashmap.hashmap_insert(&map, 2, 200)
+    hashmap.hashmap_insert(&map, 3, 300)
+    
+    passed = passed && assert_eq(hashmap.hashmap_len(&map), 3, "HashMap length")
+    
+    // Get value
+    val := hashmap.hashmap_get(&map, 2)
+    val ? | core.Option::Some(v) => {
+        passed = passed && assert_eq(v, 200, "HashMap get value")
+    } | core.Option::None => {
+        passed = false
+        puts("[FAIL] HashMap get returned None")
+    }
+    
+    // Remove value
+    removed := hashmap.hashmap_remove(&map, 2)
+    removed ? | core.Option::Some(v) => {
+        passed = passed && assert_eq(v, 200, "HashMap remove value")
+        passed = passed && assert_eq(hashmap.hashmap_len(&map), 2, "HashMap length after remove")
+    } | core.Option::None => {
+        passed = false
+        puts("[FAIL] HashMap remove returned None")
+    }
+    
+    hashmap.hashmap_free(&map)
+    return passed
+}
+
+// Test algorithms
+test_algorithms = () bool {
+    puts("\nTesting Algorithms...")
+    passed ::= true
+    
+    // Factorial using loops
+    factorial = (n: i64) i64 {
+        result ::= 1
+        i ::= 1
+        loop i <= n {
+            result = result * i
+            i = i + 1
+        }
+        return result
+    }
+    
+    passed = passed && assert_eq(factorial(5), 120, "Factorial of 5")
+    passed = passed && assert_eq(factorial(6), 720, "Factorial of 6")
+    
+    // Fibonacci using loops
+    fibonacci = (n: i64) i64 {
+        n <= 1 ? | true => { return n } | false => {}
+        
+        prev ::= 0
+        curr ::= 1
+        i ::= 2
+        loop i <= n {
+            next := prev + curr
+            prev = curr
+            curr = next
+            i = i + 1
+        }
+        return curr
+    }
+    
+    passed = passed && assert_eq(fibonacci(10), 55, "Fibonacci of 10")
+    passed = passed && assert_eq(fibonacci(12), 144, "Fibonacci of 12")
+    
+    return passed
+}
+
+// Main test runner
+main = () i32 {
+    puts("===== Zen Self-Hosted Tests =====")
+    
+    passed ::= 0
+    failed ::= 0
+    
+    // Run tests
+    test_loops() ? | true => {
+        passed = passed + 1
+    } | false => {
+        failed = failed + 1
+    }
+    
+    test_vec() ? | true => {
+        passed = passed + 1
+    } | false => {
+        failed = failed + 1
+    }
+    
+    test_hashmap() ? | true => {
+        passed = passed + 1
+    } | false => {
+        failed = failed + 1
+    }
+    
+    test_algorithms() ? | true => {
+        passed = passed + 1
+    } | false => {
+        failed = failed + 1
+    }
+    
+    // Print summary
+    puts("\n===== Test Summary =====")
+    printf("Passed: %d\n", passed)
+    printf("Failed: %d\n", failed)
+    
+    failed == 0 ? | true => {
+        puts("\nAll tests passed!")
+        return 0
+    } | false => {
+        puts("\nSome tests failed!")
+        return 1
+    }
+}
