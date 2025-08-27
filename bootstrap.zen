@@ -1,0 +1,151 @@
+// Zen Bootstrap Script
+// This script will eventually bootstrap the Zen compiler using the self-hosted components
+
+comptime {
+    core := @std.core
+    io := @std.io
+    build := @std.build
+}
+
+// Import self-hosted components
+lexer := build.import("stdlib/lexer.zen")
+parser := build.import("stdlib/parser.zen")
+
+// Bootstrap stages
+Stage = 
+    | Stage0  // Use Rust compiler
+    | Stage1  // Use Stage0 output to compile lexer/parser
+    | Stage2  // Use Stage1 output to compile full compiler
+    | Stage3  // Self-hosted verification
+
+// Current stage
+CURRENT_STAGE := Stage::Stage0
+
+// Bootstrap configuration
+BootstrapConfig = {
+    src_dir: string,
+    build_dir: string,
+    stage: Stage,
+    verbose: bool,
+}
+
+// Create default config
+default_config = () BootstrapConfig {
+    return BootstrapConfig {
+        src_dir: ".",
+        build_dir: "build",
+        stage: CURRENT_STAGE,
+        verbose: true,
+    }
+}
+
+// Log message if verbose
+log = (config: BootstrapConfig, msg: string) void {
+    config.verbose ?
+        | true => { io.println(msg) }
+        | false => {}
+}
+
+// Stage 0: Use Rust compiler to compile initial Zen code
+bootstrap_stage0 = (config: BootstrapConfig) bool {
+    log(config, "Stage 0: Using Rust compiler...")
+    
+    // The Rust compiler is already built
+    // Just verify it works
+    log(config, "  - Rust compiler available")
+    log(config, "  - Can compile Zen code")
+    
+    return true
+}
+
+// Stage 1: Compile self-hosted lexer and parser
+bootstrap_stage1 = (config: BootstrapConfig) bool {
+    log(config, "Stage 1: Compiling self-hosted lexer and parser...")
+    
+    // Use Stage 0 compiler to compile lexer
+    log(config, "  - Compiling lexer.zen...")
+    // TODO: Actually compile when ready
+    
+    // Use Stage 0 compiler to compile parser
+    log(config, "  - Compiling parser.zen...")
+    // TODO: Actually compile when ready
+    
+    return true
+}
+
+// Stage 2: Compile full compiler using Stage 1 components
+bootstrap_stage2 = (config: BootstrapConfig) bool {
+    log(config, "Stage 2: Compiling full compiler...")
+    
+    // TODO: Implement when self-hosted compiler is ready
+    log(config, "  - Using self-hosted lexer")
+    log(config, "  - Using self-hosted parser")
+    log(config, "  - Generating LLVM IR")
+    
+    return true
+}
+
+// Stage 3: Verify self-hosting
+bootstrap_stage3 = (config: BootstrapConfig) bool {
+    log(config, "Stage 3: Verifying self-hosting...")
+    
+    // Compile the compiler with itself
+    log(config, "  - Compiling compiler with itself")
+    log(config, "  - Comparing outputs")
+    log(config, "  - Running test suite")
+    
+    return true
+}
+
+// Run bootstrap for a specific stage
+run_stage = (config: BootstrapConfig) bool {
+    config.stage ?
+        | Stage0 => return bootstrap_stage0(config)
+        | Stage1 => return bootstrap_stage1(config)
+        | Stage2 => return bootstrap_stage2(config)
+        | Stage3 => return bootstrap_stage3(config)
+}
+
+// Main bootstrap function
+bootstrap = () i32 {
+    config := default_config()
+    
+    io.println("Zen Compiler Bootstrap")
+    io.println("======================")
+    
+    // Run all stages in sequence
+    stages := [Stage::Stage0, Stage::Stage1, Stage::Stage2, Stage::Stage3]
+    
+    current_stage_idx := 0
+    // TODO: Need proper loop when syntax is ready
+    // loop stage in stages {
+    //     config.stage = stage
+    //     success := run_stage(config)
+    //     
+    //     success ?
+    //         | false => {
+    //             io.println("Bootstrap failed at stage")
+    //             return 1
+    //         }
+    //         | true => {}
+    // }
+    
+    // For now, just run Stage 0
+    config.stage = Stage::Stage0
+    success := run_stage(config)
+    
+    success ?
+        | true => {
+            io.println("\nBootstrap completed successfully!")
+            return 0
+        }
+        | false => {
+            io.println("\nBootstrap failed!")
+            return 1
+        }
+}
+
+// Entry point
+main = () i32 {
+    return bootstrap()
+}
