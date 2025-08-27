@@ -117,8 +117,8 @@ bootstrap = () i32 {
     stages := [Stage::Stage0, Stage::Stage1, Stage::Stage2, Stage::Stage3]
     
     current_stage_idx := 0
-    // TODO: Need proper loop when syntax is ready
-    // loop stage in stages {
+    // TODO: Use iterator.loop when array iterator is ready
+    // stages.loop(stage -> {
     //     config.stage = stage
     //     success := run_stage(config)
     //     
@@ -128,7 +128,7 @@ bootstrap = () i32 {
     //             return 1
     //         }
     //         | true => {}
-    // }
+    // })
     
     // For now, just run Stage 0
     config.stage = Stage::Stage0
