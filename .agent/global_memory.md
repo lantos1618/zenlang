@@ -26,12 +26,17 @@
    - Arrays and pointers
    - External function declarations
    - Loops (with some syntax limitations)
+   - String interpolation with `$(expr)` syntax (fully working)
 
 ## Current Limitations
-1. **Loop Syntax**: Cannot use function calls directly in loop conditions
-2. **String Interpolation**: Syntax defined but codegen incomplete
-3. **Comptime**: Framework exists but needs full integration
-4. **Self-hosting**: Lexer and parser need more work for full bootstrap
+1. **Loop Syntax**: Cannot reassign variables in loops (immutability)
+2. **Void Functions**: Not fully supported - must return values
+3. **Modulo Operator**: Not working correctly in all contexts
+4. **Type System**: Some type inference issues with mixed int/float
+5. **Struct Generics**: Generic struct types not monomorphizing correctly
+6. **Module-level Constants**: Not supported, must use functions
+7. **Comptime**: Framework exists but needs full integration
+8. **Self-hosting**: Need more core features before stdlib can be written in Zen
 
 ## Important Files
 - `/home/ubuntu/zenlang/stdlib/lexer.zen` - Minimal self-hosted lexer
@@ -44,8 +49,10 @@
 - 100% test pass rate maintained
 
 ## Next Major Milestones
-1. Complete self-hosted parser implementation
-2. Implement string interpolation codegen
-3. Integrate comptime execution
-4. Create bootstrap process
-5. Write comprehensive stdlib in Zen
+1. Fix loop mutability issues (allow mutable loop variables)
+2. Implement void function support properly
+3. Fix modulo operator parsing/codegen
+4. Complete self-hosted parser implementation
+5. Integrate comptime execution
+6. Create bootstrap process
+7. Write comprehensive stdlib in Zen
