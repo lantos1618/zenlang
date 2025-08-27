@@ -252,11 +252,17 @@ read_dir = (path: string) io.IOResult<[]DirEntry> {
 walk_dir = (path: string, callback: (DirEntry) void) io.IOResult<void> {
     entries := read_dir(path)?
     
-    loop entry in entries {
+    // TODO: Replace with proper iteration once array iterators are available
+    // Would be: array_iter(entries).loop(entry -> { callback(entry); ... })
+    // For now, using index-based iteration
+    i ::= 0
+    loop i < entries.len {
+        entry := entries[i]
         callback(entry)
         is_dir(entry.path) ? | true => {
             walk_dir(entry.path, callback)?
         } | false => {}
+        i = i + 1
     }
     
     io.IOResult::Ok({})

@@ -61,7 +61,10 @@ test_basic_tokens = () bool {
 test_keywords = () bool {
     keywords := ["loop", "in", "comptime", "return", "break", "continue", "true", "false"]
     
-    loop kw in keywords {
+    // TODO: Replace with array iterator when available
+    i ::= 0
+    loop i < 8 {  // 8 keywords in the array
+        kw := keywords[i]
         lex := lexer::lexer_new(kw)
         result := lexer::lexer_next_token(lex)
         token := result.1
@@ -69,6 +72,7 @@ test_keywords = () bool {
         token.token_type ?
             | Keyword(_) => {}
             | _ => return false
+        i = i + 1
     }
     
     return true
@@ -78,7 +82,10 @@ test_keywords = () bool {
 test_operators = () bool {
     operators := [":=", "::=", "::", "==", "!=", "<=", ">=", "&&", "||", "->", "=>", "..", "..=", "<<", ">>"]
     
-    loop op in operators {
+    // TODO: Replace with array iterator when available
+    i ::= 0 
+    loop i < 15 {  // 15 operators in the array
+        op := operators[i]
         lex := lexer::lexer_new(op)
         result := lexer::lexer_next_token(lex)
         token := result.1
@@ -95,6 +102,7 @@ test_operators = () bool {
                 printf("Failed: '%s' not parsed as operator\n", op)
                 return false
             }
+        i = i + 1
     }
     
     return true
