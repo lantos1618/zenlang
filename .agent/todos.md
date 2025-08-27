@@ -1,49 +1,51 @@
-# Zen Language - TODO List
+# Zen Language Project - TODOs
 
-## Immediate Priority (Next Session)
-- [x] Fix stdlib vector tests - 90% COMPLETE (9/10 passing)
-- [x] Parser improvements for generics and member access - COMPLETE
-- [x] Block expressions support - COMPLETE
-- [ ] Complete self-hosted lexer (30% done)
-- [ ] Complete self-hosted parser (20% done)
-- [ ] Fix remaining vector test
+## Completed ✅
+- [x] Fix self-hosted lexer syntax for parser compatibility
+- [x] Verify all printf/puts tests capture and verify output  
+- [x] Debug and fix failing vector test
+- [x] Run tests and verify all pass (100% pass rate achieved)
+- [x] Commit and push changes
 
-## Short-term (Next Few Sessions)
-- [ ] Implement comptime execution framework
-- [x] Expand standard library:
-  - [x] collections module (Vec, HashMap) - COMPLETE
-  - [x] mem module (allocators, pools) - COMPLETE
-  - [ ] net module (TCP/UDP)
-- [ ] Implement behaviors (trait/interface system)
-- [ ] Complete UFCS (Uniform Function Call Syntax)
-- [ ] Improve type inference
+## In Progress 🚧
+- [ ] Complete self-hosted parser implementation
+  - Basic structure created in stdlib/parser.zen
+  - Need to implement actual parsing logic
+  - Need to handle all AST node types
 
-## Medium-term
-- [ ] Memory management (Ptr<T>, Ref<T>, allocators)
-- [ ] Async/await with Task<T>
-- [ ] Module import system completion
-- [ ] Package management system
+## Pending 📋
 
-## Long-term (Self-hosting)
-- [ ] Bootstrap compiler in Zen
-- [ ] Rewrite standard library in Zen (not Rust)
-- [ ] Performance optimizations
-- [ ] Documentation generation
-- [ ] LSP improvements
+### High Priority
+- [ ] Implement string interpolation codegen
+  - Syntax: `$(expression)`
+  - Parser recognizes it but codegen incomplete
+  
+- [ ] Integrate comptime execution system
+  - Framework exists
+  - Need to connect to compiler pipeline
+  
+### Medium Priority  
+- [ ] Write comprehensive stdlib modules in Zen
+  - io.zen - Input/output operations
+  - fs.zen - File system operations
+  - net.zen - Network operations (TCP/UDP)
+  - collections.zen - Data structures
+  
+### Low Priority
+- [ ] Create bootstrap process for self-hosting
+  - Use self-hosted lexer/parser to compile Zen
+  - Create build script for bootstrap
+  
+- [ ] Improve loop syntax support
+  - Allow function calls in loop conditions
+  - Full iterator protocol support
+  
+- [ ] Add missing AST node types
+  - Range expressions
+  - String concatenation operator
+  - Additional pattern matching cases
 
-## Test Improvements Needed
-- [ ] Convert ffi.rs tests to use ExecutionHelper
-- [ ] Add more comprehensive pattern matching tests
-- [ ] Test error handling paths
-- [ ] Benchmark suite
-
-## Known Bugs
-- [ ] Some generic instantiations fail with complex types
-- [ ] Error messages could be more helpful
-- [ ] Memory leaks in certain edge cases
-
-## Documentation
-- [ ] Complete language reference
-- [ ] Tutorial series
-- [ ] Standard library docs
-- [ ] Contributor guide
+## Technical Debt
+- Lexer currently minimal - needs full implementation when parser supports more syntax
+- Some AST types defined but never constructed
+- Warning about unused variables in parser code
