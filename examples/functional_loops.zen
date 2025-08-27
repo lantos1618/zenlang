@@ -1,0 +1,109 @@
+// Functional-style loops in Zen
+// Demonstrates the simplified loop syntax with functional patterns
+
+comptime {
+    core := @std.core
+    build := @std.build
+    io := build.import("io")
+    range := core.range
+    range_inclusive := core.range_inclusive
+}
+
+main = () void {
+    io.print("=== Functional Loop Examples ===\n\n")
+    
+    // Traditional conditional loop
+    io.print("Traditional countdown:\n")
+    n ::= 5
+    loop n > 0 {
+        io.print("  $(n)...\n")
+        n = n - 1
+    }
+    io.print("  Liftoff!\n\n")
+    
+    // Functional range iteration
+    io.print("Range iteration (0 to 4):\n  ")
+    range(0, 5).loop((i: i64) void {
+        io.print("$(i) ")
+    })
+    io.print("\n\n")
+    
+    // Inclusive range
+    io.print("Inclusive range (1 to 5):\n  ")
+    range_inclusive(1, 5).loop((i: i64) void {
+        io.print("$(i) ")
+    })
+    io.print("\n\n")
+    
+    // Sum using functional loop
+    io.print("Sum of 1 to 10:\n")
+    sum ::= 0
+    range_inclusive(1, 10).loop((i: i64) void {
+        sum = sum + i
+    })
+    io.print("  Result: $(sum)\n\n")
+    
+    // Factorial using functional loop
+    io.print("Factorial of 5:\n")
+    fact ::= 1
+    range_inclusive(1, 5).loop((i: i64) void {
+        fact = fact * i
+    })
+    io.print("  5! = $(fact)\n\n")
+    
+    // Nested functional loops
+    io.print("Multiplication table (3x3):\n")
+    range_inclusive(1, 3).loop((i: i64) void {
+        io.print("  ")
+        range_inclusive(1, 3).loop((j: i64) void {
+            product := i * j
+            io.print("$(i)×$(j)=$(product) ")
+        })
+        io.print("\n")
+    })
+    io.print("\n")
+    
+    // FizzBuzz with functional loops
+    io.print("FizzBuzz (1 to 15):\n  ")
+    range_inclusive(1, 15).loop((n: i64) void {
+        (n % 15 == 0) ? | true => io.print("FizzBuzz ")
+                       | false => {
+            (n % 3 == 0) ? | true => io.print("Fizz ")
+                          | false => {
+                (n % 5 == 0) ? | true => io.print("Buzz ")
+                              | false => io.print("$(n) ")
+            }
+        }
+    })
+    io.print("\n\n")
+    
+    // Prime numbers using functional approach
+    io.print("Prime numbers up to 20:\n  ")
+    range(2, 21).loop((n: i64) void {
+        is_prime ::= true
+        i ::= 2
+        loop i * i <= n {
+            (n % i == 0) ? | true => {
+                is_prime = false
+                break
+            }
+            | false => {}
+            i = i + 1
+        }
+        is_prime ? | true => io.print("$(n) ")
+                  | false => {}
+    })
+    io.print("\n\n")
+    
+    // Fibonacci sequence
+    io.print("Fibonacci sequence (first 10):\n  ")
+    a ::= 0
+    b ::= 1
+    range(0, 10).loop((i: i64) void {
+        io.print("$(a) ")
+        temp := a + b
+        a = b
+        b = temp
+    })
+    io.print("\n")
+}
