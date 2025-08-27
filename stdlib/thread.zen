@@ -1,0 +1,381 @@
+// Zen Standard Library: Thread Module  
+// Threading and concurrency primitives
+
+comptime {
+    core := @std.core
+    mem := @std.mem
+}
+
+// Thread ID type
+ThreadId = i64
+
+// Thread handle
+Thread<T> = {
+    id: ThreadId,
+    name: core.Option<string>,
+    join_handle: *void,  // Platform-specific handle
+}
+
+// Thread-local storage key
+ThreadLocal<T> = {
+    key: i64,
+    initializer: () T,
+}
+
+// Mutex for thread synchronization
+Mutex<T> = {
+    data: T,
+    lock_state: *void,  // Platform-specific lock
+}
+
+// Read-write lock
+RwLock<T> = {
+    data: T,
+    lock_state: *void,  // Platform-specific lock
+}
+
+// Condition variable
+Condvar = {
+    state: *void,  // Platform-specific state
+}
+
+// Atomic types
+Atomic<T> = {
+    value: T,
+}
+
+// Thread spawn options
+SpawnOptions = {
+    name: core.Option<string>,
+    stack_size: core.Option<i64>,
+}
+
+// Spawn a new thread
+spawn = <T>(f: () T) core.Result<Thread<T>, core.Error> {
+    // Mock implementation
+    thread_id := 1001  // Mock thread ID
+    
+    thread := Thread<T> {
+        id: thread_id,
+        name: core.Option::None,
+        join_handle: core.nullptr(),
+    }
+    
+    core.Result::Ok(thread)
+}
+
+// Spawn a thread with options
+spawn_with = <T>(opts: SpawnOptions, f: () T) core.Result<Thread<T>, core.Error> {
+    // Mock implementation
+    thread_id := 1002  // Mock thread ID
+    
+    thread := Thread<T> {
+        id: thread_id,
+        name: opts.name,
+        join_handle: core.nullptr(),
+    }
+    
+    core.Result::Ok(thread)
+}
+
+// Get current thread ID
+current_id = () ThreadId {
+    // Mock implementation
+    1000
+}
+
+// Get current thread
+current = () Thread<void> {
+    Thread<void> {
+        id: current_id(),
+        name: core.Option::Some("main"),
+        join_handle: core.nullptr(),
+    }
+}
+
+// Sleep current thread
+sleep = (millis: i64) void {
+    // Mock implementation - would use system call
+    // In real implementation: nanosleep or similar
+}
+
+// Yield current thread
+yield_now = () void {
+    // Mock implementation - would use system call
+    // In real implementation: sched_yield or similar
+}
+
+// Join a thread
+join = <T>(thread: Thread<T>) core.Result<T, core.Error> {
+    // Mock implementation
+    // In real implementation, would wait for thread and get result
+    core.Result::Err(core.Error::NotImplemented("Thread join not implemented"))
+}
+
+// Create a new mutex
+mutex_new = <T>(value: T) Mutex<T> {
+    Mutex<T> {
+        data: value,
+        lock_state: core.nullptr(),
+    }
+}
+
+// Lock a mutex
+mutex_lock = <T>(m: Ref<Mutex<T>>) MutexGuard<T> {
+    // Mock implementation
+    // In real implementation, would acquire lock
+    MutexGuard<T> {
+        mutex: m,
+        data: Ref::new(m.data),
+    }
+}
+
+// Try to lock a mutex
+mutex_try_lock = <T>(m: Ref<Mutex<T>>) core.Option<MutexGuard<T>> {
+    // Mock implementation
+    // In real implementation, would try to acquire lock
+    core.Option::Some(MutexGuard<T> {
+        mutex: m,
+        data: Ref::new(m.data),
+    })
+}
+
+// Mutex guard (RAII lock holder)
+MutexGuard<T> = {
+    mutex: Ref<Mutex<T>>,
+    data: Ref<T>,
+}
+
+// Create a new read-write lock
+rwlock_new = <T>(value: T) RwLock<T> {
+    RwLock<T> {
+        data: value,
+        lock_state: core.nullptr(),
+    }
+}
+
+// Acquire read lock
+read_lock = <T>(rw: Ref<RwLock<T>>) ReadGuard<T> {
+    // Mock implementation
+    ReadGuard<T> {
+        rwlock: rw,
+        data: Ref::new(rw.data),
+    }
+}
+
+// Acquire write lock
+write_lock = <T>(rw: Ref<RwLock<T>>) WriteGuard<T> {
+    // Mock implementation
+    WriteGuard<T> {
+        rwlock: rw,
+        data: Ref::new(rw.data),
+    }
+}
+
+// Read guard (RAII read lock holder)
+ReadGuard<T> = {
+    rwlock: Ref<RwLock<T>>,
+    data: Ref<T>,
+}
+
+// Write guard (RAII write lock holder)
+WriteGuard<T> = {
+    rwlock: Ref<RwLock<T>>,
+    data: Ref<T>,
+}
+
+// Create a new condition variable
+condvar_new = () Condvar {
+    Condvar {
+        state: core.nullptr(),
+    }
+}
+
+// Wait on condition variable
+condvar_wait = <T>(cv: Ref<Condvar>, guard: MutexGuard<T>) MutexGuard<T> {
+    // Mock implementation
+    // In real implementation, would release mutex and wait
+    guard
+}
+
+// Signal one waiting thread
+condvar_notify_one = (cv: Ref<Condvar>) void {
+    // Mock implementation
+    // In real implementation, would signal one waiter
+}
+
+// Signal all waiting threads
+condvar_notify_all = (cv: Ref<Condvar>) void {
+    // Mock implementation
+    // In real implementation, would signal all waiters
+}
+
+// Create atomic value
+atomic_new = <T>(value: T) Atomic<T> {
+    Atomic<T> {
+        value: value,
+    }
+}
+
+// Load atomic value
+atomic_load = <T>(a: Ref<Atomic<T>>) T {
+    a.value
+}
+
+// Store atomic value
+atomic_store = <T>(a: Ref<Atomic<T>>, value: T) void {
+    a.value = value
+}
+
+// Compare and swap
+atomic_cas = <T>(a: Ref<Atomic<T>>, expected: T, new_value: T) bool {
+    a.value == expected ? | true => {
+        a.value = new_value
+        true
+    } | false => false
+}
+
+// Atomic add (for numeric types)
+atomic_add = (a: Ref<Atomic<i64>>, val: i64) i64 {
+    old := a.value
+    a.value = old + val
+    old
+}
+
+// Atomic subtract
+atomic_sub = (a: Ref<Atomic<i64>>, val: i64) i64 {
+    old := a.value
+    a.value = old - val
+    old
+}
+
+// Thread-local storage
+thread_local_new = <T>(init: () T) ThreadLocal<T> {
+    ThreadLocal<T> {
+        key: 0,  // Mock key
+        initializer: init,
+    }
+}
+
+// Get thread-local value
+thread_local_get = <T>(tls: Ref<ThreadLocal<T>>) Ref<T> {
+    // Mock implementation
+    // In real implementation, would get thread-specific value
+    value := tls.initializer()
+    Ref::new(value)
+}
+
+// Set thread-local value
+thread_local_set = <T>(tls: Ref<ThreadLocal<T>>, value: T) void {
+    // Mock implementation
+    // In real implementation, would set thread-specific value
+}
+
+// Parallel iteration helper
+parallel_for = <T>(items: [T], f: (T) void) void {
+    // Simple mock - in real implementation would use thread pool
+    range(0, items.len()).loop(i -> {
+        f(items[i])
+    })
+}
+
+// Parallel map
+parallel_map = <T, U>(items: [T], f: (T) U) [U] {
+    // Simple mock - in real implementation would use thread pool
+    results := []
+    range(0, items.len()).loop(i -> {
+        results.push(f(items[i]))
+    })
+    results
+}
+
+// Thread pool for work scheduling
+ThreadPool = {
+    num_threads: i64,
+    threads: [Thread<void>],
+}
+
+// Create thread pool
+thread_pool = (num_threads: i64) ThreadPool {
+    ThreadPool {
+        num_threads: num_threads,
+        threads: [],
+    }
+}
+
+// Submit work to thread pool
+submit = <T>(pool: Ref<ThreadPool>, f: () T) core.Future<T> {
+    // Mock implementation
+    // In real implementation, would queue work
+    core.Future::Ready(f())
+}
+
+// Shutdown thread pool
+shutdown = (pool: Ref<ThreadPool>) void {
+    // Mock implementation
+    // In real implementation, would stop all threads
+}
+
+// Export public API
+export {
+    // Types
+    ThreadId,
+    Thread,
+    ThreadLocal,
+    Mutex,
+    RwLock,
+    Condvar,
+    Atomic,
+    SpawnOptions,
+    MutexGuard,
+    ReadGuard,
+    WriteGuard,
+    ThreadPool,
+    
+    // Thread operations
+    spawn,
+    spawn_with,
+    current_id,
+    current,
+    sleep,
+    yield_now,
+    join,
+    
+    // Mutex operations
+    mutex_new,
+    mutex_lock,
+    mutex_try_lock,
+    
+    // RwLock operations
+    rwlock_new,
+    read_lock,
+    write_lock,
+    
+    // Condition variable operations
+    condvar_new,
+    condvar_wait,
+    condvar_notify_one,
+    condvar_notify_all,
+    
+    // Atomic operations
+    atomic_new,
+    atomic_load,
+    atomic_store,
+    atomic_cas,
+    atomic_add,
+    atomic_sub,
+    
+    // Thread-local storage
+    thread_local_new,
+    thread_local_get,
+    thread_local_set,
+    
+    // Parallel utilities
+    parallel_for,
+    parallel_map,
+    
+    // Thread pool
+    thread_pool,
+    submit,
+    shutdown,
+}
