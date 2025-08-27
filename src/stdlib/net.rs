@@ -3,7 +3,6 @@
 
 use crate::ast::{Declaration, Function, ExternalFunction, Statement, Expression, AstType};
 use crate::ast::{StructDefinition, StructField, VariableDeclarationType};
-use crate::error::Result;
 
 /// Create the net module with TCP and UDP support
 pub fn create_net_module() -> Vec<Declaration> {

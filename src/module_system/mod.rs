@@ -1,7 +1,7 @@
 pub mod resolver;
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use crate::ast::{Program, Declaration};
 use crate::parser::Parser;
 use crate::error::CompileError;
@@ -64,7 +64,7 @@ impl ModuleSystem {
             .map_err(|e| CompileError::ParseError(format!("Failed to parse module {}: {:?}", module_path, e), None))?;
         
         // Process imports in the loaded module
-        let mut processed_program = program.clone();
+        let processed_program = program.clone();
         for decl in &program.declarations {
             if let Declaration::ModuleImport { alias: _, module_path: import_path } = decl {
                 // Recursively load imported modules

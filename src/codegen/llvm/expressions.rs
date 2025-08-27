@@ -116,6 +116,16 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 // For now, blocks always return void
                 Ok(self.context.i32_type().const_int(0, false).into())
             }
+            Expression::Return(expr) => {
+                // Compile return expression 
+                let return_val = self.compile_expression(expr)?;
+                // Generate return instruction
+                self.builder.build_return(Some(&return_val))
+                    .map_err(|e| CompileError::InternalError(format!("Failed to build return: {:?}", e), None))?;
+                // Return expressions don't actually return a value in the normal sense,
+                // but we need to return something for the type system
+                Ok(return_val)
+            }
         }
     }
 

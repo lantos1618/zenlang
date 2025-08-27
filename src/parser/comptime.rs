@@ -1,7 +1,7 @@
 use super::core::Parser;
 use crate::ast::{Statement, Expression};
 use crate::error::{CompileError, Result};
-use crate::lexer::{Token, Keyword};
+use crate::lexer::Token;
 
 impl<'a> Parser<'a> {
     /// Parse a comptime block: comptime { ... }
