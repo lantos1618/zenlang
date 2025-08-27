@@ -68,16 +68,10 @@ impl<'a> Parser<'a> {
     fn parse_postfix_expression(&mut self) -> Result<Expression> {
         let mut expr = self.parse_primary_expression()?;
         
-        // Handle postfix operators
-        loop {
-            match &self.current_token {
-                Token::Symbol('?') => {
-                    // Pattern matching: scrutinee ? | pattern => expression
-                    self.next_token(); // consume '?'
-                    expr = self.parse_pattern_match(expr)?;
-                }
-                _ => break,
-            }
+        // Handle pattern matching operator which can apply to any expression
+        if self.current_token == Token::Symbol('?') {
+            self.next_token(); // consume '?'
+            expr = self.parse_pattern_match(expr)?;
         }
         
         Ok(expr)
@@ -180,32 +174,48 @@ impl<'a> Parser<'a> {
                     });
                 }
                 
-                // Check for generic type parameters before struct literal
-                // e.g., Vec<T> { ... } or Result<T,E> { ... }
-                let struct_name = if self.current_token == Token::Operator("<".to_string()) {
-                    // This is a generic struct instantiation
-                    // We need to consume the type parameters but for now we'll just 
-                    // skip to the closing '>' and use the base name
-                    let mut depth = 1;
-                    self.next_token(); // consume '<'
-                    while depth > 0 && self.current_token != Token::Eof {
-                        match &self.current_token {
-                            Token::Operator(op) if op == "<" => depth += 1,
-                            Token::Operator(op) if op == ">" => depth -= 1,
-                            _ => {}
+                // Check for generic type parameters
+                // Could be:
+                // 1. Generic struct literal: Vec<T> { ... }
+                // 2. Generic function call: vec_new<i32>()
+                // 3. Comparison: x < y
+                let (name_with_generics, consumed_generics) = if self.current_token == Token::Operator("<".to_string()) {
+                    // Try to parse generic type arguments
+                    // Save the position in case we need to backtrack
+                    let saved_pos = self.current_span.start;
+                    
+                    // Look ahead to determine if this is really generic syntax
+                    if self.looks_like_generic_type_args() {
+                        // Consume the generic type arguments
+                        let mut depth = 1;
+                        self.next_token(); // consume '<'
+                        while depth > 0 && self.current_token != Token::Eof {
+                            match &self.current_token {
+                                Token::Operator(op) if op == "<" => depth += 1,
+                                Token::Operator(op) if op == ">" => depth -= 1,
+                                _ => {}
+                            }
+                            self.next_token();
                         }
-                        self.next_token();
+                        // For now, we just track that we consumed generics
+                        // In the future, we should preserve the actual type arguments
+                        (format!("{}<>", name), true)
+                    } else {
+                        // Not generic type args, probably a comparison
+                        (name.clone(), false)
                     }
-                    // For now, just use the base name without type params for struct literals
-                    // In the future, we might want to preserve the full generic type
-                    name.clone()
                 } else {
-                    name.clone()
+                    (name.clone(), false)
                 };
                 
                 // Check for struct literal syntax: Name { field: value, ... }
                 if self.current_token == Token::Symbol('{') {
-                    return self.parse_struct_literal(struct_name);
+                    return self.parse_struct_literal(name_with_generics);
+                }
+                
+                // Check for function call with generics: vec_new<i32>()
+                if consumed_generics && self.current_token == Token::Symbol('(') {
+                    return self.parse_call_expression(name_with_generics);
                 }
                 
                 let mut expr = Expression::Identifier(name);
@@ -530,6 +540,28 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn looks_like_generic_type_args(&self) -> bool {
+        // Try to determine if this is generic type args Vec<T> or vec_new<i32> vs comparison x < y
+        // Heuristics:
+        // 1. If next token is a type-like identifier (uppercase or known types like i32), likely generic
+        // 2. If we can see a > followed by { or (, it's definitely generic
+        if let Token::Operator(op) = &self.current_token {
+            if op == "<" {
+                if let Token::Identifier(name) = &self.peek_token {
+                    // Check for type-like names
+                    let first_char = name.chars().next().unwrap_or('_');
+                    
+                    // Types typically start with uppercase or are primitive types
+                    return first_char.is_uppercase() || 
+                           name == "i8" || name == "i16" || name == "i32" || name == "i64" ||
+                           name == "u8" || name == "u16" || name == "u32" || name == "u64" ||
+                           name == "f32" || name == "f64" || name == "bool" || name == "string";
+                }
+            }
+        }
+        false
+    }
+    
     fn parse_array_literal(&mut self) -> Result<Expression> {
         // Consume '['
         self.next_token();
