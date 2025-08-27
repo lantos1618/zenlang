@@ -64,8 +64,13 @@ lexer_peek_char = (l: Lexer) i8 {
 
 // Skip whitespace
 lexer_skip_whitespace = (l: Lexer) Lexer {
-    // For now, just return the lexer unchanged
-    // TODO: Implement proper whitespace skipping when loop syntax is stabilized
+    loop {
+        is_ws := l.current_char == 32 || l.current_char == 9 || l.current_char == 10 || l.current_char == 13
+        is_ws ?
+            | false => break
+            | true => {}
+        l = lexer_read_char(l)
+    }
     return l
 }
 
@@ -103,8 +108,13 @@ lexer_next_token = (l: Lexer) Token {
             is_id_start := is_alpha(l.current_char)
             is_id_start ?
                 | true => {
-                    // Read identifier - simplified without loop
-                    l = lexer_read_char(l)
+                    loop {
+                        is_id_char := is_alpha(l.current_char) || is_digit(l.current_char)
+                        is_id_char ? 
+                            | false => break 
+                            | true => {}
+                        l = lexer_read_char(l)
+                    }
                     token_type = TokenType::Identifier
                 }
                 | false => {}
@@ -113,8 +123,13 @@ lexer_next_token = (l: Lexer) Token {
             is_num := is_digit(l.current_char)
             is_num ?
                 | true => {
-                    // Read number - simplified without loop
-                    l = lexer_read_char(l)
+                    loop {
+                        is_d := is_digit(l.current_char)
+                        is_d ?
+                            | false => break
+                            | true => {}
+                        l = lexer_read_char(l)
+                    }
                     token_type = TokenType::Integer
                 }
                 | false => {}

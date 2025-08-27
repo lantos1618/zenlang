@@ -58,7 +58,7 @@ fn test_self_hosted_lexer_can_compile() {
     
     // Simple subset of lexer for testing compilation
     let test_code = r#"
-        extern malloc(size: i64) *i8
+        extern malloc = (size: i64) *i8
         
         Lexer = {
             input: string,
