@@ -210,7 +210,7 @@ count_down = (start: i32) void {
 // Iterator loop (for-each)
 sum_array = (numbers: []i32) i32 {
     total ::= 0
-    loop num in numbers {
+    numbers.iter().loop(num -> {
         total = total + num
     }
     return total
@@ -218,7 +218,7 @@ sum_array = (numbers: []i32) i32 {
 
 // Range loop with exclusive range
 print_range = (start: i32, end: i32) void {
-    loop i in start..end {
+    range(start, end).loop(i -> {
         io.print("$(i) ")
     }
     io.print("\n")
@@ -227,7 +227,7 @@ print_range = (start: i32, end: i32) void {
 // Range loop with inclusive range
 factorial = (n: i32) i64 {
     result ::= 1i64
-    loop i in 1..=n {
+    range(1, n+1).loop(i -> {
         result = result * i
     }
     return result
@@ -235,8 +235,8 @@ factorial = (n: i32) i64 {
 
 // Nested loops with labels
 find_pair = (target: i32, nums: []i32) Option<{a: i32, b: i32}> {
-    outer: loop i in 0..nums.length {
-        loop j in (i+1)..nums.length {
+    outer: range(0, nums.length).loop(i -> {
+        range(i+1, nums.length).loop(j -> {
             sum := nums[i] + nums[j]
             found := sum == target
             _ = found ? | true => {
@@ -293,7 +293,7 @@ Point2D.impl = {
 
 // Generic function using behaviors
 draw_all = (items: []Drawable) void {
-    loop item in items {
+    items.iter().loop(item -> {
         item.draw()
     }
 }
@@ -306,7 +306,7 @@ draw_all = (items: []Drawable) void {
 LOOKUP_TABLE := comptime {
     // Generate a lookup table at compile time
     table:: [256]u8
-    loop i in 0..256 {
+    range(0, 256).loop(i -> {
         // Simple transformation
         table[i] = (i * 2) % 256
     }
@@ -451,7 +451,7 @@ main = () void {
     // Section 3: Pattern matching
     io.print("\n3. Pattern Matching:\n")
     scores := [95, 82, 73, 65, 45]
-    loop score in scores {
+    scores.iter().loop(score -> {
         grade := classify_score(score)
         io.print("   Score $(score) = Grade $(grade)\n")
     }
@@ -468,7 +468,7 @@ main = () void {
         }),
     ]
     
-    loop msg in messages {
+    messages.iter().loop(msg -> {
         processed := process_message(msg)
         io.print("   $(processed)\n")
     }
@@ -476,7 +476,7 @@ main = () void {
     // Section 5: Error handling
     io.print("\n5. Error Handling:\n")
     user_ids := [1, 500, 9999]
-    loop id in user_ids {
+    user_ids.iter().loop(id -> {
         user_result := find_user(id)
         message := user_result ? | .Ok -> user => "Found: $(user.username)"
                                 | .Err -> .NotFound => "User $(id) not found"
@@ -519,7 +519,7 @@ main = () void {
         Result.Err(DatabaseError.ConnectionFailed("localhost", 5432)),
     ]
     
-    loop test_result in test_results {
+    test_results.iter().loop(test_result -> {
         analysis := analyze_result(test_result)
         io.print("   $(analysis)\n")
     }

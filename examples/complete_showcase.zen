@@ -114,7 +114,7 @@ count_active_users = (users: []User) i32 {
     count ::= 0
     
     // Iterator loop
-    loop user in users {
+    users.iter().loop(user -> {
         is_active := user.is_active ? | true => 1
                                       | false => 0
         count = count + is_active
@@ -189,7 +189,7 @@ sum_range = (start: i32, end: i32) i32 {
     sum ::= 0
     
     // Exclusive range
-    loop i in start..end {
+    range(start, end).loop(i -> {
         sum = sum + i
     }
     
