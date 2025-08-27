@@ -78,3 +78,24 @@ range = (start: i64, end: i64) Range {
 range_step = (start: i64, end: i64, step: i64) Range {
     return Range { start: start, end: end, step: step }
 }
+
+// Functional loop method for Range
+Range.loop = (self: Range, callback: (i64) void) void {
+    i ::= self.start
+    loop i < self.end {
+        callback(i)
+        i = i + self.step
+    }
+}
+
+// Inclusive range
+range_inclusive = (start: i64, end: i64) Range {
+    return Range { start: start, end: end + 1, step: 1 }
+}
+
+// Standalone loop function for conditions
+loop = (condition: () bool, body: () void) void {
+    loop condition() {
+        body()
+    }
+}

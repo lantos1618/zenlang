@@ -3,6 +3,9 @@ comptime {
     core := @std.core
     build := @std.build
     io := build.import("io")
+    // Import core for range functions
+    range := core.range
+    range_inclusive := core.range_inclusive
 }
 
 main = () void {
@@ -15,49 +18,60 @@ main = () void {
     }
     io.print("Liftoff!\n")
     
-    // Range-based iteration
+    // Range-based iteration using functional style
     io.print("Range 0..5: ")
-    loop i in 0..5 {
+    range(0, 5).loop((i: i64) void {
         io.print("$(i) ")
-    }
+    })
     io.print("\n")
     
     // Inclusive range
     io.print("Range 1..=3: ")
-    loop i in 1..=3 {
+    range_inclusive(1, 3).loop((i: i64) void {
         io.print("$(i) ")
-    }
+    })
     io.print("\n")
     
-    // Array iteration
+    // Array iteration using index-based loop
     fruits := ["apple", "banana", "orange"]
     io.print("Fruits: ")
-    loop fruit in fruits {
-        io.print("$(fruit) ")
+    idx ::= 0
+    loop idx < 3 {
+        io.print("$(fruits[idx]) ")
+        idx = idx + 1
     }
     io.print("\n")
     
     // Loop with break and continue
     io.print("Even numbers: ")
-    loop n in 0..10 {
-        n % 2 != 0 ? | true => continue
-                    | false => {}
+    n ::= 0
+    loop n < 10 {
+        n % 2 != 0 ? | true => {
+            n = n + 1
+            continue
+        }
+        | false => {}
         
         io.print("$(n) ")
         
         n >= 6 ? | true => break
                 | false => {}
+        n = n + 1
     }
     io.print("\n")
     
     // Nested loops with labels
-    outer: loop i in 0..3 {
-        loop j in 0..3 {
+    i ::= 0
+    outer: loop i < 3 {
+        j ::= 0
+        loop j < 3 {
             io.print("($(i),$(j)) ")
             
             (i == 1 && j == 1) ? | true => break outer
                                  | false => {}
+            j = j + 1
         }
+        i = i + 1
     }
     io.print("\n")
 }

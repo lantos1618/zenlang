@@ -2,8 +2,11 @@
 // Demonstrates the unified loop construct
 
 comptime {
+    core := @std.core
     build := @std.build
     io := build.import("io")
+    range := core.range
+    range_inclusive := core.range_inclusive
 }
 
 main = () void {
@@ -22,52 +25,63 @@ main = () void {
     
     // Exclusive range (0..5 gives 0,1,2,3,4)
     io.print("Exclusive range 0..5:\n")
-    loop i in 0..5 {
+    range(0, 5).loop((i: i64) void {
         io.print("  $(i)")
-    }
+    })
     io.print("\n\n")
     
     // Inclusive range (1..=5 gives 1,2,3,4,5)
     io.print("Inclusive range 1..=5:\n")
-    loop i in 1..=5 {
+    range_inclusive(1, 5).loop((i: i64) void {
         io.print("  $(i)")
-    }
+    })
     io.print("\n\n")
     
     // ===== Array Iteration =====
     io.print("Array iteration:\n")
     fruits := ["apple", "banana", "orange"]
-    loop fruit in fruits {
-        io.print("  - $(fruit)\n")
+    idx ::= 0
+    loop idx < 3 {
+        io.print("  - $(fruits[idx])\n")
+        idx = idx + 1
     }
     io.print("\n")
     
     // ===== Loop Control =====
     io.print("Loop with break and continue:\n")
-    loop i in 0..10 {
+    i ::= 0
+    loop i < 10 {
         // Skip even numbers
-        (i % 2 == 0) ? | true => continue
-                      | false => {}
+        (i % 2 == 0) ? | true => {
+            i = i + 1
+            continue
+        }
+        | false => {}
         
         // Stop at 7
         (i == 7) ? | true => break
                   | false => {}
         
         io.print("  $(i)")
+        i = i + 1
     }
     io.print("\n\n")
     
     // ===== Nested Loops with Labels =====
     io.print("Nested loops with labels:\n")
-    outer: loop i in 0..3 {
-        inner: loop j in 0..3 {
+    i ::= 0
+    outer: loop i < 3 {
+        j ::= 0
+        inner: loop j < 3 {
             // Break outer loop when i==1 and j==2
             (i == 1 && j == 2) ? | true => break outer
                                 | false => {}
             
             io.print("  ($(i),$(j))")
+            j = j + 1
         }
         io.print("\n")
+        i = i + 1
     }
     io.print("\n")
     
