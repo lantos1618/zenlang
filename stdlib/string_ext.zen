@@ -1,0 +1,408 @@
+// Zen Standard Library: Extended String Utilities
+// Additional string manipulation functions
+
+comptime {
+    core := @std.core
+    mem := @std.mem
+    vec := @std.vec
+}
+
+// String slice for zero-copy operations
+StringSlice = {
+    data: *u8,
+    start: i64,
+    end: i64,
+}
+
+// Create string slice
+string_slice = (str: string, start: i64, end: i64) StringSlice {
+    return StringSlice {
+        data: str as *u8,
+        start: start,
+        end: end,
+    }
+}
+
+// Get slice length
+slice_len = (slice: StringSlice) i64 {
+    return slice.end - slice.start
+}
+
+// Convert slice to owned string
+slice_to_string = (slice: StringSlice) core.Result<string, core.Error> {
+    len := slice_len(slice)
+    buffer := mem.alloc(len + 1)
+    
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        mem.copy(buf, slice.data + slice.start, len)
+        (buf as *u8)[len] = 0
+        return core.Result::Ok(buf as string)
+    }
+}
+
+// Split string by delimiter
+string_split = (str: string, delimiter: u8) core.Result<vec.Vec<string>, core.Error> {
+    result := vec.vec_new<string>()
+    len := string_len(str)
+    start ::= 0i64
+    i ::= 0i64
+    
+    loop i <= len {
+        // Check for delimiter or end of string
+        at_delimiter := i < len && (str as *u8)[i] == delimiter
+        at_end := i == len
+        
+        at_delimiter || at_end ? | true => {
+            // Extract substring
+            substr_len := i - start
+            substr_len > 0 ? | true => {
+                buffer := mem.alloc(substr_len + 1)
+                buffer ? | .Err -> e => return core.Result::Err(e)
+                        | .Ok -> buf => {
+                    mem.copy(buf, (str as *u8) + start, substr_len)
+                    (buf as *u8)[substr_len] = 0
+                    vec.vec_push(&result, buf as string)?
+                }
+            } | false => {}
+            
+            start = i + 1
+        } | false => {}
+        
+        i = i + 1
+    }
+    
+    return core.Result::Ok(result)
+}
+
+// Split string by whitespace
+string_split_whitespace = (str: string) core.Result<vec.Vec<string>, core.Error> {
+    result := vec.vec_new<string>()
+    len := string_len(str)
+    start ::= -1i64
+    i ::= 0i64
+    
+    loop i <= len {
+        is_ws := i < len && is_whitespace((str as *u8)[i])
+        at_end := i == len
+        
+        !is_ws && start == -1 ? | true => {
+            start = i
+        } | false => {}
+        
+        (is_ws || at_end) && start != -1 ? | true => {
+            // Extract word
+            word_len := i - start
+            buffer := mem.alloc(word_len + 1)
+            buffer ? | .Err -> e => return core.Result::Err(e)
+                    | .Ok -> buf => {
+                mem.copy(buf, (str as *u8) + start, word_len)
+                (buf as *u8)[word_len] = 0
+                vec.vec_push(&result, buf as string)?
+            }
+            start = -1
+        } | false => {}
+        
+        i = i + 1
+    }
+    
+    return core.Result::Ok(result)
+}
+
+// Join strings with separator
+string_join = (strings: vec.Vec<string>, separator: string) core.Result<string, core.Error> {
+    strings.len == 0 ? | true => return core.Result::Ok("")
+                       | false => {}
+    
+    // Calculate total length
+    sep_len := string_len(separator)
+    total_len ::= 0i64
+    
+    i ::= 0i64
+    loop i < strings.len {
+        total_len = total_len + string_len(vec.vec_get(&strings, i)?)
+        i < strings.len - 1 ? | true => {
+            total_len = total_len + sep_len
+        } | false => {}
+        i = i + 1
+    }
+    
+    // Allocate buffer
+    buffer := mem.alloc(total_len + 1)
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        pos ::= 0i64
+        i = 0
+        
+        loop i < strings.len {
+            str := vec.vec_get(&strings, i)?
+            str_len := string_len(str)
+            mem.copy((buf as *u8) + pos, str as *u8, str_len)
+            pos = pos + str_len
+            
+            i < strings.len - 1 ? | true => {
+                mem.copy((buf as *u8) + pos, separator as *u8, sep_len)
+                pos = pos + sep_len
+            } | false => {}
+            
+            i = i + 1
+        }
+        
+        (buf as *u8)[total_len] = 0
+        return core.Result::Ok(buf as string)
+    }
+}
+
+// Replace all occurrences of substring
+string_replace = (str: string, old: string, new: string) core.Result<string, core.Error> {
+    str_len := string_len(str)
+    old_len := string_len(old)
+    new_len := string_len(new)
+    
+    old_len == 0 ? | true => return core.Result::Ok(str)
+                   | false => {}
+    
+    // Count occurrences
+    count ::= 0i64
+    i ::= 0i64
+    loop i <= str_len - old_len {
+        found := true
+        j ::= 0i64
+        loop j < old_len {
+            (str as *u8)[i + j] != (old as *u8)[j] ? | true => {
+                found = false
+                break
+            } | false => {}
+            j = j + 1
+        }
+        
+        found ? | true => {
+            count = count + 1
+            i = i + old_len
+        } | false => {
+            i = i + 1
+        }
+    }
+    
+    count == 0 ? | true => return core.Result::Ok(str)
+                | false => {}
+    
+    // Calculate new length and allocate
+    new_total_len := str_len + count * (new_len - old_len)
+    buffer := mem.alloc(new_total_len + 1)
+    
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        src_pos ::= 0i64
+        dst_pos ::= 0i64
+        
+        loop src_pos < str_len {
+            // Check if we found the pattern
+            found := false
+            src_pos <= str_len - old_len ? | true => {
+                found = true
+                j ::= 0i64
+                loop j < old_len {
+                    (str as *u8)[src_pos + j] != (old as *u8)[j] ? | true => {
+                        found = false
+                        break
+                    } | false => {}
+                    j = j + 1
+                }
+            } | false => {}
+            
+            found ? | true => {
+                // Copy replacement
+                mem.copy((buf as *u8) + dst_pos, new as *u8, new_len)
+                dst_pos = dst_pos + new_len
+                src_pos = src_pos + old_len
+            } | false => {
+                // Copy original character
+                (buf as *u8)[dst_pos] = (str as *u8)[src_pos]
+                dst_pos = dst_pos + 1
+                src_pos = src_pos + 1
+            }
+        }
+        
+        (buf as *u8)[new_total_len] = 0
+        return core.Result::Ok(buf as string)
+    }
+}
+
+// Check if string contains substring
+string_contains = (str: string, needle: string) bool {
+    return string_find(str, needle) >= 0
+}
+
+// Count occurrences of character
+string_count_char = (str: string, c: u8) i64 {
+    len := string_len(str)
+    count ::= 0i64
+    i ::= 0i64
+    
+    loop i < len {
+        (str as *u8)[i] == c ? | true => {
+            count = count + 1
+        } | false => {}
+        i = i + 1
+    }
+    
+    return count
+}
+
+// Repeat string n times
+string_repeat = (str: string, n: i64) core.Result<string, core.Error> {
+    n <= 0 ? | true => return core.Result::Ok("")
+           | false => {}
+    
+    str_len := string_len(str)
+    total_len := str_len * n
+    
+    buffer := mem.alloc(total_len + 1)
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        i ::= 0i64
+        loop i < n {
+            mem.copy((buf as *u8) + (i * str_len), str as *u8, str_len)
+            i = i + 1
+        }
+        (buf as *u8)[total_len] = 0
+        return core.Result::Ok(buf as string)
+    }
+}
+
+// Pad string to left with character
+string_pad_left = (str: string, width: i64, pad_char: u8) core.Result<string, core.Error> {
+    str_len := string_len(str)
+    str_len >= width ? | true => return core.Result::Ok(str)
+                       | false => {}
+    
+    pad_count := width - str_len
+    buffer := mem.alloc(width + 1)
+    
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        // Fill padding
+        i ::= 0i64
+        loop i < pad_count {
+            (buf as *u8)[i] = pad_char
+            i = i + 1
+        }
+        
+        // Copy string
+        mem.copy((buf as *u8) + pad_count, str as *u8, str_len)
+        (buf as *u8)[width] = 0
+        
+        return core.Result::Ok(buf as string)
+    }
+}
+
+// Pad string to right with character
+string_pad_right = (str: string, width: i64, pad_char: u8) core.Result<string, core.Error> {
+    str_len := string_len(str)
+    str_len >= width ? | true => return core.Result::Ok(str)
+                       | false => {}
+    
+    buffer := mem.alloc(width + 1)
+    
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        // Copy string
+        mem.copy(buf, str as *u8, str_len)
+        
+        // Fill padding
+        i ::= str_len
+        loop i < width {
+            (buf as *u8)[i] = pad_char
+            i = i + 1
+        }
+        
+        (buf as *u8)[width] = 0
+        return core.Result::Ok(buf as string)
+    }
+}
+
+// Reverse string (works for ASCII)
+string_reverse = (str: string) core.Result<string, core.Error> {
+    len := string_len(str)
+    buffer := mem.alloc(len + 1)
+    
+    buffer ? | .Err -> e => return core.Result::Err(e)
+            | .Ok -> buf => {
+        i ::= 0i64
+        loop i < len {
+            (buf as *u8)[i] = (str as *u8)[len - 1 - i]
+            i = i + 1
+        }
+        (buf as *u8)[len] = 0
+        return core.Result::Ok(buf as string)
+    }
+}
+
+// Check if string is numeric
+string_is_numeric = (str: string) bool {
+    len := string_len(str)
+    len == 0 ? | true => return false
+              | false => {}
+    
+    i ::= 0i64
+    
+    // Allow leading sign
+    (str as *u8)[0] == '-' as u8 || (str as *u8)[0] == '+' as u8 ? | true => {
+        i = 1
+        len == 1 ? | true => return false
+                   | false => {}
+    } | false => {}
+    
+    has_digit := false
+    loop i < len {
+        c := (str as *u8)[i]
+        c >= '0' as u8 && c <= '9' as u8 ? | true => {
+            has_digit = true
+        } | false => {
+            return false
+        }
+        i = i + 1
+    }
+    
+    return has_digit
+}
+
+// Check if string is alphabetic
+string_is_alpha = (str: string) bool {
+    len := string_len(str)
+    len == 0 ? | true => return false
+              | false => {}
+    
+    i ::= 0i64
+    loop i < len {
+        c := (str as *u8)[i]
+        is_alpha := (c >= 'a' as u8 && c <= 'z' as u8) || 
+                   (c >= 'A' as u8 && c <= 'Z' as u8)
+        !is_alpha ? | true => return false
+                   | false => {}
+        i = i + 1
+    }
+    
+    return true
+}
+
+// Check if string is alphanumeric
+string_is_alnum = (str: string) bool {
+    len := string_len(str)
+    len == 0 ? | true => return false
+              | false => {}
+    
+    i ::= 0i64
+    loop i < len {
+        c := (str as *u8)[i]
+        is_alnum := (c >= 'a' as u8 && c <= 'z' as u8) || 
+                   (c >= 'A' as u8 && c <= 'Z' as u8) ||
+                   (c >= '0' as u8 && c <= '9' as u8)
+        !is_alnum ? | true => return false
+                   | false => {}
+        i = i + 1
+    }
+    
+    return true
+}
