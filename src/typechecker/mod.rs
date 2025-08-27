@@ -239,46 +239,6 @@ impl TypeChecker {
                             ));
                         }
                     }
-                    LoopKind::Range { variable, start, end, .. } => {
-                        // Type check start and end
-                        let start_type = self.infer_expression_type(start)?;
-                        let end_type = self.infer_expression_type(end)?;
-                        
-                        // Both should be integers
-                        if !matches!(start_type, AstType::I32 | AstType::I64) {
-                            return Err(CompileError::TypeError(
-                                format!("Loop range start must be integer, got {:?}", start_type),
-                                None
-                            ));
-                        }
-                        if !matches!(end_type, AstType::I32 | AstType::I64) {
-                            return Err(CompileError::TypeError(
-                                format!("Loop range end must be integer, got {:?}", end_type),
-                                None
-                            ));
-                        }
-                        
-                        // Declare the loop variable in the loop scope
-                        self.declare_variable(variable, AstType::I64)?;
-                    }
-                    LoopKind::Iterator { variable, iterable } => {
-                        // For now, assume the iterable is an array
-                        let iterable_type = self.infer_expression_type(iterable)?;
-                        
-                        // Extract element type from array type
-                        let element_type = match iterable_type {
-                            AstType::Array(element) => *element,
-                            AstType::FixedArray { element_type, .. } => *element_type,
-                            _ => {
-                                // For now, default to i64 if we can't determine the type
-                                // TODO: Better handling of iterables
-                                AstType::I64
-                            }
-                        };
-                        
-                        // Declare the loop variable with the element type
-                        self.declare_variable(variable, element_type)?;
-                    }
                 }
                 
                 // Check loop body with the variable in scope

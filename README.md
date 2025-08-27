@@ -30,7 +30,6 @@ A modern systems programming language designed for clarity, performance, and joy
 - Pattern matching with unified `?` operator (parser complete, codegen WIP)
 - Range expressions (`..` and `..=`)
 - String interpolation with `$(expr)` syntax
-- Loop iteration (`loop item in collection`)
 - Compile-time evaluation (`comptime`)
 - Type checker improvements
 - Generic type instantiation and monomorphization
@@ -60,10 +59,9 @@ score ? | 90..=100 => "A"
 result ? | .Ok -> value => process(value)
         | .Err -> msg => handle_error(msg)
 
-// Single 'loop' keyword for all iteration
-loop i in 0..10 { }           // Range iteration
-loop condition { }             // While-like
-loop item in items { }         // For-each
+// Single 'loop' keyword for iteration
+loop condition { }             // Conditional loop
+loop { }                       // Infinite loop
 
 // Clean function syntax
 add = (a: i32, b: i32) i32 { a + b }

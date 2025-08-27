@@ -1,3 +1,7 @@
+// Iterator loop syntax has been removed - use items.loop() instead
+// This file contains tests for the old iterator loop syntax which is no longer supported
+
+/*
 use zen::ast::{Declaration, ExternalFunction, Function, Statement, Expression, AstType, LoopKind, VariableDeclarationType};
 use zen::compiler::Compiler;
 
@@ -202,4 +206,4 @@ fn test_loop_iterator_with_printf() {
     output.assert_stdout_contains("value: 20");
     output.assert_stdout_contains("value: 30");
     output.assert_exit_code(0);
-}
+}*/

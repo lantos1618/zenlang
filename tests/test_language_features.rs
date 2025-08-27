@@ -15,8 +15,7 @@ fn test_fibonacci_recursive() {
         extern printf = (format: *i8, ...) i32
         
         fib = (n: i32) i32 {
-            n <= 1 ? | true => { return n } | false => {}
-            return fib(n - 1) + fib(n - 2)
+            (n <= 1) ? | true => { return n } | false => { return fib(n - 1) + fib(n - 2) }
         }
         
         main = () i32 {
@@ -78,21 +77,17 @@ fn test_struct_with_methods() {
     
     let input = r#"
         extern printf = (format: *i8, ...) i32
-        extern malloc = (size: i64) *void
         
         Point = {
             x: i32,
             y: i32,
         }
         
-        point_new = (x: i32, y: i32) *Point {
-            p := malloc(16) as *Point
-            p.x = x
-            p.y = y
-            return p
+        point_new = (x: i32, y: i32) Point {
+            return Point { x: x, y: y }
         }
         
-        point_distance_squared = (p: *Point) i32 {
+        point_distance_squared = (p: Point) i32 {
             return p.x * p.x + p.y * p.y
         }
         

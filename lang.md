@@ -373,8 +373,10 @@ The `comptime` keyword designates code to be executed at compile time.
     ```zen
     LOOKUP_TABLE := comptime {
         table:: [256]int
-        loop i in 0..256 {
+        i ::= 0
+        loop i < 256 {
             table[i] = i * i
+            i = i + 1
         }
         table // The block evaluates to this value
     }
@@ -406,8 +408,11 @@ Zen aims to give developers explicit control over memory.
     // A function that needs dynamic memory
     create_list = (allocator: mem.Allocator, initial_items: []string) collections.List<string> {
         list := collections.List<string>.new(allocator)
-        loop item in initial_items {
-            list.append(item)
+        // Iterate over initial_items
+        i ::= 0
+        loop i < initial_items.len {
+            list.append(initial_items[i])
+            i = i + 1
         }
         return list
     }

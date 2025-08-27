@@ -4,7 +4,21 @@ at some point we want to be self hosted and have a good STD (witten in zen lang)
 
 use .agent/zen_language_reference.md for guidance
 
-Message from lyndon > "you are doing like tests that are doing external calls to printf but aren't actually capturing this or testing this, you just run but don't confirm the side affect happens like, printf or puts thish should put something to console but are running this in rust testing how can you be sure that the thiing put "hi" to the console?, you can delete this message after you fix this problem" 
+remove all ```
+loop i in 0..10 { }           // Range iteration
+loop condition { }             // While-like
+loop item in items { }         // For-each
+```
+
+we should only have simple loops like 
+```
+range(1,10).loop(i -> {})
+or 
+loop(true -> {})
+
+review our changes and merge with main
+
+
 
 
 notes from Lyndon
@@ -19,5 +33,5 @@ notes from Lyndon
 - you work better at around 40% context window (100K-140k) we can either prime or cull the ctx window
 - use frequent git commits and pushes 
 - code principles DRY & KISS
-- merge to main when you think it is smart to
+- merge to main when you think it is smart to 
 - git commit frequently 

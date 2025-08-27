@@ -43,8 +43,8 @@ x ? | val -> val > 0 => "positive"
 #### Loop Construct
 ```zen
 loop condition { /* while-like */ }
-loop i in 0..10 { /* for-like */ }
-loop item in items { /* iteration */ }
+loop { /* infinite loop */ }
+// Range and iterator loops removed - use function-based iteration instead
 ```
 
 #### Data Structures

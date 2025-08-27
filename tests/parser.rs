@@ -166,33 +166,12 @@ fn test_parse_loop_with_condition() {
     assert_eq!(program, expected);
 }
 
-#[test]
-fn test_parse_loop_with_in() {
-    let input = "print_names = () void { names := [\"Alice\", \"Bob\"]; loop name in names { io.print(name) } }";
-    let lexer = Lexer::new(input);
-    let mut parser = Parser::new(lexer);
-    let program = parser.parse_program();
-    
-    // Iterator syntax is now supported, expect success
-    assert!(program.is_ok());
-    let program = program.unwrap();
-    assert_eq!(program.declarations.len(), 1);
-    if let zen::ast::Declaration::Function(func) = &program.declarations[0] {
-        assert_eq!(func.body.len(), 2); // Variable declaration + loop
-        if let zen::ast::Statement::Loop { kind, .. } = &func.body[1] {
-            if let LoopKind::Iterator { variable, iterable } = kind {
-                assert_eq!(variable, "name");
-                assert!(matches!(iterable, Expression::Identifier(ref name) if name == "names"));
-            } else {
-                panic!("Expected LoopKind::Iterator");
-            }
-        } else {
-            panic!("Expected Loop statement");
-        }
-    } else {
-        panic!("Expected Function declaration");
-    }
-}
+// Iterator loop syntax has been removed - use items.loop() instead
+// #[test]
+// fn test_parse_loop_with_in() {
+//     let input = "print_names = () void { names := [\"Alice\", \"Bob\"]; loop name in names { io.print(name) } }";
+//     ...
+// }
 
 #[test]
 fn test_parse_struct_definition() {

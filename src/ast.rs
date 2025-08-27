@@ -271,18 +271,6 @@ pub enum LoopKind {
     Infinite,
     // loop condition { } - while-like loop
     Condition(Expression),
-    // loop i in 0..10 { } - range iteration
-    Range {
-        variable: String,
-        start: Expression,
-        end: Expression,
-        inclusive: bool,
-    },
-    // loop item in items { } - collection iteration
-    Iterator {
-        variable: String,
-        iterable: Expression,
-    },
 }
 
 
