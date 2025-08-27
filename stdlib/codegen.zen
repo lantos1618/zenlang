@@ -1,0 +1,741 @@
+// Zen Code Generation Module  
+// Self-hosted LLVM IR code generation for the Zen compiler
+
+// Import dependencies
+comptime {
+    ast := @import("ast")
+    mem := @import("mem")
+    core := @import("core")
+    string := @import("string")
+    vec := @import("vec")
+}
+
+// LLVM IR Types
+LLVMType = 
+    | Void
+    | I1   // Boolean
+    | I8
+    | I16
+    | I32
+    | I64
+    | F32
+    | F64
+    | Ptr(inner: *LLVMType)
+    | Array(element: *LLVMType, size: i32)
+    | Struct(fields: *LLVMType, field_count: i32)
+    | Function(params: *LLVMType, param_count: i32, return_type: *LLVMType)
+
+// LLVM IR Values
+LLVMValue = {
+    type_: *LLVMType,
+    name: string,
+    is_constant: bool,
+}
+
+// LLVM IR Instructions
+LLVMInstr = 
+    | Alloca(result: string, type_: *LLVMType)
+    | Store(value: *LLVMValue, ptr: *LLVMValue)
+    | Load(result: string, type_: *LLVMType, ptr: *LLVMValue)
+    | Add(result: string, type_: *LLVMType, lhs: *LLVMValue, rhs: *LLVMValue)
+    | Sub(result: string, type_: *LLVMType, lhs: *LLVMValue, rhs: *LLVMValue)
+    | Mul(result: string, type_: *LLVMType, lhs: *LLVMValue, rhs: *LLVMValue)
+    | Div(result: string, type_: *LLVMType, lhs: *LLVMValue, rhs: *LLVMValue)
+    | Rem(result: string, type_: *LLVMType, lhs: *LLVMValue, rhs: *LLVMValue)
+    | ICmp(result: string, cond: string, type_: *LLVMType, lhs: *LLVMValue, rhs: *LLVMValue)
+    | FCmp(result: string, cond: string, type_: *LLVMType, lhs: *LLVMValue, rhs: *LLVMValue)
+    | Call(result: string, func_type: *LLVMType, func: string, args: *LLVMValue, arg_count: i32)
+    | Ret(type_: *LLVMType, value: *LLVMValue)
+    | RetVoid
+    | Br(label: string)
+    | BrCond(cond: *LLVMValue, true_label: string, false_label: string)
+    | Phi(result: string, type_: *LLVMType, incoming: *PhiNode, incoming_count: i32)
+    | GetElementPtr(result: string, type_: *LLVMType, ptr: *LLVMValue, indices: *LLVMValue, index_count: i32)
+    | BitCast(result: string, value: *LLVMValue, target_type: *LLVMType)
+    | ZExt(result: string, value: *LLVMValue, target_type: *LLVMType)
+    | SExt(result: string, value: *LLVMValue, target_type: *LLVMType)
+    | Trunc(result: string, value: *LLVMValue, target_type: *LLVMType)
+
+PhiNode = {
+    value: *LLVMValue,
+    label: string,
+}
+
+// Basic Block
+BasicBlock = {
+    label: string,
+    instructions: *Vec<*LLVMInstr>,
+    is_terminated: bool,
+}
+
+// Function Definition
+LLVMFunction = {
+    name: string,
+    params: *LLVMParam,
+    param_count: i32,
+    return_type: *LLVMType,
+    blocks: *Vec<*BasicBlock>,
+    is_external: bool,
+    is_varargs: bool,
+}
+
+LLVMParam = {
+    type_: *LLVMType,
+    name: string,
+}
+
+// Code Generator Context
+CodeGen = {
+    functions: *Vec<*LLVMFunction>,
+    current_function: *LLVMFunction,
+    current_block: *BasicBlock,
+    value_counter: i32,
+    label_counter: i32,
+    string_constants: *Vec<*StringConstant>,
+    output: *string,
+}
+
+StringConstant = {
+    value: string,
+    name: string,
+}
+
+// Create new code generator
+codegen_new = () *CodeGen {
+    gen := mem.alloc(@sizeof(CodeGen)) as *CodeGen
+    gen.functions = vec.new<*LLVMFunction>()
+    gen.current_function = 0 as *LLVMFunction
+    gen.current_block = 0 as *BasicBlock
+    gen.value_counter = 0
+    gen.label_counter = 0
+    gen.string_constants = vec.new<*StringConstant>()
+    gen.output = string.new()
+    return gen
+}
+
+// Generate fresh value name
+gen_value_name = (gen: *CodeGen) string {
+    name := string.format("%{}", gen.value_counter)
+    gen.value_counter = gen.value_counter + 1
+    return name
+}
+
+// Generate fresh label name
+gen_label_name = (gen: *CodeGen) string {
+    name := string.format("label_{}", gen.label_counter)
+    gen.label_counter = gen.label_counter + 1
+    return name
+}
+
+// Convert AST type to LLVM type
+ast_type_to_llvm = (type_: *ast.AstType) *LLVMType {
+    type_ ?
+        | ast.AstType::I8 => { return &LLVMType::I8 }
+        | ast.AstType::I16 => { return &LLVMType::I16 }
+        | ast.AstType::I32 => { return &LLVMType::I32 }
+        | ast.AstType::I64 => { return &LLVMType::I64 }
+        | ast.AstType::U8 => { return &LLVMType::I8 }
+        | ast.AstType::U16 => { return &LLVMType::I16 }
+        | ast.AstType::U32 => { return &LLVMType::I32 }
+        | ast.AstType::U64 => { return &LLVMType::I64 }
+        | ast.AstType::F32 => { return &LLVMType::F32 }
+        | ast.AstType::F64 => { return &LLVMType::F64 }
+        | ast.AstType::Bool => { return &LLVMType::I1 }
+        | ast.AstType::Void => { return &LLVMType::Void }
+        | ast.AstType::String => { return &LLVMType::Ptr(&LLVMType::I8) }
+        | ast.AstType::Pointer(inner) => {
+            inner_llvm := ast_type_to_llvm(inner)
+            return &LLVMType::Ptr(inner_llvm)
+        }
+        | ast.AstType::Array(element) => {
+            elem_llvm := ast_type_to_llvm(element)
+            return &LLVMType::Ptr(elem_llvm)
+        }
+        | _ => { return &LLVMType::Void }
+}
+
+// Generate code for program
+codegen_program = (gen: *CodeGen, program: *ast.Program) string {
+    // Generate declarations
+    i ::= 0
+    loop (i < program.declaration_count) {
+        codegen_declaration(gen, &program.declarations[i])
+        i = i + 1
+    }
+    
+    // Generate IR
+    return codegen_emit_ir(gen)
+}
+
+// Generate code for declaration
+codegen_declaration = (gen: *CodeGen, decl: *ast.Declaration) void {
+    decl ?
+        | ast.Declaration::Function(func) => {
+            codegen_function(gen, func)
+        }
+        | ast.Declaration::External(ext) => {
+            codegen_external(gen, ext)
+        }
+        | _ => {}
+}
+
+// Generate code for function
+codegen_function = (gen: *CodeGen, func: *ast.Function) void {
+    // Create LLVM function
+    llvm_func := mem.alloc(@sizeof(LLVMFunction)) as *LLVMFunction
+    llvm_func.name = func.name
+    llvm_func.param_count = func.param_count
+    llvm_func.params = mem.alloc(func.param_count * @sizeof(LLVMParam)) as *LLVMParam
+    llvm_func.return_type = ast_type_to_llvm(func.return_type)
+    llvm_func.blocks = vec.new<*BasicBlock>()
+    llvm_func.is_external = false
+    llvm_func.is_varargs = false
+    
+    // Convert parameters
+    i ::= 0
+    loop (i < func.param_count) {
+        llvm_func.params[i] = LLVMParam {
+            type_: ast_type_to_llvm(func.params[i].type_),
+            name: func.params[i].name,
+        }
+        i = i + 1
+    }
+    
+    // Set as current function
+    gen.current_function = llvm_func
+    gen.value_counter = 0
+    gen.label_counter = 0
+    
+    // Create entry block
+    entry_block := mem.alloc(@sizeof(BasicBlock)) as *BasicBlock
+    entry_block.label = "entry"
+    entry_block.instructions = vec.new<*LLVMInstr>()
+    entry_block.is_terminated = false
+    gen.current_block = entry_block
+    vec.push(llvm_func.blocks, entry_block)
+    
+    // Generate function body
+    codegen_statement(gen, func.body)
+    
+    // Add implicit return if needed
+    !gen.current_block.is_terminated ?
+        | true => {
+            llvm_func.return_type ?
+                | LLVMType::Void => {
+                    add_instruction(gen, &LLVMInstr::RetVoid)
+                }
+                | _ => {
+                    // Return zero value
+                    zero := create_zero_value(llvm_func.return_type)
+                    add_instruction(gen, &LLVMInstr::Ret(llvm_func.return_type, zero))
+                }
+            gen.current_block.is_terminated = true
+        }
+        | false => {}
+    
+    // Add function to list
+    vec.push(gen.functions, llvm_func)
+}
+
+// Generate code for external declaration
+codegen_external = (gen: *CodeGen, ext: *ast.ExternalDecl) void {
+    // Create external function declaration
+    llvm_func := mem.alloc(@sizeof(LLVMFunction)) as *LLVMFunction
+    llvm_func.name = ext.link_name != "" ? ext.link_name : ext.name
+    llvm_func.param_count = 0  // TODO: Parse from type
+    llvm_func.params = 0 as *LLVMParam
+    llvm_func.return_type = &LLVMType::Void  // TODO: Parse from type
+    llvm_func.blocks = vec.new<*BasicBlock>()
+    llvm_func.is_external = true
+    llvm_func.is_varargs = ext.is_varargs
+    
+    vec.push(gen.functions, llvm_func)
+}
+
+// Generate code for statement
+codegen_statement = (gen: *CodeGen, stmt: *ast.Statement) void {
+    stmt ?
+        | ast.Statement::Expression(expr) => {
+            codegen_expression(gen, expr)
+        }
+        | ast.Statement::VariableDeclaration(name, type_, value, is_mutable) => {
+            // Allocate space for variable
+            llvm_type := ast_type_to_llvm(type_)
+            alloca_name := gen_value_name(gen)
+            add_instruction(gen, &LLVMInstr::Alloca(alloca_name, llvm_type))
+            
+            // Store initial value
+            value_result := codegen_expression(gen, value)
+            ptr_value := create_value(llvm_type.Ptr(llvm_type), alloca_name)
+            add_instruction(gen, &LLVMInstr::Store(value_result, ptr_value))
+        }
+        | ast.Statement::Return(value) => {
+            value != 0 as *ast.Expression ?
+                | true => {
+                    result := codegen_expression(gen, value)
+                    add_instruction(gen, &LLVMInstr::Ret(result.type_, result))
+                }
+                | false => {
+                    add_instruction(gen, &LLVMInstr::RetVoid)
+                }
+            gen.current_block.is_terminated = true
+        }
+        | ast.Statement::If(condition, then_body, else_body) => {
+            codegen_if_statement(gen, condition, then_body, else_body)
+        }
+        | ast.Statement::Loop(condition, body) => {
+            codegen_loop_statement(gen, condition, body)
+        }
+        | ast.Statement::Block(statements, count) => {
+            i ::= 0
+            loop (i < count) {
+                codegen_statement(gen, &statements[i])
+                i = i + 1
+            }
+        }
+        | _ => {}
+}
+
+// Generate code for if statement
+codegen_if_statement = (gen: *CodeGen, condition: *ast.Expression, then_body: *ast.Statement, else_body: *ast.Statement) void {
+    // Generate condition
+    cond_value := codegen_expression(gen, condition)
+    
+    // Create labels
+    then_label := gen_label_name(gen)
+    else_label := else_body != 0 as *ast.Statement ? gen_label_name(gen) : ""
+    end_label := gen_label_name(gen)
+    
+    // Branch on condition
+    else_body != 0 as *ast.Statement ?
+        | true => {
+            add_instruction(gen, &LLVMInstr::BrCond(cond_value, then_label, else_label))
+        }
+        | false => {
+            add_instruction(gen, &LLVMInstr::BrCond(cond_value, then_label, end_label))
+        }
+    gen.current_block.is_terminated = true
+    
+    // Generate then block
+    then_block := create_block(gen, then_label)
+    gen.current_block = then_block
+    codegen_statement(gen, then_body)
+    !gen.current_block.is_terminated ?
+        | true => {
+            add_instruction(gen, &LLVMInstr::Br(end_label))
+            gen.current_block.is_terminated = true
+        }
+        | false => {}
+    
+    // Generate else block if present
+    else_body != 0 as *ast.Statement ?
+        | true => {
+            else_block := create_block(gen, else_label)
+            gen.current_block = else_block
+            codegen_statement(gen, else_body)
+            !gen.current_block.is_terminated ?
+                | true => {
+                    add_instruction(gen, &LLVMInstr::Br(end_label))
+                    gen.current_block.is_terminated = true
+                }
+                | false => {}
+        }
+        | false => {}
+    
+    // Create end block
+    end_block := create_block(gen, end_label)
+    gen.current_block = end_block
+}
+
+// Generate code for loop statement
+codegen_loop_statement = (gen: *CodeGen, condition: *ast.Expression, body: *ast.Statement) void {
+    // Create labels
+    cond_label := condition != 0 as *ast.Expression ? gen_label_name(gen) : ""
+    body_label := gen_label_name(gen)
+    end_label := gen_label_name(gen)
+    
+    // Jump to condition or body
+    condition != 0 as *ast.Expression ?
+        | true => {
+            add_instruction(gen, &LLVMInstr::Br(cond_label))
+            gen.current_block.is_terminated = true
+            
+            // Create condition block
+            cond_block := create_block(gen, cond_label)
+            gen.current_block = cond_block
+            cond_value := codegen_expression(gen, condition)
+            add_instruction(gen, &LLVMInstr::BrCond(cond_value, body_label, end_label))
+            gen.current_block.is_terminated = true
+        }
+        | false => {
+            // Infinite loop
+            add_instruction(gen, &LLVMInstr::Br(body_label))
+            gen.current_block.is_terminated = true
+        }
+    
+    // Generate body block
+    body_block := create_block(gen, body_label)
+    gen.current_block = body_block
+    codegen_statement(gen, body)
+    
+    // Jump back to condition/body
+    !gen.current_block.is_terminated ?
+        | true => {
+            condition != 0 as *ast.Expression ?
+                | true => {
+                    add_instruction(gen, &LLVMInstr::Br(cond_label))
+                }
+                | false => {
+                    add_instruction(gen, &LLVMInstr::Br(body_label))
+                }
+            gen.current_block.is_terminated = true
+        }
+        | false => {}
+    
+    // Create end block
+    end_block := create_block(gen, end_label)
+    gen.current_block = end_block
+}
+
+// Generate code for expression
+codegen_expression = (gen: *CodeGen, expr: *ast.Expression) *LLVMValue {
+    expr ?
+        | ast.Expression::Integer32(value) => {
+            return create_constant_i32(value)
+        }
+        | ast.Expression::Integer64(value) => {
+            return create_constant_i64(value)
+        }
+        | ast.Expression::Boolean(value) => {
+            return create_constant_bool(value)
+        }
+        | ast.Expression::StringLiteral(value) => {
+            return codegen_string_literal(gen, value)
+        }
+        | ast.Expression::Identifier(name) => {
+            // TODO: Look up variable
+            return create_value(&LLVMType::I32, name)
+        }
+        | ast.Expression::BinaryOp(left, op, right) => {
+            return codegen_binary_op(gen, left, op, right)
+        }
+        | ast.Expression::FunctionCall(target, args, arg_count) => {
+            return codegen_function_call(gen, target, args, arg_count)
+        }
+        | _ => {
+            return create_value(&LLVMType::Void, "undef")
+        }
+}
+
+// Generate code for binary operation
+codegen_binary_op = (gen: *CodeGen, left: *ast.Expression, op: ast.BinaryOperator, right: *ast.Expression) *LLVMValue {
+    left_val := codegen_expression(gen, left)
+    right_val := codegen_expression(gen, right)
+    result_name := gen_value_name(gen)
+    
+    op ?
+        | ast.BinaryOperator::Add => {
+            add_instruction(gen, &LLVMInstr::Add(result_name, left_val.type_, left_val, right_val))
+            return create_value(left_val.type_, result_name)
+        }
+        | ast.BinaryOperator::Subtract => {
+            add_instruction(gen, &LLVMInstr::Sub(result_name, left_val.type_, left_val, right_val))
+            return create_value(left_val.type_, result_name)
+        }
+        | ast.BinaryOperator::Multiply => {
+            add_instruction(gen, &LLVMInstr::Mul(result_name, left_val.type_, left_val, right_val))
+            return create_value(left_val.type_, result_name)
+        }
+        | ast.BinaryOperator::Divide => {
+            add_instruction(gen, &LLVMInstr::Div(result_name, left_val.type_, left_val, right_val))
+            return create_value(left_val.type_, result_name)
+        }
+        | ast.BinaryOperator::Equal => {
+            add_instruction(gen, &LLVMInstr::ICmp(result_name, "eq", left_val.type_, left_val, right_val))
+            return create_value(&LLVMType::I1, result_name)
+        }
+        | ast.BinaryOperator::NotEqual => {
+            add_instruction(gen, &LLVMInstr::ICmp(result_name, "ne", left_val.type_, left_val, right_val))
+            return create_value(&LLVMType::I1, result_name)
+        }
+        | ast.BinaryOperator::LessThan => {
+            add_instruction(gen, &LLVMInstr::ICmp(result_name, "slt", left_val.type_, left_val, right_val))
+            return create_value(&LLVMType::I1, result_name)
+        }
+        | ast.BinaryOperator::GreaterThan => {
+            add_instruction(gen, &LLVMInstr::ICmp(result_name, "sgt", left_val.type_, left_val, right_val))
+            return create_value(&LLVMType::I1, result_name)
+        }
+        | _ => {
+            return create_value(&LLVMType::Void, "undef")
+        }
+}
+
+// Generate code for function call
+codegen_function_call = (gen: *CodeGen, target: *ast.Expression, args: *ast.Expression, arg_count: i32) *LLVMValue {
+    // Get function name (simplified)
+    func_name := ""
+    target ?
+        | ast.Expression::Identifier(name) => { func_name = name }
+        | _ => {}
+    
+    // Generate arguments
+    arg_values := mem.alloc(arg_count * @sizeof(LLVMValue)) as *LLVMValue
+    i ::= 0
+    loop (i < arg_count) {
+        arg_values[i] = *codegen_expression(gen, &args[i])
+        i = i + 1
+    }
+    
+    // Generate call
+    result_name := gen_value_name(gen)
+    // TODO: Get actual function type
+    func_type := &LLVMType::Function(0 as *LLVMType, 0, &LLVMType::I32)
+    add_instruction(gen, &LLVMInstr::Call(result_name, func_type, func_name, arg_values, arg_count))
+    
+    return create_value(&LLVMType::I32, result_name)
+}
+
+// Generate code for string literal
+codegen_string_literal = (gen: *CodeGen, value: string) *LLVMValue {
+    // Create string constant
+    const_name := string.format("@str.{}", vec.len(gen.string_constants))
+    str_const := mem.alloc(@sizeof(StringConstant)) as *StringConstant
+    str_const.value = value
+    str_const.name = const_name
+    vec.push(gen.string_constants, str_const)
+    
+    return create_value(&LLVMType::Ptr(&LLVMType::I8), const_name)
+}
+
+// Helper functions
+create_block = (gen: *CodeGen, label: string) *BasicBlock {
+    block := mem.alloc(@sizeof(BasicBlock)) as *BasicBlock
+    block.label = label
+    block.instructions = vec.new<*LLVMInstr>()
+    block.is_terminated = false
+    vec.push(gen.current_function.blocks, block)
+    return block
+}
+
+add_instruction = (gen: *CodeGen, instr: *LLVMInstr) void {
+    vec.push(gen.current_block.instructions, instr)
+}
+
+create_value = (type_: *LLVMType, name: string) *LLVMValue {
+    val := mem.alloc(@sizeof(LLVMValue)) as *LLVMValue
+    val.type_ = type_
+    val.name = name
+    val.is_constant = false
+    return val
+}
+
+create_constant_i32 = (value: i32) *LLVMValue {
+    val := mem.alloc(@sizeof(LLVMValue)) as *LLVMValue
+    val.type_ = &LLVMType::I32
+    val.name = string.format("{}", value)
+    val.is_constant = true
+    return val
+}
+
+create_constant_i64 = (value: i64) *LLVMValue {
+    val := mem.alloc(@sizeof(LLVMValue)) as *LLVMValue
+    val.type_ = &LLVMType::I64
+    val.name = string.format("{}", value)
+    val.is_constant = true
+    return val
+}
+
+create_constant_bool = (value: bool) *LLVMValue {
+    val := mem.alloc(@sizeof(LLVMValue)) as *LLVMValue
+    val.type_ = &LLVMType::I1
+    val.name = value ? "true" : "false"
+    val.is_constant = true
+    return val
+}
+
+create_zero_value = (type_: *LLVMType) *LLVMValue {
+    type_ ?
+        | LLVMType::I1 => { return create_constant_bool(false) }
+        | LLVMType::I8 | LLVMType::I16 | LLVMType::I32 => { return create_constant_i32(0) }
+        | LLVMType::I64 => { return create_constant_i64(0) }
+        | _ => { return create_value(type_, "zeroinitializer") }
+}
+
+// Emit LLVM IR
+codegen_emit_ir = (gen: *CodeGen) string {
+    output := string.new()
+    
+    // Emit string constants
+    i ::= 0
+    loop (i < vec.len(gen.string_constants)) {
+        str_const := vec.get(gen.string_constants, i)
+        len := string.len(str_const.value)
+        string.append(output, "$(str_const.name) = private unnamed_addr constant [$(len + 1) x i8] c\"$(str_const.value)\\00\"\n")
+        i = i + 1
+    }
+    
+    // Emit function declarations
+    i = 0
+    loop (i < vec.len(gen.functions)) {
+        func := vec.get(gen.functions, i)
+        func.is_external ?
+            | true => {
+                string.append(output, "declare ")
+                emit_function_signature(output, func)
+                string.append(output, "\n")
+            }
+            | false => {}
+        i = i + 1
+    }
+    
+    // Emit function definitions
+    i = 0
+    loop (i < vec.len(gen.functions)) {
+        func := vec.get(gen.functions, i)
+        !func.is_external ?
+            | true => {
+                string.append(output, "\ndefine ")
+                emit_function_signature(output, func)
+                string.append(output, " {\n")
+                emit_function_body(output, func)
+                string.append(output, "}\n")
+            }
+            | false => {}
+        i = i + 1
+    }
+    
+    return output
+}
+
+emit_function_signature = (output: string, func: *LLVMFunction) void {
+    emit_type(output, func.return_type)
+    string.append(output, " @$(func.name)(")
+    
+    i ::= 0
+    loop (i < func.param_count) {
+        i > 0 ? | true => { string.append(output, ", ") } | false => {}
+        emit_type(output, func.params[i].type_)
+        string.append(output, " %$(func.params[i].name)")
+        i = i + 1
+    }
+    
+    func.is_varargs ?
+        | true => {
+            func.param_count > 0 ? | true => { string.append(output, ", ") } | false => {}
+            string.append(output, "...")
+        }
+        | false => {}
+    
+    string.append(output, ")")
+}
+
+emit_function_body = (output: string, func: *LLVMFunction) void {
+    i ::= 0
+    loop (i < vec.len(func.blocks)) {
+        block := vec.get(func.blocks, i)
+        emit_block(output, block)
+        i = i + 1
+    }
+}
+
+emit_block = (output: string, block: *BasicBlock) void {
+    string.append(output, "$(block.label):\n")
+    
+    i ::= 0
+    loop (i < vec.len(block.instructions)) {
+        instr := vec.get(block.instructions, i)
+        string.append(output, "  ")
+        emit_instruction(output, instr)
+        string.append(output, "\n")
+        i = i + 1
+    }
+}
+
+emit_instruction = (output: string, instr: *LLVMInstr) void {
+    instr ?
+        | LLVMInstr::Alloca(result, type_) => {
+            string.append(output, "$(result) = alloca ")
+            emit_type(output, type_)
+        }
+        | LLVMInstr::Store(value, ptr) => {
+            string.append(output, "store ")
+            emit_type(output, value.type_)
+            string.append(output, " $(value.name), ")
+            emit_type(output, ptr.type_)
+            string.append(output, " $(ptr.name)")
+        }
+        | LLVMInstr::Load(result, type_, ptr) => {
+            string.append(output, "$(result) = load ")
+            emit_type(output, type_)
+            string.append(output, ", ")
+            emit_type(output, ptr.type_)
+            string.append(output, " $(ptr.name)")
+        }
+        | LLVMInstr::Add(result, type_, lhs, rhs) => {
+            string.append(output, "$(result) = add ")
+            emit_type(output, type_)
+            string.append(output, " $(lhs.name), $(rhs.name)")
+        }
+        | LLVMInstr::Sub(result, type_, lhs, rhs) => {
+            string.append(output, "$(result) = sub ")
+            emit_type(output, type_)
+            string.append(output, " $(lhs.name), $(rhs.name)")
+        }
+        | LLVMInstr::Mul(result, type_, lhs, rhs) => {
+            string.append(output, "$(result) = mul ")
+            emit_type(output, type_)
+            string.append(output, " $(lhs.name), $(rhs.name)")
+        }
+        | LLVMInstr::ICmp(result, cond, type_, lhs, rhs) => {
+            string.append(output, "$(result) = icmp $(cond) ")
+            emit_type(output, type_)
+            string.append(output, " $(lhs.name), $(rhs.name)")
+        }
+        | LLVMInstr::Call(result, func_type, func, args, arg_count) => {
+            string.append(output, "$(result) = call ")
+            // TODO: Emit proper function type
+            string.append(output, "i32 @$(func)(")
+            j ::= 0
+            loop (j < arg_count) {
+                j > 0 ? | true => { string.append(output, ", ") } | false => {}
+                emit_type(output, args[j].type_)
+                string.append(output, " $(args[j].name)")
+                j = j + 1
+            }
+            string.append(output, ")")
+        }
+        | LLVMInstr::Ret(type_, value) => {
+            string.append(output, "ret ")
+            emit_type(output, type_)
+            string.append(output, " $(value.name)")
+        }
+        | LLVMInstr::RetVoid => {
+            string.append(output, "ret void")
+        }
+        | LLVMInstr::Br(label) => {
+            string.append(output, "br label %$(label)")
+        }
+        | LLVMInstr::BrCond(cond, true_label, false_label) => {
+            string.append(output, "br i1 $(cond.name), label %$(true_label), label %$(false_label)")
+        }
+        | _ => {
+            string.append(output, "; TODO: emit instruction")
+        }
+}
+
+emit_type = (output: string, type_: *LLVMType) void {
+    type_ ?
+        | LLVMType::Void => { string.append(output, "void") }
+        | LLVMType::I1 => { string.append(output, "i1") }
+        | LLVMType::I8 => { string.append(output, "i8") }
+        | LLVMType::I16 => { string.append(output, "i16") }
+        | LLVMType::I32 => { string.append(output, "i32") }
+        | LLVMType::I64 => { string.append(output, "i64") }
+        | LLVMType::F32 => { string.append(output, "float") }
+        | LLVMType::F64 => { string.append(output, "double") }
+        | LLVMType::Ptr(inner) => {
+            string.append(output, "ptr")
+        }
+        | _ => { string.append(output, "i32") }
+}

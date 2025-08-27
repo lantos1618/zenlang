@@ -1,0 +1,561 @@
+// Zen AST (Abstract Syntax Tree) Module
+// Self-hosted AST representation for the Zen compiler
+
+// Import dependencies
+comptime {
+    mem := @import("mem")
+    core := @import("core")
+}
+
+// Type System
+AstType = 
+    | I8
+    | I16
+    | I32
+    | I64
+    | U8
+    | U16
+    | U32
+    | U64
+    | F32
+    | F64
+    | Bool
+    | String
+    | Void
+    | Pointer(inner: *AstType)
+    | Array(element: *AstType)
+    | FixedArray(element: *AstType, size: i32)
+    | FunctionPointer(params: *AstType, param_count: i32, return_type: *AstType)
+    | Generic(name: string, type_args: *AstType, arg_count: i32)
+    | Tuple(elements: *AstType, element_count: i32)
+
+// Binary Operations
+BinaryOperator = 
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+    | Modulo
+    | Equal
+    | NotEqual
+    | LessThan
+    | GreaterThan
+    | LessThanOrEqual
+    | GreaterThanOrEqual
+    | LogicalAnd
+    | LogicalOr
+    | BitwiseAnd
+    | BitwiseOr
+    | BitwiseXor
+    | LeftShift
+    | RightShift
+
+// Unary Operations
+UnaryOperator = 
+    | Negate
+    | LogicalNot
+    | BitwiseNot
+    | AddressOf
+    | Dereference
+
+// Expressions
+Expression = 
+    | Integer8(value: i8)
+    | Integer16(value: i16)
+    | Integer32(value: i32)
+    | Integer64(value: i64)
+    | Unsigned8(value: u8)
+    | Unsigned16(value: u16)
+    | Unsigned32(value: u32)
+    | Unsigned64(value: u64)
+    | Float32(value: f32)
+    | Float64(value: f64)
+    | Boolean(value: bool)
+    | StringLiteral(value: string)
+    | Identifier(name: string)
+    | BinaryOp(left: *Expression, op: BinaryOperator, right: *Expression)
+    | UnaryOp(op: UnaryOperator, operand: *Expression)
+    | FunctionCall(target: *Expression, args: *Expression, arg_count: i32)
+    | MethodCall(object: *Expression, method: string, args: *Expression, arg_count: i32)
+    | FieldAccess(object: *Expression, field: string)
+    | ArrayAccess(array: *Expression, index: *Expression)
+    | Cast(expr: *Expression, target_type: *AstType)
+    | StructLiteral(type_name: string, fields: *FieldInit, field_count: i32)
+    | ArrayLiteral(elements: *Expression, element_count: i32)
+    | TupleLiteral(elements: *Expression, element_count: i32)
+    | PatternMatch(expr: *Expression, arms: *MatchArm, arm_count: i32)
+    | Block(statements: *Statement, statement_count: i32)
+    | Lambda(params: *FunctionParam, param_count: i32, body: *Expression)
+
+// Pattern Matching
+Pattern = 
+    | Wildcard
+    | Literal(value: *Expression)
+    | Identifier(name: string)
+    | Constructor(name: string, patterns: *Pattern, pattern_count: i32)
+    | Tuple(patterns: *Pattern, pattern_count: i32)
+    | Guard(pattern: *Pattern, condition: *Expression)
+
+MatchArm = {
+    pattern: *Pattern,
+    guard: *Expression,  // Optional guard condition
+    body: *Expression,
+}
+
+// Field initialization for struct literals
+FieldInit = {
+    name: string,
+    value: *Expression,
+}
+
+// Statements
+Statement = 
+    | Expression(expr: *Expression)
+    | VariableDeclaration(name: string, type_: *AstType, value: *Expression, is_mutable: bool)
+    | Assignment(target: *Expression, value: *Expression)
+    | Return(value: *Expression)
+    | Break
+    | Continue
+    | If(condition: *Expression, then_body: *Statement, else_body: *Statement)
+    | Loop(condition: *Expression, body: *Statement)
+    | ForEach(variable: string, iterable: *Expression, body: *Statement)
+    | Block(statements: *Statement, statement_count: i32)
+
+// Function Parameters
+FunctionParam = {
+    name: string,
+    type_: *AstType,
+    default_value: *Expression,
+    is_varargs: bool,
+}
+
+// Top-level Declarations
+Declaration = 
+    | Function(func: *Function)
+    | Struct(struct_: *Struct)
+    | Enum(enum_: *Enum)
+    | TypeAlias(alias: *TypeAlias)
+    | Const(const_: *ConstDecl)
+    | External(ext: *ExternalDecl)
+    | Module(module: *Module)
+    | Behavior(behavior: *Behavior)
+
+// Function Declaration
+Function = {
+    name: string,
+    generic_params: *string,
+    generic_count: i32,
+    params: *FunctionParam,
+    param_count: i32,
+    return_type: *AstType,
+    body: *Statement,
+    is_public: bool,
+    is_comptime: bool,
+}
+
+// Struct Declaration
+Struct = {
+    name: string,
+    generic_params: *string,
+    generic_count: i32,
+    fields: *StructField,
+    field_count: i32,
+    methods: *Function,
+    method_count: i32,
+    is_public: bool,
+}
+
+StructField = {
+    name: string,
+    type_: *AstType,
+    default_value: *Expression,
+    is_mutable: bool,
+    is_public: bool,
+}
+
+// Enum Declaration
+Enum = {
+    name: string,
+    generic_params: *string,
+    generic_count: i32,
+    variants: *EnumVariant,
+    variant_count: i32,
+    methods: *Function,
+    method_count: i32,
+    is_public: bool,
+}
+
+EnumVariant = {
+    name: string,
+    fields: *StructField,
+    field_count: i32,
+}
+
+// Type Alias
+TypeAlias = {
+    name: string,
+    generic_params: *string,
+    generic_count: i32,
+    target_type: *AstType,
+    is_public: bool,
+}
+
+// Constant Declaration
+ConstDecl = {
+    name: string,
+    type_: *AstType,
+    value: *Expression,
+    is_public: bool,
+}
+
+// External Declaration
+ExternalDecl = {
+    name: string,
+    type_: *AstType,
+    link_name: string,
+    is_varargs: bool,
+}
+
+// Module
+Module = {
+    name: string,
+    declarations: *Declaration,
+    declaration_count: i32,
+    imports: *Import,
+    import_count: i32,
+}
+
+// Import
+Import = {
+    path: string,
+    alias: string,
+    items: *string,
+    item_count: i32,
+}
+
+// Behavior (Interface/Trait)
+Behavior = {
+    name: string,
+    generic_params: *string,
+    generic_count: i32,
+    requirements: *BehaviorRequirement,
+    requirement_count: i32,
+    is_public: bool,
+}
+
+BehaviorRequirement = {
+    name: string,
+    type_: *AstType,
+}
+
+// Program (Root AST Node)
+Program = {
+    modules: *Module,
+    module_count: i32,
+    declarations: *Declaration,
+    declaration_count: i32,
+}
+
+// AST Builder Functions
+ast_new_program = () *Program {
+    program := mem.alloc(@sizeof(Program)) as *Program
+    program.modules = 0 as *Module
+    program.module_count = 0
+    program.declarations = 0 as *Declaration
+    program.declaration_count = 0
+    return program
+}
+
+ast_add_declaration = (program: *Program, decl: *Declaration) void {
+    // Reallocate array with new size
+    new_size := (program.declaration_count + 1) * @sizeof(Declaration)
+    new_array := mem.realloc(program.declarations as *void, new_size) as *Declaration
+    new_array[program.declaration_count] = *decl
+    program.declarations = new_array
+    program.declaration_count = program.declaration_count + 1
+}
+
+// Expression Builders
+ast_new_integer32 = (value: i32) *Expression {
+    expr := mem.alloc(@sizeof(Expression)) as *Expression
+    *expr = Expression::Integer32(value)
+    return expr
+}
+
+ast_new_identifier = (name: string) *Expression {
+    expr := mem.alloc(@sizeof(Expression)) as *Expression
+    *expr = Expression::Identifier(name)
+    return expr
+}
+
+ast_new_binary_op = (left: *Expression, op: BinaryOperator, right: *Expression) *Expression {
+    expr := mem.alloc(@sizeof(Expression)) as *Expression
+    *expr = Expression::BinaryOp(left, op, right)
+    return expr
+}
+
+ast_new_function_call = (target: *Expression, args: *Expression, arg_count: i32) *Expression {
+    expr := mem.alloc(@sizeof(Expression)) as *Expression
+    *expr = Expression::FunctionCall(target, args, arg_count)
+    return expr
+}
+
+// Statement Builders
+ast_new_variable_decl = (name: string, type_: *AstType, value: *Expression, is_mutable: bool) *Statement {
+    stmt := mem.alloc(@sizeof(Statement)) as *Statement
+    *stmt = Statement::VariableDeclaration(name, type_, value, is_mutable)
+    return stmt
+}
+
+ast_new_return = (value: *Expression) *Statement {
+    stmt := mem.alloc(@sizeof(Statement)) as *Statement
+    *stmt = Statement::Return(value)
+    return stmt
+}
+
+ast_new_if = (condition: *Expression, then_body: *Statement, else_body: *Statement) *Statement {
+    stmt := mem.alloc(@sizeof(Statement)) as *Statement
+    *stmt = Statement::If(condition, then_body, else_body)
+    return stmt
+}
+
+ast_new_loop = (condition: *Expression, body: *Statement) *Statement {
+    stmt := mem.alloc(@sizeof(Statement)) as *Statement
+    *stmt = Statement::Loop(condition, body)
+    return stmt
+}
+
+// Type Builders
+ast_type_i32 = () *AstType {
+    type_ := mem.alloc(@sizeof(AstType)) as *AstType
+    *type_ = AstType::I32
+    return type_
+}
+
+ast_type_bool = () *AstType {
+    type_ := mem.alloc(@sizeof(AstType)) as *AstType
+    *type_ = AstType::Bool
+    return type_
+}
+
+ast_type_string = () *AstType {
+    type_ := mem.alloc(@sizeof(AstType)) as *AstType
+    *type_ = AstType::String
+    return type_
+}
+
+ast_type_pointer = (inner: *AstType) *AstType {
+    type_ := mem.alloc(@sizeof(AstType)) as *AstType
+    *type_ = AstType::Pointer(inner)
+    return type_
+}
+
+ast_type_array = (element: *AstType) *AstType {
+    type_ := mem.alloc(@sizeof(AstType)) as *AstType
+    *type_ = AstType::Array(element)
+    return type_
+}
+
+// Function Builder
+ast_new_function = (name: string, params: *FunctionParam, param_count: i32, return_type: *AstType, body: *Statement) *Function {
+    func := mem.alloc(@sizeof(Function)) as *Function
+    func.name = name
+    func.generic_params = 0 as *string
+    func.generic_count = 0
+    func.params = params
+    func.param_count = param_count
+    func.return_type = return_type
+    func.body = body
+    func.is_public = false
+    func.is_comptime = false
+    return func
+}
+
+// Pattern Matching Helpers
+ast_new_pattern_match = (expr: *Expression, arms: *MatchArm, arm_count: i32) *Expression {
+    match_expr := mem.alloc(@sizeof(Expression)) as *Expression
+    *match_expr = Expression::PatternMatch(expr, arms, arm_count)
+    return match_expr
+}
+
+ast_new_wildcard_pattern = () *Pattern {
+    pattern := mem.alloc(@sizeof(Pattern)) as *Pattern
+    *pattern = Pattern::Wildcard
+    return pattern
+}
+
+ast_new_literal_pattern = (value: *Expression) *Pattern {
+    pattern := mem.alloc(@sizeof(Pattern)) as *Pattern
+    *pattern = Pattern::Literal(value)
+    return pattern
+}
+
+// Visitor Pattern for AST Traversal
+AstVisitor<T> = {
+    visit_expression: *(visitor: *AstVisitor<T>, expr: *Expression) T,
+    visit_statement: *(visitor: *AstVisitor<T>, stmt: *Statement) T,
+    visit_declaration: *(visitor: *AstVisitor<T>, decl: *Declaration) T,
+    visit_type: *(visitor: *AstVisitor<T>, type_: *AstType) T,
+    context: *void,
+}
+
+// AST Printing (for debugging)
+ast_print_expression = (expr: *Expression) void {
+    expr ?
+        | Expression::Integer32(value) => { io.print("Integer32($(value))") }
+        | Expression::Identifier(name) => { io.print("Identifier($(name))") }
+        | Expression::BinaryOp(left, op, right) => {
+            io.print("BinaryOp(")
+            ast_print_expression(left)
+            io.print(", ")
+            ast_print_binary_op(op)
+            io.print(", ")
+            ast_print_expression(right)
+            io.print(")")
+        }
+        | _ => { io.print("Expression(...)") }
+}
+
+ast_print_binary_op = (op: BinaryOperator) void {
+    op ?
+        | BinaryOperator::Add => { io.print("+") }
+        | BinaryOperator::Subtract => { io.print("-") }
+        | BinaryOperator::Multiply => { io.print("*") }
+        | BinaryOperator::Divide => { io.print("/") }
+        | BinaryOperator::Equal => { io.print("==") }
+        | BinaryOperator::NotEqual => { io.print("!=") }
+        | BinaryOperator::LessThan => { io.print("<") }
+        | BinaryOperator::GreaterThan => { io.print(">") }
+        | _ => { io.print("?") }
+}
+
+// AST Validation
+ast_validate_program = (program: *Program) bool {
+    // Check for main function
+    has_main := false
+    i ::= 0
+    loop (i < program.declaration_count) {
+        decl := program.declarations[i]
+        decl ?
+            | Declaration::Function(func) => {
+                func.name == "main" ?
+                    | true => { has_main = true }
+                    | false => {}
+            }
+            | _ => {}
+        i = i + 1
+    }
+    return has_main
+}
+
+// Memory management
+ast_free_program = (program: *Program) void {
+    // Free all declarations
+    i ::= 0
+    loop (i < program.declaration_count) {
+        ast_free_declaration(&program.declarations[i])
+        i = i + 1
+    }
+    mem.free(program.declarations as *void)
+    
+    // Free all modules
+    i = 0
+    loop (i < program.module_count) {
+        ast_free_module(&program.modules[i])
+        i = i + 1
+    }
+    mem.free(program.modules as *void)
+    
+    mem.free(program as *void)
+}
+
+ast_free_declaration = (decl: *Declaration) void {
+    decl ?
+        | Declaration::Function(func) => { ast_free_function(func) }
+        | Declaration::Struct(struct_) => { ast_free_struct(struct_) }
+        | Declaration::Enum(enum_) => { ast_free_enum(enum_) }
+        | _ => {}
+}
+
+ast_free_function = (func: *Function) void {
+    // Free parameters
+    mem.free(func.params as *void)
+    // Free body
+    ast_free_statement(func.body)
+    // Free the function itself
+    mem.free(func as *void)
+}
+
+ast_free_struct = (struct_: *Struct) void {
+    mem.free(struct_.fields as *void)
+    mem.free(struct_.methods as *void)
+    mem.free(struct_ as *void)
+}
+
+ast_free_enum = (enum_: *Enum) void {
+    mem.free(enum_.variants as *void)
+    mem.free(enum_.methods as *void)
+    mem.free(enum_ as *void)
+}
+
+ast_free_module = (module: *Module) void {
+    mem.free(module.declarations as *void)
+    mem.free(module.imports as *void)
+    mem.free(module as *void)
+}
+
+ast_free_statement = (stmt: *Statement) void {
+    stmt ?
+        | Statement::Expression(expr) => { ast_free_expression(expr) }
+        | Statement::VariableDeclaration(_, _, value, _) => { ast_free_expression(value) }
+        | Statement::Return(value) => { ast_free_expression(value) }
+        | Statement::If(condition, then_body, else_body) => {
+            ast_free_expression(condition)
+            ast_free_statement(then_body)
+            ast_free_statement(else_body)
+        }
+        | Statement::Loop(condition, body) => {
+            ast_free_expression(condition)
+            ast_free_statement(body)
+        }
+        | Statement::Block(statements, count) => {
+            i ::= 0
+            loop (i < count) {
+                ast_free_statement(&statements[i])
+                i = i + 1
+            }
+            mem.free(statements as *void)
+        }
+        | _ => {}
+    mem.free(stmt as *void)
+}
+
+ast_free_expression = (expr: *Expression) void {
+    expr ?
+        | Expression::BinaryOp(left, _, right) => {
+            ast_free_expression(left)
+            ast_free_expression(right)
+        }
+        | Expression::UnaryOp(_, operand) => {
+            ast_free_expression(operand)
+        }
+        | Expression::FunctionCall(target, args, count) => {
+            ast_free_expression(target)
+            i ::= 0
+            loop (i < count) {
+                ast_free_expression(&args[i])
+                i = i + 1
+            }
+            mem.free(args as *void)
+        }
+        | Expression::Block(statements, count) => {
+            i ::= 0
+            loop (i < count) {
+                ast_free_statement(&statements[i])
+                i = i + 1
+            }
+            mem.free(statements as *void)
+        }
+        | _ => {}
+    mem.free(expr as *void)
+}
