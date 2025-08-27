@@ -1,65 +1,36 @@
-# Zen Language Project - TODOs
+# Zen Language - TODO List
 
-## Completed ✅
-- [x] Fix self-hosted lexer syntax for parser compatibility
-- [x] Verify all printf/puts tests capture and verify output  
-- [x] Debug and fix failing vector test
-- [x] Review project documentation and .agent files
-- [x] Confirm testing infrastructure properly captures output
-- [x] Fix segmentation fault in codegen tests (RESOLVED)
-  - Reverted problematic changes in literals.rs
-  - All tests passing again
-- [x] Complete string interpolation implementation (DONE)
-  - Fixed typechecker to recognize StringInterpolation
-  - Fixed identifier loading for string pointers
-  - Works correctly when stored in variables
-- [x] Implement comptime execution system (DONE - 2025-08-27)
-  - Integrated into compiler pipeline
-  - Comptime blocks and expressions evaluated at compile time
-  - Tests verify constant folding works
-- [x] Fix loop mutability issues (VERIFIED WORKING - 2025-08-27)
-  - Loops support mutable variables correctly
-  - Comprehensive tests added
+## Current Session Tasks
 
-## High Priority 🔴
-1. [ ] Complete self-hosted parser implementation
-   - Basic structure created in stdlib/parser.zen
-   - Need to implement actual parsing logic
-   - Need to handle all AST node types
-   
-2. [x] Write comprehensive stdlib modules in Zen (ALREADY EXISTS)
-   - io.zen - Input/output operations ✓
-   - fs.zen - File system operations ✓
-   - net.zen - Network operations (TCP/UDP) ✓
-   - collections.zen - Data structures ✓
-   - algorithms.zen - Common algorithms ✓
-   - mem.zen - Memory management ✓
-   - math.zen - Mathematical functions ✓
-   - string.zen - String operations ✓
-   - hashmap.zen - Hash map implementation ✓
-   - vec.zen - Vector implementation ✓
+### Loop Syntax Refactoring (Priority: HIGH)
+- [ ] Audit all files for old loop syntax patterns
+- [ ] Update remaining files to use functional loop style
+- [ ] Test all loop changes
+- [ ] Document loop syntax changes
 
-## Low Priority 🟢  
-5. [ ] Create bootstrap process for self-hosting
-   - Use self-hosted lexer/parser to compile Zen
-   - Create multi-stage build script
-   - Test bootstrap compilation
-   
-6. [ ] Clean up unused code warnings
-   - Remove dead code or mark as used
-   - Fix all compiler warnings
-   
-7. [ ] Add missing AST node types
-   - Range expressions
-   - String concatenation operator
-   - Additional pattern matching cases
-   
-8. [ ] Improve loop syntax support
-   - Allow function calls in loop conditions
-   - Full iterator protocol support
+### Standard Library Development (Priority: HIGH)
+- [ ] Expand core.zen with essential operations
+- [ ] Implement Vec collection
+- [ ] Implement HashMap collection
+- [ ] Enhance I/O operations
+- [ ] Add file system operations
+- [ ] Write self-hosted tests in Zen
 
-## Technical Debt
-- Lexer currently minimal - needs full implementation when parser supports more syntax
-- Some AST types defined but never constructed  
-- Warning about unused variables in parser code
-- Many unused functions in codegen (might be needed later)
+### Testing & Quality (Priority: MEDIUM)
+- [ ] Run comprehensive test suite after changes
+- [ ] Add performance benchmarks
+- [ ] Create integration tests for stdlib
+
+### Git Operations (Priority: LOW)
+- [ ] Create descriptive commits for each feature
+- [ ] Merge stable changes to main branch
+- [ ] Clean up temporary files
+
+## Estimated Time
+- Loop Refactoring: ~1 hour
+- Standard Library: ~4-6 hours
+- Testing: ~2 hours
+- Total: ~7-9 hours
+
+## Progress Tracking
+Use TodoWrite tool to update status in real-time.
