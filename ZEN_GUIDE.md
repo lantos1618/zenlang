@@ -306,9 +306,9 @@ Circle.impl = {
 
 // Generic function using behavior
 render_all = (items: []Drawable, canvas: Canvas) void {
-    loop item in items {
+    items.iter().loop(item -> {
         item.draw(canvas)
-    }
+    })
 }
 ```
 
@@ -402,8 +402,9 @@ result := x ? | 0 => "zero"
              | _ => "non-zero"
 
 // Loops
-loop i in 0..10 { }      // for-like
-loop x > 0 { x = x - 1 }  // while-like
+range(0, 10).loop(i -> { })  // range iteration
+loop x > 0 { x = x - 1 }     // while-like
+loop { }                      // infinite
 
 // Structs
 Point = { x: f64, y: f64 }

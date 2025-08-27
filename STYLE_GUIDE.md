@@ -6,8 +6,10 @@
   - No `for i in ...`, no `loop ... in ...`.
   - This is a permanent design decision.
 - Use explicit, non-dangling, non-tertiary forms only.
-- Prefer:
-  - `loop (0..10) { ... }` (range as condition, no variable)
+- Prefer functional iteration:
+  - `range(0, 10).loop(i -> { ... })` (functional range iteration)
+  - `loop condition { ... }` (while-like)
+  - `loop { ... }` (infinite)
 
 ## Variable Declaration Philosophy
 

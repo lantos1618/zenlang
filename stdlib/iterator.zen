@@ -5,6 +5,30 @@ comptime {
     core := @std.core
 }
 
+// Range iterator for numeric ranges
+Range = {
+    start: i64,
+    end: i64,
+    current: i64,
+}
+
+// Create a range from start to end (exclusive)
+range = (start: i64, end: i64) Range {
+    return Range {
+        start: start,
+        end: end,
+        current: start,
+    }
+}
+
+// Loop method for Range - executes callback for each value
+Range.loop = (self:: *Range, callback: (i64) void) void {
+    loop self.current < self.end {
+        callback(self.current)
+        self.current = self.current + 1
+    }
+}
+
 // Generic iterator interface
 Iterator<T> = {
     data: *T,
@@ -39,13 +63,17 @@ Iterator<T>.next = (self:: *Iterator<T>) Option<T> {
         }
 }
 
-// Functional iteration methods
-Iterator<T>.for_each = (self: Iterator<T>, callback: (T) void) void {
-    i ::= 0
-    loop i < self.size {
-        // callback(self.data[i])
-        i = i + 1
+// Loop method for Iterator - executes callback for each element
+Iterator<T>.loop = (self:: *Iterator<T>, callback: (T) void) void {
+    loop self.current < self.size {
+        // callback(self.data[self.current])
+        self.current = self.current + 1
     }
+}
+
+// Functional iteration methods (alias for compatibility)
+Iterator<T>.for_each = (self:: *Iterator<T>, callback: (T) void) void {
+    self.loop(callback)
 }
 
 // Map iterator to new values
@@ -82,62 +110,55 @@ Iterator<T>.reduce<U> = (self: Iterator<T>, initial: U, accumulator: (U, T) U) U
 }
 
 // Sum numeric iterator (for i32)
-sum_i32 = (iter: Iterator<i32>) i32 {
+sum_i32 = (iter:: *Iterator<i32>) i32 {
     sum ::= 0
-    i ::= 0
-    loop i < iter.size {
-        // sum = sum + iter.data[i]
-        i = i + 1
-    }
+    iter.loop(value -> {
+        sum = sum + value
+    })
     return sum
 }
 
 // Find first element matching predicate
-Iterator<T>.find = (self: Iterator<T>, predicate: (T) bool) Option<T> {
-    i ::= 0
-    loop i < self.size {
-        // predicate(self.data[i]) ?
-        //     | true => return Option<T>::Some(self.data[i])
-        //     | false => {}
-        i = i + 1
-    }
-    return Option<T>::None
+Iterator<T>.find = (self:: *Iterator<T>, predicate: (T) bool) Option<T> {
+    result ::= Option<T>::None
+    self.loop(value -> {
+        predicate(value) ?
+            | true => result = Option<T>::Some(value)
+            | false => {}
+    })
+    return result
 }
 
 // Check if any element matches predicate
-Iterator<T>.any = (self: Iterator<T>, predicate: (T) bool) bool {
-    i ::= 0
-    loop i < self.size {
-        // predicate(self.data[i]) ?
-        //     | true => return true
-        //     | false => {}
-        i = i + 1
-    }
-    return false
+Iterator<T>.any = (self:: *Iterator<T>, predicate: (T) bool) bool {
+    found ::= false
+    self.loop(value -> {
+        predicate(value) ?
+            | true => found = true
+            | false => {}
+    })
+    return found
 }
 
 // Check if all elements match predicate
-Iterator<T>.all = (self: Iterator<T>, predicate: (T) bool) bool {
-    i ::= 0
-    loop i < self.size {
-        // predicate(self.data[i]) ?
-        //     | false => return false
-        //     | true => {}
-        i = i + 1
-    }
-    return true
+Iterator<T>.all = (self:: *Iterator<T>, predicate: (T) bool) bool {
+    all_match ::= true
+    self.loop(value -> {
+        predicate(value) ?
+            | false => all_match = false
+            | true => {}
+    })
+    return all_match
 }
 
 // Count elements matching predicate
-Iterator<T>.count = (self: Iterator<T>, predicate: (T) bool) i64 {
+Iterator<T>.count = (self:: *Iterator<T>, predicate: (T) bool) i64 {
     count ::= 0
-    i ::= 0
-    loop i < self.size {
-        // predicate(self.data[i]) ?
-        //     | true => count = count + 1
-        //     | false => {}
-        i = i + 1
-    }
+    self.loop(value -> {
+        predicate(value) ?
+            | true => count = count + 1
+            | false => {}
+    })
     return count
 }
 
