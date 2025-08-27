@@ -1,0 +1,22 @@
+extern printf = (format: string, ...) i64
+extern malloc = (size: i64) *void
+
+main = () i32 {
+    // Test simple array
+    arr := [10, 20, 30, 40, 50]
+    printf("arr[0]: %d\n", arr[0])
+    printf("arr[1]: %d\n", arr[1])
+    printf("arr[2]: %d\n", arr[2])
+    printf("arr[3]: %d\n", arr[3])
+    printf("arr[4]: %d\n", arr[4])
+    
+    // Test comptime array
+    comptime_arr := comptime [1, 2, 3, 4, 5]
+    printf("comptime_arr[0]: %d\n", comptime_arr[0])
+    printf("comptime_arr[1]: %d\n", comptime_arr[1])
+    printf("comptime_arr[2]: %d\n", comptime_arr[2])
+    printf("comptime_arr[3]: %d\n", comptime_arr[3])
+    printf("comptime_arr[4]: %d\n", comptime_arr[4])
+    
+    return 0
+}

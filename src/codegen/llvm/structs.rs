@@ -286,11 +286,21 @@ impl<'ctx> LLVMCompiler<'ctx> {
             Expression::Identifier(name) => {
                 // Look up the variable type
                 if let Some((_, var_type)) = self.variables.get(name) {
-                    if let AstType::Struct { name: struct_name, .. } = var_type {
-                        Ok(struct_name.clone())
-                    } else {
-                        Err(CompileError::TypeError(
-                            format!("Variable '{}' is not a struct type", name),
+                    match var_type {
+                        AstType::Struct { name: struct_name, .. } => Ok(struct_name.clone()),
+                        AstType::Pointer(inner) => {
+                            // Handle pointer to struct
+                            if let AstType::Struct { name: struct_name, .. } = &**inner {
+                                Ok(struct_name.clone())
+                            } else {
+                                Err(CompileError::TypeError(
+                                    format!("Variable '{}' is not a struct or pointer to struct", name),
+                                    None
+                                ))
+                            }
+                        },
+                        _ => Err(CompileError::TypeError(
+                            format!("Variable '{}' is not a struct type, got {:?}", name, var_type),
                             None
                         ))
                     }

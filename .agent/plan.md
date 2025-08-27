@@ -1,37 +1,52 @@
-# Zenlang Development Plan
+# Zen Language Self-Hosting Plan
+Last Updated: 2025-08-27
 
-## Immediate Tasks (Today)
-1. ✅ Read .agent directory and understand project state
-2. 🔧 Fix function pointer test failure 
-3. 🔧 Review and commit pending changes
-4. 🔧 Clean up temporary test files
-5. 🔧 Verify loop syntax migration complete
-6. 🔧 Run full test suite
-7. 🔧 Merge to main branch
+## Objective
+Complete self-hosting preparations and enhance stdlib for Zen language
 
-## Short Term (This Week)
-1. Complete self-hosting bootstrap test
-2. Enhance standard library with missing utilities
-3. Performance benchmarking
-4. Documentation improvements
-5. Create release notes for self-hosting milestone
+## Current State Analysis
+- Loop syntax migration: ✅ COMPLETE (no old syntax found)
+- Stdlib: 31 modules, 12,880 lines of code
+- Test pass rate: ~95% (some failures in comptime and integration tests)
+- Self-hosting readiness: 97.8% complete
 
-## Medium Term (Next 2 Weeks)
-1. Stage 1 bootstrap: Zen frontend + Rust backend
-2. Optimize compiler performance
-3. Add more comprehensive tests
-4. Community documentation and examples
-5. Package manager design
+## Immediate Tasks
 
-## Long Term Goals
-1. Full self-hosting (Stage 3)
-2. Package ecosystem development
-3. IDE/LSP support
-4. Performance competitive with Rust/C++
-5. Production deployment readiness
+### 1. Fix Test Failures (Priority: HIGH)
+- [ ] Fix comptime array generation test
+- [ ] Fix integration test failures (4 tests failing)
+- [ ] Fix pattern matching test failure
 
-## Current Session Focus
-- Fix test failures to reach 100% pass rate
-- Clean up codebase (remove temp files)
-- Git hygiene (commit, push, merge)
-- Maintain simplicity and elegance
+### 2. Stdlib Review and Enhancement
+- [ ] Review duplicated modules (io.zen vs io_improved.zen, math.zen vs math_improved.zen)
+- [ ] Consolidate and remove redundant implementations
+- [ ] Ensure all modules follow new loop syntax patterns
+- [ ] Add missing functionality based on language spec
+
+### 3. Self-Hosting Verification
+- [ ] Verify compiler components (lexer, parser, ast, type_checker, codegen)
+- [ ] Test bootstrap script functionality
+- [ ] Ensure all dependencies are written in Zen
+
+### 4. Code Quality
+- [ ] Remove old/deprecated files
+- [ ] Ensure consistent coding style
+- [ ] Update documentation
+
+## Implementation Order
+1. Fix critical test failures first
+2. Clean up stdlib duplicates
+3. Verify self-hosting components
+4. Run comprehensive tests
+5. Prepare for merge to main
+
+## Success Criteria
+- All tests passing (100% pass rate)
+- No duplicate/redundant stdlib modules
+- Bootstrap script successfully compiles Zen compiler
+- Clean, well-organized codebase ready for production
+
+## Notes
+- Project is very close to completion (97.8%)
+- Main blockers are test failures and code cleanup
+- Loop syntax migration already complete

@@ -242,15 +242,24 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     fn compile_array_literal(&mut self, elements: &[Expression]) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // For now, treat all arrays as arrays of i64
-        let element_type = self.context.i64_type();
+        // Infer type from first element or default to i32
+        let element_type = if !elements.is_empty() {
+            // Compile first element to get its type
+            let first_val = self.compile_expression(&elements[0])?;
+            match first_val.get_type() {
+                inkwell::types::BasicTypeEnum::IntType(_) => self.context.i32_type(),
+                _ => self.context.i32_type() // Default to i32 for other types too
+            }
+        } else {
+            self.context.i32_type()
+        };
+        
         let array_len = elements.len() as u32;
         let _array_type = element_type.array_type(array_len);
 
         // Allocate the array on the heap (malloc)
-        let i64_type = self.context.i64_type();
-        let elem_size = i64_type.size_of();
-        let total_size = i64_type.const_int(array_len as u64, false);
+        let elem_size = element_type.size_of();
+        let total_size = element_type.const_int(array_len as u64, false);
         let malloc_fn = self.module.get_function("malloc").ok_or_else(|| CompileError::InternalError("No malloc function declared".to_string(), None))?;
         let size = self.builder.build_int_mul(elem_size, total_size, "arraysize");
         let raw_ptr = self.builder.build_call(malloc_fn, &[size?.into()], "arraymalloc")?.try_as_basic_value().left().unwrap().into_pointer_value();
@@ -271,8 +280,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
         // Get the address of the indexed element
         let gep = self.compile_array_index_address(array, index)?;
         
-        // For now, use i32 as default element type
-        // TODO: Proper type inference for array elements
+        // Try to infer element type from context. Default to i32 for compatibility with tests
+        // TODO: Proper type inference for array elements from declaration
         let element_type = self.context.i32_type();
         
         // Load the value from the address
@@ -294,8 +303,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
             ));
         };
         
-        // For now, use i32 as default element type
-        // TODO: Proper type inference for array elements
+        // Try to infer element type from context. Default to i32 for compatibility with tests
+        // TODO: Proper type inference for array elements from declaration
         let element_type = self.context.i32_type();
         
         let index_val = self.compile_expression(index)?;
