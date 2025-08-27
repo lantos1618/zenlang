@@ -1,0 +1,756 @@
+// Zen Type Checker Module
+// Self-hosted type checking and semantic analysis for the Zen compiler
+
+// Import dependencies
+comptime {
+    ast := @import("ast")
+    mem := @import("mem")
+    core := @import("core")
+    hashmap := @import("hashmap")
+}
+
+// Type Environment
+TypeEnv = {
+    parent: *TypeEnv,
+    bindings: *HashMap<string, *ast.AstType>,
+    functions: *HashMap<string, *FunctionSignature>,
+    types: *HashMap<string, *TypeDefinition>,
+}
+
+// Function signature for type checking
+FunctionSignature = {
+    name: string,
+    generic_params: *string,
+    generic_count: i32,
+    param_types: *ast.AstType,
+    param_count: i32,
+    return_type: *ast.AstType,
+    is_varargs: bool,
+}
+
+// Type definition for structs and enums
+TypeDefinition = 
+    | Struct(fields: *FieldDef, field_count: i32)
+    | Enum(variants: *VariantDef, variant_count: i32)
+    | Alias(target: *ast.AstType)
+
+FieldDef = {
+    name: string,
+    type_: *ast.AstType,
+    is_mutable: bool,
+}
+
+VariantDef = {
+    name: string,
+    fields: *FieldDef,
+    field_count: i32,
+}
+
+// Type checking context
+TypeChecker = {
+    env: *TypeEnv,
+    errors: *TypeError,
+    error_count: i32,
+    current_function: *FunctionSignature,
+    in_loop: bool,
+}
+
+// Type errors
+TypeError = {
+    message: string,
+    location: SourceLocation,
+    next: *TypeError,
+}
+
+SourceLocation = {
+    line: i32,
+    column: i32,
+    file: string,
+}
+
+// Create a new type environment
+type_env_new = (parent: *TypeEnv) *TypeEnv {
+    env := mem.alloc(@sizeof(TypeEnv)) as *TypeEnv
+    env.parent = parent
+    env.bindings = hashmap.new<string, *ast.AstType>()
+    env.functions = hashmap.new<string, *FunctionSignature>()
+    env.types = hashmap.new<string, *TypeDefinition>()
+    return env
+}
+
+// Create a new type checker
+type_checker_new = () *TypeChecker {
+    checker := mem.alloc(@sizeof(TypeChecker)) as *TypeChecker
+    checker.env = type_env_new(0 as *TypeEnv)
+    checker.errors = 0 as *TypeError
+    checker.error_count = 0
+    checker.current_function = 0 as *FunctionSignature
+    checker.in_loop = false
+    
+    // Register built-in types
+    register_builtin_types(checker.env)
+    
+    return checker
+}
+
+// Register built-in types
+register_builtin_types = (env: *TypeEnv) void {
+    // Primitive types are handled directly in type checking
+    // Register built-in functions
+    register_builtin_function(env, "print", &[ast.AstType::String], ast.type_void())
+    register_builtin_function(env, "println", &[ast.AstType::String], ast.type_void())
+    register_builtin_function(env, "malloc", &[ast.AstType::I64], ast.type_pointer(ast.type_void()))
+    register_builtin_function(env, "free", &[ast.type_pointer(ast.type_void())], ast.type_void())
+}
+
+register_builtin_function = (env: *TypeEnv, name: string, params: *ast.AstType, return_type: *ast.AstType) void {
+    sig := mem.alloc(@sizeof(FunctionSignature)) as *FunctionSignature
+    sig.name = name
+    sig.generic_params = 0 as *string
+    sig.generic_count = 0
+    sig.param_types = params
+    sig.param_count = 1  // Simplified for now
+    sig.return_type = return_type
+    sig.is_varargs = false
+    
+    env.functions.insert(name, sig)
+}
+
+// Add error
+add_error = (checker: *TypeChecker, message: string, location: SourceLocation) void {
+    error := mem.alloc(@sizeof(TypeError)) as *TypeError
+    error.message = message
+    error.location = location
+    error.next = checker.errors
+    checker.errors = error
+    checker.error_count = checker.error_count + 1
+}
+
+// Lookup variable type
+lookup_variable = (env: *TypeEnv, name: string) *ast.AstType {
+    // Check current scope
+    result := env.bindings.get(name)
+    result != 0 as *ast.AstType ?
+        | true => { return result }
+        | false => {
+            // Check parent scope
+            env.parent != 0 as *TypeEnv ?
+                | true => { return lookup_variable(env.parent, name) }
+                | false => { return 0 as *ast.AstType }
+        }
+}
+
+// Add variable binding
+add_variable = (env: *TypeEnv, name: string, type_: *ast.AstType) void {
+    env.bindings.insert(name, type_)
+}
+
+// Type check program
+type_check_program = (checker: *TypeChecker, program: *ast.Program) bool {
+    // Check all declarations
+    i ::= 0
+    loop (i < program.declaration_count) {
+        type_check_declaration(checker, &program.declarations[i])
+        i = i + 1
+    }
+    
+    // Check for main function
+    main_func := checker.env.functions.get("main")
+    main_func == 0 as *FunctionSignature ?
+        | true => {
+            add_error(checker, "No main function defined", SourceLocation { line: 0, column: 0, file: "" })
+        }
+        | false => {
+            // Verify main function signature
+            main_func.param_count != 0 || !types_equal(main_func.return_type, ast.type_i32()) ?
+                | true => {
+                    add_error(checker, "main function must have signature: main = () i32", 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                }
+                | false => {}
+        }
+    
+    return checker.error_count == 0
+}
+
+// Type check declaration
+type_check_declaration = (checker: *TypeChecker, decl: *ast.Declaration) void {
+    decl ?
+        | ast.Declaration::Function(func) => { type_check_function(checker, func) }
+        | ast.Declaration::Struct(struct_) => { type_check_struct(checker, struct_) }
+        | ast.Declaration::Enum(enum_) => { type_check_enum(checker, enum_) }
+        | ast.Declaration::Const(const_) => { type_check_const(checker, const_) }
+        | ast.Declaration::External(ext) => { type_check_external(checker, ext) }
+        | _ => {}
+}
+
+// Type check function
+type_check_function = (checker: *TypeChecker, func: *ast.Function) void {
+    // Create function signature
+    sig := mem.alloc(@sizeof(FunctionSignature)) as *FunctionSignature
+    sig.name = func.name
+    sig.generic_params = func.generic_params
+    sig.generic_count = func.generic_count
+    sig.param_types = mem.alloc(func.param_count * @sizeof(ast.AstType)) as *ast.AstType
+    sig.param_count = func.param_count
+    sig.return_type = func.return_type
+    sig.is_varargs = false
+    
+    // Extract parameter types
+    i ::= 0
+    loop (i < func.param_count) {
+        sig.param_types[i] = func.params[i].type_
+        i = i + 1
+    }
+    
+    // Register function
+    checker.env.functions.insert(func.name, sig)
+    
+    // Create new scope for function body
+    func_env := type_env_new(checker.env)
+    old_env := checker.env
+    checker.env = func_env
+    
+    // Add parameters to scope
+    i = 0
+    loop (i < func.param_count) {
+        add_variable(func_env, func.params[i].name, func.params[i].type_)
+        i = i + 1
+    }
+    
+    // Set current function
+    old_func := checker.current_function
+    checker.current_function = sig
+    
+    // Type check body
+    type_check_statement(checker, func.body)
+    
+    // Restore context
+    checker.current_function = old_func
+    checker.env = old_env
+}
+
+// Type check struct
+type_check_struct = (checker: *TypeChecker, struct_: *ast.Struct) void {
+    // Create type definition
+    fields := mem.alloc(struct_.field_count * @sizeof(FieldDef)) as *FieldDef
+    i ::= 0
+    loop (i < struct_.field_count) {
+        fields[i] = FieldDef {
+            name: struct_.fields[i].name,
+            type_: struct_.fields[i].type_,
+            is_mutable: struct_.fields[i].is_mutable,
+        }
+        i = i + 1
+    }
+    
+    type_def := TypeDefinition::Struct(fields, struct_.field_count)
+    checker.env.types.insert(struct_.name, &type_def)
+    
+    // Type check methods
+    i = 0
+    loop (i < struct_.method_count) {
+        type_check_function(checker, &struct_.methods[i])
+        i = i + 1
+    }
+}
+
+// Type check enum
+type_check_enum = (checker: *TypeChecker, enum_: *ast.Enum) void {
+    // Create type definition
+    variants := mem.alloc(enum_.variant_count * @sizeof(VariantDef)) as *VariantDef
+    i ::= 0
+    loop (i < enum_.variant_count) {
+        variant_fields := mem.alloc(enum_.variants[i].field_count * @sizeof(FieldDef)) as *FieldDef
+        j ::= 0
+        loop (j < enum_.variants[i].field_count) {
+            variant_fields[j] = FieldDef {
+                name: enum_.variants[i].fields[j].name,
+                type_: enum_.variants[i].fields[j].type_,
+                is_mutable: false,
+            }
+            j = j + 1
+        }
+        variants[i] = VariantDef {
+            name: enum_.variants[i].name,
+            fields: variant_fields,
+            field_count: enum_.variants[i].field_count,
+        }
+        i = i + 1
+    }
+    
+    type_def := TypeDefinition::Enum(variants, enum_.variant_count)
+    checker.env.types.insert(enum_.name, &type_def)
+}
+
+// Type check const declaration
+type_check_const = (checker: *TypeChecker, const_: *ast.ConstDecl) void {
+    // Type check initializer
+    init_type := type_check_expression(checker, const_.value)
+    
+    // Check type compatibility
+    const_.type_ != 0 as *ast.AstType ?
+        | true => {
+            !types_equal(const_.type_, init_type) ?
+                | true => {
+                    add_error(checker, "Type mismatch in constant declaration", 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                }
+                | false => {}
+        }
+        | false => {
+            // Infer type from initializer
+            const_.type_ = init_type
+        }
+    
+    // Add to environment
+    add_variable(checker.env, const_.name, const_.type_)
+}
+
+// Type check external declaration
+type_check_external = (checker: *TypeChecker, ext: *ast.ExternalDecl) void {
+    // Register as a function signature
+    sig := mem.alloc(@sizeof(FunctionSignature)) as *FunctionSignature
+    sig.name = ext.name
+    sig.generic_params = 0 as *string
+    sig.generic_count = 0
+    sig.param_types = 0 as *ast.AstType  // TODO: Parse function type
+    sig.param_count = 0
+    sig.return_type = ast.type_void()  // TODO: Get from type
+    sig.is_varargs = ext.is_varargs
+    
+    checker.env.functions.insert(ext.name, sig)
+}
+
+// Type check statement
+type_check_statement = (checker: *TypeChecker, stmt: *ast.Statement) void {
+    stmt ?
+        | ast.Statement::Expression(expr) => {
+            type_check_expression(checker, expr)
+        }
+        | ast.Statement::VariableDeclaration(name, type_, value, is_mutable) => {
+            // Type check initializer
+            value_type := type_check_expression(checker, value)
+            
+            // Check type compatibility
+            type_ != 0 as *ast.AstType ?
+                | true => {
+                    !types_equal(type_, value_type) ?
+                        | true => {
+                            add_error(checker, "Type mismatch in variable declaration", 
+                                      SourceLocation { line: 0, column: 0, file: "" })
+                        }
+                        | false => {}
+                }
+                | false => {
+                    // Infer type from initializer
+                    type_ = value_type
+                }
+            
+            // Add to environment
+            add_variable(checker.env, name, type_)
+        }
+        | ast.Statement::Assignment(target, value) => {
+            target_type := type_check_expression(checker, target)
+            value_type := type_check_expression(checker, value)
+            
+            !types_equal(target_type, value_type) ?
+                | true => {
+                    add_error(checker, "Type mismatch in assignment", 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                }
+                | false => {}
+        }
+        | ast.Statement::Return(value) => {
+            value_type := type_check_expression(checker, value)
+            
+            checker.current_function != 0 as *FunctionSignature ?
+                | true => {
+                    !types_equal(value_type, checker.current_function.return_type) ?
+                        | true => {
+                            add_error(checker, "Return type mismatch", 
+                                      SourceLocation { line: 0, column: 0, file: "" })
+                        }
+                        | false => {}
+                }
+                | false => {
+                    add_error(checker, "Return statement outside of function", 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                }
+        }
+        | ast.Statement::Break => {
+            !checker.in_loop ?
+                | true => {
+                    add_error(checker, "Break statement outside of loop", 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                }
+                | false => {}
+        }
+        | ast.Statement::Continue => {
+            !checker.in_loop ?
+                | true => {
+                    add_error(checker, "Continue statement outside of loop", 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                }
+                | false => {}
+        }
+        | ast.Statement::If(condition, then_body, else_body) => {
+            cond_type := type_check_expression(checker, condition)
+            !types_equal(cond_type, ast.type_bool()) ?
+                | true => {
+                    add_error(checker, "If condition must be boolean", 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                }
+                | false => {}
+            
+            type_check_statement(checker, then_body)
+            else_body != 0 as *ast.Statement ?
+                | true => { type_check_statement(checker, else_body) }
+                | false => {}
+        }
+        | ast.Statement::Loop(condition, body) => {
+            condition != 0 as *ast.Expression ?
+                | true => {
+                    cond_type := type_check_expression(checker, condition)
+                    !types_equal(cond_type, ast.type_bool()) ?
+                        | true => {
+                            add_error(checker, "Loop condition must be boolean", 
+                                      SourceLocation { line: 0, column: 0, file: "" })
+                        }
+                        | false => {}
+                }
+                | false => {}
+            
+            old_in_loop := checker.in_loop
+            checker.in_loop = true
+            type_check_statement(checker, body)
+            checker.in_loop = old_in_loop
+        }
+        | ast.Statement::Block(statements, count) => {
+            // Create new scope
+            block_env := type_env_new(checker.env)
+            old_env := checker.env
+            checker.env = block_env
+            
+            // Type check statements
+            i ::= 0
+            loop (i < count) {
+                type_check_statement(checker, &statements[i])
+                i = i + 1
+            }
+            
+            // Restore scope
+            checker.env = old_env
+        }
+        | _ => {}
+}
+
+// Type check expression
+type_check_expression = (checker: *TypeChecker, expr: *ast.Expression) *ast.AstType {
+    expr ?
+        | ast.Expression::Integer8(_) => { return ast.type_i8() }
+        | ast.Expression::Integer16(_) => { return ast.type_i16() }
+        | ast.Expression::Integer32(_) => { return ast.type_i32() }
+        | ast.Expression::Integer64(_) => { return ast.type_i64() }
+        | ast.Expression::Unsigned8(_) => { return ast.type_u8() }
+        | ast.Expression::Unsigned16(_) => { return ast.type_u16() }
+        | ast.Expression::Unsigned32(_) => { return ast.type_u32() }
+        | ast.Expression::Unsigned64(_) => { return ast.type_u64() }
+        | ast.Expression::Float32(_) => { return ast.type_f32() }
+        | ast.Expression::Float64(_) => { return ast.type_f64() }
+        | ast.Expression::Boolean(_) => { return ast.type_bool() }
+        | ast.Expression::StringLiteral(_) => { return ast.type_string() }
+        | ast.Expression::Identifier(name) => {
+            type_ := lookup_variable(checker.env, name)
+            type_ == 0 as *ast.AstType ?
+                | true => {
+                    add_error(checker, "Undefined variable: " + name, 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                    return ast.type_void()
+                }
+                | false => { return type_ }
+        }
+        | ast.Expression::BinaryOp(left, op, right) => {
+            return type_check_binary_op(checker, left, op, right)
+        }
+        | ast.Expression::UnaryOp(op, operand) => {
+            return type_check_unary_op(checker, op, operand)
+        }
+        | ast.Expression::FunctionCall(target, args, arg_count) => {
+            return type_check_function_call(checker, target, args, arg_count)
+        }
+        | ast.Expression::FieldAccess(object, field) => {
+            return type_check_field_access(checker, object, field)
+        }
+        | ast.Expression::ArrayAccess(array, index) => {
+            return type_check_array_access(checker, array, index)
+        }
+        | ast.Expression::Cast(expr, target_type) => {
+            type_check_expression(checker, expr)
+            return target_type
+        }
+        | _ => { return ast.type_void() }
+}
+
+// Type check binary operation
+type_check_binary_op = (checker: *TypeChecker, left: *ast.Expression, op: ast.BinaryOperator, right: *ast.Expression) *ast.AstType {
+    left_type := type_check_expression(checker, left)
+    right_type := type_check_expression(checker, right)
+    
+    // Check type compatibility
+    !types_equal(left_type, right_type) ?
+        | true => {
+            add_error(checker, "Type mismatch in binary operation", 
+                      SourceLocation { line: 0, column: 0, file: "" })
+            return ast.type_void()
+        }
+        | false => {}
+    
+    // Determine result type based on operator
+    op ?
+        | ast.BinaryOperator::Equal 
+        | ast.BinaryOperator::NotEqual
+        | ast.BinaryOperator::LessThan
+        | ast.BinaryOperator::GreaterThan
+        | ast.BinaryOperator::LessThanOrEqual
+        | ast.BinaryOperator::GreaterThanOrEqual => {
+            return ast.type_bool()
+        }
+        | ast.BinaryOperator::LogicalAnd
+        | ast.BinaryOperator::LogicalOr => {
+            !types_equal(left_type, ast.type_bool()) ?
+                | true => {
+                    add_error(checker, "Logical operators require boolean operands", 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                }
+                | false => {}
+            return ast.type_bool()
+        }
+        | _ => {
+            // Arithmetic and bitwise operations preserve type
+            return left_type
+        }
+}
+
+// Type check unary operation
+type_check_unary_op = (checker: *TypeChecker, op: ast.UnaryOperator, operand: *ast.Expression) *ast.AstType {
+    operand_type := type_check_expression(checker, operand)
+    
+    op ?
+        | ast.UnaryOperator::LogicalNot => {
+            !types_equal(operand_type, ast.type_bool()) ?
+                | true => {
+                    add_error(checker, "Logical not requires boolean operand", 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                }
+                | false => {}
+            return ast.type_bool()
+        }
+        | ast.UnaryOperator::AddressOf => {
+            return ast.type_pointer(operand_type)
+        }
+        | ast.UnaryOperator::Dereference => {
+            // Check if operand is a pointer
+            operand_type ?
+                | ast.AstType::Pointer(inner) => { return inner }
+                | _ => {
+                    add_error(checker, "Cannot dereference non-pointer type", 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                    return ast.type_void()
+                }
+        }
+        | _ => { return operand_type }
+}
+
+// Type check function call
+type_check_function_call = (checker: *TypeChecker, target: *ast.Expression, args: *ast.Expression, arg_count: i32) *ast.AstType {
+    // Get function name (simplified - assumes identifier)
+    target ?
+        | ast.Expression::Identifier(name) => {
+            func_sig := checker.env.functions.get(name)
+            func_sig == 0 as *FunctionSignature ?
+                | true => {
+                    add_error(checker, "Undefined function: " + name, 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                    return ast.type_void()
+                }
+                | false => {
+                    // Check argument count
+                    arg_count != func_sig.param_count && !func_sig.is_varargs ?
+                        | true => {
+                            add_error(checker, "Incorrect number of arguments", 
+                                      SourceLocation { line: 0, column: 0, file: "" })
+                        }
+                        | false => {
+                            // Type check arguments
+                            i ::= 0
+                            loop (i < arg_count && i < func_sig.param_count) {
+                                arg_type := type_check_expression(checker, &args[i])
+                                !types_equal(arg_type, &func_sig.param_types[i]) ?
+                                    | true => {
+                                        add_error(checker, "Argument type mismatch", 
+                                                  SourceLocation { line: 0, column: 0, file: "" })
+                                    }
+                                    | false => {}
+                                i = i + 1
+                            }
+                        }
+                    
+                    return func_sig.return_type
+                }
+        }
+        | _ => {
+            add_error(checker, "Invalid function call target", 
+                      SourceLocation { line: 0, column: 0, file: "" })
+            return ast.type_void()
+        }
+}
+
+// Type check field access
+type_check_field_access = (checker: *TypeChecker, object: *ast.Expression, field: string) *ast.AstType {
+    object_type := type_check_expression(checker, object)
+    
+    // Get type name (simplified)
+    object_type ?
+        | ast.AstType::Generic(name, _, _) => {
+            type_def := checker.env.types.get(name)
+            type_def != 0 as *TypeDefinition ?
+                | true => {
+                    type_def ?
+                        | TypeDefinition::Struct(fields, field_count) => {
+                            // Find field
+                            i ::= 0
+                            loop (i < field_count) {
+                                fields[i].name == field ?
+                                    | true => { return fields[i].type_ }
+                                    | false => {}
+                                i = i + 1
+                            }
+                            
+                            add_error(checker, "Unknown field: " + field, 
+                                      SourceLocation { line: 0, column: 0, file: "" })
+                            return ast.type_void()
+                        }
+                        | _ => {
+                            add_error(checker, "Field access on non-struct type", 
+                                      SourceLocation { line: 0, column: 0, file: "" })
+                            return ast.type_void()
+                        }
+                }
+                | false => {
+                    add_error(checker, "Unknown type: " + name, 
+                              SourceLocation { line: 0, column: 0, file: "" })
+                    return ast.type_void()
+                }
+        }
+        | _ => {
+            add_error(checker, "Field access on non-struct type", 
+                      SourceLocation { line: 0, column: 0, file: "" })
+            return ast.type_void()
+        }
+}
+
+// Type check array access
+type_check_array_access = (checker: *TypeChecker, array: *ast.Expression, index: *ast.Expression) *ast.AstType {
+    array_type := type_check_expression(checker, array)
+    index_type := type_check_expression(checker, index)
+    
+    // Check index is integer
+    !is_integer_type(index_type) ?
+        | true => {
+            add_error(checker, "Array index must be integer", 
+                      SourceLocation { line: 0, column: 0, file: "" })
+        }
+        | false => {}
+    
+    // Get element type
+    array_type ?
+        | ast.AstType::Array(element) => { return element }
+        | ast.AstType::FixedArray(element, _) => { return element }
+        | ast.AstType::Pointer(inner) => { return inner }
+        | _ => {
+            add_error(checker, "Cannot index non-array type", 
+                      SourceLocation { line: 0, column: 0, file: "" })
+            return ast.type_void()
+        }
+}
+
+// Check if type is integer
+is_integer_type = (type_: *ast.AstType) bool {
+    type_ ?
+        | ast.AstType::I8 | ast.AstType::I16 | ast.AstType::I32 | ast.AstType::I64
+        | ast.AstType::U8 | ast.AstType::U16 | ast.AstType::U32 | ast.AstType::U64 => {
+            return true
+        }
+        | _ => { return false }
+}
+
+// Check if types are equal
+types_equal = (a: *ast.AstType, b: *ast.AstType) bool {
+    a == b ? | true => { return true } | false => {}
+    
+    a == 0 as *ast.AstType || b == 0 as *ast.AstType ?
+        | true => { return false }
+        | false => {}
+    
+    // Compare type variants
+    *a ?
+        | ast.AstType::I8 => { *b ? | ast.AstType::I8 => { return true } | _ => { return false } }
+        | ast.AstType::I16 => { *b ? | ast.AstType::I16 => { return true } | _ => { return false } }
+        | ast.AstType::I32 => { *b ? | ast.AstType::I32 => { return true } | _ => { return false } }
+        | ast.AstType::I64 => { *b ? | ast.AstType::I64 => { return true } | _ => { return false } }
+        | ast.AstType::U8 => { *b ? | ast.AstType::U8 => { return true } | _ => { return false } }
+        | ast.AstType::U16 => { *b ? | ast.AstType::U16 => { return true } | _ => { return false } }
+        | ast.AstType::U32 => { *b ? | ast.AstType::U32 => { return true } | _ => { return false } }
+        | ast.AstType::U64 => { *b ? | ast.AstType::U64 => { return true } | _ => { return false } }
+        | ast.AstType::F32 => { *b ? | ast.AstType::F32 => { return true } | _ => { return false } }
+        | ast.AstType::F64 => { *b ? | ast.AstType::F64 => { return true } | _ => { return false } }
+        | ast.AstType::Bool => { *b ? | ast.AstType::Bool => { return true } | _ => { return false } }
+        | ast.AstType::String => { *b ? | ast.AstType::String => { return true } | _ => { return false } }
+        | ast.AstType::Void => { *b ? | ast.AstType::Void => { return true } | _ => { return false } }
+        | ast.AstType::Pointer(inner_a) => {
+            *b ?
+                | ast.AstType::Pointer(inner_b) => { return types_equal(inner_a, inner_b) }
+                | _ => { return false }
+        }
+        | ast.AstType::Array(elem_a) => {
+            *b ?
+                | ast.AstType::Array(elem_b) => { return types_equal(elem_a, elem_b) }
+                | _ => { return false }
+        }
+        | _ => { return false }
+}
+
+// Print type errors
+print_type_errors = (checker: *TypeChecker) void {
+    error := checker.errors
+    loop (error != 0 as *TypeError) {
+        io.println("Type error: $(error.message) at $(error.location.file):$(error.location.line):$(error.location.column)")
+        error = error.next
+    }
+}
+
+// Free type checker
+type_checker_free = (checker: *TypeChecker) void {
+    // Free error list
+    error := checker.errors
+    loop (error != 0 as *TypeError) {
+        next := error.next
+        mem.free(error as *void)
+        error = next
+    }
+    
+    // Free environment
+    type_env_free(checker.env)
+    
+    mem.free(checker as *void)
+}
+
+type_env_free = (env: *TypeEnv) void {
+    // Free hashmaps
+    hashmap.free(env.bindings)
+    hashmap.free(env.functions)
+    hashmap.free(env.types)
+    
+    mem.free(env as *void)
+}
