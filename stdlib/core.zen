@@ -92,10 +92,3 @@ Range.loop = (self: Range, callback: (i64) void) void {
 range_inclusive = (start: i64, end: i64) Range {
     return Range { start: start, end: end + 1, step: 1 }
 }
-
-// Standalone loop function for conditions
-loop = (condition: () bool, body: () void) void {
-    loop condition() {
-        body()
-    }
-}
