@@ -201,54 +201,283 @@ parser_parse_type = (p: Parser) *AstType {
     return &AstType::I32
 }
 
-// Parse expression
-parser_parse_expression = (p: Parser) *Expression {
-    // TODO: Implement expression parsing
-    // For now, return integer literal
+// Parse primary expression (literals, identifiers, parentheses)
+parser_parse_primary = (p: Parser) *Expression {
+    token := parser_current_token(p)
+    
+    // Check token type and parse accordingly
+    // Note: This is conceptual - needs proper token type checking
+    // when token access is implemented
+    
+    // For now, return a placeholder
     p = parser_advance(p)
-    return &Expression::Integer32(0)
+    return &Expression::Integer32(42)
 }
 
-// Parse statement
+// Parse unary expression
+parser_parse_unary = (p: Parser) *Expression {
+    // Check for unary operators: -, !, ~, &, *
+    token := parser_current_token(p)
+    
+    // If unary operator, parse it
+    // Otherwise parse primary
+    return parser_parse_primary(p)
+}
+
+// Parse multiplicative expression (* / %)
+parser_parse_multiplicative = (p: Parser) *Expression {
+    left := parser_parse_unary(p)
+    
+    // Loop to handle chained operations
+    // Check for *, /, % operators
+    
+    return left
+}
+
+// Parse additive expression (+ -)
+parser_parse_additive = (p: Parser) *Expression {
+    left := parser_parse_multiplicative(p)
+    
+    // Loop to handle chained operations
+    // Check for +, - operators
+    
+    return left
+}
+
+// Parse comparison expression (< > <= >= == !=)
+parser_parse_comparison = (p: Parser) *Expression {
+    left := parser_parse_additive(p)
+    
+    // Check for comparison operators
+    
+    return left
+}
+
+// Parse logical expression (&& ||)
+parser_parse_logical = (p: Parser) *Expression {
+    left := parser_parse_comparison(p)
+    
+    // Check for && and || operators
+    
+    return left
+}
+
+// Parse expression (entry point)
+parser_parse_expression = (p: Parser) *Expression {
+    return parser_parse_logical(p)
+}
+
+// Parse variable declaration
+parser_parse_variable_declaration = (p: Parser) *Statement {
+    name := parser_parse_identifier(p)
+    
+    // Check for := (immutable) or ::= (mutable)
+    is_mutable := false  // TODO: Check actual operator
+    
+    p = parser_advance(p)  // Skip assignment operator
+    
+    // Parse initializer
+    initializer := parser_parse_expression(p)
+    
+    return &Statement::VariableDeclaration(
+        name, 0, initializer, is_mutable
+    )
+}
+
+// Parse return statement
+parser_parse_return = (p: Parser) *Statement {
+    p = parser_advance(p)  // Skip 'return'
+    
+    // Check if there's a return value
+    // If next token is not ';' or '}', parse expression
+    value := parser_parse_expression(p)
+    
+    return &Statement::Return(value)
+}
+
+// Parse loop statement
+parser_parse_loop = (p: Parser) *Statement {
+    p = parser_advance(p)  // Skip 'loop'
+    
+    // Parse loop body
+    p = parser_advance(p)  // Skip '{'
+    
+    // TODO: Parse statements until '}'
+    body := &Statement::Block(0, 0)
+    
+    p = parser_advance(p)  // Skip '}'
+    
+    return &Statement::Loop(body)
+}
+
+// Parse if statement
+parser_parse_if = (p: Parser) *Statement {
+    p = parser_advance(p)  // Skip 'if' or pattern match operator
+    
+    condition := parser_parse_expression(p)
+    
+    // Parse then branch
+    p = parser_advance(p)  // Skip '{'
+    then_body := parser_parse_statement(p)
+    p = parser_advance(p)  // Skip '}'
+    
+    // Check for else branch
+    else_body := 0 as *Statement
+    
+    return &Statement::If(condition, then_body, else_body)
+}
+
+// Parse block statement
+parser_parse_block = (p: Parser) *Statement {
+    p = parser_advance(p)  // Skip '{'
+    
+    // TODO: Parse statements until '}'
+    // For now, return empty block
+    
+    p = parser_advance(p)  // Skip '}'
+    
+    return &Statement::Block(0, 0)
+}
+
+// Parse statement (entry point)
 parser_parse_statement = (p: Parser) *Statement {
-    // TODO: Implement statement parsing
-    // For now, return expression statement
+    token := parser_current_token(p)
+    
+    // Check token type to determine statement type
+    // This is conceptual - needs proper implementation
+    
+    // Default to expression statement for now
     expr := parser_parse_expression(p)
     return &Statement::Expression(expr)
 }
 
+// Parse function argument
+parser_parse_function_arg = (p: Parser) *FunctionArg {
+    name := parser_parse_identifier(p)
+    p = parser_advance(p)  // Skip ':'
+    type_ := parser_parse_type(p)
+    
+    return &FunctionArg {
+        name: name,
+        type_: type_,
+    }
+}
+
 // Parse function
 parser_parse_function = (p: Parser) *Function {
-    // Skip 'fn' or function name
+    // Parse function name
     name := parser_parse_identifier(p)
     
-    // TODO: Parse parameters
-    p = parser_advance(p) // Skip '('
-    p = parser_advance(p) // Skip ')'
+    // Skip '='
+    p = parser_advance(p)
+    
+    // Parse parameters
+    p = parser_advance(p)  // Skip '('
+    
+    // TODO: Parse parameter list
+    args := 0 as *FunctionArg
+    arg_count := 0
+    
+    p = parser_advance(p)  // Skip ')'
     
     // Parse return type
     return_type := parser_parse_type(p)
     
-    // TODO: Parse body
-    p = parser_advance(p) // Skip '{'
-    p = parser_advance(p) // Skip '}'
+    // Parse body
+    p = parser_advance(p)  // Skip '{'
+    
+    // TODO: Parse statements
+    body := 0 as *Statement
+    body_count := 0
+    
+    p = parser_advance(p)  // Skip '}'
     
     return &Function {
         name: name,
-        args: 0,
-        arg_count: 0,
+        args: args,
+        arg_count: arg_count,
         return_type: return_type,
-        body: 0,
-        body_count: 0,
+        body: body,
+        body_count: body_count,
+    }
+}
+
+// Parse struct definition
+parser_parse_struct = (p: Parser) *Struct {
+    name := parser_parse_identifier(p)
+    
+    p = parser_advance(p)  // Skip '='
+    p = parser_advance(p)  // Skip '{'
+    
+    // TODO: Parse fields
+    fields := 0 as *StructField
+    field_count := 0
+    
+    p = parser_advance(p)  // Skip '}'
+    
+    return &Struct {
+        name: name,
+        fields: fields,
+        field_count: field_count,
+    }
+}
+
+// Parse external function
+parser_parse_external_function = (p: Parser) *ExternalFunction {
+    p = parser_advance(p)  // Skip 'extern'
+    
+    name := parser_parse_identifier(p)
+    
+    p = parser_advance(p)  // Skip '='
+    p = parser_advance(p)  // Skip '('
+    
+    // TODO: Parse parameter types
+    args := 0 as *AstType
+    arg_count := 0
+    
+    p = parser_advance(p)  // Skip ')'
+    
+    return_type := parser_parse_type(p)
+    
+    return &ExternalFunction {
+        name: name,
+        args: args,
+        arg_count: arg_count,
+        return_type: return_type,
+        is_varargs: false,
     }
 }
 
 // Parse declaration
 parser_parse_declaration = (p: Parser) *Declaration {
-    // TODO: Determine declaration type
-    // For now, assume function
+    token := parser_current_token(p)
+    
+    // Check token to determine declaration type
+    // This is conceptual - needs proper implementation
+    
+    // Default to function for now
     func := parser_parse_function(p)
     return &Declaration::Function(func)
+}
+
+// Parse program (entry point)
+parser_parse_program = (p: Parser) *Program {
+    // TODO: Parse all declarations
+    declarations := 0 as *Declaration
+    declaration_count := 0
+    
+    // Loop until end of tokens
+    loop !parser_is_at_end(p) {
+        // Parse next declaration
+        decl := parser_parse_declaration(p)
+        // TODO: Add to declarations array
+        break  // For now, just parse one
+    }
+    
+    return &Program {
+        declarations: declarations,
+        declaration_count: declaration_count,
+    }
 }
 
 // Parse program
