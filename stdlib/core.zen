@@ -92,3 +92,237 @@ Range.loop = (self: Range, callback: (i64) void) void {
 range_inclusive = (start: i64, end: i64) Range {
     return Range { start: start, end: end + 1, step: 1 }
 }
+
+// ===== Additional Core Operations =====
+
+// Clamp a value between min and max
+clamp = (value: i64, min_val: i64, max_val: i64) i64 {
+    value < min_val ? | true => min_val
+    | false => value > max_val ? | true => max_val
+    | false => value
+}
+
+// Sign function
+sign = (n: i64) i64 {
+    n < 0 ? | true => -1
+    | false => n > 0 ? | true => 1
+    | false => 0
+}
+
+// Power of 2 check
+is_power_of_two = (n: i64) bool {
+    n > 0 && (n & (n - 1)) == 0 ? | true => true | false => false
+}
+
+// Next power of 2
+next_power_of_two = (n: i64) i64 {
+    n <= 1 ? | true => return 1 | false => {}
+    
+    result ::= 1
+    loop result < n {
+        result = result << 1
+    }
+    return result
+}
+
+// Bit counting operations
+count_ones = (n: i64) i64 {
+    count ::= 0
+    val ::= n
+    loop val != 0 {
+        count = count + (val & 1)
+        val = val >> 1
+    }
+    return count
+}
+
+count_zeros = (n: i64) i64 {
+    return 64 - count_ones(n)
+}
+
+// Array/slice utilities
+reverse_array = (arr: *i64, len: i64) void {
+    i ::= 0
+    j ::= len - 1
+    loop i < j {
+        swap(&arr[i], &arr[j])
+        i = i + 1
+        j = j - 1
+    }
+}
+
+// Find minimum in array
+array_min = (arr: *i64, len: i64) i64 {
+    len == 0 ? | true => return 0 | false => {}
+    
+    min_val ::= arr[0]
+    i ::= 1
+    loop i < len {
+        arr[i] < min_val ? | true => { min_val = arr[i] } | false => {}
+        i = i + 1
+    }
+    return min_val
+}
+
+// Find maximum in array  
+array_max = (arr: *i64, len: i64) i64 {
+    len == 0 ? | true => return 0 | false => {}
+    
+    max_val ::= arr[0]
+    i ::= 1
+    loop i < len {
+        arr[i] > max_val ? | true => { max_val = arr[i] } | false => {}
+        i = i + 1
+    }
+    return max_val
+}
+
+// Sum of array elements
+array_sum = (arr: *i64, len: i64) i64 {
+    sum ::= 0
+    i ::= 0
+    loop i < len {
+        sum = sum + arr[i]
+        i = i + 1
+    }
+    return sum
+}
+
+// Equality check for arrays
+arrays_equal = (a: *i64, b: *i64, len: i64) bool {
+    i ::= 0
+    loop i < len {
+        a[i] != b[i] ? | true => return false | false => {}
+        i = i + 1
+    }
+    return true
+}
+
+// Copy array
+array_copy = (dest: *i64, src: *i64, len: i64) void {
+    i ::= 0
+    loop i < len {
+        dest[i] = src[i]
+        i = i + 1
+    }
+}
+
+// Fill array with value
+array_fill = (arr: *i64, len: i64, value: i64) void {
+    i ::= 0
+    loop i < len {
+        arr[i] = value
+        i = i + 1
+    }
+}
+
+// Linear search
+array_find = (arr: *i64, len: i64, value: i64) i64 {
+    i ::= 0
+    loop i < len {
+        arr[i] == value ? | true => return i | false => {}
+        i = i + 1
+    }
+    return -1  // Not found
+}
+
+// Contains check
+array_contains = (arr: *i64, len: i64, value: i64) bool {
+    return array_find(arr, len, value) != -1
+}
+
+// GCD and LCM
+gcd = (a: i64, b: i64) i64 {
+    a_val ::= abs(a)
+    b_val ::= abs(b)
+    
+    loop b_val != 0 {
+        temp := b_val
+        b_val = a_val % b_val
+        a_val = temp
+    }
+    return a_val
+}
+
+lcm = (a: i64, b: i64) i64 {
+    a == 0 || b == 0 ? | true => return 0 | false => {}
+    return abs(a * b) / gcd(a, b)
+}
+
+// Factorial
+factorial = (n: i64) i64 {
+    n < 0 ? | true => return 0 | false => {}
+    n <= 1 ? | true => return 1 | false => {}
+    
+    result ::= 1
+    i ::= 2
+    loop i <= n {
+        result = result * i
+        i = i + 1
+    }
+    return result
+}
+
+// Fibonacci
+fibonacci = (n: i64) i64 {
+    n <= 0 ? | true => return 0 | false => {}
+    n == 1 ? | true => return 1 | false => {}
+    
+    a ::= 0
+    b ::= 1
+    i ::= 2
+    loop i <= n {
+        temp := a + b
+        a = b
+        b = temp
+        i = i + 1
+    }
+    return b
+}
+
+// Is prime
+is_prime = (n: i64) bool {
+    n <= 1 ? | true => return false | false => {}
+    n <= 3 ? | true => return true | false => {}
+    n % 2 == 0 || n % 3 == 0 ? | true => return false | false => {}
+    
+    i ::= 5
+    loop i * i <= n {
+        n % i == 0 || n % (i + 2) == 0 ? | true => return false | false => {}
+        i = i + 6
+    }
+    return true
+}
+
+// Panic function for unrecoverable errors
+extern abort = () void
+panic = (message: string) void {
+    // Would print the message in a real implementation
+    abort()
+}
+
+// Unreachable marker
+unreachable = () void {
+    panic("unreachable code executed")
+}
+
+// Type size information (platform-dependent, assuming 64-bit)
+size_of_i8 = () i64 { return 1 }
+size_of_i16 = () i64 { return 2 }
+size_of_i32 = () i64 { return 4 }
+size_of_i64 = () i64 { return 8 }
+size_of_ptr = () i64 { return 8 }  // 64-bit platform
+size_of_bool = () i64 { return 1 }
+
+// Alignment helpers
+align_up = (value: i64, alignment: i64) i64 {
+    return (value + alignment - 1) & ~(alignment - 1)
+}
+
+align_down = (value: i64, alignment: i64) i64 {
+    return value & ~(alignment - 1)
+}
+
+is_aligned = (value: i64, alignment: i64) bool {
+    return (value & (alignment - 1)) == 0
+}
