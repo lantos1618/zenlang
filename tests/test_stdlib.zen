@@ -1,0 +1,244 @@
+// Self-hosted tests for Zen standard library
+// Tests core functionality written in Zen
+
+comptime {
+    core := @std.core
+    vec := @std.vec
+    hashmap := @std.hashmap
+    io := @std.io
+}
+
+// External functions for testing
+extern printf = (format: *i8, ...) i32
+extern puts = (str: *i8) i32
+
+// Test result tracking
+TestResult = {
+    passed: i32,
+    failed: i32,
+}
+
+// Assert helper
+assert_eq = (actual: i64, expected: i64, test_name: string) bool {
+    actual == expected ? | true => {
+        printf("[PASS] %s\n", test_name)
+        return true
+    } | false => {
+        printf("[FAIL] %s: expected %d, got %d\n", test_name, expected, actual)
+        return false
+    }
+}
+
+// Test Range functionality
+test_range = () bool {
+    puts("\nTesting Range...")
+    passed := true
+    
+    // Test basic range
+    r := core.range(0, 5)
+    passed = passed && assert_eq(r.start, 0, "range start")
+    passed = passed && assert_eq(r.end, 5, "range end")
+    passed = passed && assert_eq(r.step, 1, "range step")
+    
+    // Test range with step
+    r2 := core.range_step(0, 10, 2)
+    passed = passed && assert_eq(r2.step, 2, "range custom step")
+    
+    // Test inclusive range
+    r3 := core.range_inclusive(1, 3)
+    passed = passed && assert_eq(r3.end, 4, "inclusive range end")
+    
+    // Test range loop
+    sum ::= 0
+    core.range(0, 5).loop(|i| {
+        sum = sum + i
+    })
+    passed = passed && assert_eq(sum, 10, "range loop sum")
+    
+    return passed
+}
+
+// Test Vec functionality
+test_vec = () bool {
+    puts("\nTesting Vec...")
+    passed := true
+    
+    // Create new vec
+    v := vec.vec_new<i64>()
+    passed = passed && assert_eq(vec.vec_len(&v), 0, "new vec length")
+    passed = passed && assert_eq(vec.vec_is_empty(&v) as i64, 1, "new vec is empty")
+    
+    // Push elements
+    vec.vec_push(&v, 10)
+    vec.vec_push(&v, 20)
+    vec.vec_push(&v, 30)
+    passed = passed && assert_eq(vec.vec_len(&v), 3, "vec length after push")
+    
+    // Get elements
+    elem := vec.vec_get(&v, 1)
+    elem ? | core.Option::Some(val) => {
+        passed = passed && assert_eq(val, 20, "vec get element")
+    } | core.Option::None => {
+        passed = false
+        puts("[FAIL] vec get returned None")
+    }
+    
+    // Pop element
+    popped := vec.vec_pop(&v)
+    popped ? | core.Option::Some(val) => {
+        passed = passed && assert_eq(val, 30, "vec pop value")
+        passed = passed && assert_eq(vec.vec_len(&v), 2, "vec length after pop")
+    } | core.Option::None => {
+        passed = false
+        puts("[FAIL] vec pop returned None")
+    }
+    
+    // Set element
+    vec.vec_set(&v, 0, 100)
+    elem2 := vec.vec_get(&v, 0)
+    elem2 ? | core.Option::Some(val) => {
+        passed = passed && assert_eq(val, 100, "vec set element")
+    } | core.Option::None => {
+        passed = false
+    }
+    
+    // Clear vec
+    vec.vec_clear(&v)
+    passed = passed && assert_eq(vec.vec_len(&v), 0, "vec length after clear")
+    
+    // Free vec
+    vec.vec_free(&v)
+    
+    return passed
+}
+
+// Test HashMap functionality
+test_hashmap = () bool {
+    puts("\nTesting HashMap...")
+    passed := true
+    
+    // Create new hashmap
+    map := hashmap.hashmap_new<i64, i64>(hashmap.hash_i64, hashmap.eq_i64)
+    passed = passed && assert_eq(hashmap.hashmap_len(&map), 0, "new hashmap length")
+    passed = passed && assert_eq(hashmap.hashmap_is_empty(&map) as i64, 1, "new hashmap is empty")
+    
+    // Insert key-value pairs
+    hashmap.hashmap_insert(&map, 1, 100)
+    hashmap.hashmap_insert(&map, 2, 200)
+    hashmap.hashmap_insert(&map, 3, 300)
+    passed = passed && assert_eq(hashmap.hashmap_len(&map), 3, "hashmap length after insert")
+    
+    // Get value
+    val := hashmap.hashmap_get(&map, 2)
+    val ? | core.Option::Some(v) => {
+        passed = passed && assert_eq(v, 200, "hashmap get value")
+    } | core.Option::None => {
+        passed = false
+        puts("[FAIL] hashmap get returned None")
+    }
+    
+    // Check contains
+    contains := hashmap.hashmap_contains(&map, 1)
+    passed = passed && assert_eq(contains as i64, 1, "hashmap contains key")
+    
+    not_contains := hashmap.hashmap_contains(&map, 10)
+    passed = passed && assert_eq(not_contains as i64, 0, "hashmap doesn't contain key")
+    
+    // Remove key
+    removed := hashmap.hashmap_remove(&map, 2)
+    removed ? | core.Option::Some(v) => {
+        passed = passed && assert_eq(v, 200, "hashmap remove value")
+        passed = passed && assert_eq(hashmap.hashmap_len(&map), 2, "hashmap length after remove")
+    } | core.Option::None => {
+        passed = false
+        puts("[FAIL] hashmap remove returned None")
+    }
+    
+    // Clear hashmap
+    hashmap.hashmap_clear(&map)
+    passed = passed && assert_eq(hashmap.hashmap_len(&map), 0, "hashmap length after clear")
+    
+    // Free hashmap
+    hashmap.hashmap_free(&map)
+    
+    return passed
+}
+
+// Test min/max functions
+test_min_max = () bool {
+    puts("\nTesting min/max...")
+    passed := true
+    
+    passed = passed && assert_eq(core.min(5, 10), 5, "min of 5 and 10")
+    passed = passed && assert_eq(core.min(-5, 5), -5, "min of -5 and 5")
+    passed = passed && assert_eq(core.max(5, 10), 10, "max of 5 and 10")
+    passed = passed && assert_eq(core.max(-5, 5), 5, "max of -5 and 5")
+    
+    return passed
+}
+
+// Test abs function
+test_abs = () bool {
+    puts("\nTesting abs...")
+    passed := true
+    
+    passed = passed && assert_eq(core.abs(5), 5, "abs of positive")
+    passed = passed && assert_eq(core.abs(-5), 5, "abs of negative")
+    passed = passed && assert_eq(core.abs(0), 0, "abs of zero")
+    
+    return passed
+}
+
+// Main test runner
+main = () i32 {
+    puts("=== Zen Standard Library Self-Hosted Tests ===")
+    
+    results := TestResult {
+        passed: 0,
+        failed: 0,
+    }
+    
+    // Run tests
+    test_range() ? | true => {
+        results.passed = results.passed + 1
+    } | false => {
+        results.failed = results.failed + 1
+    }
+    
+    test_vec() ? | true => {
+        results.passed = results.passed + 1
+    } | false => {
+        results.failed = results.failed + 1
+    }
+    
+    test_hashmap() ? | true => {
+        results.passed = results.passed + 1
+    } | false => {
+        results.failed = results.failed + 1
+    }
+    
+    test_min_max() ? | true => {
+        results.passed = results.passed + 1
+    } | false => {
+        results.failed = results.failed + 1
+    }
+    
+    test_abs() ? | true => {
+        results.passed = results.passed + 1
+    } | false => {
+        results.failed = results.failed + 1
+    }
+    
+    // Print summary
+    puts("\n=== Test Summary ===")
+    printf("Passed: %d\n", results.passed)
+    printf("Failed: %d\n", results.failed)
+    
+    results.failed == 0 ? | true => {
+        puts("\nAll tests passed! 🎉")
+        return 0
+    } | false => {
+        puts("\nSome tests failed!")
+        return 1
+    }
+}
