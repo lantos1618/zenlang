@@ -124,7 +124,8 @@ fn test_array_operations() {
         
         main = () i32 {
             // Allocate array of 5 integers
-            arr := malloc(20) as *i32
+            size: i64 = 20
+            arr := malloc(size) as *i32
             
             // Initialize array
             i ::= 0

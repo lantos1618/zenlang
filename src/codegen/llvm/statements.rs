@@ -266,24 +266,33 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 Ok(())
             }
             Statement::PointerAssignment { pointer, value } => {
-                let ptr_val = self.compile_expression(&pointer)?;
-                let val = self.compile_expression(&value)?;
-                
-                // For pointer variables, we need to load the address first, then store to that address
-                if ptr_val.is_pointer_value() {
-                    let ptr = ptr_val.into_pointer_value();
-                    // Load the address stored in the pointer variable
-                    let address = self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), ptr, "deref_ptr")?;
-                    // Store the value at that address
-                    let address_ptr = address.into_pointer_value();
-                    self.builder.build_store(address_ptr, val)?;
+                // Special case for array indexing on left side
+                if let Expression::ArrayIndex { array, index } = pointer {
+                    // Get the address of the array element
+                    let element_ptr = self.compile_array_index_address(array, index)?;
+                    let val = self.compile_expression(&value)?;
+                    self.builder.build_store(element_ptr, val)?;
                     Ok(())
                 } else {
-                    Err(CompileError::TypeMismatch {
-                        expected: "pointer".to_string(),
-                        found: format!("{:?}", ptr_val.get_type()),
-                        span: None,
-                    })
+                    let ptr_val = self.compile_expression(&pointer)?;
+                    let val = self.compile_expression(&value)?;
+                    
+                    // For pointer variables, we need to load the address first, then store to that address
+                    if ptr_val.is_pointer_value() {
+                        let ptr = ptr_val.into_pointer_value();
+                        // Load the address stored in the pointer variable
+                        let address = self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), ptr, "deref_ptr")?;
+                        // Store the value at that address
+                        let address_ptr = address.into_pointer_value();
+                        self.builder.build_store(address_ptr, val)?;
+                        Ok(())
+                    } else {
+                        Err(CompileError::TypeMismatch {
+                            expected: "pointer".to_string(),
+                            found: format!("{:?}", ptr_val.get_type()),
+                            span: None,
+                        })
+                    }
                 }
             }
             Statement::Loop { kind, body, label: _ } => {

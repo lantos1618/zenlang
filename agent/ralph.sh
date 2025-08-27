@@ -5,4 +5,4 @@ while :; do
           bun agent/visualize.ts --debug;
   echo -e "===SLEEP===\n===SLEEP===\n"; echo 'looping';
 sleep 1;
-done 
+done
