@@ -1,0 +1,17 @@
+// Very simple loop test
+extern printf = (format: *i8, ...) i32
+
+main = () i32 {
+    // Test conditional loop
+    counter ::= 5
+    sum ::= 0
+    
+    loop counter > 0 {
+        sum = sum + counter
+        counter = counter - 1
+    }
+    
+    printf("Sum: %d\n", sum)
+    
+    return 0
+}

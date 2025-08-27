@@ -1,0 +1,108 @@
+// Test simplified loop syntax for Zen
+// Demonstrates the language works with the new loop requirements
+
+extern printf = (format: *i8, ...) i32
+extern puts = (str: *i8) i32
+
+main = () i32 {
+    puts("Testing Zen Loop Simplification")
+    puts("================================")
+    
+    // Test 1: Conditional loop (while-like)
+    puts("\nTest 1: Conditional loop")
+    counter ::= 10
+    sum ::= 0
+    loop counter > 0 {
+        sum = sum + counter
+        counter = counter - 1
+    }
+    printf("Sum from 10 to 1: %d\n", sum)
+    
+    // Test 2: Infinite loop with break
+    puts("\nTest 2: Infinite loop with break")
+    i ::= 0
+    loop {
+        i = i + 1
+        i == 5 ? | true => {
+            printf("Breaking at i = %d\n", i)
+            break
+        } | false => {}
+    }
+    
+    // Test 3: Nested loops
+    puts("\nTest 3: Nested loops")
+    rows ::= 3
+    cols ::= 4
+    total ::= 0
+    r ::= 0
+    c ::= 0
+    
+    loop r < rows {
+        c = 0
+        loop c < cols {
+            total = total + 1
+            c = c + 1
+        }
+        r = r + 1
+    }
+    printf("Total cells in %dx%d grid: %d\n", rows, cols, total)
+    
+    // Test 4: Loop with continue
+    puts("\nTest 4: Loop with continue (skip even numbers)")
+    result ::= 0
+    n ::= 0
+    loop n < 10 {
+        n = n + 1
+        n % 2 == 0 ? | true => {
+            continue
+        } | false => {}
+        result = result + n
+    }
+    printf("Sum of odd numbers 1-9: %d\n", result)
+    
+    // Test 5: Fibonacci using loops
+    puts("\nTest 5: Fibonacci sequence")
+    target := 10
+    prev ::= 0
+    curr ::= 1
+    idx ::= 2
+    
+    loop idx <= target {
+        next := prev + curr
+        prev = curr
+        curr = next
+        idx = idx + 1
+    }
+    printf("Fibonacci(%d) = %d\n", target, curr)
+    
+    // Test 6: Pattern matching in loops
+    puts("\nTest 6: Pattern matching in loops")
+    count ::= 0
+    x ::= 1
+    loop x <= 20 {
+        x % 15 == 0 ? | true => {
+            puts("FizzBuzz")
+            count = count + 1
+        } | false => {
+            x % 3 == 0 ? | true => {
+                puts("Fizz")
+                count = count + 1
+            } | false => {
+                x % 5 == 0 ? | true => {
+                    puts("Buzz")
+                    count = count + 1
+                } | false => {}
+            }
+        }
+        x = x + 1
+    }
+    printf("Special numbers found: %d\n", count)
+    
+    puts("\n================================")
+    puts("All loop tests completed!")
+    puts("Loop syntax simplified to:")
+    puts("  - loop condition { }  (conditional)")
+    puts("  - loop { }           (infinite)")
+    
+    return 0
+}

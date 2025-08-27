@@ -1,0 +1,235 @@
+// Basic self-hosted test for Zen
+// Tests core language features using simplified loop syntax
+
+extern printf = (format: *i8, ...) i32
+extern puts = (str: *i8) i32
+
+// Test conditional loops
+test_loops = () i32 {
+    puts("Testing loops...")
+    
+    // Test 1: Simple countdown
+    count ::= 5
+    sum ::= 0
+    loop count > 0 {
+        sum = sum + count
+        count = count - 1
+    }
+    
+    sum == 15 ? | true => {
+        puts("[PASS] Conditional loop sum")
+    } | false => {
+        printf("[FAIL] Expected 15, got %d\n", sum)
+        return 1
+    }
+    
+    // Test 2: Nested loops
+    outer ::= 0
+    result ::= 0
+    loop outer < 3 {
+        inner ::= 0
+        loop inner < 3 {
+            result = result + 1
+            inner = inner + 1
+        }
+        outer = outer + 1
+    }
+    
+    result == 9 ? | true => {
+        puts("[PASS] Nested loops count")
+    } | false => {
+        printf("[FAIL] Expected 9, got %d\n", result)
+        return 1
+    }
+    
+    // Test 3: Loop with break
+    i ::= 0
+    loop_result ::= 0
+    loop true {
+        i = i + 1
+        loop_result = loop_result + i
+        i >= 5 ? | true => { break } | false => {}
+    }
+    
+    loop_result == 15 ? | true => {
+        puts("[PASS] Loop with break")
+    } | false => {
+        printf("[FAIL] Expected 15, got %d\n", loop_result)
+        return 1
+    }
+    
+    return 0
+}
+
+// Test pattern matching
+test_pattern_matching = () i32 {
+    puts("Testing pattern matching...")
+    
+    // Test 1: Simple pattern matching
+    x := 42
+    result := x ? | val -> val > 40 => "big"
+                 | val -> val > 20 => "medium"
+                 | _ => "small"
+    
+    result == "big" ? | true => {
+        puts("[PASS] Pattern matching with guards")
+    } | false => {
+        puts("[FAIL] Pattern matching failed")
+        return 1
+    }
+    
+    // Test 2: Nested pattern matching
+    a := 10
+    b := 20
+    sum := a + b
+    
+    check := sum ? | 30 => true
+                  | _ => false
+    
+    check ? | true => {
+        puts("[PASS] Direct value pattern")
+    } | false => {
+        puts("[FAIL] Direct value pattern failed")
+        return 1
+    }
+    
+    return 0
+}
+
+// Test mathematical operations
+test_math = () i32 {
+    puts("Testing math operations...")
+    
+    // Factorial
+    factorial = (n: i64) i64 {
+        n <= 1 ? | true => { return 1 } | false => {}
+        
+        result ::= 1
+        i ::= 2
+        loop i <= n {
+            result = result * i
+            i = i + 1
+        }
+        return result
+    }
+    
+    fact5 := factorial(5)
+    fact5 == 120 ? | true => {
+        puts("[PASS] Factorial calculation")
+    } | false => {
+        printf("[FAIL] Factorial(5) expected 120, got %d\n", fact5)
+        return 1
+    }
+    
+    // Fibonacci
+    fibonacci = (n: i64) i64 {
+        n <= 1 ? | true => { return n } | false => {}
+        
+        prev ::= 0
+        curr ::= 1
+        i ::= 2
+        loop i <= n {
+            next := prev + curr
+            prev = curr
+            curr = next
+            i = i + 1
+        }
+        return curr
+    }
+    
+    fib10 := fibonacci(10)
+    fib10 == 55 ? | true => {
+        puts("[PASS] Fibonacci calculation")
+    } | false => {
+        printf("[FAIL] Fibonacci(10) expected 55, got %d\n", fib10)
+        return 1
+    }
+    
+    return 0
+}
+
+// Test array operations
+test_arrays = () i32 {
+    puts("Testing arrays...")
+    
+    // Create and manipulate array
+    arr ::= [1, 2, 3, 4, 5]
+    
+    // Sum array elements
+    sum ::= 0
+    i ::= 0
+    loop i < 5 {
+        sum = sum + arr[i]
+        i = i + 1
+    }
+    
+    sum == 15 ? | true => {
+        puts("[PASS] Array sum")
+    } | false => {
+        printf("[FAIL] Array sum expected 15, got %d\n", sum)
+        return 1
+    }
+    
+    // Find maximum
+    max ::= arr[0]
+    j ::= 1
+    loop j < 5 {
+        arr[j] > max ? | true => {
+            max = arr[j]
+        } | false => {}
+        j = j + 1
+    }
+    
+    max == 5 ? | true => {
+        puts("[PASS] Array max")
+    } | false => {
+        printf("[FAIL] Array max expected 5, got %d\n", max)
+        return 1
+    }
+    
+    return 0
+}
+
+// Main test runner
+main = () i32 {
+    puts("===================================")
+    puts("   Zen Self-Hosted Basic Tests")
+    puts("===================================\n")
+    
+    failures ::= 0
+    
+    // Run loop tests
+    result := test_loops()
+    result != 0 ? | true => {
+        failures = failures + 1
+    } | false => {}
+    
+    // Run pattern matching tests
+    result2 := test_pattern_matching()
+    result2 != 0 ? | true => {
+        failures = failures + 1
+    } | false => {}
+    
+    // Run math tests
+    result3 := test_math()
+    result3 != 0 ? | true => {
+        failures = failures + 1
+    } | false => {}
+    
+    // Run array tests
+    result4 := test_arrays()
+    result4 != 0 ? | true => {
+        failures = failures + 1
+    } | false => {}
+    
+    // Print summary
+    puts("\n===================================")
+    failures == 0 ? | true => {
+        puts("All tests passed!")
+        puts("Zen successfully demonstrates self-hosting capabilities")
+        return 0
+    } | false => {
+        printf("%d test suites failed\n", failures)
+        return 1
+    }
+}

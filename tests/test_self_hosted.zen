@@ -1,0 +1,433 @@
+// Comprehensive self-hosted test suite for Zen
+// Demonstrates the language's ability to implement complex systems in itself
+
+comptime {
+    core := @std.core
+    vec := @std.vec
+    hashmap := @std.hashmap
+    string := @std.string
+    math := @std.math
+    algorithms := @std.algorithms
+    collections := @std.collections
+    iterator := @std.iterator
+}
+
+// External functions for testing
+extern printf = (format: *i8, ...) i32
+extern puts = (str: *i8) i32
+extern malloc = (size: i64) *void
+extern free = (ptr: *void) void
+
+// Test result tracking
+TestResult = {
+    passed: i32,
+    failed: i32,
+    total: i32,
+}
+
+// Enhanced assert with better error reporting
+assert = (condition: bool, test_name: string) bool {
+    condition ? | true => {
+        printf("[PASS] %s\n", test_name)
+        return true
+    } | false => {
+        printf("[FAIL] %s\n", test_name)
+        return false
+    }
+}
+
+assert_eq = (actual: i64, expected: i64, test_name: string) bool {
+    actual == expected ? | true => {
+        printf("[PASS] %s\n", test_name)
+        return true
+    } | false => {
+        printf("[FAIL] %s: expected %d, got %d\n", test_name, expected, actual)
+        return false
+    }
+}
+
+// Test functional loop iteration patterns
+test_functional_loops = () bool {
+    puts("\n=== Testing Functional Loop Patterns ===")
+    passed := true
+    
+    // Test range with callback
+    sum ::= 0
+    core.range(1, 6).loop((i: i64) void {
+        sum = sum + i
+    })
+    passed = passed && assert_eq(sum, 15, "Range loop sum (1+2+3+4+5)")
+    
+    // Test range with step
+    evens ::= 0
+    core.range_step(0, 10, 2).loop((i: i64) void {
+        evens = evens + 1
+    })
+    passed = passed && assert_eq(evens, 5, "Range step count (0,2,4,6,8)")
+    
+    // Test nested functional loops
+    product ::= 0
+    core.range(1, 4).loop((i: i64) void {
+        core.range(1, 4).loop((j: i64) void {
+            product = product + (i * j)
+        })
+    })
+    passed = passed && assert_eq(product, 36, "Nested range loops product")
+    
+    return passed
+}
+
+// Test conditional loops with complex conditions
+test_conditional_loops = () bool {
+    puts("\n=== Testing Conditional Loops ===")
+    passed := true
+    
+    // Simple conditional loop
+    counter ::= 10
+    iterations ::= 0
+    loop counter > 0 {
+        counter = counter - 1
+        iterations = iterations + 1
+    }
+    passed = passed && assert_eq(iterations, 10, "Simple conditional loop")
+    passed = passed && assert_eq(counter, 0, "Loop counter final value")
+    
+    // Complex conditional with early exit
+    value ::= 100
+    steps ::= 0
+    loop value > 10 {
+        value = value / 2
+        steps = steps + 1
+        value < 20 ? | true => { break } | false => {}
+    }
+    passed = passed && assert(value < 20, "Early exit condition")
+    passed = passed && assert(steps > 0, "Loop executed steps")
+    
+    return passed
+}
+
+// Test Vec collection with functional patterns
+test_vec_functional = () bool {
+    puts("\n=== Testing Vec with Functional Patterns ===")
+    passed := true
+    
+    // Create and populate vec
+    v := vec.vec_new<i64>()
+    core.range(1, 11).loop((i: i64) void {
+        vec.vec_push(&v, i * i)  // Store squares
+    })
+    passed = passed && assert_eq(vec.vec_len(&v), 10, "Vec populated with squares")
+    
+    // Sum all elements using functional iteration
+    sum ::= 0
+    i ::= 0
+    loop i < vec.vec_len(&v) {
+        elem := vec.vec_get(&v, i)
+        elem ? | core.Option::Some(val) => {
+            sum = sum + val
+        } | core.Option::None => {}
+        i = i + 1
+    }
+    passed = passed && assert_eq(sum, 385, "Sum of squares 1-10")
+    
+    // Filter-like operation
+    filtered := vec.vec_new<i64>()
+    j ::= 0
+    loop j < vec.vec_len(&v) {
+        elem := vec.vec_get(&v, j)
+        elem ? | core.Option::Some(val) => {
+            val > 25 ? | true => {
+                vec.vec_push(&filtered, val)
+            } | false => {}
+        } | core.Option::None => {}
+        j = j + 1
+    }
+    passed = passed && assert_eq(vec.vec_len(&filtered), 5, "Filtered vec size")
+    
+    vec.vec_free(&v)
+    vec.vec_free(&filtered)
+    
+    return passed
+}
+
+// Test HashMap with complex operations
+test_hashmap_advanced = () bool {
+    puts("\n=== Testing HashMap Advanced Operations ===")
+    passed := true
+    
+    // Create frequency counter
+    map := hashmap.hashmap_new<i64, i64>(hashmap.hash_i64, hashmap.eq_i64)
+    
+    // Simulate counting occurrences
+    data := [1, 2, 3, 2, 1, 3, 3, 4, 1, 2]
+    idx ::= 0
+    loop idx < 10 {
+        key := data[idx]
+        current := hashmap.hashmap_get(&map, key)
+        current ? | core.Option::Some(count) => {
+            hashmap.hashmap_insert(&map, key, count + 1)
+        } | core.Option::None => {
+            hashmap.hashmap_insert(&map, key, 1)
+        }
+        idx = idx + 1
+    }
+    
+    // Verify frequencies
+    freq1 := hashmap.hashmap_get(&map, 1)
+    freq1 ? | core.Option::Some(count) => {
+        passed = passed && assert_eq(count, 3, "Frequency of 1")
+    } | core.Option::None => {
+        passed = false
+    }
+    
+    freq3 := hashmap.hashmap_get(&map, 3)
+    freq3 ? | core.Option::Some(count) => {
+        passed = passed && assert_eq(count, 3, "Frequency of 3")
+    } | core.Option::None => {
+        passed = false
+    }
+    
+    passed = passed && assert_eq(hashmap.hashmap_len(&map), 4, "Unique elements count")
+    
+    hashmap.hashmap_free(&map)
+    
+    return passed
+}
+
+// Test algorithm implementations
+test_algorithms = () bool {
+    puts("\n=== Testing Algorithm Implementations ===")
+    passed := true
+    
+    // Test sorting (bubble sort implementation)
+    arr ::= [64, 34, 25, 12, 22, 11, 90]
+    n := 7
+    
+    // Bubble sort using conditional loops
+    i ::= 0
+    loop i < n - 1 {
+        j ::= 0
+        loop j < n - i - 1 {
+            arr[j] > arr[j + 1] ? | true => {
+                temp := arr[j]
+                arr[j] = arr[j + 1]
+                arr[j + 1] = temp
+            } | false => {}
+            j = j + 1
+        }
+        i = i + 1
+    }
+    
+    passed = passed && assert_eq(arr[0], 11, "First element after sort")
+    passed = passed && assert_eq(arr[6], 90, "Last element after sort")
+    
+    // Test binary search
+    target := 25
+    left ::= 0
+    right ::= n - 1
+    found ::= false
+    position ::= -1
+    
+    loop left <= right && !found {
+        mid := (left + right) / 2
+        arr[mid] == target ? | true => {
+            found = true
+            position = mid
+        } | false => {
+            arr[mid] < target ? | true => {
+                left = mid + 1
+            } | false => {
+                right = mid - 1
+            }
+        }
+    }
+    
+    passed = passed && assert(found, "Binary search found target")
+    passed = passed && assert_eq(position, 3, "Binary search position")
+    
+    return passed
+}
+
+// Test string operations
+test_string_operations = () bool {
+    puts("\n=== Testing String Operations ===")
+    passed := true
+    
+    // Test string length calculation
+    str := "Hello, Zen!"
+    len ::= 0
+    idx ::= 0
+    loop str[idx] != 0 {
+        len = len + 1
+        idx = idx + 1
+    }
+    passed = passed && assert_eq(len, 11, "String length calculation")
+    
+    // Test character counting
+    char_count ::= 0
+    i ::= 0
+    loop str[i] != 0 {
+        str[i] == 'l' ? | true => {
+            char_count = char_count + 1
+        } | false => {}
+        i = i + 1
+    }
+    passed = passed && assert_eq(char_count, 2, "Character 'l' count")
+    
+    return passed
+}
+
+// Test math operations
+test_math_operations = () bool {
+    puts("\n=== Testing Math Operations ===")
+    passed := true
+    
+    // Test factorial using loops
+    factorial = (n: i64) i64 {
+        result ::= 1
+        i ::= 1
+        loop i <= n {
+            result = result * i
+            i = i + 1
+        }
+        return result
+    }
+    
+    passed = passed && assert_eq(factorial(5), 120, "Factorial of 5")
+    passed = passed && assert_eq(factorial(0), 1, "Factorial of 0")
+    
+    // Test fibonacci using loops
+    fibonacci = (n: i64) i64 {
+        n <= 1 ? | true => { return n } | false => {}
+        
+        prev ::= 0
+        curr ::= 1
+        i ::= 2
+        loop i <= n {
+            next := prev + curr
+            prev = curr
+            curr = next
+            i = i + 1
+        }
+        return curr
+    }
+    
+    passed = passed && assert_eq(fibonacci(10), 55, "Fibonacci of 10")
+    passed = passed && assert_eq(fibonacci(15), 610, "Fibonacci of 15")
+    
+    // Test GCD using Euclidean algorithm
+    gcd = (a: i64, b: i64) i64 {
+        a_mut ::= a
+        b_mut ::= b
+        loop b_mut != 0 {
+            temp := b_mut
+            b_mut = a_mut % b_mut
+            a_mut = temp
+        }
+        return a_mut
+    }
+    
+    passed = passed && assert_eq(gcd(48, 18), 6, "GCD of 48 and 18")
+    passed = passed && assert_eq(gcd(100, 35), 5, "GCD of 100 and 35")
+    
+    return passed
+}
+
+// Test complex data structure operations
+test_complex_structures = () bool {
+    puts("\n=== Testing Complex Data Structures ===")
+    passed := true
+    
+    // Simulate a simple stack using Vec
+    stack := vec.vec_new<i64>()
+    
+    // Push operations
+    core.range(1, 6).loop((i: i64) void {
+        vec.vec_push(&stack, i * 10)
+    })
+    passed = passed && assert_eq(vec.vec_len(&stack), 5, "Stack size after pushes")
+    
+    // Pop operations
+    sum ::= 0
+    loop !vec.vec_is_empty(&stack) {
+        popped := vec.vec_pop(&stack)
+        popped ? | core.Option::Some(val) => {
+            sum = sum + val
+        } | core.Option::None => {}
+    }
+    passed = passed && assert_eq(sum, 150, "Sum of popped values")
+    passed = passed && assert(vec.vec_is_empty(&stack), "Stack empty after pops")
+    
+    vec.vec_free(&stack)
+    
+    return passed
+}
+
+// Main test runner
+main = () i32 {
+    puts("=================================================")
+    puts("     Zen Language Self-Hosted Test Suite")
+    puts("=================================================")
+    puts("Testing the language's ability to implement")
+    puts("complex systems and algorithms in itself.")
+    
+    results := TestResult {
+        passed: 0,
+        failed: 0,
+        total: 0,
+    }
+    
+    // Run all test suites
+    tests := [
+        test_functional_loops,
+        test_conditional_loops,
+        test_vec_functional,
+        test_hashmap_advanced,
+        test_algorithms,
+        test_string_operations,
+        test_math_operations,
+        test_complex_structures,
+    ]
+    
+    test_names := [
+        "Functional Loops",
+        "Conditional Loops", 
+        "Vec Functional",
+        "HashMap Advanced",
+        "Algorithms",
+        "String Operations",
+        "Math Operations",
+        "Complex Structures",
+    ]
+    
+    i ::= 0
+    loop i < 8 {
+        test_func := tests[i]
+        test_func() ? | true => {
+            results.passed = results.passed + 1
+        } | false => {
+            results.failed = results.failed + 1
+        }
+        results.total = results.total + 1
+        i = i + 1
+    }
+    
+    // Print final summary
+    puts("\n=================================================")
+    puts("                 TEST SUMMARY")
+    puts("=================================================")
+    printf("Total Tests: %d\n", results.total)
+    printf("Passed:      %d\n", results.passed)
+    printf("Failed:      %d\n", results.failed)
+    
+    results.failed == 0 ? | true => {
+        puts("\n[SUCCESS] All self-hosted tests passed!")
+        puts("The Zen language successfully demonstrates")
+        puts("its ability to implement complex systems.")
+        return 0
+    } | false => {
+        puts("\n[ERROR] Some tests failed.")
+        puts("Please review the failures above.")
+        return 1
+    }
+}
