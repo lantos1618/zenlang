@@ -1,0 +1,539 @@
+// Zen Lexer - Self-hosted lexer implementation
+// Complete implementation for bootstrapping the Zen compiler
+
+comptime {
+    core := @std.core
+    string := @std.string
+}
+
+// Token types - matches the Rust implementation
+TokenType = 
+    | Identifier(value: string)
+    | Integer(value: string)
+    | Float(value: string)
+    | StringLiteral(value: string)
+    | Keyword(word: KeywordType)
+    | Symbol(char: i8)
+    | Operator(op: string)
+    | Comment(text: string)
+    | Eof
+
+KeywordType = 
+    | Loop
+    | In
+    | Comptime
+    | Async
+    | Await
+    | Behavior
+    | Impl
+    | Extern
+    | Break
+    | Continue
+    | Return
+    | Type
+    | Void
+    | True
+    | False
+
+// Token with position information
+Token = {
+    token_type: TokenType,
+    line: i32,
+    column: i32,
+    start: i32,
+    end: i32,
+}
+
+// Lexer state
+Lexer = {
+    input: string,
+    position: i32,
+    read_position: i32,
+    current_char: i8,  // Using i8 for char, -1 for EOF
+    line: i32,
+    column: i32,
+}
+
+// Create a new lexer
+lexer_new = (input: string) Lexer {
+    lexer := Lexer {
+        input: input,
+        position: 0,
+        read_position: 0,
+        current_char: 0,
+        line: 1,
+        column: 1,
+    }
+    
+    // Read the first character
+    lexer = lexer_read_char(lexer)
+    return lexer
+}
+
+// Read next character
+lexer_read_char = (l: Lexer) Lexer {
+    l.position = l.read_position
+    
+    // Check if at end of input
+    l.read_position >= string_len(l.input) ? 
+        | true => {
+            l.current_char = -1  // EOF marker
+        }
+        | false => {
+            l.current_char = string_char_at(l.input, l.read_position)
+            l.read_position = l.read_position + 1
+            
+            // Update line and column
+            l.current_char == 10 ?  // '\n'
+                | true => {
+                    l.line = l.line + 1
+                    l.column = 1
+                }
+                | false => {
+                    l.column = l.column + 1
+                }
+        }
+    
+    return l
+}
+
+// Peek at next character without advancing
+lexer_peek_char = (l: Lexer) i8 {
+    l.read_position >= string_len(l.input) ?
+        | true => return -1
+        | false => return string_char_at(l.input, l.read_position)
+}
+
+// Peek two characters ahead
+lexer_peek_char2 = (l: Lexer) i8 {
+    pos := l.read_position + 1
+    pos >= string_len(l.input) ?
+        | true => return -1
+        | false => return string_char_at(l.input, pos)
+}
+
+// Skip whitespace
+lexer_skip_whitespace = (l: Lexer) Lexer {
+    loop is_whitespace(l.current_char) {
+        l = lexer_read_char(l)
+    }
+    return l
+}
+
+// Skip single-line comment
+lexer_skip_line_comment = (l: Lexer) (Lexer, string) {
+    start := l.position + 2  // Skip "//"
+    l = lexer_read_char(l)  // Skip first /
+    l = lexer_read_char(l)  // Skip second /
+    
+    loop l.current_char != 10 && l.current_char != -1 {
+        l = lexer_read_char(l)
+    }
+    
+    comment := string_substring(l.input, start, l.position)
+    return (l, comment)
+}
+
+// Skip multi-line comment
+lexer_skip_block_comment = (l: Lexer) (Lexer, string) {
+    start := l.position + 2  // Skip "/*"
+    l = lexer_read_char(l)  // Skip /
+    l = lexer_read_char(l)  // Skip *
+    
+    loop l.current_char != -1 {
+        l.current_char == 42 && lexer_peek_char(l) == 47 ?  // "*/"
+            | true => {
+                l = lexer_read_char(l)  // Skip *
+                l = lexer_read_char(l)  // Skip /
+                break
+            }
+            | false => {
+                l = lexer_read_char(l)
+            }
+    }
+    
+    end := l.position - 2  // Exclude "*/"
+    comment := string_substring(l.input, start, end)
+    return (l, comment)
+}
+
+// Character classification functions
+is_whitespace = (c: i8) bool {
+    c == 32 || c == 9 || c == 10 || c == 13  // space, tab, newline, carriage return
+}
+
+is_alpha = (c: i8) bool {
+    (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95  // A-Z, a-z, _
+}
+
+is_digit = (c: i8) bool {
+    c >= 48 && c <= 57  // 0-9
+}
+
+is_hex_digit = (c: i8) bool {
+    is_digit(c) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102)  // 0-9, A-F, a-f
+}
+
+is_symbol = (c: i8) bool {
+    c == 40 || c == 41 ||  // ( )
+    c == 123 || c == 125 || // { }
+    c == 91 || c == 93 ||   // [ ]
+    c == 59 || c == 44 ||   // ; ,
+    c == 124 || c == 38 ||  // | &
+    c == 46 || c == 63      // . ?
+}
+
+is_operator_char = (c: i8) bool {
+    c == 43 || c == 45 || c == 42 || c == 47 ||  // + - * /
+    c == 61 || c == 33 || c == 60 || c == 62 ||  // = ! < >
+    c == 38 || c == 124 || c == 58               // & | :
+}
+
+// Read identifier or keyword
+lexer_read_identifier = (l: Lexer) (Lexer, string) {
+    start_pos := l.position
+    
+    // Handle @ prefix for namespaces
+    l.current_char == 64 ?  // '@'
+        | true => { l = lexer_read_char(l) }
+        | false => {}
+    
+    loop is_alpha(l.current_char) || is_digit(l.current_char) {
+        l = lexer_read_char(l)
+    }
+    
+    // Handle dot for namespace paths (e.g., @std.core)
+    loop l.current_char == 46 && is_alpha(lexer_peek_char(l)) {  // '.'
+        l = lexer_read_char(l)  // consume '.'
+        loop is_alpha(l.current_char) || is_digit(l.current_char) {
+            l = lexer_read_char(l)
+        }
+    }
+    
+    ident := string_substring(l.input, start_pos, l.position)
+    return (l, ident)
+}
+
+// Read number (integer or float)
+lexer_read_number = (l: Lexer) (Lexer, string, bool) {
+    start_pos := l.position
+    is_float := false
+    
+    // Handle hex numbers
+    l.current_char == 48 && (lexer_peek_char(l) == 120 || lexer_peek_char(l) == 88) ?  // "0x" or "0X"
+        | true => {
+            l = lexer_read_char(l)  // consume '0'
+            l = lexer_read_char(l)  // consume 'x'
+            loop is_hex_digit(l.current_char) {
+                l = lexer_read_char(l)
+            }
+        }
+        | false => {
+            // Regular decimal number
+            loop is_digit(l.current_char) {
+                l = lexer_read_char(l)
+            }
+            
+            // Check for decimal point
+            l.current_char == 46 && is_digit(lexer_peek_char(l)) ?  // '.'
+                | true => {
+                    is_float = true
+                    l = lexer_read_char(l)  // consume '.'
+                    loop is_digit(l.current_char) {
+                        l = lexer_read_char(l)
+                    }
+                    
+                    // Handle scientific notation
+                    (l.current_char == 101 || l.current_char == 69) ?  // 'e' or 'E'
+                        | true => {
+                            l = lexer_read_char(l)  // consume 'e'
+                            (l.current_char == 43 || l.current_char == 45) ?  // '+' or '-'
+                                | true => { l = lexer_read_char(l) }
+                                | false => {}
+                            loop is_digit(l.current_char) {
+                                l = lexer_read_char(l)
+                            }
+                        }
+                        | false => {}
+                }
+                | false => {}
+        }
+    
+    // Handle type suffixes (i8, i16, i32, i64, u8, u16, u32, u64, f32, f64)
+    (l.current_char == 105 || l.current_char == 117 || l.current_char == 102) ?  // 'i', 'u', 'f'
+        | true => {
+            loop is_alpha(l.current_char) || is_digit(l.current_char) {
+                l = lexer_read_char(l)
+            }
+        }
+        | false => {}
+    
+    num := string_substring(l.input, start_pos, l.position)
+    return (l, num, is_float)
+}
+
+// Read string literal with escape sequences
+lexer_read_string = (l: Lexer) (Lexer, string) {
+    l = lexer_read_char(l)  // Skip opening quote
+    start_pos := l.position
+    
+    loop l.current_char != 34 && l.current_char != -1 {  // '"'
+        // Handle escape sequences
+        l.current_char == 92 ?  // '\'
+            | true => {
+                l = lexer_read_char(l)  // Skip backslash
+                l.current_char != -1 ?
+                    | true => { l = lexer_read_char(l) }  // Skip escaped char
+                    | false => {}
+            }
+            | false => {
+                l = lexer_read_char(l)
+            }
+    }
+    
+    str := string_substring(l.input, start_pos, l.position)
+    l.current_char == 34 ?
+        | true => { l = lexer_read_char(l) }  // Skip closing quote
+        | false => {}
+    
+    return (l, str)
+}
+
+// Read operator (handles multi-character operators)
+lexer_read_operator = (l: Lexer) (Lexer, string) {
+    start_pos := l.position
+    c1 := l.current_char
+    c2 := lexer_peek_char(l)
+    c3 := lexer_peek_char2(l)
+    
+    // Three-character operators: ::=, ..=
+    (c1 == 58 && c2 == 58 && c3 == 61) ?  // "::="
+        | true => {
+            l = lexer_read_char(l)
+            l = lexer_read_char(l)
+            l = lexer_read_char(l)
+            return (l, "::=")
+        }
+        | false => {}
+    
+    (c1 == 46 && c2 == 46 && c3 == 61) ?  // "..="
+        | true => {
+            l = lexer_read_char(l)
+            l = lexer_read_char(l)
+            l = lexer_read_char(l)
+            return (l, "..=")
+        }
+        | false => {}
+    
+    // Two-character operators
+    op2 := ""
+    (c1 == 61 && c2 == 61) ? | true => { op2 = "==" } | false => {}
+    (c1 == 33 && c2 == 61) ? | true => { op2 = "!=" } | false => {}
+    (c1 == 60 && c2 == 61) ? | true => { op2 = "<=" } | false => {}
+    (c1 == 62 && c2 == 61) ? | true => { op2 = ">=" } | false => {}
+    (c1 == 38 && c2 == 38) ? | true => { op2 = "&&" } | false => {}
+    (c1 == 124 && c2 == 124) ? | true => { op2 = "||" } | false => {}
+    (c1 == 45 && c2 == 62) ? | true => { op2 = "->" } | false => {}
+    (c1 == 61 && c2 == 62) ? | true => { op2 = "=>" } | false => {}
+    (c1 == 58 && c2 == 61) ? | true => { op2 = ":=" } | false => {}
+    (c1 == 58 && c2 == 58) ? | true => { op2 = "::" } | false => {}
+    (c1 == 46 && c2 == 46) ? | true => { op2 = ".." } | false => {}
+    (c1 == 60 && c2 == 60) ? | true => { op2 = "<<" } | false => {}
+    (c1 == 62 && c2 == 62) ? | true => { op2 = ">>" } | false => {}
+    
+    string_len(op2) > 0 ?
+        | true => {
+            l = lexer_read_char(l)
+            l = lexer_read_char(l)
+            return (l, op2)
+        }
+        | false => {}
+    
+    // Single-character operators
+    l = lexer_read_char(l)
+    op := string_substring(l.input, start_pos, l.position)
+    return (l, op)
+}
+
+// Convert string to keyword if applicable
+string_to_keyword = (s: string) Option<KeywordType> {
+    string_equals(s, "loop") ? | true => return Option::Some(KeywordType::Loop) | false => {}
+    string_equals(s, "in") ? | true => return Option::Some(KeywordType::In) | false => {}
+    string_equals(s, "comptime") ? | true => return Option::Some(KeywordType::Comptime) | false => {}
+    string_equals(s, "async") ? | true => return Option::Some(KeywordType::Async) | false => {}
+    string_equals(s, "await") ? | true => return Option::Some(KeywordType::Await) | false => {}
+    string_equals(s, "behavior") ? | true => return Option::Some(KeywordType::Behavior) | false => {}
+    string_equals(s, "impl") ? | true => return Option::Some(KeywordType::Impl) | false => {}
+    string_equals(s, "extern") ? | true => return Option::Some(KeywordType::Extern) | false => {}
+    string_equals(s, "break") ? | true => return Option::Some(KeywordType::Break) | false => {}
+    string_equals(s, "continue") ? | true => return Option::Some(KeywordType::Continue) | false => {}
+    string_equals(s, "return") ? | true => return Option::Some(KeywordType::Return) | false => {}
+    string_equals(s, "type") ? | true => return Option::Some(KeywordType::Type) | false => {}
+    string_equals(s, "void") ? | true => return Option::Some(KeywordType::Void) | false => {}
+    string_equals(s, "true") ? | true => return Option::Some(KeywordType::True) | false => {}
+    string_equals(s, "false") ? | true => return Option::Some(KeywordType::False) | false => {}
+    
+    return Option::None
+}
+
+// Get next token - main lexer function
+lexer_next_token = (l: Lexer) (Lexer, Token) {
+    l = lexer_skip_whitespace(l)
+    
+    start_pos := l.position
+    start_line := l.line
+    start_column := l.column
+    
+    // Default to EOF
+    token_type := TokenType::Eof
+    
+    // Check for EOF
+    l.current_char == -1 ?
+        | true => {
+            token_type = TokenType::Eof
+        }
+        | false => {
+            // Comments
+            l.current_char == 47 ?  // '/'
+                | true => {
+                    next := lexer_peek_char(l)
+                    next == 47 ?  // "//"
+                        | true => {
+                            result := lexer_skip_line_comment(l)
+                            l = result.0
+                            comment := result.1
+                            token_type = TokenType::Comment(comment)
+                        }
+                        | false => {
+                            next == 42 ?  // "/*"
+                                | true => {
+                                    result := lexer_skip_block_comment(l)
+                                    l = result.0
+                                    comment := result.1
+                                    token_type = TokenType::Comment(comment)
+                                }
+                                | false => {
+                                    // Just a division operator
+                                    result := lexer_read_operator(l)
+                                    l = result.0
+                                    op := result.1
+                                    token_type = TokenType::Operator(op)
+                                }
+                        }
+                }
+                | false => {}
+            
+            // Identifier or keyword
+            token_type == TokenType::Eof && (is_alpha(l.current_char) || l.current_char == 64) ?  // @ symbol
+                | true => {
+                    result := lexer_read_identifier(l)
+                    l = result.0
+                    ident := result.1
+                    
+                    keyword_opt := string_to_keyword(ident)
+                    keyword_opt ?
+                        | Some(kw) => { token_type = TokenType::Keyword(kw) }
+                        | None => { token_type = TokenType::Identifier(ident) }
+                }
+                | false => {}
+            
+            // Number
+            token_type == TokenType::Eof && is_digit(l.current_char) ?
+                | true => {
+                    result := lexer_read_number(l)
+                    l = result.0
+                    num := result.1
+                    is_float := result.2
+                    
+                    is_float ?
+                        | true => { token_type = TokenType::Float(num) }
+                        | false => { token_type = TokenType::Integer(num) }
+                }
+                | false => {}
+            
+            // String literal
+            token_type == TokenType::Eof && l.current_char == 34 ?  // '"'
+                | true => {
+                    result := lexer_read_string(l)
+                    l = result.0
+                    str := result.1
+                    token_type = TokenType::StringLiteral(str)
+                }
+                | false => {}
+            
+            // Symbols
+            token_type == TokenType::Eof && is_symbol(l.current_char) ?
+                | true => {
+                    c := l.current_char
+                    l = lexer_read_char(l)
+                    token_type = TokenType::Symbol(c)
+                }
+                | false => {}
+            
+            // Operators
+            token_type == TokenType::Eof && is_operator_char(l.current_char) ?
+                | true => {
+                    result := lexer_read_operator(l)
+                    l = result.0
+                    op := result.1
+                    token_type = TokenType::Operator(op)
+                }
+                | false => {}
+            
+            // Unknown character - treat as symbol
+            token_type == TokenType::Eof ?
+                | true => {
+                    c := l.current_char
+                    l = lexer_read_char(l)
+                    token_type = TokenType::Symbol(c)
+                }
+                | false => {}
+        }
+    
+    token := Token {
+        token_type: token_type,
+        line: start_line,
+        column: start_column,
+        start: start_pos,
+        end: l.position,
+    }
+    
+    return (l, token)
+}
+
+// Tokenize entire input
+lexer_tokenize_all = (input: string) Vec<Token> {
+    tokens := vec_new<Token>()
+    lexer := lexer_new(input)
+    
+    loop {
+        result := lexer_next_token(lexer)
+        lexer = result.0
+        token := result.1
+        
+        vec_push(&tokens, token)
+        
+        token.token_type ?
+            | Eof => break
+            | _ => {}
+    }
+    
+    return tokens
+}
+
+// Helper to check if we reached EOF
+lexer_is_eof = (l: Lexer) bool {
+    return l.current_char == -1
+}
+
+// Export the lexer interface
+export {
+    Lexer,
+    Token,
+    TokenType,
+    KeywordType,
+    lexer_new,
+    lexer_next_token,
+    lexer_tokenize_all,
+    lexer_is_eof,
+}
