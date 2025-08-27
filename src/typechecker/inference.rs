@@ -96,6 +96,11 @@ pub fn infer_member_type(
                 ), None))
             }
         }
+        // Handle pointer to struct types
+        AstType::Pointer(inner) => {
+            // Dereference the pointer and check the inner type
+            infer_member_type(inner, member, structs)
+        }
         // Handle Generic types that represent structs
         AstType::Generic { name, .. } => {
             // Try to look up the struct info by name
