@@ -45,6 +45,16 @@ impl<'a> Parser<'a> {
                     break;
                 }
                 
+                // Check if we have a parameter name (optional)
+                if let Token::Identifier(_param_name) = &self.current_token {
+                    // Check if the next token is ':'
+                    if self.peek_token == Token::Symbol(':') {
+                        // Skip the parameter name and ':'
+                        self.next_token(); // skip param name
+                        self.next_token(); // skip ':'
+                    }
+                }
+                
                 let arg_type = self.parse_type()?;
                 args.push(arg_type);
                 

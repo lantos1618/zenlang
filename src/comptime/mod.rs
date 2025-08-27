@@ -329,6 +329,27 @@ impl ComptimeInterpreter {
                 self.evaluate_expression(inner)
             }
             
+            Expression::Range { start, end, inclusive } => {
+                let start_val = self.evaluate_expression(start)?;
+                let end_val = self.evaluate_expression(end)?;
+                
+                match (start_val, end_val) {
+                    (ComptimeValue::I32(start_i), ComptimeValue::I32(end_i)) => {
+                        let mut values = Vec::new();
+                        let end_val = if *inclusive { end_i + 1 } else { end_i };
+                        
+                        for i in start_i..end_val {
+                            values.push(ComptimeValue::I32(i));
+                        }
+                        
+                        Ok(ComptimeValue::Array(values))
+                    }
+                    _ => Err(CompileError::ComptimeError(
+                        "Range expressions only support integer bounds".to_string()
+                    ))
+                }
+            }
+            
             _ => Err(CompileError::ComptimeError(
                 format!("Expression type not supported in comptime: {:?}", expr)
             ))

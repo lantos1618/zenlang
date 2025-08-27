@@ -175,52 +175,95 @@ impl<'a> Parser<'a> {
                     });
                 }
                 
+                // Check for generic type parameters before struct literal
+                // e.g., Vec<T> { ... } or Result<T,E> { ... }
+                let struct_name = if self.current_token == Token::Operator("<".to_string()) {
+                    // This is a generic struct instantiation
+                    // We need to consume the type parameters but for now we'll just 
+                    // skip to the closing '>' and use the base name
+                    let mut depth = 1;
+                    self.next_token(); // consume '<'
+                    while depth > 0 && self.current_token != Token::Eof {
+                        match &self.current_token {
+                            Token::Operator(op) if op == "<" => depth += 1,
+                            Token::Operator(op) if op == ">" => depth -= 1,
+                            _ => {}
+                        }
+                        self.next_token();
+                    }
+                    // For now, just use the base name without type params for struct literals
+                    // In the future, we might want to preserve the full generic type
+                    name.clone()
+                } else {
+                    name.clone()
+                };
+                
                 // Check for struct literal syntax: Name { field: value, ... }
                 if self.current_token == Token::Symbol('{') {
-                    return self.parse_struct_literal(name);
+                    return self.parse_struct_literal(struct_name);
                 }
                 
                 let mut expr = Expression::Identifier(name);
                 
-                // Handle member access and function calls
-                while let Token::Symbol('.') = &self.current_token {
-                    self.next_token(); // consume '.'
-                    
-                    let member = match &self.current_token {
-                        Token::Identifier(name) => name.clone(),
-                        Token::Keyword(kw) => {
-                            // Allow keywords as member names (e.g., .loop, .await, etc.)
-                            format!("{:?}", kw).to_lowercase()
+                // Handle member access, array indexing, and function calls
+                loop {
+                    match &self.current_token {
+                        Token::Symbol('.') => {
+                            self.next_token(); // consume '.'
+                            
+                            let member = match &self.current_token {
+                                Token::Identifier(name) => name.clone(),
+                                Token::Keyword(kw) => {
+                                    // Allow keywords as member names (e.g., .loop, .await, etc.)
+                                    format!("{:?}", kw).to_lowercase()
+                                }
+                                _ => {
+                                    return Err(CompileError::SyntaxError(
+                                        "Expected identifier after '.'".to_string(),
+                                        Some(self.current_span.clone()),
+                                    ));
+                                }
+                            };
+                            self.next_token();
+                            expr = Expression::MemberAccess {
+                                object: Box::new(expr),
+                                member,
+                            };
                         }
-                        _ => {
-                            return Err(CompileError::SyntaxError(
-                                "Expected identifier after '.'".to_string(),
-                                Some(self.current_span.clone()),
-                            ));
+                        Token::Symbol('[') => {
+                            // Array indexing
+                            self.next_token(); // consume '['
+                            let index = self.parse_expression()?;
+                            if self.current_token != Token::Symbol(']') {
+                                return Err(CompileError::SyntaxError(
+                                    "Expected ']' after array index".to_string(),
+                                    Some(self.current_span.clone()),
+                                ));
+                            }
+                            self.next_token(); // consume ']'
+                            expr = Expression::ArrayIndex {
+                                array: Box::new(expr),
+                                index: Box::new(index),
+                            };
                         }
-                    };
-                    self.next_token();
-                    expr = Expression::MemberAccess {
-                        object: Box::new(expr),
-                        member,
-                    };
+                        Token::Symbol('(') => {
+                            // Function call
+                            if let Expression::MemberAccess { object, member } = expr {
+                                return self.parse_call_expression_with_object(*object, member);
+                            } else if let Expression::Identifier(name) = expr {
+                                return self.parse_call_expression(name);
+                            } else {
+                                return Err(CompileError::SyntaxError(
+                                    "Unexpected expression type for function call".to_string(),
+                                    Some(self.current_span.clone()),
+                                ));
+                            }
+                        }
+                        _ => break,
+                    }
                 }
                 
-                // Handle function call if present
-                if self.current_token == Token::Symbol('(') {
-                    if let Expression::MemberAccess { object, member } = expr {
-                        self.parse_call_expression_with_object(*object, member)
-                    } else if let Expression::Identifier(name) = expr {
-                        self.parse_call_expression(name)
-                    } else {
-                        Err(CompileError::SyntaxError(
-                            "Unexpected expression type for function call".to_string(),
-                            Some(self.current_span.clone()),
-                        ))
-                    }
-                } else {
-                    Ok(expr)
-                }
+                Ok(expr)
             }
             Token::Symbol('(') => {
                 self.next_token();
@@ -233,47 +276,71 @@ impl<'a> Parser<'a> {
                 }
                 self.next_token();
                 
-                // Handle member access after parenthesized expression
-                while let Token::Symbol('.') = &self.current_token {
-                    self.next_token(); // consume '.'
-                    
-                    let member = match &self.current_token {
-                        Token::Identifier(name) => name.clone(),
-                        Token::Keyword(kw) => {
-                            // Allow keywords as member names (e.g., .loop, .await, etc.)
-                            format!("{:?}", kw).to_lowercase()
+                // Handle member access, array indexing, and function calls after parenthesized expression
+                loop {
+                    match &self.current_token {
+                        Token::Symbol('.') => {
+                            self.next_token(); // consume '.'
+                            
+                            let member = match &self.current_token {
+                                Token::Identifier(name) => name.clone(),
+                                Token::Keyword(kw) => {
+                                    // Allow keywords as member names (e.g., .loop, .await, etc.)
+                                    format!("{:?}", kw).to_lowercase()
+                                }
+                                _ => {
+                                    return Err(CompileError::SyntaxError(
+                                        "Expected identifier after '.'".to_string(),
+                                        Some(self.current_span.clone()),
+                                    ));
+                                }
+                            };
+                            self.next_token();
+                            expr = Expression::MemberAccess {
+                                object: Box::new(expr),
+                                member,
+                            };
                         }
-                        _ => {
-                            return Err(CompileError::SyntaxError(
-                                "Expected identifier after '.'".to_string(),
-                                Some(self.current_span.clone()),
-                            ));
+                        Token::Symbol('[') => {
+                            // Array indexing
+                            self.next_token(); // consume '['
+                            let index = self.parse_expression()?;
+                            if self.current_token != Token::Symbol(']') {
+                                return Err(CompileError::SyntaxError(
+                                    "Expected ']' after array index".to_string(),
+                                    Some(self.current_span.clone()),
+                                ));
+                            }
+                            self.next_token(); // consume ']'
+                            expr = Expression::ArrayIndex {
+                                array: Box::new(expr),
+                                index: Box::new(index),
+                            };
                         }
-                    };
-                    self.next_token();
-                    expr = Expression::MemberAccess {
-                        object: Box::new(expr),
-                        member,
-                    };
+                        Token::Symbol('(') => {
+                            // Function call
+                            if let Expression::MemberAccess { object, member } = expr {
+                                return self.parse_call_expression_with_object(*object, member);
+                            } else {
+                                return Err(CompileError::SyntaxError(
+                                    "Cannot call non-identifier expression".to_string(),
+                                    Some(self.current_span.clone()),
+                                ));
+                            }
+                        }
+                        _ => break,
+                    }
                 }
                 
-                // Handle function call if present
-                if self.current_token == Token::Symbol('(') {
-                    if let Expression::MemberAccess { object, member } = expr {
-                        self.parse_call_expression_with_object(*object, member)
-                    } else {
-                        Err(CompileError::SyntaxError(
-                            "Cannot call non-identifier expression".to_string(),
-                            Some(self.current_span.clone()),
-                        ))
-                    }
-                } else {
-                    Ok(expr)
-                }
+                Ok(expr)
             }
             Token::Symbol('[') => {
                 // Array literal: [expr, expr, ...]
                 self.parse_array_literal()
+            }
+            Token::Symbol('{') => {
+                // Block expression: { statements... }
+                self.parse_block_expression()
             }
             _ => Err(CompileError::SyntaxError(
                 format!("Unexpected token: {:?}", self.current_token),
@@ -495,6 +562,25 @@ impl<'a> Parser<'a> {
         self.next_token();
         
         Ok(Expression::ArrayLiteral(elements))
+    }
+    
+    fn parse_block_expression(&mut self) -> Result<Expression> {
+        self.next_token(); // consume '{'
+        let mut statements = vec![];
+        
+        while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
+            statements.push(self.parse_statement()?);
+        }
+        
+        if self.current_token != Token::Symbol('}') {
+            return Err(CompileError::SyntaxError(
+                "Expected '}' to close block expression".to_string(),
+                Some(self.current_span.clone()),
+            ));
+        }
+        self.next_token(); // consume '}'
+        
+        Ok(Expression::Block(statements))
     }
 
     pub(crate) fn token_to_binary_operator(&self, op: &str) -> Result<BinaryOperator> {
