@@ -1,0 +1,224 @@
+// Zen Standard Library: Build System Module
+// Provides utilities for compiling and building Zen projects
+
+comptime {
+    core := @std.core
+    fs := @std.fs
+    process := @std.process
+    string := @std.string
+}
+
+// Build configuration
+BuildConfig = {
+    source_dir: string,
+    output_dir: string,
+    target: string,
+    optimization_level: i32,
+    debug_info: bool,
+    verbose: bool,
+}
+
+// Compilation unit
+CompilationUnit = {
+    path: string,
+    module_name: string,
+    dependencies: Vec<string>,
+}
+
+// Build result
+BuildResult = 
+    | Success(output_path: string, warnings: Vec<string>)
+    | Failure(errors: Vec<string>)
+
+// Module import system
+import = (module_name: string) Module {
+    // This would be implemented by the compiler
+    // For now, it's a placeholder that represents module loading
+    Module {
+        name: module_name,
+        exports: HashMap<string, Symbol>,
+    }
+}
+
+// Module representation
+Module = {
+    name: string,
+    exports: HashMap<string, Symbol>,
+}
+
+// Symbol in a module
+Symbol = 
+    | Function(name: string, type: Type)
+    | Type(name: string, definition: Type)
+    | Constant(name: string, value: Value)
+
+// Create default build configuration
+default_config = () BuildConfig {
+    BuildConfig {
+        source_dir: "./src",
+        output_dir: "./build",
+        target: "x86_64-unknown-linux",
+        optimization_level: 2,
+        debug_info: false,
+        verbose: false,
+    }
+}
+
+// Compile a single Zen file
+compile_file = (path: string, config: BuildConfig) BuildResult {
+    // Read the source file
+    source := fs.read_file(path) ? 
+        | Ok(content) => content
+        | Err(e) => return BuildResult.Failure([string.format("Failed to read {}: {}", path, e)])
+    
+    // Tokenize
+    tokens := lexer.tokenize(source) ?
+        | Ok(t) => t
+        | Err(e) => return BuildResult.Failure([string.format("Lexer error in {}: {}", path, e)])
+    
+    // Parse
+    ast := parser.parse(tokens) ?
+        | Ok(a) => a
+        | Err(e) => return BuildResult.Failure([string.format("Parse error in {}: {}", path, e)])
+    
+    // Type check
+    typed_ast := type_checker.check(ast) ?
+        | Ok(a) => a
+        | Err(e) => return BuildResult.Failure([string.format("Type error in {}: {}", path, e)])
+    
+    // Generate code
+    output := codegen.generate(typed_ast, config) ?
+        | Ok(o) => o
+        | Err(e) => return BuildResult.Failure([string.format("Codegen error in {}: {}", path, e)])
+    
+    // Write output
+    output_path := string.format("{}/{}.o", config.output_dir, fs.basename(path))
+    fs.write_file(output_path, output) ?
+        | Ok(_) => BuildResult.Success(output_path, [])
+        | Err(e) => BuildResult.Failure([string.format("Failed to write output: {}", e)])
+}
+
+// Build an entire project
+build_project = (config: BuildConfig) BuildResult {
+    // Find all .zen files in source directory
+    files := fs.find_files(config.source_dir, "*.zen") ?
+        | Ok(f) => f
+        | Err(e) => return BuildResult.Failure([string.format("Failed to scan source directory: {}", e)])
+    
+    // Compile each file
+    objects := Vec<string>.new()
+    warnings := Vec<string>.new()
+    
+    files.loop(file -> {
+        compile_file(file, config) ?
+            | Success(obj, warn) => {
+                objects.push(obj)
+                warnings.extend(warn)
+            }
+            | Failure(errors) => return BuildResult.Failure(errors)
+    })
+    
+    // Link objects into executable
+    executable := link_objects(objects, config) ?
+        | Ok(exe) => exe
+        | Err(e) => return BuildResult.Failure([string.format("Linking failed: {}", e)])
+    
+    BuildResult.Success(executable, warnings)
+}
+
+// Link object files into executable
+link_objects = (objects: Vec<string>, config: BuildConfig) Result<string, string> {
+    output_path := string.format("{}/output", config.output_dir)
+    
+    // Build linker command
+    cmd := Vec<string>.new()
+    cmd.push("ld")
+    cmd.push("-o")
+    cmd.push(output_path)
+    objects.loop(obj -> cmd.push(obj))
+    
+    // Run linker
+    result := process.run(cmd) ?
+        | Ok(r) => r
+        | Err(e) => return Result.Err(string.format("Linker error: {}", e))
+    
+    result.exit_code == 0 ?
+        | true => Result.Ok(output_path)
+        | false => Result.Err(string.format("Linker failed: {}", result.stderr))
+}
+
+// Clean build artifacts
+clean = (config: BuildConfig) Result<void, string> {
+    fs.remove_directory(config.output_dir)
+}
+
+// Run tests
+test = (config: BuildConfig) Result<TestResults, string> {
+    test_dir := string.format("{}/tests", config.source_dir)
+    test_files := fs.find_files(test_dir, "*_test.zen") ?
+        | Ok(f) => f
+        | Err(e) => return Result.Err(string.format("Failed to find tests: {}", e))
+    
+    results := TestResults {
+        total: test_files.len(),
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        failures: Vec<TestFailure>.new(),
+    }
+    
+    test_files.loop(file -> {
+        run_test_file(file, config) ?
+            | Ok(r) => {
+                results.passed = results.passed + r.passed
+                results.failed = results.failed + r.failed
+                results.failures.extend(r.failures)
+            }
+            | Err(e) => {
+                results.failed = results.failed + 1
+                results.failures.push(TestFailure {
+                    name: file,
+                    message: e,
+                })
+            }
+    })
+    
+    Result.Ok(results)
+}
+
+// Test results
+TestResults = {
+    total: i64,
+    passed: i64,
+    failed: i64,
+    skipped: i64,
+    failures: Vec<TestFailure>,
+}
+
+TestFailure = {
+    name: string,
+    message: string,
+}
+
+// Run a single test file
+run_test_file = (path: string, config: BuildConfig) Result<TestResults, string> {
+    // Compile and run the test file
+    // This is simplified - in reality would need more infrastructure
+    compile_file(path, config) ?
+        | Success(obj, _) => {
+            result := process.run([obj]) ?
+                | Ok(r) => r
+                | Err(e) => return Result.Err(e)
+            
+            r.exit_code == 0 ?
+                | true => Result.Ok(TestResults { total: 1, passed: 1, failed: 0, skipped: 0, failures: Vec<TestFailure>.new() })
+                | false => Result.Ok(TestResults { 
+                    total: 1, 
+                    passed: 0, 
+                    failed: 1, 
+                    skipped: 0,
+                    failures: [TestFailure { name: path, message: r.stderr }]
+                })
+        }
+        | Failure(errors) => Result.Err(errors.join("\n"))
+}
