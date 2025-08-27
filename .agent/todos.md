@@ -1,12 +1,12 @@
 # Zen Language - TODO List
 
 ## Immediate Priority (Next Session)
-- [x] Verify printf/puts test output capture - COMPLETE
-- [x] Implement string interpolation $(expr) syntax codegen - COMPLETE
-- [x] Fix loop syntax to match specification - COMPLETE
-- [x] Zen standard library foundation - COMPLETE
-- [ ] Port lexer to Zen language
-- [ ] Port parser to Zen language
+- [x] Fix stdlib vector tests - 90% COMPLETE (9/10 passing)
+- [x] Parser improvements for generics and member access - COMPLETE
+- [x] Block expressions support - COMPLETE
+- [ ] Complete self-hosted lexer (30% done)
+- [ ] Complete self-hosted parser (20% done)
+- [ ] Fix remaining vector test
 
 ## Short-term (Next Few Sessions)
 - [ ] Implement comptime execution framework
