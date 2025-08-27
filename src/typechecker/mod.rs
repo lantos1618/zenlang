@@ -369,6 +369,10 @@ impl TypeChecker {
                     type_args: vec![],
                 })
             }
+            Expression::StringInterpolation { .. } => {
+                // String interpolation always returns a string (pointer to char)
+                Ok(AstType::Pointer(Box::new(AstType::I8)))
+            }
             _ => Ok(AstType::Void), // Default for unhandled cases
         }
     }
