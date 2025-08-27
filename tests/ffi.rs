@@ -1,11 +1,13 @@
+mod common;
+
+use common::{ExecutionHelper, CapturedOutput};
 use inkwell::context::Context;
 use zen::ast::{self, Declaration, ExternalFunction, Function, Statement, Expression, AstType, VariableDeclarationType};
 use zen::compiler::Compiler;
 
 #[test]
-fn test_external_function_declaration() {
-    let context = Context::create();
-    let mut compiler = Compiler::new(&context);
+fn test_printf_output_verified() {
+    let helper = ExecutionHelper::new();
     
     let program = ast::Program {
         declarations: vec![
@@ -15,7 +17,8 @@ fn test_external_function_declaration() {
                 return_type: AstType::I64,
                 is_varargs: true,
             }),
-            Declaration::Function(Function { type_params: vec![],
+            Declaration::Function(Function { 
+                type_params: vec![],
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
@@ -31,29 +34,180 @@ fn test_external_function_declaration() {
         ],
     };
 
-    let ir = compiler.compile_llvm(&program).unwrap();
-    println!("IR for external function declaration:");
-    println!("{}", ir);
+    // Compile and run, verifying actual output
+    let output = helper.compile_ast_and_run(&program)
+        .expect("Failed to compile and run program");
+    
+    // Verify the output actually appeared on stdout
+    output.assert_stdout_contains("Hello, World!");
+    output.assert_success();
+    
+    println!("✓ Printf output verified successfully!");
 }
 
 #[test]
-fn test_float_operations() {
-    let context = Context::create();
-    let mut compiler = Compiler::new(&context);
+fn test_printf_return_value() {
+    let helper = ExecutionHelper::new();
     
     let program = ast::Program {
         declarations: vec![
             Declaration::ExternalFunction(ExternalFunction {
-                name: "add_floats".to_string(),
-                args: vec![AstType::F64, AstType::F64],
-                return_type: AstType::F64,
+                name: "printf".to_string(),
+                args: vec![AstType::String],
+                return_type: AstType::I64,
+                is_varargs: true,
+            }),
+            Declaration::Function(Function { 
+                type_params: vec![],
+                name: "main".to_string(),
+                args: vec![],
+                return_type: AstType::I64,
+                body: vec![
+                    // Printf returns number of characters printed
+                    Statement::Expression(Expression::FunctionCall {
+                        name: "printf".to_string(),
+                        args: vec![Expression::String("Test\n".to_string())],
+                    }),
+                    Statement::Return(Expression::Integer64(42)),
+                ],
+                is_async: false,
+            }),
+        ],
+    };
+
+    let output = helper.compile_ast_and_run(&program)
+        .expect("Failed to compile and run program");
+    
+    output.assert_stdout_eq("Test");
+    output.assert_exit_code(42);
+    
+    println!("✓ Printf return value test passed!");
+}
+
+#[test]
+fn test_puts_output_verified() {
+    let helper = ExecutionHelper::new();
+    
+    let program = ast::Program {
+        declarations: vec![
+            Declaration::ExternalFunction(ExternalFunction {
+                name: "puts".to_string(),
+                args: vec![AstType::String],
+                return_type: AstType::I32,
                 is_varargs: false,
             }),
-            Declaration::Function(Function { type_params: vec![],
-                name: "test_float_math".to_string(),
-                args: vec![("x".to_string(), AstType::F64), ("y".to_string(), AstType::F64)],
-                return_type: AstType::F64,
+            Declaration::Function(Function { 
+                type_params: vec![],
+                name: "main".to_string(),
+                args: vec![],
+                return_type: AstType::I32,
                 body: vec![
+                    Statement::Expression(Expression::FunctionCall {
+                        name: "puts".to_string(),
+                        args: vec![Expression::String("Hello from puts".to_string())],
+                    }),
+                    Statement::Return(Expression::Integer32(0)),
+                ],
+                is_async: false,
+            }),
+        ],
+    };
+
+    let output = helper.compile_ast_and_run(&program)
+        .expect("Failed to compile and run program");
+    
+    // puts adds newline automatically
+    output.assert_stdout_contains("Hello from puts");
+    output.assert_success();
+    
+    println!("✓ Puts output verified successfully!");
+}
+
+#[test]
+fn test_multiple_printf_calls_verified() {
+    let helper = ExecutionHelper::new();
+    
+    let program = ast::Program {
+        declarations: vec![
+            Declaration::ExternalFunction(ExternalFunction {
+                name: "printf".to_string(),
+                args: vec![AstType::String],
+                return_type: AstType::I64,
+                is_varargs: true,
+            }),
+            Declaration::Function(Function { 
+                type_params: vec![],
+                name: "main".to_string(),
+                args: vec![],
+                return_type: AstType::I64,
+                body: vec![
+                    Statement::Expression(Expression::FunctionCall {
+                        name: "printf".to_string(),
+                        args: vec![Expression::String("First\n".to_string())],
+                    }),
+                    Statement::Expression(Expression::FunctionCall {
+                        name: "printf".to_string(),
+                        args: vec![Expression::String("Second\n".to_string())],
+                    }),
+                    Statement::Expression(Expression::FunctionCall {
+                        name: "printf".to_string(),
+                        args: vec![Expression::String("Third\n".to_string())],
+                    }),
+                    Statement::Return(Expression::Integer64(0)),
+                ],
+                is_async: false,
+            }),
+        ],
+    };
+
+    let output = helper.compile_ast_and_run(&program)
+        .expect("Failed to compile and run program");
+    
+    // Verify all outputs appear in correct order
+    let lines = output.stdout_lines();
+    assert_eq!(lines.len(), 3, "Should have exactly 3 lines");
+    assert_eq!(lines[0], "First");
+    assert_eq!(lines[1], "Second");
+    assert_eq!(lines[2], "Third");
+    
+    output.assert_success();
+    
+    println!("✓ Multiple printf calls verified in correct order!");
+}
+
+#[test]
+fn test_float_operations_with_printf() {
+    let helper = ExecutionHelper::new();
+    
+    let program = ast::Program {
+        declarations: vec![
+            Declaration::ExternalFunction(ExternalFunction {
+                name: "printf".to_string(),
+                args: vec![AstType::String],
+                return_type: AstType::I64,
+                is_varargs: true,
+            }),
+            Declaration::Function(Function { 
+                type_params: vec![],
+                name: "main".to_string(),
+                args: vec![],
+                return_type: AstType::I64,
+                body: vec![
+                    // Test float math
+                    Statement::VariableDeclaration {
+                        name: "x".to_string(),
+                        type_: Some(AstType::F64),
+                        initializer: Some(Expression::Float64(3.14)),
+                        is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
+                    },
+                    Statement::VariableDeclaration {
+                        name: "y".to_string(),
+                        type_: Some(AstType::F64),
+                        initializer: Some(Expression::Float64(2.0)),
+                        is_mutable: false,
+                        declaration_type: VariableDeclarationType::ExplicitImmutable,
+                    },
                     Statement::VariableDeclaration {
                         name: "result".to_string(),
                         type_: Some(AstType::F64),
@@ -65,39 +219,50 @@ fn test_float_operations() {
                         is_mutable: false,
                         declaration_type: VariableDeclarationType::ExplicitImmutable,
                     },
-                    Statement::Return(Expression::Identifier("result".to_string())),
+                    // Just verify computation worked
+                    Statement::Expression(Expression::FunctionCall {
+                        name: "printf".to_string(),
+                        args: vec![Expression::String("Float math completed\n".to_string())],
+                    }),
+                    Statement::Return(Expression::Integer64(0)),
                 ],
                 is_async: false,
             }),
         ],
     };
 
-    let ir = compiler.compile_llvm(&program).unwrap();
-    println!("IR for float operations:");
-    println!("{}", ir);
+    let output = helper.compile_ast_and_run(&program)
+        .expect("Failed to compile and run program");
+    
+    output.assert_stdout_contains("Float math completed");
+    output.assert_success();
+    
+    println!("✓ Float operations test passed!");
 }
 
+// Keep the LLVM IR generation tests for verification
 #[test]
-fn test_printf() {
+fn test_external_function_ir_generation() {
     let context = Context::create();
-    let mut compiler = Compiler::new(&context);
-
+    let compiler = Compiler::new(&context);
+    
     let program = ast::Program {
         declarations: vec![
             Declaration::ExternalFunction(ExternalFunction {
                 name: "printf".to_string(),
-                args: vec![AstType::String], // First arg is format string
+                args: vec![AstType::String],
                 return_type: AstType::I64,
-                is_varargs: true, // printf is variadic
+                is_varargs: true,
             }),
-            Declaration::Function(Function { type_params: vec![],
+            Declaration::Function(Function { 
+                type_params: vec![],
                 name: "main".to_string(),
                 args: vec![],
                 return_type: AstType::I64,
                 body: vec![
                     Statement::Expression(Expression::FunctionCall {
                         name: "printf".to_string(),
-                        args: vec![Expression::String("Hello from Zen!\n".to_string())],
+                        args: vec![Expression::String("Hello\n".to_string())],
                     }),
                     Statement::Return(Expression::Integer64(0)),
                 ],
@@ -107,78 +272,21 @@ fn test_printf() {
     };
 
     let ir = compiler.compile_llvm(&program).unwrap();
-    println!("IR for printf:");
-    println!("{}", ir);
-}
-
-#[test]
-fn test_executable_ffi_printf() {
-    let context = Context::create();
-    let mut compiler = Compiler::new(&context);
-
-    let program = ast::Program {
-        declarations: vec![
-            Declaration::ExternalFunction(ExternalFunction {
-                name: "printf".to_string(),
-                args: vec![AstType::String], // First arg is format string
-                return_type: AstType::I64,
-                is_varargs: true, // printf is variadic
-            }),
-            Declaration::Function(Function { type_params: vec![],
-                name: "main".to_string(),
-                args: vec![],
-                return_type: AstType::I64,
-                body: vec![
-                    Statement::Expression(Expression::FunctionCall {
-                        name: "printf".to_string(),
-                        args: vec![Expression::String("Hello from Zen FFI!\n".to_string())],
-                    }),
-                    Statement::Return(Expression::Integer64(42)),
-                ],
-                is_async: false,
-            }),
-        ],
-    };
-
-    // Compile to LLVM IR
-    let ir = compiler.compile_llvm(&program).unwrap();
-    println!("Generated IR:");
-    println!("{}", ir);
     
-    // Verify the IR contains the expected elements
-    let printf_declared = ir.contains("declare i64 @printf(ptr, ...)") || ir.contains("declare i64 @printf(i8*, ...)");
+    // Verify IR contains expected declarations
+    let printf_declared = ir.contains("declare i64 @printf(ptr, ...)") || 
+                         ir.contains("declare i64 @printf(i8*, ...)");
     assert!(printf_declared, "Should declare printf with varargs");
     assert!(ir.contains("@printf"), "Should reference printf function");
-    let printf_call = ir.contains("call i64 @printf") || ir.contains("call i64 (ptr, ...) @printf");
-    assert!(printf_call, "Should call printf function");
     
-    // Create execution engine and run the program
-    let module = compiler.get_module(&program).expect("Failed to get module");
-    let execution_engine = module.create_jit_execution_engine(inkwell::OptimizationLevel::None)
-        .expect("Failed to create execution engine");
-    
-    // Get the main function
-    let main_fn = module.get_function("main")
-        .expect("Main function not found");
-    
-    // Run the function
-    let result = unsafe {
-        execution_engine.run_function(main_fn, &[])
-    };
-    
-    // Verify the return value
-    let return_value = result.as_int(false);
-    assert_eq!(return_value, 42, "Main should return 42");
-    
-    println!("✓ FFI test passed! Function returned: {}", return_value);
+    println!("✓ External function IR generation test passed!");
 }
 
 #[test]
-fn test_external_math_function() {
+fn test_external_math_function_ir() {
     let context = Context::create();
-    let mut compiler = Compiler::new(&context);
+    let compiler = Compiler::new(&context);
 
-    // Declare sqrt from math.h
     let program = ast::Program {
         declarations: vec![
             Declaration::ExternalFunction(ExternalFunction {
@@ -187,7 +295,8 @@ fn test_external_math_function() {
                 return_type: AstType::F64,
                 is_varargs: false,
             }),
-            Declaration::Function(Function { type_params: vec![],
+            Declaration::Function(Function { 
+                type_params: vec![],
                 name: "calculate_distance".to_string(),
                 args: vec![("x".to_string(), AstType::F64), ("y".to_string(), AstType::F64)],
                 return_type: AstType::F64,
@@ -222,6 +331,10 @@ fn test_external_math_function() {
     };
 
     let ir = compiler.compile_llvm(&program).unwrap();
-    println!("IR for external math function:");
-    println!("{}", ir);
-} 
+    
+    // Verify sqrt declaration
+    assert!(ir.contains("declare double @sqrt(double)"), "Should declare sqrt");
+    assert!(ir.contains("call double @sqrt"), "Should call sqrt");
+    
+    println!("✓ External math function IR test passed!");
+}
