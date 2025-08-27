@@ -1,0 +1,333 @@
+// Zen Standard Library: IO Module (Improved)
+// Input/Output operations with proper syntax
+
+// External C functions for IO
+extern printf = (format: *i8, ...) i32
+extern puts = (str: *i8) i32
+extern getchar = () i32
+extern fopen = (filename: *i8, mode: *i8) *i8
+extern fclose = (file: *i8) i32
+extern fread = (buffer: *i8, size: i64, count: i64, file: *i8) i64
+extern fwrite = (buffer: *i8, size: i64, count: i64, file: *i8) i64
+extern feof = (file: *i8) i32
+extern ferror = (file: *i8) i32
+extern fflush = (file: *i8) i32
+extern malloc = (size: i64) *i8
+extern free = (ptr: *i8) void
+
+// File descriptor constants
+STDIN := 0
+STDOUT := 1
+STDERR := 2
+
+// Buffer sizes
+BUFFER_SIZE := 4096
+LINE_BUFFER_SIZE := 1024
+
+// File modes
+FileMode = 
+    | ReadOnly
+    | WriteOnly
+    | ReadWrite
+    | Append
+    | CreateNew
+
+// IO Error types
+IOError = 
+    | FileNotFound
+    | PermissionDenied
+    | AlreadyExists
+    | BrokenPipe
+    | UnexpectedEof
+    | InvalidInput
+    | WriteZero
+    | ReadError
+    | WriteError
+    | Other
+
+// Result type for IO operations
+IOResult<T> = 
+    | Ok(value: T)
+    | Err(error: IOError)
+
+// File handle type
+File = {
+    handle: *i8,
+    path: *i8,
+    mode: FileMode,
+    is_open: bool,
+}
+
+// Print string to stdout
+print = (message: *i8) void {
+    puts(message)
+}
+
+// Print with newline
+println = (message: *i8) void {
+    puts(message)
+}
+
+// Print formatted integer
+print_int = (value: i32) void {
+    format := "%d\n"
+    printf(format, value)
+}
+
+// Print formatted float
+print_float = (value: f64) void {
+    format := "%.6f\n"
+    printf(format, value)
+}
+
+// Read a single character from stdin
+read_char = () i32 {
+    return getchar()
+}
+
+// Open a file with specified mode
+file_open = (path: *i8, mode: FileMode) IOResult<File> {
+    // Convert mode to C string
+    mode_str := "r"  // Default to read
+    mode ?
+        | ReadOnly => { mode_str = "r" }
+        | WriteOnly => { mode_str = "w" }
+        | ReadWrite => { mode_str = "r+" }
+        | Append => { mode_str = "a" }
+        | CreateNew => { mode_str = "w+" }
+    
+    handle := fopen(path, mode_str)
+    
+    // Check if open succeeded
+    handle == 0 ?
+        | true => {
+            return IOResult::Err(IOError::FileNotFound)
+        }
+        | false => {
+            file := File {
+                handle: handle,
+                path: path,
+                mode: mode,
+                is_open: true,
+            }
+            return IOResult::Ok(file)
+        }
+}
+
+// Close a file
+file_close = (file: File) IOResult<bool> {
+    file.is_open ?
+        | false => {
+            return IOResult::Err(IOError::Other)
+        }
+        | true => {}
+    
+    result := fclose(file.handle)
+    result == 0 ?
+        | true => {
+            return IOResult::Ok(true)
+        }
+        | false => {
+            return IOResult::Err(IOError::Other)
+        }
+}
+
+// Write bytes to a file
+file_write = (file: File, data: *i8, len: i64) IOResult<i64> {
+    file.is_open ?
+        | false => {
+            return IOResult::Err(IOError::Other)
+        }
+        | true => {}
+    
+    written := fwrite(data, 1, len, file.handle)
+    
+    written == len ?
+        | true => {
+            return IOResult::Ok(written)
+        }
+        | false => {
+            written == 0 ?
+                | true => {
+                    return IOResult::Err(IOError::WriteZero)
+                }
+                | false => {
+                    return IOResult::Err(IOError::WriteError)
+                }
+        }
+}
+
+// Read bytes from a file
+file_read = (file: File, buffer: *i8, max_len: i64) IOResult<i64> {
+    file.is_open ?
+        | false => {
+            return IOResult::Err(IOError::Other)
+        }
+        | true => {}
+    
+    bytes_read := fread(buffer, 1, max_len, file.handle)
+    
+    has_error := ferror(file.handle)
+    has_error != 0 ?
+        | true => {
+            return IOResult::Err(IOError::ReadError)
+        }
+        | false => {
+            is_eof := feof(file.handle)
+            is_eof != 0 && bytes_read == 0 ?
+                | true => {
+                    return IOResult::Err(IOError::UnexpectedEof)
+                }
+                | false => {
+                    return IOResult::Ok(bytes_read)
+                }
+        }
+}
+
+// Flush output stream
+flush = (file: File) IOResult<bool> {
+    result := fflush(file.handle)
+    result == 0 ?
+        | true => {
+            return IOResult::Ok(true)
+        }
+        | false => {
+            return IOResult::Err(IOError::Other)
+        }
+}
+
+// Write a string to file
+file_write_string = (file: File, str: *i8) IOResult<i64> {
+    // Calculate string length (simplified - would need proper strlen)
+    len := 0
+    i := 0
+    // TODO: Implement proper string length calculation
+    
+    return file_write(file, str, len)
+}
+
+// Create a buffered reader
+BufferedReader = {
+    file: File,
+    buffer: *i8,
+    buffer_size: i64,
+    buffer_pos: i64,
+    buffer_len: i64,
+}
+
+// Create new buffered reader
+buffered_reader_new = (file: File) BufferedReader {
+    buffer := malloc(BUFFER_SIZE)
+    return BufferedReader {
+        file: file,
+        buffer: buffer,
+        buffer_size: BUFFER_SIZE,
+        buffer_pos: 0,
+        buffer_len: 0,
+    }
+}
+
+// Create a buffered writer
+BufferedWriter = {
+    file: File,
+    buffer: *i8,
+    buffer_size: i64,
+    buffer_pos: i64,
+}
+
+// Create new buffered writer
+buffered_writer_new = (file: File) BufferedWriter {
+    buffer := malloc(BUFFER_SIZE)
+    return BufferedWriter {
+        file: file,
+        buffer: buffer,
+        buffer_size: BUFFER_SIZE,
+        buffer_pos: 0,
+    }
+}
+
+// Flush buffered writer
+buffered_writer_flush = (writer: BufferedWriter) IOResult<bool> {
+    writer.buffer_pos > 0 ?
+        | true => {
+            result := file_write(writer.file, writer.buffer, writer.buffer_pos)
+            result ?
+                | Ok(written) => {
+                    writer.buffer_pos = 0
+                    return IOResult::Ok(true)
+                }
+                | Err(e) => {
+                    return IOResult::Err(e)
+                }
+        }
+        | false => {
+            return IOResult::Ok(true)
+        }
+}
+
+// Free buffered reader resources
+buffered_reader_free = (reader: BufferedReader) void {
+    free(reader.buffer)
+}
+
+// Free buffered writer resources  
+buffered_writer_free = (writer: BufferedWriter) void {
+    free(writer.buffer)
+}
+
+// Standard streams (simplified)
+stdout = () File {
+    return File {
+        handle: 0,  // Would need proper stdout handle
+        path: "stdout",
+        mode: FileMode::WriteOnly,
+        is_open: true,
+    }
+}
+
+stderr = () File {
+    return File {
+        handle: 0,  // Would need proper stderr handle
+        path: "stderr",
+        mode: FileMode::WriteOnly,
+        is_open: true,
+    }
+}
+
+stdin = () File {
+    return File {
+        handle: 0,  // Would need proper stdin handle
+        path: "stdin",
+        mode: FileMode::ReadOnly,
+        is_open: true,
+    }
+}
+
+// Export main functions
+export {
+    print,
+    println,
+    print_int,
+    print_float,
+    read_char,
+    file_open,
+    file_close,
+    file_write,
+    file_read,
+    file_write_string,
+    flush,
+    BufferedReader,
+    BufferedWriter,
+    buffered_reader_new,
+    buffered_writer_new,
+    buffered_reader_free,
+    buffered_writer_free,
+    buffered_writer_flush,
+    stdout,
+    stderr,
+    stdin,
+    IOResult,
+    IOError,
+    File,
+    FileMode,
+}
