@@ -187,6 +187,9 @@ main = () i32 {
     let lexer = Lexer::new(pattern_code);
     let mut parser = Parser::new(lexer);
     let result = parser.parse_program();
+    if let Err(e) = &result {
+        println!("Parsing error: {:?}", e);
+    }
     assert!(result.is_ok(), "Pattern matching with Vec should parse: {:?}", result.err());
 }
 

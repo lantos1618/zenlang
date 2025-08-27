@@ -1,5 +1,5 @@
 use super::LLVMCompiler;
-use crate::ast::{AstType, Expression};
+use crate::ast::AstType;
 use crate::error::CompileError;
 use inkwell::values::{BasicValueEnum, BasicValue};
 

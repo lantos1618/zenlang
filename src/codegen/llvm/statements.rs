@@ -460,7 +460,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         self.loop_stack.push((loop_header, after_loop_block));
                         
                         // Compile the iterable expression (expecting an array)
-                        let array_ptr = if let Expression::ArrayLiteral(ref elements) = iterable {
+                        let _array_ptr = if let Expression::ArrayLiteral(ref elements) = iterable {
                             // Get the array length
                             let array_len = elements.len() as u64;
                             
@@ -527,9 +527,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                             array_val.into_pointer_value()
                         } else if let Expression::Identifier(name) = iterable {
                             // Support iterating over array variables
-                            if let Some((var_ptr, var_type)) = self.variables.get(name) {
+                            if let Some((var_ptr, _var_type)) = self.variables.get(name) {
                                 // Assume it's an array pointer
-                                let array_ptr = self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), *var_ptr, "array_var").map_err(|e| CompileError::from(e))?.into_pointer_value();
+                                let _array_ptr = self.builder.build_load(self.context.ptr_type(inkwell::AddressSpace::default()), *var_ptr, "array_var").map_err(|e| CompileError::from(e))?.into_pointer_value();
                                 
                                 // We need to know the array length - for now assume a fixed size or error
                                 // In a real implementation, we'd store array length metadata

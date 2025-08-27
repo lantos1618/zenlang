@@ -1,4 +1,4 @@
-use crate::ast::{AstType, Expression};
+use crate::ast::AstType;
 use crate::stdlib::StdFunction;
 use std::collections::HashMap;
 

@@ -1,7 +1,7 @@
 // Compile-time execution framework for Zen
 // This module provides an interpreter that executes Zen code during compilation
 
-use crate::ast::{self, AstType, Expression, Statement, Declaration, Program};
+use crate::ast::{self, AstType, Expression, Statement, Declaration};
 use crate::error::{CompileError, Result};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -63,7 +63,7 @@ impl ComptimeValue {
                     .collect();
                 Ok(Expression::ArrayLiteral(exprs?))
             }
-            ComptimeValue::Type(t) => {
+            ComptimeValue::Type(_t) => {
                 // Type values become type annotations
                 Err(CompileError::ComptimeError(
                     "Cannot convert type value to runtime expression".to_string()

@@ -85,6 +85,11 @@ impl<'a> Parser<'a> {
 
     fn parse_primary_expression(&mut self) -> Result<Expression> {
         match &self.current_token {
+            Token::Keyword(crate::lexer::Keyword::Return) => {
+                self.next_token(); // consume 'return'
+                let expr = self.parse_expression()?;
+                Ok(Expression::Return(Box::new(expr)))
+            }
             Token::Keyword(crate::lexer::Keyword::Comptime) => {
                 self.next_token(); // consume 'comptime'
                 let expr = self.parse_expression()?;
@@ -608,10 +613,12 @@ impl<'a> Parser<'a> {
     fn get_precedence(&self, op: &str) -> u8 {
         match op {
             ".." | "..=" => 1,  // Range has lowest precedence
-            "==" | "!=" => 2,
-            "<" | "<=" | ">" | ">=" => 3,
-            "+" | "-" => 4,
-            "*" | "/" | "%" => 5,
+            "||" => 2,          // Logical OR
+            "&&" => 3,          // Logical AND
+            "==" | "!=" => 4,   // Equality
+            "<" | "<=" | ">" | ">=" => 5,  // Comparison
+            "+" | "-" => 6,     // Addition/Subtraction
+            "*" | "/" | "%" => 7,  // Multiplication/Division/Modulo
             _ => 0,
         }
     }

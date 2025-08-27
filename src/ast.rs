@@ -167,6 +167,8 @@ pub enum Expression {
     Module(String),
     // Block expression - evaluates to the last expression or void
     Block(Vec<Statement>),
+    // Return expression - for early returns in pattern match arms
+    Return(Box<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
