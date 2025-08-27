@@ -4,8 +4,8 @@
 - **Language**: Zen - A modern systems programming language
 - **Goal**: Achieve self-hosting capability with comprehensive standard library  
 - **Current Status**: 99% test pass rate (1 test ignored)
-- **Branch**: ragemode
-- **Last Updated**: 2025-08-27
+- **Branch**: master
+- **Last Updated**: 2025-08-28
 - **Overall Completion**: ~55-60%
 - **Self-Hosting Progress**: ~30%
 
@@ -17,6 +17,7 @@
 3. **Comptime Integration Tests**: Fixed most tests, one temporarily ignored due to type mismatch
 4. **Loop Mutability**: FIXED - mutable loop variables work correctly
 5. **String Interpolation**: FULLY WORKING with `$(expr)` syntax including variable storage
+6. **Loop Syntax Simplification**: COMPLETED - Removed range/iterator loops, now only conditional and infinite loops
 
 ### Self-Hosted Components Progress
 1. **Lexer** (stdlib/lexer.zen): ~90% Complete
@@ -52,7 +53,7 @@
 - LLVM backend code generation
 - FFI with C functions
 - String interpolation with `$(expr)` syntax
-- Loop constructs with break/continue
+- Loop constructs (simplified: conditional and infinite only)
 - Generic types with monomorphization
 - External function declarations
 - Comptime execution system (integrated into compiler pipeline)
