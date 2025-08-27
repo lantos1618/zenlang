@@ -444,3 +444,21 @@ vec_capacity<T> = (vec: *Vec<T>) i64 {
 vec_as_slice<T> = (vec: *Vec<T>) (*T, i64) {
     return (vec.data, vec.len)
 }
+
+// Functional loop method for Vec - executes callback for each element
+Vec<T>.loop = (self: *Vec<T>, callback: (T) void) void {
+    i ::= 0
+    loop i < self.len {
+        callback(self.data[i])
+        i = i + 1
+    }
+}
+
+// Loop with index - executes callback for each element with its index
+Vec<T>.loop_indexed = (self: *Vec<T>, callback: (i64, T) void) void {
+    i ::= 0
+    loop i < self.len {
+        callback(i, self.data[i])
+        i = i + 1
+    }
+}

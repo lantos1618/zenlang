@@ -476,3 +476,15 @@ hashmap_find<K, V> = (map: *HashMap<K, V>, predicate: (K, V) bool) core.Option<(
     }
     return core.Option::None
 }
+
+// Functional loop method for HashMap - executes callback for each key-value pair
+HashMap<K, V>.loop = (self: *HashMap<K, V>, callback: (K, V) void) void {
+    i ::= 0
+    loop i < self.capacity {
+        entry := self.buckets[i]
+        entry.occupied && !entry.deleted ? | true => {
+            callback(entry.key, entry.value)
+        } | false => {}
+        i = i + 1
+    }
+}

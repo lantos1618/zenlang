@@ -9,29 +9,42 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_binary_expression(&mut self, precedence: u8) -> Result<Expression> {
+        use crate::lexer::Keyword;
         let mut left = self.parse_unary_expression()?;
         
-        while let Token::Operator(op) = &self.current_token {
-            let op_clone = op.clone();
-            let next_prec = self.get_precedence(&op_clone);
-            if next_prec > precedence {
-                self.next_token(); // advance past the operator
-                
-                // Handle range expressions specially
-                if op_clone == ".." || op_clone == "..=" {
-                    let right = self.parse_binary_expression(next_prec)?;
-                    left = Expression::Range {
-                        start: Box::new(left),
-                        end: Box::new(right),
-                        inclusive: op_clone == "..=",
-                    };
+        loop {
+            // Check for 'as' keyword for type casting
+            if let Token::Keyword(Keyword::As) = &self.current_token {
+                self.next_token(); // consume 'as'
+                let target_type = self.parse_type()?;
+                left = Expression::TypeCast {
+                    expr: Box::new(left),
+                    target_type,
+                };
+            } else if let Token::Operator(op) = &self.current_token {
+                let op_clone = op.clone();
+                let next_prec = self.get_precedence(&op_clone);
+                if next_prec > precedence {
+                    self.next_token(); // advance past the operator
+                    
+                    // Handle range expressions specially
+                    if op_clone == ".." || op_clone == "..=" {
+                        let right = self.parse_binary_expression(next_prec)?;
+                        left = Expression::Range {
+                            start: Box::new(left),
+                            end: Box::new(right),
+                            inclusive: op_clone == "..=",
+                        };
+                    } else {
+                        let right = self.parse_binary_expression(next_prec)?;
+                        left = Expression::BinaryOp {
+                            left: Box::new(left),
+                            op: self.token_to_binary_operator(&op_clone)?,
+                            right: Box::new(right),
+                        };
+                    }
                 } else {
-                    let right = self.parse_binary_expression(next_prec)?;
-                    left = Expression::BinaryOp {
-                        left: Box::new(left),
-                        op: self.token_to_binary_operator(&op_clone)?,
-                        right: Box::new(right),
-                    };
+                    break;
                 }
             } else {
                 break;

@@ -88,6 +88,30 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 };
                 Ok(Type::Function(function_type))
             },
+            AstType::FunctionPointer { param_types, return_type } => {
+                // Function pointers are represented as pointers to functions
+                let return_llvm_type = self.to_llvm_type(return_type)?;
+                let arg_llvm_types: Result<Vec<BasicTypeEnum<'ctx>>, CompileError> = param_types.iter().map(|arg| {
+                    let arg_type = self.to_llvm_type(arg)?;
+                    match arg_type {
+                        Type::Basic(basic_type) => Ok(basic_type),
+                        _ => Ok(self.context.i64_type().into()), // Default to i64 for complex types
+                    }
+                }).collect();
+                let arg_llvm_types = arg_llvm_types?;
+                
+                // Convert BasicTypeEnum to BasicMetadataTypeEnum for function signatures
+                let arg_metadata_types: Vec<BasicMetadataTypeEnum<'ctx>> = arg_llvm_types.iter().map(|ty| (*ty).into()).collect();
+                
+                let function_type = match return_llvm_type {
+                    Type::Basic(basic_type) => basic_type.fn_type(&arg_metadata_types, false),
+                    Type::Void => self.context.void_type().fn_type(&arg_metadata_types, false),
+                    _ => self.context.i64_type().fn_type(&arg_metadata_types, false),
+                };
+                
+                // Return a pointer to the function type
+                Ok(Type::Basic(function_type.ptr_type(AddressSpace::default()).into()))
+            },
             AstType::Enum { name, variants: _ } => {
                 // Look up the registered enum type
                 if let Some(symbols::Symbol::EnumType(enum_info)) = self.symbols.lookup(name) {

@@ -5,6 +5,7 @@ pub enum Keyword {
     Loop,
     In,  // for loop i in range
     Comptime,
+    As,
     Async,
     Await,
     Behavior,
@@ -344,6 +345,7 @@ impl<'a> Lexer<'a> {
             "loop" => Some(Keyword::Loop),
             "in" => Some(Keyword::In),
             "comptime" => Some(Keyword::Comptime),
+            "as" => Some(Keyword::As),
             "async" => Some(Keyword::Async),
             "await" => Some(Keyword::Await),
             "behavior" => Some(Keyword::Behavior),
