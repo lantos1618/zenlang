@@ -1,0 +1,445 @@
+// Extended Collections Module for Zen
+// Provides advanced data structures and utilities
+
+comptime {
+    core := @std.core
+    vec := @std.build.import("vec")
+    hashmap := @std.build.import("hashmap")
+}
+
+// Priority Queue (Binary Heap) implementation
+BinaryHeap<T> = {
+    items: Vec<T>,
+    compare: (T, T) i32,  // Comparison function for ordering
+}
+
+BinaryHeap<T>.impl = {
+    // Create new heap
+    new = (compare: (T, T) i32) BinaryHeap<T> {
+        return BinaryHeap<T> {
+            items: Vec<T>::new(),
+            compare: compare,
+        }
+    }
+    
+    // Create max heap (default)
+    max_heap = () BinaryHeap<T> {
+        return BinaryHeap<T>::new((a, b) -> { a > b ? | true => 1 | false => -1 })
+    }
+    
+    // Create min heap
+    min_heap = () BinaryHeap<T> {
+        return BinaryHeap<T>::new((a, b) -> { a < b ? | true => -1 | false => 1 })
+    }
+    
+    // Push element onto heap
+    push = (self:: *BinaryHeap<T>, value: T) void {
+        self.items.push(value)
+        self.bubble_up(self.items.len() - 1)
+    }
+    
+    // Pop top element
+    pop = (self:: *BinaryHeap<T>) Option<T> {
+        self.items.is_empty() ? | true => return Option<T>::None
+                               | false => {}
+        
+        self.items.len() == 1 ? | true => return Option<T>::Some(self.items.pop())
+                               | false => {}
+        
+        // Swap first and last, pop last, then bubble down
+        result := self.items[0]
+        self.items[0] = self.items.pop()
+        self.bubble_down(0)
+        return Option<T>::Some(result)
+    }
+    
+    // Peek at top element
+    peek = (self: BinaryHeap<T>) Option<T> {
+        self.items.is_empty() ? | true => Option<T>::None
+                               | false => Option<T>::Some(self.items[0])
+    }
+    
+    // Internal heap operations
+    bubble_up = (self:: *BinaryHeap<T>, idx:: i64) void {
+        idx == 0 ? | true => return | false => {}
+        
+        parent_idx := (idx - 1) / 2
+        self.compare(self.items[idx], self.items[parent_idx]) > 0 ?
+            | true => {
+                self.items.swap(idx, parent_idx)
+                self.bubble_up(parent_idx)
+            }
+            | false => {}
+    }
+    
+    bubble_down = (self:: *BinaryHeap<T>, idx:: i64) void {
+        left := 2 * idx + 1
+        right := 2 * idx + 2
+        largest := idx
+        
+        left < self.items.len() && self.compare(self.items[left], self.items[largest]) > 0 ?
+            | true => largest = left
+            | false => {}
+            
+        right < self.items.len() && self.compare(self.items[right], self.items[largest]) > 0 ?
+            | true => largest = right
+            | false => {}
+            
+        largest != idx ? | true => {
+            self.items.swap(idx, largest)
+            self.bubble_down(largest)
+        } | false => {}
+    }
+}
+
+// Double-ended queue (Deque) implementation
+Deque<T> = {
+    front: Vec<T>,
+    back: Vec<T>,
+}
+
+Deque<T>.impl = {
+    // Create new deque
+    new = () Deque<T> {
+        return Deque<T> {
+            front: Vec<T>::new(),
+            back: Vec<T>::new(),
+        }
+    }
+    
+    // Push to front
+    push_front = (self:: *Deque<T>, value: T) void {
+        self.front.push(value)
+    }
+    
+    // Push to back
+    push_back = (self:: *Deque<T>, value: T) void {
+        self.back.push(value)
+    }
+    
+    // Pop from front
+    pop_front = (self:: *Deque<T>) Option<T> {
+        !self.front.is_empty() ? | true => return Option<T>::Some(self.front.pop())
+                                | false => {}
+        
+        self.back.is_empty() ? | true => return Option<T>::None
+                              | false => {}
+        
+        // Move half of back to front (reversed)
+        self.rebalance()
+        return Option<T>::Some(self.front.pop())
+    }
+    
+    // Pop from back
+    pop_back = (self:: *Deque<T>) Option<T> {
+        !self.back.is_empty() ? | true => return Option<T>::Some(self.back.pop())
+                               | false => {}
+        
+        self.front.is_empty() ? | true => return Option<T>::None
+                               | false => {}
+        
+        // Move half of front to back (reversed)
+        self.rebalance()
+        return Option<T>::Some(self.back.pop())
+    }
+    
+    // Internal rebalancing
+    rebalance = (self:: *Deque<T>) void {
+        // Move elements between front and back to maintain balance
+        total := self.front.len() + self.back.len()
+        target := total / 2
+        
+        self.front.len() > self.back.len() ?
+            | true => {
+                range(0, self.front.len() - target).loop(_ -> {
+                    self.back.push(self.front.pop())
+                })
+            }
+            | false => {
+                range(0, self.back.len() - target).loop(_ -> {
+                    self.front.push(self.back.pop())
+                })
+            }
+    }
+    
+    // Check if empty
+    is_empty = (self: Deque<T>) bool {
+        return self.front.is_empty() && self.back.is_empty()
+    }
+    
+    // Get length
+    len = (self: Deque<T>) i64 {
+        return self.front.len() + self.back.len()
+    }
+}
+
+// Ring buffer (circular buffer) implementation
+RingBuffer<T> = {
+    buffer: []T,
+    capacity: i64,
+    head: i64,
+    tail: i64,
+    size: i64,
+}
+
+RingBuffer<T>.impl = {
+    // Create new ring buffer
+    new = (capacity: i64) RingBuffer<T> {
+        return RingBuffer<T> {
+            buffer: make_array(T, capacity),
+            capacity: capacity,
+            head: 0,
+            tail: 0,
+            size: 0,
+        }
+    }
+    
+    // Push element (overwrites oldest if full)
+    push = (self:: *RingBuffer<T>, value: T) void {
+        self.buffer[self.tail] = value
+        self.tail = (self.tail + 1) % self.capacity
+        
+        self.size < self.capacity ?
+            | true => self.size = self.size + 1
+            | false => self.head = (self.head + 1) % self.capacity
+    }
+    
+    // Pop oldest element
+    pop = (self:: *RingBuffer<T>) Option<T> {
+        self.size == 0 ? | true => return Option<T>::None
+                        | false => {}
+        
+        result := self.buffer[self.head]
+        self.head = (self.head + 1) % self.capacity
+        self.size = self.size - 1
+        return Option<T>::Some(result)
+    }
+    
+    // Check if full
+    is_full = (self: RingBuffer<T>) bool {
+        return self.size == self.capacity
+    }
+    
+    // Check if empty
+    is_empty = (self: RingBuffer<T>) bool {
+        return self.size == 0
+    }
+}
+
+// Trie (prefix tree) for string operations
+Trie = {
+    root: TrieNode,
+}
+
+TrieNode = {
+    children: HashMap<char, TrieNode>,
+    is_word: bool,
+    value: Option<string>,
+}
+
+Trie.impl = {
+    // Create new trie
+    new = () Trie {
+        return Trie {
+            root: TrieNode {
+                children: HashMap<char, TrieNode>::new(),
+                is_word: false,
+                value: Option<string>::None,
+            }
+        }
+    }
+    
+    // Insert word into trie
+    insert = (self:: *Trie, word: string) void {
+        current ::= &self.root
+        
+        word.chars().loop(ch -> {
+            !current.children.contains_key(ch) ?
+                | true => current.children.insert(ch, TrieNode {
+                    children: HashMap<char, TrieNode>::new(),
+                    is_word: false,
+                    value: Option<string>::None,
+                })
+                | false => {}
+            
+            current = current.children.get_mut(ch)
+        })
+        
+        current.is_word = true
+        current.value = Option<string>::Some(word)
+    }
+    
+    // Search for word
+    search = (self: Trie, word: string) bool {
+        current ::= &self.root
+        
+        word.chars().loop(ch -> {
+            current.children.contains_key(ch) ?
+                | true => current = current.children.get(ch)
+                | false => return false
+        })
+        
+        return current.is_word
+    }
+    
+    // Check if any word starts with prefix
+    starts_with = (self: Trie, prefix: string) bool {
+        current ::= &self.root
+        
+        prefix.chars().loop(ch -> {
+            current.children.contains_key(ch) ?
+                | true => current = current.children.get(ch)
+                | false => return false
+        })
+        
+        return true
+    }
+}
+
+// Sorted set implementation using balanced tree
+SortedSet<T> = {
+    items: Vec<T>,
+    compare: (T, T) i32,
+}
+
+SortedSet<T>.impl = {
+    // Create new sorted set
+    new = (compare: (T, T) i32) SortedSet<T> {
+        return SortedSet<T> {
+            items: Vec<T>::new(),
+            compare: compare,
+        }
+    }
+    
+    // Insert element maintaining order
+    insert = (self:: *SortedSet<T>, value: T) bool {
+        idx := self.binary_search(value)
+        
+        idx >= 0 ? | true => return false  // Already exists
+                  | false => {}
+        
+        insert_idx := -(idx + 1)
+        self.items.insert(insert_idx, value)
+        return true
+    }
+    
+    // Remove element
+    remove = (self:: *SortedSet<T>, value: T) bool {
+        idx := self.binary_search(value)
+        
+        idx < 0 ? | true => return false
+                 | false => {}
+        
+        self.items.remove(idx)
+        return true
+    }
+    
+    // Check if contains
+    contains = (self: SortedSet<T>, value: T) bool {
+        return self.binary_search(value) >= 0
+    }
+    
+    // Binary search helper
+    binary_search = (self: SortedSet<T>, value: T) i64 {
+        left ::= 0
+        right ::= self.items.len() - 1
+        
+        loop left <= right {
+            mid := (left + right) / 2
+            cmp := self.compare(value, self.items[mid])
+            
+            cmp == 0 ? | true => return mid
+                      | false => {}
+            
+            cmp < 0 ? | true => right = mid - 1
+                     | false => left = mid + 1
+        }
+        
+        return -(left + 1)  // Not found, return insertion point
+    }
+    
+    // Get minimum element
+    min = (self: SortedSet<T>) Option<T> {
+        self.items.is_empty() ? | true => Option<T>::None
+                               | false => Option<T>::Some(self.items[0])
+    }
+    
+    // Get maximum element
+    max = (self: SortedSet<T>) Option<T> {
+        self.items.is_empty() ? | true => Option<T>::None
+                               | false => Option<T>::Some(self.items[self.items.len() - 1])
+    }
+}
+
+// Utility functions for collections
+
+// Group elements by key
+group_by<T, K> = (items: []T, key_fn: (T) K) HashMap<K, Vec<T>> {
+    groups := HashMap<K, Vec<T>>::new()
+    
+    items.iter().loop(item -> {
+        key := key_fn(item)
+        !groups.contains_key(key) ?
+            | true => groups.insert(key, Vec<T>::new())
+            | false => {}
+        
+        groups.get_mut(key).push(item)
+    })
+    
+    return groups
+}
+
+// Flatten nested collections
+flatten<T> = (nested: [][]T) []T {
+    result := Vec<T>::new()
+    
+    nested.iter().loop(inner -> {
+        inner.iter().loop(item -> {
+            result.push(item)
+        })
+    })
+    
+    return result.to_array()
+}
+
+// Unique elements from collection
+unique<T> = (items: []T, eq: (T, T) bool) []T {
+    result := Vec<T>::new()
+    
+    items.iter().loop(item -> {
+        found ::= false
+        result.iter().loop(existing -> {
+            eq(item, existing) ? | true => found = true
+                                | false => {}
+        })
+        
+        !found ? | true => result.push(item)
+                | false => {}
+    })
+    
+    return result.to_array()
+}
+
+// Zip multiple collections
+zip_all<T> = (collections: [][]T) [][]T {
+    collections.is_empty() ? | true => return [][]T{}
+                           | false => {}
+    
+    min_len := collections[0].len()
+    collections.iter().loop(col -> {
+        col.len() < min_len ? | true => min_len = col.len()
+                             | false => {}
+    })
+    
+    result := Vec<[]T>::new()
+    
+    range(0, min_len).loop(i -> {
+        row := Vec<T>::new()
+        collections.iter().loop(col -> {
+            row.push(col[i])
+        })
+        result.push(row.to_array())
+    })
+    
+    return result.to_array()
+}
