@@ -46,7 +46,7 @@ fn test_factorial_iterative() {
         factorial = (n: i32) i32 {
             result ::= 1
             i ::= 2
-            loop i <= n {
+            loop (i <= n) {
                 result = result * i
                 i = i + 1
             }
@@ -124,7 +124,7 @@ fn test_array_operations() {
             
             // Initialize array
             i ::= 0
-            loop i < 5 {
+            loop (i < 5) {
                 arr[i] = i * i
                 i = i + 1
             }
@@ -132,7 +132,7 @@ fn test_array_operations() {
             // Sum array elements
             sum ::= 0
             i = 0
-            loop i < 5 {
+            loop (i < 5) {
                 sum = sum + arr[i]
                 i = i + 1
             }
@@ -332,7 +332,7 @@ fn test_loop_with_range() {
         main = () i32 {
             sum ::= 0
             i ::= 1
-            loop i < 5 {
+            loop (i < 5) {
                 sum = sum + i
                 i = i + 1
             }
