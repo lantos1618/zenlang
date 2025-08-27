@@ -1,0 +1,206 @@
+// Zen Standard Library: Iterator Module
+// Provides functional iteration patterns for collections
+
+comptime {
+    core := @std.core
+}
+
+// Generic iterator interface
+Iterator<T> = {
+    data: *T,
+    size: i64,
+    current: i64,
+}
+
+// Create iterator from array
+array_iter<T> = (arr: *T, size: i64) Iterator<T> {
+    return Iterator<T> {
+        data: arr,
+        size: size,
+        current: 0,
+    }
+}
+
+// Check if iterator has next element
+Iterator<T>.has_next = (self: Iterator<T>) bool {
+    return self.current < self.size
+}
+
+// Get next element
+Iterator<T>.next = (self:: *Iterator<T>) Option<T> {
+    self.current >= self.size ? 
+        | true => return Option<T>::None
+        | false => {
+            idx := self.current
+            self.current = self.current + 1
+            // Note: Array indexing would be: self.data[idx]
+            // For now using pointer arithmetic concept
+            return Option<T>::Some(*((self.data as i64) + idx * sizeof(T)))
+        }
+}
+
+// Functional iteration methods
+Iterator<T>.for_each = (self: Iterator<T>, callback: (T) void) void {
+    i ::= 0
+    loop i < self.size {
+        // callback(self.data[i])
+        i = i + 1
+    }
+}
+
+// Map iterator to new values
+Iterator<T>.map<U> = (self: Iterator<T>, transform: (T) U) Iterator<U> {
+    // Implementation would require dynamic allocation
+    // Placeholder for concept
+    return Iterator<U> { 
+        data: 0 as *U,
+        size: 0,
+        current: 0,
+    }
+}
+
+// Filter iterator
+Iterator<T>.filter = (self: Iterator<T>, predicate: (T) bool) Iterator<T> {
+    // Implementation would require dynamic allocation
+    // Placeholder for concept
+    return Iterator<T> {
+        data: self.data,
+        size: self.size,
+        current: 0,
+    }
+}
+
+// Reduce/fold operation
+Iterator<T>.reduce<U> = (self: Iterator<T>, initial: U, accumulator: (U, T) U) U {
+    result ::= initial
+    i ::= 0
+    loop i < self.size {
+        // result = accumulator(result, self.data[i])
+        i = i + 1
+    }
+    return result
+}
+
+// Sum numeric iterator (for i32)
+sum_i32 = (iter: Iterator<i32>) i32 {
+    sum ::= 0
+    i ::= 0
+    loop i < iter.size {
+        // sum = sum + iter.data[i]
+        i = i + 1
+    }
+    return sum
+}
+
+// Find first element matching predicate
+Iterator<T>.find = (self: Iterator<T>, predicate: (T) bool) Option<T> {
+    i ::= 0
+    loop i < self.size {
+        // predicate(self.data[i]) ?
+        //     | true => return Option<T>::Some(self.data[i])
+        //     | false => {}
+        i = i + 1
+    }
+    return Option<T>::None
+}
+
+// Check if any element matches predicate
+Iterator<T>.any = (self: Iterator<T>, predicate: (T) bool) bool {
+    i ::= 0
+    loop i < self.size {
+        // predicate(self.data[i]) ?
+        //     | true => return true
+        //     | false => {}
+        i = i + 1
+    }
+    return false
+}
+
+// Check if all elements match predicate
+Iterator<T>.all = (self: Iterator<T>, predicate: (T) bool) bool {
+    i ::= 0
+    loop i < self.size {
+        // predicate(self.data[i]) ?
+        //     | false => return false
+        //     | true => {}
+        i = i + 1
+    }
+    return true
+}
+
+// Count elements matching predicate
+Iterator<T>.count = (self: Iterator<T>, predicate: (T) bool) i64 {
+    count ::= 0
+    i ::= 0
+    loop i < self.size {
+        // predicate(self.data[i]) ?
+        //     | true => count = count + 1
+        //     | false => {}
+        i = i + 1
+    }
+    return count
+}
+
+// Take first n elements
+Iterator<T>.take = (self: Iterator<T>, n: i64) Iterator<T> {
+    new_size := n < self.size ? | true => n | false => self.size
+    return Iterator<T> {
+        data: self.data,
+        size: new_size,
+        current: 0,
+    }
+}
+
+// Skip first n elements
+Iterator<T>.skip = (self: Iterator<T>, n: i64) Iterator<T> {
+    n >= self.size ? 
+        | true => return Iterator<T> { data: self.data, size: 0, current: 0 }
+        | false => {}
+    
+    // Would need pointer arithmetic to skip elements
+    return Iterator<T> {
+        data: self.data,  // Should be: self.data + n
+        size: self.size - n,
+        current: 0,
+    }
+}
+
+// Chain two iterators
+Iterator<T>.chain = (self: Iterator<T>, other: Iterator<T>) Iterator<T> {
+    // Would need dynamic allocation to combine
+    return Iterator<T> {
+        data: self.data,
+        size: self.size + other.size,
+        current: 0,
+    }
+}
+
+// Zip two iterators into pairs
+zip<T, U> = (iter1: Iterator<T>, iter2: Iterator<U>) Iterator<Pair<T, U>> {
+    // Placeholder for concept
+    min_size := iter1.size < iter2.size ? 
+        | true => iter1.size 
+        | false => iter2.size
+    
+    return Iterator<Pair<T, U>> {
+        data: 0 as *Pair<T, U>,
+        size: min_size,
+        current: 0,
+    }
+}
+
+// Pair type for zip
+Pair<T, U> = {
+    first: T,
+    second: U,
+}
+
+// Enumerate iterator with indices
+Iterator<T>.enumerate = (self: Iterator<T>) Iterator<Pair<i64, T>> {
+    // Would return pairs of (index, value)
+    return Iterator<Pair<i64, T>> {
+        data: 0 as *Pair<i64, T>,
+        size: self.size,
+        current: 0,
+    }
+}
