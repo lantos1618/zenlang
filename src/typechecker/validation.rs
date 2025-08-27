@@ -64,6 +64,19 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
             AstType::Range { start_type: expected_start, end_type: expected_end, .. },
             AstType::Range { start_type: actual_start, end_type: actual_end, .. },
         ) => types_compatible(expected_start, actual_start) && types_compatible(expected_end, actual_end),
+        // Function and FunctionPointer compatibility
+        (AstType::Function { args: expected_args, return_type: expected_ret }, 
+         AstType::FunctionPointer { param_types: actual_params, return_type: actual_ret }) => {
+            expected_args.len() == actual_params.len()
+                && expected_args.iter().zip(actual_params.iter()).all(|(e, a)| types_compatible(e, a))
+                && types_compatible(expected_ret, actual_ret)
+        }
+        (AstType::FunctionPointer { param_types: expected_params, return_type: expected_ret },
+         AstType::Function { args: actual_args, return_type: actual_ret }) => {
+            expected_params.len() == actual_args.len()
+                && expected_params.iter().zip(actual_args.iter()).all(|(e, a)| types_compatible(e, a))
+                && types_compatible(expected_ret, actual_ret)
+        }
         // Void is only compatible with void
         (AstType::Void, AstType::Void) => true,
         // All other combinations are incompatible

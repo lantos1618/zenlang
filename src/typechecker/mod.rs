@@ -254,6 +254,13 @@ impl TypeChecker {
                 }
                 self.exit_scope();
             }
+            Statement::PointerAssignment { pointer, value } => {
+                // For array indexing like arr[i] = value
+                // The pointer expression should be a pointer type
+                let _pointer_type = self.infer_expression_type(pointer)?;
+                let _value_type = self.infer_expression_type(value)?;
+                // TODO: Type check that value is compatible with the pointed-to type
+            }
             _ => {}
         }
         Ok(())
@@ -267,15 +274,39 @@ impl TypeChecker {
             Expression::Float64(_) => Ok(AstType::F64),
             Expression::Boolean(_) => Ok(AstType::Bool),
             Expression::String(_) => Ok(AstType::String),
-            Expression::Identifier(name) => self.get_variable_type(name),
+            Expression::Identifier(name) => {
+                // First check if it's a function name
+                if let Some(sig) = self.functions.get(name) {
+                    // Return function pointer type
+                    Ok(AstType::FunctionPointer {
+                        param_types: sig.params.iter().map(|(_, t)| t.clone()).collect(),
+                        return_type: Box::new(sig.return_type.clone()),
+                    })
+                } else {
+                    // Otherwise check if it's a variable
+                    self.get_variable_type(name)
+                }
+            }
             Expression::BinaryOp { left, op, right } => {
                 inference::infer_binary_op_type(self, left, op, right)
             }
             Expression::FunctionCall { name, .. } => {
+                // First check if it's a known function
                 if let Some(sig) = self.functions.get(name) {
                     Ok(sig.return_type.clone())
                 } else {
-                    Err(CompileError::TypeError(format!("Unknown function: {}", name), None))
+                    // Check if it's a variable holding a function pointer
+                    match self.get_variable_type(name) {
+                        Ok(AstType::FunctionPointer { return_type, .. }) => {
+                            Ok(*return_type)
+                        }
+                        Ok(_) => {
+                            Err(CompileError::TypeError(format!("'{}' is not a function", name), None))
+                        }
+                        Err(_) => {
+                            Err(CompileError::TypeError(format!("Unknown function: {}", name), None))
+                        }
+                    }
                 }
             }
             Expression::MemberAccess { object, member } => {

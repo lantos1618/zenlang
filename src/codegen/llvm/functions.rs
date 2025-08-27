@@ -296,7 +296,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             // Get function type from the variable type
             let function_type = match &var_type {
                 AstType::Function { args, return_type } => {
-                    let param_types: Result<Vec<BasicTypeEnum>, CompileError> = args
+                    let param_types_basic: Result<Vec<BasicTypeEnum>, CompileError> = args
                         .iter()
                         .map(|ty| {
                             let llvm_ty = self.to_llvm_type(ty)?;
@@ -306,8 +306,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                             }
                         })
                         .collect();
-                    let param_types = param_types?;
-                    let param_metadata: Vec<BasicMetadataTypeEnum> = param_types.iter().map(|ty| (*ty).into()).collect();
+                    let param_types_basic = param_types_basic?;
+                    let param_metadata: Vec<BasicMetadataTypeEnum> = param_types_basic.iter().map(|ty| (*ty).into()).collect();
                     let ret_type = self.to_llvm_type(return_type)?;
                     match ret_type {
                         Type::Basic(b) => b.fn_type(&param_metadata, false),
@@ -315,15 +315,35 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         _ => return Err(CompileError::InternalError("Function return type must be a basic type or void".to_string(), None)),
                     }
                 },
-                AstType::Pointer(inner) if matches!(**inner, AstType::Function { .. }) => {
+                AstType::FunctionPointer { param_types, return_type } => {
+                    let param_types_basic: Result<Vec<BasicTypeEnum>, CompileError> = param_types
+                        .iter()
+                        .map(|ty| {
+                            let llvm_ty = self.to_llvm_type(ty)?;
+                            match llvm_ty {
+                                Type::Basic(b) => Ok(b),
+                                _ => Err(CompileError::InternalError("Function argument type must be a basic type".to_string(), None)),
+                            }
+                        })
+                        .collect();
+                    let param_types_basic = param_types_basic?;
+                    let param_metadata: Vec<BasicMetadataTypeEnum> = param_types_basic.iter().map(|ty| (*ty).into()).collect();
+                    let ret_type = self.to_llvm_type(return_type)?;
+                    match ret_type {
+                        Type::Basic(b) => b.fn_type(&param_metadata, false),
+                        Type::Void => self.context.void_type().fn_type(&param_metadata, false),
+                        _ => return Err(CompileError::InternalError("Function return type must be a basic type or void".to_string(), None)),
+                    }
+                },
+                AstType::Pointer(inner) if matches!(**inner, AstType::FunctionPointer { .. }) => {
                     let inner_llvm_type = self.to_llvm_type(inner)?;
                     match inner_llvm_type {
                         Type::Basic(inkwell::types::BasicTypeEnum::PointerType(_ptr_type)) => {
                             // For function pointers, we need to get the function type
                             // Since we can't get it directly from the pointer type in newer LLVM,
                             // we'll create a function type based on the AST type
-                            if let AstType::Function { args, return_type } = &**inner {
-                                let param_types: Result<Vec<BasicTypeEnum>, CompileError> = args
+                            if let AstType::FunctionPointer { param_types, return_type } = &**inner {
+                                let param_types_basic: Result<Vec<BasicTypeEnum>, CompileError> = param_types
                                     .iter()
                                     .map(|ty| {
                                         let llvm_ty = self.to_llvm_type(ty)?;
@@ -333,8 +353,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                                         }
                                     })
                                     .collect();
-                                let param_types = param_types?;
-                                let param_metadata: Vec<BasicMetadataTypeEnum> = param_types.iter().map(|ty| (*ty).into()).collect();
+                                let param_types_basic = param_types_basic?;
+                                let param_metadata: Vec<BasicMetadataTypeEnum> = param_types_basic.iter().map(|ty| (*ty).into()).collect();
                                 let ret_type = self.to_llvm_type(return_type)?;
                                 match ret_type {
                                     Type::Basic(b) => b.fn_type(&param_metadata, false),
@@ -342,7 +362,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                                     _ => return Err(CompileError::InternalError("Function return type must be a basic type or void".to_string(), None)),
                                 }
                             } else {
-                                return Err(CompileError::InternalError("Expected function type in pointer".to_string(), None));
+                                return Err(CompileError::InternalError("Expected function pointer type in pointer".to_string(), None));
                             }
                         },
                         _ => return Err(CompileError::TypeMismatch {
