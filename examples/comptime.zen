@@ -4,6 +4,7 @@ comptime {
     build := @std.build
     io := build.import("io")
     math := build.import("math")
+    range := core.range
 }
 
 // Compile-time constant calculation
@@ -11,8 +12,10 @@ FIBONACCI_10 := comptime {
     fib :: [10]i32
     fib[0] = 0
     fib[1] = 1
-    loop i in 2..10 {
+    i ::= 2
+    loop i < 10 {
         fib[i] = fib[i-1] + fib[i-2]
+        i = i + 1
     }
     fib[9]  // Result: 34
 }
@@ -20,8 +23,10 @@ FIBONACCI_10 := comptime {
 // Compile-time lookup table generation
 SQUARES := comptime {
     table :: [100]i32
-    loop i in 0..100 {
+    i ::= 0
+    loop i < 100 {
         table[i] = i * i
+        i = i + 1
     }
     table
 }

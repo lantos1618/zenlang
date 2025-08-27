@@ -331,8 +331,10 @@ fn test_loop_with_range() {
         
         main = () i32 {
             sum ::= 0
-            loop i in 1..5 {
+            i ::= 1
+            loop i < 5 {
                 sum = sum + i
+                i = i + 1
             }
             printf("Sum of 1..5: %d\n", sum)
             return 0
