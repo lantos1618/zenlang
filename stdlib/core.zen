@@ -25,17 +25,17 @@ Error =
     | SystemError(code: i32)
 
 // Memory operations (will be implemented with comptime/intrinsics)
-extern malloc(size: i64) *void
-extern free(ptr: *void) void
-extern memcpy(dest: *void, src: *void, n: i64) *void
-extern memset(ptr: *void, value: i32, n: i64) *void
+extern malloc = (size: i64) *void
+extern free = (ptr: *void) void
+extern memcpy = (dest: *void, src: *void, n: i64) *void
+extern memset = (ptr: *void, value: i32, n: i64) *void
 
 // Assertion for debugging
 assert = (condition: bool, message: string) void {
     condition ? | false => {
         // In the future, this would panic with the message
         // For now, we'll use a placeholder
-        extern exit(code: i32) void
+        extern exit = (code: i32) void
         exit(1)
     }
     | true => {}
