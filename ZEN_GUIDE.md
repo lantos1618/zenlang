@@ -204,9 +204,10 @@ comptime {
     // This runs at compile time
     ValidTypes := [i32, f64, string]
     
-    loop T in ValidTypes {
-        // Generate specialized versions
-    }
+    // Use functional iteration for type processing
+    // ValidTypes.loop(T -> {
+    //     // Generate specialized versions
+    // })
 }
 ```
 

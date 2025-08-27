@@ -287,7 +287,7 @@ This creates an extremely clean, readable, and keyword-free system where:
 
 #### The `loop` Construct
 
-`loop` is the only looping keyword, used for all iteration patterns.
+`loop` is the only looping keyword, used for conditional iteration patterns. For range and collection iteration, use functional methods.
 
 *   **Conditional Loop (`while`-like):**
 
@@ -300,13 +300,18 @@ This creates an extremely clean, readable, and keyword-free system where:
     io.print("Liftoff!")
     ```
 
-*   **Iterable Loop (`for`-each like):**
+*   **Functional Iteration (ranges and collections):**
 
     ```zen
-    names := ["Alice", "Bob", "Charlie"]
-    loop name in names {
-        io.print("Hello, $(name)!")
-    }
+    // Range iteration
+    range(0, 10).loop(i -> {
+        io.print("$(i) ")
+    })
+    
+    // Collection iteration (future)
+    items.loop(item -> {
+        io.print("Processing $(item)")
+    })
     ```
 
 *   **Loop Control:** `break` exits a loop, and `continue` skips to the next iteration. Labels can be used for nested loop control: `my_label: loop { ... break my_label ... }`.

@@ -39,9 +39,9 @@ The Zen compiler has reached significant maturity with 99.6% test pass rate (285
 ### 4. Control Flow
 - **Pattern matching**: Full `?` operator with multiple arms
 - **Loops**: 
-  - `loop condition { body }`
-  - `loop i in range { body }`
-  - `loop { body }` with `break` and `continue`
+  - `loop condition { body }` - conditional loops
+  - `loop { body }` with `break` and `continue` - infinite loops
+  - `range(0, 10).loop(i -> { })` - functional range iteration
 - **Conditional compilation**: `comptime { ... }` blocks
 
 ### 5. Module System
