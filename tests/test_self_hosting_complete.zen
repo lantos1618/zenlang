@@ -1,0 +1,309 @@
+// Comprehensive Self-Hosting Test for Zen Language
+// Tests that all stdlib modules required for self-hosting are working
+
+comptime {
+    std := @std
+    core := std.core
+    io := std.io
+    fs := std.fs
+    assert := std.assert
+    test := std.test_framework
+}
+
+// Import compiler modules
+comptime {
+    lexer := std.lexer
+    parser := std.parser
+    ast := std.ast
+    type_checker := std.type_checker
+    codegen := std.codegen
+}
+
+// Import support modules
+comptime {
+    vec := std.vec
+    hashmap := std.hashmap
+    string := std.string
+    mem := std.mem
+    process := std.process
+    thread := std.thread
+    async := std.async
+}
+
+extern puts = (s: *i8) i32
+extern printf = (format: *i8, ...) i32
+extern malloc = (size: i64) *void
+extern free = (ptr: *void) void
+
+// Test lexer functionality
+test_lexer = () bool {
+    puts("Testing Lexer...")
+    
+    // Create a simple token test
+    input := "x := 42"
+    lex := lexer.Lexer.new(input)
+    
+    // Get first token (identifier)
+    token1 := lex.next_token()
+    assert.equal(token1.type, lexer.TokenType.Identifier)
+    assert.equal(token1.value, "x")
+    
+    // Get second token (:=)
+    token2 := lex.next_token()
+    assert.equal(token2.type, lexer.TokenType.Assign)
+    assert.equal(token2.value, ":=")
+    
+    // Get third token (number)
+    token3 := lex.next_token()
+    assert.equal(token3.type, lexer.TokenType.Number)
+    assert.equal(token3.value, "42")
+    
+    puts("  ✓ Lexer tests passed")
+    return true
+}
+
+// Test parser functionality
+test_parser = () bool {
+    puts("Testing Parser...")
+    
+    input := "x := 42; y ::= x + 1"
+    p := parser.Parser.new(input)
+    
+    // Parse the program
+    program := p.parse()
+    assert.not_null(program)
+    assert.equal(program.statements.len, 2)
+    
+    puts("  ✓ Parser tests passed")
+    return true
+}
+
+// Test AST functionality
+test_ast = () bool {
+    puts("Testing AST...")
+    
+    // Create a simple AST node
+    lit := ast.IntLiteral { value: 42 }
+    assert.equal(lit.value, 42)
+    
+    // Create an identifier
+    id := ast.Identifier { name: "x" }
+    assert.equal(id.name, "x")
+    
+    puts("  ✓ AST tests passed")
+    return true
+}
+
+// Test type checker functionality
+test_type_checker = () bool {
+    puts("Testing Type Checker...")
+    
+    // Create type environment
+    env := type_checker.TypeEnv.new()
+    
+    // Add a variable
+    env.define("x", type_checker.Type.Int)
+    
+    // Check type
+    x_type := env.get("x")
+    assert.equal(x_type, type_checker.Type.Int)
+    
+    puts("  ✓ Type Checker tests passed")
+    return true
+}
+
+// Test code generation functionality
+test_codegen = () bool {
+    puts("Testing Code Generator...")
+    
+    // Create a code generator
+    gen := codegen.CodeGen.new()
+    
+    // Generate a simple function
+    gen.begin_function("test", type_checker.Type.Int, [])
+    gen.emit_return(codegen.IntValue { value: 42 })
+    func := gen.end_function()
+    
+    assert.not_null(func)
+    assert.equal(func.name, "test")
+    
+    puts("  ✓ Code Generator tests passed")
+    return true
+}
+
+// Test Vec (dynamic array)
+test_vec = () bool {
+    puts("Testing Vec...")
+    
+    v := vec.Vec<i32>.new()
+    v.push(10)
+    v.push(20)
+    v.push(30)
+    
+    assert.equal(v.len(), 3)
+    assert.equal(v.get(0), 10)
+    assert.equal(v.get(1), 20)
+    assert.equal(v.get(2), 30)
+    
+    popped := v.pop()
+    assert.equal(popped, 30)
+    assert.equal(v.len(), 2)
+    
+    puts("  ✓ Vec tests passed")
+    return true
+}
+
+// Test HashMap
+test_hashmap = () bool {
+    puts("Testing HashMap...")
+    
+    map := hashmap.HashMap<string, i32>.new()
+    map.insert("one", 1)
+    map.insert("two", 2)
+    map.insert("three", 3)
+    
+    assert.equal(map.get("one"), 1)
+    assert.equal(map.get("two"), 2)
+    assert.equal(map.get("three"), 3)
+    assert.equal(map.len(), 3)
+    
+    map.remove("two")
+    assert.equal(map.len(), 2)
+    assert.false(map.contains("two"))
+    
+    puts("  ✓ HashMap tests passed")
+    return true
+}
+
+// Test functional loop syntax
+test_functional_loops = () bool {
+    puts("Testing Functional Loops...")
+    
+    sum ::= 0
+    core.range(1, 6).loop(i -> {
+        sum = sum + i
+    })
+    assert.equal(sum, 15)  // 1+2+3+4+5 = 15
+    
+    sum2 ::= 0
+    core.range_inclusive(1, 5).loop(i -> {
+        sum2 = sum2 + i
+    })
+    assert.equal(sum2, 15)  // 1+2+3+4+5 = 15
+    
+    puts("  ✓ Functional loop tests passed")
+    return true
+}
+
+// Test async/await functionality
+test_async = () bool {
+    puts("Testing Async...")
+    
+    // Create an async task
+    task := async.Task<i32>.new(() i32 {
+        return 42
+    })
+    
+    // Wait for result
+    result := task.await()
+    assert.equal(result, 42)
+    
+    puts("  ✓ Async tests passed")
+    return true
+}
+
+// Test thread functionality
+test_threads = () bool {
+    puts("Testing Threads...")
+    
+    counter ::= 0
+    mutex := thread.Mutex.new()
+    
+    // Create threads
+    t1 := thread.Thread.spawn(() void {
+        mutex.lock()
+        counter = counter + 1
+        mutex.unlock()
+    })
+    
+    t2 := thread.Thread.spawn(() void {
+        mutex.lock()
+        counter = counter + 1
+        mutex.unlock()
+    })
+    
+    t1.join()
+    t2.join()
+    
+    assert.equal(counter, 2)
+    
+    puts("  ✓ Thread tests passed")
+    return true
+}
+
+// Test process functionality
+test_process = () bool {
+    puts("Testing Process...")
+    
+    // Get current process ID
+    pid := process.get_pid()
+    assert.true(pid > 0)
+    
+    // Get environment variable
+    path := process.get_env("PATH")
+    assert.not_null(path)
+    
+    puts("  ✓ Process tests passed")
+    return true
+}
+
+// Main test runner
+main = () i32 {
+    printf("\n=== Zen Self-Hosting Comprehensive Test Suite ===\n\n")
+    
+    passed ::= 0
+    failed ::= 0
+    
+    tests := [
+        ("Lexer", test_lexer),
+        ("Parser", test_parser),
+        ("AST", test_ast),
+        ("Type Checker", test_type_checker),
+        ("Code Generator", test_codegen),
+        ("Vec", test_vec),
+        ("HashMap", test_hashmap),
+        ("Functional Loops", test_functional_loops),
+        ("Async", test_async),
+        ("Threads", test_threads),
+        ("Process", test_process)
+    ]
+    
+    i ::= 0
+    loop i < 11 {
+        test := tests[i]
+        printf("Running test: %s\n", test.0)
+        
+        test.1() ? | true => {
+            passed = passed + 1
+            printf("  PASSED\n")
+        } | false => {
+            failed = failed + 1
+            printf("  FAILED\n")
+        }
+        
+        i = i + 1
+    }
+    
+    printf("\n=== Test Results ===\n")
+    printf("Passed: %d\n", passed)
+    printf("Failed: %d\n", failed)
+    printf("Total:  %d\n", passed + failed)
+    
+    failed == 0 ? | true => {
+        printf("\n✅ All tests passed! Zen is ready for self-hosting!\n")
+        return 0
+    } | false => {
+        printf("\n❌ Some tests failed. Please review.\n")
+        return 1
+    }
+}
