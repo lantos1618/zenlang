@@ -1,0 +1,303 @@
+// Zen Standard Library: Extended Math Module
+// Transcendental and advanced mathematical functions
+
+comptime {
+    core := @std.core
+    math := @std.math
+}
+
+// External math functions from libc
+extern sin = (x: f64) f64
+extern cos = (x: f64) f64
+extern tan = (x: f64) f64
+extern asin = (x: f64) f64
+extern acos = (x: f64) f64
+extern atan = (x: f64) f64
+extern atan2 = (y: f64, x: f64) f64
+extern sinh = (x: f64) f64
+extern cosh = (x: f64) f64
+extern tanh = (x: f64) f64
+extern exp = (x: f64) f64
+extern log = (x: f64) f64
+extern log10 = (x: f64) f64
+extern log2 = (x: f64) f64
+extern pow = (base: f64, exp: f64) f64
+extern sqrt = (x: f64) f64
+extern cbrt = (x: f64) f64
+extern hypot = (x: f64, y: f64) f64
+extern fma = (x: f64, y: f64, z: f64) f64
+
+// Trigonometric functions with degree versions
+sin_deg = (degrees: f64) f64 {
+    return sin(math.deg_to_rad(degrees))
+}
+
+cos_deg = (degrees: f64) f64 {
+    return cos(math.deg_to_rad(degrees))
+}
+
+tan_deg = (degrees: f64) f64 {
+    return tan(math.deg_to_rad(degrees))
+}
+
+// Exponential and logarithmic utilities
+exp2 = (x: f64) f64 {
+    return pow(2.0, x)
+}
+
+exp10 = (x: f64) f64 {
+    return pow(10.0, x)
+}
+
+ln = (x: f64) f64 {
+    return log(x)  // Natural logarithm alias
+}
+
+// Logistic function (sigmoid)
+sigmoid = (x: f64) f64 {
+    return 1.0 / (1.0 + exp(-x))
+}
+
+// Hyperbolic functions utilities
+asinh = (x: f64) f64 {
+    return log(x + sqrt(x * x + 1.0))
+}
+
+acosh = (x: f64) f64 {
+    x < 1.0 ? | true => return 0.0 / 0.0  // NaN for x < 1
+             | false => {}
+    return log(x + sqrt(x * x - 1.0))
+}
+
+atanh = (x: f64) f64 {
+    math.abs_f64(x) >= 1.0 ? | true => return 0.0 / 0.0  // NaN for |x| >= 1
+                            | false => {}
+    return 0.5 * log((1.0 + x) / (1.0 - x))
+}
+
+// Statistical functions
+mean_f64 = (values: *f64, count: i64) f64 {
+    count <= 0 ? | true => return 0.0 / 0.0  // NaN for empty array
+                | false => {}
+    
+    sum := 0.0
+    i ::= 0i64
+    loop (i < count) {
+        sum = sum + values[i]
+        i = i + 1
+    }
+    
+    return sum / (count as f64)
+}
+
+variance_f64 = (values: *f64, count: i64) f64 {
+    count <= 1 ? | true => return 0.0 / 0.0  // NaN for insufficient data
+                | false => {}
+    
+    mean := mean_f64(values, count)
+    sum_sq_diff := 0.0
+    i ::= 0i64
+    
+    loop (i < count) {
+        diff := values[i] - mean
+        sum_sq_diff = sum_sq_diff + diff * diff
+        i = i + 1
+    }
+    
+    return sum_sq_diff / ((count - 1) as f64)
+}
+
+std_dev_f64 = (values: *f64, count: i64) f64 {
+    return sqrt(variance_f64(values, count))
+}
+
+// Compute sum of array
+sum_f64 = (values: *f64, count: i64) f64 {
+    sum := 0.0
+    i ::= 0i64
+    loop (i < count) {
+        sum = sum + values[i]
+        i = i + 1
+    }
+    return sum
+}
+
+// Compute product of array
+product_f64 = (values: *f64, count: i64) f64 {
+    count <= 0 ? | true => return 1.0
+                | false => {}
+    
+    product := 1.0
+    i ::= 0i64
+    loop (i < count) {
+        product = product * values[i]
+        i = i + 1
+    }
+    return product
+}
+
+// Find minimum in array
+min_array_f64 = (values: *f64, count: i64) f64 {
+    count <= 0 ? | true => return 0.0 / 0.0  // NaN for empty array
+                | false => {}
+    
+    min := values[0]
+    i ::= 1i64
+    loop (i < count) {
+        values[i] < min ? | true => { min = values[i] }
+                        | false => {}
+        i = i + 1
+    }
+    return min
+}
+
+// Find maximum in array
+max_array_f64 = (values: *f64, count: i64) f64 {
+    count <= 0 ? | true => return 0.0 / 0.0  // NaN for empty array
+                | false => {}
+    
+    max := values[0]
+    i ::= 1i64
+    loop (i < count) {
+        values[i] > max ? | true => { max = values[i] }
+                        | false => {}
+        i = i + 1
+    }
+    return max
+}
+
+// Euclidean distance in 2D
+distance_2d = (x1: f64, y1: f64, x2: f64, y2: f64) f64 {
+    dx := x2 - x1
+    dy := y2 - y1
+    return hypot(dx, dy)
+}
+
+// Euclidean distance in 3D
+distance_3d = (x1: f64, y1: f64, z1: f64, x2: f64, y2: f64, z2: f64) f64 {
+    dx := x2 - x1
+    dy := y2 - y1
+    dz := z2 - z1
+    return sqrt(dx * dx + dy * dy + dz * dz)
+}
+
+// Normalize value to [0, 1] range
+normalize = (value: f64, min: f64, max: f64) f64 {
+    min == max ? | true => return 0.5
+                | false => {}
+    return (value - min) / (max - min)
+}
+
+// Clamp and normalize
+clamp_normalize = (value: f64, min: f64, max: f64) f64 {
+    clamped := math.clamp_f64(value, min, max)
+    return normalize(clamped, min, max)
+}
+
+// Compute nth root
+nth_root = (x: f64, n: f64) f64 {
+    n == 0.0 ? | true => return 0.0 / 0.0  // NaN
+              | false => {}
+    return pow(x, 1.0 / n)
+}
+
+// Gamma function approximation (Stirling's approximation)
+// Note: This is a simple approximation, not the full gamma function
+gamma_approx = (x: f64) f64 {
+    x <= 0.0 ? | true => return 0.0 / 0.0  // NaN for non-positive
+              | false => {}
+    
+    // Stirling's approximation: sqrt(2*pi*x) * (x/e)^x
+    return sqrt(2.0 * math.PI * x) * pow(x / math.E, x)
+}
+
+// Error function approximation
+// Using Abramowitz and Stegun approximation
+erf_approx = (x: f64) f64 {
+    // Constants
+    a1 :=  0.254829592
+    a2 := -0.284496736
+    a3 :=  1.421413741
+    a4 := -1.453152027
+    a5 :=  1.061405429
+    p  :=  0.3275911
+    
+    // Save the sign of x
+    sign := math.sign_f64(x)
+    x = math.abs_f64(x)
+    
+    // A&S formula 7.1.26
+    t := 1.0 / (1.0 + p * x)
+    y := 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * exp(-x * x)
+    
+    return (sign as f64) * y
+}
+
+// Complementary error function
+erfc_approx = (x: f64) f64 {
+    return 1.0 - erf_approx(x)
+}
+
+// Binomial coefficient (n choose k)
+binomial = (n: i64, k: i64) i64 {
+    k < 0 || k > n ? | true => return 0
+                    | false => {}
+    
+    k == 0 || k == n ? | true => return 1
+                      | false => {}
+    
+    // Optimize by using the smaller k
+    k > n - k ? | true => { k = n - k }
+              | false => {}
+    
+    result ::= 1i64
+    i ::= 0i64
+    loop (i < k) {
+        result = result * (n - i) / (i + 1)
+        i = i + 1
+    }
+    
+    return result
+}
+
+// Logarithm with arbitrary base
+log_base = (x: f64, base: f64) f64 {
+    return log(x) / log(base)
+}
+
+// Check if two floats are approximately equal
+approx_equal = (a: f64, b: f64, epsilon: f64) bool {
+    return math.abs_f64(a - b) < epsilon
+}
+
+// Linear congruential generator (simple PRNG)
+// Note: This is a basic implementation for demonstration
+LCG = {
+    seed: i64,
+}
+
+lcg_new = (seed: i64) LCG {
+    return LCG { seed: seed }
+}
+
+lcg_next = (lcg: *LCG) i64 {
+    // Parameters from Numerical Recipes
+    a := 1664525i64
+    c := 1013904223i64
+    m := 2147483648i64  // 2^31
+    
+    lcg.seed = (a * lcg.seed + c) % m
+    return lcg.seed
+}
+
+lcg_next_float = (lcg: *LCG) f64 {
+    return (lcg_next(lcg) as f64) / 2147483648.0
+}
+
+lcg_next_range = (lcg: *LCG, min: i64, max: i64) i64 {
+    min >= max ? | true => return min
+                | false => {}
+    
+    range := max - min
+    return min + (lcg_next(lcg) % range)
+}

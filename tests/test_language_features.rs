@@ -15,7 +15,7 @@ fn test_fibonacci_recursive() {
         extern printf = (format: *i8, ...) i32
         
         fib = (n: i32) i32 {
-            n <= 1 ? | true => n | false => fib(n - 1) + fib(n - 2)
+            return n <= 1 ? | true => n | false => fib(n - 1) + fib(n - 2)
         }
         
         main = () i32 {
@@ -128,7 +128,7 @@ fn test_array_operations() {
             
             // Initialize array
             i ::= 0
-            loop i < 5 {
+            loop (i < 5) {
                 arr[i] = i * i
                 i = i + 1
             }
@@ -136,7 +136,7 @@ fn test_array_operations() {
             // Sum array elements
             sum ::= 0
             i = 0
-            loop i < 5 {
+            loop (i < 5) {
                 sum = sum + arr[i]
                 i = i + 1
             }
@@ -194,13 +194,9 @@ fn test_nested_pattern_matching() {
         extern printf = (format: *i8, ...) i32
         
         classify = (x: i32, y: i32) i32 {
-            x == 0 ? 
-                | true => {
-                    y == 0 ? | true => 0 | false => 1
-                }
-                | false => {
-                    y == 0 ? | true => 2 | false => 3
-                }
+            return x == 0 ? 
+                | true => y == 0 ? | true => 0 | false => 1
+                | false => y == 0 ? | true => 2 | false => 3
         }
         
         main = () i32 {
