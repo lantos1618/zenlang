@@ -13,30 +13,31 @@
   - Fixed typechecker to recognize StringInterpolation
   - Fixed identifier loading for string pointers
   - Works correctly when stored in variables
+- [x] Implement comptime execution system (DONE - 2025-08-27)
+  - Integrated into compiler pipeline
+  - Comptime blocks and expressions evaluated at compile time
+  - Tests verify constant folding works
+- [x] Fix loop mutability issues (VERIFIED WORKING - 2025-08-27)
+  - Loops support mutable variables correctly
+  - Comprehensive tests added
 
 ## High Priority 🔴
-1. [ ] Implement comptime execution system
-   - Framework exists but not connected
-   - Need to connect to compiler pipeline
-   - Required for build system integration
-   
-2. [ ] Fix loop mutability issues
-   - Cannot reassign variables in loops
-   - Blocks many algorithm implementations
-
-## Medium Priority 🟡
-3. [ ] Complete self-hosted parser implementation
+1. [ ] Complete self-hosted parser implementation
    - Basic structure created in stdlib/parser.zen
    - Need to implement actual parsing logic
    - Need to handle all AST node types
    
-4. [ ] Write comprehensive stdlib modules in Zen
-   - io.zen - Input/output operations
-   - fs.zen - File system operations  
-   - net.zen - Network operations (TCP/UDP)
-   - collections.zen - Data structures
-   - algorithms.zen - Common algorithms
-   - mem.zen - Memory management
+2. [x] Write comprehensive stdlib modules in Zen (ALREADY EXISTS)
+   - io.zen - Input/output operations ✓
+   - fs.zen - File system operations ✓
+   - net.zen - Network operations (TCP/UDP) ✓
+   - collections.zen - Data structures ✓
+   - algorithms.zen - Common algorithms ✓
+   - mem.zen - Memory management ✓
+   - math.zen - Mathematical functions ✓
+   - string.zen - String operations ✓
+   - hashmap.zen - Hash map implementation ✓
+   - vec.zen - Vector implementation ✓
 
 ## Low Priority 🟢  
 5. [ ] Create bootstrap process for self-hosting
