@@ -6,10 +6,10 @@
 - **Goal**: Self-hosted compiler with comprehensive standard library
 
 ## Current Status (2025-08-27)
-- Loop syntax already converted to functional approach ✓
-- No changes needed to parser/lexer/codegen
-- Standard library modules partially implemented
-- Working towards self-hosting
+- Loop syntax fully converted to functional approach ✓
+- Documentation cleaned up - no old syntax references ✓
+- Standard library expanded with critical modules ✓
+- Working towards self-hosting with 24 stdlib modules
 
 ## Key Files & Locations
 ### Core Implementation
@@ -48,20 +48,36 @@ loop { }           // infinite
 // These have been replaced with functional approach
 ```
 
-## Standard Library Progress
-### Existing Modules
+## Standard Library Progress (24 modules total)
+### Core Modules (Complete)
 - ✓ core.zen - Basic types and functions
 - ✓ io.zen - Input/output operations  
 - ✓ iterator.zen - Iteration utilities
+- ✓ mem.zen - Memory management
+- ✓ math.zen - Mathematical functions
+- ✓ string.zen - String utilities
+- ✓ collections.zen - Data structures
+- ✓ fs.zen - File system operations
+- ✓ net.zen - Network operations
+- ✓ vec.zen - Dynamic arrays
+- ✓ hashmap.zen - Hash map implementation
+- ✓ algorithms.zen - Common algorithms
 
-### To Implement
-- [ ] mem.zen - Memory management
-- [ ] math.zen - Mathematical functions
-- [ ] string.zen - String utilities
-- [ ] collections.zen - Data structures
-- [ ] fs.zen - File system operations
-- [ ] net.zen - Network operations
+### New Modules Added (2025-08-27)
+- ✓ assert.zen - Testing and assertion utilities
+- ✓ process.zen - Process management
+- ✓ thread.zen - Threading and concurrency
+
+### Compiler Support Modules
+- ✓ lexer.zen - Tokenization (90% complete)
+- ✓ parser.zen - Parsing (25% complete)
+
+### To Implement for Full Self-Hosting
+- [ ] ast.zen - Abstract syntax tree
+- [ ] type_checker.zen - Type checking
+- [ ] codegen.zen - Code generation
 - [ ] async.zen - Async/await utilities
+- [ ] test_framework.zen - Testing infrastructure
 
 ## Design Principles
 - No keywords philosophy - composable primitives
@@ -71,12 +87,14 @@ loop { }           // infinite
 - Simplicity, elegance, practicality
 - DRY & KISS principles
 
-## Recent Commits
+## Recent Commits (2025-08-27)
+- 3709c52: Added critical stdlib modules (assert, process, thread)
+- 7f196bf: Cleaned up references to old loop syntax
+- cbf3787: Refactored loop syntax to use parentheses
+- 078714e: Removed unused 'In' keyword from lexer
 - d7746ce: Session summary documentation
 - 9a0e96a: Updated loop syntax documentation to functional approach ✓
 - 14b4a17: Added comprehensive self-hosted test suites
-- 96e0c34: Added type casting and improved language features
-- 5255e43: Fixed loop syntax parsing and improved test suite
 
 ## Next Steps
 1. Clean up any remaining legacy loop references
