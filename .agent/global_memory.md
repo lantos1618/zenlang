@@ -7,7 +7,7 @@
 - **Branch**: master
 - **Last Updated**: 2025-08-28
 - **Overall Completion**: ~55-60%
-- **Self-Hosting Progress**: ~30%
+- **Self-Hosting Progress**: ~35%
 
 ## Recent Accomplishments
 
@@ -28,17 +28,25 @@
    - Position tracking implemented
    - Loop-based parsing working
 
-2. **Parser** (stdlib/parser.zen): ~10% Complete
+2. **Parser** (stdlib/parser.zen): ~25% Complete
    - AST definitions complete
-   - Basic structure in place
-   - Implementation pending
+   - Expression parsing with precedence implemented
+   - Statement parsing functions added
+   - Declaration parsing structured
+   - Needs array access and token handling
 
-3. **String Utils** (stdlib/string_utils.zen): New!
+3. **String Utils** (stdlib/string_utils.zen): Complete
    - Complete string manipulation library
    - Essential functions for self-hosting
    - String comparison, concatenation, trimming
    - Character classification functions
    - Substring and parsing utilities
+
+4. **Iterator** (stdlib/iterator.zen): New!
+   - Functional iteration patterns
+   - Iterator<T> type with common operations
+   - Methods: for_each, map, filter, reduce, find
+   - Utilities: take, skip, chain, zip, enumerate
 
 ## Language Features Status
 
