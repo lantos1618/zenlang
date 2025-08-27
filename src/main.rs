@@ -128,8 +128,6 @@ fn run_repl() -> std::io::Result<()> {
 }
 
 fn run_file(file_path: &str) -> std::io::Result<()> {
-    println!("📁 Compiling and running: {}", file_path);
-    
     // Read the file
     let source = std::fs::read_to_string(file_path)
         .map_err(|e| io::Error::new(io::ErrorKind::NotFound, format!("Failed to read file: {}", e)))?;
@@ -140,11 +138,11 @@ fn run_file(file_path: &str) -> std::io::Result<()> {
     match execute_zen_code(&mut compiler, &source) {
         Ok(result) => {
             if let Some(value) = result {
-                println!("=> {}", value);
+                println!("{}", value);
             }
         }
         Err(e) => {
-            eprintln!("❌ Compilation error: {}", e);
+            eprintln!("Compilation error: {}", e);
             std::process::exit(1);
         }
     }
@@ -166,9 +164,8 @@ fn execute_zen_code(compiler: &mut Compiler, source: &str) -> Result<Option<Stri
     // Compile the program using LLVM backend
     let llvm_ir = compiler.compile_llvm(&program)?;
     
-    // For now, just return the LLVM IR as a string
-    // TODO: Implement JIT execution in the future
-    Ok(Some(format!("Compiled successfully!\nLLVM IR:\n{}", llvm_ir)))
+    // Return just the LLVM IR
+    Ok(Some(llvm_ir))
 }
 
 fn print_repl_help() {
