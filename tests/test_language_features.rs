@@ -15,7 +15,7 @@ fn test_fibonacci_recursive() {
         extern printf = (format: *i8, ...) i32
         
         fib = (n: i32) i32 {
-            (n <= 1) ? | true => { return n } | false => { return fib(n - 1) + fib(n - 2) }
+            n <= 1 ? | true => n | false => fib(n - 1) + fib(n - 2)
         }
         
         main = () i32 {
@@ -77,17 +77,21 @@ fn test_struct_with_methods() {
     
     let input = r#"
         extern printf = (format: *i8, ...) i32
+        extern malloc = (size: i64) *void
         
         Point = {
             x: i32,
             y: i32,
         }
         
-        point_new = (x: i32, y: i32) Point {
-            return Point { x: x, y: y }
+        point_new = (x: i32, y: i32) *Point {
+            p := malloc(8) as *Point
+            p.x = x
+            p.y = y
+            return p
         }
         
-        point_distance_squared = (p: Point) i32 {
+        point_distance_squared = (p: *Point) i32 {
             return p.x * p.x + p.y * p.y
         }
         
@@ -124,7 +128,7 @@ fn test_array_operations() {
             
             // Initialize array
             i ::= 0
-            loop (i < 5) {
+            loop i < 5 {
                 arr[i] = i * i
                 i = i + 1
             }
@@ -132,7 +136,7 @@ fn test_array_operations() {
             // Sum array elements
             sum ::= 0
             i = 0
-            loop (i < 5) {
+            loop i < 5 {
                 sum = sum + arr[i]
                 i = i + 1
             }
@@ -190,14 +194,13 @@ fn test_nested_pattern_matching() {
         extern printf = (format: *i8, ...) i32
         
         classify = (x: i32, y: i32) i32 {
-            result := x ? 
-                | 0 => {
-                    y ? | 0 => 0 | _ => 1
+            x == 0 ? 
+                | true => {
+                    y == 0 ? | true => 0 | false => 1
                 }
-                | _ => {
-                    y ? | 0 => 2 | _ => 3
+                | false => {
+                    y == 0 ? | true => 2 | false => 3
                 }
-            return result
         }
         
         main = () i32 {
@@ -270,16 +273,23 @@ fn test_multiple_return_values() {
     
     let input = r#"
         extern printf = (format: *i8, ...) i32
+        extern malloc = (size: i64) *void
         
-        divmod = (a: i32, b: i32) (i32, i32) {
-            quotient := a / b
-            remainder := a - (quotient * b)
-            return (quotient, remainder)
+        DivModResult = {
+            quotient: i32,
+            remainder: i32,
+        }
+        
+        divmod = (a: i32, b: i32) *DivModResult {
+            result := malloc(8) as *DivModResult
+            result.quotient = a / b
+            result.remainder = a - (result.quotient * b)
+            return result
         }
         
         main = () i32 {
             result := divmod(17, 5)
-            printf("17 / 5 = %d remainder %d\n", result.0, result.1)
+            printf("17 / 5 = %d remainder %d\n", result.quotient, result.remainder)
             return 0
         }
     "#;
