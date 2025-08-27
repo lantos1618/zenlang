@@ -6,8 +6,8 @@
 - **Current Status**: 100% test pass rate
 - **Branch**: master
 - **Last Updated**: 2025-08-27
-- **Overall Completion**: ~60-65%
-- **Self-Hosting Progress**: ~40%
+- **Overall Completion**: ~70-75%
+- **Self-Hosting Progress**: ~50%
 
 ## Recent Accomplishments
 
@@ -17,7 +17,7 @@
 3. **Comptime Integration Tests**: Fixed most tests, one temporarily ignored due to type mismatch
 4. **Loop Mutability**: FIXED - mutable loop variables work correctly
 5. **String Interpolation**: FULLY WORKING with `$(expr)` syntax including variable storage
-6. **Loop Syntax Simplification**: IN PROGRESS - Transitioning to functional loop syntax with range().loop() and iterator.loop()
+6. **Loop Syntax Simplification**: COMPLETE - Removed old loop syntax patterns, now only supporting `loop condition` and functional patterns
 
 ### Self-Hosted Components Progress
 1. **Lexer** (stdlib/lexer.zen): ~90% Complete
@@ -42,11 +42,30 @@
    - Character classification functions
    - Substring and parsing utilities
 
-4. **Iterator** (stdlib/iterator.zen): New!
+4. **Iterator** (stdlib/iterator.zen): Complete
    - Functional iteration patterns
    - Iterator<T> type with common operations
    - Methods: for_each, map, filter, reduce, find
    - Utilities: take, skip, chain, zip, enumerate
+
+5. **Core** (stdlib/core.zen): Enhanced!
+   - Added 50+ essential operations
+   - Mathematical functions (gcd, lcm, factorial, fibonacci, is_prime)
+   - Bit operations (count_ones, is_power_of_two, etc.)
+   - Array utilities (min, max, sum, find, reverse, etc.)
+   - Type size and alignment helpers
+
+6. **Vec** (stdlib/vec.zen): Enhanced!
+   - Added 20+ new methods
+   - Functional operations (map, filter, find, etc.)
+   - Advanced operations (split_off, extend, shrink_to_fit)
+   - Complete dynamic array implementation
+
+7. **HashMap** (stdlib/hashmap.zen): Enhanced!
+   - Added 15+ new methods
+   - Functional operations (for_each, filter, any, all)
+   - Advanced operations (merge, clone, compute)
+   - Complete hash table implementation
 
 ## Language Features Status
 
