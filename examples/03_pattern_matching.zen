@@ -45,7 +45,7 @@ main = () void {
     
     // Test age categories
     ages := [5, 15, 25, 65]
-    loop age in ages {
+    ages.iter().loop(age -> {
         io.print("Age $(age): $(categorize_age(age))\n")
     }
     io.print("\n")
@@ -57,7 +57,7 @@ main = () void {
         Status.Error(404),
     ]
     
-    loop status in statuses {
+    statuses.iter().loop(status -> {
         io.print("$(handle_status(status))\n")
     }
     

@@ -107,13 +107,13 @@ main = () void {
     }
     
     // Range loop
-    loop i in 0..5 {
+    range(0, 5).loop(i -> {
         score = score + i
     }
     
     // Array iteration
     names := ["Alice", "Bob", "Charlie"]
-    loop name in names {
+    names.iter().loop(name -> {
         io.print("Hello, $(name)!")
     }
     
@@ -129,7 +129,7 @@ main = () void {
     // Compile-time computation
     LOOKUP_TABLE := comptime {
         table:: [10]i32
-        loop i in 0..10 {
+        range(0, 10).loop(i -> {
             table[i] = i * i
         }
         table

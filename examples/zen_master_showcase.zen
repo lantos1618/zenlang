@@ -227,18 +227,18 @@ demonstrate_loops = () void {
     }
     
     // Range iteration (exclusive)
-    loop i in 0..5 {
+    range(0, 5).loop(i -> {
         io.print("Index: $(i)\n")
     }
     
     // Range iteration (inclusive)
-    loop i in 1..=5 {
+    range(1, 6).loop(i -> {
         io.print("Number: $(i)\n")
     }
     
     // Array iteration
     colors := [Color.Red, Color.Green, Color.Blue]
-    loop color in colors {
+    colors.iter().loop(color -> {
         color_str := color ? | .Red => "Red"
                             | .Green => "Green"
                             | .Blue => "Blue"
@@ -247,15 +247,15 @@ demonstrate_loops = () void {
     }
     
     // Loop with break and continue
-    loop i in 0..10 {
+    range(0, 10).loop(i -> {
         i ? | 3 => continue
             | 7 => break
             | _ => io.print("Processing: $(i)\n")
     }
     
     // Labeled loops for nested control
-    outer: loop i in 0..3 {
-        inner: loop j in 0..3 {
+    outer: range(0, 3).loop(i -> {
+        inner: range(0, 3).loop(j -> {
             (i == 1 && j == 1) ? | true => break outer
                                 | false => io.print("($(i), $(j)) ")
         }
@@ -284,7 +284,7 @@ parse_int = (s: string) Result<i32, ParseError> {
 
 // Function that uses Option
 find_person = (name: string, people: []Person) Option<Person> {
-    loop person in people {
+    people.iter().loop(person -> {
         str_utils.equals(person.name, name) ? | true => return Option.Some(person)
                                               | false => continue
     }
@@ -344,7 +344,7 @@ Point2D.impl = {
 
 // Generic function using behaviors
 draw_all = (items: []Drawable) void {
-    loop item in items {
+    items.iter().loop(item -> {
         item.draw()
     }
 }
@@ -358,7 +358,7 @@ FIBONACCI_LOOKUP := comptime {
     table:: [20]i32
     table[0] = 0
     table[1] = 1
-    loop i in 2..20 {
+    range(2, 20).loop(i -> {
         table[i] = table[i-1] + table[i-2]
     }
     table  // Return the computed table
@@ -398,7 +398,7 @@ demonstrate_memory = (allocator: mem.Allocator) void {
                                                     | .Err -> _ => return
     
     // Use the array
-    loop i in 0..100 {
+    range(0, 100).loop(i -> {
         array_ptr[i] = i * i
     }
     
@@ -495,7 +495,7 @@ main = () void {
         Action.Wait(1000),
         Action.Error({ code: 404, message: "Not found" }),
     ]
-    loop action in actions {
+    actions.iter().loop(action -> {
         result := handle_action(action)
         io.print("  $(result)\n")
     }
@@ -528,7 +528,7 @@ main = () void {
         parse_int("456"),
     ]
     
-    loop result in parse_results {
+    parse_results.iter().loop(result -> {
         value := process_result(result)
         io.print("  Processed value: $(value)\n")
     }
@@ -550,14 +550,14 @@ main = () void {
     // 9. Pattern matching examples
     io.print("9. Advanced Pattern Matching:\n")
     grades := [95, 85, 75, 65, 55]
-    loop score in grades {
+    grades.iter().loop(score -> {
         grade := grade_from_score(score)
         io.print("  Score $(score) -> Grade $(grade)\n")
     }
     io.print("\n")
     
     numbers := [-5, 0, 3, 15, 150]
-    loop n in numbers {
+    numbers.iter().loop(n -> {
         category := categorize_number(n)
         io.print("  $(n) is $(category)\n")
     }

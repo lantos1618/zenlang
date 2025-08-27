@@ -41,7 +41,7 @@ main = () void {
     ]
     
     // Loop through shapes
-    loop shape in shapes {
+    shapes.iter().loop(shape -> {
         area := calculate_area(shape)
         total_area = total_area + area
         

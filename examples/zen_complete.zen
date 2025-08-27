@@ -233,28 +233,28 @@ demonstrate_loops = () void {
     }
     
     // Range iteration
-    loop i in 0..5 {
+    range(0, 5).loop(i -> {
         io.print("Index: $(i)")
-    }
+    })
     
     // Inclusive range
-    loop i in 1..=3 {
+    range(1, 4).loop(i -> {
         io.print("Number: $(i)")
-    }
+    })
     
     // Collection iteration
     items := ["apple", "banana", "cherry"]
-    loop item in items {
+    items.iter().loop(item -> {
         io.print("Fruit: $(item)")
-    }
+    })
     
     // Nested loops with labels
-    outer: loop i in 0..3 {
-        inner: loop j in 0..3 {
+    outer: range(0, 3).loop(i -> {
+        inner: range(0, 3).loop(j -> {
             i * j > 4 ? | true => break outer
                       | false => continue inner
-        }
-    }
+        })
+    })
 }
 
 // ============================================================================
@@ -332,18 +332,18 @@ FIBONACCI_TABLE := comptime {
     table:: [20]i32
     table[0] = 0
     table[1] = 1
-    loop i in 2..20 {
+    range(2, 20).loop(i -> {
         table[i] = table[i-1] + table[i-2]
-    }
+    })
     table
 }
 
 // Generic function with comptime parameters
 create_array = (comptime T: type, comptime N: usize, default_val: T) [N]T {
     result:: [N]T
-    loop i in 0..N {
+    range(0, N).loop(i -> {
         result[i] = default_val
-    }
+    })
     return result
 }
 

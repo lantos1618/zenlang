@@ -79,9 +79,9 @@ Circle.impl = {
 
 // Generic function using behaviors
 draw_all = (items: []Drawable) void {
-    loop item in items {
+    items.iter().loop(item -> {
         item.draw()
-    }
+    })
 }
 
 // Function accepting any Serializable
