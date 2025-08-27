@@ -44,7 +44,9 @@ x ? | val -> val > 0 => "positive"
 ```zen
 loop condition { /* while-like */ }
 loop { /* infinite loop */ }
-// Range and iterator loops removed - use function-based iteration instead
+// For range and collection iteration, use functional methods:
+range(0, 10).loop(i -> { })   // Range iteration
+items.loop(item -> { })        // Collection iteration (future)
 ```
 
 #### Data Structures
