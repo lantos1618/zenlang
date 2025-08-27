@@ -161,6 +161,7 @@ parser_current_token = (p: Parser) Token {
             // Return EOF token
             return Token {
                 token_type: TokenType::Eof,
+                value: 0 as *i8,
                 line: 0,
                 column: 0,
                 start: 0,
@@ -168,335 +169,1015 @@ parser_current_token = (p: Parser) Token {
             }
         }
         | false => {
-            // TODO: Array access when implemented
-            // For now, return placeholder
-            return Token {
-                token_type: TokenType::Eof,
-                line: 0,
-                column: 0,
-                start: 0,
-                end: 0,
-            }
-        }
+            // Return token at current position
+            return p.tokens[idx]
 }
 
 // Advance to next token
-parser_advance = (p: Parser) Parser {
-    p.current = p.current + 1
-    return p
+parser_advance = (p: *Parser) void {
+    !parser_is_at_end(*p) ?
+        | true => { p.current = p.current + 1 }
+        | false => {}
+}
+
+// Check if current token matches type
+parser_check = (p: Parser, expected: TokenType) bool {
+    parser_is_at_end(p) ? | true => { return false } | false => {}
+    token := parser_current_token(p)
+    return token.token_type == expected
+}
+
+// Match and advance if token matches
+parser_match = (p: *Parser, expected: TokenType) bool {
+    parser_check(*p, expected) ?
+        | true => {
+            parser_advance(p)
+            return true
+        }
+        | false => {
+            return false
+        }
 }
 
 // Parse identifier
-parser_parse_identifier = (p: Parser) *i8 {
-    // TODO: Implement when we have proper token access
-    p = parser_advance(p)
-    return "placeholder"
-}
+parser_parse_identifier = (p: *Parser) *i8 {
+    token := parser_current_token(*p)
+    token.token_type == TokenType::Identifier ?
+        | true => {
+            value := token.value
+            parser_advance(p)
+            return value
+        }
+        | false => {
+            return 0 as *i8
+        }
 
 // Parse type
-parser_parse_type = (p: Parser) *AstType {
-    // TODO: Implement type parsing
-    // For now, return i32 as default
-    p = parser_advance(p)
-    return &AstType::I32
-}
+parser_parse_type = (p: *Parser) *AstType {
+    token := parser_current_token(*p)
+    
+    // Check for basic types
+    token.token_type == TokenType::Identifier ?
+        | true => {
+            name := token.value
+            parser_advance(p)
+            
+            // Check type name
+            strcmp(name, "i8") == 0 ? | true => { return &AstType::I8 } | false => {}
+            strcmp(name, "i16") == 0 ? | true => { return &AstType::I16 } | false => {}
+            strcmp(name, "i32") == 0 ? | true => { return &AstType::I32 } | false => {}
+            strcmp(name, "i64") == 0 ? | true => { return &AstType::I64 } | false => {}
+            strcmp(name, "u8") == 0 ? | true => { return &AstType::U8 } | false => {}
+            strcmp(name, "u16") == 0 ? | true => { return &AstType::U16 } | false => {}
+            strcmp(name, "u32") == 0 ? | true => { return &AstType::U32 } | false => {}
+            strcmp(name, "u64") == 0 ? | true => { return &AstType::U64 } | false => {}
+            strcmp(name, "f32") == 0 ? | true => { return &AstType::F32 } | false => {}
+            strcmp(name, "f64") == 0 ? | true => { return &AstType::F64 } | false => {}
+            strcmp(name, "bool") == 0 ? | true => { return &AstType::Bool } | false => {}
+            strcmp(name, "void") == 0 ? | true => { return &AstType::Void } | false => {}
+            
+            // Custom type
+            return &AstType::Custom(name)
+        }
+        | false => {
+            // Check for pointer type
+            token.token_type == TokenType::Operator ?
+                | true => {
+                    strcmp(token.value, "*") == 0 ?
+                        | true => {
+                            parser_advance(p)
+                            inner := parser_parse_type(p)
+                            return &AstType::Pointer(inner)
+                        }
+                        | false => {
+                            return &AstType::I32  // Default
+                        }
+                }
+                | false => {
+                    return &AstType::I32  // Default
+                }
+        }
 
 // Parse primary expression (literals, identifiers, parentheses)
-parser_parse_primary = (p: Parser) *Expression {
-    token := parser_current_token(p)
+parser_parse_primary = (p: *Parser) *Expression {
+    token := parser_current_token(*p)
     
-    // Check token type and parse accordingly
-    // Note: This is conceptual - needs proper token type checking
-    // when token access is implemented
+    // Parse literals
+    token.token_type == TokenType::Integer ?
+        | true => {
+            // Parse integer literal
+            // TODO: Proper string to integer conversion
+            value := 42  // Placeholder
+            parser_advance(p)
+            return &Expression::Integer32(value)
+        }
+        | false => {}
     
-    // For now, return a placeholder
-    p = parser_advance(p)
-    return &Expression::Integer32(42)
+    token.token_type == TokenType::Float ?
+        | true => {
+            // Parse float literal
+            value := 3.14 as f32  // Placeholder
+            parser_advance(p)
+            return &Expression::Float32(value)
+        }
+        | false => {}
+    
+    token.token_type == TokenType::StringLiteral ?
+        | true => {
+            value := token.value
+            parser_advance(p)
+            return &Expression::StringLit(value)
+        }
+        | false => {}
+    
+    token.token_type == TokenType::Identifier ?
+        | true => {
+            name := token.value
+            parser_advance(p)
+            
+            // Check for function call
+            parser_check(*p, TokenType::Symbol) ?
+                | true => {
+                    next := parser_current_token(*p)
+                    strcmp(next.value, "(") == 0 ?
+                        | true => {
+                            parser_advance(p)  // Skip '('
+                            // TODO: Parse arguments
+                            parser_match(p, TokenType::Symbol)  // Skip ')'
+                            return &Expression::FunctionCall(name, 0 as *Expression, 0)
+                        }
+                        | false => {}
+                }
+                | false => {}
+            
+            // Check for field access
+            parser_check(*p, TokenType::Symbol) ?
+                | true => {
+                    next := parser_current_token(*p)
+                    strcmp(next.value, ".") == 0 ?
+                        | true => {
+                            parser_advance(p)  // Skip '.'
+                            field := parser_parse_identifier(p)
+                            object := &Expression::Identifier(name)
+                            return &Expression::FieldAccess(object, field)
+                        }
+                        | false => {}
+                }
+                | false => {}
+            
+            // Just an identifier
+            return &Expression::Identifier(name)
+        }
+        | false => {}
+    
+    // Handle parenthesized expression
+    token.token_type == TokenType::Symbol ?
+        | true => {
+            strcmp(token.value, "(") == 0 ?
+                | true => {
+                    parser_advance(p)  // Skip '('
+                    expr := parser_parse_expression(p)
+                    parser_match(p, TokenType::Symbol)  // Skip ')'
+                    return expr
+                }
+                | false => {}
+        }
+        | false => {}
+    
+    // Default: return null expression
+    return 0 as *Expression
 }
 
 // Parse unary expression
-parser_parse_unary = (p: Parser) *Expression {
-    // Check for unary operators: -, !, ~, &, *
-    token := parser_current_token(p)
+parser_parse_unary = (p: *Parser) *Expression {
+    token := parser_current_token(*p)
     
-    // If unary operator, parse it
-    // Otherwise parse primary
+    // Check for unary operators
+    token.token_type == TokenType::Operator ?
+        | true => {
+            strcmp(token.value, "-") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    operand := parser_parse_unary(p)
+                    return &Expression::UnaryOp(UnaryOperator::Negate, operand)
+                }
+                | false => {}
+            
+            strcmp(token.value, "!") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    operand := parser_parse_unary(p)
+                    return &Expression::UnaryOp(UnaryOperator::LogicalNot, operand)
+                }
+                | false => {}
+            
+            strcmp(token.value, "~") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    operand := parser_parse_unary(p)
+                    return &Expression::UnaryOp(UnaryOperator::BitwiseNot, operand)
+                }
+                | false => {}
+            
+            strcmp(token.value, "&") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    operand := parser_parse_unary(p)
+                    return &Expression::UnaryOp(UnaryOperator::AddressOf, operand)
+                }
+                | false => {}
+            
+            strcmp(token.value, "*") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    operand := parser_parse_unary(p)
+                    return &Expression::UnaryOp(UnaryOperator::Dereference, operand)
+                }
+                | false => {}
+        }
+        | false => {}
+    
+    // Not a unary operator, parse primary
     return parser_parse_primary(p)
 }
 
 // Parse multiplicative expression (* / %)
-parser_parse_multiplicative = (p: Parser) *Expression {
+parser_parse_multiplicative = (p: *Parser) *Expression {
     left := parser_parse_unary(p)
     
-    // Loop to handle chained operations
-    // Check for *, /, % operators
+    // Handle chained operations
+    loop {
+        token := parser_current_token(*p)
+        token.token_type == TokenType::Operator ?
+            | false => { break }
+            | true => {}
+        
+        op := UnaryOperator::Negate  // Placeholder
+        strcmp(token.value, "*") == 0 ?
+            | true => {
+                parser_advance(p)
+                right := parser_parse_unary(p)
+                left = &Expression::BinaryOp(left, BinaryOperator::Multiply, right)
+            }
+            | false => {}
+        
+        strcmp(token.value, "/") == 0 ?
+            | true => {
+                parser_advance(p)
+                right := parser_parse_unary(p)
+                left = &Expression::BinaryOp(left, BinaryOperator::Divide, right)
+            }
+            | false => {}
+        
+        strcmp(token.value, "%") == 0 ?
+            | true => {
+                parser_advance(p)
+                right := parser_parse_unary(p)
+                left = &Expression::BinaryOp(left, BinaryOperator::Modulo, right)
+            }
+            | false => { break }
+    }
     
     return left
 }
 
 // Parse additive expression (+ -)
-parser_parse_additive = (p: Parser) *Expression {
+parser_parse_additive = (p: *Parser) *Expression {
     left := parser_parse_multiplicative(p)
     
-    // Loop to handle chained operations
-    // Check for +, - operators
+    // Handle chained operations
+    loop {
+        token := parser_current_token(*p)
+        token.token_type == TokenType::Operator ?
+            | false => { break }
+            | true => {}
+        
+        strcmp(token.value, "+") == 0 ?
+            | true => {
+                parser_advance(p)
+                right := parser_parse_multiplicative(p)
+                left = &Expression::BinaryOp(left, BinaryOperator::Add, right)
+            }
+            | false => {}
+        
+        strcmp(token.value, "-") == 0 ?
+            | true => {
+                parser_advance(p)
+                right := parser_parse_multiplicative(p)
+                left = &Expression::BinaryOp(left, BinaryOperator::Subtract, right)
+            }
+            | false => { break }
+    }
     
     return left
 }
 
 // Parse comparison expression (< > <= >= == !=)
-parser_parse_comparison = (p: Parser) *Expression {
+parser_parse_comparison = (p: *Parser) *Expression {
     left := parser_parse_additive(p)
     
-    // Check for comparison operators
+    // Handle comparison operators
+    token := parser_current_token(*p)
+    token.token_type == TokenType::Operator ?
+        | true => {
+            strcmp(token.value, "<") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    right := parser_parse_additive(p)
+                    return &Expression::BinaryOp(left, BinaryOperator::LessThan, right)
+                }
+                | false => {}
+            
+            strcmp(token.value, ">") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    right := parser_parse_additive(p)
+                    return &Expression::BinaryOp(left, BinaryOperator::GreaterThan, right)
+                }
+                | false => {}
+            
+            strcmp(token.value, "<=") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    right := parser_parse_additive(p)
+                    return &Expression::BinaryOp(left, BinaryOperator::LessThanOrEqual, right)
+                }
+                | false => {}
+            
+            strcmp(token.value, ">=") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    right := parser_parse_additive(p)
+                    return &Expression::BinaryOp(left, BinaryOperator::GreaterThanOrEqual, right)
+                }
+                | false => {}
+            
+            strcmp(token.value, "==") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    right := parser_parse_additive(p)
+                    return &Expression::BinaryOp(left, BinaryOperator::Equal, right)
+                }
+                | false => {}
+            
+            strcmp(token.value, "!=") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    right := parser_parse_additive(p)
+                    return &Expression::BinaryOp(left, BinaryOperator::NotEqual, right)
+                }
+                | false => {}
+        }
+        | false => {}
     
     return left
 }
 
 // Parse logical expression (&& ||)
-parser_parse_logical = (p: Parser) *Expression {
+parser_parse_logical = (p: *Parser) *Expression {
     left := parser_parse_comparison(p)
     
-    // Check for && and || operators
+    // Handle logical operators
+    loop {
+        token := parser_current_token(*p)
+        token.token_type == TokenType::Operator ?
+            | false => { break }
+            | true => {}
+        
+        strcmp(token.value, "&&") == 0 ?
+            | true => {
+                parser_advance(p)
+                right := parser_parse_comparison(p)
+                left = &Expression::BinaryOp(left, BinaryOperator::LogicalAnd, right)
+            }
+            | false => {}
+        
+        strcmp(token.value, "||") == 0 ?
+            | true => {
+                parser_advance(p)
+                right := parser_parse_comparison(p)
+                left = &Expression::BinaryOp(left, BinaryOperator::LogicalOr, right)
+            }
+            | false => { break }
+    }
     
     return left
 }
 
 // Parse expression (entry point)
-parser_parse_expression = (p: Parser) *Expression {
+parser_parse_expression = (p: *Parser) *Expression {
     return parser_parse_logical(p)
 }
 
 // Parse variable declaration
-parser_parse_variable_declaration = (p: Parser) *Statement {
+parser_parse_variable_declaration = (p: *Parser) *Statement {
     name := parser_parse_identifier(p)
     
-    // Check for := (immutable) or ::= (mutable)
-    is_mutable := false  // TODO: Check actual operator
+    token := parser_current_token(*p)
+    is_mutable := false
     
-    p = parser_advance(p)  // Skip assignment operator
+    // Check for := (immutable) or ::= (mutable)
+    token.token_type == TokenType::Operator ?
+        | true => {
+            strcmp(token.value, ":=") == 0 ?
+                | true => {
+                    is_mutable = false
+                    parser_advance(p)
+                }
+                | false => {}
+            
+            strcmp(token.value, "::=") == 0 ?
+                | true => {
+                    is_mutable = true
+                    parser_advance(p)
+                }
+                | false => {}
+        }
+        | false => {}
     
     // Parse initializer
     initializer := parser_parse_expression(p)
     
     return &Statement::VariableDeclaration(
-        name, 0, initializer, is_mutable
+        name, 0 as *AstType, initializer, is_mutable
     )
 }
 
 // Parse return statement
-parser_parse_return = (p: Parser) *Statement {
-    p = parser_advance(p)  // Skip 'return'
+parser_parse_return = (p: *Parser) *Statement {
+    parser_advance(p)  // Skip 'return'
     
     // Check if there's a return value
-    // If next token is not ';' or '}', parse expression
-    value := parser_parse_expression(p)
-    
-    return &Statement::Return(value)
+    token := parser_current_token(*p)
+    token.token_type == TokenType::Symbol ?
+        | true => {
+            strcmp(token.value, ";") == 0 || strcmp(token.value, "}") == 0 ?
+                | true => {
+                    // No return value
+                    return &Statement::Return(0 as *Expression)
+                }
+                | false => {
+                    // Parse return value
+                    value := parser_parse_expression(p)
+                    return &Statement::Return(value)
+                }
+        }
+        | false => {
+            // Parse return value
+            value := parser_parse_expression(p)
+            return &Statement::Return(value)
+        }
 }
 
 // Parse loop statement
-parser_parse_loop = (p: Parser) *Statement {
-    p = parser_advance(p)  // Skip 'loop'
+parser_parse_loop = (p: *Parser) *Statement {
+    parser_advance(p)  // Skip 'loop'
+    
+    // Check for loop condition (new syntax)
+    token := parser_current_token(*p)
     
     // Parse loop body
-    p = parser_advance(p)  // Skip '{'
-    
-    // TODO: Parse statements until '}'
-    body := &Statement::Block(0, 0)
-    
-    p = parser_advance(p)  // Skip '}'
+    body := parser_parse_block(p)
     
     return &Statement::Loop(body)
 }
 
-// Parse if statement
-parser_parse_if = (p: Parser) *Statement {
-    p = parser_advance(p)  // Skip 'if' or pattern match operator
-    
+// Parse if statement or pattern match
+parser_parse_if = (p: *Parser) *Statement {
+    // Parse condition expression first
     condition := parser_parse_expression(p)
     
-    // Parse then branch
-    p = parser_advance(p)  // Skip '{'
-    then_body := parser_parse_statement(p)
-    p = parser_advance(p)  // Skip '}'
-    
-    // Check for else branch
-    else_body := 0 as *Statement
-    
-    return &Statement::If(condition, then_body, else_body)
+    // Check for '?' pattern match operator
+    token := parser_current_token(*p)
+    strcmp(token.value, "?") == 0 ?
+        | true => {
+            parser_advance(p)  // Skip '?'
+            
+            // Parse pattern match branches
+            parser_match(p, TokenType::Symbol)  // Skip '|'
+            
+            // Parse true branch
+            parser_advance(p)  // Skip 'true'
+            parser_match(p, TokenType::Symbol)  // Skip '=>'
+            then_body := parser_parse_block(p)
+            
+            // Parse false branch
+            parser_match(p, TokenType::Symbol)  // Skip '|'
+            parser_advance(p)  // Skip 'false'
+            parser_match(p, TokenType::Symbol)  // Skip '=>'
+            else_body := parser_parse_block(p)
+            
+            return &Statement::If(condition, then_body, else_body)
+        }
+        | false => {
+            // Traditional if statement
+            then_body := parser_parse_block(p)
+            
+            // Check for else
+            token = parser_current_token(*p)
+            else_body := 0 as *Statement
+            strcmp(token.value, "else") == 0 ?
+                | true => {
+                    parser_advance(p)  // Skip 'else'
+                    else_body = parser_parse_block(p)
+                }
+                | false => {}
+            
+            return &Statement::If(condition, then_body, else_body)
+        }
 }
 
 // Parse block statement
-parser_parse_block = (p: Parser) *Statement {
-    p = parser_advance(p)  // Skip '{'
+parser_parse_block = (p: *Parser) *Statement {
+    parser_match(p, TokenType::Symbol)  // Skip '{'
     
-    // TODO: Parse statements until '}'
-    // For now, return empty block
+    // Allocate space for statements (max 100 for now)
+    statements := malloc(100 * 8) as *Statement
+    count := 0
     
-    p = parser_advance(p)  // Skip '}'
+    // Parse statements until '}'
+    loop {
+        token := parser_current_token(*p)
+        token.token_type == TokenType::Symbol ?
+            | true => {
+                strcmp(token.value, "}") == 0 ?
+                    | true => { break }
+                    | false => {}
+            }
+            | false => {}
+        
+        parser_is_at_end(*p) ? | true => { break } | false => {}
+        
+        stmt := parser_parse_statement(p)
+        stmt != 0 as *Statement ?
+            | true => {
+                statements[count] = stmt
+                count = count + 1
+            }
+            | false => {}
+        
+        count >= 100 ? | true => { break } | false => {}
+    }
     
-    return &Statement::Block(0, 0)
+    parser_match(p, TokenType::Symbol)  // Skip '}'
+    
+    return &Statement::Block(statements, count)
 }
 
 // Parse statement (entry point)
-parser_parse_statement = (p: Parser) *Statement {
-    token := parser_current_token(p)
+parser_parse_statement = (p: *Parser) *Statement {
+    token := parser_current_token(*p)
     
-    // Check token type to determine statement type
-    // This is conceptual - needs proper implementation
+    // Check for keywords
+    token.token_type == TokenType::Keyword ?
+        | true => {
+            strcmp(token.value, "return") == 0 ?
+                | true => { return parser_parse_return(p) }
+                | false => {}
+            
+            strcmp(token.value, "loop") == 0 ?
+                | true => { return parser_parse_loop(p) }
+                | false => {}
+            
+            strcmp(token.value, "break") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    return &Statement::Block(0 as *Statement, 0)  // Placeholder for break
+                }
+                | false => {}
+            
+            strcmp(token.value, "continue") == 0 ?
+                | true => {
+                    parser_advance(p)
+                    return &Statement::Block(0 as *Statement, 0)  // Placeholder for continue
+                }
+                | false => {}
+        }
+        | false => {}
     
-    // Default to expression statement for now
+    // Check for block
+    token.token_type == TokenType::Symbol ?
+        | true => {
+            strcmp(token.value, "{") == 0 ?
+                | true => { return parser_parse_block(p) }
+                | false => {}
+        }
+        | false => {}
+    
+    // Check for variable declaration
+    token.token_type == TokenType::Identifier ?
+        | true => {
+            // Look ahead for := or ::=
+            parser_advance(p)
+            next := parser_current_token(*p)
+            
+            next.token_type == TokenType::Operator ?
+                | true => {
+                    strcmp(next.value, ":=") == 0 || strcmp(next.value, "::=") == 0 ?
+                        | true => {
+                            // Reset position and parse variable declaration
+                            p.current = p.current - 1
+                            return parser_parse_variable_declaration(p)
+                        }
+                        | false => {
+                            strcmp(next.value, "=") == 0 ?
+                                | true => {
+                                    // Variable assignment
+                                    name := token.value
+                                    parser_advance(p)  // Skip '='
+                                    value := parser_parse_expression(p)
+                                    return &Statement::VariableAssignment(name, value)
+                                }
+                                | false => {}
+                        }
+                }
+                | false => {}
+            
+            // Reset position for expression parsing
+            p.current = p.current - 1
+        }
+        | false => {}
+    
+    // Parse as expression statement
     expr := parser_parse_expression(p)
+    
+    // Check for pattern matching with '?'
+    token = parser_current_token(*p)
+    strcmp(token.value, "?") == 0 ?
+        | true => {
+            // Reset and parse as if statement
+            p.current = p.current - 1  // Go back before expression
+            return parser_parse_if(p)
+        }
+        | false => {}
+    
     return &Statement::Expression(expr)
 }
 
 // Parse function argument
-parser_parse_function_arg = (p: Parser) *FunctionArg {
+parser_parse_function_arg = (p: *Parser) *FunctionArg {
     name := parser_parse_identifier(p)
-    p = parser_advance(p)  // Skip ':'
+    parser_match(p, TokenType::Symbol)  // Skip ':'
     type_ := parser_parse_type(p)
     
-    return &FunctionArg {
-        name: name,
-        type_: type_,
-    }
+    arg := malloc(16) as *FunctionArg
+    arg.name = name
+    arg.type_ = type_
+    return arg
 }
 
 // Parse function
-parser_parse_function = (p: Parser) *Function {
+parser_parse_function = (p: *Parser) *Function {
     // Parse function name
     name := parser_parse_identifier(p)
     
     // Skip '='
-    p = parser_advance(p)
+    parser_match(p, TokenType::Operator)
     
     // Parse parameters
-    p = parser_advance(p)  // Skip '('
+    parser_match(p, TokenType::Symbol)  // Skip '('
     
-    // TODO: Parse parameter list
-    args := 0 as *FunctionArg
+    // Parse parameter list
+    args := malloc(20 * 16) as *FunctionArg  // Max 20 args
     arg_count := 0
     
-    p = parser_advance(p)  // Skip ')'
+    loop {
+        token := parser_current_token(*p)
+        strcmp(token.value, ")") == 0 ? | true => { break } | false => {}
+        
+        arg_count > 0 ?
+            | true => { parser_match(p, TokenType::Symbol) }  // Skip ','
+            | false => {}
+        
+        arg := parser_parse_function_arg(p)
+        args[arg_count] = *arg
+        arg_count = arg_count + 1
+        
+        arg_count >= 20 ? | true => { break } | false => {}
+    }
+    
+    parser_match(p, TokenType::Symbol)  // Skip ')'
     
     // Parse return type
     return_type := parser_parse_type(p)
     
     // Parse body
-    p = parser_advance(p)  // Skip '{'
+    body_block := parser_parse_block(p)
     
-    // TODO: Parse statements
-    body := 0 as *Statement
-    body_count := 0
+    func := malloc(48) as *Function
+    func.name = name
+    func.args = args
+    func.arg_count = arg_count
+    func.return_type = return_type
+    func.body = body_block
+    func.body_count = 1
     
-    p = parser_advance(p)  // Skip '}'
-    
-    return &Function {
-        name: name,
-        args: args,
-        arg_count: arg_count,
-        return_type: return_type,
-        body: body,
-        body_count: body_count,
-    }
+    return func
 }
 
 // Parse struct definition
-parser_parse_struct = (p: Parser) *Struct {
+parser_parse_struct = (p: *Parser) *Struct {
     name := parser_parse_identifier(p)
     
-    p = parser_advance(p)  // Skip '='
-    p = parser_advance(p)  // Skip '{'
+    parser_match(p, TokenType::Operator)  // Skip '='
+    parser_match(p, TokenType::Symbol)  // Skip '{'
     
-    // TODO: Parse fields
-    fields := 0 as *StructField
+    // Parse fields
+    fields := malloc(50 * 24) as *StructField  // Max 50 fields
     field_count := 0
     
-    p = parser_advance(p)  // Skip '}'
-    
-    return &Struct {
-        name: name,
-        fields: fields,
-        field_count: field_count,
+    loop {
+        token := parser_current_token(*p)
+        strcmp(token.value, "}") == 0 ? | true => { break } | false => {}
+        
+        field_count > 0 ?
+            | true => { parser_match(p, TokenType::Symbol) }  // Skip ','
+            | false => {}
+        
+        // Parse field name
+        field_name := parser_parse_identifier(p)
+        parser_match(p, TokenType::Symbol)  // Skip ':'
+        
+        // Check for mutability
+        is_mutable := false
+        token = parser_current_token(*p)
+        strcmp(token.value, "mut") == 0 ?
+            | true => {
+                is_mutable = true
+                parser_advance(p)
+            }
+            | false => {}
+        
+        // Parse field type
+        field_type := parser_parse_type(p)
+        
+        field := &fields[field_count]
+        field.name = field_name
+        field.type_ = field_type
+        field.is_mutable = is_mutable
+        field_count = field_count + 1
+        
+        field_count >= 50 ? | true => { break } | false => {}
     }
+    
+    parser_match(p, TokenType::Symbol)  // Skip '}'
+    
+    struct_ := malloc(24) as *Struct
+    struct_.name = name
+    struct_.fields = fields
+    struct_.field_count = field_count
+    
+    return struct_
 }
 
 // Parse external function
-parser_parse_external_function = (p: Parser) *ExternalFunction {
-    p = parser_advance(p)  // Skip 'extern'
+parser_parse_external_function = (p: *Parser) *ExternalFunction {
+    parser_advance(p)  // Skip 'extern'
     
     name := parser_parse_identifier(p)
     
-    p = parser_advance(p)  // Skip '='
-    p = parser_advance(p)  // Skip '('
+    parser_match(p, TokenType::Operator)  // Skip '='
+    parser_match(p, TokenType::Symbol)  // Skip '('
     
-    // TODO: Parse parameter types
-    args := 0 as *AstType
+    // Parse parameter types
+    args := malloc(20 * 8) as *AstType  // Max 20 args
     arg_count := 0
+    is_varargs := false
     
-    p = parser_advance(p)  // Skip ')'
+    loop {
+        token := parser_current_token(*p)
+        strcmp(token.value, ")") == 0 ? | true => { break } | false => {}
+        
+        arg_count > 0 ?
+            | true => { parser_match(p, TokenType::Symbol) }  // Skip ','
+            | false => {}
+        
+        // Check for varargs
+        strcmp(token.value, "...") == 0 ?
+            | true => {
+                is_varargs = true
+                parser_advance(p)
+                break
+            }
+            | false => {}
+        
+        arg_type := parser_parse_type(p)
+        args[arg_count] = *arg_type
+        arg_count = arg_count + 1
+        
+        arg_count >= 20 ? | true => { break } | false => {}
+    }
+    
+    parser_match(p, TokenType::Symbol)  // Skip ')'
     
     return_type := parser_parse_type(p)
     
-    return &ExternalFunction {
-        name: name,
-        args: args,
-        arg_count: arg_count,
-        return_type: return_type,
-        is_varargs: false,
-    }
+    ext_func := malloc(40) as *ExternalFunction
+    ext_func.name = name
+    ext_func.args = args
+    ext_func.arg_count = arg_count
+    ext_func.return_type = return_type
+    ext_func.is_varargs = is_varargs
+    
+    return ext_func
 }
 
 // Parse declaration
-parser_parse_declaration = (p: Parser) *Declaration {
-    token := parser_current_token(p)
+parser_parse_declaration = (p: *Parser) *Declaration {
+    token := parser_current_token(*p)
     
-    // Check token to determine declaration type
-    // This is conceptual - needs proper implementation
+    // Check for extern
+    token.token_type == TokenType::Keyword ?
+        | true => {
+            strcmp(token.value, "extern") == 0 ?
+                | true => {
+                    ext_func := parser_parse_external_function(p)
+                    return &Declaration::ExternalFunction(ext_func)
+                }
+                | false => {}
+        }
+        | false => {}
     
-    // Default to function for now
+    // Check for type definitions (enum or struct)
+    token.token_type == TokenType::Identifier ?
+        | true => {
+            // Look ahead to see if it's a type definition
+            name_token := token
+            parser_advance(p)
+            token = parser_current_token(*p)
+            
+            token.token_type == TokenType::Operator ?
+                | true => {
+                    strcmp(token.value, "=") == 0 ?
+                        | true => {
+                            parser_advance(p)  // Skip '='
+                            next := parser_current_token(*p)
+                            
+                            // Check if it's an enum (starts with |)
+                            strcmp(next.value, "|") == 0 ?
+                                | true => {
+                                    // Reset and parse as enum
+                                    p.current = p.current - 2
+                                    enum_ := parser_parse_enum(p)
+                                    return &Declaration::Enum(enum_)
+                                }
+                                | false => {}
+                            
+                            // Check if it's a struct (starts with {)
+                            strcmp(next.value, "{") == 0 ?
+                                | true => {
+                                    // Reset and parse as struct
+                                    p.current = p.current - 2
+                                    struct_ := parser_parse_struct(p)
+                                    return &Declaration::Struct(struct_)
+                                }
+                                | false => {}
+                            
+                            // Check if it's a function (starts with ()
+                            strcmp(next.value, "(") == 0 ?
+                                | true => {
+                                    // Reset and parse as function
+                                    p.current = p.current - 2
+                                    func := parser_parse_function(p)
+                                    return &Declaration::Function(func)
+                                }
+                                | false => {}
+                        }
+                        | false => {}
+                }
+                | false => {}
+            
+            // Reset position
+            p.current = p.current - 1
+        }
+        | false => {}
+    
+    // Default: try to parse as function
     func := parser_parse_function(p)
     return &Declaration::Function(func)
 }
 
+// Parse enum definition
+parser_parse_enum = (p: *Parser) *Enum {
+    name := parser_parse_identifier(p)
+    
+    parser_match(p, TokenType::Operator)  // Skip '='
+    
+    // Parse variants
+    variants := malloc(50 * 24) as *EnumVariant  // Max 50 variants
+    variant_count := 0
+    
+    loop {
+        token := parser_current_token(*p)
+        
+        // Check for variant separator |   
+        strcmp(token.value, "|") == 0 ?
+            | true => { parser_advance(p) }
+            | false => {
+                // If not |, check if we're done
+                parser_is_at_end(*p) ? | true => { break } | false => {}
+                token.token_type != TokenType::Identifier ? | true => { break } | false => {}
+            }
+        
+        // Parse variant name
+        variant_name := parser_parse_identifier(p)
+        
+        // Check for variant fields
+        token = parser_current_token(*p)
+        variant_fields := 0 as *StructField
+        variant_field_count := 0
+        
+        strcmp(token.value, "(") == 0 ?
+            | true => {
+                parser_advance(p)  // Skip '('
+                
+                // Parse variant fields
+                variant_fields = malloc(20 * 24) as *StructField
+                
+                loop {
+                    token = parser_current_token(*p)
+                    strcmp(token.value, ")") == 0 ? | true => { break } | false => {}
+                    
+                    variant_field_count > 0 ?
+                        | true => { parser_match(p, TokenType::Symbol) }  // Skip ','
+                        | false => {}
+                    
+                    field_name := parser_parse_identifier(p)
+                    parser_match(p, TokenType::Symbol)  // Skip ':'
+                    field_type := parser_parse_type(p)
+                    
+                    field := &variant_fields[variant_field_count]
+                    field.name = field_name
+                    field.type_ = field_type
+                    field.is_mutable = false
+                    variant_field_count = variant_field_count + 1
+                }
+                
+                parser_match(p, TokenType::Symbol)  // Skip ')'
+            }
+            | false => {}
+        
+        variant := &variants[variant_count]
+        variant.name = variant_name
+        variant.fields = variant_fields
+        variant.field_count = variant_field_count
+        variant_count = variant_count + 1
+        
+        variant_count >= 50 ? | true => { break } | false => {}
+    }
+    
+    enum_ := malloc(24) as *Enum
+    enum_.name = name
+    enum_.variants = variants
+    enum_.variant_count = variant_count
+    
+    return enum_
+}
+
 // Parse program (entry point)
-parser_parse_program = (p: Parser) *Program {
-    // TODO: Parse all declarations
-    declarations := 0 as *Declaration
+parser_parse_program = (p: *Parser) *Program {
+    // Parse all declarations
+    declarations := malloc(500 * 8) as *Declaration  // Max 500 declarations
     declaration_count := 0
     
     // Loop until end of tokens
-    loop !parser_is_at_end(p) {
+    loop !parser_is_at_end(*p) {
+        // Skip any semicolons
+        token := parser_current_token(*p)
+        strcmp(token.value, ";") == 0 ?
+            | true => {
+                parser_advance(p)
+                continue
+            }
+            | false => {}
+        
         // Parse next declaration
         decl := parser_parse_declaration(p)
-        // TODO: Add to declarations array
-        break  // For now, just parse one
+        decl != 0 as *Declaration ?
+            | true => {
+                declarations[declaration_count] = *decl
+                declaration_count = declaration_count + 1
+            }
+            | false => {}
+        
+        declaration_count >= 500 ? | true => { break } | false => {}
     }
     
-    return &Program {
-        declarations: declarations,
-        declaration_count: declaration_count,
-    }
-}
-
-// Parse program
-parser_parse_program = (p: Parser) Program {
-    // TODO: Parse all declarations
-    // For now, return empty program
-    return Program {
-        declarations: 0,
-        declaration_count: 0,
-    }
+    program := malloc(16) as *Program
+    program.declarations = declarations
+    program.declaration_count = declaration_count
+    
+    return program
 }
 
 // Main entry point for testing
 main = () i32 {
-    // Create empty parser for testing
-    parser := parser_new(0, 0)
+    // Create empty parser for testing  
+    tokens := malloc(0) as *Token
+    parser := parser_new(tokens, 0)
     
     // Try to parse a program
-    program := parser_parse_program(parser)
+    program := parser_parse_program(&parser)
     
     return 0
 }

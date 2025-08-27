@@ -464,12 +464,12 @@ handle_request = (url: string) Result<string, HttpError> {
 main = () void {
     urls_to_test := ["/home", "/admin/dashboard", "/about"]
 
-    loop url in urls_to_test {
+    urls_to_test.loop(url -> {
         response_text := handle_request(url) ? | .Ok -> body => "SUCCESS: Fetched $(url) -> $(body)"
                                               | .Err -> .NotFound => "FAILURE: Path $(url) not found"
                                               | .Err -> .BadRequest(reason) => "FAILURE: Bad request for $(url): $(reason)"
 
         io.print_line(response_text)
-    }
+    })
 }
 ```
