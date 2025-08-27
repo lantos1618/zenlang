@@ -1,0 +1,196 @@
+// Zen Standard Library: Assert Module
+// Testing and assertion utilities
+
+comptime {
+    core := @std.core
+    io := @std.io
+}
+
+// Assert that a condition is true
+assert = (condition: bool, message: string = "Assertion failed") void {
+    condition ? | false => {
+        io.println("ASSERTION FAILED: $(message)")
+        core.panic(message)
+    } | true => {}
+}
+
+// Assert two values are equal
+assert_eq = <T>(actual: T, expected: T, message: string = "") void {
+    actual == expected ? | false => {
+        msg := message == "" ? | true => 
+            "Expected $(expected), but got $(actual)" 
+        | false => 
+            message
+        io.println("ASSERTION FAILED: $(msg)")
+        core.panic(msg)
+    } | true => {}
+}
+
+// Assert two values are not equal
+assert_ne = <T>(actual: T, expected: T, message: string = "") void {
+    actual != expected ? | false => {
+        msg := message == "" ? | true => 
+            "Expected values to be different, but both were $(actual)" 
+        | false => 
+            message
+        io.println("ASSERTION FAILED: $(msg)")
+        core.panic(msg)
+    } | true => {}
+}
+
+// Assert a value is less than another
+assert_lt = <T>(actual: T, limit: T, message: string = "") void {
+    actual < limit ? | false => {
+        msg := message == "" ? | true => 
+            "Expected $(actual) to be less than $(limit)" 
+        | false => 
+            message
+        io.println("ASSERTION FAILED: $(msg)")
+        core.panic(msg)
+    } | true => {}
+}
+
+// Assert a value is greater than another
+assert_gt = <T>(actual: T, limit: T, message: string = "") void {
+    actual > limit ? | false => {
+        msg := message == "" ? | true => 
+            "Expected $(actual) to be greater than $(limit)" 
+        | false => 
+            message
+        io.println("ASSERTION FAILED: $(msg)")
+        core.panic(msg)
+    } | true => {}
+}
+
+// Assert a value is within a range
+assert_in_range = <T>(value: T, min: T, max: T, message: string = "") void {
+    value >= min && value <= max ? | false => {
+        msg := message == "" ? | true => 
+            "Expected $(value) to be in range [$(min), $(max)]" 
+        | false => 
+            message
+        io.println("ASSERTION FAILED: $(msg)")
+        core.panic(msg)
+    } | true => {}
+}
+
+// Assert an Option is Some
+assert_some = <T>(opt: core.Option<T>, message: string = "") T {
+    opt ? | core.Option::Some(val) => val 
+          | core.Option::None => {
+        msg := message == "" ? | true => 
+            "Expected Some value, but got None" 
+        | false => 
+            message
+        io.println("ASSERTION FAILED: $(msg)")
+        core.panic(msg)
+        // Unreachable, but needed for type checker
+        core.unreachable<T>()
+    }
+}
+
+// Assert an Option is None
+assert_none = <T>(opt: core.Option<T>, message: string = "") void {
+    opt ? | core.Option::None => {} 
+          | core.Option::Some(val) => {
+        msg := message == "" ? | true => 
+            "Expected None, but got Some($(val))" 
+        | false => 
+            message
+        io.println("ASSERTION FAILED: $(msg)")
+        core.panic(msg)
+    }
+}
+
+// Assert a Result is Ok
+assert_ok = <T, E>(result: core.Result<T, E>, message: string = "") T {
+    result ? | core.Result::Ok(val) => val 
+             | core.Result::Err(err) => {
+        msg := message == "" ? | true => 
+            "Expected Ok value, but got Err($(err))" 
+        | false => 
+            message
+        io.println("ASSERTION FAILED: $(msg)")
+        core.panic(msg)
+        // Unreachable, but needed for type checker
+        core.unreachable<T>()
+    }
+}
+
+// Assert a Result is Err
+assert_err = <T, E>(result: core.Result<T, E>, message: string = "") E {
+    result ? | core.Result::Err(err) => err 
+             | core.Result::Ok(val) => {
+        msg := message == "" ? | true => 
+            "Expected Err, but got Ok($(val))" 
+        | false => 
+            message
+        io.println("ASSERTION FAILED: $(msg)")
+        core.panic(msg)
+        // Unreachable, but needed for type checker
+        core.unreachable<E>()
+    }
+}
+
+// Test runner context
+TestContext = {
+    name: string,
+    passed: i32,
+    failed: i32,
+    skipped: i32,
+}
+
+// Run a test
+run_test = (name: string, test_fn: () void) void {
+    io.print("  Testing $(name)... ")
+    
+    // Try to run the test
+    // In a real implementation, this would catch panics
+    test_fn()
+    
+    io.println("✓ PASSED")
+}
+
+// Test suite runner
+run_suite = (suite_name: string, tests: [(string, () void)]) void {
+    io.println("\n=== Test Suite: $(suite_name) ===")
+    
+    passed := 0
+    failed := 0
+    
+    range(0, tests.len()).loop(i -> {
+        test := tests[i]
+        run_test(test.0, test.1)
+        passed = passed + 1
+    })
+    
+    io.println("\nResults: $(passed) passed, $(failed) failed")
+}
+
+// Macro-like helper for defining test suites
+test_suite = (name: string) TestContext {
+    TestContext {
+        name: name,
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+    }
+}
+
+// Export public API
+export {
+    assert,
+    assert_eq,
+    assert_ne,
+    assert_lt,
+    assert_gt,
+    assert_in_range,
+    assert_some,
+    assert_none,
+    assert_ok,
+    assert_err,
+    run_test,
+    run_suite,
+    test_suite,
+    TestContext,
+}
