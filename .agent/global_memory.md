@@ -1,5 +1,5 @@
 # Zen Language - Global Memory and Status
-Last Updated: 2025-08-27 (Session 5)
+Last Updated: 2025-08-27 (Session 6)
 
 ## Project Overview
 Zen is a modern systems programming language with a "no keywords" philosophy, using minimal composable primitives. The project has achieved **self-hosting readiness** with a complete standard library written in pure Zen.
@@ -7,7 +7,7 @@ Zen is a modern systems programming language with a "no keywords" philosophy, us
 ## Current Status: 99% Complete ✅
 
 ### Milestones Achieved
-- ✅ Complete standard library (34 modules, 14,000+ lines)
+- ✅ Complete standard library (37 modules, 15,000+ lines)
 - ✅ Self-hosted compiler components (lexer, parser, AST, type checker, codegen)
 - ✅ Loop syntax migration to functional style complete
 - ✅ Bootstrap script and documentation created
@@ -15,8 +15,23 @@ Zen is a modern systems programming language with a "no keywords" philosophy, us
 - ✅ 99.5% test pass rate (only 1 comptime test failing)
 - ✅ Array type inference fixed (now uses proper i32 type)
 - ✅ Struct pointer member access fixed
+- ✅ Enhanced functional programming support in stdlib
 
-### Recent Changes (2025-08-27 Session 5)
+### Recent Changes (2025-08-27 Session 6 - Current)
+1. **Project Cleanup**:
+   - Verified loop syntax migration complete (no old syntax found)
+   - Removed duplicate agent/ folder
+   - Added better-ui framework for UI development
+2. **Standard Library Enhancements**:
+   - Added comprehensive Result<T,E> and Option<T> types with monadic operations
+   - Enhanced iterator module with 15+ functional operations (flat_map, partition, scan, etc.)
+   - Created extended collections module with advanced data structures
+   - Added collection utilities (group_by, flatten, unique, zip_all)
+3. **Testing & Quality**:
+   - All tests passing except known comptime array generation issue
+   - 99%+ test pass rate maintained
+
+### Previous Changes (Session 5)
 1. **Project Organization**:
    - Moved agent files to .agent directory
    - Consolidated documentation to docs/ directory
