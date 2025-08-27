@@ -1,0 +1,29 @@
+# Stock Chat App Example .gitignore
+
+# Environment variables
+.env
+.env.local
+
+# Build outputs
+/build/
+/dist/
+*.out
+
+# Dependencies  
+/node_modules/
+
+# Logs
+*.log
+logs/
+
+# API Keys (NEVER commit these)
+config/secrets.zen
+api_keys.zen
+
+# Cache
+.cache/
+*.cache
+
+# OS
+.DS_Store
+Thumbs.db

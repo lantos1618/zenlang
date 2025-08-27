@@ -1,0 +1,380 @@
+// Stock Chat App - Main Application
+import std.io
+import std.string
+import std.vec
+import std.datetime
+import ../../src/core
+import ../../src/components
+import ../../src/http
+
+// Main Application Component
+struct StockChatApp {
+    messages: Store<Vec<ChatMessage>>,
+    stocks: Store<Vec<StockData>>,
+    ai_client: GeminiClient,
+    stock_client: StockAPIClient,
+    context: AppContext,
+    
+    fn new(gemini_api_key: String) -> StockChatApp {
+        let app = StockChatApp {
+            messages: Store.new(Vec.new()),
+            stocks: Store.new(Vec.new()),
+            ai_client: GeminiClient.new(gemini_api_key),
+            stock_client: StockAPIClient.new(),
+            context: AppContext.new()
+        }
+        
+        // Initialize with welcome message
+        app.add_system_message("Welcome to Stock Chat! Ask me about stocks or get AI-powered insights.")
+        
+        // Load initial stocks
+        app.load_default_stocks()
+        
+        return app
+    }
+    
+    fn load_default_stocks() -> void {
+        let symbols = ["AAPL", "GOOGL", "MSFT", "AMZN", "TSLA"]
+        
+        symbols.iter().each(symbol -> {
+            match self.stock_client.get_quote(symbol) {
+                Ok(data) -> {
+                    let stocks = self.stocks.get()
+                    stocks.push(data)
+                    self.stocks.set(stocks)
+                },
+                Err(e) -> {
+                    io.println("Failed to load stock " + symbol + ": " + e)
+                }
+            }
+        })
+    }
+    
+    fn add_system_message(content: String) -> void {
+        let message = ChatMessage {
+            user: "System",
+            content: content,
+            timestamp: datetime.now().unix_timestamp(),
+            metadata: null
+        }
+        
+        let messages = self.messages.get()
+        messages.push(message)
+        self.messages.set(messages)
+    }
+    
+    fn handle_user_message(content: String) -> void {
+        // Add user message
+        let user_message = ChatMessage {
+            user: "You",
+            content: content,
+            timestamp: datetime.now().unix_timestamp(),
+            metadata: null
+        }
+        
+        let messages = self.messages.get()
+        messages.push(user_message)
+        self.messages.set(messages)
+        
+        // Process the message
+        if content.starts_with("/stock ") {
+            self.handle_stock_command(content.substring(7))
+        } else if content.starts_with("/ai ") {
+            self.handle_ai_command(content.substring(4))
+        } else if content.contains("$") {
+            self.detect_and_show_stocks(content)
+        } else {
+            // Regular AI chat
+            self.get_ai_response(content)
+        }
+    }
+    
+    fn handle_stock_command(symbol: String) -> void {
+        let clean_symbol = symbol.trim().to_uppercase()
+        
+        match self.stock_client.get_quote(clean_symbol) {
+            Ok(data) -> {
+                // Add stock to tracking list
+                let stocks = self.stocks.get()
+                stocks.push(data)
+                self.stocks.set(stocks)
+                
+                // Create rich stock message
+                let stock_info = self.format_stock_info(data)
+                self.add_stock_message(stock_info, data)
+            },
+            Err(e) -> {
+                self.add_system_message("Could not fetch data for " + clean_symbol + ": " + e)
+            }
+        }
+    }
+    
+    fn format_stock_info(data: StockData) -> String {
+        let trend = if data.change >= 0.0 { "📈" } else { "📉" }
+        
+        return string.format(
+            "{} {} - ${:.2f} {} {:.2f} ({:.2f}%)\nVolume: {:,}\nMarket Cap: ${:,}",
+            trend,
+            data.symbol,
+            data.price,
+            if data.change >= 0.0 { "+" } else { "" },
+            data.change,
+            data.change_percent,
+            data.volume,
+            data.market_cap
+        )
+    }
+    
+    fn add_stock_message(content: String, data: StockData) -> void {
+        let metadata = HashMap.new()
+        metadata.set("type", "stock")
+        metadata.set("symbol", data.symbol)
+        metadata.set("price", data.price)
+        
+        let message = ChatMessage {
+            user: "StockBot",
+            content: content,
+            timestamp: datetime.now().unix_timestamp(),
+            metadata: metadata
+        }
+        
+        let messages = self.messages.get()
+        messages.push(message)
+        self.messages.set(messages)
+    }
+    
+    fn handle_ai_command(prompt: String) -> void {
+        // Enhanced AI prompt with stock context
+        let stocks_context = self.build_stocks_context()
+        let full_prompt = "You are a financial assistant. Current stocks being tracked:\n" + 
+                         stocks_context + "\n\nUser query: " + prompt
+        
+        self.get_ai_response_with_prompt(full_prompt)
+    }
+    
+    fn build_stocks_context() -> String {
+        let context = ""
+        self.stocks.get().iter().each(stock -> {
+            context += stock.symbol + ": $" + stock.price.to_string() + 
+                      " (" + stock.change_percent.to_string() + "%)\n"
+        })
+        return context
+    }
+    
+    fn detect_and_show_stocks(content: String) -> void {
+        // Extract stock symbols (e.g., $AAPL)
+        let symbols = self.extract_stock_symbols(content)
+        
+        symbols.iter().each(symbol -> {
+            self.handle_stock_command(symbol)
+        })
+        
+        // Also get AI interpretation
+        self.get_ai_response(content)
+    }
+    
+    fn extract_stock_symbols(text: String) -> Vec<String> {
+        let symbols = Vec.new()
+        let parts = text.split(" ")
+        
+        parts.iter().each(part -> {
+            if part.starts_with("$") && part.len() > 1 {
+                symbols.push(part.substring(1))
+            }
+        })
+        
+        return symbols
+    }
+    
+    fn get_ai_response(prompt: String) -> void {
+        self.get_ai_response_with_prompt(prompt)
+    }
+    
+    fn get_ai_response_with_prompt(prompt: String) -> void {
+        // Show loading indicator
+        self.add_system_message("AI is thinking...")
+        
+        match self.ai_client.generate_content(prompt, "gemini-pro") {
+            Ok(response) -> {
+                // Remove loading message
+                let messages = self.messages.get()
+                messages.pop()
+                
+                // Add AI response
+                let ai_message = ChatMessage {
+                    user: "AI Assistant",
+                    content: response,
+                    timestamp: datetime.now().unix_timestamp(),
+                    metadata: HashMap.new().set("type", "ai")
+                }
+                messages.push(ai_message)
+                self.messages.set(messages)
+            },
+            Err(e) -> {
+                // Remove loading message and show error
+                let messages = self.messages.get()
+                messages.pop()
+                self.messages.set(messages)
+                
+                self.add_system_message("AI error: " + e)
+            }
+        }
+    }
+    
+    fn render() -> VNode {
+        let app_container = div().attr("class", "stock-chat-app")
+        
+        // Header with stock tickers
+        let header = div()
+            .attr("class", "app-header")
+            .child(
+                div()
+                    .attr("class", "stock-ticker-bar")
+                    .child(self.render_stock_tickers())
+            )
+        
+        // Chat area
+        let chat_area = div()
+            .attr("class", "chat-area")
+            .child(self.render_messages())
+            .child(self.render_input())
+        
+        // Sidebar with stock details
+        let sidebar = div()
+            .attr("class", "sidebar")
+            .child(self.render_stock_details())
+        
+        return app_container
+            .child(header)
+            .child(
+                div()
+                    .attr("class", "main-content")
+                    .child(chat_area)
+                    .child(sidebar)
+            )
+    }
+    
+    fn render_stock_tickers() -> VNode {
+        let ticker_container = div().attr("class", "ticker-container")
+        
+        self.stocks.get().iter().each(stock -> {
+            let ticker = StockTicker {
+                symbol: stock.symbol,
+                price: stock.price,
+                change: stock.change,
+                change_percent: stock.change_percent
+            }
+            ticker_container.child(ticker.render())
+        })
+        
+        return ticker_container
+    }
+    
+    fn render_messages() -> VNode {
+        let messages_container = div()
+            .attr("class", "messages-container")
+            .attr("id", "messages")
+        
+        self.messages.get().iter().each(message -> {
+            messages_container.child(message.render())
+        })
+        
+        return messages_container
+    }
+    
+    fn render_input() -> VNode {
+        let input = ChatInput.new(
+            "Ask about stocks or type $SYMBOL...",
+            |text| { self.handle_user_message(text) }
+        )
+        return input.render()
+    }
+    
+    fn render_stock_details() -> VNode {
+        let details = div().attr("class", "stock-details")
+        
+        details.child(
+            div()
+                .attr("class", "section-title")
+                .text_content("Tracked Stocks")
+        )
+        
+        self.stocks.get().iter().each(stock -> {
+            let card = Card {
+                title: stock.symbol,
+                content: div()
+                    .child(span("Price: $" + stock.price.to_string()))
+                    .child(span("Change: " + stock.change_percent.to_string() + "%"))
+                    .child(span("Volume: " + stock.volume.to_string())),
+                footer: button("View Chart", || {
+                    self.show_stock_chart(stock.symbol)
+                })
+            }
+            details.child(card.render())
+        })
+        
+        return details
+    }
+    
+    fn show_stock_chart(symbol: String) -> void {
+        match self.stock_client.get_chart(symbol, "1d") {
+            Ok(data) -> {
+                // Would render chart here
+                self.add_system_message("Chart data loaded for " + symbol)
+            },
+            Err(e) -> {
+                self.add_system_message("Failed to load chart: " + e)
+            }
+        }
+    }
+}
+
+// Application entry point
+fn main() -> void {
+    // Load API key from environment or config
+    let gemini_api_key = "AIzaSyCGCPgt4Dw635kw6MDgVTepwGvHPM_HqYE"
+    
+    // Initialize app
+    let app = StockChatApp.new(gemini_api_key)
+    
+    // Mount to DOM (in a real implementation)
+    // For now, just render and print
+    let rendered = app.render()
+    
+    io.println("Stock Chat App initialized successfully!")
+    io.println("Commands:")
+    io.println("  /stock SYMBOL - Get stock quote")
+    io.println("  /ai <prompt> - Ask AI with stock context")
+    io.println("  $SYMBOL - Mention a stock to track it")
+    
+    // Run app loop (simplified for example)
+    app.run_interactive()
+}
+
+// Interactive CLI mode for testing
+impl StockChatApp {
+    fn run_interactive() -> void {
+        io.println("\nStock Chat App - Interactive Mode")
+        io.println("Type 'quit' to exit\n")
+        
+        loop {
+            io.print("> ")
+            let input = io.read_line()
+            
+            if input == "quit" || input == "exit" {
+                break
+            }
+            
+            self.handle_user_message(input)
+            
+            // Print last message
+            let messages = self.messages.get()
+            if messages.len() > 0 {
+                let last = messages[messages.len() - 1]
+                io.println("\n" + last.user + ": " + last.content + "\n")
+            }
+        }
+        
+        io.println("Goodbye!")
+    }
+}

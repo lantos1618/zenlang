@@ -1,0 +1,219 @@
+// Better-UI Component Library
+import std.string
+import std.vec
+import core
+
+// Chat Message Component
+struct ChatMessage {
+    user: String,
+    content: String,
+    timestamp: i64,
+    metadata: HashMap<String, Any>?,
+    
+    fn render() -> VNode {
+        return div()
+            .attr("class", "chat-message")
+            .child(
+                div()
+                    .attr("class", "message-header")
+                    .child(span(self.user))
+                    .child(span(self.timestamp.to_string()))
+            )
+            .child(
+                div()
+                    .attr("class", "message-content")
+                    .text_content(self.content)
+            )
+    }
+}
+
+// Stock Ticker Component
+struct StockTicker {
+    symbol: String,
+    price: f64,
+    change: f64,
+    change_percent: f64,
+    
+    fn render() -> VNode {
+        let color = if self.change >= 0.0 { "green" } else { "red" }
+        
+        return div()
+            .attr("class", "stock-ticker")
+            .attr("data-color", color)
+            .child(span(self.symbol))
+            .child(span("$" + self.price.to_string()))
+            .child(
+                span(
+                    (if self.change >= 0.0 { "+" } else { "" }) +
+                    self.change.to_string() + 
+                    " (" + self.change_percent.to_string() + "%)"
+                ).attr("class", color)
+            )
+    }
+}
+
+// Chat Input Component
+struct ChatInput {
+    placeholder: String,
+    on_submit: fn(String) -> void,
+    value: Store<String>,
+    
+    fn new(placeholder: String, on_submit: fn(String) -> void) -> ChatInput {
+        return ChatInput {
+            placeholder: placeholder,
+            on_submit: on_submit,
+            value: Store.new("")
+        }
+    }
+    
+    fn render() -> VNode {
+        return div()
+            .attr("class", "chat-input")
+            .child(
+                input("text", self.placeholder)
+                    .attr("value", self.value.get())
+                    .attr("onchange", |e| { self.value.set(e.target.value) })
+            )
+            .child(
+                button("Send", || {
+                    self.on_submit(self.value.get())
+                    self.value.set("")
+                })
+            )
+    }
+}
+
+// List Component
+struct List<T> {
+    items: Vec<T>,
+    render_item: fn(T) -> VNode,
+    
+    fn render() -> VNode {
+        let container = div().attr("class", "list")
+        
+        self.items.iter().each(item -> {
+            container.child(self.render_item(item))
+        })
+        
+        return container
+    }
+}
+
+// Modal Component
+struct Modal {
+    is_open: Store<bool>,
+    title: String,
+    content: VNode,
+    
+    fn render() -> VNode {
+        if !self.is_open.get() {
+            return div().attr("style", "display: none")
+        }
+        
+        return div()
+            .attr("class", "modal-overlay")
+            .child(
+                div()
+                    .attr("class", "modal")
+                    .child(
+                        div()
+                            .attr("class", "modal-header")
+                            .child(span(self.title))
+                            .child(
+                                button("×", || { self.is_open.set(false) })
+                                    .attr("class", "close-btn")
+                            )
+                    )
+                    .child(
+                        div()
+                            .attr("class", "modal-content")
+                            .child(self.content)
+                    )
+            )
+    }
+}
+
+// Tab Component
+struct TabView {
+    tabs: Vec<Tab>,
+    active_index: Store<i32>,
+    
+    fn render() -> VNode {
+        let tab_headers = div().attr("class", "tab-headers")
+        let current_index = self.active_index.get()
+        
+        self.tabs.iter().enumerate().each(|(i, tab)| {
+            tab_headers.child(
+                button(tab.label, || { self.active_index.set(i) })
+                    .attr("class", if i == current_index { "active" } else { "" })
+            )
+        })
+        
+        let content = if current_index >= 0 && current_index < self.tabs.len() {
+            self.tabs[current_index].content
+        } else {
+            div()
+        }
+        
+        return div()
+            .attr("class", "tab-view")
+            .child(tab_headers)
+            .child(
+                div()
+                    .attr("class", "tab-content")
+                    .child(content)
+            )
+    }
+}
+
+struct Tab {
+    label: String,
+    content: VNode
+}
+
+// Loading Spinner Component
+struct LoadingSpinner {
+    size: String,
+    
+    fn render() -> VNode {
+        return div()
+            .attr("class", "loading-spinner")
+            .attr("data-size", self.size)
+            .child(div().attr("class", "spinner"))
+    }
+}
+
+// Card Component
+struct Card {
+    title: String?,
+    content: VNode,
+    footer: VNode?,
+    
+    fn render() -> VNode {
+        let card = div().attr("class", "card")
+        
+        if self.title != null {
+            card.child(
+                div()
+                    .attr("class", "card-header")
+                    .text_content(self.title)
+            )
+        }
+        
+        card.child(
+            div()
+                .attr("class", "card-body")
+                .child(self.content)
+        )
+        
+        if self.footer != null {
+            card.child(
+                div()
+                    .attr("class", "card-footer")
+                    .child(self.footer)
+            )
+        }
+        
+        return card
+    }
+}

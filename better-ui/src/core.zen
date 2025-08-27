@@ -1,0 +1,175 @@
+// Better-UI Core Framework
+import std.io
+import std.string
+import std.vec
+
+// Core UI Component trait
+behavior UIComponent {
+    fn render() -> String
+    fn update(state: Any) -> void
+    fn handle_event(event: Event) -> void
+}
+
+// Base Event structure
+struct Event {
+    type: String,
+    data: Any,
+    timestamp: i64
+}
+
+// Component State management
+struct State {
+    data: HashMap<String, Any>,
+    
+    fn new() -> State {
+        return State { data: HashMap.new() }
+    }
+    
+    fn get(key: String) -> Any {
+        return self.data.get(key)
+    }
+    
+    fn set(key: String, value: Any) -> void {
+        self.data.set(key, value)
+    }
+}
+
+// Virtual DOM Node
+struct VNode {
+    tag: String,
+    attrs: HashMap<String, String>,
+    children: Vec<VNode>,
+    text: String?,
+    
+    fn new(tag: String) -> VNode {
+        return VNode {
+            tag: tag,
+            attrs: HashMap.new(),
+            children: Vec.new(),
+            text: null
+        }
+    }
+    
+    fn attr(key: String, value: String) -> VNode {
+        self.attrs.set(key, value)
+        return self
+    }
+    
+    fn child(node: VNode) -> VNode {
+        self.children.push(node)
+        return self
+    }
+    
+    fn text_content(content: String) -> VNode {
+        self.text = content
+        return self
+    }
+}
+
+// UI Builder helper functions
+fn div() -> VNode {
+    return VNode.new("div")
+}
+
+fn span(text: String) -> VNode {
+    return VNode.new("span").text_content(text)
+}
+
+fn button(text: String, onclick: fn() -> void) -> VNode {
+    return VNode.new("button")
+        .attr("onclick", onclick.to_string())
+        .text_content(text)
+}
+
+fn input(type: String, placeholder: String) -> VNode {
+    return VNode.new("input")
+        .attr("type", type)
+        .attr("placeholder", placeholder)
+}
+
+// Reactive Store
+struct Store<T> {
+    value: T,
+    subscribers: Vec<fn(T) -> void>,
+    
+    fn new(initial: T) -> Store<T> {
+        return Store {
+            value: initial,
+            subscribers: Vec.new()
+        }
+    }
+    
+    fn get() -> T {
+        return self.value
+    }
+    
+    fn set(value: T) -> void {
+        self.value = value
+        self.notify()
+    }
+    
+    fn subscribe(callback: fn(T) -> void) -> void {
+        self.subscribers.push(callback)
+    }
+    
+    fn notify() -> void {
+        self.subscribers.iter().each(sub -> {
+            sub(self.value)
+        })
+    }
+}
+
+// Application Context
+struct AppContext {
+    components: HashMap<String, Component>,
+    stores: HashMap<String, Store<Any>>,
+    router: Router?,
+    
+    fn new() -> AppContext {
+        return AppContext {
+            components: HashMap.new(),
+            stores: HashMap.new(),
+            router: null
+        }
+    }
+    
+    fn register_component(name: String, component: Component) -> void {
+        self.components.set(name, component)
+    }
+    
+    fn create_store(name: String, initial: Any) -> Store<Any> {
+        let store = Store.new(initial)
+        self.stores.set(name, store)
+        return store
+    }
+}
+
+// Router for single-page applications
+struct Router {
+    routes: HashMap<String, fn() -> VNode>,
+    current: String,
+    
+    fn new() -> Router {
+        return Router {
+            routes: HashMap.new(),
+            current: "/"
+        }
+    }
+    
+    fn route(path: String, handler: fn() -> VNode) -> void {
+        self.routes.set(path, handler)
+    }
+    
+    fn navigate(path: String) -> void {
+        self.current = path
+        self.render()
+    }
+    
+    fn render() -> VNode {
+        let handler = self.routes.get(self.current)
+        if handler != null {
+            return handler()
+        }
+        return div().text_content("404 - Not Found")
+    }
+}
