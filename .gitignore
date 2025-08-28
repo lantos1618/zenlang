@@ -3,3 +3,4 @@
 output.o
 .agent/
 agent/
+.agent/claude_output.jsonl
