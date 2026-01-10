@@ -53,7 +53,7 @@ rng_next_bounded = (rng: MutPtr<Rng>, max: i64) i64 {
     | true { return 0 }
     | false { }
 
-    val ::= rng_next(rng)
+    val = rng_next(rng)
     val < 0 ?
     | true { val = 0 - val }
     | false { }
@@ -68,12 +68,12 @@ default_rng = () Rng {
 
 // Global random (convenience)
 random = () i64 {
-    rng ::= default_rng()
+    rng = default_rng()
     return rng_next(rng.mut_ref())
 }
 
 // Global random in range
 random_bounded = (max: i64) i64 {
-    rng ::= default_rng()
+    rng = default_rng()
     return rng_next_bounded(rng.mut_ref(), max)
 }

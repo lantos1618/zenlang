@@ -5,7 +5,6 @@ use crate::error::{CompileError, Result};
 use std::collections::HashMap;
 
 /// Tracks behaviors, implementations, and provides trait resolution
-#[allow(dead_code)]
 pub struct BehaviorResolver {
     /// All defined behaviors/traits
     behaviors: HashMap<String, BehaviorInfo>,
@@ -16,7 +15,6 @@ pub struct BehaviorResolver {
 }
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct BehaviorInfo {
     pub name: String,
     pub type_params: Vec<String>,
@@ -24,7 +22,6 @@ pub struct BehaviorInfo {
 }
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct BehaviorMethodInfo {
     pub name: String,
     pub param_types: Vec<AstType>,
@@ -33,7 +30,6 @@ pub struct BehaviorMethodInfo {
 }
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct ImplInfo {
     pub type_name: String,
     pub trait_name: String,
@@ -42,7 +38,6 @@ pub struct ImplInfo {
 }
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct MethodInfo {
     pub name: String,
     pub param_types: Vec<AstType>,
@@ -50,7 +45,6 @@ pub struct MethodInfo {
 }
 
 impl BehaviorResolver {
-    #[allow(dead_code)]
     pub fn new() -> Self {
         let mut behaviors = HashMap::new();
 
@@ -113,7 +107,6 @@ impl BehaviorResolver {
     }
 
     /// Register a behavior definition
-    #[allow(dead_code)]
     pub fn register_behavior(&mut self, behavior: &BehaviorDefinition) -> Result<()> {
         if self.behaviors.contains_key(&behavior.name) {
             return Err(CompileError::TypeError(
@@ -152,7 +145,6 @@ impl BehaviorResolver {
     }
 
     /// Register a trait definition (using same storage as behaviors)
-    #[allow(dead_code)]
     pub fn register_trait(&mut self, trait_def: &TraitDefinition) -> Result<()> {
         let methods: Vec<BehaviorMethodInfo> = trait_def
             .methods
@@ -486,7 +478,6 @@ impl BehaviorResolver {
     }
 
     /// Resolve a method call on a type
-    #[allow(dead_code)]
     pub fn resolve_method(&self, type_name: &str, method_name: &str) -> Option<MethodInfo> {
         // First check inherent methods
         if let Some(methods) = self.inherent_methods.get(type_name) {

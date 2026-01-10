@@ -1,0 +1,632 @@
+// Zen Standard Library: Process Management (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ String } = @std.string
+{ Vec } = @std.vec
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Process Syscall Numbers
+// ============================================================================
+
+SYS_READ = 0
+SYS_WRITE = 1
+SYS_CLOSE = 3
+SYS_PIPE = 22
+SYS_DUP = 32
+SYS_DUP2 = 33
+SYS_FORK = 57
+SYS_EXECVE = 59
+SYS_EXIT = 60
+SYS_WAIT4 = 61
+SYS_KILL = 62
+SYS_GETPID = 39
+SYS_GETPPID = 110
+SYS_GETUID = 102
+SYS_GETGID = 104
+SYS_GETEUID = 107
+SYS_GETEGID = 108
+SYS_SETUID = 105
+SYS_SETGID = 106
+SYS_SETSID = 112
+SYS_GETPGID = 121
+SYS_SETPGID = 109
+SYS_CHDIR = 80
+SYS_GETCWD = 79
+
+// ============================================================================
+// Signal Numbers (Linux)
+// ============================================================================
+
+SIGHUP = 1
+SIGINT = 2
+SIGQUIT = 3
+SIGILL = 4
+SIGTRAP = 5
+SIGABRT = 6
+SIGBUS = 7
+SIGFPE = 8
+SIGKILL = 9
+SIGUSR1 = 10
+SIGSEGV = 11
+SIGUSR2 = 12
+SIGPIPE = 13
+SIGALRM = 14
+SIGTERM = 15
+SIGCHLD = 17
+SIGCONT = 18
+SIGSTOP = 19
+SIGTSTP = 20
+SIGTTIN = 21
+SIGTTOU = 22
+
+// ============================================================================
+// Wait Options
+// ============================================================================
+
+WNOHANG = 1
+WUNTRACED = 2
+WCONTINUED = 8
+
+// ============================================================================
+// Process Error Type
+// ============================================================================
+
+ProcessError: {
+    code: i32,
+    message: String
+}
+
+// Create error from errno
+process_errno_to_error = (errno: i64, allocator: Allocator) ProcessError {
+    code = 0 - errno
+
+    msg = code ?
+        | 1 { String.from("Operation not permitted", allocator) }
+        | 2 { String.from("No such file or directory", allocator) }
+        | 3 { String.from("No such process", allocator) }
+        | 4 { String.from("Interrupted system call", allocator) }
+        | 10 { String.from("No child processes", allocator) }
+        | 11 { String.from("Resource temporarily unavailable", allocator) }
+        | 12 { String.from("Out of memory", allocator) }
+        | 13 { String.from("Permission denied", allocator) }
+        | 22 { String.from("Invalid argument", allocator) }
+        | _ { String.from("Unknown process error", allocator) }
+
+    return ProcessError { code: code, message: msg }
+}
+
+// ============================================================================
+// Low-Level Process Syscalls
+// ============================================================================
+
+// Fork process
+sys_fork = () i64 {
+    return compiler.syscall0(SYS_FORK)
+}
+
+// Exit process
+sys_exit = (status: i32) void {
+    _ = compiler.syscall1(SYS_EXIT, status)
+}
+
+// Wait for child process
+// Returns: child pid on success, negative errno on error
+sys_wait4 = (pid: i32, status_ptr: i64, options: i32, rusage_ptr: i64) i64 {
+    return compiler.syscall4(SYS_WAIT4, pid, status_ptr, options, rusage_ptr)
+}
+
+// Execute program
+sys_execve = (pathname: i64, argv: i64, envp: i64) i64 {
+    return compiler.syscall3(SYS_EXECVE, pathname, argv, envp)
+}
+
+// Send signal to process
+sys_kill = (pid: i32, sig: i32) i64 {
+    return compiler.syscall2(SYS_KILL, pid, sig)
+}
+
+// Get current process ID
+sys_getpid = () i64 {
+    return compiler.syscall0(SYS_GETPID)
+}
+
+// Get parent process ID
+sys_getppid = () i64 {
+    return compiler.syscall0(SYS_GETPPID)
+}
+
+// Get user ID
+sys_getuid = () i64 {
+    return compiler.syscall0(SYS_GETUID)
+}
+
+// Get group ID
+sys_getgid = () i64 {
+    return compiler.syscall0(SYS_GETGID)
+}
+
+// Get effective user ID
+sys_geteuid = () i64 {
+    return compiler.syscall0(SYS_GETEUID)
+}
+
+// Get effective group ID
+sys_getegid = () i64 {
+    return compiler.syscall0(SYS_GETEGID)
+}
+
+// Create pipe
+sys_pipe = (pipefd: i64) i64 {
+    return compiler.syscall1(SYS_PIPE, pipefd)
+}
+
+// Duplicate file descriptor
+sys_dup = (oldfd: i32) i64 {
+    return compiler.syscall1(SYS_DUP, oldfd)
+}
+
+// Duplicate file descriptor to specific fd
+sys_dup2 = (oldfd: i32, newfd: i32) i64 {
+    return compiler.syscall2(SYS_DUP2, oldfd, newfd)
+}
+
+// Set session ID
+sys_setsid = () i64 {
+    return compiler.syscall0(SYS_SETSID)
+}
+
+// Get process group ID
+sys_getpgid = (pid: i32) i64 {
+    return compiler.syscall1(SYS_GETPGID, pid)
+}
+
+// Set process group ID
+sys_setpgid = (pid: i32, pgid: i32) i64 {
+    return compiler.syscall2(SYS_SETPGID, pid, pgid)
+}
+
+// ============================================================================
+// High-Level Process Functions
+// ============================================================================
+
+// Get current process ID
+getpid = () i32 {
+    return sys_getpid()
+}
+
+// Get parent process ID
+getppid = () i32 {
+    return sys_getppid()
+}
+
+// Get user ID
+getuid = () i32 {
+    return sys_getuid()
+}
+
+// Get group ID
+getgid = () i32 {
+    return sys_getgid()
+}
+
+// Get effective user ID
+geteuid = () i32 {
+    return sys_geteuid()
+}
+
+// Get effective group ID
+getegid = () i32 {
+    return sys_getegid()
+}
+
+// Exit with status code
+exit = (status: i32) void {
+    sys_exit(status)
+}
+
+// Fork the current process
+// Returns: Ok(0) in child, Ok(child_pid) in parent, Err on failure
+fork = (allocator: Allocator) Result<i32, ProcessError> {
+    result = sys_fork()
+
+    result < 0 ?
+        | true { return Result.Err(process_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(result) }
+}
+
+// Send signal to process
+kill = (pid: i32, sig: i32, allocator: Allocator) Result<void, ProcessError> {
+    result = sys_kill(pid, sig)
+
+    result < 0 ?
+        | true { return Result.Err(process_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Wait Status Helpers
+// ============================================================================
+
+// Exit status from wait
+ExitStatus: {
+    raw: i32
+}
+
+// Check if process exited normally
+ExitStatus.exited = (self: ExitStatus) bool {
+    // WIFEXITED: (status & 0x7f) == 0
+    return (self.raw & 0x7f) == 0
+}
+
+// Get exit code (only valid if exited() is true)
+ExitStatus.exit_code = (self: ExitStatus) i32 {
+    // WEXITSTATUS: (status >> 8) & 0xff
+    return (self.raw >> 8) & 0xff
+}
+
+// Check if process was signaled
+ExitStatus.signaled = (self: ExitStatus) bool {
+    // WIFSIGNALED: ((status & 0x7f) + 1) >> 1 > 0
+    term_sig = self.raw & 0x7f
+    return term_sig != 0 && term_sig != 0x7f
+}
+
+// Get termination signal (only valid if signaled() is true)
+ExitStatus.term_signal = (self: ExitStatus) i32 {
+    // WTERMSIG: status & 0x7f
+    return self.raw & 0x7f
+}
+
+// Check if process was stopped
+ExitStatus.stopped = (self: ExitStatus) bool {
+    // WIFSTOPPED: (status & 0xff) == 0x7f
+    return (self.raw & 0xff) == 0x7f
+}
+
+// Get stop signal (only valid if stopped() is true)
+ExitStatus.stop_signal = (self: ExitStatus) i32 {
+    // WSTOPSIG: (status >> 8) & 0xff
+    return (self.raw >> 8) & 0xff
+}
+
+// Check if process continued
+ExitStatus.continued = (self: ExitStatus) bool {
+    // WIFCONTINUED: status == 0xffff
+    return self.raw == 0xffff
+}
+
+// ============================================================================
+// Wait Functions
+// ============================================================================
+
+// Wait for any child process
+// Returns (child_pid, exit_status)
+wait = (allocator: Allocator) Result<(i32, ExitStatus), ProcessError> {
+    status_ptr = allocator.allocate(4)
+    compiler.store<i32>(status_ptr, 0)
+
+    result = sys_wait4(-1, status_ptr, 0, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(status_ptr, 4)
+            return Result.Err(process_errno_to_error(result, allocator))
+        }
+        | false {
+            status = compiler.load<i32>(status_ptr)
+            allocator.deallocate(status_ptr, 4)
+            return Result.Ok((result, ExitStatus { raw: status }))
+        }
+}
+
+// Wait for specific child process
+waitpid = (pid: i32, allocator: Allocator) Result<ExitStatus, ProcessError> {
+    status_ptr = allocator.allocate(4)
+    compiler.store<i32>(status_ptr, 0)
+
+    result = sys_wait4(pid, status_ptr, 0, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(status_ptr, 4)
+            return Result.Err(process_errno_to_error(result, allocator))
+        }
+        | false {
+            status = compiler.load<i32>(status_ptr)
+            allocator.deallocate(status_ptr, 4)
+            return Result.Ok(ExitStatus { raw: status })
+        }
+}
+
+// Non-blocking wait for any child
+try_wait = (allocator: Allocator) Result<Option<(i32, ExitStatus)>, ProcessError> {
+    status_ptr = allocator.allocate(4)
+    compiler.store<i32>(status_ptr, 0)
+
+    result = sys_wait4(-1, status_ptr, WNOHANG, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(status_ptr, 4)
+            return Result.Err(process_errno_to_error(result, allocator))
+        }
+        | false {
+            result == 0 ?
+                | true {
+                    allocator.deallocate(status_ptr, 4)
+                    return Result.Ok(Option.None)
+                }
+                | false {
+                    status = compiler.load<i32>(status_ptr)
+                    allocator.deallocate(status_ptr, 4)
+                    return Result.Ok(Option.Some((result, ExitStatus { raw: status })))
+                }
+        }
+}
+
+// ============================================================================
+// Pipe Support
+// ============================================================================
+
+Pipe: {
+    read_fd: i32,
+    write_fd: i32
+}
+
+// Create a pipe
+pipe = (allocator: Allocator) Result<Pipe, ProcessError> {
+    // Allocate space for two i32s (pipe fds)
+    fds_ptr = allocator.allocate(8)
+
+    result = sys_pipe(fds_ptr)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(fds_ptr, 8)
+            return Result.Err(process_errno_to_error(result, allocator))
+        }
+        | false {
+            read_fd = compiler.load<i32>(fds_ptr)
+            write_fd = compiler.load<i32>(compiler.gep(fds_ptr, 4))
+            allocator.deallocate(fds_ptr, 8)
+            return Result.Ok(Pipe { read_fd: read_fd, write_fd: write_fd })
+        }
+}
+
+// Close pipe read end
+Pipe.close_read = (self: MutPtr<Pipe>) void {
+    _ = compiler.syscall1(SYS_CLOSE, self.val.read_fd)
+    self.val.read_fd = -1
+}
+
+// Close pipe write end
+Pipe.close_write = (self: MutPtr<Pipe>) void {
+    _ = compiler.syscall1(SYS_CLOSE, self.val.write_fd)
+    self.val.write_fd = -1
+}
+
+// Close both ends
+Pipe.close = (self: MutPtr<Pipe>) void {
+    self.val.read_fd >= 0 ?
+        | true { _ = compiler.syscall1(SYS_CLOSE, self.val.read_fd) }
+        | false { }
+    self.val.write_fd >= 0 ?
+        | true { _ = compiler.syscall1(SYS_CLOSE, self.val.write_fd) }
+        | false { }
+    self.val.read_fd = -1
+    self.val.write_fd = -1
+}
+
+// Read from pipe
+Pipe.read = (self: Pipe, buf: i64, count: usize) i64 {
+    return compiler.syscall3(SYS_READ, self.read_fd, buf, count)
+}
+
+// Write to pipe
+Pipe.write = (self: Pipe, buf: i64, count: usize) i64 {
+    return compiler.syscall3(SYS_WRITE, self.write_fd, buf, count)
+}
+
+// ============================================================================
+// File Descriptor Operations
+// ============================================================================
+
+// Duplicate file descriptor
+dup = (fd: i32, allocator: Allocator) Result<i32, ProcessError> {
+    result = sys_dup(fd)
+
+    result < 0 ?
+        | true { return Result.Err(process_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(result) }
+}
+
+// Duplicate file descriptor to specific fd
+dup2 = (oldfd: i32, newfd: i32, allocator: Allocator) Result<i32, ProcessError> {
+    result = sys_dup2(oldfd, newfd)
+
+    result < 0 ?
+        | true { return Result.Err(process_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(result) }
+}
+
+// ============================================================================
+// Session/Process Group
+// ============================================================================
+
+// Create new session
+setsid = (allocator: Allocator) Result<i32, ProcessError> {
+    result = sys_setsid()
+
+    result < 0 ?
+        | true { return Result.Err(process_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(result) }
+}
+
+// Get process group ID
+getpgid = (pid: i32, allocator: Allocator) Result<i32, ProcessError> {
+    result = sys_getpgid(pid)
+
+    result < 0 ?
+        | true { return Result.Err(process_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(result) }
+}
+
+// Set process group ID
+setpgid = (pid: i32, pgid: i32, allocator: Allocator) Result<void, ProcessError> {
+    result = sys_setpgid(pid, pgid)
+
+    result < 0 ?
+        | true { return Result.Err(process_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Command Execution Helper
+// ============================================================================
+
+// Helper: Convert String to null-terminated C string
+string_to_cstr = (s: String, allocator: Allocator) i64 {
+    len = s.len()
+    ptr = allocator.allocate(len + 1)
+    src_ptr = s.data.addr()
+    compiler.memcpy(ptr, src_ptr, len)
+    compiler.store<u8>(compiler.gep(ptr, len), 0)
+    return ptr
+}
+
+// Helper: Free C string
+free_cstr = (ptr: i64, len: usize, allocator: Allocator) void {
+    allocator.deallocate(ptr, len + 1)
+}
+
+// Build argv array from Vec<String>
+// Returns pointer to null-terminated array of C strings
+build_argv = (args: Vec<String>, allocator: Allocator) i64 {
+    count = args.len()
+    // Allocate pointer array (count + 1 for null terminator)
+    argv_size = (count + 1) * 8  // 8 bytes per pointer
+    argv = allocator.allocate(argv_size)
+
+    // Convert each string and store pointer
+    i = 0
+    loop {
+        i >= count ?
+            | true { break }
+            | false {
+                arg_opt = args.get(i)
+                arg_opt ?
+                    | Some(arg) {
+                        cstr = string_to_cstr(arg, allocator)
+                        ptr_addr = compiler.gep(argv, i * 8)
+                        compiler.store<i64>(ptr_addr, cstr)
+                    }
+                    | None { }
+                i = i + 1
+            }
+    }
+
+    // Null terminate the array
+    null_addr = compiler.gep(argv, count * 8)
+    compiler.store<i64>(null_addr, 0)
+
+    return argv
+}
+
+// Free argv array built by build_argv
+free_argv = (argv: i64, args: Vec<String>, allocator: Allocator) void {
+    count = args.len()
+
+    // Free each C string
+    i = 0
+    loop {
+        i >= count ?
+            | true { break }
+            | false {
+                ptr_addr = compiler.gep(argv, i * 8)
+                cstr = compiler.load<i64>(ptr_addr)
+                arg_opt = args.get(i)
+                arg_opt ?
+                    | Some(arg) { free_cstr(cstr, arg.len(), allocator) }
+                    | None { }
+                i = i + 1
+            }
+    }
+
+    // Free the pointer array
+    argv_size = (count + 1) * 8
+    allocator.deallocate(argv, argv_size)
+}
+
+// Execute a program (replaces current process)
+// This function does not return on success
+exec = (program: String, args: Vec<String>, allocator: Allocator) Result<void, ProcessError> {
+    // Build C string for program path
+    prog_cstr = string_to_cstr(program, allocator)
+
+    // Build argv array
+    argv = build_argv(args, allocator)
+
+    // Empty environment (inherit from parent would need /proc/self/environ)
+    envp = allocator.allocate(8)
+    compiler.store<i64>(envp, 0)
+
+    // Execute
+    result = sys_execve(prog_cstr, argv, envp)
+
+    // If we get here, execve failed
+    free_cstr(prog_cstr, program.len(), allocator)
+    free_argv(argv, args, allocator)
+    allocator.deallocate(envp, 8)
+
+    return Result.Err(process_errno_to_error(result, allocator))
+}
+
+// ============================================================================
+// Spawn Helper (fork + exec)
+// ============================================================================
+
+// Spawn a new process running the given program
+// Returns child PID on success
+spawn = (program: String, args: Vec<String>, allocator: Allocator) Result<i32, ProcessError> {
+    fork_result = fork(allocator)
+
+    fork_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(pid) {
+            pid == 0 ?
+                | true {
+                    // Child process - exec the program
+                    exec_result = exec(program, args, allocator)
+                    // If exec fails, exit with error
+                    exec_result ?
+                        | Err(e) { exit(e.code) }
+                        | Ok(_) { }  // Never reached
+                    exit(1)  // Never reached
+                }
+                | false {
+                    // Parent process - return child PID
+                    return Result.Ok(pid)
+                }
+        }
+
+    // Unreachable
+    return Result.Err(ProcessError { code: -1, message: String.from("unreachable", allocator) })
+}
+
+// Spawn and wait for completion
+// Returns exit status
+spawn_wait = (program: String, args: Vec<String>, allocator: Allocator) Result<ExitStatus, ProcessError> {
+    spawn_result = spawn(program, args, allocator)
+
+    spawn_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(pid) {
+            return waitpid(pid, allocator)
+        }
+}
+

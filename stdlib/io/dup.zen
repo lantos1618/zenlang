@@ -1,0 +1,272 @@
+// Zen Standard Library: File Descriptor Duplication (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+
+{ compiler } = @std
+{ Result } = @std.core.result
+
+// ============================================================================
+// Linux x86-64 Syscall Numbers
+// ============================================================================
+
+SYS_DUP = 32
+SYS_DUP2 = 33
+SYS_DUP3 = 292
+SYS_CLOSE = 3
+
+// ============================================================================
+// Dup Flags (for dup3)
+// ============================================================================
+
+O_CLOEXEC = 524288    // 02000000 octal - close on exec
+
+// ============================================================================
+// Standard File Descriptors
+// ============================================================================
+
+STDIN_FILENO = 0
+STDOUT_FILENO = 1
+STDERR_FILENO = 2
+
+// ============================================================================
+// Basic Duplication Functions
+// ============================================================================
+
+// Duplicate a file descriptor
+// Returns new fd on success, negative errno on failure
+dup = (oldfd: i32) Result<i32, i32> {
+    result = compiler.syscall1(SYS_DUP, oldfd)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(result)
+}
+
+// Duplicate fd to specific new fd
+// If newfd is open, it is closed first
+dup2 = (oldfd: i32, newfd: i32) Result<i32, i32> {
+    result = compiler.syscall2(SYS_DUP2, oldfd, newfd)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(result)
+}
+
+// Duplicate fd to specific new fd with flags
+// Supports O_CLOEXEC flag
+dup3 = (oldfd: i32, newfd: i32, flags: i32) Result<i32, i32> {
+    result = compiler.syscall3(SYS_DUP3, oldfd, newfd, flags)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(result)
+}
+
+// Duplicate with close-on-exec flag
+dup_cloexec = (oldfd: i32, newfd: i32) Result<i32, i32> {
+    return dup3(oldfd, newfd, O_CLOEXEC)
+}
+
+// ============================================================================
+// FdGuard - RAII guard for file descriptor lifetime
+// ============================================================================
+
+FdGuard: {
+    fd: i32,
+    owned: bool
+}
+
+// Create guard that owns the fd (will close on deinit)
+FdGuard.own = (fd: i32) FdGuard {
+    return FdGuard { fd: fd, owned: true }
+}
+
+// Create guard that borrows the fd (won't close)
+FdGuard.borrow = (fd: i32) FdGuard {
+    return FdGuard { fd: fd, owned: false }
+}
+
+// Get the raw fd
+FdGuard.raw = (self: FdGuard) i32 {
+    return self.fd
+}
+
+// Release ownership (won't close on deinit)
+FdGuard.release = (self: FdGuard) i32 {
+    // Note: In real Zen, we'd mutate self.owned = false
+    // For now, just return the fd
+    return self.fd
+}
+
+// Close the fd if owned
+FdGuard.close = (self: FdGuard) Result<void, i32> {
+    self.owned ? {
+        result = compiler.syscall1(SYS_CLOSE, self.fd)
+        result < 0 ? {
+            return Result.Err(0 - result)
+        }
+    }
+    return Result.Ok(())
+}
+
+// ============================================================================
+// SavedFd - Save and restore file descriptor
+// ============================================================================
+
+SavedFd: {
+    original_fd: i32,
+    saved_fd: i32
+}
+
+// Save a file descriptor (duplicates it)
+SavedFd.save = (fd: i32) Result<SavedFd, i32> {
+    dup_result = dup(fd)
+
+    dup_result ? {
+        | Ok(saved) {
+            return Result.Ok(SavedFd { original_fd: fd, saved_fd: saved })
+        }
+        | Err(e) {
+            return Result.Err(e)
+        }
+    }
+}
+
+// Restore the saved fd (moves saved back to original)
+SavedFd.restore = (self: SavedFd) Result<void, i32> {
+    result = dup2(self.saved_fd, self.original_fd)
+
+    result ? {
+        | Ok(_) {
+            // Close the saved copy
+            _ = compiler.syscall1(SYS_CLOSE, self.saved_fd)
+            return Result.Ok(())
+        }
+        | Err(e) {
+            return Result.Err(e)
+        }
+    }
+}
+
+// Discard the saved fd without restoring
+SavedFd.discard = (self: SavedFd) void {
+    _ = compiler.syscall1(SYS_CLOSE, self.saved_fd)
+}
+
+// ============================================================================
+// Stdio Redirection
+// ============================================================================
+
+// Redirect stdin from a file descriptor
+redirect_stdin = (new_fd: i32) Result<SavedFd, i32> {
+    saved = SavedFd.save(STDIN_FILENO)
+
+    saved ? {
+        | Ok(s) {
+            dup2_result = dup2(new_fd, STDIN_FILENO)
+            dup2_result ? {
+                | Ok(_) { return Result.Ok(s) }
+                | Err(e) {
+                    s.discard()
+                    return Result.Err(e)
+                }
+            }
+        }
+        | Err(e) {
+            return Result.Err(e)
+        }
+    }
+}
+
+// Redirect stdout to a file descriptor
+redirect_stdout = (new_fd: i32) Result<SavedFd, i32> {
+    saved = SavedFd.save(STDOUT_FILENO)
+
+    saved ? {
+        | Ok(s) {
+            dup2_result = dup2(new_fd, STDOUT_FILENO)
+            dup2_result ? {
+                | Ok(_) { return Result.Ok(s) }
+                | Err(e) {
+                    s.discard()
+                    return Result.Err(e)
+                }
+            }
+        }
+        | Err(e) {
+            return Result.Err(e)
+        }
+    }
+}
+
+// Redirect stderr to a file descriptor
+redirect_stderr = (new_fd: i32) Result<SavedFd, i32> {
+    saved = SavedFd.save(STDERR_FILENO)
+
+    saved ? {
+        | Ok(s) {
+            dup2_result = dup2(new_fd, STDERR_FILENO)
+            dup2_result ? {
+                | Ok(_) { return Result.Ok(s) }
+                | Err(e) {
+                    s.discard()
+                    return Result.Err(e)
+                }
+            }
+        }
+        | Err(e) {
+            return Result.Err(e)
+        }
+    }
+}
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+// Close a file descriptor
+close_fd = (fd: i32) Result<void, i32> {
+    result = compiler.syscall1(SYS_CLOSE, fd)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(())
+}
+
+// Clone all standard file descriptors
+clone_stdio = () Result<{i32, i32, i32}, i32> {
+    stdin_dup = dup(STDIN_FILENO)
+    stdin_dup ? {
+        | Err(e) { return Result.Err(e) }
+        | Ok(new_stdin) {
+            stdout_dup = dup(STDOUT_FILENO)
+            stdout_dup ? {
+                | Err(e) {
+                    _ = close_fd(new_stdin)
+                    return Result.Err(e)
+                }
+                | Ok(new_stdout) {
+                    stderr_dup = dup(STDERR_FILENO)
+                    stderr_dup ? {
+                        | Err(e) {
+                            _ = close_fd(new_stdin)
+                            _ = close_fd(new_stdout)
+                            return Result.Err(e)
+                        }
+                        | Ok(new_stderr) {
+                            return Result.Ok({new_stdin, new_stdout, new_stderr})
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

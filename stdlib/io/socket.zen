@@ -1,0 +1,701 @@
+// Zen Standard Library: Socket I/O (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ String } = @std.string
+{ Vec } = @std.vec
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Socket Syscall Numbers
+// ============================================================================
+
+SYS_SOCKET = 41
+SYS_CONNECT = 42
+SYS_ACCEPT = 43
+SYS_SENDTO = 44
+SYS_RECVFROM = 45
+SYS_SENDMSG = 46
+SYS_RECVMSG = 47
+SYS_SHUTDOWN = 48
+SYS_BIND = 49
+SYS_LISTEN = 50
+SYS_GETSOCKNAME = 51
+SYS_GETPEERNAME = 52
+SYS_SOCKETPAIR = 53
+SYS_SETSOCKOPT = 54
+SYS_GETSOCKOPT = 55
+SYS_ACCEPT4 = 288
+SYS_CLOSE = 3
+
+// ============================================================================
+// Socket Constants
+// ============================================================================
+
+// Address families
+AF_UNSPEC = 0
+AF_UNIX = 1
+AF_LOCAL = 1
+AF_INET = 2       // IPv4
+AF_INET6 = 10     // IPv6
+
+// Socket types
+SOCK_STREAM = 1   // TCP
+SOCK_DGRAM = 2    // UDP
+SOCK_RAW = 3
+SOCK_SEQPACKET = 5
+
+// Socket protocols
+IPPROTO_IP = 0
+IPPROTO_TCP = 6
+IPPROTO_UDP = 17
+
+// Socket options levels
+SOL_SOCKET = 1
+SOL_TCP = 6
+SOL_UDP = 17
+
+// Socket options
+SO_REUSEADDR = 2
+SO_KEEPALIVE = 9
+SO_BROADCAST = 6
+SO_RCVTIMEO = 20
+SO_SNDTIMEO = 21
+SO_RCVBUF = 8
+SO_SNDBUF = 7
+
+// TCP options
+TCP_NODELAY = 1
+TCP_MAXSEG = 2
+TCP_KEEPIDLE = 4
+TCP_KEEPINTVL = 5
+TCP_KEEPCNT = 6
+
+// Shutdown modes
+SHUT_RD = 0
+SHUT_WR = 1
+SHUT_RDWR = 2
+
+// Accept4 flags
+SOCK_NONBLOCK = 2048
+SOCK_CLOEXEC = 524288
+
+// ============================================================================
+// IPv4 Address Structure (sockaddr_in)
+// ============================================================================
+
+// Layout: family (2) + port (2) + addr (4) + zero (8) = 16 bytes
+// Note: Port and address must be in network byte order (big-endian)
+
+// IPv4 address (4 bytes)
+Ipv4Addr: {
+    a: u8,
+    b: u8,
+    c: u8,
+    d: u8
+}
+
+// Create IPv4 address from components
+Ipv4Addr.new = (a: u8, b: u8, c: u8, d: u8) Ipv4Addr {
+    return Ipv4Addr { a: a, b: b, c: c, d: d }
+}
+
+// Common addresses
+Ipv4Addr.localhost = () Ipv4Addr {
+    return Ipv4Addr { a: 127, b: 0, c: 0, d: 1 }
+}
+
+Ipv4Addr.any = () Ipv4Addr {
+    return Ipv4Addr { a: 0, b: 0, c: 0, d: 0 }
+}
+
+Ipv4Addr.broadcast = () Ipv4Addr {
+    return Ipv4Addr { a: 255, b: 255, c: 255, d: 255 }
+}
+
+// Convert to 32-bit integer (network byte order)
+Ipv4Addr.to_u32 = (self: Ipv4Addr) u32 {
+    // Network byte order is big-endian
+    result = self.a
+    result = result << 8
+    result = result | self.b
+    result = result << 8
+    result = result | self.c
+    result = result << 8
+    result = result | self.d
+    return result
+}
+
+// Socket address for IPv4
+SocketAddrV4: {
+    addr: Ipv4Addr,
+    port: u16
+}
+
+// Create socket address
+SocketAddrV4.new = (addr: Ipv4Addr, port: u16) SocketAddrV4 {
+    return SocketAddrV4 { addr: addr, port: port }
+}
+
+// Convert port to network byte order (big-endian)
+htons = (port: u16) u16 {
+    high = (port >> 8) & 0xFF
+    low = port & 0xFF
+    return (low << 8) | high
+}
+
+// Convert port from network byte order
+ntohs = (port: u16) u16 {
+    return htons(port)  // Same operation
+}
+
+// Convert 32-bit to network byte order
+htonl = (val: u32) u32 {
+    b0 = (val >> 24) & 0xFF
+    b1 = (val >> 16) & 0xFF
+    b2 = (val >> 8) & 0xFF
+    b3 = val & 0xFF
+    return (b3 << 24) | (b2 << 16) | (b1 << 8) | b0
+}
+
+// ============================================================================
+// Socket Handle
+// ============================================================================
+
+Socket: {
+    fd: i32
+}
+
+// Create socket from raw fd
+Socket.from_raw = (fd: i32) Socket {
+    return Socket { fd: fd }
+}
+
+// Check if socket is valid
+Socket.is_valid = (self: Socket) bool {
+    return self.fd >= 0
+}
+
+// ============================================================================
+// Socket Error Type
+// ============================================================================
+
+SocketError: {
+    code: i32,
+    message: String
+}
+
+// Create error from errno
+socket_errno_to_error = (errno: i64, allocator: Allocator) SocketError {
+    code = 0 - errno
+
+    msg = code ?
+        | 9 { String.from("Bad file descriptor", allocator) }
+        | 13 { String.from("Permission denied", allocator) }
+        | 22 { String.from("Invalid argument", allocator) }
+        | 88 { String.from("Socket operation on non-socket", allocator) }
+        | 93 { String.from("Protocol not supported", allocator) }
+        | 94 { String.from("Socket type not supported", allocator) }
+        | 95 { String.from("Operation not supported", allocator) }
+        | 97 { String.from("Address family not supported", allocator) }
+        | 98 { String.from("Address already in use", allocator) }
+        | 99 { String.from("Cannot assign requested address", allocator) }
+        | 100 { String.from("Network is down", allocator) }
+        | 101 { String.from("Network is unreachable", allocator) }
+        | 104 { String.from("Connection reset by peer", allocator) }
+        | 106 { String.from("Transport endpoint already connected", allocator) }
+        | 107 { String.from("Transport endpoint not connected", allocator) }
+        | 110 { String.from("Connection timed out", allocator) }
+        | 111 { String.from("Connection refused", allocator) }
+        | 113 { String.from("No route to host", allocator) }
+        | 114 { String.from("Operation already in progress", allocator) }
+        | 115 { String.from("Operation now in progress", allocator) }
+        | _ { String.from("Unknown socket error", allocator) }
+
+    return SocketError { code: code, message: msg }
+}
+
+// ============================================================================
+// Low-Level Socket Syscalls
+// ============================================================================
+
+// Create socket
+sys_socket = (domain: i32, type: i32, protocol: i32) i64 {
+    return compiler.syscall3(SYS_SOCKET, domain, type, protocol)
+}
+
+// Close socket
+sys_close = (fd: i32) i64 {
+    return compiler.syscall1(SYS_CLOSE, fd)
+}
+
+// Bind socket to address
+sys_bind = (sockfd: i32, addr_ptr: i64, addrlen: i32) i64 {
+    return compiler.syscall3(SYS_BIND, sockfd, addr_ptr, addrlen)
+}
+
+// Listen for connections
+sys_listen = (sockfd: i32, backlog: i32) i64 {
+    return compiler.syscall2(SYS_LISTEN, sockfd, backlog)
+}
+
+// Accept connection
+sys_accept = (sockfd: i32, addr_ptr: i64, addrlen_ptr: i64) i64 {
+    return compiler.syscall3(SYS_ACCEPT, sockfd, addr_ptr, addrlen_ptr)
+}
+
+// Accept with flags
+sys_accept4 = (sockfd: i32, addr_ptr: i64, addrlen_ptr: i64, flags: i32) i64 {
+    return compiler.syscall4(SYS_ACCEPT4, sockfd, addr_ptr, addrlen_ptr, flags)
+}
+
+// Connect to address
+sys_connect = (sockfd: i32, addr_ptr: i64, addrlen: i32) i64 {
+    return compiler.syscall3(SYS_CONNECT, sockfd, addr_ptr, addrlen)
+}
+
+// Send data (connected socket)
+sys_send = (sockfd: i32, buf_ptr: i64, len: usize, flags: i32) i64 {
+    return compiler.syscall4(SYS_SENDTO, sockfd, buf_ptr, len, flags)
+}
+
+// Receive data (connected socket)
+sys_recv = (sockfd: i32, buf_ptr: i64, len: usize, flags: i32) i64 {
+    return compiler.syscall4(SYS_RECVFROM, sockfd, buf_ptr, len, flags)
+}
+
+// Send to address (UDP)
+sys_sendto = (sockfd: i32, buf_ptr: i64, len: usize, flags: i32, addr_ptr: i64, addrlen: i32) i64 {
+    return compiler.syscall6(SYS_SENDTO, sockfd, buf_ptr, len, flags, addr_ptr, addrlen)
+}
+
+// Receive from address (UDP)
+sys_recvfrom = (sockfd: i32, buf_ptr: i64, len: usize, flags: i32, addr_ptr: i64, addrlen_ptr: i64) i64 {
+    return compiler.syscall6(SYS_RECVFROM, sockfd, buf_ptr, len, flags, addr_ptr, addrlen_ptr)
+}
+
+// Shutdown socket
+sys_shutdown = (sockfd: i32, how: i32) i64 {
+    return compiler.syscall2(SYS_SHUTDOWN, sockfd, how)
+}
+
+// Set socket option
+sys_setsockopt = (sockfd: i32, level: i32, optname: i32, optval_ptr: i64, optlen: i32) i64 {
+    return compiler.syscall5(SYS_SETSOCKOPT, sockfd, level, optname, optval_ptr, optlen)
+}
+
+// Get socket option
+sys_getsockopt = (sockfd: i32, level: i32, optname: i32, optval_ptr: i64, optlen_ptr: i64) i64 {
+    return compiler.syscall5(SYS_GETSOCKOPT, sockfd, level, optname, optval_ptr, optlen_ptr)
+}
+
+// ============================================================================
+// Helper: Build sockaddr_in structure
+// ============================================================================
+
+// Build sockaddr_in in memory and return pointer
+// Layout: sin_family (2) + sin_port (2) + sin_addr (4) + sin_zero (8) = 16 bytes
+build_sockaddr_in = (addr: SocketAddrV4, allocator: Allocator) i64 {
+    // Allocate 16 bytes for sockaddr_in
+    ptr = allocator.allocate(16)
+
+    // sin_family (AF_INET = 2) - 2 bytes at offset 0
+    compiler.store<u16>(ptr, AF_INET)
+
+    // sin_port (network byte order) - 2 bytes at offset 2
+    port_ptr = compiler.gep(ptr, 2)
+    compiler.store<u16>(port_ptr, htons(addr.port))
+
+    // sin_addr - 4 bytes at offset 4
+    addr_ptr = compiler.gep(ptr, 4)
+    compiler.store<u32>(addr_ptr, addr.addr.to_u32())
+
+    // sin_zero - 8 bytes at offset 8 (zero-fill)
+    zero_ptr = compiler.gep(ptr, 8)
+    i = 0
+    loop {
+        i >= 8 ?
+            | true { break }
+            | false {
+                compiler.store<u8>(compiler.gep(zero_ptr, i), 0)
+                i = i + 1
+            }
+    }
+
+    return ptr
+}
+
+// Free sockaddr_in
+free_sockaddr_in = (ptr: i64, allocator: Allocator) void {
+    allocator.deallocate(ptr, 16)
+}
+
+// ============================================================================
+// TCP Socket Operations
+// ============================================================================
+
+// Create TCP socket
+tcp_socket = (allocator: Allocator) Result<Socket, SocketError> {
+    result = sys_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(Socket.from_raw(result)) }
+}
+
+// Bind TCP socket to address
+tcp_bind = (sock: Socket, addr: SocketAddrV4, allocator: Allocator) Result<void, SocketError> {
+    sockaddr = build_sockaddr_in(addr, allocator)
+    result = sys_bind(sock.fd, sockaddr, 16)
+    free_sockaddr_in(sockaddr, allocator)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// Listen for connections
+tcp_listen = (sock: Socket, backlog: i32, allocator: Allocator) Result<void, SocketError> {
+    result = sys_listen(sock.fd, backlog)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// Accept incoming connection
+tcp_accept = (sock: Socket, allocator: Allocator) Result<Socket, SocketError> {
+    // Allocate space for client address (16 bytes) and length (4 bytes)
+    addr_ptr = allocator.allocate(16)
+    len_ptr = allocator.allocate(4)
+    compiler.store<i32>(len_ptr, 16)
+
+    result = sys_accept(sock.fd, addr_ptr, len_ptr)
+
+    allocator.deallocate(addr_ptr, 16)
+    allocator.deallocate(len_ptr, 4)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(Socket.from_raw(result)) }
+}
+
+// Connect to remote address
+tcp_connect = (sock: Socket, addr: SocketAddrV4, allocator: Allocator) Result<void, SocketError> {
+    sockaddr = build_sockaddr_in(addr, allocator)
+    result = sys_connect(sock.fd, sockaddr, 16)
+    free_sockaddr_in(sockaddr, allocator)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// Send data over TCP
+tcp_send = (sock: Socket, data: Vec<u8>, allocator: Allocator) Result<usize, SocketError> {
+    buf_ptr = data.data.addr()
+    result = sys_send(sock.fd, buf_ptr, data.len(), 0)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(result) }
+}
+
+// Receive data over TCP
+tcp_recv = (sock: Socket, max_len: usize, allocator: Allocator) Result<Vec<u8>, SocketError> {
+    // Allocate receive buffer
+    buf = allocator.allocate(max_len)
+    result = sys_recv(sock.fd, buf, max_len, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, max_len)
+            return Result.Err(socket_errno_to_error(result, allocator))
+        }
+        | false {
+            // Create Vec from received data
+            vec = Vec<u8>.from_ptr(buf, result, allocator)
+            return Result.Ok(vec)
+        }
+}
+
+// ============================================================================
+// UDP Socket Operations
+// ============================================================================
+
+// Create UDP socket
+udp_socket = (allocator: Allocator) Result<Socket, SocketError> {
+    result = sys_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(Socket.from_raw(result)) }
+}
+
+// Bind UDP socket to address
+udp_bind = (sock: Socket, addr: SocketAddrV4, allocator: Allocator) Result<void, SocketError> {
+    sockaddr = build_sockaddr_in(addr, allocator)
+    result = sys_bind(sock.fd, sockaddr, 16)
+    free_sockaddr_in(sockaddr, allocator)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// Send datagram to address
+udp_sendto = (sock: Socket, data: Vec<u8>, addr: SocketAddrV4, allocator: Allocator) Result<usize, SocketError> {
+    sockaddr = build_sockaddr_in(addr, allocator)
+    buf_ptr = data.data.addr()
+    result = sys_sendto(sock.fd, buf_ptr, data.len(), 0, sockaddr, 16)
+    free_sockaddr_in(sockaddr, allocator)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(result) }
+}
+
+// Receive datagram (returns data only, not sender address)
+udp_recvfrom = (sock: Socket, max_len: usize, allocator: Allocator) Result<Vec<u8>, SocketError> {
+    // Allocate receive buffer and address storage
+    buf = allocator.allocate(max_len)
+    addr_ptr = allocator.allocate(16)
+    len_ptr = allocator.allocate(4)
+    compiler.store<i32>(len_ptr, 16)
+
+    result = sys_recvfrom(sock.fd, buf, max_len, 0, addr_ptr, len_ptr)
+
+    allocator.deallocate(addr_ptr, 16)
+    allocator.deallocate(len_ptr, 4)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, max_len)
+            return Result.Err(socket_errno_to_error(result, allocator))
+        }
+        | false {
+            vec = Vec<u8>.from_ptr(buf, result, allocator)
+            return Result.Ok(vec)
+        }
+}
+
+// ============================================================================
+// Common Socket Operations
+// ============================================================================
+
+// Close socket
+socket_close = (sock: Socket, allocator: Allocator) Result<void, SocketError> {
+    result = sys_close(sock.fd)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// Shutdown socket
+socket_shutdown = (sock: Socket, how: i32, allocator: Allocator) Result<void, SocketError> {
+    result = sys_shutdown(sock.fd, how)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// Set socket option (integer value)
+socket_set_opt_int = (sock: Socket, level: i32, optname: i32, value: i32, allocator: Allocator) Result<void, SocketError> {
+    // Allocate space for option value
+    val_ptr = allocator.allocate(4)
+    compiler.store<i32>(val_ptr, value)
+
+    result = sys_setsockopt(sock.fd, level, optname, val_ptr, 4)
+
+    allocator.deallocate(val_ptr, 4)
+
+    result < 0 ?
+        | true { return Result.Err(socket_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// Enable SO_REUSEADDR
+socket_set_reuseaddr = (sock: Socket, enable: bool, allocator: Allocator) Result<void, SocketError> {
+    value = enable ? | true { 1 } | false { 0 }
+    return socket_set_opt_int(sock, SOL_SOCKET, SO_REUSEADDR, value, allocator)
+}
+
+// Enable TCP_NODELAY (disable Nagle's algorithm)
+tcp_set_nodelay = (sock: Socket, enable: bool, allocator: Allocator) Result<void, SocketError> {
+    value = enable ? | true { 1 } | false { 0 }
+    return socket_set_opt_int(sock, SOL_TCP, TCP_NODELAY, value, allocator)
+}
+
+// Enable SO_BROADCAST (for UDP)
+udp_set_broadcast = (sock: Socket, enable: bool, allocator: Allocator) Result<void, SocketError> {
+    value = enable ? | true { 1 } | false { 0 }
+    return socket_set_opt_int(sock, SOL_SOCKET, SO_BROADCAST, value, allocator)
+}
+
+// ============================================================================
+// TcpListener - High-level TCP server
+// ============================================================================
+
+TcpListener: {
+    sock: Socket,
+    allocator: Allocator
+}
+
+// Create and bind TCP listener
+TcpListener.bind = (addr: SocketAddrV4, allocator: Allocator) Result<TcpListener, SocketError> {
+    // Create socket
+    sock_result = tcp_socket(allocator)
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(sock) {
+            // Enable reuse address
+            _ = socket_set_reuseaddr(sock, true, allocator)
+
+            // Bind to address
+            bind_result = tcp_bind(sock, addr, allocator)
+            bind_result ?
+                | Err(e) {
+                    _ = socket_close(sock, allocator)
+                    return Result.Err(e)
+                }
+                | Ok(_) {
+                    // Start listening
+                    listen_result = tcp_listen(sock, 128, allocator)
+                    listen_result ?
+                        | Err(e) {
+                            _ = socket_close(sock, allocator)
+                            return Result.Err(e)
+                        }
+                        | Ok(_) {
+                            return Result.Ok(TcpListener {
+                                sock: sock,
+                                allocator: allocator
+                            })
+                        }
+                }
+        }
+}
+
+// Accept incoming connection
+TcpListener.accept = (self: TcpListener) Result<TcpStream, SocketError> {
+    accept_result = tcp_accept(self.sock, self.allocator)
+    accept_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(client_sock) {
+            return Result.Ok(TcpStream {
+                sock: client_sock,
+                allocator: self.allocator
+            })
+        }
+}
+
+// Close listener
+TcpListener.close = (self: MutPtr<TcpListener>) Result<void, SocketError> {
+    return socket_close(self.val.sock, self.val.allocator)
+}
+
+// ============================================================================
+// TcpStream - High-level TCP connection
+// ============================================================================
+
+TcpStream: {
+    sock: Socket,
+    allocator: Allocator
+}
+
+// Connect to remote address
+TcpStream.connect = (addr: SocketAddrV4, allocator: Allocator) Result<TcpStream, SocketError> {
+    sock_result = tcp_socket(allocator)
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(sock) {
+            connect_result = tcp_connect(sock, addr, allocator)
+            connect_result ?
+                | Err(e) {
+                    _ = socket_close(sock, allocator)
+                    return Result.Err(e)
+                }
+                | Ok(_) {
+                    return Result.Ok(TcpStream {
+                        sock: sock,
+                        allocator: allocator
+                    })
+                }
+        }
+}
+
+// Send data
+TcpStream.send = (self: TcpStream, data: Vec<u8>) Result<usize, SocketError> {
+    return tcp_send(self.sock, data, self.allocator)
+}
+
+// Receive data
+TcpStream.recv = (self: TcpStream, max_len: usize) Result<Vec<u8>, SocketError> {
+    return tcp_recv(self.sock, max_len, self.allocator)
+}
+
+// Close stream
+TcpStream.close = (self: MutPtr<TcpStream>) Result<void, SocketError> {
+    return socket_close(self.val.sock, self.val.allocator)
+}
+
+// Set TCP_NODELAY
+TcpStream.set_nodelay = (self: TcpStream, enable: bool) Result<void, SocketError> {
+    return tcp_set_nodelay(self.sock, enable, self.allocator)
+}
+
+// ============================================================================
+// UdpSocket - High-level UDP socket
+// ============================================================================
+
+UdpSocket: {
+    sock: Socket,
+    allocator: Allocator
+}
+
+// Create and bind UDP socket
+UdpSocket.bind = (addr: SocketAddrV4, allocator: Allocator) Result<UdpSocket, SocketError> {
+    sock_result = udp_socket(allocator)
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(sock) {
+            bind_result = udp_bind(sock, addr, allocator)
+            bind_result ?
+                | Err(e) {
+                    _ = socket_close(sock, allocator)
+                    return Result.Err(e)
+                }
+                | Ok(_) {
+                    return Result.Ok(UdpSocket {
+                        sock: sock,
+                        allocator: allocator
+                    })
+                }
+        }
+}
+
+// Send datagram to address
+UdpSocket.send_to = (self: UdpSocket, data: Vec<u8>, addr: SocketAddrV4) Result<usize, SocketError> {
+    return udp_sendto(self.sock, data, addr, self.allocator)
+}
+
+// Receive datagram
+UdpSocket.recv = (self: UdpSocket, max_len: usize) Result<Vec<u8>, SocketError> {
+    return udp_recvfrom(self.sock, max_len, self.allocator)
+}
+
+// Close socket
+UdpSocket.close = (self: MutPtr<UdpSocket>) Result<void, SocketError> {
+    return socket_close(self.val.sock, self.val.allocator)
+}
+
+// Enable broadcast
+UdpSocket.set_broadcast = (self: UdpSocket, enable: bool) Result<void, SocketError> {
+    return udp_set_broadcast(self.sock, enable, self.allocator)
+}
+

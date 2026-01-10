@@ -10,6 +10,7 @@ pub mod lsp;
 pub mod module_system;
 pub mod parser;
 pub mod stdlib_types;
-pub mod type_system;
+pub mod type_context;
+pub mod lowering;
 pub mod typechecker;
 pub mod well_known;

@@ -43,7 +43,6 @@ impl AstType {
     }
 
     /// Check if this type is a signed integer
-    #[allow(dead_code)]
     pub fn is_signed_integer(&self) -> bool {
         matches!(
             self,

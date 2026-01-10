@@ -1,0 +1,598 @@
+// Zen Standard Library: Process File Descriptors (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Modern Linux process management without PID races
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Pidfd Syscall Numbers
+// ============================================================================
+
+SYS_PIDFD_OPEN = 434
+SYS_PIDFD_SEND_SIGNAL = 424
+SYS_PIDFD_GETFD = 438
+SYS_WAITID = 247
+SYS_CLONE3 = 435
+SYS_CLOSE = 3
+SYS_POLL = 7
+
+// ============================================================================
+// Pidfd Flags
+// ============================================================================
+
+PIDFD_NONBLOCK = 2048   // O_NONBLOCK
+
+// Clone flags for pidfd
+CLONE_PIDFD = 0x00001000
+
+// Waitid options
+P_PID = 1
+P_PIDFD = 3
+
+WEXITED = 4
+WSTOPPED = 2
+WCONTINUED = 8
+WNOHANG = 1
+WNOWAIT = 0x01000000
+
+// Signal info constants
+CLD_EXITED = 1
+CLD_KILLED = 2
+CLD_DUMPED = 3
+CLD_TRAPPED = 4
+CLD_STOPPED = 5
+CLD_CONTINUED = 6
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+PidfdError: {
+    code: i32
+}
+
+pidfd_errno_to_error = (errno: i64) PidfdError {
+    code = 0 - errno
+    return PidfdError { code: code }
+}
+
+// Check if error is ESRCH (no such process)
+PidfdError.no_such_process = (self: PidfdError) bool {
+    return self.code == 3  // ESRCH
+}
+
+// Check if error is permission denied
+PidfdError.permission_denied = (self: PidfdError) bool {
+    return self.code == 1 or self.code == 13  // EPERM or EACCES
+}
+
+// Check if would block
+PidfdError.would_block = (self: PidfdError) bool {
+    return self.code == 11  // EAGAIN
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+// Open a pidfd for a process
+sys_pidfd_open = (pid: i32, flags: u32) i64 {
+    return compiler.syscall2(SYS_PIDFD_OPEN, pid, flags)
+}
+
+// Send signal via pidfd
+sys_pidfd_send_signal = (pidfd: i32, sig: i32, info: i64, flags: u32) i64 {
+    return compiler.syscall4(SYS_PIDFD_SEND_SIGNAL, pidfd, sig, info, flags)
+}
+
+// Get file descriptor from another process via pidfd
+sys_pidfd_getfd = (pidfd: i32, targetfd: i32, flags: u32) i64 {
+    return compiler.syscall3(SYS_PIDFD_GETFD, pidfd, targetfd, flags)
+}
+
+// Wait for process state change
+sys_waitid = (idtype: i32, id: i32, infop: i64, options: i32, rusage: i64) i64 {
+    return compiler.syscall5(SYS_WAITID, idtype, id, infop, options, rusage)
+}
+
+sys_close = (fd: i32) i64 {
+    return compiler.syscall1(SYS_CLOSE, fd)
+}
+
+sys_poll = (fds: i64, nfds: usize, timeout: i32) i64 {
+    return compiler.syscall3(SYS_POLL, fds, nfds, timeout)
+}
+
+// ============================================================================
+// Siginfo Structure (partial, for waitid)
+// ============================================================================
+
+// struct siginfo_t is 128 bytes on x86-64
+SIGINFO_SIZE = 128
+
+WaitStatus: {
+    signo: i32,       // Signal number (SIGCHLD)
+    errno_val: i32,   // Error number
+    code: i32,        // Signal code (CLD_*)
+    pid: i32,         // Process ID
+    uid: u32,         // User ID
+    status: i32       // Exit status or signal number
+}
+
+// Parse siginfo from waitid
+parse_siginfo = (buf: i64) WaitStatus {
+    signo = compiler.load<i32>(buf)
+    errno_val = compiler.load<i32>(buf + 4)
+    code = compiler.load<i32>(buf + 8)
+    // si_pid is at offset 16 in siginfo_t
+    pid = compiler.load<i32>(buf + 16)
+    uid = compiler.load<u32>(buf + 20)
+    // si_status is at offset 24
+    status = compiler.load<i32>(buf + 24)
+
+    return WaitStatus {
+        signo: signo,
+        errno_val: errno_val,
+        code: code,
+        pid: pid,
+        uid: uid,
+        status: status
+    }
+}
+
+// Check if process exited normally
+WaitStatus.exited = (self: WaitStatus) bool {
+    return self.code == CLD_EXITED
+}
+
+// Check if process was killed by signal
+WaitStatus.signaled = (self: WaitStatus) bool {
+    return self.code == CLD_KILLED or self.code == CLD_DUMPED
+}
+
+// Check if process was stopped
+WaitStatus.stopped = (self: WaitStatus) bool {
+    return self.code == CLD_STOPPED
+}
+
+// Check if process continued
+WaitStatus.continued = (self: WaitStatus) bool {
+    return self.code == CLD_CONTINUED
+}
+
+// Get exit code (if exited)
+WaitStatus.exit_code = (self: WaitStatus) i32 {
+    return self.status
+}
+
+// Get terminating signal (if signaled)
+WaitStatus.term_signal = (self: WaitStatus) i32 {
+    return self.status
+}
+
+// ============================================================================
+// Pidfd - Process File Descriptor
+// ============================================================================
+
+Pidfd: {
+    fd: i32,
+    pid: i32
+}
+
+// Open a pidfd for a running process
+Pidfd.open = (pid: i32) Result<Pidfd, PidfdError> {
+    fd = sys_pidfd_open(pid, 0)
+
+    fd < 0 ?
+        | true { return Result.Err(pidfd_errno_to_error(fd)) }
+        | false { return Result.Ok(Pidfd { fd: fd, pid: pid }) }
+}
+
+// Open nonblocking pidfd
+Pidfd.open_nonblock = (pid: i32) Result<Pidfd, PidfdError> {
+    fd = sys_pidfd_open(pid, PIDFD_NONBLOCK)
+
+    fd < 0 ?
+        | true { return Result.Err(pidfd_errno_to_error(fd)) }
+        | false { return Result.Ok(Pidfd { fd: fd, pid: pid }) }
+}
+
+// Get file descriptor
+Pidfd.as_fd = (self: Pidfd) i32 {
+    return self.fd
+}
+
+// Get PID
+Pidfd.get_pid = (self: Pidfd) i32 {
+    return self.pid
+}
+
+// Send signal to process
+Pidfd.kill = (self: Pidfd, sig: i32) Result<void, PidfdError> {
+    result = sys_pidfd_send_signal(self.fd, sig, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(pidfd_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Send SIGTERM
+Pidfd.terminate = (self: Pidfd) Result<void, PidfdError> {
+    return self.kill(15)  // SIGTERM
+}
+
+// Send SIGKILL
+Pidfd.force_kill = (self: Pidfd) Result<void, PidfdError> {
+    return self.kill(9)  // SIGKILL
+}
+
+// Send SIGSTOP
+Pidfd.stop = (self: Pidfd) Result<void, PidfdError> {
+    return self.kill(19)  // SIGSTOP
+}
+
+// Send SIGCONT
+Pidfd.resume = (self: Pidfd) Result<void, PidfdError> {
+    return self.kill(18)  // SIGCONT
+}
+
+// Wait for process to exit (blocking)
+Pidfd.wait = (self: Pidfd, allocator: Allocator) Result<WaitStatus, PidfdError> {
+    buf = allocator.allocate(SIGINFO_SIZE)
+
+    result = sys_waitid(P_PIDFD, self.fd, buf, WEXITED, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, SIGINFO_SIZE)
+            return Result.Err(pidfd_errno_to_error(result))
+        }
+        | false {
+            status = parse_siginfo(buf)
+            allocator.deallocate(buf, SIGINFO_SIZE)
+            return Result.Ok(status)
+        }
+}
+
+// Try to wait (non-blocking)
+Pidfd.try_wait = (self: Pidfd, allocator: Allocator) Result<Option<WaitStatus>, PidfdError> {
+    buf = allocator.allocate(SIGINFO_SIZE)
+    // Zero the buffer first
+    compiler.memset(buf, 0, SIGINFO_SIZE)
+
+    result = sys_waitid(P_PIDFD, self.fd, buf, WEXITED | WNOHANG, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, SIGINFO_SIZE)
+            return Result.Err(pidfd_errno_to_error(result))
+        }
+        | false {
+            // Check if si_pid is set (process actually exited)
+            pid = compiler.load<i32>(buf + 16)
+            pid == 0 ?
+                | true {
+                    allocator.deallocate(buf, SIGINFO_SIZE)
+                    return Result.Ok(Option.None())
+                }
+                | false {
+                    status = parse_siginfo(buf)
+                    allocator.deallocate(buf, SIGINFO_SIZE)
+                    return Result.Ok(Option.Some(status))
+                }
+        }
+}
+
+// Wait with timeout (milliseconds)
+Pidfd.wait_timeout = (self: Pidfd, timeout_ms: i32, allocator: Allocator) Result<Option<WaitStatus>, PidfdError> {
+    // Use poll to wait with timeout
+    pollfd_buf = allocator.allocate(8)
+    compiler.store<i32>(pollfd_buf, self.fd)
+    compiler.store<i16>(pollfd_buf + 4, 1)  // POLLIN
+    compiler.store<i16>(pollfd_buf + 6, 0)
+
+    poll_result = sys_poll(pollfd_buf, 1, timeout_ms)
+    allocator.deallocate(pollfd_buf, 8)
+
+    poll_result < 0 ?
+        | true { return Result.Err(pidfd_errno_to_error(poll_result)) }
+        | false {
+            poll_result == 0 ?
+                | true { return Result.Ok(Option.None()) }  // Timeout
+                | false { return self.try_wait(allocator) }
+        }
+}
+
+// Get a file descriptor from the target process
+Pidfd.getfd = (self: Pidfd, target_fd: i32) Result<i32, PidfdError> {
+    result = sys_pidfd_getfd(self.fd, target_fd, 0)
+
+    result < 0 ?
+        | true { return Result.Err(pidfd_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Check if process is still running
+Pidfd.is_running = (self: Pidfd, allocator: Allocator) Result<bool, PidfdError> {
+    result = self.try_wait(allocator)
+
+    result ?
+        | Err(e) {
+            // ESRCH means process doesn't exist
+            e.no_such_process() ?
+                | true { return Result.Ok(false) }
+                | false { return Result.Err(e) }
+        }
+        | Ok(opt) {
+            opt ?
+                | Some(_) { return Result.Ok(false) }  // Exited
+                | None { return Result.Ok(true) }      // Still running
+        }
+}
+
+// Close the pidfd
+Pidfd.close = (self: Pidfd) Result<void, PidfdError> {
+    result = sys_close(self.fd)
+
+    result < 0 ?
+        | true { return Result.Err(pidfd_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Process Handle - Higher Level Interface
+// ============================================================================
+
+ProcessHandle: {
+    pidfd: Pidfd,
+    allocator: Allocator
+}
+
+// Open a handle to a process
+ProcessHandle.open = (pid: i32, allocator: Allocator) Result<ProcessHandle, PidfdError> {
+    pidfd_result = Pidfd.open(pid)
+
+    pidfd_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(pidfd) {
+            return Result.Ok(ProcessHandle { pidfd: pidfd, allocator: allocator })
+        }
+}
+
+// Get PID
+ProcessHandle.pid = (self: ProcessHandle) i32 {
+    return self.pidfd.pid
+}
+
+// Get underlying fd (for epoll/poll integration)
+ProcessHandle.as_fd = (self: ProcessHandle) i32 {
+    return self.pidfd.fd
+}
+
+// Send signal
+ProcessHandle.signal = (self: ProcessHandle, sig: i32) Result<void, PidfdError> {
+    return self.pidfd.kill(sig)
+}
+
+// Terminate gracefully
+ProcessHandle.terminate = (self: ProcessHandle) Result<void, PidfdError> {
+    return self.pidfd.terminate()
+}
+
+// Force kill
+ProcessHandle.kill = (self: ProcessHandle) Result<void, PidfdError> {
+    return self.pidfd.force_kill()
+}
+
+// Wait for exit
+ProcessHandle.wait = (self: ProcessHandle) Result<WaitStatus, PidfdError> {
+    return self.pidfd.wait(self.allocator)
+}
+
+// Check if exited
+ProcessHandle.try_wait = (self: ProcessHandle) Result<Option<WaitStatus>, PidfdError> {
+    return self.pidfd.try_wait(self.allocator)
+}
+
+// Wait with timeout
+ProcessHandle.wait_timeout = (self: ProcessHandle, timeout_ms: i32) Result<Option<WaitStatus>, PidfdError> {
+    return self.pidfd.wait_timeout(timeout_ms, self.allocator)
+}
+
+// Check if running
+ProcessHandle.is_running = (self: ProcessHandle) Result<bool, PidfdError> {
+    return self.pidfd.is_running(self.allocator)
+}
+
+// Steal a file descriptor from the process
+ProcessHandle.steal_fd = (self: ProcessHandle, fd: i32) Result<i32, PidfdError> {
+    return self.pidfd.getfd(fd)
+}
+
+// Close handle
+ProcessHandle.close = (self: ProcessHandle) Result<void, PidfdError> {
+    return self.pidfd.close()
+}
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+// Open pidfd for current process
+pidfd_self = () Result<Pidfd, PidfdError> {
+    pid = compiler.syscall0(39)  // getpid
+    return Pidfd.open(pid)
+}
+
+// Open pidfd for parent process
+pidfd_parent = () Result<Pidfd, PidfdError> {
+    ppid = compiler.syscall0(110)  // getppid
+    return Pidfd.open(ppid)
+}
+
+// Wait for any child with pidfd
+wait_any_child = (allocator: Allocator) Result<WaitStatus, PidfdError> {
+    buf = allocator.allocate(SIGINFO_SIZE)
+
+    // P_ALL = 0, wait for any child
+    result = sys_waitid(0, 0, buf, WEXITED, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, SIGINFO_SIZE)
+            return Result.Err(pidfd_errno_to_error(result))
+        }
+        | false {
+            status = parse_siginfo(buf)
+            allocator.deallocate(buf, SIGINFO_SIZE)
+            return Result.Ok(status)
+        }
+}
+
+// Try wait for any child (non-blocking)
+try_wait_any_child = (allocator: Allocator) Result<Option<WaitStatus>, PidfdError> {
+    buf = allocator.allocate(SIGINFO_SIZE)
+    compiler.memset(buf, 0, SIGINFO_SIZE)
+
+    result = sys_waitid(0, 0, buf, WEXITED | WNOHANG, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, SIGINFO_SIZE)
+            return Result.Err(pidfd_errno_to_error(result))
+        }
+        | false {
+            pid = compiler.load<i32>(buf + 16)
+            pid == 0 ?
+                | true {
+                    allocator.deallocate(buf, SIGINFO_SIZE)
+                    return Result.Ok(Option.None())
+                }
+                | false {
+                    status = parse_siginfo(buf)
+                    allocator.deallocate(buf, SIGINFO_SIZE)
+                    return Result.Ok(Option.Some(status))
+                }
+        }
+}
+
+// ============================================================================
+// Process Group Operations
+// ============================================================================
+
+// Signal constants
+SIGTERM = 15
+SIGKILL = 9
+SIGSTOP = 19
+SIGCONT = 18
+SIGHUP = 1
+SIGINT = 2
+SIGQUIT = 3
+SIGUSR1 = 10
+SIGUSR2 = 12
+
+// Kill a process by PID (race-prone, prefer pidfd)
+kill_pid = (pid: i32, sig: i32) Result<void, PidfdError> {
+    SYS_KILL = 62
+    result = compiler.syscall2(SYS_KILL, pid, sig)
+
+    result < 0 ?
+        | true { return Result.Err(pidfd_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Kill entire process group
+kill_pgrp = (pgrp: i32, sig: i32) Result<void, PidfdError> {
+    // Negative pid means process group
+    SYS_KILL = 62
+    result = compiler.syscall2(SYS_KILL, 0 - pgrp, sig)
+
+    result < 0 ?
+        | true { return Result.Err(pidfd_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Process Monitoring
+// ============================================================================
+
+ProcessMonitor: {
+    handles: i64,      // Pointer to array of ProcessHandle
+    count: usize,
+    capacity: usize,
+    allocator: Allocator
+}
+
+// Create a process monitor
+ProcessMonitor.new = (allocator: Allocator) ProcessMonitor {
+    capacity = 16
+    handles = allocator.allocate(capacity * 16)  // sizeof(ProcessHandle) ~= 16
+    return ProcessMonitor {
+        handles: handles,
+        count: 0,
+        capacity: capacity,
+        allocator: allocator
+    }
+}
+
+// Add a process to monitor
+ProcessMonitor.add = (self: MutPtr<ProcessMonitor>, pid: i32) Result<void, PidfdError> {
+    // Check capacity
+    self.val.count >= self.val.capacity ?
+        | true {
+            // Grow array
+            new_capacity = self.val.capacity * 2
+            new_handles = self.val.allocator.allocate(new_capacity * 16)
+            compiler.memcpy(new_handles, self.val.handles, self.val.count * 16)
+            self.val.allocator.deallocate(self.val.handles, self.val.capacity * 16)
+            self.val.handles = new_handles
+            self.val.capacity = new_capacity
+        }
+        | false { }
+
+    // Open pidfd
+    pidfd_result = Pidfd.open(pid)
+
+    pidfd_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(pidfd) {
+            // Store in array
+            offset = self.val.count * 16
+            compiler.store<i32>(self.val.handles + offset, pidfd.fd)
+            compiler.store<i32>(self.val.handles + offset + 4, pidfd.pid)
+            // Store allocator pointer
+            compiler.store<i64>(self.val.handles + offset + 8, self.val.allocator)
+
+            self.val.count = self.val.count + 1
+            return Result.Ok(())
+        }
+}
+
+// Get count of monitored processes
+ProcessMonitor.len = (self: ProcessMonitor) usize {
+    return self.count
+}
+
+// Close all handles and free
+ProcessMonitor.close = (self: MutPtr<ProcessMonitor>) void {
+    // Close all pidfds
+    i = 0
+    loop {
+        i >= self.val.count ?
+            | true { break }
+            | false {
+                offset = i * 16
+                fd = compiler.load<i32>(self.val.handles + offset)
+                sys_close(fd)
+                i = i + 1
+            }
+    }
+
+    self.val.allocator.deallocate(self.val.handles, self.val.capacity * 16)
+    self.val.count = 0
+}
+

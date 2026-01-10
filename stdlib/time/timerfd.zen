@@ -1,0 +1,614 @@
+// Zen Standard Library: Timer File Descriptors (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Integrates with epoll for efficient timer-based event handling
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Timerfd Syscall Numbers
+// ============================================================================
+
+SYS_TIMERFD_CREATE = 283
+SYS_TIMERFD_SETTIME = 286
+SYS_TIMERFD_GETTIME = 287
+SYS_READ = 0
+SYS_CLOSE = 3
+
+// ============================================================================
+// Clock IDs (same as clock_gettime)
+// ============================================================================
+
+CLOCK_REALTIME = 0           // Wall clock time
+CLOCK_MONOTONIC = 1          // Monotonic time since boot
+CLOCK_BOOTTIME = 7           // Like MONOTONIC but includes suspend time
+CLOCK_REALTIME_ALARM = 8     // Like REALTIME but wakes from suspend
+CLOCK_BOOTTIME_ALARM = 9     // Like BOOTTIME but wakes from suspend
+
+// ============================================================================
+// Timerfd Flags
+// ============================================================================
+
+TFD_NONBLOCK = 2048     // O_NONBLOCK
+TFD_CLOEXEC = 524288    // O_CLOEXEC
+
+// Settime flags
+TFD_TIMER_ABSTIME = 1   // Time is absolute
+TFD_TIMER_CANCEL_ON_SET = 2  // Cancel timer when clock is set
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+TimerError: {
+    code: i32
+}
+
+timer_errno_to_error = (errno: i64) TimerError {
+    code = 0 - errno
+    return TimerError { code: code }
+}
+
+// ============================================================================
+// Timespec (for timer values)
+// ============================================================================
+
+Timespec: {
+    tv_sec: i64,
+    tv_nsec: i64
+}
+
+Timespec.zero = () Timespec {
+    return Timespec { tv_sec: 0, tv_nsec: 0 }
+}
+
+Timespec.from_secs = (secs: i64) Timespec {
+    return Timespec { tv_sec: secs, tv_nsec: 0 }
+}
+
+Timespec.from_millis = (millis: i64) Timespec {
+    secs = millis / 1000
+    nsecs = (millis % 1000) * 1000000
+    return Timespec { tv_sec: secs, tv_nsec: nsecs }
+}
+
+Timespec.from_micros = (micros: i64) Timespec {
+    secs = micros / 1000000
+    nsecs = (micros % 1000000) * 1000
+    return Timespec { tv_sec: secs, tv_nsec: nsecs }
+}
+
+Timespec.from_nanos = (nanos: i64) Timespec {
+    secs = nanos / 1000000000
+    nsecs = nanos % 1000000000
+    return Timespec { tv_sec: secs, tv_nsec: nsecs }
+}
+
+Timespec.is_zero = (self: Timespec) bool {
+    return self.tv_sec == 0 and self.tv_nsec == 0
+}
+
+Timespec.to_millis = (self: Timespec) i64 {
+    return self.tv_sec * 1000 + self.tv_nsec / 1000000
+}
+
+Timespec.to_micros = (self: Timespec) i64 {
+    return self.tv_sec * 1000000 + self.tv_nsec / 1000
+}
+
+Timespec.to_nanos = (self: Timespec) i64 {
+    return self.tv_sec * 1000000000 + self.tv_nsec
+}
+
+// ============================================================================
+// Itimerspec (interval timer specification)
+// ============================================================================
+
+Itimerspec: {
+    it_interval: Timespec,  // Interval for periodic timer
+    it_value: Timespec      // Initial expiration
+}
+
+Itimerspec.one_shot = (expiration: Timespec) Itimerspec {
+    return Itimerspec {
+        it_interval: Timespec.zero(),
+        it_value: expiration
+    }
+}
+
+Itimerspec.periodic = (interval: Timespec) Itimerspec {
+    return Itimerspec {
+        it_interval: interval,
+        it_value: interval
+    }
+}
+
+Itimerspec.periodic_with_initial = (initial: Timespec, interval: Timespec) Itimerspec {
+    return Itimerspec {
+        it_interval: interval,
+        it_value: initial
+    }
+}
+
+Itimerspec.disarm = () Itimerspec {
+    return Itimerspec {
+        it_interval: Timespec.zero(),
+        it_value: Timespec.zero()
+    }
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+// Create a timer file descriptor
+sys_timerfd_create = (clockid: i32, flags: i32) i64 {
+    return compiler.syscall2(SYS_TIMERFD_CREATE, clockid, flags)
+}
+
+// Set or get timer value
+// new_value: pointer to Itimerspec for new settings (or 0)
+// old_value: pointer to Itimerspec to receive old settings (or 0)
+sys_timerfd_settime = (fd: i32, flags: i32, new_value: i64, old_value: i64) i64 {
+    return compiler.syscall4(SYS_TIMERFD_SETTIME, fd, flags, new_value, old_value)
+}
+
+sys_timerfd_gettime = (fd: i32, curr_value: i64) i64 {
+    return compiler.syscall2(SYS_TIMERFD_GETTIME, fd, curr_value)
+}
+
+sys_read = (fd: i32, buf: i64, count: usize) i64 {
+    return compiler.syscall3(SYS_READ, fd, buf, count)
+}
+
+sys_close = (fd: i32) i64 {
+    return compiler.syscall1(SYS_CLOSE, fd)
+}
+
+// ============================================================================
+// TimerFd - High-Level Timer Interface
+// ============================================================================
+
+TimerFd: {
+    fd: i32,
+    clock: i32
+}
+
+// Create a new timer fd with monotonic clock
+TimerFd.new = () Result<TimerFd, TimerError> {
+    fd = sys_timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC)
+
+    fd < 0 ?
+        | true { return Result.Err(timer_errno_to_error(fd)) }
+        | false { return Result.Ok(TimerFd { fd: fd, clock: CLOCK_MONOTONIC }) }
+}
+
+// Create with specific clock
+TimerFd.with_clock = (clock: i32) Result<TimerFd, TimerError> {
+    fd = sys_timerfd_create(clock, TFD_CLOEXEC)
+
+    fd < 0 ?
+        | true { return Result.Err(timer_errno_to_error(fd)) }
+        | false { return Result.Ok(TimerFd { fd: fd, clock: clock }) }
+}
+
+// Create nonblocking timer
+TimerFd.nonblocking = () Result<TimerFd, TimerError> {
+    fd = sys_timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)
+
+    fd < 0 ?
+        | true { return Result.Err(timer_errno_to_error(fd)) }
+        | false { return Result.Ok(TimerFd { fd: fd, clock: CLOCK_MONOTONIC }) }
+}
+
+// Get underlying file descriptor (for epoll integration)
+TimerFd.as_fd = (self: TimerFd) i32 {
+    return self.fd
+}
+
+// Set one-shot timer (fires once after duration)
+TimerFd.set_one_shot = (self: TimerFd, duration: Timespec, allocator: Allocator) Result<void, TimerError> {
+    spec = Itimerspec.one_shot(duration)
+    spec_ptr = allocator.allocate(32)  // sizeof(Itimerspec) = 32
+
+    // Write Itimerspec to memory
+    compiler.store<i64>(spec_ptr, spec.it_interval.tv_sec)
+    compiler.store<i64>(spec_ptr + 8, spec.it_interval.tv_nsec)
+    compiler.store<i64>(spec_ptr + 16, spec.it_value.tv_sec)
+    compiler.store<i64>(spec_ptr + 24, spec.it_value.tv_nsec)
+
+    result = sys_timerfd_settime(self.fd, 0, spec_ptr, 0)
+    allocator.deallocate(spec_ptr, 32)
+
+    result < 0 ?
+        | true { return Result.Err(timer_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Set periodic timer (fires repeatedly at interval)
+TimerFd.set_periodic = (self: TimerFd, interval: Timespec, allocator: Allocator) Result<void, TimerError> {
+    spec = Itimerspec.periodic(interval)
+    spec_ptr = allocator.allocate(32)
+
+    compiler.store<i64>(spec_ptr, spec.it_interval.tv_sec)
+    compiler.store<i64>(spec_ptr + 8, spec.it_interval.tv_nsec)
+    compiler.store<i64>(spec_ptr + 16, spec.it_value.tv_sec)
+    compiler.store<i64>(spec_ptr + 24, spec.it_value.tv_nsec)
+
+    result = sys_timerfd_settime(self.fd, 0, spec_ptr, 0)
+    allocator.deallocate(spec_ptr, 32)
+
+    result < 0 ?
+        | true { return Result.Err(timer_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Set timer with custom specification
+TimerFd.set = (self: TimerFd, spec: Itimerspec, allocator: Allocator) Result<Itimerspec, TimerError> {
+    new_ptr = allocator.allocate(32)
+    old_ptr = allocator.allocate(32)
+
+    // Write new spec
+    compiler.store<i64>(new_ptr, spec.it_interval.tv_sec)
+    compiler.store<i64>(new_ptr + 8, spec.it_interval.tv_nsec)
+    compiler.store<i64>(new_ptr + 16, spec.it_value.tv_sec)
+    compiler.store<i64>(new_ptr + 24, spec.it_value.tv_nsec)
+
+    result = sys_timerfd_settime(self.fd, 0, new_ptr, old_ptr)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(new_ptr, 32)
+            allocator.deallocate(old_ptr, 32)
+            return Result.Err(timer_errno_to_error(result))
+        }
+        | false {
+            // Read old spec
+            old_interval_sec = compiler.load<i64>(old_ptr)
+            old_interval_nsec = compiler.load<i64>(old_ptr + 8)
+            old_value_sec = compiler.load<i64>(old_ptr + 16)
+            old_value_nsec = compiler.load<i64>(old_ptr + 24)
+
+            allocator.deallocate(new_ptr, 32)
+            allocator.deallocate(old_ptr, 32)
+
+            old = Itimerspec {
+                it_interval: Timespec { tv_sec: old_interval_sec, tv_nsec: old_interval_nsec },
+                it_value: Timespec { tv_sec: old_value_sec, tv_nsec: old_value_nsec }
+            }
+            return Result.Ok(old)
+        }
+}
+
+// Set absolute timer (fires at specific time)
+TimerFd.set_absolute = (self: TimerFd, when: Timespec, allocator: Allocator) Result<void, TimerError> {
+    spec_ptr = allocator.allocate(32)
+
+    // One-shot at absolute time
+    compiler.store<i64>(spec_ptr, 0)  // interval = 0
+    compiler.store<i64>(spec_ptr + 8, 0)
+    compiler.store<i64>(spec_ptr + 16, when.tv_sec)
+    compiler.store<i64>(spec_ptr + 24, when.tv_nsec)
+
+    result = sys_timerfd_settime(self.fd, TFD_TIMER_ABSTIME, spec_ptr, 0)
+    allocator.deallocate(spec_ptr, 32)
+
+    result < 0 ?
+        | true { return Result.Err(timer_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Disarm (stop) the timer
+TimerFd.disarm = (self: TimerFd, allocator: Allocator) Result<void, TimerError> {
+    spec_ptr = allocator.allocate(32)
+
+    // All zeros disarms the timer
+    compiler.store<i64>(spec_ptr, 0)
+    compiler.store<i64>(spec_ptr + 8, 0)
+    compiler.store<i64>(spec_ptr + 16, 0)
+    compiler.store<i64>(spec_ptr + 24, 0)
+
+    result = sys_timerfd_settime(self.fd, 0, spec_ptr, 0)
+    allocator.deallocate(spec_ptr, 32)
+
+    result < 0 ?
+        | true { return Result.Err(timer_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Get current timer settings
+TimerFd.get_time = (self: TimerFd, allocator: Allocator) Result<Itimerspec, TimerError> {
+    spec_ptr = allocator.allocate(32)
+
+    result = sys_timerfd_gettime(self.fd, spec_ptr)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(spec_ptr, 32)
+            return Result.Err(timer_errno_to_error(result))
+        }
+        | false {
+            interval_sec = compiler.load<i64>(spec_ptr)
+            interval_nsec = compiler.load<i64>(spec_ptr + 8)
+            value_sec = compiler.load<i64>(spec_ptr + 16)
+            value_nsec = compiler.load<i64>(spec_ptr + 24)
+
+            allocator.deallocate(spec_ptr, 32)
+
+            spec = Itimerspec {
+                it_interval: Timespec { tv_sec: interval_sec, tv_nsec: interval_nsec },
+                it_value: Timespec { tv_sec: value_sec, tv_nsec: value_nsec }
+            }
+            return Result.Ok(spec)
+        }
+}
+
+// Wait for timer expiration (blocking)
+// Returns the number of expirations since last read
+TimerFd.wait = (self: TimerFd, allocator: Allocator) Result<u64, TimerError> {
+    buf = allocator.allocate(8)  // u64 buffer
+
+    result = sys_read(self.fd, buf, 8)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 8)
+            return Result.Err(timer_errno_to_error(result))
+        }
+        | false {
+            expirations = compiler.load<u64>(buf)
+            allocator.deallocate(buf, 8)
+            return Result.Ok(expirations)
+        }
+}
+
+// Check for expiration (non-blocking, requires TFD_NONBLOCK)
+// Returns None if timer hasn't expired, Some(count) if it has
+TimerFd.try_wait = (self: TimerFd, allocator: Allocator) Result<Option<u64>, TimerError> {
+    buf = allocator.allocate(8)
+
+    result = sys_read(self.fd, buf, 8)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 8)
+            errno = 0 - result
+            // EAGAIN means no data available (not expired)
+            errno == 11 ?
+                | true { return Result.Ok(Option.None()) }
+                | false { return Result.Err(timer_errno_to_error(result)) }
+        }
+        | false {
+            expirations = compiler.load<u64>(buf)
+            allocator.deallocate(buf, 8)
+            return Result.Ok(Option.Some(expirations))
+        }
+}
+
+// Close the timer
+TimerFd.close = (self: TimerFd) Result<void, TimerError> {
+    result = sys_close(self.fd)
+
+    result < 0 ?
+        | true { return Result.Err(timer_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+// Create a one-shot timer that fires after N milliseconds
+timer_after_millis = (millis: i64, allocator: Allocator) Result<TimerFd, TimerError> {
+    timer_result = TimerFd.new()
+
+    timer_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(timer) {
+            duration = Timespec.from_millis(millis)
+            set_result = timer.set_one_shot(duration, allocator)
+
+            set_result ?
+                | Err(e) {
+                    timer.close()
+                    return Result.Err(e)
+                }
+                | Ok(_) { return Result.Ok(timer) }
+        }
+}
+
+// Create a one-shot timer that fires after N seconds
+timer_after_secs = (secs: i64, allocator: Allocator) Result<TimerFd, TimerError> {
+    timer_result = TimerFd.new()
+
+    timer_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(timer) {
+            duration = Timespec.from_secs(secs)
+            set_result = timer.set_one_shot(duration, allocator)
+
+            set_result ?
+                | Err(e) {
+                    timer.close()
+                    return Result.Err(e)
+                }
+                | Ok(_) { return Result.Ok(timer) }
+        }
+}
+
+// Create a periodic timer that fires every N milliseconds
+timer_interval_millis = (millis: i64, allocator: Allocator) Result<TimerFd, TimerError> {
+    timer_result = TimerFd.new()
+
+    timer_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(timer) {
+            interval = Timespec.from_millis(millis)
+            set_result = timer.set_periodic(interval, allocator)
+
+            set_result ?
+                | Err(e) {
+                    timer.close()
+                    return Result.Err(e)
+                }
+                | Ok(_) { return Result.Ok(timer) }
+        }
+}
+
+// Create a periodic timer that fires every N seconds
+timer_interval_secs = (secs: i64, allocator: Allocator) Result<TimerFd, TimerError> {
+    timer_result = TimerFd.new()
+
+    timer_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(timer) {
+            interval = Timespec.from_secs(secs)
+            set_result = timer.set_periodic(interval, allocator)
+
+            set_result ?
+                | Err(e) {
+                    timer.close()
+                    return Result.Err(e)
+                }
+                | Ok(_) { return Result.Ok(timer) }
+        }
+}
+
+// ============================================================================
+// Deadline Timer
+// ============================================================================
+
+DeadlineTimer: {
+    timer: TimerFd,
+    allocator: Allocator
+}
+
+// Create a deadline timer
+DeadlineTimer.new = (allocator: Allocator) Result<DeadlineTimer, TimerError> {
+    timer_result = TimerFd.new()
+
+    timer_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(timer) {
+            return Result.Ok(DeadlineTimer { timer: timer, allocator: allocator })
+        }
+}
+
+// Set deadline N milliseconds from now
+DeadlineTimer.set_millis = (self: MutPtr<DeadlineTimer>, millis: i64) Result<void, TimerError> {
+    duration = Timespec.from_millis(millis)
+    return self.val.timer.set_one_shot(duration, self.val.allocator)
+}
+
+// Set deadline N seconds from now
+DeadlineTimer.set_secs = (self: MutPtr<DeadlineTimer>, secs: i64) Result<void, TimerError> {
+    duration = Timespec.from_secs(secs)
+    return self.val.timer.set_one_shot(duration, self.val.allocator)
+}
+
+// Wait for deadline (blocking)
+DeadlineTimer.wait = (self: MutPtr<DeadlineTimer>) Result<void, TimerError> {
+    result = self.val.timer.wait(self.val.allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { return Result.Ok(()) }
+}
+
+// Cancel the deadline
+DeadlineTimer.cancel = (self: MutPtr<DeadlineTimer>) Result<void, TimerError> {
+    return self.val.timer.disarm(self.val.allocator)
+}
+
+// Get file descriptor for epoll
+DeadlineTimer.as_fd = (self: DeadlineTimer) i32 {
+    return self.timer.fd
+}
+
+// Close the deadline timer
+DeadlineTimer.close = (self: DeadlineTimer) Result<void, TimerError> {
+    return self.timer.close()
+}
+
+// ============================================================================
+// Interval Timer (for repeated callbacks)
+// ============================================================================
+
+IntervalTimer: {
+    timer: TimerFd,
+    interval_ms: i64,
+    allocator: Allocator
+}
+
+// Create interval timer with millisecond period
+IntervalTimer.new = (interval_ms: i64, allocator: Allocator) Result<IntervalTimer, TimerError> {
+    timer_result = TimerFd.new()
+
+    timer_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(timer) {
+            interval = Timespec.from_millis(interval_ms)
+            set_result = timer.set_periodic(interval, allocator)
+
+            set_result ?
+                | Err(e) {
+                    timer.close()
+                    return Result.Err(e)
+                }
+                | Ok(_) {
+                    return Result.Ok(IntervalTimer {
+                        timer: timer,
+                        interval_ms: interval_ms,
+                        allocator: allocator
+                    })
+                }
+        }
+}
+
+// Wait for next tick (returns number of ticks since last wait)
+IntervalTimer.tick = (self: MutPtr<IntervalTimer>) Result<u64, TimerError> {
+    return self.val.timer.wait(self.val.allocator)
+}
+
+// Change the interval
+IntervalTimer.set_interval = (self: MutPtr<IntervalTimer>, new_interval_ms: i64) Result<void, TimerError> {
+    interval = Timespec.from_millis(new_interval_ms)
+    result = self.val.timer.set_periodic(interval, self.val.allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) {
+            self.val.interval_ms = new_interval_ms
+            return Result.Ok(())
+        }
+}
+
+// Get current interval in milliseconds
+IntervalTimer.get_interval = (self: IntervalTimer) i64 {
+    return self.interval_ms
+}
+
+// Pause the timer
+IntervalTimer.pause = (self: MutPtr<IntervalTimer>) Result<void, TimerError> {
+    return self.val.timer.disarm(self.val.allocator)
+}
+
+// Resume the timer
+IntervalTimer.resume = (self: MutPtr<IntervalTimer>) Result<void, TimerError> {
+    interval = Timespec.from_millis(self.val.interval_ms)
+    return self.val.timer.set_periodic(interval, self.val.allocator)
+}
+
+// Get file descriptor for epoll
+IntervalTimer.as_fd = (self: IntervalTimer) i32 {
+    return self.timer.fd
+}
+
+// Close the interval timer
+IntervalTimer.close = (self: IntervalTimer) Result<void, TimerError> {
+    return self.timer.close()
+}
+

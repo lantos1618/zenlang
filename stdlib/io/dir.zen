@@ -1,0 +1,695 @@
+// Zen Standard Library: Directory Operations (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ String } = @std.string
+{ Vec } = @std.vec
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Directory/File Syscall Numbers
+// ============================================================================
+
+SYS_STAT = 4
+SYS_FSTAT = 5
+SYS_LSTAT = 6
+SYS_OPEN = 2
+SYS_CLOSE = 3
+SYS_GETDENTS64 = 217
+SYS_READLINK = 89
+SYS_SYMLINK = 88
+SYS_LINK = 86
+SYS_CHMOD = 90
+SYS_FCHMOD = 91
+SYS_CHOWN = 92
+SYS_FCHOWN = 93
+SYS_UTIMENSAT = 280
+SYS_FACCESSAT = 269
+
+// ============================================================================
+// Open Flags (for directory opening)
+// ============================================================================
+
+O_RDONLY = 0
+O_DIRECTORY = 65536   // 0200000 octal
+O_CLOEXEC = 524288    // 02000000 octal
+
+// ============================================================================
+// File Types (from stat mode)
+// ============================================================================
+
+S_IFMT = 61440     // 0170000 - file type mask
+S_IFSOCK = 49152   // 0140000 - socket
+S_IFLNK = 40960    // 0120000 - symbolic link
+S_IFREG = 32768    // 0100000 - regular file
+S_IFBLK = 24576    // 060000  - block device
+S_IFDIR = 16384    // 040000  - directory
+S_IFCHR = 8192     // 020000  - character device
+S_IFIFO = 4096     // 010000  - FIFO/pipe
+
+// Permission bits
+S_ISUID = 2048     // 04000 - set-user-ID
+S_ISGID = 1024     // 02000 - set-group-ID
+S_ISVTX = 512      // 01000 - sticky bit
+
+S_IRWXU = 448      // 0700 - owner RWX
+S_IRUSR = 256      // 0400 - owner R
+S_IWUSR = 128      // 0200 - owner W
+S_IXUSR = 64       // 0100 - owner X
+
+S_IRWXG = 56       // 070 - group RWX
+S_IRGRP = 32       // 040 - group R
+S_IWGRP = 16       // 020 - group W
+S_IXGRP = 8        // 010 - group X
+
+S_IRWXO = 7        // 07 - other RWX
+S_IROTH = 4        // 04 - other R
+S_IWOTH = 2        // 02 - other W
+S_IXOTH = 1        // 01 - other X
+
+// ============================================================================
+// Directory Entry Types (from getdents64 d_type)
+// ============================================================================
+
+DT_UNKNOWN = 0
+DT_FIFO = 1
+DT_CHR = 2
+DT_DIR = 4
+DT_BLK = 6
+DT_REG = 8
+DT_LNK = 10
+DT_SOCK = 12
+DT_WHT = 14
+
+// ============================================================================
+// Stat Structure
+// Linux x86-64 struct stat layout (144 bytes total)
+// ============================================================================
+
+FileStat: {
+    dev: u64,        // Device ID
+    ino: u64,        // Inode number
+    nlink: u64,      // Number of hard links
+    mode: u32,       // File mode (type + permissions)
+    uid: u32,        // User ID
+    gid: u32,        // Group ID
+    _pad0: u32,      // Padding
+    rdev: u64,       // Device ID (if special file)
+    size: i64,       // Size in bytes
+    blksize: i64,    // Block size for I/O
+    blocks: i64,     // Number of 512-byte blocks
+    atime_sec: i64,  // Access time (seconds)
+    atime_nsec: i64, // Access time (nanoseconds)
+    mtime_sec: i64,  // Modification time (seconds)
+    mtime_nsec: i64, // Modification time (nanoseconds)
+    ctime_sec: i64,  // Change time (seconds)
+    ctime_nsec: i64  // Change time (nanoseconds)
+}
+
+// File type checks
+FileStat.is_file = (self: FileStat) bool {
+    return (self.mode & S_IFMT) == S_IFREG
+}
+
+FileStat.is_dir = (self: FileStat) bool {
+    return (self.mode & S_IFMT) == S_IFDIR
+}
+
+FileStat.is_symlink = (self: FileStat) bool {
+    return (self.mode & S_IFMT) == S_IFLNK
+}
+
+FileStat.is_socket = (self: FileStat) bool {
+    return (self.mode & S_IFMT) == S_IFSOCK
+}
+
+FileStat.is_block_device = (self: FileStat) bool {
+    return (self.mode & S_IFMT) == S_IFBLK
+}
+
+FileStat.is_char_device = (self: FileStat) bool {
+    return (self.mode & S_IFMT) == S_IFCHR
+}
+
+FileStat.is_fifo = (self: FileStat) bool {
+    return (self.mode & S_IFMT) == S_IFIFO
+}
+
+// Permission checks
+FileStat.is_readable = (self: FileStat) bool {
+    return (self.mode & S_IRUSR) != 0
+}
+
+FileStat.is_writable = (self: FileStat) bool {
+    return (self.mode & S_IWUSR) != 0
+}
+
+FileStat.is_executable = (self: FileStat) bool {
+    return (self.mode & S_IXUSR) != 0
+}
+
+// Get permission bits only (octal 0777)
+FileStat.permissions = (self: FileStat) u32 {
+    return self.mode & 511  // 0777
+}
+
+// ============================================================================
+// Directory Entry
+// ============================================================================
+
+DirEntry: {
+    name: String,
+    inode: u64,
+    file_type: u8,
+    allocator: Allocator
+}
+
+// Get entry name
+DirEntry.name = (self: DirEntry) String {
+    return self.name
+}
+
+// File type checks
+DirEntry.is_file = (self: DirEntry) bool {
+    return self.file_type == DT_REG
+}
+
+DirEntry.is_dir = (self: DirEntry) bool {
+    return self.file_type == DT_DIR
+}
+
+DirEntry.is_symlink = (self: DirEntry) bool {
+    return self.file_type == DT_LNK
+}
+
+DirEntry.is_unknown = (self: DirEntry) bool {
+    return self.file_type == DT_UNKNOWN
+}
+
+// Free the entry (frees the name string)
+DirEntry.free = (self: MutPtr<DirEntry>) void {
+    self.val.name.mut_ref().free()
+}
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+DirError: {
+    code: i32,
+    message: String
+}
+
+dir_errno_to_error = (errno: i64, allocator: Allocator) DirError {
+    code = 0 - errno
+
+    msg = code ?
+        | 2 { String.from("No such file or directory", allocator) }
+        | 13 { String.from("Permission denied", allocator) }
+        | 20 { String.from("Not a directory", allocator) }
+        | 21 { String.from("Is a directory", allocator) }
+        | 22 { String.from("Invalid argument", allocator) }
+        | 24 { String.from("Too many open files", allocator) }
+        | 36 { String.from("File name too long", allocator) }
+        | 40 { String.from("Too many symbolic links", allocator) }
+        | _ { String.from("Unknown directory error", allocator) }
+
+    return DirError { code: code, message: msg }
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+// Stat a file by path
+sys_stat = (pathname: i64, statbuf: i64) i64 {
+    return compiler.syscall2(SYS_STAT, pathname, statbuf)
+}
+
+// Stat an open file descriptor
+sys_fstat = (fd: i32, statbuf: i64) i64 {
+    return compiler.syscall2(SYS_FSTAT, fd, statbuf)
+}
+
+// Stat a symbolic link (don't follow)
+sys_lstat = (pathname: i64, statbuf: i64) i64 {
+    return compiler.syscall2(SYS_LSTAT, pathname, statbuf)
+}
+
+// Open directory
+sys_open = (pathname: i64, flags: i32, mode: i32) i64 {
+    return compiler.syscall3(SYS_OPEN, pathname, flags, mode)
+}
+
+// Close file descriptor
+sys_close = (fd: i32) i64 {
+    return compiler.syscall1(SYS_CLOSE, fd)
+}
+
+// Get directory entries
+sys_getdents64 = (fd: i32, dirp: i64, count: usize) i64 {
+    return compiler.syscall3(SYS_GETDENTS64, fd, dirp, count)
+}
+
+// Read symbolic link target
+sys_readlink = (pathname: i64, buf: i64, bufsiz: usize) i64 {
+    return compiler.syscall3(SYS_READLINK, pathname, buf, bufsiz)
+}
+
+// Create symbolic link
+sys_symlink = (target: i64, linkpath: i64) i64 {
+    return compiler.syscall2(SYS_SYMLINK, target, linkpath)
+}
+
+// Create hard link
+sys_link = (oldpath: i64, newpath: i64) i64 {
+    return compiler.syscall2(SYS_LINK, oldpath, newpath)
+}
+
+// Change file permissions
+sys_chmod = (pathname: i64, mode: u32) i64 {
+    return compiler.syscall2(SYS_CHMOD, pathname, mode)
+}
+
+// Change file permissions by fd
+sys_fchmod = (fd: i32, mode: u32) i64 {
+    return compiler.syscall2(SYS_FCHMOD, fd, mode)
+}
+
+// ============================================================================
+// Helper: String to C string
+// ============================================================================
+
+string_to_cstr = (s: String, allocator: Allocator) i64 {
+    len = s.len()
+    ptr = allocator.allocate(len + 1)
+    src_ptr = s.data.addr()
+    compiler.memcpy(ptr, src_ptr, len)
+    compiler.store<u8>(compiler.gep(ptr, len), 0)
+    return ptr
+}
+
+free_cstr = (ptr: i64, len: usize, allocator: Allocator) void {
+    allocator.deallocate(ptr, len + 1)
+}
+
+// ============================================================================
+// High-Level Stat Functions
+// ============================================================================
+
+// Parse stat buffer into FileStat struct
+parse_stat_buf = (buf: i64) FileStat {
+    return FileStat {
+        dev: compiler.load<u64>(buf),
+        ino: compiler.load<u64>(compiler.gep(buf, 8)),
+        nlink: compiler.load<u64>(compiler.gep(buf, 16)),
+        mode: compiler.load<u32>(compiler.gep(buf, 24)),
+        uid: compiler.load<u32>(compiler.gep(buf, 28)),
+        gid: compiler.load<u32>(compiler.gep(buf, 32)),
+        _pad0: 0,
+        rdev: compiler.load<u64>(compiler.gep(buf, 40)),
+        size: compiler.load<i64>(compiler.gep(buf, 48)),
+        blksize: compiler.load<i64>(compiler.gep(buf, 56)),
+        blocks: compiler.load<i64>(compiler.gep(buf, 64)),
+        atime_sec: compiler.load<i64>(compiler.gep(buf, 72)),
+        atime_nsec: compiler.load<i64>(compiler.gep(buf, 80)),
+        mtime_sec: compiler.load<i64>(compiler.gep(buf, 88)),
+        mtime_nsec: compiler.load<i64>(compiler.gep(buf, 96)),
+        ctime_sec: compiler.load<i64>(compiler.gep(buf, 104)),
+        ctime_nsec: compiler.load<i64>(compiler.gep(buf, 112))
+    }
+}
+
+// Stat a file by path
+stat = (path: String, allocator: Allocator) Result<FileStat, DirError> {
+    cstr = string_to_cstr(path, allocator)
+    buf = allocator.allocate(144)  // sizeof(struct stat)
+
+    result = sys_stat(cstr, buf)
+
+    free_cstr(cstr, path.len(), allocator)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 144)
+            return Result.Err(dir_errno_to_error(result, allocator))
+        }
+        | false {
+            file_stat = parse_stat_buf(buf)
+            allocator.deallocate(buf, 144)
+            return Result.Ok(file_stat)
+        }
+}
+
+// Stat a symbolic link (don't follow)
+lstat = (path: String, allocator: Allocator) Result<FileStat, DirError> {
+    cstr = string_to_cstr(path, allocator)
+    buf = allocator.allocate(144)
+
+    result = sys_lstat(cstr, buf)
+
+    free_cstr(cstr, path.len(), allocator)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 144)
+            return Result.Err(dir_errno_to_error(result, allocator))
+        }
+        | false {
+            file_stat = parse_stat_buf(buf)
+            allocator.deallocate(buf, 144)
+            return Result.Ok(file_stat)
+        }
+}
+
+// Stat by file descriptor
+fstat = (fd: i32, allocator: Allocator) Result<FileStat, DirError> {
+    buf = allocator.allocate(144)
+
+    result = sys_fstat(fd, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 144)
+            return Result.Err(dir_errno_to_error(result, allocator))
+        }
+        | false {
+            file_stat = parse_stat_buf(buf)
+            allocator.deallocate(buf, 144)
+            return Result.Ok(file_stat)
+        }
+}
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+// Check if path exists
+path_exists = (path: String, allocator: Allocator) bool {
+    result = stat(path, allocator)
+    result ?
+        | Ok(_) { return true }
+        | Err(_) { return false }
+}
+
+// Check if path is a file
+is_file = (path: String, allocator: Allocator) bool {
+    result = stat(path, allocator)
+    result ?
+        | Ok(s) { return s.is_file() }
+        | Err(_) { return false }
+}
+
+// Check if path is a directory
+is_dir = (path: String, allocator: Allocator) bool {
+    result = stat(path, allocator)
+    result ?
+        | Ok(s) { return s.is_dir() }
+        | Err(_) { return false }
+}
+
+// Check if path is a symbolic link
+is_symlink = (path: String, allocator: Allocator) bool {
+    result = lstat(path, allocator)
+    result ?
+        | Ok(s) { return s.is_symlink() }
+        | Err(_) { return false }
+}
+
+// Get file size
+file_size = (path: String, allocator: Allocator) Result<i64, DirError> {
+    result = stat(path, allocator)
+    result ?
+        | Ok(s) { return Result.Ok(s.size) }
+        | Err(e) { return Result.Err(e) }
+}
+
+// ============================================================================
+// Directory Iterator
+// ============================================================================
+
+Dir: {
+    fd: i32,
+    buf: i64,
+    buf_size: usize,
+    buf_pos: usize,
+    buf_end: usize,
+    allocator: Allocator
+}
+
+// Buffer size for getdents64
+DIR_BUF_SIZE = 4096
+
+// Open a directory for iteration
+Dir.open = (path: String, allocator: Allocator) Result<Dir, DirError> {
+    cstr = string_to_cstr(path, allocator)
+    flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC
+
+    fd = sys_open(cstr, flags, 0)
+    free_cstr(cstr, path.len(), allocator)
+
+    fd < 0 ?
+        | true { return Result.Err(dir_errno_to_error(fd, allocator)) }
+        | false {
+            buf = allocator.allocate(DIR_BUF_SIZE)
+            return Result.Ok(Dir {
+                fd: fd,
+                buf: buf,
+                buf_size: DIR_BUF_SIZE,
+                buf_pos: 0,
+                buf_end: 0,
+                allocator: allocator
+            })
+        }
+}
+
+// Close directory
+Dir.close = (self: MutPtr<Dir>) void {
+    self.val.fd >= 0 ?
+        | true {
+            _ = sys_close(self.val.fd)
+            self.val.fd = -1
+        }
+        | false { }
+
+    self.val.buf != 0 ?
+        | true {
+            self.val.allocator.deallocate(self.val.buf, self.val.buf_size)
+            self.val.buf = 0
+        }
+        | false { }
+}
+
+// Read next directory entry
+Dir.next = (self: MutPtr<Dir>) Result<Option<DirEntry>, DirError> {
+    // Refill buffer if needed
+    self.val.buf_pos >= self.val.buf_end ?
+        | true {
+            nread = sys_getdents64(self.val.fd, self.val.buf, self.val.buf_size)
+
+            nread < 0 ?
+                | true { return Result.Err(dir_errno_to_error(nread, self.val.allocator)) }
+                | false { }
+
+            nread == 0 ?
+                | true { return Result.Ok(Option.None) }  // End of directory
+                | false { }
+
+            self.val.buf_pos = 0
+            self.val.buf_end = nread
+        }
+        | false { }
+
+    // Parse dirent64 structure at current position
+    // Layout: d_ino (8) + d_off (8) + d_reclen (2) + d_type (1) + d_name (variable)
+    entry_ptr = compiler.gep(self.val.buf, self.val.buf_pos)
+
+    d_ino = compiler.load<u64>(entry_ptr)
+    d_reclen = compiler.load<u16>(compiler.gep(entry_ptr, 16))
+    d_type = compiler.load<u8>(compiler.gep(entry_ptr, 18))
+    name_ptr = compiler.gep(entry_ptr, 19)
+
+    // Calculate name length (find null terminator)
+    name_len = 0
+    max_name_len = d_reclen - 19
+    loop {
+        name_len >= max_name_len ?
+            | true { break }
+            | false {
+                ch = compiler.load<u8>(compiler.gep(name_ptr, name_len))
+                ch == 0 ?
+                    | true { break }
+                    | false { name_len = name_len + 1 }
+            }
+    }
+
+    // Copy name to new String
+    name_buf = self.val.allocator.allocate(name_len + 1)
+    compiler.memcpy(name_buf, name_ptr, name_len)
+    compiler.store<u8>(compiler.gep(name_buf, name_len), 0)
+
+    // Create String from buffer
+    name = String.from_ptr(name_buf, name_len, self.val.allocator)
+
+    // Advance buffer position
+    self.val.buf_pos = self.val.buf_pos + d_reclen
+
+    entry = DirEntry {
+        name: name,
+        inode: d_ino,
+        file_type: d_type,
+        allocator: self.val.allocator
+    }
+
+    return Result.Ok(Option.Some(entry))
+}
+
+// ============================================================================
+// Read All Directory Entries
+// ============================================================================
+
+// Read all entries in a directory (excluding . and ..)
+read_dir = (path: String, allocator: Allocator) Result<Vec<DirEntry>, DirError> {
+    dir_result = Dir.open(path, allocator)
+
+    dir_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(dir) {
+            entries = Vec<DirEntry>.new(allocator)
+            dir_mut = dir
+
+            loop {
+                next_result = dir_mut.mut_ref().next()
+
+                next_result ?
+                    | Err(e) {
+                        dir_mut.mut_ref().close()
+                        entries.mut_ref().free()
+                        return Result.Err(e)
+                    }
+                    | Ok(opt) {
+                        opt ?
+                            | None {
+                                dir_mut.mut_ref().close()
+                                return Result.Ok(entries)
+                            }
+                            | Some(entry) {
+                                // Skip . and ..
+                                name = entry.name
+                                skip = false
+
+                                name.len() == 1 ?
+                                    | true {
+                                        name.at(0) == 46 ?  // '.'
+                                            | true { skip = true }
+                                            | false { }
+                                    }
+                                    | false { }
+
+                                name.len() == 2 ?
+                                    | true {
+                                        name.at(0) == 46 && name.at(1) == 46 ?  // '..'
+                                            | true { skip = true }
+                                            | false { }
+                                    }
+                                    | false { }
+
+                                skip ?
+                                    | true { entry.mut_ref().free() }
+                                    | false { entries.mut_ref().push(entry) }
+                            }
+                    }
+            }
+
+            // Unreachable
+            dir_mut.mut_ref().close()
+            return Result.Ok(entries)
+        }
+}
+
+// ============================================================================
+// Symlink Operations
+// ============================================================================
+
+// Read symbolic link target
+readlink = (path: String, allocator: Allocator) Result<String, DirError> {
+    cstr = string_to_cstr(path, allocator)
+    buf_size = 4096
+    buf = allocator.allocate(buf_size)
+
+    result = sys_readlink(cstr, buf, buf_size - 1)
+
+    free_cstr(cstr, path.len(), allocator)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, buf_size)
+            return Result.Err(dir_errno_to_error(result, allocator))
+        }
+        | false {
+            // Null-terminate the result
+            compiler.store<u8>(compiler.gep(buf, result), 0)
+
+            // Create string from buffer (transfer ownership)
+            target = String.from_ptr(buf, result, allocator)
+            return Result.Ok(target)
+        }
+}
+
+// Create symbolic link
+symlink = (target: String, linkpath: String, allocator: Allocator) Result<void, DirError> {
+    target_cstr = string_to_cstr(target, allocator)
+    link_cstr = string_to_cstr(linkpath, allocator)
+
+    result = sys_symlink(target_cstr, link_cstr)
+
+    free_cstr(target_cstr, target.len(), allocator)
+    free_cstr(link_cstr, linkpath.len(), allocator)
+
+    result < 0 ?
+        | true { return Result.Err(dir_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// Create hard link
+link = (oldpath: String, newpath: String, allocator: Allocator) Result<void, DirError> {
+    old_cstr = string_to_cstr(oldpath, allocator)
+    new_cstr = string_to_cstr(newpath, allocator)
+
+    result = sys_link(old_cstr, new_cstr)
+
+    free_cstr(old_cstr, oldpath.len(), allocator)
+    free_cstr(new_cstr, newpath.len(), allocator)
+
+    result < 0 ?
+        | true { return Result.Err(dir_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Permission Operations
+// ============================================================================
+
+// Change file permissions
+chmod = (path: String, mode: u32, allocator: Allocator) Result<void, DirError> {
+    cstr = string_to_cstr(path, allocator)
+    result = sys_chmod(cstr, mode)
+    free_cstr(cstr, path.len(), allocator)
+
+    result < 0 ?
+        | true { return Result.Err(dir_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+
+// Change file permissions by fd
+fchmod = (fd: i32, mode: u32, allocator: Allocator) Result<void, DirError> {
+    result = sys_fchmod(fd, mode)
+
+    result < 0 ?
+        | true { return Result.Err(dir_errno_to_error(result, allocator)) }
+        | false { return Result.Ok(()) }
+}
+

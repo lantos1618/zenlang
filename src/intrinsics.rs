@@ -63,7 +63,6 @@ pub fn get_intrinsic_return_type(func_name: &str) -> Option<AstType> {
 }
 
 /// Get full intrinsic definition (params and return type)
-#[allow(dead_code)] // Used by LSP
 pub fn get_intrinsic(func_name: &str) -> Option<&'static Intrinsic> {
     get_intrinsics().get(func_name)
 }

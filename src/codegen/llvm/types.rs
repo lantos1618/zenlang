@@ -305,110 +305,38 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     return Ok(Type::Struct(placeholder));
                 }
 
-                // Special handling for Array<T> type - dynamic array with pointer and length
-                if name == "Array" {
-                    // Array<T> is represented as a struct: { ptr, length, capacity }
-                    let array_struct_type = self.context.struct_type(
-                        &[
-                            self.context
-                                .ptr_type(inkwell::AddressSpace::default())
-                                .into(), // data pointer
-                            self.context.i64_type().into(), // length
-                            self.context.i64_type().into(), // capacity
-                        ],
-                        false,
-                    );
-                    return Ok(Type::Struct(array_struct_type));
+                // PRIORITY 1: Check local struct_types cache first (already generated LLVM types)
+                if let Some(struct_info) = self.struct_types.get(name) {
+                    return Ok(Type::Struct(struct_info.llvm_type));
                 }
 
-                // Special handling for Result<T,E> and Option<T> types
-                // These are always represented as { i64 discriminant, ptr payload }
-                if self.well_known.is_result(name) || self.well_known.is_option(name) {
-                    let enum_struct_type = self.context.struct_type(
-                        &[
-                            self.context.i64_type().into(), // discriminant
-                            self.context
-                                .ptr_type(inkwell::AddressSpace::default())
-                                .into(), // payload pointer
-                        ],
-                        false,
-                    );
-                    return Ok(Type::Struct(enum_struct_type));
+                // PRIORITY 2: Check TypeContext.structs for struct field info from parsed stdlib
+                // This is the correct approach - read struct layouts from .zen files
+                if let Some(struct_info) = self.type_ctx.structs.get(name).cloned() {
+                    let llvm_type = self.generate_struct_from_type_context_fields(name, &struct_info.fields)?;
+                    return Ok(Type::Struct(llvm_type));
                 }
 
-                // Special handling for HashMap<K,V> type
-                if name == "HashMap" {
-                    let hashmap_struct_type = self.context.struct_type(
-                        &[
-                            self.context
-                                .ptr_type(inkwell::AddressSpace::default())
-                                .into(), // buckets
-                            self.context.i64_type().into(), // size
-                            self.context.i64_type().into(), // capacity
-                        ],
-                        false,
-                    );
-                    return Ok(Type::Struct(hashmap_struct_type));
-                }
-
-                // Special handling for HashSet<T> type
-                if name == "HashSet" {
-                    let hashset_struct_type = self.context.struct_type(
-                        &[
-                            self.context
-                                .ptr_type(inkwell::AddressSpace::default())
-                                .into(), // buckets
-                            self.context.i64_type().into(), // size
-                            self.context.i64_type().into(), // capacity
-                        ],
-                        false,
-                    );
-                    return Ok(Type::Struct(hashset_struct_type));
-                }
-
-                // Special handling for String type (dynamic string from stdlib)
-                // String is defined in stdlib/string.zen - resolve it from there
-                if name == "String" && type_args.is_empty() {
-                    let string_type = crate::stdlib_types::stdlib_types().get_string_type();
-                    // Now convert the resolved struct type to LLVM
-                    return self.to_llvm_type(&string_type);
-                }
-
-                // Special handling for Option<T> and Result<T,E> types
-                // These are registered as enum types in the symbol table
+                // PRIORITY 3: Handle well-known types (Option, Result) - these have language semantics
                 if self.well_known.is_option(name) || self.well_known.is_result(name) {
-                    // Look up the registered enum type
                     if let Some(symbols::Symbol::EnumType(enum_info)) = self.symbols.lookup(name) {
                         return Ok(Type::Struct(enum_info.llvm_type));
-                    } else {
-                        // Fallback to standard enum struct if not registered (shouldn't happen)
-                        let enum_struct_type = self.context.struct_type(
-                            &[
-                                self.context.i64_type().into(), // discriminant
-                                self.context
-                                    .ptr_type(inkwell::AddressSpace::default())
-                                    .into(), // payload pointer
-                            ],
-                            false,
-                        );
-                        return Ok(Type::Struct(enum_struct_type));
                     }
                 }
 
-                // Check if this is actually a user-defined struct type
-                if let Some(struct_info) = self.struct_types.get(name) {
-                    Ok(Type::Struct(struct_info.llvm_type))
-                } else if let Some(symbols::Symbol::EnumType(enum_info)) = self.symbols.lookup(name)
-                {
-                    // Check if it's an enum type that was parsed as Generic
-                    Ok(Type::Struct(enum_info.llvm_type))
-                } else if name == "DynVec" && type_args.len() == 1 {
-                    let dynvec_type = AstType::DynVec {
-                        element_types: type_args.clone(),
-                        allocator_type: None,
-                    };
-                    self.to_llvm_type(&dynvec_type)
-                } else if type_args
+                // PRIORITY 4: Check if it's an enum type
+                if let Some(symbols::Symbol::EnumType(enum_info)) = self.symbols.lookup(name) {
+                    return Ok(Type::Struct(enum_info.llvm_type));
+                }
+
+                // PRIORITY 5: Use TypeContext with stdlib_types fallback
+                if let Some(fields) = self.type_ctx.get_struct_definition_with_fallback(name) {
+                    let llvm_type = self.generate_struct_from_type_context_fields(name, &fields)?;
+                    return Ok(Type::Struct(llvm_type));
+                }
+
+                // Handle unresolved generic type parameters
+                if type_args
                     .iter()
                     .any(|t| matches!(t, AstType::Generic { .. }))
                 {
@@ -525,6 +453,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         }
                     }
                 }
+                // Handle Option, Result via well_known
                 base if self.well_known.is_option(base) || self.well_known.is_result(base) => {
                     let type_args = self.parse_comma_separated_types(type_params_str);
                     AstType::Generic {
@@ -532,15 +461,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         type_args,
                     }
                 }
-                "HashMap" | "HashSet" => {
-                    let type_args = self.parse_comma_separated_types(type_params_str);
-                    AstType::Generic {
-                        name: base_type.to_string(),
-                        type_args,
-                    }
-                }
+                // All other generic types (including collections with intrinsic layouts)
                 _ => {
-                    // Unknown generic type
                     let type_args = self.parse_comma_separated_types(type_params_str);
                     AstType::Generic {
                         name: base_type.to_string(),
@@ -564,8 +486,15 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 "bool" => AstType::Bool,
                 "string" => AstType::StaticLiteral,
                 "StaticString" => AstType::StaticString,
-                "String" => crate::ast::resolve_string_struct_type(),
                 "void" => AstType::Void,
+                // Types with intrinsic layouts become Generic types
+                // (codegen will look up layout via TypeContext)
+                name if self.type_ctx.get_intrinsic_layout(name).is_some() => {
+                    AstType::Generic {
+                        name: name.to_string(),
+                        type_args: vec![],
+                    }
+                }
                 _ => AstType::I32, // Default fallback
             }
         }
@@ -672,23 +601,123 @@ impl<'ctx> LLVMCompiler<'ctx> {
         Ok(())
     }
 
-    /// Try to get a struct type, registering from stdlib if not found locally
+    /// Try to get a struct type, registering from TypeContext (with stdlib fallback) if not found locally
     pub fn ensure_struct_type(&mut self, name: &str) -> Result<bool, CompileError> {
         // Already registered locally
         if self.struct_types.contains_key(name) {
             return Ok(true);
         }
 
-        // Try to get from stdlib
-        let registry = crate::stdlib_types::stdlib_types();
-        if let Some(struct_def) = registry.get_struct_definition(name) {
-            // Clone the struct_def to avoid borrow issues
-            let struct_def = struct_def.clone();
-            self.register_struct_type(&struct_def)?;
+        // Try to get from TypeContext (which has stdlib_types fallback built in)
+        if let Some(fields) = self.type_ctx.get_struct_definition_with_fallback(name) {
+            self.register_struct_from_fields(name, &fields)?;
             return Ok(true);
         }
 
         Ok(false)
+    }
+
+    /// Register a struct type from field definitions (name, type pairs)
+    /// This is used when getting struct info from TypeContext
+    fn register_struct_from_fields(
+        &mut self,
+        name: &str,
+        fields: &[(String, AstType)],
+    ) -> Result<(), CompileError> {
+        let mut field_types = Vec::new();
+        let mut field_map = HashMap::new();
+
+        for (index, (field_name, field_type)) in fields.iter().enumerate() {
+            let llvm_type = self.ast_type_to_llvm_basic_type(field_type)?;
+            field_types.push(llvm_type);
+            field_map.insert(field_name.clone(), (index, field_type.clone()));
+        }
+
+        let struct_type = self.context.struct_type(&field_types, false);
+
+        let struct_info = StructTypeInfo {
+            llvm_type: struct_type,
+            fields: field_map,
+        };
+
+        self.struct_types.insert(name.to_string(), struct_info);
+
+        Ok(())
+    }
+
+    /// Convert an AstType to LLVM BasicTypeEnum for struct fields
+    fn ast_type_to_llvm_basic_type(&mut self, ast_type: &AstType) -> Result<BasicTypeEnum<'ctx>, CompileError> {
+        use inkwell::AddressSpace;
+
+        match ast_type {
+            AstType::I8 => Ok(self.context.i8_type().as_basic_type_enum()),
+            AstType::I16 => Ok(self.context.i16_type().as_basic_type_enum()),
+            AstType::I32 => Ok(self.context.i32_type().as_basic_type_enum()),
+            AstType::I64 => Ok(self.context.i64_type().as_basic_type_enum()),
+            AstType::U8 => Ok(self.context.i8_type().as_basic_type_enum()),
+            AstType::U16 => Ok(self.context.i16_type().as_basic_type_enum()),
+            AstType::U32 => Ok(self.context.i32_type().as_basic_type_enum()),
+            AstType::U64 => Ok(self.context.i64_type().as_basic_type_enum()),
+            AstType::Usize => Ok(self.context.i64_type().as_basic_type_enum()),
+            AstType::F32 => Ok(self.context.f32_type().as_basic_type_enum()),
+            AstType::F64 => Ok(self.context.f64_type().as_basic_type_enum()),
+            AstType::Bool => Ok(self.context.bool_type().as_basic_type_enum()),
+            AstType::StaticLiteral | AstType::StaticString => Ok(self
+                .context
+                .ptr_type(AddressSpace::default())
+                .as_basic_type_enum()),
+            AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name) => Ok(self
+                .context
+                .ptr_type(AddressSpace::default())
+                .as_basic_type_enum()),
+            AstType::Void => Err(CompileError::TypeError(
+                "Void type not allowed in struct fields".to_string(),
+                None,
+            )),
+            t if t.is_ptr_type() => {
+                if t.is_raw_ptr() {
+                    Ok(self.context
+                        .ptr_type(AddressSpace::default())
+                        .as_basic_type_enum())
+                } else {
+                    // Ptr<T> and MutPtr<T> are enums: { i64 discriminant, ptr payload }
+                    Ok(self.context.struct_type(
+                        &[
+                            self.context.i64_type().into(),
+                            self.context.ptr_type(AddressSpace::default()).into(),
+                        ],
+                        false,
+                    ).as_basic_type_enum())
+                }
+            }
+            AstType::Generic { name, .. } => {
+                if let Some(struct_info) = self.struct_types.get(name) {
+                    Ok(struct_info.llvm_type.as_basic_type_enum())
+                } else {
+                    Ok(self.context
+                        .ptr_type(AddressSpace::default())
+                        .as_basic_type_enum())
+                }
+            }
+            AstType::Struct { name, .. } => {
+                if let Some(struct_info) = self.struct_types.get(name) {
+                    Ok(struct_info.llvm_type.as_basic_type_enum())
+                } else {
+                    Err(CompileError::TypeError(
+                        format!("Struct '{}' not yet registered", name),
+                        None
+                    ))
+                }
+            }
+            AstType::FunctionPointer { .. } => Ok(self
+                .context
+                .ptr_type(AddressSpace::default())
+                .as_basic_type_enum()),
+            _ => Err(CompileError::TypeError(
+                format!("Unsupported type in struct: {:?}", ast_type),
+                None,
+            ))
+        }
     }
 
     pub fn register_enum_type(
@@ -742,5 +771,64 @@ impl<'ctx> LLVMCompiler<'ctx> {
             .insert(&enum_def.name, symbols::Symbol::EnumType(enum_info));
 
         Ok(())
+    }
+
+    /// Generate LLVM struct type for an intrinsic layout.
+    /// This centralizes all collection/stdlib struct layouts in one place.
+    pub fn llvm_type_for_layout(
+        &self,
+        layout: crate::type_context::IntrinsicLayout,
+    ) -> inkwell::types::StructType<'ctx> {
+        use crate::type_context::IntrinsicLayout;
+        let ptr = self.context.ptr_type(AddressSpace::default());
+
+        match layout {
+            // Closure: { fn_ptr, captures_ptr } - the only truly intrinsic layout
+            IntrinsicLayout::Closure => {
+                self.context.struct_type(&[ptr.into(), ptr.into()], false)
+            }
+        }
+    }
+
+    /// Generate LLVM struct type from TypeContext struct fields.
+    /// This is the correct approach - read struct layouts from parsed .zen files,
+    /// not from hardcoded IntrinsicLayout patterns.
+    pub fn generate_struct_from_type_context_fields(
+        &mut self,
+        name: &str,
+        fields: &[(String, AstType)],
+    ) -> Result<inkwell::types::StructType<'ctx>, CompileError> {
+        let ptr = self.context.ptr_type(AddressSpace::default());
+        let i64_type = self.context.i64_type();
+
+        let mut field_types: Vec<inkwell::types::BasicTypeEnum> = Vec::new();
+        let mut field_map = HashMap::new();
+
+        for (idx, (field_name, field_type)) in fields.iter().enumerate() {
+            let llvm_type = match field_type {
+                AstType::I8 | AstType::U8 => self.context.i8_type().into(),
+                AstType::I16 | AstType::U16 => self.context.i16_type().into(),
+                AstType::I32 | AstType::U32 => self.context.i32_type().into(),
+                AstType::I64 | AstType::U64 | AstType::Usize => i64_type.into(),
+                AstType::F32 => self.context.f32_type().into(),
+                AstType::F64 => self.context.f64_type().into(),
+                AstType::Bool => self.context.bool_type().into(),
+                // Pointers, strings, and unknown types default to ptr
+                _ => ptr.into(),
+            };
+            field_types.push(llvm_type);
+            field_map.insert(field_name.clone(), (idx, field_type.clone()));
+        }
+
+        let struct_type = self.context.struct_type(&field_types, false);
+
+        // Cache in struct_types for future lookups
+        let struct_info = StructTypeInfo {
+            llvm_type: struct_type,
+            fields: field_map,
+        };
+        self.struct_types.insert(name.to_string(), struct_info);
+
+        Ok(struct_type)
     }
 }

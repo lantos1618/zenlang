@@ -1,0 +1,639 @@
+// Zen Standard Library: Extended File Status (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// statx provides more information than stat, including birth time
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ String } = @std.string
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Statx Syscall Number
+// ============================================================================
+
+SYS_STATX = 332
+
+// ============================================================================
+// AT_* Constants
+// ============================================================================
+
+AT_FDCWD = -100                // Use current working directory
+AT_SYMLINK_NOFOLLOW = 256      // Don't follow symlinks
+AT_REMOVEDIR = 512             // Remove directory
+AT_SYMLINK_FOLLOW = 1024       // Follow symlinks
+AT_NO_AUTOMOUNT = 2048         // Suppress automount
+AT_EMPTY_PATH = 4096           // Allow empty path
+AT_STATX_SYNC_TYPE = 0x6000    // Sync type mask
+AT_STATX_SYNC_AS_STAT = 0x0000 // Sync as stat
+AT_STATX_FORCE_SYNC = 0x2000   // Force sync
+AT_STATX_DONT_SYNC = 0x4000    // Don't sync
+
+// ============================================================================
+// STATX_* Mask Constants (what to query)
+// ============================================================================
+
+STATX_TYPE = 0x00000001        // File type
+STATX_MODE = 0x00000002        // Protection mode
+STATX_NLINK = 0x00000004       // Number of hard links
+STATX_UID = 0x00000008         // User ID
+STATX_GID = 0x00000010         // Group ID
+STATX_ATIME = 0x00000020       // Access time
+STATX_MTIME = 0x00000040       // Modification time
+STATX_CTIME = 0x00000080       // Change time
+STATX_INO = 0x00000100         // Inode number
+STATX_SIZE = 0x00000200        // File size
+STATX_BLOCKS = 0x00000400      // Blocks allocated
+STATX_BASIC_STATS = 0x000007FF // All basic stats
+STATX_BTIME = 0x00000800       // Birth (creation) time
+STATX_MNT_ID = 0x00001000      // Mount ID
+STATX_DIOALIGN = 0x00002000    // Direct I/O alignment
+STATX_ALL = 0x00000FFF         // All supported
+
+// ============================================================================
+// File Type Constants
+// ============================================================================
+
+S_IFMT = 0o170000   // Mask for file type
+S_IFSOCK = 0o140000 // Socket
+S_IFLNK = 0o120000  // Symbolic link
+S_IFREG = 0o100000  // Regular file
+S_IFBLK = 0o060000  // Block device
+S_IFDIR = 0o040000  // Directory
+S_IFCHR = 0o020000  // Character device
+S_IFIFO = 0o010000  // FIFO
+
+// Permission bits
+S_ISUID = 0o4000    // Set-user-ID
+S_ISGID = 0o2000    // Set-group-ID
+S_ISVTX = 0o1000    // Sticky bit
+S_IRWXU = 0o0700    // Owner permissions
+S_IRUSR = 0o0400    // Owner read
+S_IWUSR = 0o0200    // Owner write
+S_IXUSR = 0o0100    // Owner execute
+S_IRWXG = 0o0070    // Group permissions
+S_IRGRP = 0o0040    // Group read
+S_IWGRP = 0o0020    // Group write
+S_IXGRP = 0o0010    // Group execute
+S_IRWXO = 0o0007    // Other permissions
+S_IROTH = 0o0004    // Other read
+S_IWOTH = 0o0002    // Other write
+S_IXOTH = 0o0001    // Other execute
+
+// ============================================================================
+// Statx Attributes
+// ============================================================================
+
+STATX_ATTR_COMPRESSED = 0x00000004  // File is compressed
+STATX_ATTR_IMMUTABLE = 0x00000010   // File is immutable
+STATX_ATTR_APPEND = 0x00000020      // File is append-only
+STATX_ATTR_NODUMP = 0x00000040      // Don't include in backups
+STATX_ATTR_ENCRYPTED = 0x00000800   // File is encrypted
+STATX_ATTR_AUTOMOUNT = 0x00001000   // Automount trigger
+STATX_ATTR_MOUNT_ROOT = 0x00002000  // Root of a mount
+STATX_ATTR_VERITY = 0x00100000      // Verity protected
+STATX_ATTR_DAX = 0x00200000         // Direct access
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+StatxError: {
+    code: i32
+}
+
+statx_errno_to_error = (errno: i64) StatxError {
+    code = 0 - errno
+    return StatxError { code: code }
+}
+
+// Check if error is ENOENT (file not found)
+StatxError.not_found = (self: StatxError) bool {
+    return self.code == 2  // ENOENT
+}
+
+// Check if error is EACCES (permission denied)
+StatxError.permission_denied = (self: StatxError) bool {
+    return self.code == 13  // EACCES
+}
+
+// Check if error is ENOTDIR (not a directory)
+StatxError.not_directory = (self: StatxError) bool {
+    return self.code == 20  // ENOTDIR
+}
+
+// ============================================================================
+// Timestamp
+// ============================================================================
+
+StatxTimestamp: {
+    tv_sec: i64,
+    tv_nsec: u32,
+    reserved: i32
+}
+
+StatxTimestamp.zero = () StatxTimestamp {
+    return StatxTimestamp { tv_sec: 0, tv_nsec: 0, reserved: 0 }
+}
+
+// Convert to seconds (float)
+StatxTimestamp.as_secs_f64 = (self: StatxTimestamp) f64 {
+    return self.tv_sec + self.tv_nsec / 1000000000.0
+}
+
+// Convert to milliseconds
+StatxTimestamp.as_millis = (self: StatxTimestamp) i64 {
+    return self.tv_sec * 1000 + self.tv_nsec / 1000000
+}
+
+// Convert to microseconds
+StatxTimestamp.as_micros = (self: StatxTimestamp) i64 {
+    return self.tv_sec * 1000000 + self.tv_nsec / 1000
+}
+
+// Convert to nanoseconds
+StatxTimestamp.as_nanos = (self: StatxTimestamp) i64 {
+    return self.tv_sec * 1000000000 + self.tv_nsec
+}
+
+// ============================================================================
+// Statx Structure
+// ============================================================================
+
+// struct statx size = 256 bytes
+STATX_SIZE = 256
+
+Statx: {
+    mask: u32,          // What results were written
+    blksize: u32,       // Block size for filesystem I/O
+    attributes: u64,    // Extra file attributes
+    nlink: u32,         // Number of hard links
+    uid: u32,           // User ID of owner
+    gid: u32,           // Group ID of owner
+    mode: u16,          // File type and mode
+    ino: u64,           // Inode number
+    size: u64,          // Total size in bytes
+    blocks: u64,        // Number of 512B blocks
+    attributes_mask: u64, // Mask of supported attributes
+    atime: StatxTimestamp, // Last access time
+    btime: StatxTimestamp, // Creation time (birth time)
+    ctime: StatxTimestamp, // Last status change time
+    mtime: StatxTimestamp, // Last modification time
+    rdev_major: u32,    // Major device ID
+    rdev_minor: u32,    // Minor device ID
+    dev_major: u32,     // Major ID of containing device
+    dev_minor: u32,     // Minor ID of containing device
+    mnt_id: u64         // Mount ID
+}
+
+// ============================================================================
+// Low-Level Syscall
+// ============================================================================
+
+// statx syscall
+// dirfd: Directory fd (or AT_FDCWD)
+// pathname: File path (pointer to null-terminated string)
+// flags: AT_* flags
+// mask: STATX_* mask
+// statxbuf: Output buffer (256 bytes)
+sys_statx = (dirfd: i32, pathname: i64, flags: i32, mask: u32, statxbuf: i64) i64 {
+    return compiler.syscall5(SYS_STATX, dirfd, pathname, flags, mask, statxbuf)
+}
+
+// ============================================================================
+// Parsing Functions
+// ============================================================================
+
+// Parse statx buffer into Statx struct
+parse_statx = (buf: i64) Statx {
+    mask = compiler.load<u32>(buf)
+    blksize = compiler.load<u32>(buf + 4)
+    attributes = compiler.load<u64>(buf + 8)
+    nlink = compiler.load<u32>(buf + 16)
+    uid = compiler.load<u32>(buf + 20)
+    gid = compiler.load<u32>(buf + 24)
+    mode = compiler.load<u16>(buf + 28)
+    // 2 bytes padding
+    ino = compiler.load<u64>(buf + 32)
+    size = compiler.load<u64>(buf + 40)
+    blocks = compiler.load<u64>(buf + 48)
+    attributes_mask = compiler.load<u64>(buf + 56)
+
+    // Timestamps (each is 16 bytes: i64 sec, u32 nsec, i32 reserved)
+    atime_sec = compiler.load<i64>(buf + 64)
+    atime_nsec = compiler.load<u32>(buf + 72)
+    btime_sec = compiler.load<i64>(buf + 80)
+    btime_nsec = compiler.load<u32>(buf + 88)
+    ctime_sec = compiler.load<i64>(buf + 96)
+    ctime_nsec = compiler.load<u32>(buf + 104)
+    mtime_sec = compiler.load<i64>(buf + 112)
+    mtime_nsec = compiler.load<u32>(buf + 120)
+
+    rdev_major = compiler.load<u32>(buf + 128)
+    rdev_minor = compiler.load<u32>(buf + 132)
+    dev_major = compiler.load<u32>(buf + 136)
+    dev_minor = compiler.load<u32>(buf + 140)
+    mnt_id = compiler.load<u64>(buf + 144)
+
+    return Statx {
+        mask: mask,
+        blksize: blksize,
+        attributes: attributes,
+        nlink: nlink,
+        uid: uid,
+        gid: gid,
+        mode: mode,
+        ino: ino,
+        size: size,
+        blocks: blocks,
+        attributes_mask: attributes_mask,
+        atime: StatxTimestamp { tv_sec: atime_sec, tv_nsec: atime_nsec, reserved: 0 },
+        btime: StatxTimestamp { tv_sec: btime_sec, tv_nsec: btime_nsec, reserved: 0 },
+        ctime: StatxTimestamp { tv_sec: ctime_sec, tv_nsec: ctime_nsec, reserved: 0 },
+        mtime: StatxTimestamp { tv_sec: mtime_sec, tv_nsec: mtime_nsec, reserved: 0 },
+        rdev_major: rdev_major,
+        rdev_minor: rdev_minor,
+        dev_major: dev_major,
+        dev_minor: dev_minor,
+        mnt_id: mnt_id
+    }
+}
+
+// ============================================================================
+// File Type Methods
+// ============================================================================
+
+Statx.is_regular = (self: Statx) bool {
+    return (self.mode & S_IFMT) == S_IFREG
+}
+
+Statx.is_directory = (self: Statx) bool {
+    return (self.mode & S_IFMT) == S_IFDIR
+}
+
+Statx.is_symlink = (self: Statx) bool {
+    return (self.mode & S_IFMT) == S_IFLNK
+}
+
+Statx.is_block_device = (self: Statx) bool {
+    return (self.mode & S_IFMT) == S_IFBLK
+}
+
+Statx.is_char_device = (self: Statx) bool {
+    return (self.mode & S_IFMT) == S_IFCHR
+}
+
+Statx.is_fifo = (self: Statx) bool {
+    return (self.mode & S_IFMT) == S_IFIFO
+}
+
+Statx.is_socket = (self: Statx) bool {
+    return (self.mode & S_IFMT) == S_IFSOCK
+}
+
+// ============================================================================
+// Permission Methods
+// ============================================================================
+
+Statx.is_readable_owner = (self: Statx) bool {
+    return (self.mode & S_IRUSR) != 0
+}
+
+Statx.is_writable_owner = (self: Statx) bool {
+    return (self.mode & S_IWUSR) != 0
+}
+
+Statx.is_executable_owner = (self: Statx) bool {
+    return (self.mode & S_IXUSR) != 0
+}
+
+Statx.is_readable_group = (self: Statx) bool {
+    return (self.mode & S_IRGRP) != 0
+}
+
+Statx.is_writable_group = (self: Statx) bool {
+    return (self.mode & S_IWGRP) != 0
+}
+
+Statx.is_executable_group = (self: Statx) bool {
+    return (self.mode & S_IXGRP) != 0
+}
+
+Statx.is_readable_other = (self: Statx) bool {
+    return (self.mode & S_IROTH) != 0
+}
+
+Statx.is_writable_other = (self: Statx) bool {
+    return (self.mode & S_IWOTH) != 0
+}
+
+Statx.is_executable_other = (self: Statx) bool {
+    return (self.mode & S_IXOTH) != 0
+}
+
+Statx.is_setuid = (self: Statx) bool {
+    return (self.mode & S_ISUID) != 0
+}
+
+Statx.is_setgid = (self: Statx) bool {
+    return (self.mode & S_ISGID) != 0
+}
+
+Statx.is_sticky = (self: Statx) bool {
+    return (self.mode & S_ISVTX) != 0
+}
+
+// Get permission bits (lower 12 bits)
+Statx.permissions = (self: Statx) u16 {
+    return self.mode & 0o7777
+}
+
+// ============================================================================
+// Attribute Methods
+// ============================================================================
+
+Statx.is_compressed = (self: Statx) bool {
+    return (self.attributes & STATX_ATTR_COMPRESSED) != 0
+}
+
+Statx.is_immutable = (self: Statx) bool {
+    return (self.attributes & STATX_ATTR_IMMUTABLE) != 0
+}
+
+Statx.is_append_only = (self: Statx) bool {
+    return (self.attributes & STATX_ATTR_APPEND) != 0
+}
+
+Statx.is_encrypted = (self: Statx) bool {
+    return (self.attributes & STATX_ATTR_ENCRYPTED) != 0
+}
+
+Statx.is_automount = (self: Statx) bool {
+    return (self.attributes & STATX_ATTR_AUTOMOUNT) != 0
+}
+
+Statx.is_mount_root = (self: Statx) bool {
+    return (self.attributes & STATX_ATTR_MOUNT_ROOT) != 0
+}
+
+// ============================================================================
+// Main Functions
+// ============================================================================
+
+// Get extended file status
+statx = (path: String, allocator: Allocator) Result<Statx, StatxError> {
+    // Null-terminate path
+    path_buf = allocator.allocate(path.len() + 1)
+    compiler.memcpy(path_buf, path.data(), path.len())
+    compiler.store<u8>(path_buf + path.len(), 0)
+
+    statx_buf = allocator.allocate(STATX_SIZE)
+
+    result = sys_statx(AT_FDCWD, path_buf, 0, STATX_ALL, statx_buf)
+
+    allocator.deallocate(path_buf, path.len() + 1)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(statx_buf, STATX_SIZE)
+            return Result.Err(statx_errno_to_error(result))
+        }
+        | false {
+            stat = parse_statx(statx_buf)
+            allocator.deallocate(statx_buf, STATX_SIZE)
+            return Result.Ok(stat)
+        }
+}
+
+// Get extended file status, don't follow symlinks
+lstatx = (path: String, allocator: Allocator) Result<Statx, StatxError> {
+    path_buf = allocator.allocate(path.len() + 1)
+    compiler.memcpy(path_buf, path.data(), path.len())
+    compiler.store<u8>(path_buf + path.len(), 0)
+
+    statx_buf = allocator.allocate(STATX_SIZE)
+
+    result = sys_statx(AT_FDCWD, path_buf, AT_SYMLINK_NOFOLLOW, STATX_ALL, statx_buf)
+
+    allocator.deallocate(path_buf, path.len() + 1)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(statx_buf, STATX_SIZE)
+            return Result.Err(statx_errno_to_error(result))
+        }
+        | false {
+            stat = parse_statx(statx_buf)
+            allocator.deallocate(statx_buf, STATX_SIZE)
+            return Result.Ok(stat)
+        }
+}
+
+// Get status by file descriptor
+fstatx = (fd: i32, allocator: Allocator) Result<Statx, StatxError> {
+    statx_buf = allocator.allocate(STATX_SIZE)
+
+    // Use empty path with AT_EMPTY_PATH
+    result = sys_statx(fd, 0, AT_EMPTY_PATH, STATX_ALL, statx_buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(statx_buf, STATX_SIZE)
+            return Result.Err(statx_errno_to_error(result))
+        }
+        | false {
+            stat = parse_statx(statx_buf)
+            allocator.deallocate(statx_buf, STATX_SIZE)
+            return Result.Ok(stat)
+        }
+}
+
+// Get status relative to directory fd
+statx_at = (dirfd: i32, path: String, flags: i32, allocator: Allocator) Result<Statx, StatxError> {
+    path_buf = allocator.allocate(path.len() + 1)
+    compiler.memcpy(path_buf, path.data(), path.len())
+    compiler.store<u8>(path_buf + path.len(), 0)
+
+    statx_buf = allocator.allocate(STATX_SIZE)
+
+    result = sys_statx(dirfd, path_buf, flags, STATX_ALL, statx_buf)
+
+    allocator.deallocate(path_buf, path.len() + 1)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(statx_buf, STATX_SIZE)
+            return Result.Err(statx_errno_to_error(result))
+        }
+        | false {
+            stat = parse_statx(statx_buf)
+            allocator.deallocate(statx_buf, STATX_SIZE)
+            return Result.Ok(stat)
+        }
+}
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+// Check if path exists
+exists = (path: String, allocator: Allocator) bool {
+    result = statx(path, allocator)
+    result ?
+        | Ok(_) { return true }
+        | Err(_) { return false }
+}
+
+// Check if path is a file
+is_file = (path: String, allocator: Allocator) bool {
+    result = statx(path, allocator)
+    result ?
+        | Ok(st) { return st.is_regular() }
+        | Err(_) { return false }
+}
+
+// Check if path is a directory
+is_dir = (path: String, allocator: Allocator) bool {
+    result = statx(path, allocator)
+    result ?
+        | Ok(st) { return st.is_directory() }
+        | Err(_) { return false }
+}
+
+// Check if path is a symlink
+is_link = (path: String, allocator: Allocator) bool {
+    result = lstatx(path, allocator)
+    result ?
+        | Ok(st) { return st.is_symlink() }
+        | Err(_) { return false }
+}
+
+// Get file size
+file_size = (path: String, allocator: Allocator) Result<u64, StatxError> {
+    result = statx(path, allocator)
+    result ?
+        | Ok(st) { return Result.Ok(st.size) }
+        | Err(e) { return Result.Err(e) }
+}
+
+// Get modification time
+mtime = (path: String, allocator: Allocator) Result<StatxTimestamp, StatxError> {
+    result = statx(path, allocator)
+    result ?
+        | Ok(st) { return Result.Ok(st.mtime) }
+        | Err(e) { return Result.Err(e) }
+}
+
+// Get birth (creation) time
+btime = (path: String, allocator: Allocator) Result<StatxTimestamp, StatxError> {
+    result = statx(path, allocator)
+    result ?
+        | Ok(st) { return Result.Ok(st.btime) }
+        | Err(e) { return Result.Err(e) }
+}
+
+// Get file owner (uid)
+owner = (path: String, allocator: Allocator) Result<u32, StatxError> {
+    result = statx(path, allocator)
+    result ?
+        | Ok(st) { return Result.Ok(st.uid) }
+        | Err(e) { return Result.Err(e) }
+}
+
+// Get file group (gid)
+group = (path: String, allocator: Allocator) Result<u32, StatxError> {
+    result = statx(path, allocator)
+    result ?
+        | Ok(st) { return Result.Ok(st.gid) }
+        | Err(e) { return Result.Err(e) }
+}
+
+// Get number of hard links
+nlink = (path: String, allocator: Allocator) Result<u32, StatxError> {
+    result = statx(path, allocator)
+    result ?
+        | Ok(st) { return Result.Ok(st.nlink) }
+        | Err(e) { return Result.Err(e) }
+}
+
+// Get inode number
+inode = (path: String, allocator: Allocator) Result<u64, StatxError> {
+    result = statx(path, allocator)
+    result ?
+        | Ok(st) { return Result.Ok(st.ino) }
+        | Err(e) { return Result.Err(e) }
+}
+
+// ============================================================================
+// FileInfo - High-Level File Information
+// ============================================================================
+
+FileInfo: {
+    path: String,
+    stat: Statx,
+    allocator: Allocator
+}
+
+// Get file info
+FileInfo.get = (path: String, allocator: Allocator) Result<FileInfo, StatxError> {
+    stat_result = statx(path, allocator)
+
+    stat_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(st) {
+            return Result.Ok(FileInfo { path: path, stat: st, allocator: allocator })
+        }
+}
+
+// Get file info (no follow symlinks)
+FileInfo.get_nofollow = (path: String, allocator: Allocator) Result<FileInfo, StatxError> {
+    stat_result = lstatx(path, allocator)
+
+    stat_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(st) {
+            return Result.Ok(FileInfo { path: path, stat: st, allocator: allocator })
+        }
+}
+
+FileInfo.size = (self: FileInfo) u64 {
+    return self.stat.size
+}
+
+FileInfo.is_file = (self: FileInfo) bool {
+    return self.stat.is_regular()
+}
+
+FileInfo.is_dir = (self: FileInfo) bool {
+    return self.stat.is_directory()
+}
+
+FileInfo.is_symlink = (self: FileInfo) bool {
+    return self.stat.is_symlink()
+}
+
+FileInfo.modified = (self: FileInfo) StatxTimestamp {
+    return self.stat.mtime
+}
+
+FileInfo.created = (self: FileInfo) StatxTimestamp {
+    return self.stat.btime
+}
+
+FileInfo.accessed = (self: FileInfo) StatxTimestamp {
+    return self.stat.atime
+}
+
+FileInfo.permissions = (self: FileInfo) u16 {
+    return self.stat.permissions()
+}
+
+FileInfo.uid = (self: FileInfo) u32 {
+    return self.stat.uid
+}
+
+FileInfo.gid = (self: FileInfo) u32 {
+    return self.stat.gid
+}
+

@@ -26,12 +26,9 @@ pub enum CompileError {
     MissingReturnStatement(String, Option<Span>),
     InternalError(String, Option<Span>),
     UnsupportedFeature(String, Option<Span>),
-    #[allow(dead_code)]
     TypeError(String, Option<Span>),
     FileNotFound(String, Option<String>),
-    #[allow(dead_code)]
     ParseError(String, Option<Span>),
-    #[allow(dead_code)]
     ComptimeError(String),
     // Enhanced error types for better LSP diagnostics
     #[allow(dead_code)]

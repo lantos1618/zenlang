@@ -2,7 +2,6 @@ use crate::ast::{AstType, Expression, Function, Statement, TraitImplementation};
 use crate::error::Result;
 
 /// Transform Self types to concrete types in trait implementations
-#[allow(dead_code)]
 pub fn transform_trait_impl_self_types(
     trait_impl: &TraitImplementation,
 ) -> Result<TraitImplementation> {

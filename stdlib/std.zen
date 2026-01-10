@@ -25,6 +25,7 @@
 { Stack } = @std.collections.stack
 { Set } = @std.collections.set
 { HashMap } = @std.collections.hashmap
+{ LinkedList } = @std.collections.linkedlist
 
 // Build system types and functions
 { Build, Target, Executable, StaticLibrary, Test, Dependency, OptimizeMode, OsTag, CpuArch, InstallDir, Version, ExeOptions, LibOptions, DepOptions } = @std.build.build
@@ -32,6 +33,164 @@
 
 // IO functions (includes syscall-based I/O: sys_write, sys_ewrite, sys_write_raw)
 { STDIN, STDOUT, STDERR, print, println, eprint, eprintln, read_line, read_input, sys_write, sys_ewrite, sys_write_raw } = @std.io.io
+
+// Socket I/O (syscall-based TCP/UDP for Linux x86-64)
+{ Socket, TcpListener, TcpStream, UdpSocket, SocketAddrV4, Ipv4Addr, SocketError } = @std.io.socket
+{ tcp_socket, tcp_bind, tcp_listen, tcp_accept, tcp_connect, tcp_send, tcp_recv } = @std.io.socket
+{ udp_socket, udp_bind, udp_sendto, udp_recvfrom } = @std.io.socket
+{ socket_close, socket_shutdown, socket_set_reuseaddr, tcp_set_nodelay, udp_set_broadcast } = @std.io.socket
+{ htons, ntohs, htonl } = @std.io.socket
+
+// Process management (syscall-based for Linux x86-64)
+{ ProcessError, ExitStatus, Pipe } = @std.io.process
+{ fork, exit, wait, waitpid, try_wait, kill, spawn, spawn_wait } = @std.io.process
+{ getpid, getppid, getuid, getgid, geteuid, getegid } = @std.io.process
+{ pipe, dup, dup2, setsid, getpgid, setpgid } = @std.io.process
+{ SIGINT, SIGTERM, SIGKILL, SIGHUP, SIGCHLD } = @std.io.process
+
+// Directory operations (syscall-based for Linux x86-64)
+{ FileStat, DirEntry, Dir, DirError } = @std.io.dir
+{ stat, lstat, fstat, path_exists, is_file, is_dir, is_symlink, file_size } = @std.io.dir
+{ read_dir, readlink, symlink, link, chmod, fchmod } = @std.io.dir
+{ S_IFREG, S_IFDIR, S_IFLNK, DT_REG, DT_DIR, DT_LNK } = @std.io.dir
+
+// Epoll async I/O (syscall-based for Linux x86-64)
+{ Epoll, EpollEvent, EpollEventIterator, EpollError } = @std.io.epoll
+{ EventLoop, Interest, Token, Readiness } = @std.io.epoll
+{ EPOLLIN, EPOLLOUT, EPOLLERR, EPOLLHUP, EPOLLET } = @std.io.epoll
+
+// Environment variables (syscall-based for Linux x86-64)
+{ EnvEntry, EnvError } = @std.io.env
+{ getenv, env_exists, getenv_or, read_environ } = @std.io.env
+{ home_dir, path, user, shell, term, lang, getcwd } = @std.io.env
+{ read_args, split_path } = @std.io.env
+
+// Time (syscall-based for Linux x86-64)
+{ Timespec, Timeval, Instant, Stopwatch } = @std.time.time
+{ monotonic_now, realtime_now, clock_gettime, clock_getres } = @std.time.time
+{ sleep_secs, sleep_millis, sleep_micros, sleep_nanos } = @std.time.time
+{ unix_timestamp, unix_timestamp_millis } = @std.time.time
+{ CLOCK_REALTIME, CLOCK_MONOTONIC, CLOCK_BOOTTIME } = @std.time.time
+
+// Memory mapping (syscall-based for Linux x86-64)
+{ MemoryRegion, JitRegion, MmapError } = @std.memory.mmap
+{ mmap_anonymous, mmap_rw, mmap_rx, mmap_rwx, munmap, mprotect, mremap, madvise, mlock, munlock } = @std.memory.mmap
+{ page_alloc, page_free, page_align, PAGE_SIZE } = @std.memory.mmap
+{ PROT_READ, PROT_WRITE, PROT_EXEC, PROT_RW, PROT_RX, PROT_RWX } = @std.memory.mmap
+{ MAP_PRIVATE, MAP_SHARED, MAP_ANONYMOUS } = @std.memory.mmap
+
+// Signal handling (syscall-based for Linux x86-64)
+{ SigSet, SignalError, SignalFd } = @std.io.signal
+{ sigprocmask_block, sigprocmask_unblock, sigprocmask_set, sigprocmask_get, sigpending } = @std.io.signal
+{ kill, raise, pause, alarm, alarm_cancel, signal_ignore, signal_default } = @std.io.signal
+{ block_termination_signals, unblock_termination_signals, ignore_sigpipe, ignore_sigchld } = @std.io.signal
+{ SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE, SIGKILL } = @std.io.signal
+{ SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGSTKFLT, SIGCHLD } = @std.io.signal
+{ SIGCONT, SIGSTOP, SIGTSTP, SIGTTIN, SIGTTOU, SIGURG, SIGXCPU, SIGXFSZ } = @std.io.signal
+{ SIGVTALRM, SIGPROF, SIGWINCH, SIGIO, SIGPWR, SIGSYS, SIGRTMIN, SIGRTMAX } = @std.io.signal
+{ SA_NOCLDSTOP, SA_NOCLDWAIT, SA_SIGINFO, SA_ONSTACK, SA_RESTART, SA_NODEFER, SA_RESETHAND } = @std.io.signal
+{ SIG_BLOCK, SIG_UNBLOCK, SIG_SETMASK, SIG_DFL, SIG_IGN, SIG_ERR } = @std.io.signal
+
+// Synchronization primitives (syscall-based futex for Linux x86-64)
+{ FutexError, Mutex, CondVar, Semaphore, RwLock, Once, Barrier } = @std.sync.futex
+{ futex_wait, futex_wake, futex_wake_all } = @std.sync.futex
+{ FUTEX_WAIT, FUTEX_WAKE, FUTEX_WAIT_PRIVATE, FUTEX_WAKE_PRIVATE } = @std.sync.futex
+
+// Eventfd inter-thread signaling (syscall-based for Linux x86-64)
+{ EventFd, EventfdError, Notifier, Counter, BinarySemaphore, WakeChannel, Signal } = @std.sync.eventfd
+{ EFD_CLOEXEC, EFD_NONBLOCK, EFD_SEMAPHORE } = @std.sync.eventfd
+
+// Poll I/O multiplexing (syscall-based for Linux x86-64)
+{ Pollfd, PollSet, PollEntry, PollSetIterator, PollError } = @std.io.poll
+{ poll_read, poll_write, poll_one, poll_many } = @std.io.poll
+{ wait_readable, wait_writable, wait_readable_timeout, wait_writable_timeout } = @std.io.poll
+{ select_read } = @std.io.poll
+{ POLLIN, POLLOUT, POLLERR, POLLHUP, POLLNVAL, POLLPRI } = @std.io.poll
+
+// Inotify file watching (syscall-based for Linux x86-64)
+{ InotifyError, InotifyEvent, Inotify, Watch, FileWatcher } = @std.io.inotify
+{ IN_ACCESS, IN_MODIFY, IN_ATTRIB, IN_CLOSE_WRITE, IN_CLOSE_NOWRITE } = @std.io.inotify
+{ IN_OPEN, IN_MOVED_FROM, IN_MOVED_TO, IN_CREATE, IN_DELETE } = @std.io.inotify
+{ IN_DELETE_SELF, IN_MOVE_SELF, IN_CLOSE, IN_MOVE, IN_ALL_EVENTS } = @std.io.inotify
+{ IN_ONLYDIR, IN_DONT_FOLLOW, IN_EXCL_UNLINK, IN_MASK_ADD, IN_ONESHOT } = @std.io.inotify
+{ IN_UNMOUNT, IN_Q_OVERFLOW, IN_IGNORED, IN_ISDIR, IN_NONBLOCK, IN_CLOEXEC } = @std.io.inotify
+
+// Timer file descriptors (syscall-based for Linux x86-64)
+{ TimerFd, TimerError, Itimerspec, DeadlineTimer, IntervalTimer } = @std.time.timerfd
+{ timer_after_millis, timer_after_secs, timer_interval_millis, timer_interval_secs } = @std.time.timerfd
+{ TFD_NONBLOCK, TFD_CLOEXEC, TFD_TIMER_ABSTIME } = @std.time.timerfd
+
+// Memory file descriptors (syscall-based for Linux x86-64)
+{ Memfd, MemfdError, SharedBuffer, MemfdWriter } = @std.memory.memfd
+{ memfd_from_bytes, memfd_executable, memfd_unmap } = @std.memory.memfd
+{ MFD_CLOEXEC, MFD_ALLOW_SEALING, MFD_HUGETLB } = @std.memory.memfd
+{ F_SEAL_SEAL, F_SEAL_SHRINK, F_SEAL_GROW, F_SEAL_WRITE } = @std.memory.memfd
+
+// Zero-copy I/O (syscall-based for Linux x86-64)
+{ ZeroCopyError, Iovec, SplicePipe, StreamFork } = @std.io.zerocopy
+{ sendfile, sendfile_offset, sendfile_all } = @std.io.zerocopy
+{ splice_to_pipe, splice_from_pipe, splice_offset, splice_all } = @std.io.zerocopy
+{ tee, tee_nonblock } = @std.io.zerocopy
+{ copy_file_range, copy_file_range_offset, copy_file_all } = @std.io.zerocopy
+{ vmsplice, vmsplice_gift, transfer_file_to_socket, efficient_copy } = @std.io.zerocopy
+{ SPLICE_F_MOVE, SPLICE_F_NONBLOCK, SPLICE_F_MORE, SPLICE_F_GIFT } = @std.io.zerocopy
+
+// System information (syscall-based for Linux x86-64)
+{ Utsname, Sysinfo, SystemInfo, SysInfoError } = @std.sys.info
+{ uname, kernel_name, hostname, kernel_release, machine_arch } = @std.sys.info
+{ sysinfo, uptime, total_memory, free_memory, available_memory, process_count, load_average } = @std.sys.info
+{ getpid, getppid, gettid, getpgid, getsid, getuid, geteuid, getgid, getegid, is_root } = @std.sys.info
+{ cpu_count, system_info, set_hostname, set_domainname } = @std.sys.info
+
+// Process control (syscall-based for Linux x86-64)
+{ PrctlError, Rlimit, CpuSet } = @std.sys.prctl
+{ set_name, get_name, set_dumpable, get_dumpable } = @std.sys.prctl
+{ set_pdeathsig, get_pdeathsig, set_no_new_privs, get_no_new_privs } = @std.sys.prctl
+{ set_child_subreaper, get_child_subreaper, set_timerslack, get_timerslack } = @std.sys.prctl
+{ get_seccomp, set_seccomp_strict } = @std.sys.prctl
+{ getrlimit, setrlimit, get_nofile_limit, set_nofile_limit, disable_core_dumps } = @std.sys.prctl
+{ getpriority, setpriority, nice, sched_yield } = @std.sys.prctl
+{ get_affinity, set_affinity, pin_to_cpu } = @std.sys.prctl
+{ prepare_daemon, harden_process } = @std.sys.prctl
+{ RLIMIT_NOFILE, RLIMIT_AS, RLIMIT_CORE, RLIMIT_NPROC, RLIM_INFINITY } = @std.sys.prctl
+
+// Process file descriptors (syscall-based pidfd for Linux x86-64)
+{ Pidfd, PidfdError, WaitStatus, ProcessHandle, ProcessMonitor } = @std.sys.pidfd
+{ pidfd_self, pidfd_parent, wait_any_child, try_wait_any_child } = @std.sys.pidfd
+{ kill_pid, kill_pgrp } = @std.sys.pidfd
+{ SIGTERM, SIGKILL, SIGSTOP, SIGCONT, SIGHUP, SIGINT, SIGQUIT, SIGUSR1, SIGUSR2 } = @std.sys.pidfd
+
+// Extended file status (syscall-based statx for Linux x86-64)
+{ Statx, StatxTimestamp, StatxError, FileInfo } = @std.io.statx
+{ statx, lstatx, fstatx, statx_at } = @std.io.statx
+{ exists, is_file, is_dir, is_link, file_size, mtime, btime, owner, group, inode } = @std.io.statx
+{ STATX_TYPE, STATX_MODE, STATX_SIZE, STATX_MTIME, STATX_BTIME, STATX_ALL } = @std.io.statx
+{ S_IFREG, S_IFDIR, S_IFLNK, S_IFBLK, S_IFCHR, S_IFIFO, S_IFSOCK } = @std.io.statx
+
+// I/O control (syscall-based ioctl for Linux x86-64)
+{ IoctlError, Winsize, Termios } = @std.io.ioctl
+{ ioctl, get_winsize, set_winsize, terminal_size } = @std.io.ioctl
+{ tcgetattr, tcsetattr, enable_raw_mode, restore_termios } = @std.io.ioctl
+{ set_nonblock, bytes_available, isatty, stdin_isatty, stdout_isatty } = @std.io.ioctl
+{ blk_getsize, blk_sector_size, blk_flush, blk_set_readonly } = @std.io.ioctl
+{ tcgetpgrp, tcsetpgrp, tcgetsid, tiocsctty, tiocnotty } = @std.io.ioctl
+{ TIOCGWINSZ, TIOCSWINSZ, TCGETS, TCSETS, FIONBIO, FIONREAD } = @std.io.ioctl
+
+// Network interface information (syscall-based for Linux x86-64)
+{ NetInterface, NetIfError, Ipv4Addr, MacAddr } = @std.net.interface
+{ get_interface, get_ifindex, get_ifflags, get_ifmtu, get_ifaddr } = @std.net.interface
+{ get_ifnetmask, get_ifbrdaddr, get_ifhwaddr } = @std.net.interface
+{ ifup, ifdown, set_ifmtu, interface_exists, interface_is_up, loopback_interface } = @std.net.interface
+{ IFF_UP, IFF_RUNNING, IFF_LOOPBACK, IFF_BROADCAST, IFF_MULTICAST, IFF_PROMISC } = @std.net.interface
+
+// Cryptographic random (syscall-based getrandom for Linux x86-64)
+{ RandomError, Xorshift128Plus } = @std.random.getrandom
+{ getrandom, getrandom_nonblock, random_bytes } = @std.random.getrandom
+{ random_u8, random_u16, random_u32, random_u64, random_i32, random_i64 } = @std.random.getrandom
+{ random_u32_bounded, random_u64_bounded, random_i32_range, random_i64_range } = @std.random.getrandom
+{ random_f64, random_f64_range, random_bool, random_bool_weighted } = @std.random.getrandom
+{ shuffle_vec_u8, uuid_v4 } = @std.random.getrandom
+{ GRND_NONBLOCK, GRND_RANDOM, GRND_INSECURE } = @std.random.getrandom
 
 // Math functions
 { PI, E, sin, cos, tan, asin, acos, atan, atan2, sinh, cosh, tanh, exp, log, log10, log2, pow, sqrt, cbrt, floor, ceil, round, trunc, fabs, fmod, remainder, fmin, fmax, copysign, abs, abs64, factorial, is_even, is_odd, max, min, clamp, I8_MIN, I8_MAX, I16_MIN, I16_MAX, I32_MIN, I32_MAX, U8_MAX, U16_MAX, U32_MAX } = @std.math.math
@@ -50,3 +209,561 @@
 
 // Error handling
 { ErrorLevel, Error, error_new, warning_new, fatal_new, is_warning, is_error, is_fatal } = @std.error
+
+// io_uring async I/O (syscall-based for Linux x86-64)
+{ IoUring, IoUringSqe, IoUringCqe, UringError, Timespec, AsyncOp, CompletionIter } = @std.io.uring
+{ create_ring, create_polling_ring, is_supported } = @std.io.uring
+{ IORING_SETUP_IOPOLL, IORING_SETUP_SQPOLL, IORING_SETUP_CQSIZE } = @std.io.uring
+{ IORING_OP_NOP, IORING_OP_READ, IORING_OP_WRITE, IORING_OP_CLOSE, IORING_OP_FSYNC } = @std.io.uring
+{ IORING_OP_ACCEPT, IORING_OP_CONNECT, IORING_OP_SEND, IORING_OP_RECV } = @std.io.uring
+{ IORING_OP_POLL_ADD, IORING_OP_TIMEOUT, IORING_OP_OPENAT } = @std.io.uring
+{ IOSQE_FIXED_FILE, IOSQE_IO_DRAIN, IOSQE_IO_LINK, IOSQE_ASYNC } = @std.io.uring
+{ IORING_ENTER_GETEVENTS, IORING_ENTER_SQ_WAKEUP } = @std.io.uring
+
+// Seccomp sandboxing (syscall-based for Linux x86-64)
+{ SeccompFilter, SeccompPolicy, SeccompError, BpfInsn } = @std.security.seccomp
+{ enable_strict_mode, set_no_new_privs, get_seccomp_mode, is_available } = @std.security.seccomp
+{ load_filter, load_filter_tsync, sandbox_strict, sandbox_basic_io, sandbox_network } = @std.security.seccomp
+{ SECCOMP_RET_ALLOW, SECCOMP_RET_KILL, SECCOMP_RET_KILL_PROCESS, SECCOMP_RET_ERRNO } = @std.security.seccomp
+{ SECCOMP_RET_TRAP, SECCOMP_RET_LOG, SECCOMP_RET_TRACE } = @std.security.seccomp
+{ SECCOMP_FILTER_FLAG_TSYNC, SECCOMP_FILTER_FLAG_LOG } = @std.security.seccomp
+{ AUDIT_ARCH_X86_64, AUDIT_ARCH_AARCH64 } = @std.security.seccomp
+
+// Clone3 process/thread creation (syscall-based for Linux x86-64)
+{ CloneArgs, CloneError, Thread, Child, WaitStatus, SigInfo } = @std.process.clone3
+{ clone3_raw, fork, vfork, spawn_thread, spawn_thread_with_stack } = @std.process.clone3
+{ unshare_namespaces, fork_into_namespaces, getpid, gettid, exit_thread } = @std.process.clone3
+{ wait_any, try_wait_any, is_clone3_supported } = @std.process.clone3
+{ CLONE_VM, CLONE_FS, CLONE_FILES, CLONE_SIGHAND, CLONE_THREAD } = @std.process.clone3
+{ CLONE_NEWNS, CLONE_NEWUTS, CLONE_NEWIPC, CLONE_NEWUSER, CLONE_NEWPID, CLONE_NEWNET } = @std.process.clone3
+{ CLONE_PIDFD, CLONE_VFORK, CLONE_PARENT } = @std.process.clone3
+{ SIGCHLD, WNOHANG, WUNTRACED, WCONTINUED } = @std.process.clone3
+
+// Fanotify filesystem monitoring (syscall-based for Linux x86-64)
+{ Fanotify, FanotifyEvent, FanotifyEventMetadata, FanotifyError, FanotifyBuilder } = @std.io.fanotify
+{ watch_notifications, watch_content, watch_permissions } = @std.io.fanotify
+{ watch_directory, watch_mount_point, watch_filesystem } = @std.io.fanotify
+{ all_file_events, all_dir_events, all_events, permission_events } = @std.io.fanotify
+{ FAN_ACCESS, FAN_MODIFY, FAN_CLOSE_WRITE, FAN_CLOSE_NOWRITE, FAN_OPEN } = @std.io.fanotify
+{ FAN_CREATE, FAN_DELETE, FAN_MOVED_FROM, FAN_MOVED_TO, FAN_MOVE } = @std.io.fanotify
+{ FAN_OPEN_PERM, FAN_ACCESS_PERM, FAN_OPEN_EXEC_PERM } = @std.io.fanotify
+{ FAN_MARK_ADD, FAN_MARK_REMOVE, FAN_MARK_INODE, FAN_MARK_MOUNT, FAN_MARK_FILESYSTEM } = @std.io.fanotify
+{ FAN_ALLOW, FAN_DENY, FAN_AUDIT } = @std.io.fanotify
+{ FAN_CLASS_NOTIF, FAN_CLASS_CONTENT, FAN_CLASS_PRE_CONTENT } = @std.io.fanotify
+
+// Extended attributes (syscall-based for Linux x86-64)
+{ XattrError, FileXattrs } = @std.io.xattr
+{ getxattr, lgetxattr, fgetxattr, setxattr, lsetxattr, fsetxattr } = @std.io.xattr
+{ listxattr, llistxattr, flistxattr, removexattr, lremovexattr, fremovexattr } = @std.io.xattr
+{ get_user_attr, set_user_attr, remove_user_attr, has_xattrs, copy_xattrs } = @std.io.xattr
+{ XATTR_CREATE, XATTR_REPLACE } = @std.io.xattr
+
+// Filesystem mounting (syscall-based for Linux x86-64)
+{ MountError, Statfs, MountBuilder } = @std.sys.mount
+{ mount, umount, umount2, force_umount, lazy_umount, remount } = @std.sys.mount
+{ remount_readonly, remount_readwrite, bind_mount, rbind_mount, move_mount } = @std.sys.mount
+{ make_private, make_shared, make_slave, make_unbindable, pivot_root } = @std.sys.mount
+{ swapon, swapoff, sync, syncfs, fsync, fdatasync, statfs, fstatfs } = @std.sys.mount
+{ mount_tmpfs, mount_proc, mount_sysfs, mount_devpts, mount_devtmpfs } = @std.sys.mount
+{ MS_RDONLY, MS_NOSUID, MS_NODEV, MS_NOEXEC, MS_NOATIME, MS_BIND, MS_MOVE, MS_REC } = @std.sys.mount
+{ MS_PRIVATE, MS_SHARED, MS_SLAVE, MS_UNBINDABLE, MS_REMOUNT } = @std.sys.mount
+
+// Landlock unprivileged sandboxing (syscall-based for Linux x86-64)
+{ Ruleset, LandlockError, SandboxPolicy } = @std.security.landlock
+{ abi_version, is_supported } = @std.security.landlock
+{ sandbox_paths, sandbox_readonly, sandbox_directory, sandbox_to_tmp, sandbox_application } = @std.security.landlock
+{ LANDLOCK_ACCESS_FS_EXECUTE, LANDLOCK_ACCESS_FS_READ_FILE, LANDLOCK_ACCESS_FS_WRITE_FILE } = @std.security.landlock
+{ LANDLOCK_ACCESS_FS_READ_DIR, LANDLOCK_ACCESS_FS_REMOVE_DIR, LANDLOCK_ACCESS_FS_REMOVE_FILE } = @std.security.landlock
+{ LANDLOCK_ACCESS_FS_MAKE_DIR, LANDLOCK_ACCESS_FS_MAKE_REG, LANDLOCK_ACCESS_FS_MAKE_SYM } = @std.security.landlock
+{ LANDLOCK_ACCESS_FS_REFER, LANDLOCK_ACCESS_FS_TRUNCATE } = @std.security.landlock
+
+// Linux capabilities (syscall-based for Linux x86-64)
+{ CapSet, CapError, Capabilities } = @std.security.capability
+{ capget, capget_pid, capset, capset_pid } = @std.security.capability
+{ cap_bset_read, cap_bset_drop, cap_ambient_is_set, cap_ambient_raise, cap_ambient_lower } = @std.security.capability
+{ cap_ambient_clear_all, get_securebits, set_securebits } = @std.security.capability
+{ drop_caps_except, drop_all_caps, has_cap, is_root, become_unprivileged, cap_name } = @std.security.capability
+{ CAP_CHOWN, CAP_DAC_OVERRIDE, CAP_DAC_READ_SEARCH, CAP_FOWNER, CAP_KILL } = @std.security.capability
+{ CAP_SETGID, CAP_SETUID, CAP_SETPCAP, CAP_NET_BIND_SERVICE, CAP_NET_ADMIN, CAP_NET_RAW } = @std.security.capability
+{ CAP_SYS_MODULE, CAP_SYS_RAWIO, CAP_SYS_CHROOT, CAP_SYS_PTRACE, CAP_SYS_ADMIN } = @std.security.capability
+{ CAP_SYS_BOOT, CAP_SYS_NICE, CAP_SYS_RESOURCE, CAP_SYS_TIME, CAP_MKNOD } = @std.security.capability
+{ CAP_AUDIT_WRITE, CAP_AUDIT_CONTROL, CAP_SETFCAP, CAP_SYSLOG, CAP_BPF } = @std.security.capability
+
+// File control (syscall-based for Linux x86-64)
+{ FcntlError, Flock, FileLock } = @std.io.fcntl
+{ fcntl, fcntl_arg, fcntl_ptr } = @std.io.fcntl
+{ get_fd_flags, set_fd_flags, get_fl_flags, set_fl_flags } = @std.io.fcntl
+{ set_cloexec, clear_cloexec, is_cloexec, set_nonblock, clear_nonblock, is_nonblock } = @std.io.fcntl
+{ set_append, clear_append, set_async, clear_async } = @std.io.fcntl
+{ dup, dup2, dup3, dupfd, dupfd_cloexec, pipe2, pipe_cloexec, pipe_nonblock } = @std.io.fcntl
+{ close_range, close_from, cloexec_range, set_pipe_size, get_pipe_size } = @std.io.fcntl
+{ getlk, setlk, setlkw, ofd_getlk, ofd_setlk, ofd_setlkw } = @std.io.fcntl
+{ lock_exclusive, lock_shared, try_lock_exclusive, try_lock_shared, unlock, is_locked } = @std.io.fcntl
+{ F_DUPFD, F_GETFD, F_SETFD, F_GETFL, F_SETFL, F_GETLK, F_SETLK, F_SETLKW } = @std.io.fcntl
+{ F_RDLCK, F_WRLCK, F_UNLCK, FD_CLOEXEC, O_NONBLOCK, O_APPEND, O_ASYNC, O_CLOEXEC } = @std.io.fcntl
+
+// BSD-style file locking (syscall-based for Linux x86-64)
+{ FlockError, LockGuard, FileLock, PidLock } = @std.io.flock
+{ flock, lock_shared, lock_exclusive, try_lock_shared, try_lock_exclusive } = @std.io.flock
+{ unlock, upgrade_lock, try_upgrade_lock, downgrade_lock, is_file_locked } = @std.io.flock
+{ LOCK_SH, LOCK_EX, LOCK_NB, LOCK_UN } = @std.io.flock
+
+// POSIX message queues (syscall-based for Linux x86-64)
+{ MessageQueue, MqAttr, MqError, Channel, Timespec } = @std.sync.mqueue
+{ mq_unlink, send_string, receive_string } = @std.sync.mqueue
+{ O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_EXCL, O_NONBLOCK } = @std.sync.mqueue
+
+// Scheduler operations (syscall-based for Linux x86-64)
+{ SchedError, SchedParam, SchedAttr, CpuSet } = @std.sys.sched
+{ yield_cpu, get_scheduler, set_scheduler, get_param, set_param } = @std.sys.sched
+{ get_priority_max, get_priority_min, get_rr_interval } = @std.sys.sched
+{ set_affinity, get_affinity, set_attr, get_attr } = @std.sys.sched
+{ set_fifo, set_round_robin, set_normal, set_batch, set_idle, set_deadline } = @std.sys.sched
+{ pin_to_cpu, pin_self_to_cpu, get_allowed_cpus, get_cpu_count, policy_name, is_realtime } = @std.sys.sched
+{ SCHED_NORMAL, SCHED_FIFO, SCHED_RR, SCHED_BATCH, SCHED_IDLE, SCHED_DEADLINE } = @std.sys.sched
+
+// Userfaultfd - user-space page fault handling (syscall-based for Linux x86-64)
+{ UserfaultfdError, UffdioApi, UffdioRange, UffdioRegister, UffdioCopy, UffdioZeropage } = @std.sys.userfaultfd
+{ UffdioWriteprotect, UffdioContinue, UffdMsg, Userfaultfd, FaultHandler } = @std.sys.userfaultfd
+{ userfaultfd, userfaultfd_user_mode, alloc_uffd_memory, free_uffd_memory } = @std.sys.userfaultfd
+{ page_align_down, page_align_up } = @std.sys.userfaultfd
+{ UFFD_USER_MODE_ONLY, UFFD_FEATURE_PAGEFAULT_FLAG_WP, UFFD_FEATURE_EVENT_FORK } = @std.sys.userfaultfd
+{ UFFD_FEATURE_EVENT_REMAP, UFFD_FEATURE_EVENT_REMOVE, UFFD_FEATURE_THREAD_ID } = @std.sys.userfaultfd
+{ UFFD_PAGEFAULT_FLAG_WRITE, UFFD_PAGEFAULT_FLAG_WP, UFFD_PAGEFAULT_FLAG_MINOR } = @std.sys.userfaultfd
+{ UFFDIO_REGISTER_MODE_MISSING, UFFDIO_REGISTER_MODE_WP, UFFDIO_REGISTER_MODE_MINOR } = @std.sys.userfaultfd
+{ UFFD_EVENT_PAGEFAULT, UFFD_EVENT_FORK, UFFD_EVENT_REMAP, UFFD_EVENT_REMOVE } = @std.sys.userfaultfd
+
+// Performance monitoring (syscall-based for Linux x86-64)
+{ PerfEventError, PerfEventAttr, PerfReadValue, PerfEvent, Counter, CounterGroup } = @std.sys.perf_event
+{ perf_event_open, measure_cycles, measure_instructions } = @std.sys.perf_event
+{ disable_task_events, enable_task_events } = @std.sys.perf_event
+{ PERF_TYPE_HARDWARE, PERF_TYPE_SOFTWARE, PERF_TYPE_TRACEPOINT, PERF_TYPE_HW_CACHE } = @std.sys.perf_event
+{ PERF_COUNT_HW_CPU_CYCLES, PERF_COUNT_HW_INSTRUCTIONS, PERF_COUNT_HW_CACHE_MISSES } = @std.sys.perf_event
+{ PERF_COUNT_HW_CACHE_REFERENCES, PERF_COUNT_HW_BRANCH_MISSES, PERF_COUNT_HW_BRANCH_INSTRUCTIONS } = @std.sys.perf_event
+{ PERF_COUNT_SW_CPU_CLOCK, PERF_COUNT_SW_TASK_CLOCK, PERF_COUNT_SW_PAGE_FAULTS } = @std.sys.perf_event
+{ PERF_COUNT_SW_CONTEXT_SWITCHES, PERF_COUNT_SW_CPU_MIGRATIONS } = @std.sys.perf_event
+{ PERF_ATTR_FLAG_DISABLED, PERF_ATTR_FLAG_INHERIT, PERF_ATTR_FLAG_EXCLUDE_KERNEL } = @std.sys.perf_event
+
+// Netlink - kernel-userspace communication (syscall-based for Linux x86-64)
+{ NetlinkError, NlMsgHdr, NlMsgErr, NlAttr, IfInfoMsg, IfAddrMsg, RtMsg, GenlMsgHdr } = @std.net.netlink
+{ SockAddrNl, MessageBuffer, NetlinkSocket, MessageParser, AttrParser } = @std.net.netlink
+{ route_socket, generic_socket, kobject_socket, audit_socket } = @std.net.netlink
+{ get_links, get_addrs, get_routes } = @std.net.netlink
+{ NETLINK_ROUTE, NETLINK_GENERIC, NETLINK_KOBJECT_UEVENT, NETLINK_AUDIT } = @std.net.netlink
+{ NETLINK_NETFILTER, NETLINK_XFRM, NETLINK_SELINUX, NETLINK_SOCK_DIAG } = @std.net.netlink
+{ NLM_F_REQUEST, NLM_F_MULTI, NLM_F_ACK, NLM_F_DUMP, NLM_F_CREATE, NLM_F_REPLACE } = @std.net.netlink
+{ RTM_NEWLINK, RTM_DELLINK, RTM_GETLINK, RTM_NEWADDR, RTM_DELADDR, RTM_GETADDR } = @std.net.netlink
+{ RTM_NEWROUTE, RTM_DELROUTE, RTM_GETROUTE, IFLA_IFNAME, IFLA_MTU, IFLA_ADDRESS } = @std.net.netlink
+{ IFF_UP, IFF_BROADCAST, IFF_RUNNING, IFF_LOOPBACK, IFF_MULTICAST, IFF_PROMISC } = @std.net.netlink
+
+// Extended file operations (syscall-based for Linux x86-64)
+{ OpenError, OpenHow, Statx, StatxTimestamp, Timespec } = @std.io.openat2
+{ openat2, open2, openat, renameat2, rename2 } = @std.io.openat2
+{ statx, fstatx, stat, lstat } = @std.io.openat2
+{ linkat, link, unlinkat, unlink, rmdir } = @std.io.openat2
+{ symlinkat, symlink, readlinkat, readlink } = @std.io.openat2
+{ mkdirat, mkdir, fchownat, chown, lchown } = @std.io.openat2
+{ fchmodat, chmod, utimensat, futimens, touch } = @std.io.openat2
+{ faccessat2, access, exists, is_readable, is_writable, is_executable } = @std.io.openat2
+{ open_beneath, open_in_root, rename_noreplace, rename_exchange } = @std.io.openat2
+{ AT_FDCWD, AT_SYMLINK_NOFOLLOW, AT_REMOVEDIR, AT_EMPTY_PATH } = @std.io.openat2
+{ O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_EXCL, O_TRUNC, O_APPEND, O_CLOEXEC } = @std.io.openat2
+{ O_NONBLOCK, O_DIRECTORY, O_NOFOLLOW, O_PATH, O_TMPFILE, O_DIRECT, O_SYNC } = @std.io.openat2
+{ RESOLVE_BENEATH, RESOLVE_IN_ROOT, RESOLVE_NO_XDEV, RESOLVE_NO_SYMLINKS } = @std.io.openat2
+{ RENAME_NOREPLACE, RENAME_EXCHANGE, RENAME_WHITEOUT } = @std.io.openat2
+{ STATX_TYPE, STATX_MODE, STATX_SIZE, STATX_BASIC_STATS, STATX_BTIME, STATX_ALL } = @std.io.openat2
+{ S_IRWXU, S_IRUSR, S_IWUSR, S_IXUSR, S_IRWXG, S_IRWXO, S_IFREG, S_IFDIR, S_IFLNK } = @std.io.openat2
+
+// Process tracing and debugging (syscall-based for Linux x86-64)
+{ PtraceError, UserRegs, SigInfo, WaitStatus, Tracer, Breakpoint, SyscallTracer } = @std.sys.ptrace
+{ ptrace, traceme, attach, seize, detach, cont, singlestep, syscall, interrupt } = @std.sys.ptrace
+{ setoptions, geteventmsg, peekdata, pokedata, peekuser, pokeuser } = @std.sys.ptrace
+{ getregs, setregs, getsiginfo, setsiginfo, wait_pid, wait_any_nohang } = @std.sys.ptrace
+{ PTRACE_TRACEME, PTRACE_ATTACH, PTRACE_DETACH, PTRACE_CONT, PTRACE_SINGLESTEP } = @std.sys.ptrace
+{ PTRACE_SYSCALL, PTRACE_SEIZE, PTRACE_INTERRUPT, PTRACE_GETREGS, PTRACE_SETREGS } = @std.sys.ptrace
+{ PTRACE_O_TRACESYSGOOD, PTRACE_O_TRACEFORK, PTRACE_O_TRACECLONE, PTRACE_O_TRACEEXEC } = @std.sys.ptrace
+{ PTRACE_EVENT_FORK, PTRACE_EVENT_CLONE, PTRACE_EVENT_EXEC, PTRACE_EVENT_EXIT } = @std.sys.ptrace
+{ REG_RAX, REG_RBX, REG_RCX, REG_RDX, REG_RSI, REG_RDI, REG_RIP, REG_RSP } = @std.sys.ptrace
+
+// System power control (syscall-based for Linux x86-64)
+{ RebootError, PowerAction, ShutdownManager } = @std.sys.reboot
+{ reboot, reboot_with_cmd, sync, restart, halt, poweroff } = @std.sys.reboot
+{ restart_with_command, suspend_to_disk, kexec } = @std.sys.reboot
+{ enable_ctrl_alt_del, disable_ctrl_alt_del, power_action, can_reboot } = @std.sys.reboot
+{ LINUX_REBOOT_CMD_RESTART, LINUX_REBOOT_CMD_HALT, LINUX_REBOOT_CMD_POWER_OFF } = @std.sys.reboot
+{ LINUX_REBOOT_CMD_KEXEC, LINUX_REBOOT_CMD_SW_SUSPEND } = @std.sys.reboot
+
+// Kernel log reading (syscall-based for Linux x86-64)
+{ KlogError, KlogMessage, KlogReader } = @std.sys.klog
+{ syslog, klog_open, klog_close, klog_read, klog_read_all, klog_read_clear } = @std.sys.klog
+{ klog_clear, console_off, console_on, set_console_level } = @std.sys.klog
+{ klog_unread_size, klog_buffer_size, parse_message, read_all, has_unread } = @std.sys.klog
+{ set_min_level, mute_console, verbose_console, level_name } = @std.sys.klog
+{ KERN_EMERG, KERN_ALERT, KERN_CRIT, KERN_ERR, KERN_WARNING, KERN_NOTICE, KERN_INFO, KERN_DEBUG } = @std.sys.klog
+{ SYSLOG_ACTION_READ, SYSLOG_ACTION_READ_ALL, SYSLOG_ACTION_CLEAR } = @std.sys.klog
+
+// Disk quota management (syscall-based for Linux x86-64)
+{ QuotaError, DqBlk, DqInfo, NextDqBlk, XfsQuotaStat, QuotaManager } = @std.sys.quotactl
+{ quotactl, quotactl_fd, quota_on, quota_off, quota_sync, quota_sync_all } = @std.sys.quotactl
+{ get_quota_format, get_quota_info, set_quota_info } = @std.sys.quotactl
+{ get_quota, set_quota, get_next_quota } = @std.sys.quotactl
+{ get_user_quota, set_user_quota, get_group_quota, set_group_quota } = @std.sys.quotactl
+{ set_limits, remove_quota, format_name, type_name } = @std.sys.quotactl
+{ USRQUOTA, GRPQUOTA, PRJQUOTA, Q_SYNC, Q_QUOTAON, Q_QUOTAOFF, Q_GETQUOTA, Q_SETQUOTA } = @std.sys.quotactl
+{ QIF_BLIMITS, QIF_SPACE, QIF_ILIMITS, QIF_INODES, QIF_LIMITS, QIF_USAGE, QIF_ALL } = @std.sys.quotactl
+
+// Kernel object comparison (syscall-based for Linux x86-64)
+{ KcmpError, KcmpResult, EpollTfd, ProcessRelation } = @std.sys.kcmp
+{ kcmp, compare_files, share_vm, share_files, share_fs, share_sighand, share_io } = @std.sys.kcmp
+{ are_threads, get_relation, type_name } = @std.sys.kcmp
+{ KCMP_FILE, KCMP_VM, KCMP_FILES, KCMP_FS, KCMP_SIGHAND, KCMP_IO } = @std.sys.kcmp
+
+// Memory barriers (syscall-based for Linux x86-64)
+{ MembarrierError, SupportedCommands, BarrierManager } = @std.sys.membarrier
+{ membarrier, query, is_supported, global, global_expedited, private_expedited } = @std.sys.membarrier
+{ register_global_expedited, register_private_expedited, private_expedited_sync_core } = @std.sys.membarrier
+{ get_supported, issue_barrier, setup_fast_barriers, cmd_name } = @std.sys.membarrier
+{ MEMBARRIER_CMD_QUERY, MEMBARRIER_CMD_GLOBAL, MEMBARRIER_CMD_PRIVATE_EXPEDITED } = @std.sys.membarrier
+
+// Memory protection keys (syscall-based for Linux x86-64)
+{ PkeyError, ProtectionKey, AccessGuard, DisableGuard, ProtectedRegion } = @std.sys.pkey
+{ pkey_alloc, pkey_free, pkey_mprotect } = @std.sys.pkey
+{ rdpkru, wrpkru, get_pkey_rights, set_pkey_rights } = @std.sys.pkey
+{ disable_access, disable_write, enable_access, is_access_disabled, is_write_disabled } = @std.sys.pkey
+{ is_supported, available_keys, rights_name } = @std.sys.pkey
+{ PKEY_DISABLE_ACCESS, PKEY_DISABLE_WRITE, PROT_READ, PROT_WRITE, PROT_EXEC } = @std.sys.pkey
+
+// Socket options (syscall-based for Linux x86-64)
+{ SockOptError, Linger, Timeval } = @std.net.socket_opts
+{ getsockopt, setsockopt, get_int_opt, set_int_opt, get_bool_opt, set_bool_opt } = @std.net.socket_opts
+{ set_reuseaddr, set_reuseport, set_keepalive, set_broadcast } = @std.net.socket_opts
+{ set_sndbuf, get_sndbuf, set_rcvbuf, get_rcvbuf, get_error, get_type, is_listening } = @std.net.socket_opts
+{ set_linger, get_linger, set_rcvtimeo, set_sndtimeo, set_mark, bind_to_device } = @std.net.socket_opts
+{ set_tcp_nodelay, set_tcp_cork, set_tcp_quickack, set_tcp_keepidle } = @std.net.socket_opts
+{ set_tcp_keepintvl, set_tcp_keepcnt, set_tcp_user_timeout, set_tcp_fastopen } = @std.net.socket_opts
+{ set_ip_ttl, get_ip_ttl, set_ip_tos, set_ip_transparent, set_ipv6_v6only } = @std.net.socket_opts
+{ SOL_SOCKET, SOL_TCP, SOL_IP, SOL_IPV6, SO_REUSEADDR, SO_KEEPALIVE, SO_SNDBUF, SO_RCVBUF } = @std.net.socket_opts
+{ TCP_NODELAY, TCP_CORK, TCP_KEEPIDLE, TCP_KEEPINTVL, TCP_KEEPCNT, TCP_FASTOPEN } = @std.net.socket_opts
+
+// Restartable sequences - per-CPU operations (syscall-based for Linux x86-64)
+{ RseqError, RseqCs, Rseq, CpuInfo, PerCpuData, PerCpuCounter, ThreadRseq } = @std.sys.rseq
+{ rseq, register, unregister, getcpu, getnode, is_supported, get_num_cpus } = @std.sys.rseq
+{ RSEQ_FLAG_UNREGISTER, RSEQ_CS_FLAG_NO_RESTART_ON_PREEMPT, RSEQ_CS_FLAG_NO_RESTART_ON_SIGNAL } = @std.sys.rseq
+{ RSEQ_CS_FLAG_NO_RESTART_ON_MIGRATE, RSEQ_CPU_ID_UNINITIALIZED, RSEQ_SIG } = @std.sys.rseq
+
+// Unix domain sockets (syscall-based for Linux x86-64)
+{ UnixError, SockAddrUn, UnixListener, UnixStream, UnixDgram, UnixSeqpacket } = @std.net.unix
+{ unix_stream, unix_dgram, unix_seqpacket, socketpair, is_abstract } = @std.net.unix
+{ AF_UNIX, SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_NONBLOCK, SOCK_CLOEXEC } = @std.net.unix
+
+// BPF syscall operations (syscall-based for Linux x86-64)
+{ BpfError, BpfMap, BpfAttr } = @std.sys.bpf
+{ bpf, map_create, map_lookup_elem, map_update_elem, map_delete_elem, map_get_next_key } = @std.sys.bpf
+{ prog_load, obj_pin, obj_get, btf_load } = @std.sys.bpf
+{ BPF_MAP_TYPE_HASH, BPF_MAP_TYPE_ARRAY, BPF_MAP_TYPE_PROG_ARRAY } = @std.sys.bpf
+{ BPF_MAP_TYPE_PERF_EVENT_ARRAY, BPF_MAP_TYPE_LRU_HASH, BPF_MAP_TYPE_RINGBUF } = @std.sys.bpf
+{ BPF_PROG_TYPE_SOCKET_FILTER, BPF_PROG_TYPE_KPROBE, BPF_PROG_TYPE_TRACEPOINT } = @std.sys.bpf
+{ BPF_PROG_TYPE_XDP, BPF_PROG_TYPE_CGROUP_SKB, BPF_PROG_TYPE_SCHED_CLS } = @std.sys.bpf
+
+// Process execution domain (syscall-based for Linux x86-64)
+{ PersonalityError, PersonalityInfo } = @std.sys.personality
+{ personality, get, set, get_domain, get_flags, set_flag, clear_flag, has_flag } = @std.sys.personality
+{ disable_aslr, enable_aslr, is_aslr_disabled, set_32bit, set_3gb } = @std.sys.personality
+{ set_read_implies_exec, clear_read_implies_exec, set_compat_layout } = @std.sys.personality
+{ set_linux, set_linux32, get_info, set_info, domain_name, flag_name } = @std.sys.personality
+{ PER_LINUX, PER_LINUX32, PER_MASK, ADDR_NO_RANDOMIZE, ADDR_LIMIT_32BIT, ADDR_LIMIT_3GB } = @std.sys.personality
+{ READ_IMPLIES_EXEC, ADDR_COMPAT_LAYOUT, STICKY_TIMEOUTS } = @std.sys.personality
+
+// Process resource limits (syscall-based for Linux x86-64)
+{ PrlimitError, Rlimit, RlimitSnapshot } = @std.sys.prlimit
+{ prlimit64, getrlimit, setrlimit, getrlimit_pid, setrlimit_pid, getsetrlimit } = @std.sys.prlimit
+{ get_nofile, set_nofile, set_nofile_max, get_stack, set_stack } = @std.sys.prlimit
+{ get_as, set_as, unlimited_as, get_core, disable_core, enable_core } = @std.sys.prlimit
+{ get_nproc, set_nproc, get_memlock, set_memlock, unlimited_memlock } = @std.sys.prlimit
+{ get_cpu, set_cpu, get_fsize, set_fsize, get_data, set_data } = @std.sys.prlimit
+{ get_sigpending, set_sigpending, get_msgqueue, set_msgqueue } = @std.sys.prlimit
+{ get_rtprio, set_rtprio, get_rttime, set_rttime, resource_name } = @std.sys.prlimit
+{ RLIMIT_CPU, RLIMIT_FSIZE, RLIMIT_DATA, RLIMIT_STACK, RLIMIT_CORE } = @std.sys.prlimit
+{ RLIMIT_NPROC, RLIMIT_NOFILE, RLIMIT_MEMLOCK, RLIMIT_AS, RLIM_INFINITY } = @std.sys.prlimit
+
+// Advanced socket I/O - sendmsg/recvmsg (syscall-based for Linux x86-64)
+{ MsgError, Iovec, Cmsghdr, Msghdr, Mmsghdr, Ucred, Timespec } = @std.net.msg
+{ CmsgBuilder, CmsgParser, MessageSender, MessageReceiver } = @std.net.msg
+{ sendmsg, recvmsg, sendmmsg, recvmmsg, writev, readv } = @std.net.msg
+{ extract_fds, extract_credentials, send_fds, recv_fds } = @std.net.msg
+{ MSG_OOB, MSG_PEEK, MSG_DONTWAIT, MSG_NOSIGNAL, MSG_CMSG_CLOEXEC } = @std.net.msg
+{ SCM_RIGHTS, SCM_CREDENTIALS, SOL_SOCKET, SOL_IP, SOL_TCP } = @std.net.msg
+
+// I/O priority control (syscall-based for Linux x86-64)
+{ IoprioError, Ioprio, IoprioGuard } = @std.sys.ioprio
+{ ioprio_set, ioprio_get, set_process, get_process, set_self, get_self } = @std.sys.ioprio
+{ set_pgrp, get_pgrp, set_user, get_user } = @std.sys.ioprio
+{ set_realtime, set_best_effort, set_idle, set_self_realtime, set_self_best_effort } = @std.sys.ioprio
+{ set_self_idle, set_self_high, set_self_low, reset_self, reset_process } = @std.sys.ioprio
+{ nice_to_ioprio, class_name_raw } = @std.sys.ioprio
+{ IOPRIO_WHO_PROCESS, IOPRIO_WHO_PGRP, IOPRIO_WHO_USER } = @std.sys.ioprio
+{ IOPRIO_CLASS_RT, IOPRIO_CLASS_BE, IOPRIO_CLASS_IDLE } = @std.sys.ioprio
+
+// File advisory operations (syscall-based for Linux x86-64)
+{ FadviseError, FileAdvisor, PrefetchReader, StreamProcessor } = @std.io.fadvise
+{ fadvise64, normal, random, sequential, willneed, dontneed, noreuse } = @std.io.fadvise
+{ prefetch, drop_cache, drop_cache_all, readahead } = @std.io.fadvise
+{ sync_file_range, sync_range, sync_range_async, sync_range_wait } = @std.io.fadvise
+{ fallocate, preallocate, preallocate_keep_size, punch_hole } = @std.io.fadvise
+{ zero_range, zero_range_keep_size, collapse_range, insert_range, advice_name } = @std.io.fadvise
+{ POSIX_FADV_NORMAL, POSIX_FADV_RANDOM, POSIX_FADV_SEQUENTIAL, POSIX_FADV_WILLNEED } = @std.io.fadvise
+{ POSIX_FADV_DONTNEED, POSIX_FADV_NOREUSE, FALLOC_FL_KEEP_SIZE, FALLOC_FL_PUNCH_HOLE } = @std.io.fadvise
+
+// Extended process waiting - waitid (syscall-based for Linux x86-64)
+{ WaitidError, SigInfo, ChildHandle, WaitOptions } = @std.sys.waitid
+{ waitid, wait_any, try_wait_any, wait_pid, try_wait_pid } = @std.sys.waitid
+{ wait_pgid, wait_pidfd, wait_stopped, wait_continued, wait_any_state, peek_pid } = @std.sys.waitid
+{ idtype_name } = @std.sys.waitid
+{ P_ALL, P_PID, P_PGID, P_PIDFD, WNOHANG, WUNTRACED, WEXITED, WCONTINUED, WNOWAIT } = @std.sys.waitid
+{ CLD_EXITED, CLD_KILLED, CLD_DUMPED, CLD_TRAPPED, CLD_STOPPED, CLD_CONTINUED } = @std.sys.waitid
+
+// Thread-specific signals - tgkill (syscall-based for Linux x86-64)
+{ TgkillError, ThreadSignaler, ThreadInfo } = @std.sys.tgkill
+{ tgkill, tkill, gettid, getpid, signal_thread, signal_self } = @std.sys.tgkill
+{ kill_thread, term_thread, stop_thread, cont_thread, usr1_thread, usr2_thread } = @std.sys.tgkill
+{ thread_exists, signal_name, is_realtime_signal, realtime_signal } = @std.sys.tgkill
+{ SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE, SIGKILL } = @std.sys.tgkill
+{ SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCONT, SIGSTOP } = @std.sys.tgkill
+{ SIGRTMIN, SIGRTMAX } = @std.sys.tgkill
+
+// Memory residency checking - mincore (syscall-based for Linux x86-64)
+{ MincoreError, ResidencyInfo, LockedRegion, PageIterator } = @std.memory.mincore
+{ mincore, is_resident, page_count, check_range, count_resident, resident_ratio } = @std.memory.mincore
+{ get_residency_info, mlock, munlock, mlock2, mlockall, munlockall } = @std.memory.mincore
+{ lock_pages, lock_pages_onfault, unlock_pages, lock_all_current, lock_all, unlock_all } = @std.memory.mincore
+{ page_align_down, page_align_up, is_page_aligned, PAGE_SIZE } = @std.memory.mincore
+{ MLOCK_ONFAULT, MCL_CURRENT, MCL_FUTURE, MCL_ONFAULT } = @std.memory.mincore
+
+// Sysctl - kernel parameter access (syscall-based for Linux x86-64)
+{ SysctlError } = @std.sys.sysctl
+{ read_string, write_string, read_i64, read_u64, read_bool, write_i64, write_bool, exists } = @std.sys.sysctl
+{ get_ipv4_forwarding, set_ipv4_forwarding, get_ipv6_forwarding, set_ipv6_forwarding } = @std.sys.sysctl
+{ get_tcp_syncookies, set_tcp_syncookies, get_somaxconn, set_somaxconn } = @std.sys.sysctl
+{ get_swappiness, set_swappiness, get_overcommit_memory, set_overcommit_memory } = @std.sys.sysctl
+{ get_dirty_ratio, set_dirty_ratio, get_vfs_cache_pressure, set_vfs_cache_pressure } = @std.sys.sysctl
+{ get_hostname, get_osrelease, get_max_pid, set_max_pid, get_threads_max } = @std.sys.sysctl
+{ get_file_max, set_file_max, get_inotify_max_user_watches, set_inotify_max_user_watches } = @std.sys.sysctl
+{ get_randomize_va_space, set_randomize_va_space, get_dmesg_restrict, set_dmesg_restrict } = @std.sys.sysctl
+{ get_rmem_max, set_rmem_max, get_wmem_max, set_wmem_max } = @std.sys.sysctl
+
+// High-precision sleep - nanosleep (syscall-based for Linux x86-64)
+{ SleepError, Timespec, Deadline, PeriodicTimer } = @std.time.nanosleep
+{ nanosleep, clock_nanosleep, clock_gettime } = @std.time.nanosleep
+{ sleep_nanos, sleep_micros, sleep_millis, sleep_secs, sleep_interruptible } = @std.time.nanosleep
+{ sleep_until, sleep_until_realtime, sleep_until_monotonic } = @std.time.nanosleep
+{ sleep_relative, sleep_monotonic, sleep_boottime, spin_nanos, spin_micros } = @std.time.nanosleep
+{ now_monotonic, now_realtime, now_boottime, clock_name } = @std.time.nanosleep
+{ CLOCK_REALTIME, CLOCK_MONOTONIC, CLOCK_BOOTTIME, CLOCK_TAI, TIMER_ABSTIME } = @std.time.nanosleep
+
+// Process execution - execve/execveat (syscall-based for Linux x86-64)
+{ ExecError, ArgBuilder, EnvBuilder, ExecBuilder } = @std.sys.exec
+{ execve, execveat, fexecve, execveat_cwd, execl_sh, error_name } = @std.sys.exec
+{ AT_EMPTY_PATH, AT_SYMLINK_NOFOLLOW } = @std.sys.exec
+
+// Directory operations - chdir/fchdir (syscall-based for Linux x86-64)
+{ ChdirError, DirContext, DirStack, ChrootContext } = @std.io.chdir
+{ chdir, fchdir, getcwd, chroot, pivot_root } = @std.io.chdir
+{ cd_home, cd_root, cd_tmp, cd_parent, normalize_path } = @std.io.chdir
+
+// File truncation and seeking (syscall-based for Linux x86-64)
+{ TruncateError, FilePos, PositionGuard } = @std.io.truncate
+{ truncate, ftruncate, truncate_empty, ftruncate_empty, extend, fextend } = @std.io.truncate
+{ lseek, file_size, seek_start, seek_end, seek_to, seek_forward, seek_backward } = @std.io.truncate
+{ seek_from_end, tell, seek_data, seek_hole, grow_by, shrink_by, whence_name } = @std.io.truncate
+{ SEEK_SET, SEEK_CUR, SEEK_END, SEEK_DATA, SEEK_HOLE } = @std.io.truncate
+
+// File creation mask (syscall-based for Linux x86-64)
+{ UmaskInfo, UmaskGuard } = @std.sys.umask
+{ umask, get, set, set_permissive, set_default, set_restrictive } = @std.sys.umask
+{ effective_file_mode, effective_dir_mode, apply_mask, mask_for_mode } = @std.sys.umask
+{ mode_to_string, parse_mode, block_group_write, block_other_write, block_other_all } = @std.sys.umask
+{ S_IRWXU, S_IRUSR, S_IWUSR, S_IXUSR, S_IRWXG, S_IRGRP, S_IWGRP, S_IXGRP } = @std.sys.umask
+{ S_IRWXO, S_IROTH, S_IWOTH, S_IXOTH, MASK_DEFAULT, MASK_RESTRICTIVE } = @std.sys.umask
+
+// Hostname operations (syscall-based for Linux x86-64)
+{ HostnameError, SystemInfo } = @std.sys.hostname
+{ sethostname, setdomainname, gethostname, getdomainname } = @std.sys.hostname
+{ hostname, domainname, is_valid_hostname, get_fqdn, HOST_NAME_MAX } = @std.sys.hostname
+
+// Low-level directory reading (syscall-based for Linux x86-64)
+{ GetdentsError, Dirent64, DirentIter, DirEntry } = @std.io.getdents
+{ getdents64, opendir, closedir, readdir, readdir_no_dots } = @std.io.getdents
+{ count_entries, count_entries_no_dots, is_empty, dtype_name } = @std.io.getdents
+{ DT_UNKNOWN, DT_FIFO, DT_CHR, DT_DIR, DT_BLK, DT_REG, DT_LNK, DT_SOCK } = @std.io.getdents
+
+// Positional and vectored I/O (syscall-based for Linux x86-64)
+{ PioError, Iovec, IovecBuilder, FileIO } = @std.io.pio
+{ read, write, pread, pwrite, readv, writev, preadv, pwritev, preadv2, pwritev2 } = @std.io.pio
+{ pread_hipri, pread_nowait, pwrite_dsync, pwrite_sync, pwrite_append } = @std.io.pio
+{ read_all, write_all, pread_exact, pwrite_exact, iovec_total_len, rwf_name } = @std.io.pio
+{ RWF_HIPRI, RWF_DSYNC, RWF_SYNC, RWF_NOWAIT, RWF_APPEND } = @std.io.pio
+
+// File and filesystem sync (syscall-based for Linux x86-64)
+{ SyncError, SyncMode, FileSyncer, AutoSync, PeriodicSync } = @std.io.sync
+{ sync, syncfs, fsync, fdatasync, sync_file_range } = @std.io.sync
+{ sync_range, sync_range_async, sync_range_wait, sync_from, sync_all } = @std.io.sync
+{ sync_fd, sync_batch, mode_name, flag_name } = @std.io.sync
+{ SYNC_FILE_RANGE_WAIT_BEFORE, SYNC_FILE_RANGE_WRITE, SYNC_FILE_RANGE_WAIT_AFTER } = @std.io.sync
+
+// File descriptor duplication (syscall-based for Linux x86-64)
+{ DupError, FdGuard, FdPair, SavedFd, RedirectGuard, FdSet } = @std.io.dup
+{ dup, dup2, dup3, close, dup_cloexec, dup_guarded } = @std.io.dup
+{ redirect_stdin, redirect_stdout, redirect_stderr, merge_stderr_to_stdout } = @std.io.dup
+{ with_stdout_redirect, with_stderr_redirect, with_stdin_redirect } = @std.io.dup
+{ clone_stdio, restore_stdio, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO } = @std.io.dup
+
+// Pipe creation and operations (syscall-based for Linux x86-64)
+{ PipeError, Pipe, PipeReader, PipeWriter, BufferedPipeReader, PipeChannel } = @std.io.pipe
+{ pipe, pipe2, pipe_cloexec, pipe_nonblock, pipe_cloexec_nonblock, split_pipe } = @std.io.pipe
+{ get_pipe_buf_size, get_atomic_write_size, create_bidirectional } = @std.io.pipe
+
+// Symbolic and hard link operations (syscall-based for Linux x86-64)
+{ LinkError, SymlinkInfo, LinkType, PathOps } = @std.io.links
+{ link, linkat, unlink, unlinkat, rmdir, symlink, symlinkat } = @std.io.links
+{ readlink, readlinkat, rename, renameat, renameat2 } = @std.io.links
+{ rename_noreplace, exchange, is_symlink, remove, remove_if_exists } = @std.io.links
+{ symlink_force, create_link, resolve_symlink } = @std.io.links
+{ AT_SYMLINK_FOLLOW, AT_EMPTY_PATH, AT_REMOVEDIR } = @std.io.links
+{ RENAME_NOREPLACE, RENAME_EXCHANGE, RENAME_WHITEOUT } = @std.io.links
+
+// Socket pairs for bidirectional IPC (syscall-based for Linux x86-64)
+{ SocketpairError, SocketPair, Channel, Endpoint, ParentChild } = @std.net.socketpair
+{ socketpair, unix_stream_pair, unix_dgram_pair, unix_seqpacket_pair } = @std.net.socketpair
+{ unix_stream_pair_cloexec, unix_stream_pair_nonblock, unix_stream_pair_cloexec_nonblock } = @std.net.socketpair
+{ split, type_name } = @std.net.socketpair
+{ AF_UNIX, AF_LOCAL, SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET } = @std.net.socketpair
+
+// User/group ID and privilege management (syscall-based for Linux x86-64)
+{ PrivilegeError, Credentials, PrivilegeGuard } = @std.sys.privilege
+{ getuid, geteuid, getgid, getegid, getresuid, getresgid } = @std.sys.privilege
+{ setuid, setgid, setreuid, setregid, setresuid, setresgid } = @std.sys.privilege
+{ seteuid, setegid, setgroups, getgroups, ngroups } = @std.sys.privilege
+{ setfsuid, setfsgid, is_root, is_real_root } = @std.sys.privilege
+{ drop_privileges, drop_privileges_with_groups, drop_privileges_temp, restore_privileges } = @std.sys.privilege
+{ set_no_new_privs, get_no_new_privs, lockdown_privileges, in_group, drop_to_nobody } = @std.sys.privilege
+{ ROOT_UID, ROOT_GID, NOBODY_UID, NOBODY_GID, WHEEL_GID, USERS_GID, NOGROUP_GID } = @std.sys.privilege
+
+// Directory creation operations (syscall-based for Linux x86-64)
+{ MkdirError, TempDir, DirOps } = @std.io.mkdir
+{ mkdir, mkdirat, rmdir, mkdir_default, mkdir_private, mkdir_shared } = @std.io.mkdir
+{ mkdir_if_not_exists, mkdir_all, rmdir_if_exists } = @std.io.mkdir
+{ make_mode, mode_rwx, mode_rw, mode_private, mode_shared } = @std.io.mkdir
+{ DEFAULT_MODE, PRIVATE_MODE, SHARED_MODE } = @std.io.mkdir
+
+// File permission and ownership operations (syscall-based for Linux x86-64)
+{ ChmodError, ModeBuilder, FileOps } = @std.io.chmod
+{ chmod, fchmod, fchmodat, chown, fchown, lchown, fchownat } = @std.io.chmod
+{ chown_owner, chown_group, make_executable, make_private, make_dir_private } = @std.io.chmod
+{ make_readonly, remove_write, add_owner_write, add_execute } = @std.io.chmod
+{ set_setuid, set_setgid, set_sticky, clear_special_bits, mode_to_string } = @std.io.chmod
+{ MODE_644, MODE_755, MODE_600, MODE_700, MODE_777 } = @std.io.chmod
+{ S_ISUID, S_ISGID, S_ISVTX } = @std.io.chmod
+
+// File access permission checking (syscall-based for Linux x86-64)
+{ AccessError, AccessInfo, AccessChecker } = @std.io.access
+{ access, faccessat, faccessat2, eaccess } = @std.io.access
+{ exists, is_readable, is_writable, is_executable, is_rw, is_rx, is_rwx } = @std.io.access
+{ can_read, can_write, can_execute, lexists } = @std.io.access
+{ require_readable, require_writable, require_executable, require_exists } = @std.io.access
+{ F_OK, R_OK, W_OK, X_OK, AT_EACCESS } = @std.io.access
+
+// Device file creation (syscall-based for Linux x86-64)
+{ MknodError, DeviceInfo, NodeType, DevOps } = @std.io.mknod
+{ mknod, mknodat, mkfifo, mkfifoat, mkchr, mkblk, mkreg } = @std.io.mknod
+{ mkfifo_default, mkfifo_private, mknull, mkzero, create_node } = @std.io.mknod
+{ makedev, major, minor, node_type_name } = @std.io.mknod
+{ S_IFREG, S_IFCHR, S_IFBLK, S_IFIFO, S_IFSOCK } = @std.io.mknod
+{ DEV_MEM_MAJOR, DEV_NULL_MINOR, DEV_ZERO_MINOR, DEV_RANDOM_MINOR, DEV_URANDOM_MINOR } = @std.io.mknod
+
+// File timestamp modification (syscall-based for Linux x86-64)
+{ UtimeError, TimestampCopy, TimeBuilder, TimeOps } = @std.io.utimensat
+{ utimensat, utimes, futimens } = @std.io.utimensat
+{ touch, ftouch, ltouch, set_atime, set_mtime, touch_atime, touch_mtime } = @std.io.utimensat
+{ set_times_unix, fset_times_unix, age_file } = @std.io.utimensat
+{ UTIME_NOW, UTIME_OMIT } = @std.io.utimensat
+
+// Close range of file descriptors (syscall-based for Linux x86-64)
+{ CloseRangeError, ExecPrep, FdKeepSet } = @std.io.close_range
+{ close_range, close_from, close_from_unshare, cloexec_range, cloexec_from } = @std.io.close_range
+{ close_all_except_stdio, close_all_except, prepare_exec, close_list } = @std.io.close_range
+{ close_range_simple, is_available, flag_name } = @std.io.close_range
+{ CLOSE_RANGE_UNSHARE, CLOSE_RANGE_CLOEXEC, STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO } = @std.io.close_range
+
+// Additional pidfd operations (syscall-based for Linux x86-64)
+{ PidfdError, Pidfd, FdTransfer, SigInfo } = @std.sys.pidfd_extra
+{ pidfd_open, pidfd_getfd, pidfd_send_signal } = @std.sys.pidfd_extra
+{ open_process, open_process_nonblock, get_fd_from_process, signal_process } = @std.sys.pidfd_extra
+{ is_getfd_available, is_available } = @std.sys.pidfd_extra
+{ PIDFD_NONBLOCK, PIDFD_GETFD_NONBLOCK } = @std.sys.pidfd_extra
+
+// Signal file descriptors (syscall-based for Linux x86-64)
+{ SignalfdError, SigSet, SignalInfo, SignalFd } = @std.io.signalfd
+{ signalfd, create, create_with_flags, update_mask } = @std.io.signalfd
+{ block_signals, read_signal, for_termination, for_children, for_user, signal_name } = @std.io.signalfd
+{ SFD_CLOEXEC, SFD_NONBLOCK } = @std.io.signalfd
+
+// Poll with signal mask (syscall-based for Linux x86-64)
+{ PpollError, Pollfd, Timespec, PollSet } = @std.io.ppoll
+{ ppoll, poll, poll_timeout, poll_masked, poll_nonblock, poll_wait } = @std.io.ppoll
+{ wait_readable, wait_writable, event_name } = @std.io.ppoll
+{ POLLIN, POLLPRI, POLLOUT, POLLERR, POLLHUP, POLLNVAL, POLLRDHUP } = @std.io.ppoll
+
+// Cross-process memory access (syscall-based for Linux x86-64)
+{ ProcessVmError, Iovec, ScatterGatherReader, ScatterGatherWriter, MemoryRegion, ProcessMemory } = @std.sys.process_vm
+{ process_vm_readv, process_vm_writev, read_remote, write_remote } = @std.sys.process_vm
+{ read_value, write_value, read_i64, write_i64, read_u64, write_u64, read_i32, write_i32 } = @std.sys.process_vm
+{ copy_remote, is_available, error_name } = @std.sys.process_vm
+
+// Namespace manipulation (syscall-based for Linux x86-64)
+{ SetnsError, NamespaceFd, NamespaceContext, ContainerBuilder } = @std.sys.setns
+{ setns, unshare, join_ns, join_mnt, join_net, join_pid, join_uts, join_ipc, join_user, join_cgroup, join_all } = @std.sys.setns
+{ unshare_mnt, unshare_net, unshare_pid, unshare_uts, unshare_ipc, unshare_user, unshare_cgroup } = @std.sys.setns
+{ ns_name, ns_type } = @std.sys.setns
+{ CLONE_NEWNS, CLONE_NEWCGROUP, CLONE_NEWUTS, CLONE_NEWIPC, CLONE_NEWUSER, CLONE_NEWPID, CLONE_NEWNET, CLONE_NEWTIME } = @std.sys.setns
+
+// Synchronous I/O multiplexing with signal mask (syscall-based for Linux x86-64)
+{ PselectError, FdSet, SelectBuilder, SelectResult } = @std.io.pselect
+{ pselect6, select, select_masked, wait_readable, wait_writable, wait_ready } = @std.io.pselect
+{ is_readable, is_writable, error_name } = @std.io.pselect
+
+// System V semaphores (syscall-based for Linux x86-64)
+{ SemError, Sembuf, Semaphore, BinarySemaphore, CountingSemaphore } = @std.sync.sem
+{ semget, semctl, semop, semtimedop, create, open, open_existing, create_private } = @std.sync.sem
+{ getval, setval, remove, wait, signal, try_wait, wait_timeout, wait_zero } = @std.sync.sem
+{ ftok, error_name } = @std.sync.sem
+{ IPC_CREAT, IPC_EXCL, IPC_NOWAIT, IPC_PRIVATE, IPC_RMID, SEM_UNDO } = @std.sync.sem
+{ GETVAL, SETVAL, GETPID, GETNCNT, GETZCNT, GETALL, SETALL } = @std.sync.sem
+
+// System V shared memory (syscall-based for Linux x86-64)
+{ ShmError, ShmidDs, SharedMemory, SharedRingBuffer } = @std.sync.shm
+{ shmget, shmat, shmdt, shmctl, create, open, open_existing, create_private } = @std.sync.shm
+{ attach, attach_readonly, attach_at, detach, remove, stat, lock, unlock } = @std.sync.shm
+{ ftok, error_name } = @std.sync.shm
+{ IPC_CREAT, IPC_EXCL, IPC_PRIVATE, IPC_STAT, IPC_SET, IPC_RMID } = @std.sync.shm
+{ SHM_STAT, SHM_INFO, SHM_LOCK, SHM_UNLOCK, SHM_RDONLY, SHM_RND, SHM_REMAP } = @std.sync.shm
+
+// Socket accept with flags (syscall-based for Linux x86-64)
+{ AcceptError, SockAddrIn, SockAddrIn6, SockAddrUn, SockAddrStorage, ConnectionInfo, Acceptor } = @std.net.accept4
+{ accept4, accept, accept_cloexec, accept_nonblock, accept_cloexec_nonblock } = @std.net.accept4
+{ accept_simple, accept_simple_cloexec, accept_info, accept_info4 } = @std.net.accept4
+{ getsockname, getpeername, htons, ntohs, htonl, ntohl, error_name } = @std.net.accept4
+{ SOCK_NONBLOCK, SOCK_CLOEXEC, AF_INET, AF_INET6, AF_UNIX } = @std.net.accept4
+
+// Socket receive/send operations (syscall-based for Linux x86-64)
+{ RecvError, Datagram, SocketIO, UdpIO } = @std.net.recvfrom
+{ recvfrom, sendto, recv, send, recv_simple, send_simple } = @std.net.recvfrom
+{ recv_nosignal, send_nosignal, recv_nonblock, send_nonblock } = @std.net.recvfrom
+{ peek, recv_all, try_recv, try_send, recv_datagram, send_to_ipv4 } = @std.net.recvfrom
+{ MSG_OOB, MSG_PEEK, MSG_DONTROUTE, MSG_DONTWAIT, MSG_WAITALL, MSG_NOSIGNAL, MSG_MORE } = @std.net.recvfrom
+
+// File readahead and cache control (syscall-based for Linux x86-64)
+{ ReadaheadError, ReadaheadWindow, FileAdvisor } = @std.io.readahead
+{ readahead, readahead_from_start, readahead_file, fadvise64 } = @std.io.readahead
+{ advise_sequential, advise_random, advise_willneed, advise_dontneed, advise_noreuse, advise_normal } = @std.io.readahead
+{ drop_cache_range, drop_cache, prefetch, prefetch_from_start, advice_name, error_name } = @std.io.readahead
+{ POSIX_FADV_NORMAL, POSIX_FADV_RANDOM, POSIX_FADV_SEQUENTIAL, POSIX_FADV_WILLNEED, POSIX_FADV_DONTNEED, POSIX_FADV_NOREUSE } = @std.io.readahead

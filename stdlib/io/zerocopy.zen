@@ -1,0 +1,541 @@
+// Zen Standard Library: Zero-Copy I/O (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Provides sendfile, splice, tee, copy_file_range for efficient data transfer
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Zero-Copy Syscall Numbers
+// ============================================================================
+
+SYS_SENDFILE = 40
+SYS_SPLICE = 275
+SYS_TEE = 276
+SYS_VMSPLICE = 278
+SYS_COPY_FILE_RANGE = 326
+
+// ============================================================================
+// Splice Flags
+// ============================================================================
+
+SPLICE_F_MOVE = 1       // Move pages instead of copying
+SPLICE_F_NONBLOCK = 2   // Don't block on I/O
+SPLICE_F_MORE = 4       // More data coming
+SPLICE_F_GIFT = 8       // Gift pages to kernel (vmsplice only)
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+ZeroCopyError: {
+    code: i32
+}
+
+zerocopy_errno_to_error = (errno: i64) ZeroCopyError {
+    code = 0 - errno
+    return ZeroCopyError { code: code }
+}
+
+// Check if error is EAGAIN (would block)
+ZeroCopyError.would_block = (self: ZeroCopyError) bool {
+    return self.code == 11  // EAGAIN
+}
+
+// Check if error is EINVAL (invalid, e.g., can't splice between these fds)
+ZeroCopyError.is_invalid = (self: ZeroCopyError) bool {
+    return self.code == 22  // EINVAL
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+// sendfile - Transfer data between file descriptors
+// out_fd: destination fd (must support write)
+// in_fd: source fd (must support mmap-like operations)
+// offset: pointer to offset in source file (or 0 to use current position)
+// count: number of bytes to transfer
+sys_sendfile = (out_fd: i32, in_fd: i32, offset: i64, count: usize) i64 {
+    return compiler.syscall4(SYS_SENDFILE, out_fd, in_fd, offset, count)
+}
+
+// splice - Move data between two fds (at least one must be a pipe)
+// fd_in: source fd
+// off_in: offset in source (or 0 for pipes/current position)
+// fd_out: destination fd
+// off_out: offset in destination (or 0 for pipes/current position)
+// len: number of bytes to transfer
+// flags: SPLICE_F_* flags
+sys_splice = (fd_in: i32, off_in: i64, fd_out: i32, off_out: i64, len: usize, flags: u32) i64 {
+    return compiler.syscall6(SYS_SPLICE, fd_in, off_in, fd_out, off_out, len, flags)
+}
+
+// tee - Duplicate pipe content (copy without consuming)
+// fd_in: source pipe fd
+// fd_out: destination pipe fd
+// len: number of bytes to copy
+// flags: SPLICE_F_* flags
+sys_tee = (fd_in: i32, fd_out: i32, len: usize, flags: u32) i64 {
+    return compiler.syscall4(SYS_TEE, fd_in, fd_out, len, flags)
+}
+
+// vmsplice - Splice user pages into a pipe
+// fd: pipe fd
+// iov: pointer to iovec array
+// nr_segs: number of iovec entries
+// flags: SPLICE_F_* flags
+sys_vmsplice = (fd: i32, iov: i64, nr_segs: usize, flags: u32) i64 {
+    return compiler.syscall4(SYS_VMSPLICE, fd, iov, nr_segs, flags)
+}
+
+// copy_file_range - Copy data between files (server-side copy)
+// fd_in: source fd
+// off_in: pointer to source offset
+// fd_out: destination fd
+// off_out: pointer to destination offset
+// len: number of bytes to copy
+// flags: reserved (must be 0)
+sys_copy_file_range = (fd_in: i32, off_in: i64, fd_out: i32, off_out: i64, len: usize, flags: u32) i64 {
+    return compiler.syscall6(SYS_COPY_FILE_RANGE, fd_in, off_in, fd_out, off_out, len, flags)
+}
+
+// ============================================================================
+// Sendfile - File to Socket/Pipe Transfer
+// ============================================================================
+
+// Send file contents to a socket/pipe (efficient file serving)
+// Returns number of bytes transferred
+sendfile = (out_fd: i32, in_fd: i32, count: usize) Result<usize, ZeroCopyError> {
+    result = sys_sendfile(out_fd, in_fd, 0, count)
+
+    result < 0 ?
+        | true { return Result.Err(zerocopy_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Send file contents starting at offset
+sendfile_offset = (out_fd: i32, in_fd: i32, offset: i64, count: usize, allocator: Allocator) Result<usize, ZeroCopyError> {
+    // Need to pass pointer to offset
+    off_ptr = allocator.allocate(8)
+    compiler.store<i64>(off_ptr, offset)
+
+    result = sys_sendfile(out_fd, in_fd, off_ptr, count)
+
+    allocator.deallocate(off_ptr, 8)
+
+    result < 0 ?
+        | true { return Result.Err(zerocopy_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Send entire file to socket
+sendfile_all = (out_fd: i32, in_fd: i32, file_size: usize) Result<usize, ZeroCopyError> {
+    total = 0
+    remaining = file_size
+
+    loop {
+        remaining == 0 ?
+            | true { return Result.Ok(total) }
+            | false {
+                result = sys_sendfile(out_fd, in_fd, 0, remaining)
+
+                result < 0 ?
+                    | true {
+                        errno = 0 - result
+                        // EAGAIN is ok, retry
+                        errno == 11 ?
+                            | true { }  // Continue
+                            | false { return Result.Err(zerocopy_errno_to_error(result)) }
+                    }
+                    | false {
+                        result == 0 ?
+                            | true { return Result.Ok(total) }  // EOF
+                            | false {
+                                total = total + result
+                                remaining = remaining - result
+                            }
+                    }
+            }
+    }
+
+    return Result.Ok(total)
+}
+
+// ============================================================================
+// Splice - Pipe-based Zero-Copy Transfer
+// ============================================================================
+
+// Splice from fd to pipe
+splice_to_pipe = (in_fd: i32, pipe_fd: i32, len: usize, flags: u32) Result<usize, ZeroCopyError> {
+    result = sys_splice(in_fd, 0, pipe_fd, 0, len, flags)
+
+    result < 0 ?
+        | true { return Result.Err(zerocopy_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Splice from pipe to fd
+splice_from_pipe = (pipe_fd: i32, out_fd: i32, len: usize, flags: u32) Result<usize, ZeroCopyError> {
+    result = sys_splice(pipe_fd, 0, out_fd, 0, len, flags)
+
+    result < 0 ?
+        | true { return Result.Err(zerocopy_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Splice with offsets (for files)
+splice_offset = (in_fd: i32, in_off: i64, out_fd: i32, out_off: i64, len: usize, flags: u32, allocator: Allocator) Result<usize, ZeroCopyError> {
+    in_off_ptr = allocator.allocate(8)
+    out_off_ptr = allocator.allocate(8)
+
+    compiler.store<i64>(in_off_ptr, in_off)
+    compiler.store<i64>(out_off_ptr, out_off)
+
+    result = sys_splice(in_fd, in_off_ptr, out_fd, out_off_ptr, len, flags)
+
+    allocator.deallocate(in_off_ptr, 8)
+    allocator.deallocate(out_off_ptr, 8)
+
+    result < 0 ?
+        | true { return Result.Err(zerocopy_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Splice all data (loop until done)
+splice_all = (in_fd: i32, pipe_fd: i32, len: usize) Result<usize, ZeroCopyError> {
+    total = 0
+    remaining = len
+
+    loop {
+        remaining == 0 ?
+            | true { return Result.Ok(total) }
+            | false {
+                result = sys_splice(in_fd, 0, pipe_fd, 0, remaining, SPLICE_F_MORE)
+
+                result < 0 ?
+                    | true {
+                        errno = 0 - result
+                        errno == 11 ?
+                            | true { }  // EAGAIN, retry
+                            | false { return Result.Err(zerocopy_errno_to_error(result)) }
+                    }
+                    | false {
+                        result == 0 ?
+                            | true { return Result.Ok(total) }  // Done
+                            | false {
+                                total = total + result
+                                remaining = remaining - result
+                            }
+                    }
+            }
+    }
+
+    return Result.Ok(total)
+}
+
+// ============================================================================
+// Tee - Duplicate Pipe Data
+// ============================================================================
+
+// Tee (copy) data from one pipe to another without consuming
+tee = (in_pipe: i32, out_pipe: i32, len: usize, flags: u32) Result<usize, ZeroCopyError> {
+    result = sys_tee(in_pipe, out_pipe, len, flags)
+
+    result < 0 ?
+        | true { return Result.Err(zerocopy_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Tee with non-blocking flag
+tee_nonblock = (in_pipe: i32, out_pipe: i32, len: usize) Result<usize, ZeroCopyError> {
+    return tee(in_pipe, out_pipe, len, SPLICE_F_NONBLOCK)
+}
+
+// ============================================================================
+// Copy File Range - Server-Side File Copy
+// ============================================================================
+
+// Copy data between two files (may use server-side copy on NFS/CIFS)
+copy_file_range = (in_fd: i32, out_fd: i32, len: usize) Result<usize, ZeroCopyError> {
+    result = sys_copy_file_range(in_fd, 0, out_fd, 0, len, 0)
+
+    result < 0 ?
+        | true { return Result.Err(zerocopy_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Copy with offsets
+copy_file_range_offset = (in_fd: i32, in_off: i64, out_fd: i32, out_off: i64, len: usize, allocator: Allocator) Result<usize, ZeroCopyError> {
+    in_off_ptr = allocator.allocate(8)
+    out_off_ptr = allocator.allocate(8)
+
+    compiler.store<i64>(in_off_ptr, in_off)
+    compiler.store<i64>(out_off_ptr, out_off)
+
+    result = sys_copy_file_range(in_fd, in_off_ptr, out_fd, out_off_ptr, len, 0)
+
+    allocator.deallocate(in_off_ptr, 8)
+    allocator.deallocate(out_off_ptr, 8)
+
+    result < 0 ?
+        | true { return Result.Err(zerocopy_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Copy entire file
+copy_file_all = (in_fd: i32, out_fd: i32, file_size: usize) Result<usize, ZeroCopyError> {
+    total = 0
+    remaining = file_size
+
+    loop {
+        remaining == 0 ?
+            | true { return Result.Ok(total) }
+            | false {
+                // Copy in chunks up to 1GB
+                chunk = remaining
+                chunk > 1073741824 ?
+                    | true { chunk = 1073741824 }
+                    | false { }
+
+                result = sys_copy_file_range(in_fd, 0, out_fd, 0, chunk, 0)
+
+                result < 0 ?
+                    | true { return Result.Err(zerocopy_errno_to_error(result)) }
+                    | false {
+                        result == 0 ?
+                            | true { return Result.Ok(total) }  // Done
+                            | false {
+                                total = total + result
+                                remaining = remaining - result
+                            }
+                    }
+            }
+    }
+
+    return Result.Ok(total)
+}
+
+// ============================================================================
+// Vmsplice - User Memory to Pipe
+// ============================================================================
+
+// Iovec structure for vmsplice
+Iovec: {
+    iov_base: i64,
+    iov_len: usize
+}
+
+Iovec.new = (base: i64, len: usize) Iovec {
+    return Iovec { iov_base: base, iov_len: len }
+}
+
+// Splice user memory into pipe
+vmsplice = (pipe_fd: i32, base: i64, len: usize, flags: u32, allocator: Allocator) Result<usize, ZeroCopyError> {
+    // Build iovec
+    iov = allocator.allocate(16)  // sizeof(iovec) = 16
+    compiler.store<i64>(iov, base)
+    compiler.store<u64>(iov + 8, len)
+
+    result = sys_vmsplice(pipe_fd, iov, 1, flags)
+    allocator.deallocate(iov, 16)
+
+    result < 0 ?
+        | true { return Result.Err(zerocopy_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Splice with gift (kernel takes ownership of pages)
+vmsplice_gift = (pipe_fd: i32, base: i64, len: usize, allocator: Allocator) Result<usize, ZeroCopyError> {
+    return vmsplice(pipe_fd, base, len, SPLICE_F_GIFT, allocator)
+}
+
+// ============================================================================
+// Pipe Pair for Splice Operations
+// ============================================================================
+
+SYS_PIPE2 = 293
+
+sys_pipe2 = (pipefd: i64, flags: i32) i64 {
+    return compiler.syscall2(SYS_PIPE2, pipefd, flags)
+}
+
+SplicePipe: {
+    read_fd: i32,
+    write_fd: i32
+}
+
+// Create a pipe for splice operations
+SplicePipe.new = (allocator: Allocator) Result<SplicePipe, ZeroCopyError> {
+    fds = allocator.allocate(8)  // Two i32s
+
+    result = sys_pipe2(fds, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(fds, 8)
+            return Result.Err(zerocopy_errno_to_error(result))
+        }
+        | false {
+            read_fd = compiler.load<i32>(fds)
+            write_fd = compiler.load<i32>(fds + 4)
+            allocator.deallocate(fds, 8)
+
+            return Result.Ok(SplicePipe { read_fd: read_fd, write_fd: write_fd })
+        }
+}
+
+// Get read end
+SplicePipe.read_end = (self: SplicePipe) i32 {
+    return self.read_fd
+}
+
+// Get write end
+SplicePipe.write_end = (self: SplicePipe) i32 {
+    return self.write_fd
+}
+
+// Close both ends
+SplicePipe.close = (self: SplicePipe) void {
+    SYS_CLOSE = 3
+    compiler.syscall1(SYS_CLOSE, self.read_fd)
+    compiler.syscall1(SYS_CLOSE, self.write_fd)
+}
+
+// ============================================================================
+// High-Level Transfer Functions
+// ============================================================================
+
+// Transfer data from file to socket using pipe (works with any fd types)
+transfer_file_to_socket = (file_fd: i32, socket_fd: i32, len: usize, allocator: Allocator) Result<usize, ZeroCopyError> {
+    // Create a pipe as intermediary
+    pipe_result = SplicePipe.new(allocator)
+
+    pipe_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(pipe) {
+            total = 0
+            remaining = len
+
+            loop {
+                remaining == 0 ?
+                    | true {
+                        pipe.close()
+                        return Result.Ok(total)
+                    }
+                    | false {
+                        // Splice from file to pipe
+                        splice_in = sys_splice(file_fd, 0, pipe.write_fd, 0, remaining, SPLICE_F_MORE)
+
+                        splice_in < 0 ?
+                            | true {
+                                pipe.close()
+                                return Result.Err(zerocopy_errno_to_error(splice_in))
+                            }
+                            | false {
+                                splice_in == 0 ?
+                                    | true {
+                                        pipe.close()
+                                        return Result.Ok(total)
+                                    }
+                                    | false {
+                                        // Splice from pipe to socket
+                                        splice_out = sys_splice(pipe.read_fd, 0, socket_fd, 0, splice_in, SPLICE_F_MORE)
+
+                                        splice_out < 0 ?
+                                            | true {
+                                                pipe.close()
+                                                return Result.Err(zerocopy_errno_to_error(splice_out))
+                                            }
+                                            | false {
+                                                total = total + splice_out
+                                                remaining = remaining - splice_out
+                                            }
+                                    }
+                            }
+                    }
+            }
+
+            pipe.close()
+            return Result.Ok(total)
+        }
+}
+
+// Copy file efficiently (uses copy_file_range with sendfile fallback)
+efficient_copy = (in_fd: i32, out_fd: i32, len: usize) Result<usize, ZeroCopyError> {
+    // Try copy_file_range first (server-side copy)
+    result = copy_file_range(in_fd, out_fd, len)
+
+    result ?
+        | Ok(n) { return Result.Ok(n) }
+        | Err(e) {
+            // If not supported, fall back to sendfile
+            e.is_invalid() ?
+                | true { return sendfile_all(out_fd, in_fd, len) }
+                | false { return Result.Err(e) }
+        }
+}
+
+// ============================================================================
+// Stream Forking (tee + splice for multiple destinations)
+// ============================================================================
+
+StreamFork: {
+    source_pipe: SplicePipe,
+    dest_pipe: SplicePipe,
+    allocator: Allocator
+}
+
+// Create a stream fork
+StreamFork.new = (allocator: Allocator) Result<StreamFork, ZeroCopyError> {
+    source_result = SplicePipe.new(allocator)
+
+    source_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(source) {
+            dest_result = SplicePipe.new(allocator)
+
+            dest_result ?
+                | Err(e) {
+                    source.close()
+                    return Result.Err(e)
+                }
+                | Ok(dest) {
+                    return Result.Ok(StreamFork {
+                        source_pipe: source,
+                        dest_pipe: dest,
+                        allocator: allocator
+                    })
+                }
+        }
+}
+
+// Write data to the fork source
+StreamFork.write_fd = (self: StreamFork) i32 {
+    return self.source_pipe.write_fd
+}
+
+// Read from main output
+StreamFork.read_fd = (self: StreamFork) i32 {
+    return self.source_pipe.read_fd
+}
+
+// Read from forked output
+StreamFork.fork_fd = (self: StreamFork) i32 {
+    return self.dest_pipe.read_fd
+}
+
+// Fork some data (copy to dest_pipe without consuming)
+StreamFork.fork = (self: StreamFork, len: usize) Result<usize, ZeroCopyError> {
+    return tee(self.source_pipe.read_fd, self.dest_pipe.write_fd, len, SPLICE_F_NONBLOCK)
+}
+
+// Close all pipes
+StreamFork.close = (self: StreamFork) void {
+    self.source_pipe.close()
+    self.dest_pipe.close()
+}
+

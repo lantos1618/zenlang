@@ -1,0 +1,575 @@
+// Zen Standard Library: Futex & Synchronization Primitives (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Provides low-level building blocks for mutexes, condvars, semaphores
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Futex Syscall Number
+// ============================================================================
+
+SYS_FUTEX = 202
+
+// ============================================================================
+// Futex Operations
+// ============================================================================
+
+FUTEX_WAIT = 0           // Wait if *addr == val
+FUTEX_WAKE = 1           // Wake up to n waiters
+FUTEX_FD = 2             // Deprecated
+FUTEX_REQUEUE = 3        // Wake n, requeue rest to another futex
+FUTEX_CMP_REQUEUE = 4    // Requeue with compare
+FUTEX_WAKE_OP = 5        // Wake with operation
+FUTEX_LOCK_PI = 6        // Priority-inheritance lock
+FUTEX_UNLOCK_PI = 7      // Priority-inheritance unlock
+FUTEX_TRYLOCK_PI = 8     // Try PI lock
+FUTEX_WAIT_BITSET = 9    // Wait with bitset
+FUTEX_WAKE_BITSET = 10   // Wake with bitset
+FUTEX_WAIT_REQUEUE_PI = 11
+FUTEX_CMP_REQUEUE_PI = 12
+
+// Futex flags
+FUTEX_PRIVATE_FLAG = 128  // Private to this process (faster)
+FUTEX_CLOCK_REALTIME = 256
+
+// Combined operations (private by default for performance)
+FUTEX_WAIT_PRIVATE = 128  // FUTEX_WAIT | FUTEX_PRIVATE_FLAG
+FUTEX_WAKE_PRIVATE = 129  // FUTEX_WAKE | FUTEX_PRIVATE_FLAG
+
+// Bitset for wait/wake all
+FUTEX_BITSET_MATCH_ANY = 0xFFFFFFFF
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+FutexError: {
+    code: i32
+}
+
+// Error codes
+EAGAIN = 11       // Value changed before we could wait
+EINTR = 4         // Interrupted by signal
+ETIMEDOUT = 110   // Timeout expired
+EINVAL = 22       // Invalid argument
+
+futex_errno_to_error = (errno: i64) FutexError {
+    code = 0 - errno
+    return FutexError { code: code }
+}
+
+// Check if error is "value changed" (not really an error)
+FutexError.is_value_changed = (self: FutexError) bool {
+    return self.code == EAGAIN
+}
+
+// Check if error is timeout
+FutexError.is_timeout = (self: FutexError) bool {
+    return self.code == ETIMEDOUT
+}
+
+// Check if interrupted by signal
+FutexError.is_interrupted = (self: FutexError) bool {
+    return self.code == EINTR
+}
+
+// ============================================================================
+// Low-Level Futex Syscall
+// ============================================================================
+
+// Full futex syscall
+// addr: pointer to 32-bit futex word
+// op: futex operation
+// val: expected value (for WAIT) or count (for WAKE)
+// timeout: pointer to timespec (or 0 for no timeout)
+// addr2: second futex address (for REQUEUE operations)
+// val3: third value (operation-specific)
+sys_futex = (addr: i64, op: i32, val: i32, timeout: i64, addr2: i64, val3: i32) i64 {
+    return compiler.syscall6(SYS_FUTEX, addr, op, val, timeout, addr2, val3)
+}
+
+// ============================================================================
+// Basic Futex Operations
+// ============================================================================
+
+// Wait if *addr == expected_val
+// Blocks until wake or value changes
+// Returns Ok(()) on wake, Err on timeout/interrupt/value_changed
+futex_wait = (addr: i64, expected_val: i32) Result<void, FutexError> {
+    result = sys_futex(addr, FUTEX_WAIT_PRIVATE, expected_val, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(futex_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Wait with timeout (in nanoseconds)
+futex_wait_timeout = (addr: i64, expected_val: i32, timeout_ns: i64, allocator: Allocator) Result<void, FutexError> {
+    // Build timespec
+    ts_ptr = allocator.allocate(16)
+    secs = timeout_ns / 1000000000
+    nsecs = timeout_ns % 1000000000
+    compiler.store<i64>(ts_ptr, secs)
+    compiler.store<i64>(compiler.gep(ts_ptr, 8), nsecs)
+
+    result = sys_futex(addr, FUTEX_WAIT_PRIVATE, expected_val, ts_ptr, 0, 0)
+
+    allocator.deallocate(ts_ptr, 16)
+
+    result < 0 ?
+        | true { return Result.Err(futex_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Wake up to n waiters
+// Returns number of waiters woken
+futex_wake = (addr: i64, count: i32) Result<i32, FutexError> {
+    result = sys_futex(addr, FUTEX_WAKE_PRIVATE, count, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(futex_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Wake one waiter
+futex_wake_one = (addr: i64) Result<i32, FutexError> {
+    return futex_wake(addr, 1)
+}
+
+// Wake all waiters
+futex_wake_all = (addr: i64) Result<i32, FutexError> {
+    return futex_wake(addr, 2147483647)  // INT_MAX
+}
+
+// ============================================================================
+// Atomic Operations (using compiler intrinsics)
+// ============================================================================
+
+// Atomic load
+atomic_load = (addr: i64) i32 {
+    return compiler.atomic_load<i32>(addr)
+}
+
+// Atomic store
+atomic_store = (addr: i64, val: i32) void {
+    compiler.atomic_store<i32>(addr, val)
+}
+
+// Atomic compare-and-swap
+// Returns true if swap succeeded
+atomic_cas = (addr: i64, expected: i32, desired: i32) bool {
+    return compiler.atomic_cas<i32>(addr, expected, desired)
+}
+
+// Atomic fetch-and-add
+atomic_fetch_add = (addr: i64, val: i32) i32 {
+    return compiler.atomic_fetch_add<i32>(addr, val)
+}
+
+// Atomic fetch-and-sub
+atomic_fetch_sub = (addr: i64, val: i32) i32 {
+    return compiler.atomic_fetch_sub<i32>(addr, val)
+}
+
+// Atomic exchange
+atomic_exchange = (addr: i64, val: i32) i32 {
+    return compiler.atomic_exchange<i32>(addr, val)
+}
+
+// ============================================================================
+// Mutex (Basic Futex-based Mutex)
+// ============================================================================
+
+// States: 0 = unlocked, 1 = locked (no waiters), 2 = locked (has waiters)
+MUTEX_UNLOCKED = 0
+MUTEX_LOCKED = 1
+MUTEX_LOCKED_WAITERS = 2
+
+Mutex: {
+    state: i32
+}
+
+// Create new unlocked mutex
+Mutex.new = () Mutex {
+    return Mutex { state: MUTEX_UNLOCKED }
+}
+
+// Get state address (for futex operations)
+Mutex.state_addr = (self: MutPtr<Mutex>) i64 {
+    return compiler.ptr_to_int(self)
+}
+
+// Try to lock without blocking
+// Returns true if lock acquired
+Mutex.try_lock = (self: MutPtr<Mutex>) bool {
+    return atomic_cas(self.state_addr(), MUTEX_UNLOCKED, MUTEX_LOCKED)
+}
+
+// Lock the mutex (blocking)
+Mutex.lock = (self: MutPtr<Mutex>) void {
+    // Fast path: try to acquire unlocked mutex
+    self.try_lock() ?
+        | true { return }
+        | false { }
+
+    // Slow path: need to wait
+    loop {
+        // If state was 1 (locked, no waiters), set to 2 (locked, has waiters)
+        // If state was 2, it stays 2
+        // Then wait if still locked
+        c = atomic_exchange(self.state_addr(), MUTEX_LOCKED_WAITERS)
+
+        c == MUTEX_UNLOCKED ?
+            | true {
+                // We got the lock!
+                return
+            }
+            | false {
+                // Wait until state changes from 2
+                _ = futex_wait(self.state_addr(), MUTEX_LOCKED_WAITERS)
+            }
+    }
+}
+
+// Unlock the mutex
+Mutex.unlock = (self: MutPtr<Mutex>) void {
+    // Fast path: if state was 1 (no waiters), just set to 0
+    old = atomic_exchange(self.state_addr(), MUTEX_UNLOCKED)
+
+    old == MUTEX_LOCKED_WAITERS ?
+        | true {
+            // There were waiters, wake one
+            _ = futex_wake_one(self.state_addr())
+        }
+        | false { }
+}
+
+// Check if locked (non-atomic, for debugging)
+Mutex.is_locked = (self: Mutex) bool {
+    return self.state != MUTEX_UNLOCKED
+}
+
+// ============================================================================
+// Condition Variable
+// ============================================================================
+
+CondVar: {
+    seq: i32  // Sequence number for spurious wakeup prevention
+}
+
+// Create new condition variable
+CondVar.new = () CondVar {
+    return CondVar { seq: 0 }
+}
+
+// Get sequence address
+CondVar.seq_addr = (self: MutPtr<CondVar>) i64 {
+    return compiler.ptr_to_int(self)
+}
+
+// Wait on condition variable (must hold mutex)
+// Releases mutex, waits, reacquires mutex
+CondVar.wait = (self: MutPtr<CondVar>, mutex: MutPtr<Mutex>) void {
+    seq = atomic_load(self.seq_addr())
+
+    // Release mutex
+    mutex.unlock()
+
+    // Wait for signal (seq to change)
+    _ = futex_wait(self.seq_addr(), seq)
+
+    // Reacquire mutex
+    mutex.lock()
+}
+
+// Wait with timeout (nanoseconds)
+// Returns true if signaled, false if timeout
+CondVar.wait_timeout = (self: MutPtr<CondVar>, mutex: MutPtr<Mutex>, timeout_ns: i64, allocator: Allocator) bool {
+    seq = atomic_load(self.seq_addr())
+
+    mutex.unlock()
+
+    result = futex_wait_timeout(self.seq_addr(), seq, timeout_ns, allocator)
+
+    mutex.lock()
+
+    // Return true if we were signaled (not timeout)
+    result ?
+        | Ok(_) { return true }
+        | Err(e) {
+            e.is_timeout() ?
+                | true { return false }
+                | false { return true }  // Spurious wakeup or interrupt
+        }
+}
+
+// Signal one waiter
+CondVar.signal = (self: MutPtr<CondVar>) void {
+    // Increment sequence number
+    _ = atomic_fetch_add(self.seq_addr(), 1)
+    // Wake one waiter
+    _ = futex_wake_one(self.seq_addr())
+}
+
+// Signal all waiters
+CondVar.broadcast = (self: MutPtr<CondVar>) void {
+    // Increment sequence number
+    _ = atomic_fetch_add(self.seq_addr(), 1)
+    // Wake all waiters
+    _ = futex_wake_all(self.seq_addr())
+}
+
+// ============================================================================
+// Semaphore
+// ============================================================================
+
+Semaphore: {
+    count: i32
+}
+
+// Create semaphore with initial count
+Semaphore.new = (initial: i32) Semaphore {
+    return Semaphore { count: initial }
+}
+
+// Get count address
+Semaphore.count_addr = (self: MutPtr<Semaphore>) i64 {
+    return compiler.ptr_to_int(self)
+}
+
+// Try to acquire (decrement) without blocking
+// Returns true if acquired
+Semaphore.try_acquire = (self: MutPtr<Semaphore>) bool {
+    loop {
+        current = atomic_load(self.count_addr())
+        current <= 0 ?
+            | true { return false }
+            | false {
+                atomic_cas(self.count_addr(), current, current - 1) ?
+                    | true { return true }
+                    | false { }  // Retry
+            }
+    }
+    return false
+}
+
+// Acquire (decrement) - blocks if count is 0
+Semaphore.acquire = (self: MutPtr<Semaphore>) void {
+    loop {
+        // Try to decrement
+        current = atomic_load(self.count_addr())
+
+        current > 0 ?
+            | true {
+                atomic_cas(self.count_addr(), current, current - 1) ?
+                    | true { return }
+                    | false { }  // Retry
+            }
+            | false {
+                // Wait for count to become positive
+                _ = futex_wait(self.count_addr(), 0)
+            }
+    }
+}
+
+// Release (increment)
+Semaphore.release = (self: MutPtr<Semaphore>) void {
+    old = atomic_fetch_add(self.count_addr(), 1)
+
+    // If count was 0, wake a waiter
+    old == 0 ?
+        | true { _ = futex_wake_one(self.count_addr()) }
+        | false { }
+}
+
+// Get current count (non-atomic snapshot)
+Semaphore.count = (self: Semaphore) i32 {
+    return self.count
+}
+
+// ============================================================================
+// RwLock (Reader-Writer Lock)
+// ============================================================================
+
+// State encoding:
+// 0 = unlocked
+// positive = number of readers
+// -1 = write locked
+// -2 = write locked with waiting readers
+
+RwLock: {
+    state: i32,
+    writer_wake: i32  // Separate futex for writer wakeup
+}
+
+// Create new unlocked rwlock
+RwLock.new = () RwLock {
+    return RwLock { state: 0, writer_wake: 0 }
+}
+
+// Get state address
+RwLock.state_addr = (self: MutPtr<RwLock>) i64 {
+    return compiler.ptr_to_int(self)
+}
+
+// Get writer wake address (offset by 4 bytes)
+RwLock.writer_addr = (self: MutPtr<RwLock>) i64 {
+    return compiler.gep(compiler.ptr_to_int(self), 4)
+}
+
+// Acquire read lock
+RwLock.read_lock = (self: MutPtr<RwLock>) void {
+    loop {
+        current = atomic_load(self.state_addr())
+
+        current >= 0 ?
+            | true {
+                // No writer, try to increment reader count
+                atomic_cas(self.state_addr(), current, current + 1) ?
+                    | true { return }
+                    | false { }  // Retry
+            }
+            | false {
+                // Writer holds lock, wait
+                _ = futex_wait(self.state_addr(), current)
+            }
+    }
+}
+
+// Try to acquire read lock
+RwLock.try_read_lock = (self: MutPtr<RwLock>) bool {
+    current = atomic_load(self.state_addr())
+
+    current >= 0 ?
+        | true {
+            return atomic_cas(self.state_addr(), current, current + 1)
+        }
+        | false { return false }
+}
+
+// Release read lock
+RwLock.read_unlock = (self: MutPtr<RwLock>) void {
+    old = atomic_fetch_sub(self.state_addr(), 1)
+
+    // If we were the last reader and state is now 0, wake a waiting writer
+    old == 1 ?
+        | true { _ = futex_wake_one(self.writer_addr()) }
+        | false { }
+}
+
+// Acquire write lock
+RwLock.write_lock = (self: MutPtr<RwLock>) void {
+    loop {
+        // Try to acquire when state is 0
+        atomic_cas(self.state_addr(), 0, -1) ?
+            | true { return }
+            | false {
+                // Wait for state to become 0
+                current = atomic_load(self.state_addr())
+                current != 0 ?
+                    | true { _ = futex_wait(self.writer_addr(), 0) }
+                    | false { }
+            }
+    }
+}
+
+// Try to acquire write lock
+RwLock.try_write_lock = (self: MutPtr<RwLock>) bool {
+    return atomic_cas(self.state_addr(), 0, -1)
+}
+
+// Release write lock
+RwLock.write_unlock = (self: MutPtr<RwLock>) void {
+    atomic_store(self.state_addr(), 0)
+    // Wake all (readers and one writer will compete)
+    _ = futex_wake_all(self.state_addr())
+    _ = futex_wake_one(self.writer_addr())
+}
+
+// ============================================================================
+// Once (One-time initialization)
+// ============================================================================
+
+// States: 0 = not started, 1 = in progress, 2 = completed
+ONCE_NEW = 0
+ONCE_RUNNING = 1
+ONCE_DONE = 2
+
+Once: {
+    state: i32
+}
+
+// Create new Once
+Once.new = () Once {
+    return Once { state: ONCE_NEW }
+}
+
+// Get state address
+Once.state_addr = (self: MutPtr<Once>) i64 {
+    return compiler.ptr_to_int(self)
+}
+
+// Check if completed
+Once.is_completed = (self: Once) bool {
+    return self.state == ONCE_DONE
+}
+
+// ============================================================================
+// Barrier (for thread synchronization)
+// ============================================================================
+
+Barrier: {
+    count: i32,      // Number of threads to wait for
+    waiting: i32,    // Current number waiting
+    generation: i32  // Incremented each time barrier is released
+}
+
+// Create barrier for n threads
+Barrier.new = (count: i32) Barrier {
+    return Barrier {
+        count: count,
+        waiting: 0,
+        generation: 0
+    }
+}
+
+// Get waiting address
+Barrier.waiting_addr = (self: MutPtr<Barrier>) i64 {
+    return compiler.gep(compiler.ptr_to_int(self), 4)
+}
+
+// Get generation address
+Barrier.generation_addr = (self: MutPtr<Barrier>) i64 {
+    return compiler.gep(compiler.ptr_to_int(self), 8)
+}
+
+// Wait at barrier
+// Returns true for one "leader" thread, false for others
+Barrier.wait = (self: MutPtr<Barrier>) bool {
+    gen = atomic_load(self.generation_addr())
+    n = atomic_fetch_add(self.waiting_addr(), 1) + 1
+
+    n == self.val.count ?
+        | true {
+            // We're the last thread - release everyone
+            atomic_store(self.waiting_addr(), 0)
+            _ = atomic_fetch_add(self.generation_addr(), 1)
+            _ = futex_wake_all(self.generation_addr())
+            return true  // Leader
+        }
+        | false {
+            // Wait for generation to change
+            loop {
+                current_gen = atomic_load(self.generation_addr())
+                current_gen != gen ?
+                    | true { return false }
+                    | false { _ = futex_wait(self.generation_addr(), gen) }
+            }
+            return false
+        }
+}
+

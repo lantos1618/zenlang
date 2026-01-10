@@ -1,0 +1,666 @@
+// Zen Standard Library: Memory File Descriptors (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Creates anonymous files in memory (useful for shared memory, sealing)
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ String } = @std.string
+{ Vec } = @std.vec
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Memfd Syscall Numbers
+// ============================================================================
+
+SYS_MEMFD_CREATE = 319
+SYS_FCNTL = 72
+SYS_FTRUNCATE = 77
+SYS_READ = 0
+SYS_WRITE = 1
+SYS_LSEEK = 8
+SYS_CLOSE = 3
+SYS_MMAP = 9
+SYS_MUNMAP = 11
+
+// ============================================================================
+// Memfd Flags
+// ============================================================================
+
+MFD_CLOEXEC = 1         // Close on exec
+MFD_ALLOW_SEALING = 2   // Allow sealing operations
+MFD_HUGETLB = 4         // Use huge pages
+
+// Huge page sizes (OR with MFD_HUGETLB)
+MFD_HUGE_64KB = 16 << 26
+MFD_HUGE_512KB = 19 << 26
+MFD_HUGE_1MB = 20 << 26
+MFD_HUGE_2MB = 21 << 26
+MFD_HUGE_8MB = 23 << 26
+MFD_HUGE_16MB = 24 << 26
+MFD_HUGE_32MB = 25 << 26
+MFD_HUGE_256MB = 28 << 26
+MFD_HUGE_512MB = 29 << 26
+MFD_HUGE_1GB = 30 << 26
+MFD_HUGE_2GB = 31 << 26
+
+// ============================================================================
+// Sealing Operations (for fcntl F_ADD_SEALS)
+// ============================================================================
+
+F_ADD_SEALS = 1033
+F_GET_SEALS = 1034
+
+F_SEAL_SEAL = 1     // Prevent further sealing
+F_SEAL_SHRINK = 2   // Prevent file from shrinking
+F_SEAL_GROW = 4     // Prevent file from growing
+F_SEAL_WRITE = 8    // Prevent writes
+F_SEAL_FUTURE_WRITE = 16  // Prevent future writes (allows current mappings)
+
+// ============================================================================
+// Mmap flags and protections
+// ============================================================================
+
+PROT_READ = 1
+PROT_WRITE = 2
+PROT_EXEC = 4
+PROT_RW = 3
+PROT_RX = 5
+PROT_RWX = 7
+
+MAP_SHARED = 1
+MAP_PRIVATE = 2
+MAP_FIXED = 16
+MAP_ANONYMOUS = 32
+
+// ============================================================================
+// Seek whence
+// ============================================================================
+
+SEEK_SET = 0
+SEEK_CUR = 1
+SEEK_END = 2
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+MemfdError: {
+    code: i32
+}
+
+memfd_errno_to_error = (errno: i64) MemfdError {
+    code = 0 - errno
+    return MemfdError { code: code }
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+// Create a memory file descriptor
+// name: name for debugging (shown in /proc/self/fd/)
+// flags: MFD_* flags
+sys_memfd_create = (name: i64, flags: u32) i64 {
+    return compiler.syscall2(SYS_MEMFD_CREATE, name, flags)
+}
+
+sys_fcntl = (fd: i32, cmd: i32, arg: i64) i64 {
+    return compiler.syscall3(SYS_FCNTL, fd, cmd, arg)
+}
+
+sys_ftruncate = (fd: i32, length: i64) i64 {
+    return compiler.syscall2(SYS_FTRUNCATE, fd, length)
+}
+
+sys_read = (fd: i32, buf: i64, count: usize) i64 {
+    return compiler.syscall3(SYS_READ, fd, buf, count)
+}
+
+sys_write = (fd: i32, buf: i64, count: usize) i64 {
+    return compiler.syscall3(SYS_WRITE, fd, buf, count)
+}
+
+sys_lseek = (fd: i32, offset: i64, whence: i32) i64 {
+    return compiler.syscall3(SYS_LSEEK, fd, offset, whence)
+}
+
+sys_close = (fd: i32) i64 {
+    return compiler.syscall1(SYS_CLOSE, fd)
+}
+
+sys_mmap = (addr: i64, length: usize, prot: i32, flags: i32, fd: i32, offset: i64) i64 {
+    return compiler.syscall6(SYS_MMAP, addr, length, prot, flags, fd, offset)
+}
+
+sys_munmap = (addr: i64, length: usize) i64 {
+    return compiler.syscall2(SYS_MUNMAP, addr, length)
+}
+
+// ============================================================================
+// Memfd - Anonymous Memory File
+// ============================================================================
+
+Memfd: {
+    fd: i32,
+    size: usize,
+    allow_sealing: bool
+}
+
+// Create a new memfd with default flags
+Memfd.new = (name: String, allocator: Allocator) Result<Memfd, MemfdError> {
+    // Null-terminate the name
+    name_buf = allocator.allocate(name.len() + 1)
+    compiler.memcpy(name_buf, name.data(), name.len())
+    compiler.store<u8>(name_buf + name.len(), 0)
+
+    fd = sys_memfd_create(name_buf, MFD_CLOEXEC)
+    allocator.deallocate(name_buf, name.len() + 1)
+
+    fd < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(fd)) }
+        | false { return Result.Ok(Memfd { fd: fd, size: 0, allow_sealing: false }) }
+}
+
+// Create with sealing support
+Memfd.with_sealing = (name: String, allocator: Allocator) Result<Memfd, MemfdError> {
+    name_buf = allocator.allocate(name.len() + 1)
+    compiler.memcpy(name_buf, name.data(), name.len())
+    compiler.store<u8>(name_buf + name.len(), 0)
+
+    fd = sys_memfd_create(name_buf, MFD_CLOEXEC | MFD_ALLOW_SEALING)
+    allocator.deallocate(name_buf, name.len() + 1)
+
+    fd < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(fd)) }
+        | false { return Result.Ok(Memfd { fd: fd, size: 0, allow_sealing: true }) }
+}
+
+// Create anonymous (no name)
+Memfd.anonymous = () Result<Memfd, MemfdError> {
+    // Empty string is valid
+    fd = sys_memfd_create(0, MFD_CLOEXEC)
+
+    fd < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(fd)) }
+        | false { return Result.Ok(Memfd { fd: fd, size: 0, allow_sealing: false }) }
+}
+
+// Get file descriptor
+Memfd.as_fd = (self: Memfd) i32 {
+    return self.fd
+}
+
+// Set size of the memfd
+Memfd.set_size = (self: MutPtr<Memfd>, size: usize) Result<void, MemfdError> {
+    result = sys_ftruncate(self.val.fd, size)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false {
+            self.val.size = size
+            return Result.Ok(())
+        }
+}
+
+// Get current size
+Memfd.get_size = (self: Memfd) usize {
+    return self.size
+}
+
+// Write data to memfd
+Memfd.write = (self: MutPtr<Memfd>, data: i64, len: usize) Result<usize, MemfdError> {
+    result = sys_write(self.val.fd, data, len)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Write bytes from Vec
+Memfd.write_bytes = (self: MutPtr<Memfd>, bytes: Vec<u8>) Result<usize, MemfdError> {
+    return self.write(bytes.data(), bytes.len())
+}
+
+// Read data from memfd
+Memfd.read = (self: Memfd, buf: i64, len: usize) Result<usize, MemfdError> {
+    result = sys_read(self.fd, buf, len)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Read all content into Vec
+Memfd.read_all = (self: MutPtr<Memfd>, allocator: Allocator) Result<Vec<u8>, MemfdError> {
+    // Seek to start
+    seek_result = sys_lseek(self.val.fd, 0, SEEK_SET)
+    seek_result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(seek_result)) }
+        | false { }
+
+    buf = allocator.allocate(self.val.size)
+    read_result = sys_read(self.val.fd, buf, self.val.size)
+
+    read_result < 0 ?
+        | true {
+            allocator.deallocate(buf, self.val.size)
+            return Result.Err(memfd_errno_to_error(read_result))
+        }
+        | false {
+            vec = Vec<u8>.from_ptr(buf, read_result, allocator)
+            return Result.Ok(vec)
+        }
+}
+
+// Seek to position
+Memfd.seek = (self: Memfd, offset: i64, whence: i32) Result<i64, MemfdError> {
+    result = sys_lseek(self.fd, offset, whence)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Seek to start
+Memfd.seek_start = (self: Memfd) Result<void, MemfdError> {
+    result = self.seek(0, SEEK_SET)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { return Result.Ok(()) }
+}
+
+// Seek to end
+Memfd.seek_end = (self: Memfd) Result<void, MemfdError> {
+    result = self.seek(0, SEEK_END)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Sealing Operations
+// ============================================================================
+
+// Add seals to memfd
+Memfd.add_seals = (self: Memfd, seals: i32) Result<void, MemfdError> {
+    self.allow_sealing ?
+        | false { return Result.Err(MemfdError { code: 1 }) }  // EPERM
+        | true { }
+
+    result = sys_fcntl(self.fd, F_ADD_SEALS, seals)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Get current seals
+Memfd.get_seals = (self: Memfd) Result<i32, MemfdError> {
+    result = sys_fcntl(self.fd, F_GET_SEALS, 0)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Seal completely (no more writes, no resize, no more seals)
+Memfd.seal_all = (self: Memfd) Result<void, MemfdError> {
+    seals = F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE
+    return self.add_seals(seals)
+}
+
+// Seal for read-only sharing
+Memfd.seal_readonly = (self: Memfd) Result<void, MemfdError> {
+    seals = F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE
+    return self.add_seals(seals)
+}
+
+// Check if sealed for writing
+Memfd.is_write_sealed = (self: Memfd) Result<bool, MemfdError> {
+    seals_result = self.get_seals()
+
+    seals_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(seals) { return Result.Ok((seals & F_SEAL_WRITE) != 0) }
+}
+
+// ============================================================================
+// Memory Mapping
+// ============================================================================
+
+// Map memfd into memory (read-only)
+Memfd.map_read = (self: Memfd) Result<i64, MemfdError> {
+    result = sys_mmap(0, self.size, PROT_READ, MAP_SHARED, self.fd, 0)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Map memfd into memory (read-write)
+Memfd.map_rw = (self: Memfd) Result<i64, MemfdError> {
+    result = sys_mmap(0, self.size, PROT_RW, MAP_SHARED, self.fd, 0)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Map with custom protection
+Memfd.map = (self: Memfd, prot: i32, flags: i32) Result<i64, MemfdError> {
+    result = sys_mmap(0, self.size, prot, flags, self.fd, 0)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Unmap a mapping
+memfd_unmap = (addr: i64, len: usize) Result<void, MemfdError> {
+    result = sys_munmap(addr, len)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Close the memfd
+Memfd.close = (self: Memfd) Result<void, MemfdError> {
+    result = sys_close(self.fd)
+
+    result < 0 ?
+        | true { return Result.Err(memfd_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// SharedBuffer - High-level shared memory buffer
+// ============================================================================
+
+SharedBuffer: {
+    memfd: Memfd,
+    mapping: i64,
+    size: usize,
+    allocator: Allocator
+}
+
+// Create a shared buffer of given size
+SharedBuffer.new = (size: usize, allocator: Allocator) Result<SharedBuffer, MemfdError> {
+    memfd_result = Memfd.with_sealing(String.from_static("shared_buffer"), allocator)
+
+    memfd_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(memfd) {
+            // Set size
+            set_result = memfd.mut_ref().set_size(size)
+
+            set_result ?
+                | Err(e) {
+                    memfd.close()
+                    return Result.Err(e)
+                }
+                | Ok(_) {
+                    // Map the memory
+                    map_result = memfd.map_rw()
+
+                    map_result ?
+                        | Err(e) {
+                            memfd.close()
+                            return Result.Err(e)
+                        }
+                        | Ok(mapping) {
+                            return Result.Ok(SharedBuffer {
+                                memfd: memfd,
+                                mapping: mapping,
+                                size: size,
+                                allocator: allocator
+                            })
+                        }
+                }
+        }
+}
+
+// Get pointer to buffer data
+SharedBuffer.data = (self: SharedBuffer) i64 {
+    return self.mapping
+}
+
+// Get buffer size
+SharedBuffer.len = (self: SharedBuffer) usize {
+    return self.size
+}
+
+// Get file descriptor (for sharing with other processes)
+SharedBuffer.as_fd = (self: SharedBuffer) i32 {
+    return self.memfd.fd
+}
+
+// Write byte at offset
+SharedBuffer.write_byte = (self: SharedBuffer, offset: usize, val: u8) void {
+    offset < self.size ?
+        | true { compiler.store<u8>(self.mapping + offset, val) }
+        | false { }
+}
+
+// Read byte at offset
+SharedBuffer.read_byte = (self: SharedBuffer, offset: usize) u8 {
+    offset < self.size ?
+        | true { return compiler.load<u8>(self.mapping + offset) }
+        | false { return 0 }
+}
+
+// Write u32 at offset
+SharedBuffer.write_u32 = (self: SharedBuffer, offset: usize, val: u32) void {
+    offset + 4 <= self.size ?
+        | true { compiler.store<u32>(self.mapping + offset, val) }
+        | false { }
+}
+
+// Read u32 at offset
+SharedBuffer.read_u32 = (self: SharedBuffer, offset: usize) u32 {
+    offset + 4 <= self.size ?
+        | true { return compiler.load<u32>(self.mapping + offset) }
+        | false { return 0 }
+}
+
+// Write u64 at offset
+SharedBuffer.write_u64 = (self: SharedBuffer, offset: usize, val: u64) void {
+    offset + 8 <= self.size ?
+        | true { compiler.store<u64>(self.mapping + offset, val) }
+        | false { }
+}
+
+// Read u64 at offset
+SharedBuffer.read_u64 = (self: SharedBuffer, offset: usize) u64 {
+    offset + 8 <= self.size ?
+        | true { return compiler.load<u64>(self.mapping + offset) }
+        | false { return 0 }
+}
+
+// Copy bytes to buffer
+SharedBuffer.copy_from = (self: SharedBuffer, src: i64, offset: usize, len: usize) void {
+    offset + len <= self.size ?
+        | true { compiler.memcpy(self.mapping + offset, src, len) }
+        | false { }
+}
+
+// Copy bytes from buffer
+SharedBuffer.copy_to = (self: SharedBuffer, dst: i64, offset: usize, len: usize) void {
+    offset + len <= self.size ?
+        | true { compiler.memcpy(dst, self.mapping + offset, len) }
+        | false { }
+}
+
+// Zero the buffer
+SharedBuffer.zero = (self: SharedBuffer) void {
+    compiler.memset(self.mapping, 0, self.size)
+}
+
+// Seal for read-only (prevents future writes)
+SharedBuffer.seal_readonly = (self: SharedBuffer) Result<void, MemfdError> {
+    return self.memfd.seal_readonly()
+}
+
+// Close the shared buffer
+SharedBuffer.close = (self: SharedBuffer) Result<void, MemfdError> {
+    // Unmap first
+    unmap_result = memfd_unmap(self.mapping, self.size)
+
+    unmap_result ?
+        | Err(e) {
+            self.memfd.close()
+            return Result.Err(e)
+        }
+        | Ok(_) {
+            return self.memfd.close()
+        }
+}
+
+// ============================================================================
+// MemfdWriter - Stream-like writer to memfd
+// ============================================================================
+
+MemfdWriter: {
+    memfd: Memfd,
+    allocator: Allocator
+}
+
+// Create a writer
+MemfdWriter.new = (allocator: Allocator) Result<MemfdWriter, MemfdError> {
+    memfd_result = Memfd.new(String.from_static("writer"), allocator)
+
+    memfd_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(memfd) { return Result.Ok(MemfdWriter { memfd: memfd, allocator: allocator }) }
+}
+
+// Write bytes
+MemfdWriter.write = (self: MutPtr<MemfdWriter>, data: i64, len: usize) Result<usize, MemfdError> {
+    return self.val.memfd.mut_ref().write(data, len)
+}
+
+// Write string
+MemfdWriter.write_str = (self: MutPtr<MemfdWriter>, s: String) Result<usize, MemfdError> {
+    return self.write(s.data(), s.len())
+}
+
+// Write Vec<u8>
+MemfdWriter.write_bytes = (self: MutPtr<MemfdWriter>, bytes: Vec<u8>) Result<usize, MemfdError> {
+    return self.write(bytes.data(), bytes.len())
+}
+
+// Finish writing and get result as Vec<u8>
+MemfdWriter.finish = (self: MutPtr<MemfdWriter>) Result<Vec<u8>, MemfdError> {
+    // Get current position (= total written)
+    pos_result = self.val.memfd.seek(0, SEEK_CUR)
+
+    pos_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(pos) {
+            self.val.memfd.mut_ref().size = pos
+            return self.val.memfd.mut_ref().read_all(self.val.allocator)
+        }
+}
+
+// Get fd for the underlying memfd
+MemfdWriter.as_fd = (self: MemfdWriter) i32 {
+    return self.memfd.fd
+}
+
+// Close
+MemfdWriter.close = (self: MemfdWriter) Result<void, MemfdError> {
+    return self.memfd.close()
+}
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+// Create a memfd from bytes
+memfd_from_bytes = (bytes: Vec<u8>, name: String, allocator: Allocator) Result<Memfd, MemfdError> {
+    memfd_result = Memfd.new(name, allocator)
+
+    memfd_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(memfd) {
+            // Set size
+            set_result = memfd.mut_ref().set_size(bytes.len())
+
+            set_result ?
+                | Err(e) {
+                    memfd.close()
+                    return Result.Err(e)
+                }
+                | Ok(_) {
+                    // Write data
+                    write_result = memfd.mut_ref().write_bytes(bytes)
+
+                    write_result ?
+                        | Err(e) {
+                            memfd.close()
+                            return Result.Err(e)
+                        }
+                        | Ok(_) {
+                            // Seek back to start
+                            memfd.seek_start()
+                            return Result.Ok(memfd)
+                        }
+                }
+        }
+}
+
+// Create an executable memfd (for JIT)
+memfd_executable = (code: Vec<u8>, allocator: Allocator) Result<i64, MemfdError> {
+    memfd_result = Memfd.with_sealing(String.from_static("jit"), allocator)
+
+    memfd_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(memfd) {
+            // Set size and write code
+            set_result = memfd.mut_ref().set_size(code.len())
+
+            set_result ?
+                | Err(e) {
+                    memfd.close()
+                    return Result.Err(e)
+                }
+                | Ok(_) {
+                    write_result = memfd.mut_ref().write_bytes(code)
+
+                    write_result ?
+                        | Err(e) {
+                            memfd.close()
+                            return Result.Err(e)
+                        }
+                        | Ok(_) {
+                            // Seal to prevent modifications
+                            seal_result = memfd.seal_all()
+
+                            seal_result ?
+                                | Err(e) {
+                                    memfd.close()
+                                    return Result.Err(e)
+                                }
+                                | Ok(_) {
+                                    // Map as executable
+                                    map_result = memfd.map(PROT_RX, MAP_PRIVATE)
+
+                                    map_result ?
+                                        | Err(e) {
+                                            memfd.close()
+                                            return Result.Err(e)
+                                        }
+                                        | Ok(addr) {
+                                            // Note: caller must keep memfd open and unmap when done
+                                            return Result.Ok(addr)
+                                        }
+                                }
+                        }
+                }
+        }
+}
+

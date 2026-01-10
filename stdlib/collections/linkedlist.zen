@@ -1,0 +1,300 @@
+// Zen Standard Library: LinkedList<T>
+// Doubly linked list for O(1) insertions/deletions at both ends
+// Uses safe pointers with explicit allocator
+
+{ compiler } = @std
+{ Ptr, Option } = @std.core
+{ Allocator } = @std.memory.allocator
+
+// Node for doubly linked list
+Node<T>: {
+    value: T,
+    prev: i64,  // Raw pointer to previous node (0 = none)
+    next: i64   // Raw pointer to next node (0 = none)
+}
+
+// LinkedList<T> - doubly linked list with O(1) push/pop at both ends
+LinkedList<T>: {
+    head: i64,      // Raw pointer to first node (0 = empty)
+    tail: i64,      // Raw pointer to last node (0 = empty)
+    len: usize,
+    allocator: Allocator
+}
+
+// ============================================================================
+// Constructors
+// ============================================================================
+
+// Create new empty linked list
+LinkedList<T>.new = (allocator: Allocator) LinkedList<T> {
+    return LinkedList<T> {
+        head: 0,
+        tail: 0,
+        len: 0,
+        allocator: allocator
+    }
+}
+
+// ============================================================================
+// Properties
+// ============================================================================
+
+// Get list length
+LinkedList<T>.len = (self: LinkedList<T>) usize {
+    return self.len
+}
+
+// Check if empty
+LinkedList<T>.is_empty = (self: LinkedList<T>) bool {
+    return self.len == 0
+}
+
+// ============================================================================
+// Read Operations
+// ============================================================================
+
+// Get first element without removing
+LinkedList<T>.front = (self: LinkedList<T>) Option<T> {
+    self.head == 0 ?
+        | true { return Option.None }
+        | false {
+            value = compiler.load<T>(self.head)
+            return Option.Some(value)
+        }
+}
+
+// Get last element without removing
+LinkedList<T>.back = (self: LinkedList<T>) Option<T> {
+    self.tail == 0 ?
+        | true { return Option.None }
+        | false {
+            value = compiler.load<T>(self.tail)
+            return Option.Some(value)
+        }
+}
+
+// ============================================================================
+// Write Operations
+// ============================================================================
+
+// Helper: allocate a new node
+alloc_node<T> = (allocator: Allocator, value: T) i64 {
+    node_size = compiler.sizeof<Node<T>>()
+    node_ptr = allocator.allocate(node_size)
+
+    // Initialize node
+    node = Node<T> {
+        value: value,
+        prev: 0,
+        next: 0
+    }
+    compiler.store<Node<T>>(node_ptr, node)
+
+    return node_ptr
+}
+
+// Helper: free a node
+free_node<T> = (allocator: Allocator, node_ptr: i64) void {
+    node_size = compiler.sizeof<Node<T>>()
+    allocator.deallocate(node_ptr, node_size)
+}
+
+// Helper: get node's next pointer
+node_next<T> = (node_ptr: i64) i64 {
+    node = compiler.load<Node<T>>(node_ptr)
+    return node.next
+}
+
+// Helper: get node's prev pointer
+node_prev<T> = (node_ptr: i64) i64 {
+    node = compiler.load<Node<T>>(node_ptr)
+    return node.prev
+}
+
+// Helper: get node's value
+node_value<T> = (node_ptr: i64) T {
+    node = compiler.load<Node<T>>(node_ptr)
+    return node.value
+}
+
+// Helper: set node's next pointer
+set_node_next<T> = (node_ptr: i64, next: i64) void {
+    node = compiler.load<Node<T>>(node_ptr)
+    new_node = Node<T> {
+        value: node.value,
+        prev: node.prev,
+        next: next
+    }
+    compiler.store<Node<T>>(node_ptr, new_node)
+}
+
+// Helper: set node's prev pointer
+set_node_prev<T> = (node_ptr: i64, prev: i64) void {
+    node = compiler.load<Node<T>>(node_ptr)
+    new_node = Node<T> {
+        value: node.value,
+        prev: prev,
+        next: node.next
+    }
+    compiler.store<Node<T>>(node_ptr, new_node)
+}
+
+// Push element to front of list
+LinkedList<T>.push_front = (self: MutPtr<LinkedList<T>>, value: T) void {
+    new_node = alloc_node<T>(self.val.allocator, value)
+
+    self.val.head == 0 ?
+        | true {
+            // Empty list
+            self.val.head = new_node
+            self.val.tail = new_node
+        }
+        | false {
+            // Link new node to current head
+            set_node_next<T>(new_node, self.val.head)
+            set_node_prev<T>(self.val.head, new_node)
+            self.val.head = new_node
+        }
+
+    self.val.len = self.val.len + 1
+}
+
+// Push element to back of list
+LinkedList<T>.push_back = (self: MutPtr<LinkedList<T>>, value: T) void {
+    new_node = alloc_node<T>(self.val.allocator, value)
+
+    self.val.tail == 0 ?
+        | true {
+            // Empty list
+            self.val.head = new_node
+            self.val.tail = new_node
+        }
+        | false {
+            // Link new node to current tail
+            set_node_prev<T>(new_node, self.val.tail)
+            set_node_next<T>(self.val.tail, new_node)
+            self.val.tail = new_node
+        }
+
+    self.val.len = self.val.len + 1
+}
+
+// Pop element from front of list
+LinkedList<T>.pop_front = (self: MutPtr<LinkedList<T>>) Option<T> {
+    self.val.head == 0 ?
+        | true { return Option.None }
+        | false {
+            old_head = self.val.head
+            value = node_value<T>(old_head)
+            next = node_next<T>(old_head)
+
+            self.val.head = next
+            next == 0 ?
+                | true { self.val.tail = 0 }
+                | false { set_node_prev<T>(next, 0) }
+
+            free_node<T>(self.val.allocator, old_head)
+            self.val.len = self.val.len - 1
+
+            return Option.Some(value)
+        }
+}
+
+// Pop element from back of list
+LinkedList<T>.pop_back = (self: MutPtr<LinkedList<T>>) Option<T> {
+    self.val.tail == 0 ?
+        | true { return Option.None }
+        | false {
+            old_tail = self.val.tail
+            value = node_value<T>(old_tail)
+            prev = node_prev<T>(old_tail)
+
+            self.val.tail = prev
+            prev == 0 ?
+                | true { self.val.head = 0 }
+                | false { set_node_next<T>(prev, 0) }
+
+            free_node<T>(self.val.allocator, old_tail)
+            self.val.len = self.val.len - 1
+
+            return Option.Some(value)
+        }
+}
+
+// Clear list (removes all elements)
+LinkedList<T>.clear = (self: MutPtr<LinkedList<T>>) void {
+    loop(() {
+        self.val.head == 0 ?
+            | true { break }
+            | false { _ = self.pop_front() }
+    })
+}
+
+// ============================================================================
+// Memory Management
+// ============================================================================
+
+// Free all nodes in list
+LinkedList<T>.free = (self: MutPtr<LinkedList<T>>) void {
+    self.clear()
+}
+
+// ============================================================================
+// Iterator Support
+// ============================================================================
+
+// LinkedListIterator - Forward iteration through list
+LinkedListIterator<T>: {
+    current: i64  // Current node pointer
+}
+
+// Create forward iterator
+LinkedList<T>.iter = (self: LinkedList<T>) LinkedListIterator<T> {
+    return LinkedListIterator<T> {
+        current: self.head
+    }
+}
+
+// Get next element from iterator
+LinkedListIterator<T>.next = (self: MutPtr<LinkedListIterator<T>>) Option<T> {
+    self.val.current == 0 ?
+        | true { return Option.None }
+        | false {
+            value = node_value<T>(self.val.current)
+            self.val.current = node_next<T>(self.val.current)
+            return Option.Some(value)
+        }
+}
+
+// Check if iterator has more elements
+LinkedListIterator<T>.has_next = (self: LinkedListIterator<T>) bool {
+    return self.current != 0
+}
+
+// Reverse iterator - traverses from tail to head
+LinkedListReverseIterator<T>: {
+    current: i64
+}
+
+// Create reverse iterator
+LinkedList<T>.iter_reverse = (self: LinkedList<T>) LinkedListReverseIterator<T> {
+    return LinkedListReverseIterator<T> {
+        current: self.tail
+    }
+}
+
+// Get next element from reverse iterator
+LinkedListReverseIterator<T>.next = (self: MutPtr<LinkedListReverseIterator<T>>) Option<T> {
+    self.val.current == 0 ?
+        | true { return Option.None }
+        | false {
+            value = node_value<T>(self.val.current)
+            self.val.current = node_prev<T>(self.val.current)
+            return Option.Some(value)
+        }
+}
+
+// Check if reverse iterator has more elements
+LinkedListReverseIterator<T>.has_next = (self: LinkedListReverseIterator<T>) bool {
+    return self.current != 0
+}

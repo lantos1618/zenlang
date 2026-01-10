@@ -733,6 +733,7 @@ fn is_string_struct_type<'ctx>(
     compiler: &LLVMCompiler<'ctx>,
     struct_type: inkwell::types::StructType<'ctx>,
 ) -> bool {
+    // Check if this matches the String struct type from TypeContext.structs
     if let Some(info) = compiler.struct_types.get("String") {
         if info.llvm_type == struct_type {
             return true;

@@ -1,0 +1,579 @@
+// Zen Standard Library: Time (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Time Syscall Numbers
+// ============================================================================
+
+SYS_NANOSLEEP = 35
+SYS_GETITIMER = 36
+SYS_ALARM = 37
+SYS_SETITIMER = 38
+SYS_CLOCK_GETTIME = 228
+SYS_CLOCK_GETRES = 229
+SYS_CLOCK_NANOSLEEP = 230
+SYS_GETTIMEOFDAY = 96
+SYS_SETTIMEOFDAY = 164
+SYS_TIME = 201
+
+// ============================================================================
+// Clock IDs (Linux)
+// ============================================================================
+
+CLOCK_REALTIME = 0           // System-wide real-time clock
+CLOCK_MONOTONIC = 1          // Monotonic clock (not affected by NTP)
+CLOCK_PROCESS_CPUTIME_ID = 2 // Process CPU time
+CLOCK_THREAD_CPUTIME_ID = 3  // Thread CPU time
+CLOCK_MONOTONIC_RAW = 4      // Raw hardware clock
+CLOCK_REALTIME_COARSE = 5    // Fast but less precise realtime
+CLOCK_MONOTONIC_COARSE = 6   // Fast but less precise monotonic
+CLOCK_BOOTTIME = 7           // Monotonic including suspend time
+
+// ============================================================================
+// Time Structures
+// ============================================================================
+
+// Timespec - seconds and nanoseconds
+Timespec: {
+    tv_sec: i64,   // Seconds
+    tv_nsec: i64   // Nanoseconds (0-999999999)
+}
+
+// Create timespec from seconds
+Timespec.from_secs = (secs: i64) Timespec {
+    return Timespec { tv_sec: secs, tv_nsec: 0 }
+}
+
+// Create timespec from milliseconds
+Timespec.from_millis = (millis: i64) Timespec {
+    secs = millis / 1000
+    nsecs = (millis % 1000) * 1000000
+    return Timespec { tv_sec: secs, tv_nsec: nsecs }
+}
+
+// Create timespec from microseconds
+Timespec.from_micros = (micros: i64) Timespec {
+    secs = micros / 1000000
+    nsecs = (micros % 1000000) * 1000
+    return Timespec { tv_sec: secs, tv_nsec: nsecs }
+}
+
+// Create timespec from nanoseconds
+Timespec.from_nanos = (nanos: i64) Timespec {
+    secs = nanos / 1000000000
+    nsecs = nanos % 1000000000
+    return Timespec { tv_sec: secs, tv_nsec: nsecs }
+}
+
+// Convert to total nanoseconds
+Timespec.as_nanos = (self: Timespec) i64 {
+    return self.tv_sec * 1000000000 + self.tv_nsec
+}
+
+// Convert to total microseconds
+Timespec.as_micros = (self: Timespec) i64 {
+    return self.tv_sec * 1000000 + self.tv_nsec / 1000
+}
+
+// Convert to total milliseconds
+Timespec.as_millis = (self: Timespec) i64 {
+    return self.tv_sec * 1000 + self.tv_nsec / 1000000
+}
+
+// Convert to total seconds (truncated)
+Timespec.as_secs = (self: Timespec) i64 {
+    return self.tv_sec
+}
+
+// Convert to floating-point seconds
+Timespec.as_secs_f64 = (self: Timespec) f64 {
+    secs_f = self.tv_sec
+    nsecs_f = self.tv_nsec
+    return secs_f + nsecs_f / 1000000000.0
+}
+
+// Add two timespecs
+Timespec.add = (self: Timespec, other: Timespec) Timespec {
+    nsec = self.tv_nsec + other.tv_nsec
+    sec = self.tv_sec + other.tv_sec
+
+    // Handle nanosecond overflow
+    nsec >= 1000000000 ?
+        | true {
+            sec = sec + 1
+            nsec = nsec - 1000000000
+        }
+        | false { }
+
+    return Timespec { tv_sec: sec, tv_nsec: nsec }
+}
+
+// Subtract two timespecs (self - other)
+Timespec.sub = (self: Timespec, other: Timespec) Timespec {
+    nsec = self.tv_nsec - other.tv_nsec
+    sec = self.tv_sec - other.tv_sec
+
+    // Handle nanosecond underflow
+    nsec < 0 ?
+        | true {
+            sec = sec - 1
+            nsec = nsec + 1000000000
+        }
+        | false { }
+
+    return Timespec { tv_sec: sec, tv_nsec: nsec }
+}
+
+// Compare timespecs: returns -1, 0, or 1
+Timespec.cmp = (self: Timespec, other: Timespec) i32 {
+    self.tv_sec < other.tv_sec ?
+        | true { return -1 }
+        | false { }
+
+    self.tv_sec > other.tv_sec ?
+        | true { return 1 }
+        | false { }
+
+    self.tv_nsec < other.tv_nsec ?
+        | true { return -1 }
+        | false { }
+
+    self.tv_nsec > other.tv_nsec ?
+        | true { return 1 }
+        | false { }
+
+    return 0
+}
+
+// Check if zero
+Timespec.is_zero = (self: Timespec) bool {
+    return self.tv_sec == 0 && self.tv_nsec == 0
+}
+
+// Timeval - seconds and microseconds (older format)
+Timeval: {
+    tv_sec: i64,
+    tv_usec: i64
+}
+
+// Convert timeval to timespec
+Timeval.to_timespec = (self: Timeval) Timespec {
+    return Timespec {
+        tv_sec: self.tv_sec,
+        tv_nsec: self.tv_usec * 1000
+    }
+}
+
+// ============================================================================
+// Time Error Type
+// ============================================================================
+
+TimeError: {
+    code: i32
+}
+
+time_errno_to_error = (errno: i64) TimeError {
+    code = 0 - errno
+    return TimeError { code: code }
+}
+
+// ============================================================================
+// Low-Level Time Syscalls
+// ============================================================================
+
+// Get time from specified clock
+sys_clock_gettime = (clock_id: i32, tp_ptr: i64) i64 {
+    return compiler.syscall2(SYS_CLOCK_GETTIME, clock_id, tp_ptr)
+}
+
+// Get clock resolution
+sys_clock_getres = (clock_id: i32, res_ptr: i64) i64 {
+    return compiler.syscall2(SYS_CLOCK_GETRES, clock_id, res_ptr)
+}
+
+// Sleep for specified duration
+sys_nanosleep = (req_ptr: i64, rem_ptr: i64) i64 {
+    return compiler.syscall2(SYS_NANOSLEEP, req_ptr, rem_ptr)
+}
+
+// Sleep with clock specification
+sys_clock_nanosleep = (clock_id: i32, flags: i32, req_ptr: i64, rem_ptr: i64) i64 {
+    return compiler.syscall4(SYS_CLOCK_NANOSLEEP, clock_id, flags, req_ptr, rem_ptr)
+}
+
+// Get time of day (older API)
+sys_gettimeofday = (tv_ptr: i64, tz_ptr: i64) i64 {
+    return compiler.syscall2(SYS_GETTIMEOFDAY, tv_ptr, tz_ptr)
+}
+
+// ============================================================================
+// High-Level Time Functions
+// ============================================================================
+
+// Get current monotonic time (not affected by system clock changes)
+monotonic_now = (allocator: Allocator) Result<Timespec, TimeError> {
+    ts_ptr = allocator.allocate(16)
+
+    result = sys_clock_gettime(CLOCK_MONOTONIC, ts_ptr)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(ts_ptr, 16)
+            return Result.Err(time_errno_to_error(result))
+        }
+        | false {
+            tv_sec = compiler.load<i64>(ts_ptr)
+            tv_nsec = compiler.load<i64>(compiler.gep(ts_ptr, 8))
+            allocator.deallocate(ts_ptr, 16)
+            return Result.Ok(Timespec { tv_sec: tv_sec, tv_nsec: tv_nsec })
+        }
+}
+
+// Get current real (wall clock) time
+realtime_now = (allocator: Allocator) Result<Timespec, TimeError> {
+    ts_ptr = allocator.allocate(16)
+
+    result = sys_clock_gettime(CLOCK_REALTIME, ts_ptr)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(ts_ptr, 16)
+            return Result.Err(time_errno_to_error(result))
+        }
+        | false {
+            tv_sec = compiler.load<i64>(ts_ptr)
+            tv_nsec = compiler.load<i64>(compiler.gep(ts_ptr, 8))
+            allocator.deallocate(ts_ptr, 16)
+            return Result.Ok(Timespec { tv_sec: tv_sec, tv_nsec: tv_nsec })
+        }
+}
+
+// Get current time from specified clock
+clock_gettime = (clock_id: i32, allocator: Allocator) Result<Timespec, TimeError> {
+    ts_ptr = allocator.allocate(16)
+
+    result = sys_clock_gettime(clock_id, ts_ptr)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(ts_ptr, 16)
+            return Result.Err(time_errno_to_error(result))
+        }
+        | false {
+            tv_sec = compiler.load<i64>(ts_ptr)
+            tv_nsec = compiler.load<i64>(compiler.gep(ts_ptr, 8))
+            allocator.deallocate(ts_ptr, 16)
+            return Result.Ok(Timespec { tv_sec: tv_sec, tv_nsec: tv_nsec })
+        }
+}
+
+// Get clock resolution
+clock_getres = (clock_id: i32, allocator: Allocator) Result<Timespec, TimeError> {
+    res_ptr = allocator.allocate(16)
+
+    result = sys_clock_getres(clock_id, res_ptr)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(res_ptr, 16)
+            return Result.Err(time_errno_to_error(result))
+        }
+        | false {
+            tv_sec = compiler.load<i64>(res_ptr)
+            tv_nsec = compiler.load<i64>(compiler.gep(res_ptr, 8))
+            allocator.deallocate(res_ptr, 16)
+            return Result.Ok(Timespec { tv_sec: tv_sec, tv_nsec: tv_nsec })
+        }
+}
+
+// ============================================================================
+// Sleep Functions
+// ============================================================================
+
+// Sleep for specified timespec duration
+sleep = (duration: Timespec, allocator: Allocator) Result<void, TimeError> {
+    req_ptr = allocator.allocate(16)
+    compiler.store<i64>(req_ptr, duration.tv_sec)
+    compiler.store<i64>(compiler.gep(req_ptr, 8), duration.tv_nsec)
+
+    result = sys_nanosleep(req_ptr, 0)
+
+    allocator.deallocate(req_ptr, 16)
+
+    result < 0 ?
+        | true { return Result.Err(time_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Sleep for specified number of seconds
+sleep_secs = (secs: i64, allocator: Allocator) Result<void, TimeError> {
+    return sleep(Timespec.from_secs(secs), allocator)
+}
+
+// Sleep for specified number of milliseconds
+sleep_millis = (millis: i64, allocator: Allocator) Result<void, TimeError> {
+    return sleep(Timespec.from_millis(millis), allocator)
+}
+
+// Sleep for specified number of microseconds
+sleep_micros = (micros: i64, allocator: Allocator) Result<void, TimeError> {
+    return sleep(Timespec.from_micros(micros), allocator)
+}
+
+// Sleep for specified number of nanoseconds
+sleep_nanos = (nanos: i64, allocator: Allocator) Result<void, TimeError> {
+    return sleep(Timespec.from_nanos(nanos), allocator)
+}
+
+// ============================================================================
+// Instant - Monotonic timestamp for measuring durations
+// ============================================================================
+
+Instant: {
+    ts: Timespec
+}
+
+// Get current instant (monotonic)
+Instant.now = (allocator: Allocator) Result<Instant, TimeError> {
+    ts_result = monotonic_now(allocator)
+
+    ts_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(ts) { return Result.Ok(Instant { ts: ts }) }
+}
+
+// Get elapsed time since this instant
+Instant.elapsed = (self: Instant, allocator: Allocator) Result<Timespec, TimeError> {
+    now_result = monotonic_now(allocator)
+
+    now_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(now) { return Result.Ok(now.sub(self.ts)) }
+}
+
+// Get duration from this instant to another
+Instant.duration_since = (self: Instant, earlier: Instant) Timespec {
+    return self.ts.sub(earlier.ts)
+}
+
+// Check if duration has elapsed since this instant
+Instant.has_elapsed = (self: Instant, duration: Timespec, allocator: Allocator) Result<bool, TimeError> {
+    elapsed_result = self.elapsed(allocator)
+
+    elapsed_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(elapsed) {
+            return Result.Ok(elapsed.cmp(duration) >= 0)
+        }
+}
+
+// ============================================================================
+// Duration - Time span for calculations
+// ============================================================================
+
+Duration: {
+    ts: Timespec
+}
+
+// Create duration from seconds
+Duration.from_secs = (secs: i64) Duration {
+    return Duration { ts: Timespec.from_secs(secs) }
+}
+
+// Create duration from milliseconds
+Duration.from_millis = (millis: i64) Duration {
+    return Duration { ts: Timespec.from_millis(millis) }
+}
+
+// Create duration from microseconds
+Duration.from_micros = (micros: i64) Duration {
+    return Duration { ts: Timespec.from_micros(micros) }
+}
+
+// Create duration from nanoseconds
+Duration.from_nanos = (nanos: i64) Duration {
+    return Duration { ts: Timespec.from_nanos(nanos) }
+}
+
+// Get as nanoseconds
+Duration.as_nanos = (self: Duration) i64 {
+    return self.ts.as_nanos()
+}
+
+// Get as microseconds
+Duration.as_micros = (self: Duration) i64 {
+    return self.ts.as_micros()
+}
+
+// Get as milliseconds
+Duration.as_millis = (self: Duration) i64 {
+    return self.ts.as_millis()
+}
+
+// Get as seconds
+Duration.as_secs = (self: Duration) i64 {
+    return self.ts.as_secs()
+}
+
+// Get as floating-point seconds
+Duration.as_secs_f64 = (self: Duration) f64 {
+    return self.ts.as_secs_f64()
+}
+
+// Add durations
+Duration.add = (self: Duration, other: Duration) Duration {
+    return Duration { ts: self.ts.add(other.ts) }
+}
+
+// Subtract durations
+Duration.sub = (self: Duration, other: Duration) Duration {
+    return Duration { ts: self.ts.sub(other.ts) }
+}
+
+// Multiply duration by scalar
+Duration.mul = (self: Duration, factor: i64) Duration {
+    total_nanos = self.ts.as_nanos() * factor
+    return Duration { ts: Timespec.from_nanos(total_nanos) }
+}
+
+// Divide duration by scalar
+Duration.div = (self: Duration, divisor: i64) Duration {
+    total_nanos = self.ts.as_nanos() / divisor
+    return Duration { ts: Timespec.from_nanos(total_nanos) }
+}
+
+// Check if zero
+Duration.is_zero = (self: Duration) bool {
+    return self.ts.is_zero()
+}
+
+// Sleep for this duration
+Duration.sleep = (self: Duration, allocator: Allocator) Result<void, TimeError> {
+    return sleep(self.ts, allocator)
+}
+
+// ============================================================================
+// Stopwatch - Measure elapsed time
+// ============================================================================
+
+Stopwatch: {
+    start: Instant,
+    running: bool,
+    accumulated: Timespec
+}
+
+// Create and start a new stopwatch
+Stopwatch.start = (allocator: Allocator) Result<Stopwatch, TimeError> {
+    now_result = Instant.now(allocator)
+
+    now_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(now) {
+            return Result.Ok(Stopwatch {
+                start: now,
+                running: true,
+                accumulated: Timespec { tv_sec: 0, tv_nsec: 0 }
+            })
+        }
+}
+
+// Create a stopped stopwatch
+Stopwatch.new = () Stopwatch {
+    return Stopwatch {
+        start: Instant { ts: Timespec { tv_sec: 0, tv_nsec: 0 } },
+        running: false,
+        accumulated: Timespec { tv_sec: 0, tv_nsec: 0 }
+    }
+}
+
+// Start or resume the stopwatch
+Stopwatch.resume = (self: MutPtr<Stopwatch>, allocator: Allocator) Result<void, TimeError> {
+    self.val.running ?
+        | true { return Result.Ok(()) }  // Already running
+        | false {
+            now_result = Instant.now(allocator)
+            now_result ?
+                | Err(e) { return Result.Err(e) }
+                | Ok(now) {
+                    self.val.start = now
+                    self.val.running = true
+                    return Result.Ok(())
+                }
+        }
+}
+
+// Stop the stopwatch
+Stopwatch.stop = (self: MutPtr<Stopwatch>, allocator: Allocator) Result<void, TimeError> {
+    self.val.running ?
+        | true {
+            elapsed_result = self.val.start.elapsed(allocator)
+            elapsed_result ?
+                | Err(e) { return Result.Err(e) }
+                | Ok(elapsed) {
+                    self.val.accumulated = self.val.accumulated.add(elapsed)
+                    self.val.running = false
+                    return Result.Ok(())
+                }
+        }
+        | false { return Result.Ok(()) }  // Already stopped
+}
+
+// Reset the stopwatch
+Stopwatch.reset = (self: MutPtr<Stopwatch>) void {
+    self.val.running = false
+    self.val.accumulated = Timespec { tv_sec: 0, tv_nsec: 0 }
+}
+
+// Get elapsed time (including accumulated if stopped)
+Stopwatch.elapsed = (self: Stopwatch, allocator: Allocator) Result<Timespec, TimeError> {
+    self.running ?
+        | true {
+            current_result = self.start.elapsed(allocator)
+            current_result ?
+                | Err(e) { return Result.Err(e) }
+                | Ok(current) {
+                    return Result.Ok(self.accumulated.add(current))
+                }
+        }
+        | false {
+            return Result.Ok(self.accumulated)
+        }
+}
+
+// Get elapsed milliseconds
+Stopwatch.elapsed_millis = (self: Stopwatch, allocator: Allocator) Result<i64, TimeError> {
+    elapsed_result = self.elapsed(allocator)
+
+    elapsed_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(elapsed) { return Result.Ok(elapsed.as_millis()) }
+}
+
+// ============================================================================
+// Unix Timestamp
+// ============================================================================
+
+// Get current Unix timestamp (seconds since epoch)
+unix_timestamp = (allocator: Allocator) Result<i64, TimeError> {
+    ts_result = realtime_now(allocator)
+
+    ts_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(ts) { return Result.Ok(ts.tv_sec) }
+}
+
+// Get current Unix timestamp in milliseconds
+unix_timestamp_millis = (allocator: Allocator) Result<i64, TimeError> {
+    ts_result = realtime_now(allocator)
+
+    ts_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(ts) { return Result.Ok(ts.as_millis()) }
+}
+

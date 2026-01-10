@@ -1,0 +1,569 @@
+// Zen Standard Library: System Information (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Provides uname, sysinfo, and related system queries
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ String } = @std.string
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 System Info Syscall Numbers
+// ============================================================================
+
+SYS_UNAME = 63
+SYS_SYSINFO = 99
+SYS_GETPID = 39
+SYS_GETPPID = 110
+SYS_GETUID = 102
+SYS_GETEUID = 107
+SYS_GETGID = 104
+SYS_GETEGID = 108
+SYS_GETTID = 186
+SYS_GETPGID = 121
+SYS_GETSID = 124
+SYS_SETHOSTNAME = 170
+SYS_SETDOMAINNAME = 171
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+SysInfoError: {
+    code: i32
+}
+
+sysinfo_errno_to_error = (errno: i64) SysInfoError {
+    code = 0 - errno
+    return SysInfoError { code: code }
+}
+
+// ============================================================================
+// Utsname Structure
+// ============================================================================
+
+// struct utsname {
+//     char sysname[65];
+//     char nodename[65];
+//     char release[65];
+//     char version[65];
+//     char machine[65];
+//     char domainname[65];  // GNU extension
+// }
+UTSNAME_FIELD_SIZE = 65
+UTSNAME_SIZE = 390  // 6 * 65 = 390
+
+Utsname: {
+    sysname: String,    // OS name (e.g., "Linux")
+    nodename: String,   // Network node name (hostname)
+    release: String,    // OS release (e.g., "5.15.0")
+    version: String,    // OS version
+    machine: String,    // Hardware identifier (e.g., "x86_64")
+    domainname: String  // NIS domain name
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+sys_uname = (buf: i64) i64 {
+    return compiler.syscall1(SYS_UNAME, buf)
+}
+
+sys_sysinfo = (info: i64) i64 {
+    return compiler.syscall1(SYS_SYSINFO, info)
+}
+
+// ============================================================================
+// Uname - System Name Information
+// ============================================================================
+
+// Helper to extract string from fixed buffer
+extract_string = (buf: i64, offset: usize, allocator: Allocator) String {
+    ptr = buf + offset
+
+    // Find null terminator
+    len = 0
+    loop {
+        len >= UTSNAME_FIELD_SIZE ?
+            | true { break }
+            | false {
+                c = compiler.load<u8>(ptr + len)
+                c == 0 ?
+                    | true { break }
+                    | false { len = len + 1 }
+            }
+    }
+
+    // Create string
+    data = allocator.allocate(len)
+    compiler.memcpy(data, ptr, len)
+    return String.from_ptr(data, len, allocator)
+}
+
+// Get system name information
+uname = (allocator: Allocator) Result<Utsname, SysInfoError> {
+    buf = allocator.allocate(UTSNAME_SIZE)
+
+    result = sys_uname(buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, UTSNAME_SIZE)
+            return Result.Err(sysinfo_errno_to_error(result))
+        }
+        | false {
+            sysname = extract_string(buf, 0, allocator)
+            nodename = extract_string(buf, 65, allocator)
+            release = extract_string(buf, 130, allocator)
+            version = extract_string(buf, 195, allocator)
+            machine = extract_string(buf, 260, allocator)
+            domainname = extract_string(buf, 325, allocator)
+
+            allocator.deallocate(buf, UTSNAME_SIZE)
+
+            return Result.Ok(Utsname {
+                sysname: sysname,
+                nodename: nodename,
+                release: release,
+                version: version,
+                machine: machine,
+                domainname: domainname
+            })
+        }
+}
+
+// Get just the kernel name
+kernel_name = (allocator: Allocator) Result<String, SysInfoError> {
+    buf = allocator.allocate(UTSNAME_SIZE)
+    result = sys_uname(buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, UTSNAME_SIZE)
+            return Result.Err(sysinfo_errno_to_error(result))
+        }
+        | false {
+            name = extract_string(buf, 0, allocator)
+            allocator.deallocate(buf, UTSNAME_SIZE)
+            return Result.Ok(name)
+        }
+}
+
+// Get hostname
+hostname = (allocator: Allocator) Result<String, SysInfoError> {
+    buf = allocator.allocate(UTSNAME_SIZE)
+    result = sys_uname(buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, UTSNAME_SIZE)
+            return Result.Err(sysinfo_errno_to_error(result))
+        }
+        | false {
+            name = extract_string(buf, 65, allocator)
+            allocator.deallocate(buf, UTSNAME_SIZE)
+            return Result.Ok(name)
+        }
+}
+
+// Get kernel release version
+kernel_release = (allocator: Allocator) Result<String, SysInfoError> {
+    buf = allocator.allocate(UTSNAME_SIZE)
+    result = sys_uname(buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, UTSNAME_SIZE)
+            return Result.Err(sysinfo_errno_to_error(result))
+        }
+        | false {
+            rel = extract_string(buf, 130, allocator)
+            allocator.deallocate(buf, UTSNAME_SIZE)
+            return Result.Ok(rel)
+        }
+}
+
+// Get machine architecture
+machine_arch = (allocator: Allocator) Result<String, SysInfoError> {
+    buf = allocator.allocate(UTSNAME_SIZE)
+    result = sys_uname(buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, UTSNAME_SIZE)
+            return Result.Err(sysinfo_errno_to_error(result))
+        }
+        | false {
+            arch = extract_string(buf, 260, allocator)
+            allocator.deallocate(buf, UTSNAME_SIZE)
+            return Result.Ok(arch)
+        }
+}
+
+// ============================================================================
+// Sysinfo - System Statistics
+// ============================================================================
+
+// struct sysinfo {
+//     long uptime;           // Seconds since boot
+//     unsigned long loads[3]; // 1, 5, 15 min load averages
+//     unsigned long totalram;
+//     unsigned long freeram;
+//     unsigned long sharedram;
+//     unsigned long bufferram;
+//     unsigned long totalswap;
+//     unsigned long freeswap;
+//     unsigned short procs;
+//     unsigned long totalhigh;
+//     unsigned long freehigh;
+//     unsigned int mem_unit;
+// }
+
+SYSINFO_SIZE = 112  // Size of struct sysinfo on x86-64
+
+Sysinfo: {
+    uptime: i64,
+    load_1min: u64,
+    load_5min: u64,
+    load_15min: u64,
+    total_ram: u64,
+    free_ram: u64,
+    shared_ram: u64,
+    buffer_ram: u64,
+    total_swap: u64,
+    free_swap: u64,
+    procs: u16,
+    mem_unit: u32
+}
+
+// Get system information
+sysinfo = (allocator: Allocator) Result<Sysinfo, SysInfoError> {
+    buf = allocator.allocate(SYSINFO_SIZE)
+
+    result = sys_sysinfo(buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, SYSINFO_SIZE)
+            return Result.Err(sysinfo_errno_to_error(result))
+        }
+        | false {
+            uptime = compiler.load<i64>(buf)
+            load_1 = compiler.load<u64>(buf + 8)
+            load_5 = compiler.load<u64>(buf + 16)
+            load_15 = compiler.load<u64>(buf + 24)
+            totalram = compiler.load<u64>(buf + 32)
+            freeram = compiler.load<u64>(buf + 40)
+            sharedram = compiler.load<u64>(buf + 48)
+            bufferram = compiler.load<u64>(buf + 56)
+            totalswap = compiler.load<u64>(buf + 64)
+            freeswap = compiler.load<u64>(buf + 72)
+            procs = compiler.load<u16>(buf + 80)
+            mem_unit = compiler.load<u32>(buf + 96)
+
+            allocator.deallocate(buf, SYSINFO_SIZE)
+
+            return Result.Ok(Sysinfo {
+                uptime: uptime,
+                load_1min: load_1,
+                load_5min: load_5,
+                load_15min: load_15,
+                total_ram: totalram,
+                free_ram: freeram,
+                shared_ram: sharedram,
+                buffer_ram: bufferram,
+                total_swap: totalswap,
+                free_swap: freeswap,
+                procs: procs,
+                mem_unit: mem_unit
+            })
+        }
+}
+
+// Get uptime in seconds
+uptime = (allocator: Allocator) Result<i64, SysInfoError> {
+    info_result = sysinfo(allocator)
+
+    info_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(info) { return Result.Ok(info.uptime) }
+}
+
+// Get total RAM in bytes
+total_memory = (allocator: Allocator) Result<u64, SysInfoError> {
+    info_result = sysinfo(allocator)
+
+    info_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(info) { return Result.Ok(info.total_ram * info.mem_unit) }
+}
+
+// Get free RAM in bytes
+free_memory = (allocator: Allocator) Result<u64, SysInfoError> {
+    info_result = sysinfo(allocator)
+
+    info_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(info) { return Result.Ok(info.free_ram * info.mem_unit) }
+}
+
+// Get available RAM in bytes (approximation)
+available_memory = (allocator: Allocator) Result<u64, SysInfoError> {
+    info_result = sysinfo(allocator)
+
+    info_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(info) {
+            // free + buffers is a rough approximation of available
+            avail = (info.free_ram + info.buffer_ram) * info.mem_unit
+            return Result.Ok(avail)
+        }
+}
+
+// Get number of running processes
+process_count = (allocator: Allocator) Result<u16, SysInfoError> {
+    info_result = sysinfo(allocator)
+
+    info_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(info) { return Result.Ok(info.procs) }
+}
+
+// Get load average (1 minute)
+// Returned as fixed-point * 65536
+load_average = (allocator: Allocator) Result<f64, SysInfoError> {
+    info_result = sysinfo(allocator)
+
+    info_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(info) {
+            load = info.load_1min
+            return Result.Ok(load / 65536.0)
+        }
+}
+
+// ============================================================================
+// Process IDs
+// ============================================================================
+
+// Get current process ID
+getpid = () i32 {
+    return compiler.syscall0(SYS_GETPID)
+}
+
+// Get parent process ID
+getppid = () i32 {
+    return compiler.syscall0(SYS_GETPPID)
+}
+
+// Get current thread ID
+gettid = () i32 {
+    return compiler.syscall0(SYS_GETTID)
+}
+
+// Get process group ID
+getpgid = (pid: i32) i32 {
+    return compiler.syscall1(SYS_GETPGID, pid)
+}
+
+// Get session ID
+getsid = (pid: i32) i32 {
+    return compiler.syscall1(SYS_GETSID, pid)
+}
+
+// ============================================================================
+// User/Group IDs
+// ============================================================================
+
+// Get real user ID
+getuid = () u32 {
+    return compiler.syscall0(SYS_GETUID)
+}
+
+// Get effective user ID
+geteuid = () u32 {
+    return compiler.syscall0(SYS_GETEUID)
+}
+
+// Get real group ID
+getgid = () u32 {
+    return compiler.syscall0(SYS_GETGID)
+}
+
+// Get effective group ID
+getegid = () u32 {
+    return compiler.syscall0(SYS_GETEGID)
+}
+
+// Check if running as root
+is_root = () bool {
+    return geteuid() == 0
+}
+
+// ============================================================================
+// CPU Information (from /proc/cpuinfo)
+// ============================================================================
+
+SYS_OPEN = 2
+SYS_READ = 0
+SYS_CLOSE = 3
+
+O_RDONLY = 0
+
+// Get number of CPUs (online)
+cpu_count = (allocator: Allocator) Result<usize, SysInfoError> {
+    // Read /proc/cpuinfo and count "processor" lines
+    path = "/proc/cpuinfo"
+    path_ptr = allocator.allocate(15)
+    compiler.memcpy(path_ptr, path, 14)
+    compiler.store<u8>(path_ptr + 14, 0)
+
+    fd = compiler.syscall2(SYS_OPEN, path_ptr, O_RDONLY)
+    allocator.deallocate(path_ptr, 15)
+
+    fd < 0 ?
+        | true { return Result.Err(sysinfo_errno_to_error(fd)) }
+        | false { }
+
+    buf_size = 65536
+    buf = allocator.allocate(buf_size)
+    total_read = 0
+
+    loop {
+        result = compiler.syscall3(SYS_READ, fd, buf + total_read, buf_size - total_read)
+        result <= 0 ?
+            | true { break }
+            | false { total_read = total_read + result }
+
+        total_read >= buf_size ?
+            | true { break }
+            | false { }
+    }
+
+    compiler.syscall1(SYS_CLOSE, fd)
+
+    // Count "processor" occurrences
+    count = 0
+    i = 0
+    loop {
+        i + 9 >= total_read ?
+            | true { break }
+            | false {
+                // Check for "processor"
+                c0 = compiler.load<u8>(buf + i)
+                c0 == 112 ?  // 'p'
+                    | true {
+                        c1 = compiler.load<u8>(buf + i + 1)
+                        c2 = compiler.load<u8>(buf + i + 2)
+                        c3 = compiler.load<u8>(buf + i + 3)
+                        c4 = compiler.load<u8>(buf + i + 4)
+                        c5 = compiler.load<u8>(buf + i + 5)
+                        c6 = compiler.load<u8>(buf + i + 6)
+                        c7 = compiler.load<u8>(buf + i + 7)
+                        c8 = compiler.load<u8>(buf + i + 8)
+
+                        // "processor"
+                        c1 == 114 and c2 == 111 and c3 == 99 and c4 == 101 and c5 == 115 and c6 == 115 and c7 == 111 and c8 == 114 ?
+                            | true { count = count + 1 }
+                            | false { }
+                    }
+                    | false { }
+                i = i + 1
+            }
+    }
+
+    allocator.deallocate(buf, buf_size)
+
+    count == 0 ?
+        | true { return Result.Ok(1) }  // At least 1 CPU
+        | false { return Result.Ok(count) }
+}
+
+// ============================================================================
+// SystemInfo - Combined System Information
+// ============================================================================
+
+SystemInfo: {
+    os_name: String,
+    hostname: String,
+    kernel_release: String,
+    kernel_version: String,
+    machine: String,
+    uptime_secs: i64,
+    total_ram: u64,
+    free_ram: u64,
+    cpu_count: usize,
+    pid: i32,
+    uid: u32,
+    is_root: bool
+}
+
+// Get comprehensive system information
+system_info = (allocator: Allocator) Result<SystemInfo, SysInfoError> {
+    // Get uname
+    uname_result = uname(allocator)
+    uname_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    uname_data = uname_result ?
+        | Ok(u) { u }
+        | Err(_) { return Result.Err(SysInfoError { code: 1 }) }
+
+    // Get sysinfo
+    sysinfo_result = sysinfo(allocator)
+    sysinfo_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sys_data = sysinfo_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(SysInfoError { code: 1 }) }
+
+    // Get CPU count
+    cpu_result = cpu_count(allocator)
+    cpus = cpu_result ?
+        | Ok(c) { c }
+        | Err(_) { 1 }
+
+    return Result.Ok(SystemInfo {
+        os_name: uname_data.sysname,
+        hostname: uname_data.nodename,
+        kernel_release: uname_data.release,
+        kernel_version: uname_data.version,
+        machine: uname_data.machine,
+        uptime_secs: sys_data.uptime,
+        total_ram: sys_data.total_ram * sys_data.mem_unit,
+        free_ram: sys_data.free_ram * sys_data.mem_unit,
+        cpu_count: cpus,
+        pid: getpid(),
+        uid: getuid(),
+        is_root: is_root()
+    })
+}
+
+// ============================================================================
+// Hostname Setting (requires root)
+// ============================================================================
+
+// Set hostname (requires CAP_SYS_ADMIN)
+set_hostname = (name: String, allocator: Allocator) Result<void, SysInfoError> {
+    result = compiler.syscall2(SYS_SETHOSTNAME, name.data(), name.len())
+
+    result < 0 ?
+        | true { return Result.Err(sysinfo_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Set domain name (requires CAP_SYS_ADMIN)
+set_domainname = (name: String, allocator: Allocator) Result<void, SysInfoError> {
+    result = compiler.syscall2(SYS_SETDOMAINNAME, name.data(), name.len())
+
+    result < 0 ?
+        | true { return Result.Err(sysinfo_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+

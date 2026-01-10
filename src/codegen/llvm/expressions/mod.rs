@@ -6,6 +6,7 @@ pub mod inference;
 pub mod literals;
 pub mod operations;
 pub mod patterns;
+pub mod raise;
 pub mod structs;
 pub mod utils;
 
@@ -94,7 +95,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             Expression::Block(statements) => compile_block_expression(self, statements),
             Expression::Closure { .. } => calls::compile_closure(self, expr),
             Expression::Comptime(_) => utils::compile_comptime_expression(self, expr),
-            Expression::Raise(_) => utils::compile_raise_expression(self, expr),
+            Expression::Raise(_) => raise::compile_raise_expression(self, expr),
 
             // Pointers - delegate to pointers.rs
             Expression::AddressOf(inner) => self.compile_address_of(inner),

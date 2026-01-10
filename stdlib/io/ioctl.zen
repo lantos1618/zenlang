@@ -1,0 +1,637 @@
+// Zen Standard Library: I/O Control (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Provides ioctl for device and terminal control
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Ioctl Syscall Number
+// ============================================================================
+
+SYS_IOCTL = 16
+
+// ============================================================================
+// Terminal I/O Control Codes
+// ============================================================================
+
+// Get/set terminal attributes
+TCGETS = 0x5401
+TCSETS = 0x5402
+TCSETSW = 0x5403
+TCSETSF = 0x5404
+
+// Get/set window size
+TIOCGWINSZ = 0x5413
+TIOCSWINSZ = 0x5414
+
+// Get/set terminal process group
+TIOCGPGRP = 0x540F
+TIOCSPGRP = 0x5410
+
+// Get/set session ID
+TIOCGSID = 0x5429
+
+// Exclusive mode
+TIOCEXCL = 0x540C
+TIOCNXCL = 0x540D
+
+// Line discipline
+TIOCGETD = 0x5424
+TIOCSETD = 0x5423
+
+// Modem control
+TIOCMGET = 0x5415
+TIOCMSET = 0x5418
+TIOCMBIS = 0x5416
+TIOCMBIC = 0x5417
+
+// Control chars
+TIOCINQ = 0x541B
+TIOCOUTQ = 0x5411
+
+// Send break
+TCSBRK = 0x5409
+TCSBRKP = 0x5425
+TIOCSBRK = 0x5427
+TIOCCBRK = 0x5428
+
+// Flow control
+TCXONC = 0x540A
+TCFLSH = 0x540B
+
+// Notifications
+TIOCNOTTY = 0x5422
+TIOCSCTTY = 0x540E
+
+// Pseudo-terminal
+TIOCGPTN = 0x80045430
+TIOCSPTLCK = 0x40045431
+TIOCGPTLCK = 0x80045439
+
+// ============================================================================
+// File I/O Control Codes
+// ============================================================================
+
+// Non-blocking I/O
+FIONBIO = 0x5421
+FIOASYNC = 0x5452
+
+// Get/set file flags
+FIOCLEX = 0x5451
+FIONCLEX = 0x5450
+
+// Read queue size
+FIONREAD = 0x541B
+
+// ============================================================================
+// Socket I/O Control Codes
+// ============================================================================
+
+SIOCGIFNAME = 0x8910
+SIOCGIFCONF = 0x8912
+SIOCGIFFLAGS = 0x8913
+SIOCSIFFLAGS = 0x8914
+SIOCGIFADDR = 0x8915
+SIOCSIFADDR = 0x8916
+SIOCGIFNETMASK = 0x891B
+SIOCSIFNETMASK = 0x891C
+SIOCGIFBRDADDR = 0x8919
+SIOCSIFBRDADDR = 0x891A
+SIOCGIFMTU = 0x8921
+SIOCSIFMTU = 0x8922
+SIOCGIFHWADDR = 0x8927
+SIOCSIFHWADDR = 0x8924
+SIOCGIFINDEX = 0x8933
+
+// ============================================================================
+// Block Device I/O Control Codes
+// ============================================================================
+
+BLKROSET = 0x125D
+BLKROGET = 0x125E
+BLKRRPART = 0x125F
+BLKGETSIZE = 0x1260
+BLKFLSBUF = 0x1261
+BLKRASET = 0x1262
+BLKRAGET = 0x1263
+BLKFRASET = 0x1264
+BLKFRAGET = 0x1265
+BLKSECTSET = 0x1266
+BLKSECTGET = 0x1267
+BLKSSZGET = 0x1268
+BLKGETSIZE64 = 0x80081272
+BLKPBSZGET = 0x127B
+BLKDISCARD = 0x1277
+BLKZEROOUT = 0x127F
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+IoctlError: {
+    code: i32
+}
+
+ioctl_errno_to_error = (errno: i64) IoctlError {
+    code = 0 - errno
+    return IoctlError { code: code }
+}
+
+// Check common errors
+IoctlError.not_a_tty = (self: IoctlError) bool {
+    return self.code == 25  // ENOTTY
+}
+
+IoctlError.invalid_arg = (self: IoctlError) bool {
+    return self.code == 22  // EINVAL
+}
+
+IoctlError.permission_denied = (self: IoctlError) bool {
+    return self.code == 1 or self.code == 13  // EPERM or EACCES
+}
+
+// ============================================================================
+// Low-Level Syscall
+// ============================================================================
+
+sys_ioctl = (fd: i32, request: u64, arg: i64) i64 {
+    return compiler.syscall3(SYS_IOCTL, fd, request, arg)
+}
+
+// Generic ioctl wrapper
+ioctl = (fd: i32, request: u64, arg: i64) Result<i64, IoctlError> {
+    result = sys_ioctl(fd, request, arg)
+
+    result < 0 ?
+        | true { return Result.Err(ioctl_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// ============================================================================
+// Terminal Size
+// ============================================================================
+
+Winsize: {
+    ws_row: u16,
+    ws_col: u16,
+    ws_xpixel: u16,
+    ws_ypixel: u16
+}
+
+Winsize.new = (rows: u16, cols: u16) Winsize {
+    return Winsize { ws_row: rows, ws_col: cols, ws_xpixel: 0, ws_ypixel: 0 }
+}
+
+// Get terminal window size
+get_winsize = (fd: i32, allocator: Allocator) Result<Winsize, IoctlError> {
+    buf = allocator.allocate(8)  // sizeof(winsize) = 8
+
+    result = sys_ioctl(fd, TIOCGWINSZ, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 8)
+            return Result.Err(ioctl_errno_to_error(result))
+        }
+        | false {
+            row = compiler.load<u16>(buf)
+            col = compiler.load<u16>(buf + 2)
+            xpix = compiler.load<u16>(buf + 4)
+            ypix = compiler.load<u16>(buf + 6)
+            allocator.deallocate(buf, 8)
+
+            return Result.Ok(Winsize {
+                ws_row: row,
+                ws_col: col,
+                ws_xpixel: xpix,
+                ws_ypixel: ypix
+            })
+        }
+}
+
+// Set terminal window size
+set_winsize = (fd: i32, size: Winsize, allocator: Allocator) Result<void, IoctlError> {
+    buf = allocator.allocate(8)
+    compiler.store<u16>(buf, size.ws_row)
+    compiler.store<u16>(buf + 2, size.ws_col)
+    compiler.store<u16>(buf + 4, size.ws_xpixel)
+    compiler.store<u16>(buf + 6, size.ws_ypixel)
+
+    result = sys_ioctl(fd, TIOCSWINSZ, buf)
+    allocator.deallocate(buf, 8)
+
+    result < 0 ?
+        | true { return Result.Err(ioctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Get terminal size (convenience)
+terminal_size = (allocator: Allocator) Result<Winsize, IoctlError> {
+    return get_winsize(0, allocator)  // stdin
+}
+
+// ============================================================================
+// Terminal Attributes (termios)
+// ============================================================================
+
+// struct termios is 60 bytes on Linux x86-64
+TERMIOS_SIZE = 60
+
+// Input flags
+IGNBRK = 0o0000001
+BRKINT = 0o0000002
+IGNPAR = 0o0000004
+PARMRK = 0o0000010
+INPCK = 0o0000020
+ISTRIP = 0o0000040
+INLCR = 0o0000100
+IGNCR = 0o0000200
+ICRNL = 0o0000400
+IUCLC = 0o0001000
+IXON = 0o0002000
+IXANY = 0o0004000
+IXOFF = 0o0010000
+IMAXBEL = 0o0020000
+IUTF8 = 0o0040000
+
+// Output flags
+OPOST = 0o0000001
+OLCUC = 0o0000002
+ONLCR = 0o0000004
+OCRNL = 0o0000010
+ONOCR = 0o0000020
+ONLRET = 0o0000040
+OFILL = 0o0000100
+OFDEL = 0o0000200
+
+// Control flags
+CSIZE = 0o0000060
+CS5 = 0o0000000
+CS6 = 0o0000020
+CS7 = 0o0000040
+CS8 = 0o0000060
+CSTOPB = 0o0000100
+CREAD = 0o0000200
+PARENB = 0o0000400
+PARODD = 0o0001000
+HUPCL = 0o0002000
+CLOCAL = 0o0004000
+
+// Local flags
+ISIG = 0o0000001
+ICANON = 0o0000002
+XCASE = 0o0000004
+ECHO = 0o0000010
+ECHOE = 0o0000020
+ECHOK = 0o0000040
+ECHONL = 0o0000100
+NOFLSH = 0o0000200
+TOSTOP = 0o0000400
+ECHOCTL = 0o0001000
+ECHOPRT = 0o0002000
+ECHOKE = 0o0004000
+FLUSHO = 0o0010000
+PENDIN = 0o0040000
+IEXTEN = 0o0100000
+
+Termios: {
+    c_iflag: u32,   // Input flags
+    c_oflag: u32,   // Output flags
+    c_cflag: u32,   // Control flags
+    c_lflag: u32,   // Local flags
+    c_line: u8,     // Line discipline
+    c_cc: i64,      // Control characters (pointer to 32-byte array)
+    c_ispeed: u32,  // Input speed
+    c_ospeed: u32   // Output speed
+}
+
+// Get terminal attributes
+tcgetattr = (fd: i32, allocator: Allocator) Result<Termios, IoctlError> {
+    buf = allocator.allocate(TERMIOS_SIZE)
+
+    result = sys_ioctl(fd, TCGETS, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, TERMIOS_SIZE)
+            return Result.Err(ioctl_errno_to_error(result))
+        }
+        | false {
+            iflag = compiler.load<u32>(buf)
+            oflag = compiler.load<u32>(buf + 4)
+            cflag = compiler.load<u32>(buf + 8)
+            lflag = compiler.load<u32>(buf + 12)
+            line = compiler.load<u8>(buf + 16)
+            // c_cc is at offset 17, 32 bytes
+            ispeed = compiler.load<u32>(buf + 52)
+            ospeed = compiler.load<u32>(buf + 56)
+
+            // Keep buffer alive for c_cc
+            return Result.Ok(Termios {
+                c_iflag: iflag,
+                c_oflag: oflag,
+                c_cflag: cflag,
+                c_lflag: lflag,
+                c_line: line,
+                c_cc: buf + 17,
+                c_ispeed: ispeed,
+                c_ospeed: ospeed
+            })
+        }
+}
+
+// Set terminal attributes
+tcsetattr = (fd: i32, termios: Termios, allocator: Allocator) Result<void, IoctlError> {
+    buf = allocator.allocate(TERMIOS_SIZE)
+
+    compiler.store<u32>(buf, termios.c_iflag)
+    compiler.store<u32>(buf + 4, termios.c_oflag)
+    compiler.store<u32>(buf + 8, termios.c_cflag)
+    compiler.store<u32>(buf + 12, termios.c_lflag)
+    compiler.store<u8>(buf + 16, termios.c_line)
+
+    // Copy c_cc
+    termios.c_cc != 0 ?
+        | true { compiler.memcpy(buf + 17, termios.c_cc, 32) }
+        | false { compiler.memset(buf + 17, 0, 32) }
+
+    compiler.store<u32>(buf + 52, termios.c_ispeed)
+    compiler.store<u32>(buf + 56, termios.c_ospeed)
+
+    result = sys_ioctl(fd, TCSETS, buf)
+    allocator.deallocate(buf, TERMIOS_SIZE)
+
+    result < 0 ?
+        | true { return Result.Err(ioctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Raw Mode
+// ============================================================================
+
+// Enable raw mode on terminal
+enable_raw_mode = (fd: i32, allocator: Allocator) Result<Termios, IoctlError> {
+    // Get current attributes
+    termios_result = tcgetattr(fd, allocator)
+
+    termios_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(old_termios) {
+            // Create raw mode settings
+            raw = Termios {
+                c_iflag: old_termios.c_iflag & ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON),
+                c_oflag: old_termios.c_oflag & ~OPOST,
+                c_cflag: (old_termios.c_cflag & ~(CSIZE | PARENB)) | CS8,
+                c_lflag: old_termios.c_lflag & ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN),
+                c_line: old_termios.c_line,
+                c_cc: old_termios.c_cc,
+                c_ispeed: old_termios.c_ispeed,
+                c_ospeed: old_termios.c_ospeed
+            }
+
+            // Set raw mode
+            set_result = tcsetattr(fd, raw, allocator)
+
+            set_result ?
+                | Err(e) { return Result.Err(e) }
+                | Ok(_) { return Result.Ok(old_termios) }
+        }
+}
+
+// Restore terminal attributes
+restore_termios = (fd: i32, termios: Termios, allocator: Allocator) Result<void, IoctlError> {
+    return tcsetattr(fd, termios, allocator)
+}
+
+// ============================================================================
+// Non-blocking I/O
+// ============================================================================
+
+// Set non-blocking mode
+set_nonblock = (fd: i32, enable: bool, allocator: Allocator) Result<void, IoctlError> {
+    buf = allocator.allocate(4)
+    val = enable ?
+        | true { 1 }
+        | false { 0 }
+    compiler.store<i32>(buf, val)
+
+    result = sys_ioctl(fd, FIONBIO, buf)
+    allocator.deallocate(buf, 4)
+
+    result < 0 ?
+        | true { return Result.Err(ioctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Available Bytes
+// ============================================================================
+
+// Get number of bytes available to read
+bytes_available = (fd: i32, allocator: Allocator) Result<i32, IoctlError> {
+    buf = allocator.allocate(4)
+
+    result = sys_ioctl(fd, FIONREAD, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 4)
+            return Result.Err(ioctl_errno_to_error(result))
+        }
+        | false {
+            count = compiler.load<i32>(buf)
+            allocator.deallocate(buf, 4)
+            return Result.Ok(count)
+        }
+}
+
+// ============================================================================
+// TTY Checks
+// ============================================================================
+
+// Check if fd is a tty
+isatty = (fd: i32, allocator: Allocator) bool {
+    result = get_winsize(fd, allocator)
+    result ?
+        | Ok(_) { return true }
+        | Err(_) { return false }
+}
+
+// Check if stdin is a tty
+stdin_isatty = (allocator: Allocator) bool {
+    return isatty(0, allocator)
+}
+
+// Check if stdout is a tty
+stdout_isatty = (allocator: Allocator) bool {
+    return isatty(1, allocator)
+}
+
+// Check if stderr is a tty
+stderr_isatty = (allocator: Allocator) bool {
+    return isatty(2, allocator)
+}
+
+// ============================================================================
+// Block Device Operations
+// ============================================================================
+
+// Get block device size in bytes
+blk_getsize = (fd: i32, allocator: Allocator) Result<u64, IoctlError> {
+    buf = allocator.allocate(8)
+
+    result = sys_ioctl(fd, BLKGETSIZE64, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 8)
+            return Result.Err(ioctl_errno_to_error(result))
+        }
+        | false {
+            size = compiler.load<u64>(buf)
+            allocator.deallocate(buf, 8)
+            return Result.Ok(size)
+        }
+}
+
+// Get block device sector size
+blk_sector_size = (fd: i32, allocator: Allocator) Result<i32, IoctlError> {
+    buf = allocator.allocate(4)
+
+    result = sys_ioctl(fd, BLKSSZGET, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 4)
+            return Result.Err(ioctl_errno_to_error(result))
+        }
+        | false {
+            size = compiler.load<i32>(buf)
+            allocator.deallocate(buf, 4)
+            return Result.Ok(size)
+        }
+}
+
+// Get physical block size
+blk_physical_size = (fd: i32, allocator: Allocator) Result<u32, IoctlError> {
+    buf = allocator.allocate(4)
+
+    result = sys_ioctl(fd, BLKPBSZGET, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 4)
+            return Result.Err(ioctl_errno_to_error(result))
+        }
+        | false {
+            size = compiler.load<u32>(buf)
+            allocator.deallocate(buf, 4)
+            return Result.Ok(size)
+        }
+}
+
+// Set read-only mode on block device
+blk_set_readonly = (fd: i32, readonly: bool, allocator: Allocator) Result<void, IoctlError> {
+    buf = allocator.allocate(4)
+    val = readonly ?
+        | true { 1 }
+        | false { 0 }
+    compiler.store<i32>(buf, val)
+
+    result = sys_ioctl(fd, BLKROSET, buf)
+    allocator.deallocate(buf, 4)
+
+    result < 0 ?
+        | true { return Result.Err(ioctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Flush block device buffers
+blk_flush = (fd: i32) Result<void, IoctlError> {
+    result = sys_ioctl(fd, BLKFLSBUF, 0)
+
+    result < 0 ?
+        | true { return Result.Err(ioctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Process Group / Session
+// ============================================================================
+
+// Get foreground process group
+tcgetpgrp = (fd: i32, allocator: Allocator) Result<i32, IoctlError> {
+    buf = allocator.allocate(4)
+
+    result = sys_ioctl(fd, TIOCGPGRP, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 4)
+            return Result.Err(ioctl_errno_to_error(result))
+        }
+        | false {
+            pgrp = compiler.load<i32>(buf)
+            allocator.deallocate(buf, 4)
+            return Result.Ok(pgrp)
+        }
+}
+
+// Set foreground process group
+tcsetpgrp = (fd: i32, pgrp: i32, allocator: Allocator) Result<void, IoctlError> {
+    buf = allocator.allocate(4)
+    compiler.store<i32>(buf, pgrp)
+
+    result = sys_ioctl(fd, TIOCSPGRP, buf)
+    allocator.deallocate(buf, 4)
+
+    result < 0 ?
+        | true { return Result.Err(ioctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Get session ID
+tcgetsid = (fd: i32, allocator: Allocator) Result<i32, IoctlError> {
+    buf = allocator.allocate(4)
+
+    result = sys_ioctl(fd, TIOCGSID, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 4)
+            return Result.Err(ioctl_errno_to_error(result))
+        }
+        | false {
+            sid = compiler.load<i32>(buf)
+            allocator.deallocate(buf, 4)
+            return Result.Ok(sid)
+        }
+}
+
+// Set controlling terminal
+tiocsctty = (fd: i32, steal: bool) Result<void, IoctlError> {
+    arg = steal ?
+        | true { 1 }
+        | false { 0 }
+
+    result = sys_ioctl(fd, TIOCSCTTY, arg)
+
+    result < 0 ?
+        | true { return Result.Err(ioctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Give up controlling terminal
+tiocnotty = (fd: i32) Result<void, IoctlError> {
+    result = sys_ioctl(fd, TIOCNOTTY, 0)
+
+    result < 0 ?
+        | true { return Result.Err(ioctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+

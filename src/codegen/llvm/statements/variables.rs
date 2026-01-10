@@ -190,36 +190,23 @@ pub fn compile_variable_declaration<'ctx>(
                                     type_args[0].clone(),
                                 );
                                 compiler.generic_tracker.track_generic_type(&ast_type, name);
-                            } else if type_name == "Array" && type_args.len() == 1 {
+                            } else if crate::type_context::is_key_value_collection(type_name) && type_args.len() >= 2 {
+                                // Key-value collections
                                 compiler.track_generic_type(
-                                    format!("{}_Array_Element_Type", name),
-                                    type_args[0].clone(),
-                                );
-                                compiler.generic_tracker.track_generic_type(&ast_type, name);
-                            } else if type_name == "HashMap" && type_args.len() == 2 {
-                                compiler.track_generic_type(
-                                    format!("{}_HashMap_Key_Type", name),
+                                    format!("{}_{}_Key_Type", name, type_name),
                                     type_args[0].clone(),
                                 );
                                 compiler.track_generic_type(
-                                    format!("{}_HashMap_Value_Type", name),
+                                    format!("{}_{}_Value_Type", name, type_name),
                                     type_args[1].clone(),
                                 );
                                 compiler.generic_tracker.track_generic_type(&ast_type, name);
-                            } else if type_name == "HashSet" && type_args.len() == 1 {
+                            } else if crate::type_context::is_single_element_collection(type_name) && !type_args.is_empty() {
+                                // Single-element collections
                                 compiler.track_generic_type(
-                                    format!("{}_HashSet_Element_Type", name),
+                                    format!("{}_{}_Element_Type", name, type_name),
                                     type_args[0].clone(),
                                 );
-                                compiler.generic_tracker.track_generic_type(&ast_type, name);
-                            } else if type_name == "DynVec" {
-                                // DynVec can have multiple element types
-                                for (i, element_type) in type_args.iter().enumerate() {
-                                    compiler.track_generic_type(
-                                        format!("{}_DynVec_Element_{}_Type", name, i),
-                                        element_type.clone(),
-                                    );
-                                }
                                 compiler.generic_tracker.track_generic_type(&ast_type, name);
                             }
                         }

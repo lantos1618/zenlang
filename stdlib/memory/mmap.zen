@@ -1,0 +1,462 @@
+// Zen Standard Library: Memory Mapping (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+
+// ============================================================================
+// Linux x86-64 Memory Syscall Numbers
+// ============================================================================
+
+SYS_MMAP = 9
+SYS_MUNMAP = 11
+SYS_MPROTECT = 10
+SYS_MREMAP = 25
+SYS_MSYNC = 26
+SYS_MLOCK = 149
+SYS_MUNLOCK = 150
+SYS_MLOCKALL = 151
+SYS_MUNLOCKALL = 152
+SYS_MADVISE = 28
+SYS_BRK = 12
+SYS_MINCORE = 27
+
+// ============================================================================
+// Memory Protection Flags
+// ============================================================================
+
+PROT_NONE = 0     // Page cannot be accessed
+PROT_READ = 1     // Page can be read
+PROT_WRITE = 2    // Page can be written
+PROT_EXEC = 4     // Page can be executed
+
+// Common combinations
+PROT_RW = 3       // Read + Write
+PROT_RX = 5       // Read + Execute
+PROT_RWX = 7      // Read + Write + Execute
+
+// ============================================================================
+// Memory Mapping Flags
+// ============================================================================
+
+MAP_SHARED = 1          // Share changes with other processes
+MAP_PRIVATE = 2         // Changes are private (copy-on-write)
+MAP_SHARED_VALIDATE = 3 // Share with validation
+MAP_FIXED = 16          // Place mapping at exact address
+MAP_ANONYMOUS = 32      // Not backed by file
+MAP_GROWSDOWN = 256     // Stack-like grow down
+MAP_DENYWRITE = 2048    // Deny writes to file
+MAP_EXECUTABLE = 4096   // Mark as executable
+MAP_LOCKED = 8192       // Lock pages in memory
+MAP_NORESERVE = 16384   // Don't reserve swap space
+MAP_POPULATE = 32768    // Prefault page tables
+MAP_NONBLOCK = 65536    // Don't block on I/O
+MAP_STACK = 131072      // Hint: stack allocation
+MAP_HUGETLB = 262144    // Use huge pages
+
+// MAP_FAILED sentinel
+MAP_FAILED = -1
+
+// ============================================================================
+// Memory Advice (madvise)
+// ============================================================================
+
+MADV_NORMAL = 0       // No special treatment
+MADV_RANDOM = 1       // Expect random access
+MADV_SEQUENTIAL = 2   // Expect sequential access
+MADV_WILLNEED = 3     // Will need these pages soon
+MADV_DONTNEED = 4     // Don't need these pages
+MADV_FREE = 8         // Free pages if memory pressure
+MADV_REMOVE = 9       // Remove pages
+MADV_DONTFORK = 10    // Don't inherit across fork
+MADV_DOFORK = 11      // Do inherit across fork
+MADV_MERGEABLE = 12   // KSM: pages may be merged
+MADV_UNMERGEABLE = 13 // KSM: pages will not be merged
+MADV_HUGEPAGE = 14    // Worth backing with hugepages
+MADV_NOHUGEPAGE = 15  // Not worth hugepages
+MADV_DONTDUMP = 16    // Exclude from core dump
+MADV_DODUMP = 17      // Include in core dump
+MADV_COLD = 20        // Deactivate pages (cold)
+MADV_PAGEOUT = 21     // Reclaim pages
+
+// ============================================================================
+// Memory Sync Flags (msync)
+// ============================================================================
+
+MS_ASYNC = 1       // Schedule sync but return immediately
+MS_INVALIDATE = 2  // Invalidate mappings
+MS_SYNC = 4        // Synchronous sync
+
+// ============================================================================
+// MRemap Flags
+// ============================================================================
+
+MREMAP_MAYMOVE = 1    // May move the mapping
+MREMAP_FIXED = 2      // New address is fixed
+MREMAP_DONTUNMAP = 4  // Don't unmap old location
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+MmapError: {
+    code: i32
+}
+
+mmap_errno_to_error = (errno: i64) MmapError {
+    code = 0 - errno
+    return MmapError { code: code }
+}
+
+// ============================================================================
+// Low-Level Memory Syscalls
+// ============================================================================
+
+// Map memory
+// addr: hint address (0 for kernel to choose)
+// length: size of mapping
+// prot: protection flags (PROT_*)
+// flags: mapping flags (MAP_*)
+// fd: file descriptor (-1 for anonymous)
+// offset: offset in file
+sys_mmap = (addr: i64, length: usize, prot: i32, flags: i32, fd: i32, offset: i64) i64 {
+    return compiler.syscall6(SYS_MMAP, addr, length, prot, flags, fd, offset)
+}
+
+// Unmap memory
+sys_munmap = (addr: i64, length: usize) i64 {
+    return compiler.syscall2(SYS_MUNMAP, addr, length)
+}
+
+// Change memory protection
+sys_mprotect = (addr: i64, length: usize, prot: i32) i64 {
+    return compiler.syscall3(SYS_MPROTECT, addr, length, prot)
+}
+
+// Remap memory region
+sys_mremap = (old_addr: i64, old_size: usize, new_size: usize, flags: i32, new_addr: i64) i64 {
+    return compiler.syscall5(SYS_MREMAP, old_addr, old_size, new_size, flags, new_addr)
+}
+
+// Synchronize memory with file
+sys_msync = (addr: i64, length: usize, flags: i32) i64 {
+    return compiler.syscall3(SYS_MSYNC, addr, length, flags)
+}
+
+// Lock pages in memory
+sys_mlock = (addr: i64, length: usize) i64 {
+    return compiler.syscall2(SYS_MLOCK, addr, length)
+}
+
+// Unlock pages
+sys_munlock = (addr: i64, length: usize) i64 {
+    return compiler.syscall2(SYS_MUNLOCK, addr, length)
+}
+
+// Give advice about memory usage
+sys_madvise = (addr: i64, length: usize, advice: i32) i64 {
+    return compiler.syscall3(SYS_MADVISE, addr, length, advice)
+}
+
+// ============================================================================
+// High-Level Memory Mapping Functions
+// ============================================================================
+
+// Map anonymous private memory (like malloc but page-aligned)
+mmap_anonymous = (length: usize, prot: i32) Result<i64, MmapError> {
+    flags = MAP_PRIVATE | MAP_ANONYMOUS
+    result = sys_mmap(0, length, prot, flags, -1, 0)
+
+    result == MAP_FAILED || result < 0 ?
+        | true { return Result.Err(mmap_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Map anonymous private read-write memory
+mmap_rw = (length: usize) Result<i64, MmapError> {
+    return mmap_anonymous(length, PROT_RW)
+}
+
+// Map anonymous private read-execute memory (for JIT)
+mmap_rx = (length: usize) Result<i64, MmapError> {
+    return mmap_anonymous(length, PROT_RX)
+}
+
+// Map anonymous private read-write-execute memory
+mmap_rwx = (length: usize) Result<i64, MmapError> {
+    return mmap_anonymous(length, PROT_RWX)
+}
+
+// Unmap memory region
+munmap = (addr: i64, length: usize) Result<void, MmapError> {
+    result = sys_munmap(addr, length)
+
+    result < 0 ?
+        | true { return Result.Err(mmap_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Change memory protection
+mprotect = (addr: i64, length: usize, prot: i32) Result<void, MmapError> {
+    result = sys_mprotect(addr, length, prot)
+
+    result < 0 ?
+        | true { return Result.Err(mmap_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Resize memory mapping (may move)
+mremap = (old_addr: i64, old_size: usize, new_size: usize) Result<i64, MmapError> {
+    result = sys_mremap(old_addr, old_size, new_size, MREMAP_MAYMOVE, 0)
+
+    result == MAP_FAILED || result < 0 ?
+        | true { return Result.Err(mmap_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Give advice about memory usage pattern
+madvise = (addr: i64, length: usize, advice: i32) Result<void, MmapError> {
+    result = sys_madvise(addr, length, advice)
+
+    result < 0 ?
+        | true { return Result.Err(mmap_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Lock pages in memory (prevent swapping)
+mlock = (addr: i64, length: usize) Result<void, MmapError> {
+    result = sys_mlock(addr, length)
+
+    result < 0 ?
+        | true { return Result.Err(mmap_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Unlock pages (allow swapping)
+munlock = (addr: i64, length: usize) Result<void, MmapError> {
+    result = sys_munlock(addr, length)
+
+    result < 0 ?
+        | true { return Result.Err(mmap_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Memory Region - RAII wrapper for mmap'd memory
+// ============================================================================
+
+MemoryRegion: {
+    ptr: i64,
+    len: usize
+}
+
+// Allocate a new memory region
+MemoryRegion.new = (length: usize, prot: i32) Result<MemoryRegion, MmapError> {
+    result = mmap_anonymous(length, prot)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(ptr) {
+            return Result.Ok(MemoryRegion {
+                ptr: ptr,
+                len: length
+            })
+        }
+}
+
+// Allocate read-write region
+MemoryRegion.new_rw = (length: usize) Result<MemoryRegion, MmapError> {
+    return MemoryRegion.new(length, PROT_RW)
+}
+
+// Get pointer to start of region
+MemoryRegion.as_ptr = (self: MemoryRegion) i64 {
+    return self.ptr
+}
+
+// Get length of region
+MemoryRegion.len = (self: MemoryRegion) usize {
+    return self.len
+}
+
+// Check if valid (non-null)
+MemoryRegion.is_valid = (self: MemoryRegion) bool {
+    return self.ptr != 0 && self.ptr != MAP_FAILED
+}
+
+// Change protection
+MemoryRegion.protect = (self: MemoryRegion, prot: i32) Result<void, MmapError> {
+    return mprotect(self.ptr, self.len, prot)
+}
+
+// Make read-only
+MemoryRegion.make_readonly = (self: MemoryRegion) Result<void, MmapError> {
+    return mprotect(self.ptr, self.len, PROT_READ)
+}
+
+// Make executable (for JIT)
+MemoryRegion.make_executable = (self: MemoryRegion) Result<void, MmapError> {
+    return mprotect(self.ptr, self.len, PROT_RX)
+}
+
+// Resize the region (may move)
+MemoryRegion.resize = (self: MutPtr<MemoryRegion>, new_size: usize) Result<void, MmapError> {
+    result = mremap(self.val.ptr, self.val.len, new_size)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(new_ptr) {
+            self.val.ptr = new_ptr
+            self.val.len = new_size
+            return Result.Ok(())
+        }
+}
+
+// Lock in memory
+MemoryRegion.lock = (self: MemoryRegion) Result<void, MmapError> {
+    return mlock(self.ptr, self.len)
+}
+
+// Unlock from memory
+MemoryRegion.unlock = (self: MemoryRegion) Result<void, MmapError> {
+    return munlock(self.ptr, self.len)
+}
+
+// Free the region
+MemoryRegion.free = (self: MutPtr<MemoryRegion>) Result<void, MmapError> {
+    self.val.is_valid() ?
+        | true {
+            result = munmap(self.val.ptr, self.val.len)
+            self.val.ptr = 0
+            self.val.len = 0
+            return result
+        }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Page-Aligned Allocator using mmap
+// ============================================================================
+
+// Get system page size (usually 4096)
+// Note: This should use sysconf but we hardcode for x86-64 Linux
+PAGE_SIZE = 4096
+
+// Round up to page boundary
+page_align = (size: usize) usize {
+    mask = PAGE_SIZE - 1
+    return (size + mask) & ~mask
+}
+
+// Allocate page-aligned memory
+page_alloc = (size: usize) Result<i64, MmapError> {
+    aligned_size = page_align(size)
+    return mmap_rw(aligned_size)
+}
+
+// Free page-aligned memory
+page_free = (ptr: i64, size: usize) Result<void, MmapError> {
+    aligned_size = page_align(size)
+    return munmap(ptr, aligned_size)
+}
+
+// ============================================================================
+// JIT Code Region - For runtime code generation
+// ============================================================================
+
+JitRegion: {
+    region: MemoryRegion,
+    write_offset: usize
+}
+
+// Create a new JIT region (starts read-write)
+JitRegion.new = (capacity: usize) Result<JitRegion, MmapError> {
+    region_result = MemoryRegion.new_rw(capacity)
+
+    region_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(region) {
+            return Result.Ok(JitRegion {
+                region: region,
+                write_offset: 0
+            })
+        }
+}
+
+// Get remaining capacity
+JitRegion.remaining = (self: JitRegion) usize {
+    return self.region.len - self.write_offset
+}
+
+// Get current write position
+JitRegion.write_pos = (self: JitRegion) i64 {
+    return compiler.gep(self.region.ptr, self.write_offset)
+}
+
+// Write a byte at current position
+JitRegion.write_byte = (self: MutPtr<JitRegion>, byte: u8) bool {
+    self.val.write_offset >= self.val.region.len ?
+        | true { return false }
+        | false {
+            pos = self.val.write_pos()
+            compiler.store<u8>(pos, byte)
+            self.val.write_offset = self.val.write_offset + 1
+            return true
+        }
+}
+
+// Write bytes at current position
+JitRegion.write_bytes = (self: MutPtr<JitRegion>, data: i64, len: usize) bool {
+    self.val.write_offset + len > self.val.region.len ?
+        | true { return false }
+        | false {
+            dst = self.val.write_pos()
+            compiler.memcpy(dst, data, len)
+            self.val.write_offset = self.val.write_offset + len
+            return true
+        }
+}
+
+// Write a 32-bit value
+JitRegion.write_u32 = (self: MutPtr<JitRegion>, value: u32) bool {
+    self.val.write_offset + 4 > self.val.region.len ?
+        | true { return false }
+        | false {
+            pos = self.val.write_pos()
+            compiler.store<u32>(pos, value)
+            self.val.write_offset = self.val.write_offset + 4
+            return true
+        }
+}
+
+// Write a 64-bit value
+JitRegion.write_u64 = (self: MutPtr<JitRegion>, value: u64) bool {
+    self.val.write_offset + 8 > self.val.region.len ?
+        | true { return false }
+        | false {
+            pos = self.val.write_pos()
+            compiler.store<u64>(pos, value)
+            self.val.write_offset = self.val.write_offset + 8
+            return true
+        }
+}
+
+// Finalize: make executable (no more writes after this!)
+JitRegion.finalize = (self: JitRegion) Result<void, MmapError> {
+    return self.region.make_executable()
+}
+
+// Get start address for execution
+JitRegion.code_ptr = (self: JitRegion) i64 {
+    return self.region.ptr
+}
+
+// Free the JIT region
+JitRegion.free = (self: MutPtr<JitRegion>) Result<void, MmapError> {
+    result = self.val.region.mut_ref().free()
+    self.val.write_offset = 0
+    return result
+}
+

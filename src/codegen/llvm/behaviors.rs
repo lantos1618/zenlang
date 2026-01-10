@@ -119,6 +119,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         match ast_type {
             AstType::Struct { name, .. } | AstType::Generic { name, .. }
             | AstType::Enum { name, .. } | AstType::EnumType { name } => Some(name.clone()),
+            // TODO: These names should come from parsing stdlib, not hardcoded
             AstType::DynVec { .. } => Some("DynVec".to_string()),
             AstType::Vec { .. } => Some("Vec".to_string()),
             _ => None,

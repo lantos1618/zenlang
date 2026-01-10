@@ -3,6 +3,7 @@
 use crate::ast::{self, AstType};
 use crate::comptime;
 use crate::error::{CompileError, Span};
+use crate::type_context::TypeContext;
 use crate::well_known::WellKnownTypes;
 use inkwell::{
     basic_block::BasicBlock,
@@ -90,11 +91,16 @@ pub struct LLVMCompiler<'ctx> {
     pub current_impl_type: Option<String>,
     pub inline_counter: usize,
     pub load_counter: usize,
+    pub closure_counter: usize,
+    pub raise_counter: u32,
     pub generic_type_context: HashMap<String, AstType>,
     pub generic_tracker: generics::GenericTypeTracker,
     pub module_imports: HashMap<String, u64>,
     pub current_span: Option<Span>,
     pub well_known: WellKnownTypes,
+    /// Type context from typechecker - contains pre-computed type information
+    /// This will gradually replace the need for type inference in codegen
+    pub type_ctx: TypeContext,
 }
 
 impl<'ctx> LLVMCompiler<'ctx> {
@@ -189,21 +195,13 @@ impl<'ctx> LLVMCompiler<'ctx> {
     // Basic pattern matching implementation for common cases
     // ============================================================================
 
-    /// Get module ID for import tracking
+    /// Get module ID for import tracking.
+    /// Uses a simple hash to generate unique IDs without hardcoding module names.
     fn get_module_id(&self, module_name: &str) -> u64 {
-        if self.well_known.is_option(module_name) || self.well_known.is_option_variant(module_name) {
-            100
-        } else if self.well_known.is_result(module_name) || self.well_known.is_result_variant(module_name) {
-            101
-        } else {
-            match module_name {
-                "HashMap" | "HashSet" | "DynVec" | "Array" | "Vec" => 102,
-                "Allocator" | "get_default_allocator" => 103,
-                "min" | "max" | "abs" | "sqrt" | "pow" | "sin" | "cos" | "tan" => 104,
-                "io" => 1, "math" => 2, "core" => 3, "GPA" => 4, "AsyncPool" => 5, "build" => 7,
-                _ => 0,
-            }
-        }
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        module_name.hash(&mut hasher);
+        hasher.finish()
     }
 
     // Pattern matching code moved to patterns.rs module
@@ -215,8 +213,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     /// Helper to track complex generic types recursively
+    /// Uses TypeContext for collection semantics instead of hardcoded type names.
     pub fn track_complex_generic(&mut self, type_: &AstType, prefix: &str) {
-        self.generic_tracker.track_generic_type(type_, prefix);
+        // Use the TypeContext-aware version for proper collection handling
+        self.generic_tracker.track_generic_type_with_ctx(type_, prefix, Some(&self.type_ctx));
 
         // Also update the old system for backwards compatibility
         if let AstType::Generic { name, type_args } = type_ {
@@ -228,6 +228,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
             } else if self.well_known.is_option(name) && type_args.len() == 1 {
                 self.generic_type_context
                     .insert(format!("{}_Some_Type", prefix), type_args[0].clone());
+            } else if crate::type_context::is_single_element_collection(name) && !type_args.is_empty() {
+                self.generic_type_context
+                    .insert(format!("{}_Element_Type", prefix), type_args[0].clone());
+            } else if crate::type_context::is_key_value_collection(name) && type_args.len() >= 2 {
+                self.generic_type_context
+                    .insert(format!("{}_Key_Type", prefix), type_args[0].clone());
+                self.generic_type_context
+                    .insert(format!("{}_Value_Type", prefix), type_args[1].clone());
             }
         }
     }
@@ -271,11 +279,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
             current_impl_type: None,
             inline_counter: 0,
             load_counter: 0,
+            closure_counter: 0,
+            raise_counter: 0,
             generic_type_context: HashMap::new(),
             generic_tracker: generics::GenericTypeTracker::new(),
             module_imports: HashMap::new(),
             current_span: None,
             well_known: WellKnownTypes::new(),
+            type_ctx: TypeContext::new(),
         };
 
         // Auto-inject built-in modules (always available without explicit import)
@@ -290,6 +301,38 @@ impl<'ctx> LLVMCompiler<'ctx> {
         compiler.register_builtin_enums();
 
         compiler
+    }
+
+    /// Create a new LLVMCompiler with pre-computed type information from typechecker.
+    /// This is the preferred constructor as it allows codegen to use type information
+    /// without re-inferring types.
+    pub fn with_type_context(context: &'ctx Context, type_ctx: TypeContext) -> Self {
+        let mut compiler = Self::new(context);
+
+        // Populate function_types from TypeContext
+        // This allows the existing inference code to use typechecker's results
+        for (name, func_info) in &type_ctx.functions {
+            compiler.function_types.insert(name.clone(), func_info.return_type.clone());
+        }
+
+        compiler.type_ctx = type_ctx;
+        compiler
+    }
+
+    /// Look up a function's return type, preferring TypeContext over local inference.
+    /// This is the bridge to gradually eliminate codegen inference.
+    pub fn get_function_return_type(&self, name: &str) -> Option<AstType> {
+        // First try TypeContext (from typechecker)
+        if let Some(return_type) = self.type_ctx.get_function_return_type(name) {
+            return Some(return_type.clone());
+        }
+        // Fall back to local function_types table
+        self.function_types.get(name).cloned()
+    }
+
+    /// Look up a struct field's type from TypeContext.
+    pub fn get_struct_field_type(&self, struct_name: &str, field_name: &str) -> Option<AstType> {
+        self.type_ctx.get_struct_field_type(struct_name, field_name).cloned()
     }
 
     pub fn get_type(&self, name: &str) -> Result<BasicTypeEnum<'ctx>, CompileError> {

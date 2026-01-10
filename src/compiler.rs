@@ -6,26 +6,23 @@ use crate::codegen::llvm::LLVMCompiler;
 use crate::comptime::ComptimeInterpreter;
 use crate::error::{CompileError, Result};
 use crate::module_system::{resolver::ModuleResolver, ModuleSystem};
-use crate::type_system::Monomorphizer;
+use crate::lowering::Monomorphizer;
 use crate::typechecker::TypeChecker;
 use inkwell::context::Context;
 use inkwell::module::Module;
 
 /// The main compiler structure.
-#[allow(dead_code)]
 pub struct Compiler<'ctx> {
     context: &'ctx Context,
 }
 
 impl<'ctx> Compiler<'ctx> {
-    #[allow(dead_code)]
     pub fn new(context: &'ctx Context) -> Self {
         Self { context }
     }
 
     /// Compiles a program using the LLVM backend.
     /// In the future, this could take a `target` enum.
-    #[allow(dead_code)]
     pub fn compile_llvm(&self, program: &Program) -> Result<String> {
         // Process module imports
         let processed_program = self.process_imports(program)?;
@@ -36,15 +33,16 @@ impl<'ctx> Compiler<'ctx> {
         // Resolve Self types in trait implementations
         let processed_program = self.resolve_self_types(processed_program)?;
 
-        // Type check the program
+        // Type check the program and collect type information
         let mut typechecker = TypeChecker::new();
-        typechecker.check_program(&processed_program)?;
+        let type_context = typechecker.check_program(&processed_program)?;
 
         // Monomorphize the program to resolve all generic types
         let mut monomorphizer = Monomorphizer::new();
         let monomorphized_program = monomorphizer.monomorphize_program(&processed_program)?;
 
-        let mut llvm_compiler = LLVMCompiler::new(self.context);
+        // Create LLVM compiler with type context from typechecker
+        let mut llvm_compiler = LLVMCompiler::with_type_context(self.context, type_context);
         llvm_compiler.compile_program(&monomorphized_program)?;
 
         // Debug: Print LLVM IR before verification for debugging
@@ -63,20 +61,20 @@ impl<'ctx> Compiler<'ctx> {
     }
 
     /// Gets the LLVM module after compilation for execution engine creation.
-    #[allow(dead_code)]
     pub fn get_module(&self, program: &Program) -> Result<Module<'ctx>> {
         let processed_program = self.process_imports(program)?;
         let processed_program = self.execute_comptime(processed_program)?;
         let processed_program = self.resolve_self_types(processed_program)?;
 
-        // Type check the program
+        // Type check the program and collect type information
         let mut typechecker = TypeChecker::new();
-        typechecker.check_program(&processed_program)?;
+        let type_context = typechecker.check_program(&processed_program)?;
 
         let mut monomorphizer = Monomorphizer::new();
         let monomorphized_program = monomorphizer.monomorphize_program(&processed_program)?;
 
-        let mut llvm_compiler = LLVMCompiler::new(self.context);
+        // Create LLVM compiler with type context from typechecker
+        let mut llvm_compiler = LLVMCompiler::with_type_context(self.context, type_context);
         llvm_compiler.compile_program(&monomorphized_program)?;
 
         // Debug: Print LLVM IR before verification for debugging
@@ -370,7 +368,6 @@ impl<'ctx> Compiler<'ctx> {
 
     /// Analyze a program and collect all errors without stopping at the first one.
     /// This is useful for LSP to show all diagnostics at once.
-    #[allow(dead_code)]
     pub fn analyze_for_diagnostics(&self, program: &Program) -> Vec<CompileError> {
         let mut errors = Vec::new();
 
@@ -401,6 +398,16 @@ impl<'ctx> Compiler<'ctx> {
             }
         };
 
+        // Type check the program
+        let mut typechecker = TypeChecker::new();
+        let type_context = match typechecker.check_program(&processed_program) {
+            Ok(tc) => tc,
+            Err(err) => {
+                errors.push(err);
+                return errors; // Can't continue without type checking
+            }
+        };
+
         // Try to monomorphize
         let mut monomorphizer = Monomorphizer::new();
         let monomorphized_program = match monomorphizer.monomorphize_program(&processed_program) {
@@ -411,8 +418,8 @@ impl<'ctx> Compiler<'ctx> {
             }
         };
 
-        // Try to compile to LLVM
-        let mut llvm_compiler = LLVMCompiler::new(self.context);
+        // Try to compile to LLVM with type context
+        let mut llvm_compiler = LLVMCompiler::with_type_context(self.context, type_context);
         if let Err(err) = llvm_compiler.compile_program(&monomorphized_program) {
             errors.push(err);
             return errors; // Compilation failed

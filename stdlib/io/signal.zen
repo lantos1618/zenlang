@@ -1,0 +1,582 @@
+// Zen Standard Library: Signal Handling (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Signal Syscall Numbers
+// ============================================================================
+
+SYS_RT_SIGACTION = 13
+SYS_RT_SIGPROCMASK = 14
+SYS_RT_SIGRETURN = 15
+SYS_RT_SIGSUSPEND = 130
+SYS_RT_SIGPENDING = 127
+SYS_RT_SIGTIMEDWAIT = 128
+SYS_RT_SIGQUEUEINFO = 129
+SYS_KILL = 62
+SYS_TGKILL = 234
+SYS_TKILL = 200
+SYS_PAUSE = 34
+SYS_ALARM = 37
+SYS_SIGNALFD4 = 289
+
+// Size of sigset_t on Linux x86-64 (8 bytes = 64 signals)
+SIGSET_SIZE = 8
+
+// ============================================================================
+// Signal Numbers (Linux x86-64)
+// ============================================================================
+
+SIGHUP = 1      // Hangup
+SIGINT = 2      // Interrupt (Ctrl+C)
+SIGQUIT = 3     // Quit (Ctrl+\)
+SIGILL = 4      // Illegal instruction
+SIGTRAP = 5     // Trace/breakpoint trap
+SIGABRT = 6     // Abort
+SIGBUS = 7      // Bus error
+SIGFPE = 8      // Floating point exception
+SIGKILL = 9     // Kill (cannot be caught)
+SIGUSR1 = 10    // User-defined signal 1
+SIGSEGV = 11    // Segmentation fault
+SIGUSR2 = 12    // User-defined signal 2
+SIGPIPE = 13    // Broken pipe
+SIGALRM = 14    // Alarm clock
+SIGTERM = 15    // Termination
+SIGSTKFLT = 16  // Stack fault
+SIGCHLD = 17    // Child status changed
+SIGCONT = 18    // Continue
+SIGSTOP = 19    // Stop (cannot be caught)
+SIGTSTP = 20    // Terminal stop (Ctrl+Z)
+SIGTTIN = 21    // Background read from tty
+SIGTTOU = 22    // Background write to tty
+SIGURG = 23     // Urgent condition on socket
+SIGXCPU = 24    // CPU time limit exceeded
+SIGXFSZ = 25    // File size limit exceeded
+SIGVTALRM = 26  // Virtual alarm clock
+SIGPROF = 27    // Profiling timer expired
+SIGWINCH = 28   // Window size change
+SIGIO = 29      // I/O possible
+SIGPWR = 30     // Power failure
+SIGSYS = 31     // Bad system call
+
+// Real-time signals (32-64)
+SIGRTMIN = 32
+SIGRTMAX = 64
+
+// ============================================================================
+// Signal Action Flags
+// ============================================================================
+
+SA_NOCLDSTOP = 1          // Don't send SIGCHLD when children stop
+SA_NOCLDWAIT = 2          // Don't create zombie on child death
+SA_SIGINFO = 4            // Invoke signal handler with 3 args
+SA_ONSTACK = 134217728    // Use alternate signal stack
+SA_RESTART = 268435456    // Restart syscall on signal return
+SA_NODEFER = 1073741824   // Don't block signal in handler
+SA_RESETHAND = 2147483648 // Reset to SIG_DFL on handler entry
+SA_RESTORER = 67108864    // Provided restorer function
+
+// ============================================================================
+// Signal Mask Operations (for sigprocmask)
+// ============================================================================
+
+SIG_BLOCK = 0    // Block signals in set
+SIG_UNBLOCK = 1  // Unblock signals in set
+SIG_SETMASK = 2  // Set mask to set
+
+// ============================================================================
+// Special Signal Handlers
+// ============================================================================
+
+SIG_DFL = 0  // Default signal action
+SIG_IGN = 1  // Ignore signal
+SIG_ERR = -1 // Error return
+
+// ============================================================================
+// Signal Set
+// ============================================================================
+
+SigSet: {
+    bits: u64
+}
+
+// Create empty signal set
+SigSet.empty = () SigSet {
+    return SigSet { bits: 0 }
+}
+
+// Create full signal set (all signals)
+SigSet.full = () SigSet {
+    return SigSet { bits: 0xFFFFFFFFFFFFFFFF }
+}
+
+// Create set with single signal
+SigSet.single = (sig: i32) SigSet {
+    set = SigSet.empty()
+    set.mut_ref().add(sig)
+    return set
+}
+
+// Add signal to set
+SigSet.add = (self: MutPtr<SigSet>, sig: i32) void {
+    sig > 0 && sig <= 64 ?
+        | true {
+            mask = 1 << (sig - 1)
+            self.val.bits = self.val.bits | mask
+        }
+        | false { }
+}
+
+// Remove signal from set
+SigSet.remove = (self: MutPtr<SigSet>, sig: i32) void {
+    sig > 0 && sig <= 64 ?
+        | true {
+            mask = 1 << (sig - 1)
+            self.val.bits = self.val.bits & ~mask
+        }
+        | false { }
+}
+
+// Check if signal is in set
+SigSet.contains = (self: SigSet, sig: i32) bool {
+    sig > 0 && sig <= 64 ?
+        | true {
+            mask = 1 << (sig - 1)
+            return (self.bits & mask) != 0
+        }
+        | false { return false }
+}
+
+// Clear all signals from set
+SigSet.clear = (self: MutPtr<SigSet>) void {
+    self.val.bits = 0
+}
+
+// Fill set with all signals
+SigSet.fill = (self: MutPtr<SigSet>) void {
+    self.val.bits = 0xFFFFFFFFFFFFFFFF
+}
+
+// Union of two sets
+SigSet.union = (self: SigSet, other: SigSet) SigSet {
+    return SigSet { bits: self.bits | other.bits }
+}
+
+// Intersection of two sets
+SigSet.intersect = (self: SigSet, other: SigSet) SigSet {
+    return SigSet { bits: self.bits & other.bits }
+}
+
+// Difference (self - other)
+SigSet.difference = (self: SigSet, other: SigSet) SigSet {
+    return SigSet { bits: self.bits & ~other.bits }
+}
+
+// Check if empty
+SigSet.is_empty = (self: SigSet) bool {
+    return self.bits == 0
+}
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+SignalError: {
+    code: i32
+}
+
+signal_errno_to_error = (errno: i64) SignalError {
+    code = 0 - errno
+    return SignalError { code: code }
+}
+
+// ============================================================================
+// Low-Level Signal Syscalls
+// ============================================================================
+
+// Change signal action
+// act: pointer to sigaction struct (or 0 for query only)
+// oldact: pointer to receive old sigaction (or 0)
+sys_rt_sigaction = (sig: i32, act: i64, oldact: i64, sigsetsize: usize) i64 {
+    return compiler.syscall4(SYS_RT_SIGACTION, sig, act, oldact, sigsetsize)
+}
+
+// Change signal mask
+sys_rt_sigprocmask = (how: i32, set: i64, oldset: i64, sigsetsize: usize) i64 {
+    return compiler.syscall4(SYS_RT_SIGPROCMASK, how, set, oldset, sigsetsize)
+}
+
+// Get pending signals
+sys_rt_sigpending = (set: i64, sigsetsize: usize) i64 {
+    return compiler.syscall2(SYS_RT_SIGPENDING, set, sigsetsize)
+}
+
+// Wait for signal with timeout
+sys_rt_sigtimedwait = (set: i64, info: i64, timeout: i64, sigsetsize: usize) i64 {
+    return compiler.syscall4(SYS_RT_SIGTIMEDWAIT, set, info, timeout, sigsetsize)
+}
+
+// Suspend until signal
+sys_rt_sigsuspend = (mask: i64, sigsetsize: usize) i64 {
+    return compiler.syscall2(SYS_RT_SIGSUSPEND, mask, sigsetsize)
+}
+
+// Send signal to process
+sys_kill = (pid: i32, sig: i32) i64 {
+    return compiler.syscall2(SYS_KILL, pid, sig)
+}
+
+// Send signal to thread
+sys_tkill = (tid: i32, sig: i32) i64 {
+    return compiler.syscall2(SYS_TKILL, tid, sig)
+}
+
+// Send signal to specific thread in process
+sys_tgkill = (tgid: i32, tid: i32, sig: i32) i64 {
+    return compiler.syscall3(SYS_TGKILL, tgid, tid, sig)
+}
+
+// Wait for any signal
+sys_pause = () i64 {
+    return compiler.syscall0(SYS_PAUSE)
+}
+
+// Set alarm timer
+sys_alarm = (seconds: u32) i64 {
+    return compiler.syscall1(SYS_ALARM, seconds)
+}
+
+// Create signalfd
+sys_signalfd4 = (fd: i32, mask: i64, sizemask: usize, flags: i32) i64 {
+    return compiler.syscall4(SYS_SIGNALFD4, fd, mask, sizemask, flags)
+}
+
+// ============================================================================
+// High-Level Signal Functions
+// ============================================================================
+
+// Block signals in set, return old mask
+sigprocmask_block = (set: SigSet, allocator: Allocator) Result<SigSet, SignalError> {
+    set_ptr = allocator.allocate(SIGSET_SIZE)
+    oldset_ptr = allocator.allocate(SIGSET_SIZE)
+
+    compiler.store<u64>(set_ptr, set.bits)
+
+    result = sys_rt_sigprocmask(SIG_BLOCK, set_ptr, oldset_ptr, SIGSET_SIZE)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(set_ptr, SIGSET_SIZE)
+            allocator.deallocate(oldset_ptr, SIGSET_SIZE)
+            return Result.Err(signal_errno_to_error(result))
+        }
+        | false {
+            old_bits = compiler.load<u64>(oldset_ptr)
+            allocator.deallocate(set_ptr, SIGSET_SIZE)
+            allocator.deallocate(oldset_ptr, SIGSET_SIZE)
+            return Result.Ok(SigSet { bits: old_bits })
+        }
+}
+
+// Unblock signals in set, return old mask
+sigprocmask_unblock = (set: SigSet, allocator: Allocator) Result<SigSet, SignalError> {
+    set_ptr = allocator.allocate(SIGSET_SIZE)
+    oldset_ptr = allocator.allocate(SIGSET_SIZE)
+
+    compiler.store<u64>(set_ptr, set.bits)
+
+    result = sys_rt_sigprocmask(SIG_UNBLOCK, set_ptr, oldset_ptr, SIGSET_SIZE)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(set_ptr, SIGSET_SIZE)
+            allocator.deallocate(oldset_ptr, SIGSET_SIZE)
+            return Result.Err(signal_errno_to_error(result))
+        }
+        | false {
+            old_bits = compiler.load<u64>(oldset_ptr)
+            allocator.deallocate(set_ptr, SIGSET_SIZE)
+            allocator.deallocate(oldset_ptr, SIGSET_SIZE)
+            return Result.Ok(SigSet { bits: old_bits })
+        }
+}
+
+// Set signal mask, return old mask
+sigprocmask_set = (set: SigSet, allocator: Allocator) Result<SigSet, SignalError> {
+    set_ptr = allocator.allocate(SIGSET_SIZE)
+    oldset_ptr = allocator.allocate(SIGSET_SIZE)
+
+    compiler.store<u64>(set_ptr, set.bits)
+
+    result = sys_rt_sigprocmask(SIG_SETMASK, set_ptr, oldset_ptr, SIGSET_SIZE)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(set_ptr, SIGSET_SIZE)
+            allocator.deallocate(oldset_ptr, SIGSET_SIZE)
+            return Result.Err(signal_errno_to_error(result))
+        }
+        | false {
+            old_bits = compiler.load<u64>(oldset_ptr)
+            allocator.deallocate(set_ptr, SIGSET_SIZE)
+            allocator.deallocate(oldset_ptr, SIGSET_SIZE)
+            return Result.Ok(SigSet { bits: old_bits })
+        }
+}
+
+// Get current signal mask
+sigprocmask_get = (allocator: Allocator) Result<SigSet, SignalError> {
+    oldset_ptr = allocator.allocate(SIGSET_SIZE)
+
+    result = sys_rt_sigprocmask(SIG_BLOCK, 0, oldset_ptr, SIGSET_SIZE)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(oldset_ptr, SIGSET_SIZE)
+            return Result.Err(signal_errno_to_error(result))
+        }
+        | false {
+            old_bits = compiler.load<u64>(oldset_ptr)
+            allocator.deallocate(oldset_ptr, SIGSET_SIZE)
+            return Result.Ok(SigSet { bits: old_bits })
+        }
+}
+
+// Get pending signals
+sigpending = (allocator: Allocator) Result<SigSet, SignalError> {
+    set_ptr = allocator.allocate(SIGSET_SIZE)
+
+    result = sys_rt_sigpending(set_ptr, SIGSET_SIZE)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(set_ptr, SIGSET_SIZE)
+            return Result.Err(signal_errno_to_error(result))
+        }
+        | false {
+            bits = compiler.load<u64>(set_ptr)
+            allocator.deallocate(set_ptr, SIGSET_SIZE)
+            return Result.Ok(SigSet { bits: bits })
+        }
+}
+
+// Send signal to process
+kill = (pid: i32, sig: i32) Result<void, SignalError> {
+    result = sys_kill(pid, sig)
+
+    result < 0 ?
+        | true { return Result.Err(signal_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Send signal to self
+raise = (sig: i32) Result<void, SignalError> {
+    // getpid then kill self
+    pid = compiler.syscall0(39)  // SYS_GETPID
+    return kill(pid, sig)
+}
+
+// Wait for any signal (pause until signal delivered)
+pause = () Result<void, SignalError> {
+    result = sys_pause()
+    // pause always returns -1 with EINTR when a signal is caught
+    return Result.Ok(())
+}
+
+// Set alarm (returns seconds remaining on previous alarm)
+alarm = (seconds: u32) u32 {
+    return sys_alarm(seconds)
+}
+
+// Cancel alarm
+alarm_cancel = () u32 {
+    return sys_alarm(0)
+}
+
+// ============================================================================
+// Signal Ignore/Default
+// ============================================================================
+
+// sigaction struct for Linux x86-64 (152 bytes)
+// Layout: sa_handler (8) + sa_flags (8) + sa_restorer (8) + sa_mask (128)
+SIGACTION_SIZE = 152
+
+// Ignore a signal
+signal_ignore = (sig: i32, allocator: Allocator) Result<void, SignalError> {
+    act_ptr = allocator.allocate(SIGACTION_SIZE)
+
+    // Zero out the structure
+    i = 0
+    loop {
+        i >= SIGACTION_SIZE ?
+            | true { break }
+            | false {
+                compiler.store<u8>(compiler.gep(act_ptr, i), 0)
+                i = i + 1
+            }
+    }
+
+    // Set handler to SIG_IGN
+    compiler.store<u64>(act_ptr, SIG_IGN)
+
+    result = sys_rt_sigaction(sig, act_ptr, 0, SIGSET_SIZE)
+
+    allocator.deallocate(act_ptr, SIGACTION_SIZE)
+
+    result < 0 ?
+        | true { return Result.Err(signal_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Reset signal to default behavior
+signal_default = (sig: i32, allocator: Allocator) Result<void, SignalError> {
+    act_ptr = allocator.allocate(SIGACTION_SIZE)
+
+    // Zero out the structure
+    i = 0
+    loop {
+        i >= SIGACTION_SIZE ?
+            | true { break }
+            | false {
+                compiler.store<u8>(compiler.gep(act_ptr, i), 0)
+                i = i + 1
+            }
+    }
+
+    // Set handler to SIG_DFL
+    compiler.store<u64>(act_ptr, SIG_DFL)
+
+    result = sys_rt_sigaction(sig, act_ptr, 0, SIGSET_SIZE)
+
+    allocator.deallocate(act_ptr, SIGACTION_SIZE)
+
+    result < 0 ?
+        | true { return Result.Err(signal_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// SignalFd - File descriptor for signal handling
+// ============================================================================
+
+SFD_CLOEXEC = 524288   // O_CLOEXEC
+SFD_NONBLOCK = 2048    // O_NONBLOCK
+
+SignalFd: {
+    fd: i32
+}
+
+// Create signalfd for the given signals
+SignalFd.new = (mask: SigSet, flags: i32, allocator: Allocator) Result<SignalFd, SignalError> {
+    mask_ptr = allocator.allocate(SIGSET_SIZE)
+    compiler.store<u64>(mask_ptr, mask.bits)
+
+    fd = sys_signalfd4(-1, mask_ptr, SIGSET_SIZE, flags)
+
+    allocator.deallocate(mask_ptr, SIGSET_SIZE)
+
+    fd < 0 ?
+        | true { return Result.Err(signal_errno_to_error(fd)) }
+        | false { return Result.Ok(SignalFd { fd: fd }) }
+}
+
+// Create signalfd with default flags (close-on-exec)
+SignalFd.create = (mask: SigSet, allocator: Allocator) Result<SignalFd, SignalError> {
+    return SignalFd.new(mask, SFD_CLOEXEC, allocator)
+}
+
+// Get file descriptor (for epoll, select, etc.)
+SignalFd.as_fd = (self: SignalFd) i32 {
+    return self.fd
+}
+
+// Update signal mask
+SignalFd.set_mask = (self: SignalFd, mask: SigSet, allocator: Allocator) Result<void, SignalError> {
+    mask_ptr = allocator.allocate(SIGSET_SIZE)
+    compiler.store<u64>(mask_ptr, mask.bits)
+
+    fd = sys_signalfd4(self.fd, mask_ptr, SIGSET_SIZE, 0)
+
+    allocator.deallocate(mask_ptr, SIGSET_SIZE)
+
+    fd < 0 ?
+        | true { return Result.Err(signal_errno_to_error(fd)) }
+        | false { return Result.Ok(()) }
+}
+
+// Read signal info from fd
+// Returns signal number, or None if no signal pending (non-blocking)
+SignalFd.read = (self: SignalFd, allocator: Allocator) Result<Option<i32>, SignalError> {
+    // signalfd_siginfo is 128 bytes, signal number at offset 0 (4 bytes)
+    buf_size = 128
+    buf = allocator.allocate(buf_size)
+
+    n = compiler.syscall3(0, self.fd, buf, buf_size)  // SYS_READ = 0
+
+    n < 0 ?
+        | true {
+            allocator.deallocate(buf, buf_size)
+            // EAGAIN means no signal pending
+            n == -11 ?
+                | true { return Result.Ok(Option.None) }
+                | false { return Result.Err(signal_errno_to_error(n)) }
+        }
+        | false {
+            n == 0 ?
+                | true {
+                    allocator.deallocate(buf, buf_size)
+                    return Result.Ok(Option.None)
+                }
+                | false {
+                    sig = compiler.load<u32>(buf)
+                    allocator.deallocate(buf, buf_size)
+                    return Result.Ok(Option.Some(sig))
+                }
+        }
+}
+
+// Close signalfd
+SignalFd.close = (self: MutPtr<SignalFd>) void {
+    self.val.fd >= 0 ?
+        | true {
+            _ = compiler.syscall1(3, self.val.fd)  // SYS_CLOSE
+            self.val.fd = -1
+        }
+        | false { }
+}
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+// Block SIGINT and SIGTERM (common for graceful shutdown)
+block_termination_signals = (allocator: Allocator) Result<SigSet, SignalError> {
+    set = SigSet.empty()
+    set.mut_ref().add(SIGINT)
+    set.mut_ref().add(SIGTERM)
+    return sigprocmask_block(set, allocator)
+}
+
+// Unblock SIGINT and SIGTERM
+unblock_termination_signals = (allocator: Allocator) Result<SigSet, SignalError> {
+    set = SigSet.empty()
+    set.mut_ref().add(SIGINT)
+    set.mut_ref().add(SIGTERM)
+    return sigprocmask_unblock(set, allocator)
+}
+
+// Ignore SIGPIPE (common for network servers)
+ignore_sigpipe = (allocator: Allocator) Result<void, SignalError> {
+    return signal_ignore(SIGPIPE, allocator)
+}
+
+// Ignore SIGCHLD (don't create zombies)
+ignore_sigchld = (allocator: Allocator) Result<void, SignalError> {
+    return signal_ignore(SIGCHLD, allocator)
+}
+

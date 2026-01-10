@@ -1,0 +1,649 @@
+// Zen Standard Library: Poll I/O Multiplexing (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Simple and portable alternative to epoll
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Vec } = @std.vec
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Poll Syscall Numbers
+// ============================================================================
+
+SYS_POLL = 7
+SYS_PPOLL = 271
+
+// ============================================================================
+// Poll Event Flags
+// ============================================================================
+
+// Input events (requested)
+POLLIN = 1          // Data to read
+POLLPRI = 2         // Priority data to read
+POLLOUT = 4         // Writing won't block
+POLLRDNORM = 64     // Normal data to read
+POLLRDBAND = 128    // Priority band data to read
+POLLWRNORM = 256    // Writing normal data won't block
+POLLWRBAND = 512    // Writing priority data won't block
+
+// Output events (returned)
+POLLERR = 8         // Error condition
+POLLHUP = 16        // Hung up
+POLLNVAL = 32       // Invalid request (fd not open)
+
+// Convenience combinations
+POLL_READ = 1       // POLLIN
+POLL_WRITE = 4      // POLLOUT
+POLL_RDWR = 5       // POLLIN | POLLOUT
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+PollError: {
+    code: i32
+}
+
+poll_errno_to_error = (errno: i64) PollError {
+    code = 0 - errno
+    return PollError { code: code }
+}
+
+// Check if error is timeout (ETIMEDOUT or result 0)
+PollError.is_timeout = (self: PollError) bool {
+    return self.code == 110  // ETIMEDOUT
+}
+
+// Check if error is interrupted
+PollError.is_interrupted = (self: PollError) bool {
+    return self.code == 4  // EINTR
+}
+
+// ============================================================================
+// Pollfd Structure
+// ============================================================================
+
+// sizeof(struct pollfd) = 8 bytes on Linux x86-64
+// struct pollfd {
+//     int fd;           // 4 bytes
+//     short events;     // 2 bytes
+//     short revents;    // 2 bytes
+// }
+POLLFD_SIZE = 8
+
+Pollfd: {
+    fd: i32,
+    events: i16,
+    revents: i16
+}
+
+Pollfd.new = (fd: i32, events: i16) Pollfd {
+    return Pollfd { fd: fd, events: events, revents: 0 }
+}
+
+Pollfd.read = (fd: i32) Pollfd {
+    return Pollfd { fd: fd, events: POLLIN, revents: 0 }
+}
+
+Pollfd.write = (fd: i32) Pollfd {
+    return Pollfd { fd: fd, events: POLLOUT, revents: 0 }
+}
+
+Pollfd.read_write = (fd: i32) Pollfd {
+    return Pollfd { fd: fd, events: POLLIN | POLLOUT, revents: 0 }
+}
+
+// Check if readable
+Pollfd.is_readable = (self: Pollfd) bool {
+    return (self.revents & POLLIN) != 0
+}
+
+// Check if writable
+Pollfd.is_writable = (self: Pollfd) bool {
+    return (self.revents & POLLOUT) != 0
+}
+
+// Check if error occurred
+Pollfd.is_error = (self: Pollfd) bool {
+    return (self.revents & POLLERR) != 0
+}
+
+// Check if hung up
+Pollfd.is_hangup = (self: Pollfd) bool {
+    return (self.revents & POLLHUP) != 0
+}
+
+// Check if invalid fd
+Pollfd.is_invalid = (self: Pollfd) bool {
+    return (self.revents & POLLNVAL) != 0
+}
+
+// Check if any event occurred
+Pollfd.has_events = (self: Pollfd) bool {
+    return self.revents != 0
+}
+
+// Clear returned events
+Pollfd.clear_revents = (self: MutPtr<Pollfd>) void {
+    self.val.revents = 0
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+// Poll syscall
+// fds: pointer to array of pollfd structs
+// nfds: number of fds to poll
+// timeout: timeout in milliseconds (-1 = block forever, 0 = return immediately)
+sys_poll = (fds: i64, nfds: usize, timeout: i32) i64 {
+    return compiler.syscall3(SYS_POLL, fds, nfds, timeout)
+}
+
+// ppoll syscall (with signal mask and nanosecond timeout)
+// tmo_p: pointer to timespec (or 0 for no timeout)
+// sigmask: pointer to sigset_t (or 0 for no mask)
+// sigsetsize: size of sigset_t
+sys_ppoll = (fds: i64, nfds: usize, tmo_p: i64, sigmask: i64, sigsetsize: usize) i64 {
+    return compiler.syscall5(SYS_PPOLL, fds, nfds, tmo_p, sigmask, sigsetsize)
+}
+
+// ============================================================================
+// Single FD Polling
+// ============================================================================
+
+// Poll a single fd for reading
+poll_read = (fd: i32, timeout_ms: i32, allocator: Allocator) Result<bool, PollError> {
+    buf = allocator.allocate(POLLFD_SIZE)
+
+    // Write pollfd struct
+    compiler.store<i32>(buf, fd)
+    compiler.store<i16>(buf + 4, POLLIN)
+    compiler.store<i16>(buf + 6, 0)
+
+    result = sys_poll(buf, 1, timeout_ms)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, POLLFD_SIZE)
+            return Result.Err(poll_errno_to_error(result))
+        }
+        | false {
+            revents = compiler.load<i16>(buf + 6)
+            allocator.deallocate(buf, POLLFD_SIZE)
+
+            // result is number of fds with events
+            result == 0 ?
+                | true { return Result.Ok(false) }  // Timeout
+                | false { return Result.Ok((revents & POLLIN) != 0) }
+        }
+}
+
+// Poll a single fd for writing
+poll_write = (fd: i32, timeout_ms: i32, allocator: Allocator) Result<bool, PollError> {
+    buf = allocator.allocate(POLLFD_SIZE)
+
+    compiler.store<i32>(buf, fd)
+    compiler.store<i16>(buf + 4, POLLOUT)
+    compiler.store<i16>(buf + 6, 0)
+
+    result = sys_poll(buf, 1, timeout_ms)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, POLLFD_SIZE)
+            return Result.Err(poll_errno_to_error(result))
+        }
+        | false {
+            revents = compiler.load<i16>(buf + 6)
+            allocator.deallocate(buf, POLLFD_SIZE)
+
+            result == 0 ?
+                | true { return Result.Ok(false) }
+                | false { return Result.Ok((revents & POLLOUT) != 0) }
+        }
+}
+
+// Poll a single fd for any event
+poll_one = (fd: i32, events: i16, timeout_ms: i32, allocator: Allocator) Result<i16, PollError> {
+    buf = allocator.allocate(POLLFD_SIZE)
+
+    compiler.store<i32>(buf, fd)
+    compiler.store<i16>(buf + 4, events)
+    compiler.store<i16>(buf + 6, 0)
+
+    result = sys_poll(buf, 1, timeout_ms)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, POLLFD_SIZE)
+            return Result.Err(poll_errno_to_error(result))
+        }
+        | false {
+            revents = compiler.load<i16>(buf + 6)
+            allocator.deallocate(buf, POLLFD_SIZE)
+            return Result.Ok(revents)
+        }
+}
+
+// ============================================================================
+// Multi-FD Polling
+// ============================================================================
+
+// Poll multiple fds
+// Returns number of fds with events (0 = timeout)
+poll_many = (fds: MutPtr<Vec<Pollfd>>, timeout_ms: i32, allocator: Allocator) Result<usize, PollError> {
+    nfds = fds.val.len()
+    nfds == 0 ?
+        | true { return Result.Ok(0) }
+        | false { }
+
+    buf_size = nfds * POLLFD_SIZE
+    buf = allocator.allocate(buf_size)
+
+    // Copy pollfd structs to buffer
+    i = 0
+    loop {
+        i >= nfds ?
+            | true { break }
+            | false {
+                pfd_opt = fds.val.get(i)
+                pfd_opt ?
+                    | Some(pfd) {
+                        offset = i * POLLFD_SIZE
+                        compiler.store<i32>(buf + offset, pfd.fd)
+                        compiler.store<i16>(buf + offset + 4, pfd.events)
+                        compiler.store<i16>(buf + offset + 6, 0)
+                    }
+                    | None { }
+                i = i + 1
+            }
+    }
+
+    result = sys_poll(buf, nfds, timeout_ms)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, buf_size)
+            return Result.Err(poll_errno_to_error(result))
+        }
+        | false {
+            // Copy revents back to vec
+            i = 0
+            loop {
+                i >= nfds ?
+                    | true { break }
+                    | false {
+                        offset = i * POLLFD_SIZE
+                        revents = compiler.load<i16>(buf + offset + 6)
+
+                        pfd_opt = fds.val.get(i)
+                        pfd_opt ?
+                            | Some(pfd) {
+                                updated = Pollfd { fd: pfd.fd, events: pfd.events, revents: revents }
+                                fds.val.set(i, updated)
+                            }
+                            | None { }
+                        i = i + 1
+                    }
+            }
+
+            allocator.deallocate(buf, buf_size)
+            return Result.Ok(result)
+        }
+}
+
+// ============================================================================
+// PollSet - Managed set of polled file descriptors
+// ============================================================================
+
+PollEntry: {
+    fd: i32,
+    events: i16,
+    revents: i16,
+    user_data: i64
+}
+
+PollEntry.new = (fd: i32, events: i16, user_data: i64) PollEntry {
+    return PollEntry { fd: fd, events: events, revents: 0, user_data: user_data }
+}
+
+PollSet: {
+    entries: Vec<PollEntry>,
+    allocator: Allocator
+}
+
+// Create a new poll set
+PollSet.new = (allocator: Allocator) PollSet {
+    entries = Vec<PollEntry>.new(allocator)
+    return PollSet { entries: entries, allocator: allocator }
+}
+
+// Add fd to poll set
+PollSet.add = (self: MutPtr<PollSet>, fd: i32, events: i16, user_data: i64) void {
+    entry = PollEntry.new(fd, events, user_data)
+    self.val.entries.mut_ref().push(entry)
+}
+
+// Add fd for reading
+PollSet.add_read = (self: MutPtr<PollSet>, fd: i32, user_data: i64) void {
+    self.add(fd, POLLIN, user_data)
+}
+
+// Add fd for writing
+PollSet.add_write = (self: MutPtr<PollSet>, fd: i32, user_data: i64) void {
+    self.add(fd, POLLOUT, user_data)
+}
+
+// Add fd for reading and writing
+PollSet.add_rdwr = (self: MutPtr<PollSet>, fd: i32, user_data: i64) void {
+    self.add(fd, POLLIN | POLLOUT, user_data)
+}
+
+// Remove fd from poll set
+PollSet.remove = (self: MutPtr<PollSet>, fd: i32) bool {
+    len = self.val.entries.len()
+    i = 0
+    loop {
+        i >= len ?
+            | true { return false }
+            | false {
+                entry_opt = self.val.entries.get(i)
+                entry_opt ?
+                    | Some(entry) {
+                        entry.fd == fd ?
+                            | true {
+                                self.val.entries.mut_ref().remove(i)
+                                return true
+                            }
+                            | false { i = i + 1 }
+                    }
+                    | None { i = i + 1 }
+            }
+    }
+    return false
+}
+
+// Modify events for fd
+PollSet.modify = (self: MutPtr<PollSet>, fd: i32, new_events: i16) bool {
+    len = self.val.entries.len()
+    i = 0
+    loop {
+        i >= len ?
+            | true { return false }
+            | false {
+                entry_opt = self.val.entries.get(i)
+                entry_opt ?
+                    | Some(entry) {
+                        entry.fd == fd ?
+                            | true {
+                                updated = PollEntry {
+                                    fd: entry.fd,
+                                    events: new_events,
+                                    revents: 0,
+                                    user_data: entry.user_data
+                                }
+                                self.val.entries.mut_ref().set(i, updated)
+                                return true
+                            }
+                            | false { i = i + 1 }
+                    }
+                    | None { i = i + 1 }
+            }
+    }
+    return false
+}
+
+// Get number of fds in set
+PollSet.len = (self: PollSet) usize {
+    return self.entries.len()
+}
+
+// Check if empty
+PollSet.is_empty = (self: PollSet) bool {
+    return self.entries.len() == 0
+}
+
+// Poll the set
+// Returns number of fds with events
+PollSet.poll = (self: MutPtr<PollSet>, timeout_ms: i32) Result<usize, PollError> {
+    nfds = self.val.entries.len()
+    nfds == 0 ?
+        | true { return Result.Ok(0) }
+        | false { }
+
+    buf_size = nfds * POLLFD_SIZE
+    buf = self.val.allocator.allocate(buf_size)
+
+    // Copy entries to pollfd buffer
+    i = 0
+    loop {
+        i >= nfds ?
+            | true { break }
+            | false {
+                entry_opt = self.val.entries.get(i)
+                entry_opt ?
+                    | Some(entry) {
+                        offset = i * POLLFD_SIZE
+                        compiler.store<i32>(buf + offset, entry.fd)
+                        compiler.store<i16>(buf + offset + 4, entry.events)
+                        compiler.store<i16>(buf + offset + 6, 0)
+                    }
+                    | None { }
+                i = i + 1
+            }
+    }
+
+    result = sys_poll(buf, nfds, timeout_ms)
+
+    result < 0 ?
+        | true {
+            self.val.allocator.deallocate(buf, buf_size)
+            return Result.Err(poll_errno_to_error(result))
+        }
+        | false {
+            // Copy revents back
+            i = 0
+            loop {
+                i >= nfds ?
+                    | true { break }
+                    | false {
+                        offset = i * POLLFD_SIZE
+                        revents = compiler.load<i16>(buf + offset + 6)
+
+                        entry_opt = self.val.entries.get(i)
+                        entry_opt ?
+                            | Some(entry) {
+                                updated = PollEntry {
+                                    fd: entry.fd,
+                                    events: entry.events,
+                                    revents: revents,
+                                    user_data: entry.user_data
+                                }
+                                self.val.entries.mut_ref().set(i, updated)
+                            }
+                            | None { }
+                        i = i + 1
+                    }
+            }
+
+            self.val.allocator.deallocate(buf, buf_size)
+            return Result.Ok(result)
+        }
+}
+
+// Clear all revents
+PollSet.clear_revents = (self: MutPtr<PollSet>) void {
+    len = self.val.entries.len()
+    i = 0
+    loop {
+        i >= len ?
+            | true { break }
+            | false {
+                entry_opt = self.val.entries.get(i)
+                entry_opt ?
+                    | Some(entry) {
+                        updated = PollEntry {
+                            fd: entry.fd,
+                            events: entry.events,
+                            revents: 0,
+                            user_data: entry.user_data
+                        }
+                        self.val.entries.mut_ref().set(i, updated)
+                    }
+                    | None { }
+                i = i + 1
+            }
+    }
+}
+
+// Free resources
+PollSet.free = (self: MutPtr<PollSet>) void {
+    self.val.entries.mut_ref().free()
+}
+
+// ============================================================================
+// PollSet Iterator for ready entries
+// ============================================================================
+
+PollSetIterator: {
+    set: PollSet,
+    index: usize
+}
+
+// Get iterator over entries with events
+PollSet.ready = (self: PollSet) PollSetIterator {
+    return PollSetIterator { set: self, index: 0 }
+}
+
+// Get next ready entry
+PollSetIterator.next = (self: MutPtr<PollSetIterator>) Option<PollEntry> {
+    len = self.val.set.entries.len()
+
+    loop {
+        self.val.index >= len ?
+            | true { return Option.None() }
+            | false {
+                entry_opt = self.val.set.entries.get(self.val.index)
+                self.val.index = self.val.index + 1
+
+                entry_opt ?
+                    | Some(entry) {
+                        entry.revents != 0 ?
+                            | true { return Option.Some(entry) }
+                            | false { }  // Continue looking
+                    }
+                    | None { }
+            }
+    }
+
+    return Option.None()
+}
+
+// ============================================================================
+// Wait Helpers
+// ============================================================================
+
+// Wait for fd to become readable (blocking)
+wait_readable = (fd: i32, allocator: Allocator) Result<void, PollError> {
+    result = poll_read(fd, -1, allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(ready) {
+            ready ?
+                | true { return Result.Ok(()) }
+                | false { return Result.Err(PollError { code: 110 }) }  // Shouldn't happen with -1 timeout
+        }
+}
+
+// Wait for fd to become writable (blocking)
+wait_writable = (fd: i32, allocator: Allocator) Result<void, PollError> {
+    result = poll_write(fd, -1, allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(ready) {
+            ready ?
+                | true { return Result.Ok(()) }
+                | false { return Result.Err(PollError { code: 110 }) }
+        }
+}
+
+// Wait for fd with timeout
+wait_readable_timeout = (fd: i32, timeout_ms: i32, allocator: Allocator) Result<bool, PollError> {
+    return poll_read(fd, timeout_ms, allocator)
+}
+
+wait_writable_timeout = (fd: i32, timeout_ms: i32, allocator: Allocator) Result<bool, PollError> {
+    return poll_write(fd, timeout_ms, allocator)
+}
+
+// ============================================================================
+// Select-style API (for compatibility)
+// ============================================================================
+
+// Check if any fd in list is ready for reading
+select_read = (fds: Vec<i32>, timeout_ms: i32, allocator: Allocator) Result<Vec<i32>, PollError> {
+    nfds = fds.len()
+    nfds == 0 ?
+        | true { return Result.Ok(Vec<i32>.new(allocator)) }
+        | false { }
+
+    buf_size = nfds * POLLFD_SIZE
+    buf = allocator.allocate(buf_size)
+
+    // Build pollfd array
+    i = 0
+    loop {
+        i >= nfds ?
+            | true { break }
+            | false {
+                fd_opt = fds.get(i)
+                fd_opt ?
+                    | Some(fd) {
+                        offset = i * POLLFD_SIZE
+                        compiler.store<i32>(buf + offset, fd)
+                        compiler.store<i16>(buf + offset + 4, POLLIN)
+                        compiler.store<i16>(buf + offset + 6, 0)
+                    }
+                    | None { }
+                i = i + 1
+            }
+    }
+
+    result = sys_poll(buf, nfds, timeout_ms)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, buf_size)
+            return Result.Err(poll_errno_to_error(result))
+        }
+        | false {
+            // Collect ready fds
+            ready = Vec<i32>.new(allocator)
+            i = 0
+            loop {
+                i >= nfds ?
+                    | true { break }
+                    | false {
+                        offset = i * POLLFD_SIZE
+                        revents = compiler.load<i16>(buf + offset + 6)
+                        (revents & POLLIN) != 0 ?
+                            | true {
+                                fd = compiler.load<i32>(buf + offset)
+                                ready.mut_ref().push(fd)
+                            }
+                            | false { }
+                        i = i + 1
+                    }
+            }
+
+            allocator.deallocate(buf, buf_size)
+            return Result.Ok(ready)
+        }
+}
+

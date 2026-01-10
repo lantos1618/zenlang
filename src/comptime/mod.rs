@@ -9,7 +9,6 @@ use std::rc::Rc;
 
 // Value types that can exist at compile time
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum ComptimeValue {
     // Primitive values
     I8(i8),
@@ -177,7 +176,6 @@ impl Environment {
 }
 
 // Compile-time interpreter
-#[allow(dead_code)]
 pub struct ComptimeInterpreter {
     env: Environment,
     // Track generated code
@@ -205,8 +203,7 @@ impl ComptimeInterpreter {
         Self::default()
     }
 
-    // Helper methods for testing
-    #[allow(dead_code)]
+    // Helper methods
     pub fn set_variable(&mut self, name: String, value: ComptimeValue) {
         self.env.variables.borrow_mut().insert(name, value);
     }

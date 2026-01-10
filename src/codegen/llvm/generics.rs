@@ -1,4 +1,5 @@
 use crate::ast::AstType;
+use crate::type_context::TypeContext;
 use crate::well_known::well_known;
 use std::collections::HashMap;
 
@@ -53,7 +54,14 @@ impl GenericTypeTracker {
     }
 
     /// Extract and track generic types from a complex type
+    /// Uses TypeContext to determine collection semantics instead of hardcoded type names.
     pub fn track_generic_type(&mut self, type_: &AstType, prefix: &str) {
+        // Delegate to the version with TypeContext, using None for backward compatibility
+        self.track_generic_type_with_ctx(type_, prefix, None);
+    }
+
+    /// Extract and track generic types from a complex type with TypeContext
+    pub fn track_generic_type_with_ctx(&mut self, type_: &AstType, prefix: &str, type_ctx: Option<&TypeContext>) {
         match type_ {
             AstType::Generic { name, type_args } => {
                 // Track the main generic type
@@ -72,37 +80,32 @@ impl GenericTypeTracker {
                     self.insert(format!("{}_Err_Type", prefix), type_args[1].clone());
 
                     // Recursively track nested generics
-                    self.track_generic_type(&type_args[0], &format!("{}_Ok", prefix));
-                    self.track_generic_type(&type_args[1], &format!("{}_Err", prefix));
+                    self.track_generic_type_with_ctx(&type_args[0], &format!("{}_Ok", prefix), type_ctx);
+                    self.track_generic_type_with_ctx(&type_args[1], &format!("{}_Err", prefix), type_ctx);
                 } else if wk.is_option(name) && type_args.len() == 1 {
                     self.insert(format!("{}_Some_Type", prefix), type_args[0].clone());
 
                     // Recursively track nested generics
-                    self.track_generic_type(&type_args[0], &format!("{}_Some", prefix));
-                } else if name == "Array" && type_args.len() == 1 {
-                    self.insert(format!("{}_Element_Type", prefix), type_args[0].clone());
-
-                    // Recursively track nested generics
-                    self.track_generic_type(&type_args[0], &format!("{}_Element", prefix));
-                } else if name == "Vec" && type_args.len() == 1 {
-                    self.insert(format!("{}_Element_Type", prefix), type_args[0].clone());
-
-                    self.track_generic_type(&type_args[0], &format!("{}_Element", prefix));
-                } else if name == "HashMap" && type_args.len() == 2 {
-                    self.insert(format!("{}_Key_Type", prefix), type_args[0].clone());
-                    self.insert(format!("{}_Value_Type", prefix), type_args[1].clone());
-
-                    self.track_generic_type(&type_args[0], &format!("{}_Key", prefix));
-                    self.track_generic_type(&type_args[1], &format!("{}_Value", prefix));
-                } else if name == "HashSet" && type_args.len() == 1 {
-                    self.insert(format!("{}_Element_Type", prefix), type_args[0].clone());
-
-                    self.track_generic_type(&type_args[0], &format!("{}_Element", prefix));
+                    self.track_generic_type_with_ctx(&type_args[0], &format!("{}_Some", prefix), type_ctx);
+                } else if crate::type_context::is_single_element_collection(name) {
+                    // Single element collection - track element type
+                    if !type_args.is_empty() {
+                        self.insert(format!("{}_Element_Type", prefix), type_args[0].clone());
+                        self.track_generic_type_with_ctx(&type_args[0], &format!("{}_Element", prefix), type_ctx);
+                    }
+                } else if crate::type_context::is_key_value_collection(name) {
+                    // Key-value collection - track key and value types
+                    if type_args.len() >= 2 {
+                        self.insert(format!("{}_Key_Type", prefix), type_args[0].clone());
+                        self.insert(format!("{}_Value_Type", prefix), type_args[1].clone());
+                        self.track_generic_type_with_ctx(&type_args[0], &format!("{}_Key", prefix), type_ctx);
+                        self.track_generic_type_with_ctx(&type_args[1], &format!("{}_Value", prefix), type_ctx);
+                    }
                 } else {
                     // For other generic types, track type arguments by index
                     for (i, arg) in type_args.iter().enumerate() {
                         self.insert(format!("{}_arg{}_Type", prefix, i), arg.clone());
-                        self.track_generic_type(arg, &format!("{}_arg{}", prefix, i));
+                        self.track_generic_type_with_ctx(arg, &format!("{}_arg{}", prefix, i), type_ctx);
                     }
                 }
             }

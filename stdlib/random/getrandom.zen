@@ -1,0 +1,465 @@
+// Zen Standard Library: Random Number Generation (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses getrandom syscall
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Vec } = @std.vec
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Syscall Number
+// ============================================================================
+
+SYS_GETRANDOM = 318
+
+// ============================================================================
+// Getrandom Flags
+// ============================================================================
+
+GRND_NONBLOCK = 1  // Don't block if entropy not available
+GRND_RANDOM = 2    // Use /dev/random instead of /dev/urandom
+GRND_INSECURE = 4  // Allow insecure (uninitialized) random data
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+RandomError: {
+    code: i32
+}
+
+random_errno_to_error = (errno: i64) RandomError {
+    code = 0 - errno
+    return RandomError { code: code }
+}
+
+// ============================================================================
+// Low-Level Syscall
+// ============================================================================
+
+// Get random bytes from kernel
+// buf: buffer to fill
+// buflen: number of bytes to get
+// flags: GRND_* flags
+sys_getrandom = (buf: i64, buflen: usize, flags: u32) i64 {
+    return compiler.syscall3(SYS_GETRANDOM, buf, buflen, flags)
+}
+
+// ============================================================================
+// High-Level Functions
+// ============================================================================
+
+// Fill buffer with random bytes (blocking, cryptographically secure)
+getrandom = (buf: i64, len: usize) Result<usize, RandomError> {
+    result = sys_getrandom(buf, len, 0)
+
+    result < 0 ?
+        | true { return Result.Err(random_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Fill buffer with random bytes (non-blocking, may return fewer bytes)
+getrandom_nonblock = (buf: i64, len: usize) Result<usize, RandomError> {
+    result = sys_getrandom(buf, len, GRND_NONBLOCK)
+
+    result < 0 ?
+        | true { return Result.Err(random_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Get random bytes into Vec
+random_bytes = (len: usize, allocator: Allocator) Result<Vec<u8>, RandomError> {
+    buf = allocator.allocate(len)
+
+    result = getrandom(buf, len)
+
+    result ?
+        | Err(e) {
+            allocator.deallocate(buf, len)
+            return Result.Err(e)
+        }
+        | Ok(n) {
+            vec = Vec<u8>.from_ptr(buf, n, allocator)
+            return Result.Ok(vec)
+        }
+}
+
+// ============================================================================
+// Random Value Generation
+// ============================================================================
+
+// Get random u8
+random_u8 = (allocator: Allocator) Result<u8, RandomError> {
+    buf = allocator.allocate(1)
+    result = getrandom(buf, 1)
+
+    result ?
+        | Err(e) {
+            allocator.deallocate(buf, 1)
+            return Result.Err(e)
+        }
+        | Ok(_) {
+            val = compiler.load<u8>(buf)
+            allocator.deallocate(buf, 1)
+            return Result.Ok(val)
+        }
+}
+
+// Get random u16
+random_u16 = (allocator: Allocator) Result<u16, RandomError> {
+    buf = allocator.allocate(2)
+    result = getrandom(buf, 2)
+
+    result ?
+        | Err(e) {
+            allocator.deallocate(buf, 2)
+            return Result.Err(e)
+        }
+        | Ok(_) {
+            val = compiler.load<u16>(buf)
+            allocator.deallocate(buf, 2)
+            return Result.Ok(val)
+        }
+}
+
+// Get random u32
+random_u32 = (allocator: Allocator) Result<u32, RandomError> {
+    buf = allocator.allocate(4)
+    result = getrandom(buf, 4)
+
+    result ?
+        | Err(e) {
+            allocator.deallocate(buf, 4)
+            return Result.Err(e)
+        }
+        | Ok(_) {
+            val = compiler.load<u32>(buf)
+            allocator.deallocate(buf, 4)
+            return Result.Ok(val)
+        }
+}
+
+// Get random u64
+random_u64 = (allocator: Allocator) Result<u64, RandomError> {
+    buf = allocator.allocate(8)
+    result = getrandom(buf, 8)
+
+    result ?
+        | Err(e) {
+            allocator.deallocate(buf, 8)
+            return Result.Err(e)
+        }
+        | Ok(_) {
+            val = compiler.load<u64>(buf)
+            allocator.deallocate(buf, 8)
+            return Result.Ok(val)
+        }
+}
+
+// Get random i32
+random_i32 = (allocator: Allocator) Result<i32, RandomError> {
+    result = random_u32(allocator)
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(val) { return Result.Ok(val) }
+}
+
+// Get random i64
+random_i64 = (allocator: Allocator) Result<i64, RandomError> {
+    result = random_u64(allocator)
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(val) { return Result.Ok(val) }
+}
+
+// ============================================================================
+// Bounded Random Values
+// ============================================================================
+
+// Get random u32 in range [0, max)
+random_u32_bounded = (max: u32, allocator: Allocator) Result<u32, RandomError> {
+    max == 0 ?
+        | true { return Result.Ok(0) }
+        | false { }
+
+    // Rejection sampling to avoid modulo bias
+    // threshold = (2^32 - max) % max = -max % max
+    threshold = (0 - max) % max
+
+    loop {
+        result = random_u32(allocator)
+        result ?
+            | Err(e) { return Result.Err(e) }
+            | Ok(val) {
+                val >= threshold ?
+                    | true { return Result.Ok(val % max) }
+                    | false { }  // Retry
+            }
+    }
+
+    // Unreachable
+    return Result.Ok(0)
+}
+
+// Get random u64 in range [0, max)
+random_u64_bounded = (max: u64, allocator: Allocator) Result<u64, RandomError> {
+    max == 0 ?
+        | true { return Result.Ok(0) }
+        | false { }
+
+    threshold = (0 - max) % max
+
+    loop {
+        result = random_u64(allocator)
+        result ?
+            | Err(e) { return Result.Err(e) }
+            | Ok(val) {
+                val >= threshold ?
+                    | true { return Result.Ok(val % max) }
+                    | false { }
+            }
+    }
+
+    return Result.Ok(0)
+}
+
+// Get random i32 in range [min, max)
+random_i32_range = (min: i32, max: i32, allocator: Allocator) Result<i32, RandomError> {
+    max <= min ?
+        | true { return Result.Ok(min) }
+        | false { }
+
+    range = max - min
+    result = random_u32_bounded(range, allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(val) { return Result.Ok(min + val) }
+}
+
+// Get random i64 in range [min, max)
+random_i64_range = (min: i64, max: i64, allocator: Allocator) Result<i64, RandomError> {
+    max <= min ?
+        | true { return Result.Ok(min) }
+        | false { }
+
+    range = max - min
+    result = random_u64_bounded(range, allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(val) { return Result.Ok(min + val) }
+}
+
+// ============================================================================
+// Floating Point Random
+// ============================================================================
+
+// Get random f64 in range [0.0, 1.0)
+random_f64 = (allocator: Allocator) Result<f64, RandomError> {
+    result = random_u64(allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(val) {
+            // Use top 53 bits for mantissa precision
+            shifted = val >> 11
+            f = shifted
+            return Result.Ok(f / 9007199254740992.0)  // 2^53
+        }
+}
+
+// Get random f64 in range [min, max)
+random_f64_range = (min: f64, max: f64, allocator: Allocator) Result<f64, RandomError> {
+    result = random_f64(allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(val) {
+            range = max - min
+            return Result.Ok(min + val * range)
+        }
+}
+
+// ============================================================================
+// Random Boolean
+// ============================================================================
+
+// Get random boolean
+random_bool = (allocator: Allocator) Result<bool, RandomError> {
+    result = random_u8(allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(val) { return Result.Ok((val & 1) == 1) }
+}
+
+// Get random boolean with probability p (0.0 to 1.0)
+random_bool_weighted = (p: f64, allocator: Allocator) Result<bool, RandomError> {
+    result = random_f64(allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(val) { return Result.Ok(val < p) }
+}
+
+// ============================================================================
+// Shuffle
+// ============================================================================
+
+// Shuffle a Vec in place (Fisher-Yates)
+shuffle_vec_u8 = (vec: MutPtr<Vec<u8>>, allocator: Allocator) Result<void, RandomError> {
+    len = vec.val.len()
+    len <= 1 ?
+        | true { return Result.Ok(()) }
+        | false { }
+
+    i = len - 1
+    loop {
+        i <= 0 ?
+            | true { break }
+            | false {
+                // Random index from 0 to i (inclusive)
+                j_result = random_u64_bounded(i + 1, allocator)
+
+                j_result ?
+                    | Err(e) { return Result.Err(e) }
+                    | Ok(j) {
+                        // Swap elements at i and j
+                        i != j ?
+                            | true {
+                                elem_i = vec.val.get(i)
+                                elem_j = vec.val.get(j)
+
+                                elem_i ?
+                                    | Some(vi) {
+                                        elem_j ?
+                                            | Some(vj) {
+                                                vec.val.set(i, vj)
+                                                vec.val.set(j, vi)
+                                            }
+                                            | None { }
+                                    }
+                                    | None { }
+                            }
+                            | false { }
+                    }
+
+                i = i - 1
+            }
+    }
+
+    return Result.Ok(())
+}
+
+// ============================================================================
+// UUID Generation
+// ============================================================================
+
+// Generate UUID v4 (random)
+// Returns 16 bytes
+uuid_v4 = (allocator: Allocator) Result<Vec<u8>, RandomError> {
+    result = random_bytes(16, allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(bytes) {
+            // Set version (4) and variant (RFC 4122)
+            // byte 6: xxxx0100 (version 4)
+            // byte 8: 10xxxxxx (variant 1)
+
+            byte6_opt = bytes.get(6)
+            byte6_opt ?
+                | Some(b6) {
+                    new_b6 = (b6 & 0x0F) | 0x40
+                    bytes.mut_ref().set(6, new_b6)
+                }
+                | None { }
+
+            byte8_opt = bytes.get(8)
+            byte8_opt ?
+                | Some(b8) {
+                    new_b8 = (b8 & 0x3F) | 0x80
+                    bytes.mut_ref().set(8, new_b8)
+                }
+                | None { }
+
+            return Result.Ok(bytes)
+        }
+}
+
+// ============================================================================
+// PRNG (for when you need deterministic sequences)
+// Uses xorshift128+ algorithm
+// ============================================================================
+
+Xorshift128Plus: {
+    s0: u64,
+    s1: u64
+}
+
+// Create from seed
+Xorshift128Plus.new = (seed: u64) Xorshift128Plus {
+    // Use splitmix64 to expand seed
+    z = seed
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9
+    s0 = z ^ (z >> 27) * 0x94D049BB133111EB
+    z = z + 0x9E3779B97F4A7C15
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9
+    s1 = z ^ (z >> 27) * 0x94D049BB133111EB
+
+    return Xorshift128Plus { s0: s0, s1: s1 }
+}
+
+// Seed from system entropy
+Xorshift128Plus.from_entropy = (allocator: Allocator) Result<Xorshift128Plus, RandomError> {
+    seed_result = random_u64(allocator)
+
+    seed_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(seed) { return Result.Ok(Xorshift128Plus.new(seed)) }
+}
+
+// Generate next u64
+Xorshift128Plus.next_u64 = (self: MutPtr<Xorshift128Plus>) u64 {
+    x = self.val.s0
+    y = self.val.s1
+    self.val.s0 = y
+    x = x ^ (x << 23)
+    self.val.s1 = x ^ y ^ (x >> 17) ^ (y >> 26)
+    return self.val.s1 + y
+}
+
+// Generate u64 in range [0, max)
+Xorshift128Plus.next_u64_bounded = (self: MutPtr<Xorshift128Plus>, max: u64) u64 {
+    max == 0 ?
+        | true { return 0 }
+        | false { }
+
+    threshold = (0 - max) % max
+
+    loop {
+        val = self.next_u64()
+        val >= threshold ?
+            | true { return val % max }
+            | false { }
+    }
+
+    return 0
+}
+
+// Generate f64 in [0.0, 1.0)
+Xorshift128Plus.next_f64 = (self: MutPtr<Xorshift128Plus>) f64 {
+    val = self.next_u64()
+    shifted = val >> 11
+    f = shifted
+    return f / 9007199254740992.0
+}
+
+// Generate bool
+Xorshift128Plus.next_bool = (self: MutPtr<Xorshift128Plus>) bool {
+    return (self.next_u64() & 1) == 1
+}
+

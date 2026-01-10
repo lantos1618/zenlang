@@ -35,6 +35,7 @@ pub fn infer_string_method_type(method: &str, is_string_struct: bool) -> Option<
         "char_at" => Some(AstType::I32),
         "split" => {
             // split returns array of same string type as input
+            // TODO: should come from TypeContext String::split return type
             let string_type = if is_string_struct {
                 crate::ast::resolve_string_struct_type()
             } else {

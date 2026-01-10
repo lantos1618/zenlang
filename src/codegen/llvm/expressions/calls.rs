@@ -4,9 +4,6 @@ use crate::codegen::llvm::{LLVMCompiler, Type, VariableInfo};
 use crate::error::CompileError;
 use inkwell::types::BasicMetadataTypeEnum;
 use inkwell::values::BasicValueEnum;
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-static CLOSURE_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 pub fn compile_function_call<'ctx>(
     compiler: &mut LLVMCompiler<'ctx>,
@@ -50,7 +47,8 @@ pub fn compile_closure<'ctx>(
             body,
             return_type,
         } => {
-            let closure_id = CLOSURE_COUNTER.fetch_add(1, Ordering::SeqCst);
+            let closure_id = compiler.closure_counter;
+            compiler.closure_counter += 1;
             let closure_name = format!("__closure_{}", closure_id);
 
             let ret_type = return_type

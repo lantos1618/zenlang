@@ -1,0 +1,539 @@
+// Zen Standard Library: Inotify File Watching (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ String } = @std.string
+{ Vec } = @std.vec
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Inotify Syscall Numbers
+// ============================================================================
+
+SYS_INOTIFY_INIT = 253
+SYS_INOTIFY_INIT1 = 294
+SYS_INOTIFY_ADD_WATCH = 254
+SYS_INOTIFY_RM_WATCH = 255
+SYS_READ = 0
+SYS_CLOSE = 3
+
+// ============================================================================
+// Inotify Init Flags
+// ============================================================================
+
+IN_NONBLOCK = 2048     // O_NONBLOCK
+IN_CLOEXEC = 524288    // O_CLOEXEC
+
+// ============================================================================
+// Inotify Watch Mask (events to watch for)
+// ============================================================================
+
+IN_ACCESS = 1           // File was accessed
+IN_MODIFY = 2           // File was modified
+IN_ATTRIB = 4           // Metadata changed
+IN_CLOSE_WRITE = 8      // Writable file closed
+IN_CLOSE_NOWRITE = 16   // Non-writable file closed
+IN_OPEN = 32            // File was opened
+IN_MOVED_FROM = 64      // File moved from watched dir
+IN_MOVED_TO = 128       // File moved to watched dir
+IN_CREATE = 256         // File/dir created in watched dir
+IN_DELETE = 512         // File/dir deleted from watched dir
+IN_DELETE_SELF = 1024   // Watched file/dir deleted
+IN_MOVE_SELF = 2048     // Watched file/dir moved
+
+// Convenience combinations
+IN_CLOSE = 24           // IN_CLOSE_WRITE | IN_CLOSE_NOWRITE
+IN_MOVE = 192           // IN_MOVED_FROM | IN_MOVED_TO
+IN_ALL_EVENTS = 4095    // All of the above
+
+// Additional flags for add_watch
+IN_ONLYDIR = 16777216     // Only watch if directory
+IN_DONT_FOLLOW = 33554432 // Don't follow symlinks
+IN_EXCL_UNLINK = 67108864 // Don't generate events for unlinked children
+IN_MASK_CREATE = 268435456  // Only create watch if doesn't exist
+IN_MASK_ADD = 536870912   // Add to existing watch mask
+IN_ISDIR = 1073741824     // Event subject is directory
+IN_ONESHOT = 2147483648   // Only report one event, then remove watch
+
+// Event flags (set in returned events)
+IN_UNMOUNT = 8192       // Filesystem unmounted
+IN_Q_OVERFLOW = 16384   // Event queue overflowed
+IN_IGNORED = 32768      // Watch was removed
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+InotifyError: {
+    code: i32
+}
+
+inotify_errno_to_error = (errno: i64) InotifyError {
+    code = 0 - errno
+    return InotifyError { code: code }
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+// Create inotify instance
+sys_inotify_init1 = (flags: i32) i64 {
+    return compiler.syscall1(SYS_INOTIFY_INIT1, flags)
+}
+
+// Add watch to inotify instance
+sys_inotify_add_watch = (fd: i32, pathname: i64, mask: u32) i64 {
+    return compiler.syscall3(SYS_INOTIFY_ADD_WATCH, fd, pathname, mask)
+}
+
+// Remove watch from inotify instance
+sys_inotify_rm_watch = (fd: i32, wd: i32) i64 {
+    return compiler.syscall2(SYS_INOTIFY_RM_WATCH, fd, wd)
+}
+
+// Read from fd
+sys_read = (fd: i32, buf: i64, count: usize) i64 {
+    return compiler.syscall3(SYS_READ, fd, buf, count)
+}
+
+// Close fd
+sys_close = (fd: i32) i64 {
+    return compiler.syscall1(SYS_CLOSE, fd)
+}
+
+// ============================================================================
+// Helper: String to C string
+// ============================================================================
+
+string_to_cstr = (s: String, allocator: Allocator) i64 {
+    len = s.len()
+    ptr = allocator.allocate(len + 1)
+    src_ptr = s.data.addr()
+    compiler.memcpy(ptr, src_ptr, len)
+    compiler.store<u8>(compiler.gep(ptr, len), 0)
+    return ptr
+}
+
+free_cstr = (ptr: i64, len: usize, allocator: Allocator) void {
+    allocator.deallocate(ptr, len + 1)
+}
+
+// ============================================================================
+// Inotify Event
+// ============================================================================
+
+// inotify_event structure:
+// wd (4) + mask (4) + cookie (4) + len (4) + name (variable)
+
+InotifyEvent: {
+    wd: i32,        // Watch descriptor
+    mask: u32,      // Event mask
+    cookie: u32,    // Cookie for related events (rename)
+    name: String    // Filename (may be empty)
+}
+
+// Event type checks
+InotifyEvent.is_access = (self: InotifyEvent) bool {
+    return (self.mask & IN_ACCESS) != 0
+}
+
+InotifyEvent.is_modify = (self: InotifyEvent) bool {
+    return (self.mask & IN_MODIFY) != 0
+}
+
+InotifyEvent.is_attrib = (self: InotifyEvent) bool {
+    return (self.mask & IN_ATTRIB) != 0
+}
+
+InotifyEvent.is_close_write = (self: InotifyEvent) bool {
+    return (self.mask & IN_CLOSE_WRITE) != 0
+}
+
+InotifyEvent.is_close_nowrite = (self: InotifyEvent) bool {
+    return (self.mask & IN_CLOSE_NOWRITE) != 0
+}
+
+InotifyEvent.is_open = (self: InotifyEvent) bool {
+    return (self.mask & IN_OPEN) != 0
+}
+
+InotifyEvent.is_moved_from = (self: InotifyEvent) bool {
+    return (self.mask & IN_MOVED_FROM) != 0
+}
+
+InotifyEvent.is_moved_to = (self: InotifyEvent) bool {
+    return (self.mask & IN_MOVED_TO) != 0
+}
+
+InotifyEvent.is_create = (self: InotifyEvent) bool {
+    return (self.mask & IN_CREATE) != 0
+}
+
+InotifyEvent.is_delete = (self: InotifyEvent) bool {
+    return (self.mask & IN_DELETE) != 0
+}
+
+InotifyEvent.is_delete_self = (self: InotifyEvent) bool {
+    return (self.mask & IN_DELETE_SELF) != 0
+}
+
+InotifyEvent.is_move_self = (self: InotifyEvent) bool {
+    return (self.mask & IN_MOVE_SELF) != 0
+}
+
+InotifyEvent.is_dir = (self: InotifyEvent) bool {
+    return (self.mask & IN_ISDIR) != 0
+}
+
+InotifyEvent.is_unmount = (self: InotifyEvent) bool {
+    return (self.mask & IN_UNMOUNT) != 0
+}
+
+InotifyEvent.is_overflow = (self: InotifyEvent) bool {
+    return (self.mask & IN_Q_OVERFLOW) != 0
+}
+
+InotifyEvent.is_ignored = (self: InotifyEvent) bool {
+    return (self.mask & IN_IGNORED) != 0
+}
+
+// Free event (frees name string)
+InotifyEvent.free = (self: MutPtr<InotifyEvent>) void {
+    self.val.name.len() > 0 ?
+        | true { self.val.name.mut_ref().free() }
+        | false { }
+}
+
+// ============================================================================
+// Inotify Instance
+// ============================================================================
+
+Inotify: {
+    fd: i32,
+    buf: i64,
+    buf_size: usize,
+    buf_pos: usize,
+    buf_len: usize,
+    allocator: Allocator
+}
+
+// Default buffer size
+INOTIFY_BUF_SIZE = 4096
+
+// Create new inotify instance
+Inotify.new = (allocator: Allocator) Result<Inotify, InotifyError> {
+    fd = sys_inotify_init1(IN_CLOEXEC)
+
+    fd < 0 ?
+        | true { return Result.Err(inotify_errno_to_error(fd)) }
+        | false {
+            buf = allocator.allocate(INOTIFY_BUF_SIZE)
+            return Result.Ok(Inotify {
+                fd: fd,
+                buf: buf,
+                buf_size: INOTIFY_BUF_SIZE,
+                buf_pos: 0,
+                buf_len: 0,
+                allocator: allocator
+            })
+        }
+}
+
+// Create non-blocking inotify instance
+Inotify.new_nonblock = (allocator: Allocator) Result<Inotify, InotifyError> {
+    fd = sys_inotify_init1(IN_CLOEXEC | IN_NONBLOCK)
+
+    fd < 0 ?
+        | true { return Result.Err(inotify_errno_to_error(fd)) }
+        | false {
+            buf = allocator.allocate(INOTIFY_BUF_SIZE)
+            return Result.Ok(Inotify {
+                fd: fd,
+                buf: buf,
+                buf_size: INOTIFY_BUF_SIZE,
+                buf_pos: 0,
+                buf_len: 0,
+                allocator: allocator
+            })
+        }
+}
+
+// Get fd (for epoll, select, etc.)
+Inotify.as_fd = (self: Inotify) i32 {
+    return self.fd
+}
+
+// Add watch on path
+// Returns watch descriptor
+Inotify.add_watch = (self: Inotify, path: String, mask: u32) Result<i32, InotifyError> {
+    cstr = string_to_cstr(path, self.allocator)
+    wd = sys_inotify_add_watch(self.fd, cstr, mask)
+    free_cstr(cstr, path.len(), self.allocator)
+
+    wd < 0 ?
+        | true { return Result.Err(inotify_errno_to_error(wd)) }
+        | false { return Result.Ok(wd) }
+}
+
+// Watch for all events
+Inotify.watch_all = (self: Inotify, path: String) Result<i32, InotifyError> {
+    return self.add_watch(path, IN_ALL_EVENTS)
+}
+
+// Watch for modifications only
+Inotify.watch_modify = (self: Inotify, path: String) Result<i32, InotifyError> {
+    return self.add_watch(path, IN_MODIFY | IN_CLOSE_WRITE)
+}
+
+// Watch for creates/deletes only
+Inotify.watch_create_delete = (self: Inotify, path: String) Result<i32, InotifyError> {
+    return self.add_watch(path, IN_CREATE | IN_DELETE | IN_DELETE_SELF)
+}
+
+// Watch for moves only
+Inotify.watch_moves = (self: Inotify, path: String) Result<i32, InotifyError> {
+    return self.add_watch(path, IN_MOVE | IN_MOVE_SELF)
+}
+
+// Remove watch by descriptor
+Inotify.rm_watch = (self: Inotify, wd: i32) Result<void, InotifyError> {
+    result = sys_inotify_rm_watch(self.fd, wd)
+
+    result < 0 ?
+        | true { return Result.Err(inotify_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Read next event (blocking unless nonblock mode)
+// Returns None on EAGAIN (no events pending in nonblock mode)
+Inotify.read_event = (self: MutPtr<Inotify>) Result<Option<InotifyEvent>, InotifyError> {
+    // Refill buffer if needed
+    self.val.buf_pos >= self.val.buf_len ?
+        | true {
+            n = sys_read(self.val.fd, self.val.buf, self.val.buf_size)
+
+            n < 0 ?
+                | true {
+                    // EAGAIN means no events pending (nonblock)
+                    n == -11 ?
+                        | true { return Result.Ok(Option.None) }
+                        | false { return Result.Err(inotify_errno_to_error(n)) }
+                }
+                | false { }
+
+            n == 0 ?
+                | true { return Result.Ok(Option.None) }
+                | false { }
+
+            self.val.buf_pos = 0
+            self.val.buf_len = n
+        }
+        | false { }
+
+    // Parse event at current position
+    event_ptr = compiler.gep(self.val.buf, self.val.buf_pos)
+
+    wd = compiler.load<i32>(event_ptr)
+    mask = compiler.load<u32>(compiler.gep(event_ptr, 4))
+    cookie = compiler.load<u32>(compiler.gep(event_ptr, 8))
+    name_len = compiler.load<u32>(compiler.gep(event_ptr, 12))
+
+    // Event header is 16 bytes, name follows
+    event_size = 16 + name_len
+
+    // Extract name if present
+    name = String.new(self.val.allocator)
+    name_len > 0 ?
+        | true {
+            name_ptr = compiler.gep(event_ptr, 16)
+            // Find actual string length (null-terminated)
+            actual_len = 0
+            loop {
+                actual_len >= name_len ?
+                    | true { break }
+                    | false {
+                        ch = compiler.load<u8>(compiler.gep(name_ptr, actual_len))
+                        ch == 0 ?
+                            | true { break }
+                            | false { actual_len = actual_len + 1 }
+                    }
+            }
+
+            // Copy name
+            i = 0
+            loop {
+                i >= actual_len ?
+                    | true { break }
+                    | false {
+                        ch = compiler.load<u8>(compiler.gep(name_ptr, i))
+                        name.mut_ref().push(ch)
+                        i = i + 1
+                    }
+            }
+        }
+        | false { }
+
+    // Advance buffer position
+    self.val.buf_pos = self.val.buf_pos + event_size
+
+    event = InotifyEvent {
+        wd: wd,
+        mask: mask,
+        cookie: cookie,
+        name: name
+    }
+
+    return Result.Ok(Option.Some(event))
+}
+
+// Read all pending events
+Inotify.read_all_events = (self: MutPtr<Inotify>) Result<Vec<InotifyEvent>, InotifyError> {
+    events = Vec<InotifyEvent>.new(self.val.allocator)
+
+    loop {
+        result = self.read_event()
+
+        result ?
+            | Err(e) {
+                // Free already-read events
+                i = 0
+                len = events.len()
+                loop {
+                    i >= len ?
+                        | true { break }
+                        | false {
+                            ev_opt = events.get(i)
+                            ev_opt ?
+                                | Some(ev) { ev.mut_ref().free() }
+                                | None { }
+                            i = i + 1
+                        }
+                }
+                events.mut_ref().free()
+                return Result.Err(e)
+            }
+            | Ok(opt) {
+                opt ?
+                    | None { return Result.Ok(events) }
+                    | Some(event) { events.mut_ref().push(event) }
+            }
+    }
+
+    return Result.Ok(events)
+}
+
+// Close inotify instance
+Inotify.close = (self: MutPtr<Inotify>) void {
+    self.val.fd >= 0 ?
+        | true {
+            _ = sys_close(self.val.fd)
+            self.val.fd = -1
+        }
+        | false { }
+
+    self.val.buf != 0 ?
+        | true {
+            self.val.allocator.deallocate(self.val.buf, self.val.buf_size)
+            self.val.buf = 0
+        }
+        | false { }
+}
+
+// ============================================================================
+// Watch Handle (RAII wrapper for watch descriptors)
+// ============================================================================
+
+Watch: {
+    inotify_fd: i32,
+    wd: i32
+}
+
+// Create watch (usually via Inotify.add_watch)
+Watch.new = (inotify_fd: i32, wd: i32) Watch {
+    return Watch { inotify_fd: inotify_fd, wd: wd }
+}
+
+// Get watch descriptor
+Watch.descriptor = (self: Watch) i32 {
+    return self.wd
+}
+
+// Remove watch
+Watch.remove = (self: MutPtr<Watch>) Result<void, InotifyError> {
+    self.val.wd >= 0 ?
+        | true {
+            result = sys_inotify_rm_watch(self.val.inotify_fd, self.val.wd)
+            self.val.wd = -1
+
+            result < 0 ?
+                | true { return Result.Err(inotify_errno_to_error(result)) }
+                | false { return Result.Ok(()) }
+        }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// FileWatcher - High-level file watching interface
+// ============================================================================
+
+FileWatcher: {
+    inotify: Inotify,
+    watches: Vec<i32>
+}
+
+// Create new file watcher
+FileWatcher.new = (allocator: Allocator) Result<FileWatcher, InotifyError> {
+    inotify_result = Inotify.new(allocator)
+
+    inotify_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(inotify) {
+            return Result.Ok(FileWatcher {
+                inotify: inotify,
+                watches: Vec<i32>.new(allocator)
+            })
+        }
+}
+
+// Watch a file or directory
+FileWatcher.watch = (self: MutPtr<FileWatcher>, path: String, mask: u32) Result<i32, InotifyError> {
+    wd_result = self.val.inotify.add_watch(path, mask)
+
+    wd_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(wd) {
+            self.val.watches.mut_ref().push(wd)
+            return Result.Ok(wd)
+        }
+}
+
+// Watch for any changes
+FileWatcher.watch_all = (self: MutPtr<FileWatcher>, path: String) Result<i32, InotifyError> {
+    return self.watch(path, IN_ALL_EVENTS)
+}
+
+// Unwatch by descriptor
+FileWatcher.unwatch = (self: MutPtr<FileWatcher>, wd: i32) Result<void, InotifyError> {
+    return self.val.inotify.rm_watch(wd)
+}
+
+// Get next event (blocking)
+FileWatcher.next_event = (self: MutPtr<FileWatcher>) Result<Option<InotifyEvent>, InotifyError> {
+    return self.val.inotify.mut_ref().read_event()
+}
+
+// Get file descriptor (for epoll)
+FileWatcher.as_fd = (self: FileWatcher) i32 {
+    return self.inotify.fd
+}
+
+// Close watcher
+FileWatcher.close = (self: MutPtr<FileWatcher>) void {
+    self.val.inotify.mut_ref().close()
+    self.val.watches.mut_ref().free()
+}
+

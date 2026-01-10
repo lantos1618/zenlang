@@ -59,7 +59,7 @@ All collection types now use safe pointers with explicit allocator management.
 
 ## Priority 2: Standard Library Hardening
 
-**Status: Collections Complete, I/O Pending**
+**Status: IN PROGRESS** (Linux x86-64)
 
 ### Core Types (Done)
 - [x] `Option<T>` - fully integrated
@@ -72,16 +72,63 @@ All collection types now use safe pointers with explicit allocator management.
 - [x] `Stack<T>` - LIFO with push/pop/peek
 - [x] `Queue<T>` - circular buffer with enqueue/dequeue
 - [x] `Set<T>` - wraps HashMap<T, bool>
-- [ ] `LinkedList<T>` - not started
+- [x] `LinkedList<T>` - doubly linked list with forward/reverse iterators
 
-### I/O (Syscall Layer)
-- [x] `File` - syscall-based file operations (Linux x86-64)
-- [ ] `TcpSocket` / `UdpSocket` - syscall-based networking
+### I/O (Syscall Layer) - Linux x86-64
+- [x] `File` - open, read, write, seek, mkdir, unlink (`io/file.zen`)
+- [x] `Socket` - TCP/UDP, TcpListener, TcpStream, UdpSocket (`io/socket.zen`)
+- [x] `Process` - fork, exec, wait, spawn, pipes, signals (`io/process.zen`)
+- [x] `Dir` - stat, getdents64, readlink, directory iteration (`io/dir.zen`)
+- [x] `Epoll` - epoll_create, epoll_ctl, epoll_wait, EventLoop (`io/epoll.zen`)
+- [x] `Env` - getenv from /proc, read_args, getcwd (`io/env.zen`)
+- [x] `Signal` - sigprocmask, sigaction, SignalFd, SigSet (`io/signal.zen`)
+- [x] `Inotify` - inotify_init1, add_watch, FileWatcher (`io/inotify.zen`)
+- [x] `Poll` - poll, ppoll, PollSet, PollEntry (`io/poll.zen`)
+- [x] `Zerocopy` - sendfile, splice, tee, copy_file_range (`io/zerocopy.zen`)
+- [x] `Statx` - extended file status with birth time (`io/statx.zen`)
+- [x] `Ioctl` - device/terminal control (`io/ioctl.zen`)
+- [x] `Pipe` - pipe, pipe2, PipeReader, PipeWriter (`io/pipe.zen`)
+- [x] `Dup` - dup, dup2, dup3, stdio redirection (`io/dup.zen`)
 - [ ] Darwin/Windows syscall support
 
-**Note:** Avoid FFI for I/O. Build native syscall wrappers:
+### Sync (Syscall Layer) - Linux x86-64
+- [x] `Futex` - futex_wait, futex_wake, Mutex, CondVar, Semaphore (`sync/futex.zen`)
+- [x] `EventFd` - event notification fd, Notifier, Counter (`sync/eventfd.zen`)
+
+### Time (Syscall Layer) - Linux x86-64
+- [x] `Time` - clock_gettime, nanosleep, Instant, Stopwatch (`time/time.zen`)
+- [x] `Timerfd` - timerfd_create, timerfd_settime, DeadlineTimer (`time/timerfd.zen`)
+
+### Memory (Syscall Layer) - Linux x86-64
+- [x] `Mmap` - mmap, mprotect, MemoryRegion, JitRegion (`memory/mmap.zen`)
+- [x] `Memfd` - memfd_create, sealing, SharedBuffer (`memory/memfd.zen`)
+
+### Random (Syscall Layer) - Linux x86-64
+- [x] `Getrandom` - getrandom syscall, random_bytes, PRNG (`random/getrandom.zen`)
+
+### Sys (Syscall Layer) - Linux x86-64
+- [x] `Info` - uname, sysinfo, uptime, cpu_count (`sys/info.zen`)
+- [x] `Prctl` - process control, rlimit, affinity (`sys/prctl.zen`)
+- [x] `Pidfd` - race-free process management (`sys/pidfd.zen`)
+
+### Net (Syscall Layer) - Linux x86-64
+- [x] `Interface` - network interface info via ioctl (`net/interface.zen`)
+
+### TODO: Syscall Modules to Add
+- [ ] `io_uring` - High-performance async I/O
+- [ ] `Fanotify` - Filesystem-wide notification
+- [ ] `Xattr` - Extended file attributes
+- [ ] `Mount` - Filesystem mounting, pivot_root
+- [ ] `Clone3` - Modern process/thread creation
+- [ ] `Seccomp` - BPF-based syscall filtering
+- [ ] `Landlock` - Unprivileged filesystem sandboxing
+- [ ] `Capability` - Linux capabilities management
+- [ ] `Fcntl` - File control operations
+- [ ] `Flock` - File locking
+
+**Note:** All I/O uses direct syscalls, not libc wrappers:
 ```zen
-// Goal: Direct syscalls, not libc wrappers
+// Direct syscall pattern
 File.open = (path: String, flags: i32) Result<File, IoError>
 File.read = (self: MutPtr<File>, buf: Ptr<u8>, len: usize) Result<usize, IoError>
 ```
@@ -182,13 +229,6 @@ This blocks runtime testing of collections from .zen files.
 - [x] Semantic tokens (full + delta)
 - [x] Incremental text sync
 
-### Fixed Issues
-- [x] Nested member access chains (`self.val.data`) now resolve
-- [x] Generic type field resolution works (struct fields indexed)
-- [x] MutPtr<T>.val recognized as built-in field
-- [x] Parameter type inference (e.g., `allocator: Allocator` -> `allocator.allocate`)
-- [x] Local variable type inference from constructors
-
 ---
 
 ## Priority 8: Architecture Cleanup
@@ -211,22 +251,26 @@ This blocks runtime testing of collections from .zen files.
 
 ---
 
-## Recent Completions (This Session)
+## Stdlib File Count: 52 files
 
-1. **Iterator System Enhanced** - Range now has sum, product, min, max, skip, take, find_ge
-2. **VecIterator<T>** - Full iterator for Vec<T> with next() and has_next()
-3. **HashMapIterator<K,V>** - Iterates over key-value pairs, plus keys() and values() iterators
-4. **StackIterator<T>** - Forward and reverse iterators for Stack
-5. **QueueIterator<T>** - Front-to-back iteration
-6. **SetIterator<T>** - Element iteration
-7. **Syscall-based File I/O** - Linux x86-64 file operations without FFI (474 LOC)
-8. **LSP Complete** - All modern LSP features implemented
-9. **Architecture Cleanup** - Fixed duplicate module declarations
-10. **Dead Code Audit** - Identified legitimate vs false positive dead_code markers
-11. **Typechecker Integration** - Now in main compilation pipeline
-12. **Pattern Matching Refactor** - Extracted to dedicated patterns.rs module (290 LOC)
-13. **Module Size Reduction** - codegen/llvm/mod.rs: 992 → 702 LOC (-29%)
-14. **Parser Module Split** - primary.rs: 943 → 802 LOC, control_flow.rs now used
+```
+stdlib/
+├── core/          (4 files) - iterator, option, propagate, ptr, result
+├── collections/   (5 files) - hashmap, linkedlist, queue, set, stack
+├── io/            (14 files) - dir, dup, env, epoll, file, inotify, io, ioctl, pipe, poll, process, signal, socket, statx, zerocopy
+├── memory/        (4 files) - allocator, gpa, memfd, mmap
+├── sync/          (2 files) - eventfd, futex
+├── time/          (2 files) - time, timerfd
+├── sys/           (3 files) - info, pidfd, prctl
+├── net/           (2 files) - interface, net
+├── random/        (1 file)  - getrandom
+├── (root)         (9 files) - char, error, math, random, string, std, time, vec
+├── build/         (1 file)  - build
+├── compiler/      (1 file)  - compiler
+├── ffi/           (1 file)  - ffi
+├── fs/            (1 file)  - fs
+└── testing/       (1 file)  - runner
+```
 
 ---
 

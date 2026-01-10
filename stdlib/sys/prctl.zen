@@ -1,0 +1,656 @@
+// Zen Standard Library: Process Control (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Provides prctl, nice, rlimit, and related process operations
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ String } = @std.string
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Process Control Syscall Numbers
+// ============================================================================
+
+SYS_PRCTL = 157
+SYS_GETRLIMIT = 97
+SYS_SETRLIMIT = 160
+SYS_PRLIMIT64 = 302
+SYS_GETPRIORITY = 140
+SYS_SETPRIORITY = 141
+SYS_SCHED_YIELD = 24
+SYS_SCHED_GETAFFINITY = 204
+SYS_SCHED_SETAFFINITY = 203
+
+// ============================================================================
+// Prctl Options
+// ============================================================================
+
+// Process name
+PR_SET_NAME = 15
+PR_GET_NAME = 16
+
+// Dumpable state
+PR_SET_DUMPABLE = 4
+PR_GET_DUMPABLE = 3
+
+// Capabilities
+PR_CAPBSET_READ = 23
+PR_CAPBSET_DROP = 24
+
+// Signal handling
+PR_SET_PDEATHSIG = 1
+PR_GET_PDEATHSIG = 2
+
+// Seccomp
+PR_SET_SECCOMP = 22
+PR_GET_SECCOMP = 21
+
+// No new privileges
+PR_SET_NO_NEW_PRIVS = 38
+PR_GET_NO_NEW_PRIVS = 39
+
+// Thread control
+PR_SET_KEEPCAPS = 8
+PR_GET_KEEPCAPS = 7
+
+// Timer slack
+PR_SET_TIMERSLACK = 29
+PR_GET_TIMERSLACK = 30
+
+// Child subreaper
+PR_SET_CHILD_SUBREAPER = 36
+PR_GET_CHILD_SUBREAPER = 37
+
+// Memory merge
+PR_SET_MM = 35
+
+// Thread name
+PR_SET_THP_DISABLE = 41
+PR_GET_THP_DISABLE = 42
+
+// Speculation control
+PR_SPEC_INDIRECT_BRANCH = 1
+
+// Dumpable values
+SUID_DUMP_DISABLE = 0
+SUID_DUMP_USER = 1
+
+// Seccomp modes
+SECCOMP_MODE_DISABLED = 0
+SECCOMP_MODE_STRICT = 1
+SECCOMP_MODE_FILTER = 2
+
+// ============================================================================
+// Resource Limits
+// ============================================================================
+
+RLIMIT_CPU = 0       // CPU time in seconds
+RLIMIT_FSIZE = 1     // Maximum file size
+RLIMIT_DATA = 2      // Max data segment size
+RLIMIT_STACK = 3     // Max stack size
+RLIMIT_CORE = 4      // Max core file size
+RLIMIT_RSS = 5       // Max resident set size
+RLIMIT_NPROC = 6     // Max number of processes
+RLIMIT_NOFILE = 7    // Max number of open files
+RLIMIT_MEMLOCK = 8   // Max locked memory
+RLIMIT_AS = 9        // Max address space
+RLIMIT_LOCKS = 10    // Max file locks
+RLIMIT_SIGPENDING = 11  // Max pending signals
+RLIMIT_MSGQUEUE = 12 // Max message queue bytes
+RLIMIT_NICE = 13     // Max nice value
+RLIMIT_RTPRIO = 14   // Max realtime priority
+RLIMIT_RTTIME = 15   // Max realtime timeout
+
+RLIM_INFINITY = 0xFFFFFFFFFFFFFFFF
+
+// Priority (nice) targets
+PRIO_PROCESS = 0
+PRIO_PGRP = 1
+PRIO_USER = 2
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+PrctlError: {
+    code: i32
+}
+
+prctl_errno_to_error = (errno: i64) PrctlError {
+    code = 0 - errno
+    return PrctlError { code: code }
+}
+
+// Check if error is permission denied
+PrctlError.is_permission_denied = (self: PrctlError) bool {
+    return self.code == 1 or self.code == 13  // EPERM or EACCES
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+sys_prctl = (option: i32, arg2: u64, arg3: u64, arg4: u64, arg5: u64) i64 {
+    return compiler.syscall5(SYS_PRCTL, option, arg2, arg3, arg4, arg5)
+}
+
+sys_getrlimit = (resource: i32, rlim: i64) i64 {
+    return compiler.syscall2(SYS_GETRLIMIT, resource, rlim)
+}
+
+sys_setrlimit = (resource: i32, rlim: i64) i64 {
+    return compiler.syscall2(SYS_SETRLIMIT, resource, rlim)
+}
+
+sys_prlimit64 = (pid: i32, resource: i32, new_limit: i64, old_limit: i64) i64 {
+    return compiler.syscall4(SYS_PRLIMIT64, pid, resource, new_limit, old_limit)
+}
+
+sys_getpriority = (which: i32, who: i32) i64 {
+    return compiler.syscall2(SYS_GETPRIORITY, which, who)
+}
+
+sys_setpriority = (which: i32, who: i32, prio: i32) i64 {
+    return compiler.syscall3(SYS_SETPRIORITY, which, who, prio)
+}
+
+sys_sched_yield = () i64 {
+    return compiler.syscall0(SYS_SCHED_YIELD)
+}
+
+sys_sched_getaffinity = (pid: i32, cpusetsize: usize, mask: i64) i64 {
+    return compiler.syscall3(SYS_SCHED_GETAFFINITY, pid, cpusetsize, mask)
+}
+
+sys_sched_setaffinity = (pid: i32, cpusetsize: usize, mask: i64) i64 {
+    return compiler.syscall3(SYS_SCHED_SETAFFINITY, pid, cpusetsize, mask)
+}
+
+// ============================================================================
+// Process Name
+// ============================================================================
+
+// Set thread/process name (max 16 chars including null)
+set_name = (name: String, allocator: Allocator) Result<void, PrctlError> {
+    // Allocate buffer with null terminator
+    len = name.len()
+    len > 15 ?
+        | true { len = 15 }  // Truncate to 15 chars + null
+        | false { }
+
+    buf = allocator.allocate(16)
+    compiler.memcpy(buf, name.data(), len)
+    compiler.store<u8>(buf + len, 0)
+
+    result = sys_prctl(PR_SET_NAME, buf, 0, 0, 0)
+    allocator.deallocate(buf, 16)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Get thread/process name
+get_name = (allocator: Allocator) Result<String, PrctlError> {
+    buf = allocator.allocate(16)
+
+    result = sys_prctl(PR_GET_NAME, buf, 0, 0, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 16)
+            return Result.Err(prctl_errno_to_error(result))
+        }
+        | false {
+            // Find length
+            len = 0
+            loop {
+                len >= 16 ?
+                    | true { break }
+                    | false {
+                        c = compiler.load<u8>(buf + len)
+                        c == 0 ?
+                            | true { break }
+                            | false { len = len + 1 }
+                    }
+            }
+
+            name_data = allocator.allocate(len)
+            compiler.memcpy(name_data, buf, len)
+            allocator.deallocate(buf, 16)
+
+            return Result.Ok(String.from_ptr(name_data, len, allocator))
+        }
+}
+
+// ============================================================================
+// Dumpable State
+// ============================================================================
+
+// Set whether process is dumpable (core dumps, ptrace)
+set_dumpable = (dumpable: bool) Result<void, PrctlError> {
+    val = dumpable ?
+        | true { SUID_DUMP_USER }
+        | false { SUID_DUMP_DISABLE }
+
+    result = sys_prctl(PR_SET_DUMPABLE, val, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Check if process is dumpable
+get_dumpable = () Result<bool, PrctlError> {
+    result = sys_prctl(PR_GET_DUMPABLE, 0, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(result == SUID_DUMP_USER) }
+}
+
+// ============================================================================
+// Parent Death Signal
+// ============================================================================
+
+// Set signal to receive when parent dies
+set_pdeathsig = (sig: i32) Result<void, PrctlError> {
+    result = sys_prctl(PR_SET_PDEATHSIG, sig, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Get signal received when parent dies
+get_pdeathsig = (allocator: Allocator) Result<i32, PrctlError> {
+    buf = allocator.allocate(4)
+
+    result = sys_prctl(PR_GET_PDEATHSIG, buf, 0, 0, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 4)
+            return Result.Err(prctl_errno_to_error(result))
+        }
+        | false {
+            sig = compiler.load<i32>(buf)
+            allocator.deallocate(buf, 4)
+            return Result.Ok(sig)
+        }
+}
+
+// ============================================================================
+// No New Privileges
+// ============================================================================
+
+// Enable no-new-privileges mode (cannot be disabled once set)
+set_no_new_privs = () Result<void, PrctlError> {
+    result = sys_prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Check if no-new-privileges is set
+get_no_new_privs = () Result<bool, PrctlError> {
+    result = sys_prctl(PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(result == 1) }
+}
+
+// ============================================================================
+// Child Subreaper
+// ============================================================================
+
+// Set as subreaper (orphaned descendants reparent to this process)
+set_child_subreaper = (enable: bool) Result<void, PrctlError> {
+    val = enable ?
+        | true { 1 }
+        | false { 0 }
+
+    result = sys_prctl(PR_SET_CHILD_SUBREAPER, val, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Check if process is a subreaper
+get_child_subreaper = (allocator: Allocator) Result<bool, PrctlError> {
+    buf = allocator.allocate(4)
+
+    result = sys_prctl(PR_GET_CHILD_SUBREAPER, buf, 0, 0, 0)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 4)
+            return Result.Err(prctl_errno_to_error(result))
+        }
+        | false {
+            val = compiler.load<i32>(buf)
+            allocator.deallocate(buf, 4)
+            return Result.Ok(val != 0)
+        }
+}
+
+// ============================================================================
+// Timer Slack
+// ============================================================================
+
+// Set timer slack in nanoseconds (affects timer coalescing)
+set_timerslack = (slack_ns: u64) Result<void, PrctlError> {
+    result = sys_prctl(PR_SET_TIMERSLACK, slack_ns, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Get timer slack in nanoseconds
+get_timerslack = () Result<u64, PrctlError> {
+    result = sys_prctl(PR_GET_TIMERSLACK, 0, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// ============================================================================
+// Seccomp
+// ============================================================================
+
+// Get seccomp mode
+get_seccomp = () Result<i32, PrctlError> {
+    result = sys_prctl(PR_GET_SECCOMP, 0, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Enable strict seccomp (only read, write, _exit, sigreturn)
+set_seccomp_strict = () Result<void, PrctlError> {
+    result = sys_prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT, 0, 0, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Resource Limits
+// ============================================================================
+
+Rlimit: {
+    soft: u64,
+    hard: u64
+}
+
+// Get resource limit
+getrlimit = (resource: i32, allocator: Allocator) Result<Rlimit, PrctlError> {
+    buf = allocator.allocate(16)  // sizeof(rlimit) = 16
+
+    result = sys_getrlimit(resource, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 16)
+            return Result.Err(prctl_errno_to_error(result))
+        }
+        | false {
+            soft = compiler.load<u64>(buf)
+            hard = compiler.load<u64>(buf + 8)
+            allocator.deallocate(buf, 16)
+
+            return Result.Ok(Rlimit { soft: soft, hard: hard })
+        }
+}
+
+// Set resource limit
+setrlimit = (resource: i32, limit: Rlimit, allocator: Allocator) Result<void, PrctlError> {
+    buf = allocator.allocate(16)
+    compiler.store<u64>(buf, limit.soft)
+    compiler.store<u64>(buf + 8, limit.hard)
+
+    result = sys_setrlimit(resource, buf)
+    allocator.deallocate(buf, 16)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Get max open files
+get_nofile_limit = (allocator: Allocator) Result<Rlimit, PrctlError> {
+    return getrlimit(RLIMIT_NOFILE, allocator)
+}
+
+// Set max open files
+set_nofile_limit = (soft: u64, hard: u64, allocator: Allocator) Result<void, PrctlError> {
+    limit = Rlimit { soft: soft, hard: hard }
+    return setrlimit(RLIMIT_NOFILE, limit, allocator)
+}
+
+// Get max address space
+get_as_limit = (allocator: Allocator) Result<Rlimit, PrctlError> {
+    return getrlimit(RLIMIT_AS, allocator)
+}
+
+// Get core dump size limit
+get_core_limit = (allocator: Allocator) Result<Rlimit, PrctlError> {
+    return getrlimit(RLIMIT_CORE, allocator)
+}
+
+// Disable core dumps
+disable_core_dumps = (allocator: Allocator) Result<void, PrctlError> {
+    limit = Rlimit { soft: 0, hard: 0 }
+    return setrlimit(RLIMIT_CORE, limit, allocator)
+}
+
+// ============================================================================
+// Priority (Nice)
+// ============================================================================
+
+// Get process priority (nice value)
+// Returns value from -20 (highest) to 19 (lowest)
+getpriority = () Result<i32, PrctlError> {
+    // getpriority returns 20 - nice on success, or -1 on error
+    result = sys_getpriority(PRIO_PROCESS, 0)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false {
+            // Convert from kernel format to nice value
+            nice = 20 - result
+            return Result.Ok(nice)
+        }
+}
+
+// Set process priority (nice value)
+setpriority = (nice: i32) Result<void, PrctlError> {
+    result = sys_setpriority(PRIO_PROCESS, 0, nice)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Increase niceness (lower priority)
+nice = (inc: i32) Result<i32, PrctlError> {
+    current_result = getpriority()
+
+    current_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(current) {
+            new_nice = current + inc
+            new_nice > 19 ?
+                | true { new_nice = 19 }
+                | false { }
+            new_nice < -20 ?
+                | true { new_nice = -20 }
+                | false { }
+
+            set_result = setpriority(new_nice)
+            set_result ?
+                | Err(e) { return Result.Err(e) }
+                | Ok(_) { return Result.Ok(new_nice) }
+        }
+}
+
+// ============================================================================
+// CPU Affinity
+// ============================================================================
+
+// Yield to scheduler
+sched_yield = () Result<void, PrctlError> {
+    result = sys_sched_yield()
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// CPU set (bitmask)
+CpuSet: {
+    mask: u64  // Supports up to 64 CPUs
+}
+
+CpuSet.new = () CpuSet {
+    return CpuSet { mask: 0 }
+}
+
+CpuSet.all = () CpuSet {
+    return CpuSet { mask: 0xFFFFFFFFFFFFFFFF }
+}
+
+CpuSet.single = (cpu: i32) CpuSet {
+    cpu >= 0 and cpu < 64 ?
+        | true { return CpuSet { mask: 1 << cpu } }
+        | false { return CpuSet { mask: 0 } }
+}
+
+CpuSet.set = (self: MutPtr<CpuSet>, cpu: i32) void {
+    cpu >= 0 and cpu < 64 ?
+        | true { self.val.mask = self.val.mask | (1 << cpu) }
+        | false { }
+}
+
+CpuSet.clear = (self: MutPtr<CpuSet>, cpu: i32) void {
+    cpu >= 0 and cpu < 64 ?
+        | true { self.val.mask = self.val.mask & ~(1 << cpu) }
+        | false { }
+}
+
+CpuSet.is_set = (self: CpuSet, cpu: i32) bool {
+    cpu >= 0 and cpu < 64 ?
+        | true { return (self.mask & (1 << cpu)) != 0 }
+        | false { return false }
+}
+
+CpuSet.count = (self: CpuSet) i32 {
+    count = 0
+    mask = self.mask
+    loop {
+        mask == 0 ?
+            | true { return count }
+            | false {
+                count = count + (mask & 1)
+                mask = mask >> 1
+            }
+    }
+    return count
+}
+
+// Get CPU affinity
+get_affinity = (allocator: Allocator) Result<CpuSet, PrctlError> {
+    buf = allocator.allocate(8)
+
+    result = sys_sched_getaffinity(0, 8, buf)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 8)
+            return Result.Err(prctl_errno_to_error(result))
+        }
+        | false {
+            mask = compiler.load<u64>(buf)
+            allocator.deallocate(buf, 8)
+            return Result.Ok(CpuSet { mask: mask })
+        }
+}
+
+// Set CPU affinity
+set_affinity = (cpuset: CpuSet, allocator: Allocator) Result<void, PrctlError> {
+    buf = allocator.allocate(8)
+    compiler.store<u64>(buf, cpuset.mask)
+
+    result = sys_sched_setaffinity(0, 8, buf)
+    allocator.deallocate(buf, 8)
+
+    result < 0 ?
+        | true { return Result.Err(prctl_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Pin to specific CPU
+pin_to_cpu = (cpu: i32, allocator: Allocator) Result<void, PrctlError> {
+    cpuset = CpuSet.single(cpu)
+    return set_affinity(cpuset, allocator)
+}
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+// Prepare for daemon (set name, disable dumps, set subreaper)
+prepare_daemon = (name: String, allocator: Allocator) Result<void, PrctlError> {
+    // Set name
+    name_result = set_name(name, allocator)
+    name_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    // Disable core dumps
+    dumpable_result = set_dumpable(false)
+    dumpable_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    // Become subreaper
+    subreaper_result = set_child_subreaper(true)
+    subreaper_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    return Result.Ok(())
+}
+
+// Harden process (no new privs, limit resources)
+harden_process = (allocator: Allocator) Result<void, PrctlError> {
+    // Set no new privileges
+    nnp_result = set_no_new_privs()
+    nnp_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    // Disable core dumps
+    dump_result = set_dumpable(false)
+    dump_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    // Disable core dump files
+    core_result = disable_core_dumps(allocator)
+    core_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    return Result.Ok(())
+}
+

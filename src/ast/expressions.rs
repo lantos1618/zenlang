@@ -16,7 +16,6 @@ pub enum BinaryOperator {
     GreaterThan,
     LessThanEquals,
     GreaterThanEquals,
-    #[allow(dead_code)]
     StringConcat,
     And,
     Or,
@@ -24,21 +23,14 @@ pub enum BinaryOperator {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
-    #[allow(dead_code)]
     Integer8(i8),
-    #[allow(dead_code)]
     Integer16(i16),
     Integer32(i32),
     Integer64(i64),
-    #[allow(dead_code)]
     Unsigned8(u8),
-    #[allow(dead_code)]
     Unsigned16(u16),
-    #[allow(dead_code)]
     Unsigned32(u32),
-    #[allow(dead_code)]
     Unsigned64(u64),
-    #[allow(dead_code)]
     Float32(f32),
     Float64(f64),
     Boolean(bool),
@@ -60,16 +52,12 @@ pub enum Expression {
         arms: Vec<MatchArm>,
     },
     // Conditional expression for simple boolean patterns (expr ? { block })
-    #[allow(dead_code)]
     Conditional {
         scrutinee: Box<Expression>,
         arms: Vec<ConditionalArm>,
     },
-    #[allow(dead_code)]
     AddressOf(Box<Expression>),
-    #[allow(dead_code)]
     Dereference(Box<Expression>),
-    #[allow(dead_code)]
     PointerOffset {
         pointer: Box<Expression>,
         offset: Box<Expression>,
@@ -78,7 +66,6 @@ pub enum Expression {
         name: String,
         fields: Vec<(String, Expression)>,
     },
-    #[allow(dead_code)]
     StructField {
         struct_: Box<Expression>,
         field: String,
@@ -104,15 +91,10 @@ pub enum Expression {
         member: String,
     },
     // Pointer-specific operations for Zen spec
-    #[allow(dead_code)]
     PointerDereference(Box<Expression>), // .val operation
-    #[allow(dead_code)]
-    PointerAddress(Box<Expression>), // .addr operation
-    #[allow(dead_code)]
-    CreateReference(Box<Expression>), // .ref() method
-    #[allow(dead_code)]
+    PointerAddress(Box<Expression>),     // .addr operation
+    CreateReference(Box<Expression>),    // .ref() method
     CreateMutableReference(Box<Expression>), // .mut_ref() method
-    #[allow(dead_code)]
     StringLength(Box<Expression>),
     // Option<T> constructors
     Some(Box<Expression>), // Some(value)
@@ -130,7 +112,6 @@ pub enum Expression {
         inclusive: bool,
     },
     // Pattern matching expressions
-    #[allow(dead_code)]
     PatternMatch {
         scrutinee: Box<Expression>,
         arms: Vec<PatternArm>,
@@ -176,7 +157,6 @@ pub enum Expression {
     // Error propagation: expr.raise()
     Raise(Box<Expression>),
     // Defer expression: @this.defer(expr)
-    #[allow(dead_code)]
     Defer(Box<Expression>),
     // Break expression for loops (can be used in expression contexts like pattern arms)
     Break {

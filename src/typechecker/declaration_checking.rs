@@ -112,9 +112,24 @@ pub fn collect_declaration_types(
 
                 methods.push(MethodInfo {
                     name: method.name.clone(),
-                    param_types,
-                    return_type,
+                    param_types: param_types.clone(),
+                    return_type: return_type.clone(),
                 });
+
+                // Register method in TypeContext for codegen to use
+                // This eliminates the need for hardcoded method return types in codegen
+                let params_with_names: Vec<(String, AstType)> = method.args.iter()
+                    .map(|(n, t)| (n.clone(), t.clone()))
+                    .collect();
+                let is_static = method.args.is_empty() ||
+                    !matches!(method.args.first(), Some((name, _)) if name == "self");
+                checker.type_context.register_method(
+                    &impl_block.type_name,
+                    &method.name,
+                    params_with_names,
+                    return_type.clone(),
+                    is_static,
+                );
             }
             checker
                 .behavior_resolver

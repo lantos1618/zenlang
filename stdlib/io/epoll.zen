@@ -1,0 +1,486 @@
+// Zen Standard Library: Epoll (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Efficient I/O event notification for scalable servers
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Vec } = @std.vec
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Epoll Syscall Numbers
+// ============================================================================
+
+SYS_EPOLL_CREATE = 213
+SYS_EPOLL_CREATE1 = 291
+SYS_EPOLL_CTL = 233
+SYS_EPOLL_WAIT = 232
+SYS_EPOLL_PWAIT = 281
+SYS_CLOSE = 3
+
+// ============================================================================
+// Epoll Operation Codes (for epoll_ctl)
+// ============================================================================
+
+EPOLL_CTL_ADD = 1   // Add fd to interest list
+EPOLL_CTL_DEL = 2   // Remove fd from interest list
+EPOLL_CTL_MOD = 3   // Modify fd settings
+
+// ============================================================================
+// Epoll Event Types (bit flags)
+// ============================================================================
+
+EPOLLIN = 1          // Available for read
+EPOLLOUT = 4         // Available for write
+EPOLLRDHUP = 8192    // Stream socket peer closed connection
+EPOLLPRI = 2         // Exceptional condition (urgent data)
+EPOLLERR = 8         // Error condition
+EPOLLHUP = 16        // Hang up
+EPOLLET = 2147483648 // Edge-triggered (1 << 31)
+EPOLLONESHOT = 1073741824  // One-shot notification (1 << 30)
+EPOLLWAKEUP = 536870912    // Wake up on event (1 << 29)
+EPOLLEXCLUSIVE = 268435456 // Exclusive wakeup (1 << 28)
+
+// Create flags
+EPOLL_CLOEXEC = 524288  // O_CLOEXEC
+
+// ============================================================================
+// Epoll Event Structure
+// Layout: events (4 bytes) + padding (4 bytes) + data (8 bytes) = 16 bytes
+// ============================================================================
+
+EpollEvent: {
+    events: u32,    // Event mask
+    data: u64       // User data (usually fd or pointer)
+}
+
+// Create event for a file descriptor
+EpollEvent.new = (fd: i32, events: u32) EpollEvent {
+    return EpollEvent {
+        events: events,
+        data: fd
+    }
+}
+
+// Create read event
+EpollEvent.readable = (fd: i32) EpollEvent {
+    return EpollEvent.new(fd, EPOLLIN)
+}
+
+// Create write event
+EpollEvent.writable = (fd: i32) EpollEvent {
+    return EpollEvent.new(fd, EPOLLOUT)
+}
+
+// Create read/write event
+EpollEvent.read_write = (fd: i32) EpollEvent {
+    return EpollEvent.new(fd, EPOLLIN | EPOLLOUT)
+}
+
+// Create edge-triggered read event
+EpollEvent.readable_et = (fd: i32) EpollEvent {
+    return EpollEvent.new(fd, EPOLLIN | EPOLLET)
+}
+
+// Create edge-triggered read/write event
+EpollEvent.read_write_et = (fd: i32) EpollEvent {
+    return EpollEvent.new(fd, EPOLLIN | EPOLLOUT | EPOLLET)
+}
+
+// Get fd from event data
+EpollEvent.fd = (self: EpollEvent) i32 {
+    return self.data
+}
+
+// Check if readable
+EpollEvent.is_readable = (self: EpollEvent) bool {
+    return (self.events & EPOLLIN) != 0
+}
+
+// Check if writable
+EpollEvent.is_writable = (self: EpollEvent) bool {
+    return (self.events & EPOLLOUT) != 0
+}
+
+// Check if error
+EpollEvent.is_error = (self: EpollEvent) bool {
+    return (self.events & EPOLLERR) != 0
+}
+
+// Check if hangup
+EpollEvent.is_hangup = (self: EpollEvent) bool {
+    return (self.events & EPOLLHUP) != 0
+}
+
+// Check if peer closed (RDHUP)
+EpollEvent.is_peer_closed = (self: EpollEvent) bool {
+    return (self.events & EPOLLRDHUP) != 0
+}
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+EpollError: {
+    code: i32
+}
+
+epoll_errno_to_error = (errno: i64) EpollError {
+    code = 0 - errno
+    return EpollError { code: code }
+}
+
+// ============================================================================
+// Low-Level Epoll Syscalls
+// ============================================================================
+
+// Create epoll instance
+sys_epoll_create1 = (flags: i32) i64 {
+    return compiler.syscall1(SYS_EPOLL_CREATE1, flags)
+}
+
+// Control epoll interest list
+sys_epoll_ctl = (epfd: i32, op: i32, fd: i32, event_ptr: i64) i64 {
+    return compiler.syscall4(SYS_EPOLL_CTL, epfd, op, fd, event_ptr)
+}
+
+// Wait for events
+sys_epoll_wait = (epfd: i32, events_ptr: i64, maxevents: i32, timeout: i32) i64 {
+    return compiler.syscall4(SYS_EPOLL_WAIT, epfd, events_ptr, maxevents, timeout)
+}
+
+// Wait for events with signal mask
+sys_epoll_pwait = (epfd: i32, events_ptr: i64, maxevents: i32, timeout: i32, sigmask: i64) i64 {
+    return compiler.syscall5(SYS_EPOLL_PWAIT, epfd, events_ptr, maxevents, timeout, sigmask)
+}
+
+// Close file descriptor
+sys_close = (fd: i32) i64 {
+    return compiler.syscall1(SYS_CLOSE, fd)
+}
+
+// ============================================================================
+// Epoll Instance
+// ============================================================================
+
+Epoll: {
+    fd: i32,
+    events_buf: i64,
+    events_capacity: i32,
+    allocator: Allocator
+}
+
+// Default event buffer capacity
+DEFAULT_EVENTS_CAPACITY = 64
+
+// Create new epoll instance
+Epoll.new = (allocator: Allocator) Result<Epoll, EpollError> {
+    return Epoll.with_capacity(allocator, DEFAULT_EVENTS_CAPACITY)
+}
+
+// Create epoll with specified event buffer capacity
+Epoll.with_capacity = (allocator: Allocator, capacity: i32) Result<Epoll, EpollError> {
+    result = sys_epoll_create1(EPOLL_CLOEXEC)
+
+    result < 0 ?
+        | true { return Result.Err(epoll_errno_to_error(result)) }
+        | false {
+            // Allocate event buffer (16 bytes per event)
+            buf_size = capacity * 16
+            buf = allocator.allocate(buf_size)
+
+            return Result.Ok(Epoll {
+                fd: result,
+                events_buf: buf,
+                events_capacity: capacity,
+                allocator: allocator
+            })
+        }
+}
+
+// Close epoll instance
+Epoll.close = (self: MutPtr<Epoll>) void {
+    self.val.fd >= 0 ?
+        | true {
+            _ = sys_close(self.val.fd)
+            self.val.fd = -1
+        }
+        | false { }
+
+    self.val.events_buf != 0 ?
+        | true {
+            buf_size = self.val.events_capacity * 16
+            self.val.allocator.deallocate(self.val.events_buf, buf_size)
+            self.val.events_buf = 0
+        }
+        | false { }
+}
+
+// Add file descriptor to interest list
+Epoll.add = (self: Epoll, fd: i32, events: u32) Result<void, EpollError> {
+    event_ptr = self.allocator.allocate(16)
+    compiler.store<u32>(event_ptr, events)
+    compiler.store<u32>(compiler.gep(event_ptr, 4), 0)  // padding
+    compiler.store<u64>(compiler.gep(event_ptr, 8), fd)
+
+    result = sys_epoll_ctl(self.fd, EPOLL_CTL_ADD, fd, event_ptr)
+
+    self.allocator.deallocate(event_ptr, 16)
+
+    result < 0 ?
+        | true { return Result.Err(epoll_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Add readable fd
+Epoll.add_readable = (self: Epoll, fd: i32) Result<void, EpollError> {
+    return self.add(fd, EPOLLIN)
+}
+
+// Add writable fd
+Epoll.add_writable = (self: Epoll, fd: i32) Result<void, EpollError> {
+    return self.add(fd, EPOLLOUT)
+}
+
+// Add read/write fd
+Epoll.add_read_write = (self: Epoll, fd: i32) Result<void, EpollError> {
+    return self.add(fd, EPOLLIN | EPOLLOUT)
+}
+
+// Add edge-triggered readable fd
+Epoll.add_readable_et = (self: Epoll, fd: i32) Result<void, EpollError> {
+    return self.add(fd, EPOLLIN | EPOLLET)
+}
+
+// Modify fd events
+Epoll.modify = (self: Epoll, fd: i32, events: u32) Result<void, EpollError> {
+    event_ptr = self.allocator.allocate(16)
+    compiler.store<u32>(event_ptr, events)
+    compiler.store<u32>(compiler.gep(event_ptr, 4), 0)
+    compiler.store<u64>(compiler.gep(event_ptr, 8), fd)
+
+    result = sys_epoll_ctl(self.fd, EPOLL_CTL_MOD, fd, event_ptr)
+
+    self.allocator.deallocate(event_ptr, 16)
+
+    result < 0 ?
+        | true { return Result.Err(epoll_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Remove fd from interest list
+Epoll.remove = (self: Epoll, fd: i32) Result<void, EpollError> {
+    result = sys_epoll_ctl(self.fd, EPOLL_CTL_DEL, fd, 0)
+
+    result < 0 ?
+        | true { return Result.Err(epoll_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Wait for events (blocking)
+// timeout_ms: -1 = infinite, 0 = non-blocking, >0 = milliseconds
+// Returns number of events
+Epoll.wait = (self: Epoll, timeout_ms: i32) Result<i32, EpollError> {
+    result = sys_epoll_wait(self.fd, self.events_buf, self.events_capacity, timeout_ms)
+
+    result < 0 ?
+        | true { return Result.Err(epoll_errno_to_error(result)) }
+        | false { return Result.Ok(result) }
+}
+
+// Wait indefinitely
+Epoll.wait_blocking = (self: Epoll) Result<i32, EpollError> {
+    return self.wait(-1)
+}
+
+// Poll without blocking
+Epoll.poll = (self: Epoll) Result<i32, EpollError> {
+    return self.wait(0)
+}
+
+// Get event at index (after wait returns)
+Epoll.get_event = (self: Epoll, index: i32) EpollEvent {
+    event_ptr = compiler.gep(self.events_buf, index * 16)
+    events = compiler.load<u32>(event_ptr)
+    data = compiler.load<u64>(compiler.gep(event_ptr, 8))
+    return EpollEvent { events: events, data: data }
+}
+
+// ============================================================================
+// Event Iterator
+// ============================================================================
+
+EpollEventIterator: {
+    epoll: Epoll,
+    count: i32,
+    index: i32
+}
+
+// Create iterator over ready events
+Epoll.events = (self: Epoll, count: i32) EpollEventIterator {
+    return EpollEventIterator {
+        epoll: self,
+        count: count,
+        index: 0
+    }
+}
+
+// Get next event
+EpollEventIterator.next = (self: MutPtr<EpollEventIterator>) Option<EpollEvent> {
+    self.val.index >= self.val.count ?
+        | true { return Option.None }
+        | false {
+            event = self.val.epoll.get_event(self.val.index)
+            self.val.index = self.val.index + 1
+            return Option.Some(event)
+        }
+}
+
+// Check if more events
+EpollEventIterator.has_next = (self: EpollEventIterator) bool {
+    return self.index < self.count
+}
+
+// ============================================================================
+// High-Level Event Loop
+// ============================================================================
+
+EventLoop: {
+    epoll: Epoll,
+    running: bool,
+    allocator: Allocator
+}
+
+// Create new event loop
+EventLoop.new = (allocator: Allocator) Result<EventLoop, EpollError> {
+    epoll_result = Epoll.new(allocator)
+
+    epoll_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(epoll) {
+            return Result.Ok(EventLoop {
+                epoll: epoll,
+                running: false,
+                allocator: allocator
+            })
+        }
+}
+
+// Register fd for reading
+EventLoop.register_read = (self: EventLoop, fd: i32) Result<void, EpollError> {
+    return self.epoll.add_readable_et(fd)
+}
+
+// Register fd for read/write
+EventLoop.register_read_write = (self: EventLoop, fd: i32) Result<void, EpollError> {
+    return self.epoll.add(fd, EPOLLIN | EPOLLOUT | EPOLLET)
+}
+
+// Unregister fd
+EventLoop.unregister = (self: EventLoop, fd: i32) Result<void, EpollError> {
+    return self.epoll.remove(fd)
+}
+
+// Stop the event loop
+EventLoop.stop = (self: MutPtr<EventLoop>) void {
+    self.val.running = false
+}
+
+// Close the event loop
+EventLoop.close = (self: MutPtr<EventLoop>) void {
+    self.val.epoll.mut_ref().close()
+}
+
+// Process one iteration of events
+// Returns the events iterator
+EventLoop.poll_once = (self: EventLoop, timeout_ms: i32) Result<EpollEventIterator, EpollError> {
+    count_result = self.epoll.wait(timeout_ms)
+
+    count_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(count) {
+            return Result.Ok(self.epoll.events(count))
+        }
+}
+
+// ============================================================================
+// Reactor Pattern Support
+// ============================================================================
+
+// Interest for a file descriptor
+Interest: {
+    readable: bool,
+    writable: bool
+}
+
+// Create interest
+Interest.read = () Interest {
+    return Interest { readable: true, writable: false }
+}
+
+Interest.write = () Interest {
+    return Interest { readable: false, writable: true }
+}
+
+Interest.both = () Interest {
+    return Interest { readable: true, writable: true }
+}
+
+// Convert to epoll events
+Interest.to_events = (self: Interest) u32 {
+    events = EPOLLET  // Always edge-triggered
+    self.readable ?
+        | true { events = events | EPOLLIN }
+        | false { }
+    self.writable ?
+        | true { events = events | EPOLLOUT }
+        | false { }
+    return events
+}
+
+// Token for identifying registered sources
+Token: {
+    value: u64
+}
+
+Token.new = (value: u64) Token {
+    return Token { value: value }
+}
+
+Token.from_fd = (fd: i32) Token {
+    return Token { value: fd }
+}
+
+// ============================================================================
+// Readiness
+// ============================================================================
+
+Readiness: {
+    readable: bool,
+    writable: bool,
+    error: bool,
+    hangup: bool
+}
+
+// Create from epoll event
+Readiness.from_event = (event: EpollEvent) Readiness {
+    return Readiness {
+        readable: event.is_readable(),
+        writable: event.is_writable(),
+        error: event.is_error(),
+        hangup: event.is_hangup() || event.is_peer_closed()
+    }
+}
+
+// Check if any readiness
+Readiness.is_ready = (self: Readiness) bool {
+    return self.readable || self.writable
+}
+
+// Check if needs close
+Readiness.should_close = (self: Readiness) bool {
+    return self.error || self.hangup
+}
+

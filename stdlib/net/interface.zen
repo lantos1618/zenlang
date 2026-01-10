@@ -1,0 +1,759 @@
+// Zen Standard Library: Network Interface Information (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Query network interface details via ioctl
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ String } = @std.string
+{ Vec } = @std.vec
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Syscall Numbers
+// ============================================================================
+
+SYS_SOCKET = 41
+SYS_IOCTL = 16
+SYS_CLOSE = 3
+
+// ============================================================================
+// Socket Constants
+// ============================================================================
+
+AF_INET = 2
+AF_INET6 = 10
+AF_PACKET = 17
+SOCK_DGRAM = 2
+
+// ============================================================================
+// Ioctl Codes for Network Interfaces
+// ============================================================================
+
+SIOCGIFNAME = 0x8910      // Get interface name
+SIOCGIFINDEX = 0x8933     // Get interface index
+SIOCGIFFLAGS = 0x8913     // Get interface flags
+SIOCSIFFLAGS = 0x8914     // Set interface flags
+SIOCGIFADDR = 0x8915      // Get interface address
+SIOCSIFADDR = 0x8916      // Set interface address
+SIOCGIFNETMASK = 0x891B   // Get netmask
+SIOCSIFNETMASK = 0x891C   // Set netmask
+SIOCGIFBRDADDR = 0x8919   // Get broadcast address
+SIOCSIFBRDADDR = 0x891A   // Set broadcast address
+SIOCGIFMTU = 0x8921       // Get MTU
+SIOCSIFMTU = 0x8922       // Set MTU
+SIOCGIFHWADDR = 0x8927    // Get hardware address
+SIOCSIFHWADDR = 0x8924    // Set hardware address
+SIOCGIFCONF = 0x8912      // Get interface list
+SIOCGIFTXQLEN = 0x8942    // Get transmit queue length
+SIOCSIFTXQLEN = 0x8943    // Set transmit queue length
+
+// ============================================================================
+// Interface Flags (IFF_*)
+// ============================================================================
+
+IFF_UP = 0x1              // Interface is up
+IFF_BROADCAST = 0x2       // Broadcast address valid
+IFF_DEBUG = 0x4           // Debug flag
+IFF_LOOPBACK = 0x8        // Loopback interface
+IFF_POINTOPOINT = 0x10    // Point-to-point link
+IFF_NOTRAILERS = 0x20     // Avoid trailers
+IFF_RUNNING = 0x40        // Resources allocated
+IFF_NOARP = 0x80          // No ARP protocol
+IFF_PROMISC = 0x100       // Promiscuous mode
+IFF_ALLMULTI = 0x200      // Receive all multicast
+IFF_MASTER = 0x400        // Master of load balancing
+IFF_SLAVE = 0x800         // Slave of load balancing
+IFF_MULTICAST = 0x1000    // Supports multicast
+IFF_PORTSEL = 0x2000      // Can set media type
+IFF_AUTOMEDIA = 0x4000    // Auto media selection
+IFF_DYNAMIC = 0x8000      // Addresses lost when down
+IFF_LOWER_UP = 0x10000    // Driver signals L1 up
+IFF_DORMANT = 0x20000     // Driver signals dormant
+
+// ============================================================================
+// Hardware Types
+// ============================================================================
+
+ARPHRD_ETHER = 1          // Ethernet
+ARPHRD_LOOPBACK = 772     // Loopback
+ARPHRD_PPP = 512          // PPP
+ARPHRD_TUNNEL = 768       // IP tunnel
+ARPHRD_TUNNEL6 = 769      // IPv6 tunnel
+ARPHRD_SIT = 776          // SIT tunnel
+ARPHRD_NONE = 65534       // No hardware address
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+NetIfError: {
+    code: i32
+}
+
+netif_errno_to_error = (errno: i64) NetIfError {
+    code = 0 - errno
+    return NetIfError { code: code }
+}
+
+NetIfError.not_found = (self: NetIfError) bool {
+    return self.code == 19  // ENODEV
+}
+
+NetIfError.permission_denied = (self: NetIfError) bool {
+    return self.code == 1 or self.code == 13
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+sys_socket = (domain: i32, sock_type: i32, protocol: i32) i64 {
+    return compiler.syscall3(SYS_SOCKET, domain, sock_type, protocol)
+}
+
+sys_ioctl = (fd: i32, request: u64, arg: i64) i64 {
+    return compiler.syscall3(SYS_IOCTL, fd, request, arg)
+}
+
+sys_close = (fd: i32) i64 {
+    return compiler.syscall1(SYS_CLOSE, fd)
+}
+
+// ============================================================================
+// IPv4 Address
+// ============================================================================
+
+Ipv4Addr: {
+    octets: u32
+}
+
+Ipv4Addr.new = (a: u8, b: u8, c: u8, d: u8) Ipv4Addr {
+    val = (a << 24) | (b << 16) | (c << 8) | d
+    return Ipv4Addr { octets: val }
+}
+
+Ipv4Addr.from_u32 = (val: u32) Ipv4Addr {
+    return Ipv4Addr { octets: val }
+}
+
+Ipv4Addr.from_u32_ne = (val: u32) Ipv4Addr {
+    // Network byte order (big-endian) to host
+    a = (val >> 0) & 0xFF
+    b = (val >> 8) & 0xFF
+    c = (val >> 16) & 0xFF
+    d = (val >> 24) & 0xFF
+    return Ipv4Addr.new(a, b, c, d)
+}
+
+Ipv4Addr.a = (self: Ipv4Addr) u8 {
+    return (self.octets >> 24) & 0xFF
+}
+
+Ipv4Addr.b = (self: Ipv4Addr) u8 {
+    return (self.octets >> 16) & 0xFF
+}
+
+Ipv4Addr.c = (self: Ipv4Addr) u8 {
+    return (self.octets >> 8) & 0xFF
+}
+
+Ipv4Addr.d = (self: Ipv4Addr) u8 {
+    return self.octets & 0xFF
+}
+
+Ipv4Addr.is_loopback = (self: Ipv4Addr) bool {
+    return self.a() == 127
+}
+
+Ipv4Addr.is_private = (self: Ipv4Addr) bool {
+    a = self.a()
+    b = self.b()
+    // 10.0.0.0/8
+    a == 10 ?
+        | true { return true }
+        | false { }
+    // 172.16.0.0/12
+    a == 172 and b >= 16 and b <= 31 ?
+        | true { return true }
+        | false { }
+    // 192.168.0.0/16
+    a == 192 and b == 168 ?
+        | true { return true }
+        | false { }
+    return false
+}
+
+Ipv4Addr.is_link_local = (self: Ipv4Addr) bool {
+    return self.a() == 169 and self.b() == 254
+}
+
+Ipv4Addr.is_broadcast = (self: Ipv4Addr) bool {
+    return self.octets == 0xFFFFFFFF
+}
+
+Ipv4Addr.is_unspecified = (self: Ipv4Addr) bool {
+    return self.octets == 0
+}
+
+// ============================================================================
+// MAC Address
+// ============================================================================
+
+MacAddr: {
+    bytes: i64  // Pointer to 6 bytes
+}
+
+MacAddr.from_ptr = (ptr: i64) MacAddr {
+    return MacAddr { bytes: ptr }
+}
+
+MacAddr.get = (self: MacAddr, idx: usize) u8 {
+    idx < 6 ?
+        | true { return compiler.load<u8>(self.bytes + idx) }
+        | false { return 0 }
+}
+
+MacAddr.is_zero = (self: MacAddr) bool {
+    i = 0
+    loop {
+        i >= 6 ?
+            | true { return true }
+            | false {
+                compiler.load<u8>(self.bytes + i) != 0 ?
+                    | true { return false }
+                    | false { i = i + 1 }
+            }
+    }
+    return true
+}
+
+MacAddr.is_broadcast = (self: MacAddr) bool {
+    i = 0
+    loop {
+        i >= 6 ?
+            | true { return true }
+            | false {
+                compiler.load<u8>(self.bytes + i) != 0xFF ?
+                    | true { return false }
+                    | false { i = i + 1 }
+            }
+    }
+    return true
+}
+
+// ============================================================================
+// Ifreq Structure
+// ============================================================================
+
+// struct ifreq is 40 bytes on x86-64
+// char ifr_name[16]
+// union { ... } ifr_ifru (24 bytes)
+IFREQ_SIZE = 40
+IFNAMSIZ = 16
+
+// ============================================================================
+// Network Interface
+// ============================================================================
+
+NetInterface: {
+    name: String,
+    index: i32,
+    flags: u32,
+    mtu: i32,
+    hw_type: u16,
+    ipv4_addr: Option<Ipv4Addr>,
+    netmask: Option<Ipv4Addr>,
+    broadcast: Option<Ipv4Addr>,
+    mac_addr: i64,  // Pointer to 6 bytes (or 0)
+    allocator: Allocator
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+// Create ioctl socket
+create_ioctl_socket = () Result<i32, NetIfError> {
+    fd = sys_socket(AF_INET, SOCK_DGRAM, 0)
+
+    fd < 0 ?
+        | true { return Result.Err(netif_errno_to_error(fd)) }
+        | false { return Result.Ok(fd) }
+}
+
+// Copy interface name to ifreq buffer
+copy_ifname = (buf: i64, name: String) void {
+    len = name.len()
+    len > 15 ?
+        | true { len = 15 }
+        | false { }
+    compiler.memcpy(buf, name.data(), len)
+    compiler.store<u8>(buf + len, 0)
+}
+
+// Extract string from ifreq name field
+extract_ifname = (buf: i64, allocator: Allocator) String {
+    len = 0
+    loop {
+        len >= 16 ?
+            | true { break }
+            | false {
+                c = compiler.load<u8>(buf + len)
+                c == 0 ?
+                    | true { break }
+                    | false { len = len + 1 }
+            }
+    }
+
+    data = allocator.allocate(len)
+    compiler.memcpy(data, buf, len)
+    return String.from_ptr(data, len, allocator)
+}
+
+// ============================================================================
+// Interface Query Functions
+// ============================================================================
+
+// Get interface index by name
+get_ifindex = (name: String, allocator: Allocator) Result<i32, NetIfError> {
+    sock_result = create_ioctl_socket()
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sock = sock_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(NetIfError { code: 1 }) }
+
+    buf = allocator.allocate(IFREQ_SIZE)
+    compiler.memset(buf, 0, IFREQ_SIZE)
+    copy_ifname(buf, name)
+
+    result = sys_ioctl(sock, SIOCGIFINDEX, buf)
+    sys_close(sock)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Err(netif_errno_to_error(result))
+        }
+        | false {
+            // Index is at offset 16 in ifreq
+            index = compiler.load<i32>(buf + 16)
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Ok(index)
+        }
+}
+
+// Get interface flags
+get_ifflags = (name: String, allocator: Allocator) Result<u32, NetIfError> {
+    sock_result = create_ioctl_socket()
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sock = sock_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(NetIfError { code: 1 }) }
+
+    buf = allocator.allocate(IFREQ_SIZE)
+    compiler.memset(buf, 0, IFREQ_SIZE)
+    copy_ifname(buf, name)
+
+    result = sys_ioctl(sock, SIOCGIFFLAGS, buf)
+    sys_close(sock)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Err(netif_errno_to_error(result))
+        }
+        | false {
+            flags = compiler.load<u16>(buf + 16)
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Ok(flags)
+        }
+}
+
+// Get interface MTU
+get_ifmtu = (name: String, allocator: Allocator) Result<i32, NetIfError> {
+    sock_result = create_ioctl_socket()
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sock = sock_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(NetIfError { code: 1 }) }
+
+    buf = allocator.allocate(IFREQ_SIZE)
+    compiler.memset(buf, 0, IFREQ_SIZE)
+    copy_ifname(buf, name)
+
+    result = sys_ioctl(sock, SIOCGIFMTU, buf)
+    sys_close(sock)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Err(netif_errno_to_error(result))
+        }
+        | false {
+            mtu = compiler.load<i32>(buf + 16)
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Ok(mtu)
+        }
+}
+
+// Get interface IPv4 address
+get_ifaddr = (name: String, allocator: Allocator) Result<Ipv4Addr, NetIfError> {
+    sock_result = create_ioctl_socket()
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sock = sock_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(NetIfError { code: 1 }) }
+
+    buf = allocator.allocate(IFREQ_SIZE)
+    compiler.memset(buf, 0, IFREQ_SIZE)
+    copy_ifname(buf, name)
+
+    result = sys_ioctl(sock, SIOCGIFADDR, buf)
+    sys_close(sock)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Err(netif_errno_to_error(result))
+        }
+        | false {
+            // sockaddr_in starts at offset 16
+            // sin_addr is at offset 4 within sockaddr_in
+            addr = compiler.load<u32>(buf + 16 + 4)
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Ok(Ipv4Addr.from_u32_ne(addr))
+        }
+}
+
+// Get interface netmask
+get_ifnetmask = (name: String, allocator: Allocator) Result<Ipv4Addr, NetIfError> {
+    sock_result = create_ioctl_socket()
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sock = sock_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(NetIfError { code: 1 }) }
+
+    buf = allocator.allocate(IFREQ_SIZE)
+    compiler.memset(buf, 0, IFREQ_SIZE)
+    copy_ifname(buf, name)
+
+    result = sys_ioctl(sock, SIOCGIFNETMASK, buf)
+    sys_close(sock)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Err(netif_errno_to_error(result))
+        }
+        | false {
+            addr = compiler.load<u32>(buf + 16 + 4)
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Ok(Ipv4Addr.from_u32_ne(addr))
+        }
+}
+
+// Get interface broadcast address
+get_ifbrdaddr = (name: String, allocator: Allocator) Result<Ipv4Addr, NetIfError> {
+    sock_result = create_ioctl_socket()
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sock = sock_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(NetIfError { code: 1 }) }
+
+    buf = allocator.allocate(IFREQ_SIZE)
+    compiler.memset(buf, 0, IFREQ_SIZE)
+    copy_ifname(buf, name)
+
+    result = sys_ioctl(sock, SIOCGIFBRDADDR, buf)
+    sys_close(sock)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Err(netif_errno_to_error(result))
+        }
+        | false {
+            addr = compiler.load<u32>(buf + 16 + 4)
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Ok(Ipv4Addr.from_u32_ne(addr))
+        }
+}
+
+// Get interface hardware address (MAC)
+get_ifhwaddr = (name: String, allocator: Allocator) Result<i64, NetIfError> {
+    sock_result = create_ioctl_socket()
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sock = sock_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(NetIfError { code: 1 }) }
+
+    buf = allocator.allocate(IFREQ_SIZE)
+    compiler.memset(buf, 0, IFREQ_SIZE)
+    copy_ifname(buf, name)
+
+    result = sys_ioctl(sock, SIOCGIFHWADDR, buf)
+    sys_close(sock)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Err(netif_errno_to_error(result))
+        }
+        | false {
+            // Hardware address is at offset 16 + 2 (skip sa_family)
+            mac = allocator.allocate(6)
+            compiler.memcpy(mac, buf + 18, 6)
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Ok(mac)
+        }
+}
+
+// ============================================================================
+// Full Interface Info
+// ============================================================================
+
+// Get complete interface information
+get_interface = (name: String, allocator: Allocator) Result<NetInterface, NetIfError> {
+    // Get index
+    index_result = get_ifindex(name, allocator)
+    index = index_result ?
+        | Ok(i) { i }
+        | Err(e) { return Result.Err(e) }
+
+    // Get flags
+    flags_result = get_ifflags(name, allocator)
+    flags = flags_result ?
+        | Ok(f) { f }
+        | Err(_) { 0 }
+
+    // Get MTU
+    mtu_result = get_ifmtu(name, allocator)
+    mtu = mtu_result ?
+        | Ok(m) { m }
+        | Err(_) { 0 }
+
+    // Get IPv4 address
+    addr_opt = get_ifaddr(name, allocator) ?
+        | Ok(a) { Option.Some(a) }
+        | Err(_) { Option.None() }
+
+    // Get netmask
+    mask_opt = get_ifnetmask(name, allocator) ?
+        | Ok(m) { Option.Some(m) }
+        | Err(_) { Option.None() }
+
+    // Get broadcast
+    brd_opt = get_ifbrdaddr(name, allocator) ?
+        | Ok(b) { Option.Some(b) }
+        | Err(_) { Option.None() }
+
+    // Get MAC address
+    mac = get_ifhwaddr(name, allocator) ?
+        | Ok(m) { m }
+        | Err(_) { 0 }
+
+    return Result.Ok(NetInterface {
+        name: name,
+        index: index,
+        flags: flags,
+        mtu: mtu,
+        hw_type: 0,
+        ipv4_addr: addr_opt,
+        netmask: mask_opt,
+        broadcast: brd_opt,
+        mac_addr: mac,
+        allocator: allocator
+    })
+}
+
+// ============================================================================
+// Interface Methods
+// ============================================================================
+
+NetInterface.is_up = (self: NetInterface) bool {
+    return (self.flags & IFF_UP) != 0
+}
+
+NetInterface.is_running = (self: NetInterface) bool {
+    return (self.flags & IFF_RUNNING) != 0
+}
+
+NetInterface.is_loopback = (self: NetInterface) bool {
+    return (self.flags & IFF_LOOPBACK) != 0
+}
+
+NetInterface.is_broadcast = (self: NetInterface) bool {
+    return (self.flags & IFF_BROADCAST) != 0
+}
+
+NetInterface.is_multicast = (self: NetInterface) bool {
+    return (self.flags & IFF_MULTICAST) != 0
+}
+
+NetInterface.is_promisc = (self: NetInterface) bool {
+    return (self.flags & IFF_PROMISC) != 0
+}
+
+NetInterface.is_point_to_point = (self: NetInterface) bool {
+    return (self.flags & IFF_POINTOPOINT) != 0
+}
+
+NetInterface.has_link = (self: NetInterface) bool {
+    return (self.flags & IFF_LOWER_UP) != 0
+}
+
+// ============================================================================
+// Interface Control
+// ============================================================================
+
+// Bring interface up
+ifup = (name: String, allocator: Allocator) Result<void, NetIfError> {
+    sock_result = create_ioctl_socket()
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sock = sock_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(NetIfError { code: 1 }) }
+
+    buf = allocator.allocate(IFREQ_SIZE)
+    compiler.memset(buf, 0, IFREQ_SIZE)
+    copy_ifname(buf, name)
+
+    // Get current flags
+    result = sys_ioctl(sock, SIOCGIFFLAGS, buf)
+    result < 0 ?
+        | true {
+            sys_close(sock)
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Err(netif_errno_to_error(result))
+        }
+        | false { }
+
+    // Set UP flag
+    flags = compiler.load<u16>(buf + 16)
+    flags = flags | IFF_UP
+    compiler.store<u16>(buf + 16, flags)
+
+    result = sys_ioctl(sock, SIOCSIFFLAGS, buf)
+    sys_close(sock)
+    allocator.deallocate(buf, IFREQ_SIZE)
+
+    result < 0 ?
+        | true { return Result.Err(netif_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Bring interface down
+ifdown = (name: String, allocator: Allocator) Result<void, NetIfError> {
+    sock_result = create_ioctl_socket()
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sock = sock_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(NetIfError { code: 1 }) }
+
+    buf = allocator.allocate(IFREQ_SIZE)
+    compiler.memset(buf, 0, IFREQ_SIZE)
+    copy_ifname(buf, name)
+
+    // Get current flags
+    result = sys_ioctl(sock, SIOCGIFFLAGS, buf)
+    result < 0 ?
+        | true {
+            sys_close(sock)
+            allocator.deallocate(buf, IFREQ_SIZE)
+            return Result.Err(netif_errno_to_error(result))
+        }
+        | false { }
+
+    // Clear UP flag
+    flags = compiler.load<u16>(buf + 16)
+    flags = flags & ~IFF_UP
+    compiler.store<u16>(buf + 16, flags)
+
+    result = sys_ioctl(sock, SIOCSIFFLAGS, buf)
+    sys_close(sock)
+    allocator.deallocate(buf, IFREQ_SIZE)
+
+    result < 0 ?
+        | true { return Result.Err(netif_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Set interface MTU
+set_ifmtu = (name: String, mtu: i32, allocator: Allocator) Result<void, NetIfError> {
+    sock_result = create_ioctl_socket()
+    sock_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { }
+
+    sock = sock_result ?
+        | Ok(s) { s }
+        | Err(_) { return Result.Err(NetIfError { code: 1 }) }
+
+    buf = allocator.allocate(IFREQ_SIZE)
+    compiler.memset(buf, 0, IFREQ_SIZE)
+    copy_ifname(buf, name)
+    compiler.store<i32>(buf + 16, mtu)
+
+    result = sys_ioctl(sock, SIOCSIFMTU, buf)
+    sys_close(sock)
+    allocator.deallocate(buf, IFREQ_SIZE)
+
+    result < 0 ?
+        | true { return Result.Err(netif_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+// Check if interface exists
+interface_exists = (name: String, allocator: Allocator) bool {
+    result = get_ifindex(name, allocator)
+    result ?
+        | Ok(_) { return true }
+        | Err(_) { return false }
+}
+
+// Check if interface is up
+interface_is_up = (name: String, allocator: Allocator) bool {
+    result = get_ifflags(name, allocator)
+    result ?
+        | Ok(flags) { return (flags & IFF_UP) != 0 }
+        | Err(_) { return false }
+}
+
+// Get loopback interface
+loopback_interface = (allocator: Allocator) Result<NetInterface, NetIfError> {
+    return get_interface(String.from_static("lo"), allocator)
+}
+

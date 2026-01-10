@@ -53,7 +53,6 @@ impl TypeEnvironment {
         self.generic_enums.get(name)
     }
 
-    #[allow(dead_code)] // validate_type_args is public API for future use
     pub fn validate_type_args(
         &self,
         expected: &[TypeParameter],

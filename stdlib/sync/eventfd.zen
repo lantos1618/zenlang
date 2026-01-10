@@ -1,0 +1,541 @@
+// Zen Standard Library: Event File Descriptors (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+// Provides inter-thread/inter-process notification mechanism
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Option } = @std.core.option
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Eventfd Syscall Number
+// ============================================================================
+
+SYS_EVENTFD2 = 290
+SYS_READ = 0
+SYS_WRITE = 1
+SYS_CLOSE = 3
+
+// ============================================================================
+// Eventfd Flags
+// ============================================================================
+
+EFD_CLOEXEC = 524288    // O_CLOEXEC - close on exec
+EFD_NONBLOCK = 2048     // O_NONBLOCK - non-blocking reads
+EFD_SEMAPHORE = 1       // Semaphore-like semantics
+
+// ============================================================================
+// Error Type
+// ============================================================================
+
+EventfdError: {
+    code: i32
+}
+
+eventfd_errno_to_error = (errno: i64) EventfdError {
+    code = 0 - errno
+    return EventfdError { code: code }
+}
+
+// Check if error is EAGAIN (would block)
+EventfdError.would_block = (self: EventfdError) bool {
+    return self.code == 11  // EAGAIN
+}
+
+// ============================================================================
+// Low-Level Syscalls
+// ============================================================================
+
+// Create an eventfd
+// initval: initial counter value
+// flags: EFD_* flags
+sys_eventfd = (initval: u32, flags: i32) i64 {
+    return compiler.syscall2(SYS_EVENTFD2, initval, flags)
+}
+
+sys_read = (fd: i32, buf: i64, count: usize) i64 {
+    return compiler.syscall3(SYS_READ, fd, buf, count)
+}
+
+sys_write = (fd: i32, buf: i64, count: usize) i64 {
+    return compiler.syscall3(SYS_WRITE, fd, buf, count)
+}
+
+sys_close = (fd: i32) i64 {
+    return compiler.syscall1(SYS_CLOSE, fd)
+}
+
+// ============================================================================
+// EventFd - Basic Event Notification
+// ============================================================================
+
+EventFd: {
+    fd: i32,
+    is_semaphore: bool
+}
+
+// Create a new event fd with initial value 0
+EventFd.new = () Result<EventFd, EventfdError> {
+    fd = sys_eventfd(0, EFD_CLOEXEC)
+
+    fd < 0 ?
+        | true { return Result.Err(eventfd_errno_to_error(fd)) }
+        | false { return Result.Ok(EventFd { fd: fd, is_semaphore: false }) }
+}
+
+// Create with initial value
+EventFd.with_value = (initval: u32) Result<EventFd, EventfdError> {
+    fd = sys_eventfd(initval, EFD_CLOEXEC)
+
+    fd < 0 ?
+        | true { return Result.Err(eventfd_errno_to_error(fd)) }
+        | false { return Result.Ok(EventFd { fd: fd, is_semaphore: false }) }
+}
+
+// Create nonblocking event fd
+EventFd.nonblocking = () Result<EventFd, EventfdError> {
+    fd = sys_eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)
+
+    fd < 0 ?
+        | true { return Result.Err(eventfd_errno_to_error(fd)) }
+        | false { return Result.Ok(EventFd { fd: fd, is_semaphore: false }) }
+}
+
+// Create semaphore-mode event fd
+// In semaphore mode, read returns 1 and decrements counter
+EventFd.semaphore = () Result<EventFd, EventfdError> {
+    fd = sys_eventfd(0, EFD_CLOEXEC | EFD_SEMAPHORE)
+
+    fd < 0 ?
+        | true { return Result.Err(eventfd_errno_to_error(fd)) }
+        | false { return Result.Ok(EventFd { fd: fd, is_semaphore: true }) }
+}
+
+// Create nonblocking semaphore
+EventFd.semaphore_nonblocking = () Result<EventFd, EventfdError> {
+    fd = sys_eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE)
+
+    fd < 0 ?
+        | true { return Result.Err(eventfd_errno_to_error(fd)) }
+        | false { return Result.Ok(EventFd { fd: fd, is_semaphore: true }) }
+}
+
+// Get underlying file descriptor (for epoll integration)
+EventFd.as_fd = (self: EventFd) i32 {
+    return self.fd
+}
+
+// Signal the event (add value to counter)
+// For normal mode: adds val to counter
+// For semaphore mode: increments counter by val
+EventFd.signal = (self: EventFd, val: u64, allocator: Allocator) Result<void, EventfdError> {
+    buf = allocator.allocate(8)
+    compiler.store<u64>(buf, val)
+
+    result = sys_write(self.fd, buf, 8)
+    allocator.deallocate(buf, 8)
+
+    result < 0 ?
+        | true { return Result.Err(eventfd_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// Signal once (add 1 to counter)
+EventFd.notify = (self: EventFd, allocator: Allocator) Result<void, EventfdError> {
+    return self.signal(1, allocator)
+}
+
+// Wait for signal (blocking read)
+// For normal mode: returns counter value and resets to 0
+// For semaphore mode: returns 1 and decrements counter
+EventFd.wait = (self: EventFd, allocator: Allocator) Result<u64, EventfdError> {
+    buf = allocator.allocate(8)
+
+    result = sys_read(self.fd, buf, 8)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 8)
+            return Result.Err(eventfd_errno_to_error(result))
+        }
+        | false {
+            val = compiler.load<u64>(buf)
+            allocator.deallocate(buf, 8)
+            return Result.Ok(val)
+        }
+}
+
+// Try to read (non-blocking, requires EFD_NONBLOCK)
+// Returns None if would block
+EventFd.try_wait = (self: EventFd, allocator: Allocator) Result<Option<u64>, EventfdError> {
+    buf = allocator.allocate(8)
+
+    result = sys_read(self.fd, buf, 8)
+
+    result < 0 ?
+        | true {
+            allocator.deallocate(buf, 8)
+            errno = 0 - result
+            // EAGAIN means would block
+            errno == 11 ?
+                | true { return Result.Ok(Option.None()) }
+                | false { return Result.Err(eventfd_errno_to_error(result)) }
+        }
+        | false {
+            val = compiler.load<u64>(buf)
+            allocator.deallocate(buf, 8)
+            return Result.Ok(Option.Some(val))
+        }
+}
+
+// Close the event fd
+EventFd.close = (self: EventFd) Result<void, EventfdError> {
+    result = sys_close(self.fd)
+
+    result < 0 ?
+        | true { return Result.Err(eventfd_errno_to_error(result)) }
+        | false { return Result.Ok(()) }
+}
+
+// ============================================================================
+// Notifier - Simple one-shot notification channel
+// ============================================================================
+
+Notifier: {
+    event: EventFd,
+    allocator: Allocator
+}
+
+// Create a notifier
+Notifier.new = (allocator: Allocator) Result<Notifier, EventfdError> {
+    event_result = EventFd.new()
+
+    event_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(event) { return Result.Ok(Notifier { event: event, allocator: allocator }) }
+}
+
+// Create nonblocking notifier
+Notifier.nonblocking = (allocator: Allocator) Result<Notifier, EventfdError> {
+    event_result = EventFd.nonblocking()
+
+    event_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(event) { return Result.Ok(Notifier { event: event, allocator: allocator }) }
+}
+
+// Send notification
+Notifier.notify = (self: Notifier) Result<void, EventfdError> {
+    return self.event.notify(self.allocator)
+}
+
+// Wait for notification (blocking)
+Notifier.wait = (self: Notifier) Result<void, EventfdError> {
+    result = self.event.wait(self.allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { return Result.Ok(()) }
+}
+
+// Check for notification (non-blocking)
+Notifier.check = (self: Notifier) Result<bool, EventfdError> {
+    result = self.event.try_wait(self.allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(opt) {
+            opt ?
+                | Some(_) { return Result.Ok(true) }
+                | None { return Result.Ok(false) }
+        }
+}
+
+// Get fd for epoll
+Notifier.as_fd = (self: Notifier) i32 {
+    return self.event.fd
+}
+
+// Close
+Notifier.close = (self: Notifier) Result<void, EventfdError> {
+    return self.event.close()
+}
+
+// ============================================================================
+// Counter - Accumulating counter with eventfd
+// ============================================================================
+
+Counter: {
+    event: EventFd,
+    allocator: Allocator
+}
+
+// Create a counter
+Counter.new = (allocator: Allocator) Result<Counter, EventfdError> {
+    event_result = EventFd.nonblocking()
+
+    event_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(event) { return Result.Ok(Counter { event: event, allocator: allocator }) }
+}
+
+// Create with initial value
+Counter.with_value = (initval: u32, allocator: Allocator) Result<Counter, EventfdError> {
+    fd = sys_eventfd(initval, EFD_CLOEXEC | EFD_NONBLOCK)
+
+    fd < 0 ?
+        | true { return Result.Err(eventfd_errno_to_error(fd)) }
+        | false {
+            return Result.Ok(Counter {
+                event: EventFd { fd: fd, is_semaphore: false },
+                allocator: allocator
+            })
+        }
+}
+
+// Add to counter
+Counter.add = (self: Counter, val: u64) Result<void, EventfdError> {
+    return self.event.signal(val, self.allocator)
+}
+
+// Increment by 1
+Counter.increment = (self: Counter) Result<void, EventfdError> {
+    return self.event.notify(self.allocator)
+}
+
+// Read and reset counter (returns accumulated value)
+Counter.read_and_reset = (self: Counter) Result<u64, EventfdError> {
+    result = self.event.try_wait(self.allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(opt) {
+            opt ?
+                | Some(val) { return Result.Ok(val) }
+                | None { return Result.Ok(0) }  // Counter was 0
+        }
+}
+
+// Wait until counter > 0, then read and reset
+Counter.wait_and_read = (self: Counter) Result<u64, EventfdError> {
+    // Create blocking version for this operation
+    buf = self.allocator.allocate(8)
+
+    // Note: This will block since we're reading from a nonblocking fd
+    // We need to poll or use a blocking read
+    result = sys_read(self.event.fd, buf, 8)
+
+    result < 0 ?
+        | true {
+            self.allocator.deallocate(buf, 8)
+            errno = 0 - result
+            // If EAGAIN, return 0 (no events)
+            errno == 11 ?
+                | true { return Result.Ok(0) }
+                | false { return Result.Err(eventfd_errno_to_error(result)) }
+        }
+        | false {
+            val = compiler.load<u64>(buf)
+            self.allocator.deallocate(buf, 8)
+            return Result.Ok(val)
+        }
+}
+
+// Get fd for epoll
+Counter.as_fd = (self: Counter) i32 {
+    return self.event.fd
+}
+
+// Close
+Counter.close = (self: Counter) Result<void, EventfdError> {
+    return self.event.close()
+}
+
+// ============================================================================
+// BinarySemaphore - Counting semaphore using eventfd
+// ============================================================================
+
+BinarySemaphore: {
+    event: EventFd,
+    allocator: Allocator
+}
+
+// Create a binary semaphore (initial value 0 = unavailable)
+BinarySemaphore.new = (allocator: Allocator) Result<BinarySemaphore, EventfdError> {
+    event_result = EventFd.semaphore()
+
+    event_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(event) { return Result.Ok(BinarySemaphore { event: event, allocator: allocator }) }
+}
+
+// Create with initial permits
+BinarySemaphore.with_permits = (permits: u32, allocator: Allocator) Result<BinarySemaphore, EventfdError> {
+    fd = sys_eventfd(permits, EFD_CLOEXEC | EFD_SEMAPHORE)
+
+    fd < 0 ?
+        | true { return Result.Err(eventfd_errno_to_error(fd)) }
+        | false {
+            return Result.Ok(BinarySemaphore {
+                event: EventFd { fd: fd, is_semaphore: true },
+                allocator: allocator
+            })
+        }
+}
+
+// Acquire a permit (blocking)
+// Decrements semaphore count, blocks if count is 0
+BinarySemaphore.acquire = (self: BinarySemaphore) Result<void, EventfdError> {
+    result = self.event.wait(self.allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { return Result.Ok(()) }  // Got a permit
+}
+
+// Try to acquire (non-blocking)
+// Returns true if permit acquired, false otherwise
+BinarySemaphore.try_acquire = (self: BinarySemaphore) Result<bool, EventfdError> {
+    result = self.event.try_wait(self.allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(opt) {
+            opt ?
+                | Some(_) { return Result.Ok(true) }
+                | None { return Result.Ok(false) }
+        }
+}
+
+// Release a permit (increments counter)
+BinarySemaphore.release = (self: BinarySemaphore) Result<void, EventfdError> {
+    return self.event.notify(self.allocator)
+}
+
+// Release multiple permits
+BinarySemaphore.release_many = (self: BinarySemaphore, count: u64) Result<void, EventfdError> {
+    return self.event.signal(count, self.allocator)
+}
+
+// Get fd for epoll
+BinarySemaphore.as_fd = (self: BinarySemaphore) i32 {
+    return self.event.fd
+}
+
+// Close
+BinarySemaphore.close = (self: BinarySemaphore) Result<void, EventfdError> {
+    return self.event.close()
+}
+
+// ============================================================================
+// WakeChannel - Multi-producer single-consumer wake channel
+// ============================================================================
+
+WakeChannel: {
+    event: EventFd,
+    allocator: Allocator
+}
+
+// Create a wake channel
+WakeChannel.new = (allocator: Allocator) Result<WakeChannel, EventfdError> {
+    event_result = EventFd.new()
+
+    event_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(event) { return Result.Ok(WakeChannel { event: event, allocator: allocator }) }
+}
+
+// Wake the receiver (can be called from multiple threads)
+WakeChannel.wake = (self: WakeChannel) Result<void, EventfdError> {
+    return self.event.notify(self.allocator)
+}
+
+// Wake with a count (wake N times worth)
+WakeChannel.wake_many = (self: WakeChannel, count: u64) Result<void, EventfdError> {
+    return self.event.signal(count, self.allocator)
+}
+
+// Wait for wake (blocking, clears all pending wakes)
+WakeChannel.wait = (self: WakeChannel) Result<u64, EventfdError> {
+    return self.event.wait(self.allocator)
+}
+
+// Get fd for epoll
+WakeChannel.as_fd = (self: WakeChannel) i32 {
+    return self.event.fd
+}
+
+// Close
+WakeChannel.close = (self: WakeChannel) Result<void, EventfdError> {
+    return self.event.close()
+}
+
+// ============================================================================
+// Signal - Single-use signal (like a one-shot channel)
+// ============================================================================
+
+Signal: {
+    event: EventFd,
+    allocator: Allocator,
+    signaled: bool
+}
+
+// Create a signal
+Signal.new = (allocator: Allocator) Result<Signal, EventfdError> {
+    event_result = EventFd.new()
+
+    event_result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(event) {
+            return Result.Ok(Signal { event: event, allocator: allocator, signaled: false })
+        }
+}
+
+// Send the signal (only effective once)
+Signal.send = (self: MutPtr<Signal>) Result<void, EventfdError> {
+    self.val.signaled ?
+        | true { return Result.Ok(()) }  // Already signaled
+        | false {
+            result = self.val.event.notify(self.val.allocator)
+            result ?
+                | Err(e) { return Result.Err(e) }
+                | Ok(_) {
+                    self.val.signaled = true
+                    return Result.Ok(())
+                }
+        }
+}
+
+// Wait for signal (blocking)
+Signal.wait = (self: Signal) Result<void, EventfdError> {
+    result = self.event.wait(self.allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(_) { return Result.Ok(()) }
+}
+
+// Check if signaled (non-blocking)
+Signal.is_set = (self: Signal) Result<bool, EventfdError> {
+    result = self.event.try_wait(self.allocator)
+
+    result ?
+        | Err(e) { return Result.Err(e) }
+        | Ok(opt) {
+            opt ?
+                | Some(_) { return Result.Ok(true) }
+                | None { return Result.Ok(false) }
+        }
+}
+
+// Get fd for epoll
+Signal.as_fd = (self: Signal) i32 {
+    return self.event.fd
+}
+
+// Close
+Signal.close = (self: Signal) Result<void, EventfdError> {
+    return self.event.close()
+}
+

@@ -1,6 +1,7 @@
 use crate::ast::{AstType, BinaryOperator, Expression};
 use crate::error::{CompileError, Result};
 use crate::stdlib_types::StdlibTypeRegistry;
+use crate::type_context::{is_key_value_collection, is_single_element_collection};
 use crate::typechecker::{EnumInfo, StructInfo, TypeChecker};
 use crate::well_known::well_known;
 use std::collections::HashMap;
@@ -352,9 +353,10 @@ pub fn infer_identifier_type(checker: &mut TypeChecker, name: &str) -> Result<As
         });
     }
 
-    if name == "Array" {
+    // Check if name is a collection type
+    if is_single_element_collection(name) || is_key_value_collection(name) {
         return Ok(AstType::Generic {
-            name: "Array".to_string(),
+            name: name.to_string(),
             type_args: vec![],
         });
     }
@@ -376,7 +378,8 @@ pub fn infer_identifier_type(checker: &mut TypeChecker, name: &str) -> Result<As
                 let (_, type_args) = TypeChecker::parse_generic_type_string(name);
                 let inner = type_args.first().cloned().unwrap_or(AstType::U8);
                 return Ok(AstType::raw_ptr(inner));
-            } else if matches!(base_type, "HashMap" | "HashSet" | "DynVec" | "Vec" | "Stack" | "Queue")
+            } else if is_single_element_collection(base_type)
+                || is_key_value_collection(base_type)
                 || wk.is_option(base_type)
                 || wk.is_result(base_type)
             {
@@ -401,7 +404,6 @@ pub fn infer_function_call_type(
     args: &[Expression],
 ) -> Result<AstType> {
     use super::intrinsics;
-    use crate::stdlib_types::stdlib_types;
 
     if name.contains('.') {
         let parts: Vec<&str> = name.splitn(2, '.').collect();
@@ -434,25 +436,21 @@ pub fn infer_function_call_type(
                 return result;
             }
 
-            if let Some(return_type) = stdlib_types().get_function_return_type(module, base_func) {
-                return Ok(return_type.clone());
+            // Check TypeContext (with stdlib_types fallback built in)
+            if let Some(return_type) = checker.type_context.get_function_return_type_with_fallback(module, base_func) {
+                return Ok(return_type);
             }
 
             // Handle generic constructors like HashMap.new<K, V> or Vec.new<T>
-            if base_func == "new" {
-                match module {
-                    "HashMap" | "HashSet" | "DynVec" | "Vec" | "Array" => {
-                        // Parse type args from func, e.g., "new<i32, i32>"
-                        if let Some(angle_pos) = func.find('<') {
-                            let type_args_str = &func[angle_pos + 1..func.len() - 1];
-                            let type_args = parse_type_args(type_args_str);
-                            return Ok(AstType::Generic {
-                                name: module.to_string(),
-                                type_args,
-                            });
-                        }
-                    }
-                    _ => {}
+            if base_func == "new" && (is_single_element_collection(module) || is_key_value_collection(module)) {
+                // Parse type args from func, e.g., "new<i32, i32>"
+                if let Some(angle_pos) = func.find('<') {
+                    let type_args_str = &func[angle_pos + 1..func.len() - 1];
+                    let type_args = parse_type_args(type_args_str);
+                    return Ok(AstType::Generic {
+                        name: module.to_string(),
+                        type_args,
+                    });
                 }
             }
         }
@@ -465,17 +463,15 @@ pub fn infer_function_call_type(
     if name.contains('<') && name.contains('>') {
         if let Some(angle_pos) = name.find('<') {
             let base_type = &name[..angle_pos];
-            match base_type {
-                "HashMap" | "HashSet" | "DynVec" | "Vec" | "Array" => {
-                    // Parse type args from the generic syntax, e.g. "HashMap<i32, i32>"
-                    let type_args_str = &name[angle_pos + 1..name.len() - 1];
-                    let type_args = parse_type_args(type_args_str);
-                    return Ok(AstType::Generic {
-                        name: base_type.to_string(),
-                        type_args,
-                    });
-                }
-                _ => {}
+            // Check if this is a collection type
+            if is_single_element_collection(base_type) || is_key_value_collection(base_type) {
+                // Parse type args from the generic syntax, e.g. "HashMap<i32, i32>"
+                let type_args_str = &name[angle_pos + 1..name.len() - 1];
+                let type_args = parse_type_args(type_args_str);
+                return Ok(AstType::Generic {
+                    name: base_type.to_string(),
+                    type_args,
+                });
             }
         }
     }
@@ -736,19 +732,18 @@ pub fn infer_method_call_type(
     method: &str,
 ) -> Result<AstType> {
     use super::method_types;
-    use crate::stdlib_types::stdlib_types;
 
     if let Expression::Identifier(name) = object {
         let base_name = name.split('<').next().unwrap_or(name);
-        
-        // Check for methods (Type.method style like String.len)
-        if let Some(return_type) = stdlib_types().get_method_return_type(base_name, method) {
-            return Ok(return_type.clone());
+
+        // Check TypeContext (with stdlib_types fallback built in)
+        if let Some(return_type) = checker.type_context.get_method_return_type(base_name, method) {
+            return Ok(return_type);
         }
-        
-        // Check for module functions (module.function style like gpa.default_gpa)
-        if let Some(return_type) = stdlib_types().get_function_return_type(base_name, method) {
-            return Ok(return_type.clone());
+
+        // Check for module functions
+        if let Some(return_type) = checker.type_context.get_function_return_type_with_fallback(base_name, method) {
+            return Ok(return_type);
         }
 
         // Extract base method name (e.g., "new" from "new<i32, i32>")
@@ -766,9 +761,10 @@ pub fn infer_method_call_type(
                         type_args,
                     });
                 }
-            } else if name == "Array" {
+            } else if is_single_element_collection(name.as_str()) || is_key_value_collection(name.as_str()) {
+                // Collection type constructor without explicit type args - default to I32
                 return Ok(AstType::Generic {
-                    name: "Array".to_string(),
+                    name: name.to_string(),
                     type_args: vec![AstType::I32],
                 });
             } else if name.contains('<') {
@@ -796,9 +792,10 @@ pub fn infer_method_call_type(
         }
     }
 
+    // Check TypeContext (with stdlib_types fallback built in)
     if let Some(type_name) = extract_type_name(effective_type) {
-        if let Some(return_type) = stdlib_types().get_method_return_type(type_name, method) {
-            return Ok(return_type.clone());
+        if let Some(return_type) = checker.type_context.get_method_return_type(type_name, method) {
+            return Ok(return_type);
         }
     }
 
@@ -818,22 +815,31 @@ pub fn infer_method_call_type(
         return Ok(AstType::Void);
     }
 
+    // Collection method type inference based on type name
     if let AstType::Generic { name, type_args } = &object_type {
-        if name == "HashMap" {
-            if let Some(return_type) = method_types::infer_hashmap_method_type(method, type_args) {
-                return Ok(return_type);
+        match name.as_str() {
+            "HashMap" | "BTreeMap" => {
+                if let Some(return_type) = method_types::infer_hashmap_method_type(method, type_args) {
+                    return Ok(return_type);
+                }
             }
-        } else if name == "HashSet" {
-            if let Some(return_type) = method_types::infer_hashset_method_type(method) {
-                return Ok(return_type);
+            "HashSet" | "Set" => {
+                if let Some(return_type) = method_types::infer_hashset_method_type(method) {
+                    return Ok(return_type);
+                }
             }
-        } else if checker.well_known.is_result(name) {
-            if let Some(return_type) = method_types::infer_result_method_type(method, type_args) {
-                return Ok(return_type);
+            "Vec" | "Array" | "Stack" | "Queue" | "LinkedList" if !type_args.is_empty() => {
+                if let Some(return_type) = method_types::infer_vec_method_type(method, &type_args[0]) {
+                    return Ok(return_type);
+                }
             }
-        } else if matches!(name.as_str(), "Vec" | "DynVec") && !type_args.is_empty() {
-            if let Some(return_type) = method_types::infer_vec_method_type(method, &type_args[0]) {
-                return Ok(return_type);
+            _ => {
+                // Check well_known types (Result, Option)
+                if checker.well_known.is_result(name) {
+                    if let Some(return_type) = method_types::infer_result_method_type(method, type_args) {
+                        return Ok(return_type);
+                    }
+                }
             }
         }
     }

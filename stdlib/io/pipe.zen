@@ -1,0 +1,270 @@
+// Zen Standard Library: Pipe I/O (Syscall-based)
+// Direct syscall implementation for Linux x86-64
+// No FFI - uses compiler.syscall* intrinsics
+
+{ compiler } = @std
+{ Result } = @std.core.result
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Linux x86-64 Syscall Numbers
+// ============================================================================
+
+SYS_PIPE = 22
+SYS_PIPE2 = 293
+SYS_READ = 0
+SYS_WRITE = 1
+SYS_CLOSE = 3
+
+// ============================================================================
+// Pipe Flags (for pipe2)
+// ============================================================================
+
+O_CLOEXEC = 524288    // 02000000 octal - close on exec
+O_NONBLOCK = 2048     // 04000 octal - non-blocking I/O
+O_DIRECT = 16384      // 040000 octal - direct I/O (packet mode)
+
+// ============================================================================
+// Pipe - Read/write pair of file descriptors
+// ============================================================================
+
+Pipe: {
+    read_fd: i32,
+    write_fd: i32
+}
+
+// Create a new pipe
+// Returns pipe with read and write file descriptors
+Pipe.new = (allocator: Allocator) Result<Pipe, i32> {
+    // Allocate space for two i32 fds
+    fds_ptr = allocator.allocate(8)
+
+    result = compiler.syscall1(SYS_PIPE, fds_ptr)
+
+    result < 0 ? {
+        allocator.deallocate(fds_ptr, 8)
+        return Result.Err(0 - result)
+    }
+
+    // Load the two file descriptors
+    read_fd = compiler.load<i32>(fds_ptr)
+    write_fd = compiler.load<i32>(compiler.gep(fds_ptr, 4))
+
+    allocator.deallocate(fds_ptr, 8)
+
+    return Result.Ok(Pipe { read_fd: read_fd, write_fd: write_fd })
+}
+
+// Create a new pipe with flags (pipe2)
+Pipe.with_flags = (flags: i32, allocator: Allocator) Result<Pipe, i32> {
+    // Allocate space for two i32 fds
+    fds_ptr = allocator.allocate(8)
+
+    result = compiler.syscall2(SYS_PIPE2, fds_ptr, flags)
+
+    result < 0 ? {
+        allocator.deallocate(fds_ptr, 8)
+        return Result.Err(0 - result)
+    }
+
+    // Load the two file descriptors
+    read_fd = compiler.load<i32>(fds_ptr)
+    write_fd = compiler.load<i32>(compiler.gep(fds_ptr, 4))
+
+    allocator.deallocate(fds_ptr, 8)
+
+    return Result.Ok(Pipe { read_fd: read_fd, write_fd: write_fd })
+}
+
+// Create non-blocking pipe
+Pipe.nonblocking = (allocator: Allocator) Result<Pipe, i32> {
+    return Pipe.with_flags(O_NONBLOCK, allocator)
+}
+
+// Create pipe that closes on exec
+Pipe.cloexec = (allocator: Allocator) Result<Pipe, i32> {
+    return Pipe.with_flags(O_CLOEXEC, allocator)
+}
+
+// Read from pipe
+Pipe.read = (self: Pipe, buf: i64, count: usize) Result<usize, i32> {
+    result = compiler.syscall3(SYS_READ, self.read_fd, buf, count)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(result)
+}
+
+// Write to pipe
+Pipe.write = (self: Pipe, buf: i64, count: usize) Result<usize, i32> {
+    result = compiler.syscall3(SYS_WRITE, self.write_fd, buf, count)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(result)
+}
+
+// Close read end
+Pipe.close_read = (self: Pipe) Result<void, i32> {
+    result = compiler.syscall1(SYS_CLOSE, self.read_fd)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(())
+}
+
+// Close write end
+Pipe.close_write = (self: Pipe) Result<void, i32> {
+    result = compiler.syscall1(SYS_CLOSE, self.write_fd)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(())
+}
+
+// Close both ends
+Pipe.close = (self: Pipe) void {
+    _ = compiler.syscall1(SYS_CLOSE, self.read_fd)
+    _ = compiler.syscall1(SYS_CLOSE, self.write_fd)
+}
+
+// ============================================================================
+// PipeReader - Read-only end of a pipe
+// ============================================================================
+
+PipeReader: {
+    fd: i32
+}
+
+// Create from pipe (takes ownership of read end)
+PipeReader.from_pipe = (pipe: Pipe) PipeReader {
+    // Close write end since we only read
+    _ = compiler.syscall1(SYS_CLOSE, pipe.write_fd)
+    return PipeReader { fd: pipe.read_fd }
+}
+
+// Create from raw fd
+PipeReader.from_fd = (fd: i32) PipeReader {
+    return PipeReader { fd: fd }
+}
+
+// Read bytes
+PipeReader.read = (self: PipeReader, buf: i64, count: usize) Result<usize, i32> {
+    result = compiler.syscall3(SYS_READ, self.fd, buf, count)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(result)
+}
+
+// Close reader
+PipeReader.close = (self: PipeReader) Result<void, i32> {
+    result = compiler.syscall1(SYS_CLOSE, self.fd)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(())
+}
+
+// ============================================================================
+// PipeWriter - Write-only end of a pipe
+// ============================================================================
+
+PipeWriter: {
+    fd: i32
+}
+
+// Create from pipe (takes ownership of write end)
+PipeWriter.from_pipe = (pipe: Pipe) PipeWriter {
+    // Close read end since we only write
+    _ = compiler.syscall1(SYS_CLOSE, pipe.read_fd)
+    return PipeWriter { fd: pipe.write_fd }
+}
+
+// Create from raw fd
+PipeWriter.from_fd = (fd: i32) PipeWriter {
+    return PipeWriter { fd: fd }
+}
+
+// Write bytes
+PipeWriter.write = (self: PipeWriter, buf: i64, count: usize) Result<usize, i32> {
+    result = compiler.syscall3(SYS_WRITE, self.fd, buf, count)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(result)
+}
+
+// Close writer
+PipeWriter.close = (self: PipeWriter) Result<void, i32> {
+    result = compiler.syscall1(SYS_CLOSE, self.fd)
+
+    result < 0 ? {
+        return Result.Err(0 - result)
+    }
+
+    return Result.Ok(())
+}
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+// Create a pipe and split into reader/writer pair
+pipe_pair = (allocator: Allocator) Result<{PipeReader, PipeWriter}, i32> {
+    // Allocate space for two i32 fds
+    fds_ptr = allocator.allocate(8)
+
+    result = compiler.syscall1(SYS_PIPE, fds_ptr)
+
+    result < 0 ? {
+        allocator.deallocate(fds_ptr, 8)
+        return Result.Err(0 - result)
+    }
+
+    read_fd = compiler.load<i32>(fds_ptr)
+    write_fd = compiler.load<i32>(compiler.gep(fds_ptr, 4))
+
+    allocator.deallocate(fds_ptr, 8)
+
+    reader = PipeReader { fd: read_fd }
+    writer = PipeWriter { fd: write_fd }
+
+    return Result.Ok({reader, writer})
+}
+
+// Create non-blocking pipe pair
+pipe_pair_nonblocking = (allocator: Allocator) Result<{PipeReader, PipeWriter}, i32> {
+    fds_ptr = allocator.allocate(8)
+
+    result = compiler.syscall2(SYS_PIPE2, fds_ptr, O_NONBLOCK)
+
+    result < 0 ? {
+        allocator.deallocate(fds_ptr, 8)
+        return Result.Err(0 - result)
+    }
+
+    read_fd = compiler.load<i32>(fds_ptr)
+    write_fd = compiler.load<i32>(compiler.gep(fds_ptr, 4))
+
+    allocator.deallocate(fds_ptr, 8)
+
+    reader = PipeReader { fd: read_fd }
+    writer = PipeWriter { fd: write_fd }
+
+    return Result.Ok({reader, writer})
+}

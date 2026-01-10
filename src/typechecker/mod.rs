@@ -13,6 +13,7 @@ pub mod validation;
 
 use crate::ast::{AstType, Declaration, Expression, Function, Program, Statement};
 use crate::error::{CompileError, Result, Span};
+use crate::type_context::TypeContext;
 use crate::well_known::WellKnownTypes;
 use behaviors::BehaviorResolver;
 use std::collections::HashMap;
@@ -24,7 +25,6 @@ pub struct VariableInfo {
     pub is_initialized: bool,
 }
 
-#[allow(dead_code)]
 pub struct TypeChecker {
     scopes: Vec<HashMap<String, VariableInfo>>,
     functions: HashMap<String, FunctionSignature>,
@@ -35,10 +35,11 @@ pub struct TypeChecker {
     current_impl_type: Option<String>,
     current_span: Option<Span>,
     pub well_known: WellKnownTypes,
+    /// Shared type context that flows to later compilation phases
+    pub type_context: TypeContext,
 }
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct FunctionSignature {
     pub params: Vec<(String, AstType)>,
     pub return_type: AstType,
@@ -169,10 +170,11 @@ impl TypeChecker {
             current_impl_type: None,
             current_span: None,
             well_known: WellKnownTypes::new(),
+            type_context: TypeContext::new(),
         }
     }
 
-    pub fn check_program(&mut self, program: &Program) -> Result<()> {
+    pub fn check_program(&mut self, program: &Program) -> Result<TypeContext> {
         // First pass: collect all type definitions and function signatures
         for declaration in program.declarations.iter() {
             self.collect_declaration_types(declaration)?;
@@ -230,7 +232,32 @@ impl TypeChecker {
             self.check_declaration(declaration)?;
         }
 
-        Ok(())
+        // Build and return the TypeContext with all collected type information
+        self.build_type_context();
+        Ok(self.type_context.clone())
+    }
+
+    /// Build the TypeContext from collected type information
+    fn build_type_context(&mut self) {
+        // Copy function signatures to TypeContext
+        for (name, sig) in &self.functions {
+            self.type_context.register_function(
+                name.clone(),
+                sig.params.clone(),
+                sig.return_type.clone(),
+                sig.is_external,
+            );
+        }
+
+        // Copy struct definitions to TypeContext
+        for (name, info) in &self.structs {
+            self.type_context.register_struct(name.clone(), info.fields.clone());
+        }
+
+        // Copy enum definitions to TypeContext
+        for (name, info) in &self.enums {
+            self.type_context.register_enum(name.clone(), info.variants.clone());
+        }
     }
 
     fn collect_declaration_types(&mut self, declaration: &Declaration) -> Result<()> {
@@ -687,7 +714,7 @@ impl TypeChecker {
             }
             Expression::ArrayConstructor { element_type } => {
                 // Array<T>() -> Generic { name: "Array", type_args: [T] }
-                // This matches the expected type format for generic types
+                // TODO: "Array" should come from TypeContext, not hardcoded
                 Ok(AstType::Generic {
                     name: "Array".to_string(),
                     type_args: vec![element_type.clone()],
