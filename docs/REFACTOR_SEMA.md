@@ -100,7 +100,7 @@ resolve_self_types() ← typechecker/self_resolution.rs
   ↓
 typechecker.check_program() ← typechecker/ ✅ NEW
   ↓
-monomorphize() ← type_system/
+monomorphize() ← lowering/
   ↓
 compile_program() ← codegen/llvm/
   ↓

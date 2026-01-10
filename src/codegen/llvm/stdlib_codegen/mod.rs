@@ -3,7 +3,6 @@
 //! Collections (HashMap, HashSet, Vec) are implemented in stdlib Zen using intrinsics
 
 pub mod compiler;
-pub mod helpers;
 
 // Re-export compiler intrinsics
 pub use compiler::{

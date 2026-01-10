@@ -581,26 +581,20 @@ self.stdlib_registry.get_type_location(type_name)
 **Clean modules (no hardcoded stdlib types):**
 - ✅ `comptime/`
 - ✅ `compiler.rs`
-- ✅ `type_system/`
+- ✅ `lowering/`
 - ✅ `well_known.rs` (by design - only has Option/Result/Ptr)
 - ✅ `intrinsics.rs` (by design - only has compiler intrinsics)
 - ✅ `stdlib_codegen/` (only LLVM primitives)
 
 ### Implementation Roadmap for Type Discovery
 
-**Step 1: Extend TypeContext with intrinsic layouts**
+**Step 1: ✅ DONE - TypeContext with intrinsic layouts**
 ```rust
-// src/type_context.rs
+// src/type_context.rs (IMPLEMENTED)
 pub enum IntrinsicLayout {
-    Array,    // { ptr, len, cap }
-    HashMap,  // hash table internals
-    String,   // { ptr, len, cap, allocator }
+    Closure,  // { fn_ptr, captures_ptr } - the ONLY intrinsic layout
 }
-
-pub struct TypeContext {
-    // existing fields...
-    pub intrinsic_layouts: HashMap<String, IntrinsicLayout>,
-}
+// Array, HashMap, String, etc. are regular stdlib structs - NOT intrinsic!
 ```
 
 **Step 2: Add @compiler_intrinsic attribute to stdlib**
@@ -695,7 +689,7 @@ src/
 ├── ast/                 (843 LOC)  Abstract Syntax Tree
 ├── parser/              (5,949 LOC) Parser + expressions
 ├── typechecker/         (4,226 LOC) Type checking
-├── type_system/         (1,152 LOC) Monomorphization
+├── lowering/            (1,152 LOC) Monomorphization
 ├── codegen/             (11,691 LOC) LLVM backend ✅ reduced from 12,752
 ├── lsp/                 (12,338 LOC) Language Server
 ├── module_system/       (475 LOC)  Module resolution
@@ -736,7 +730,7 @@ Orphaned behavior system implementation, superseded by:
 | `error.rs` | 19 | Error variants |
 | `typechecker/behaviors.rs` | 16 | Behavior system |
 | `module_system/resolver.rs` | 11 | Module resolver |
-| `type_system/environment.rs` | 9 | Type env |
+| `lowering/environment.rs` | 9 | Type env |
 | `compiler.rs` | 8 | Compiler methods |
 | `typechecker/types.rs` | 8 | Type helpers |
 
@@ -794,7 +788,7 @@ pub fn compile_llvm(&self, program: &Program) -> Result<String> {
 
 ### 3. Type System Module Isolation
 
-`type_system/` (1,152 LOC) only exports `Monomorphizer`. The rest is:
+`lowering/` (1,152 LOC) only exports `Monomorphizer`. The rest is:
 - `environment.rs` - 9 `#[allow(dead_code)]`
 - `instantiation.rs` - 7 `#[allow(dead_code)]`
 
@@ -815,7 +809,7 @@ over-engineered for current usage.
 | `lsp/` | 12,338 | zen-lsp binary | ✅ Active (but too big) |
 | `parser/` | 5,949 | compiler, LSP | ✅ Active |
 | `typechecker/` | 4,226 | compiler, LSP | ✅ Now integrated! |
-| `type_system/` | 1,152 | compiler (partial) | ⚠️ Much dead code |
+| `lowering/` | 1,152 | compiler | ✅ Renamed from type_system/ |
 | `ast/` | 843 | Everyone | ✅ Active |
 | `comptime/` | 660 | compiler | ⚠️ Light use |
 | `module_system/` | 475 | compiler, LSP | ✅ Active |
@@ -856,8 +850,8 @@ over-engineered for current usage.
 
 ### Short-Term (This Week)
 
-4. **Integrate typechecker into pipeline** - Call before monomorphization
-5. **Audit type_system module** - Either use or remove
+4. ~~**Integrate typechecker into pipeline**~~ ✅ DONE - TypeContext flows typechecker → codegen
+5. ~~**Audit type_system module**~~ ✅ DONE - Renamed to `lowering/`
 6. **Document why comptime is 660 LOC** - Justify or simplify
 
 ### Medium-Term (This Month)

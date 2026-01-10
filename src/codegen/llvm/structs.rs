@@ -2,14 +2,7 @@ use super::{symbols, LLVMCompiler, Type};
 use crate::ast::{AstType, Expression};
 use crate::error::CompileError;
 use inkwell::types::BasicType;
-use inkwell::{types::StructType, values::BasicValueEnum};
-use std::collections::HashMap;
-
-#[derive(Debug, Clone)]
-pub struct StructTypeInfo<'ctx> {
-    pub llvm_type: StructType<'ctx>,
-    pub fields: HashMap<String, (usize, AstType)>,
-}
+use inkwell::values::BasicValueEnum;
 
 // ============================================================================
 // Helper Types and Functions

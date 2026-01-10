@@ -268,7 +268,7 @@ impl TypeContext {
     }
 
     /// Check if a type has a specific intrinsic layout.
-    /// Example: `type_ctx.has_layout("Array", IntrinsicLayout::Array)`
+    /// Example: `type_ctx.has_layout("MyClosure", IntrinsicLayout::Closure)`
     pub fn has_layout(&self, type_name: &str, layout: IntrinsicLayout) -> bool {
         self.get_intrinsic_layout(type_name) == Some(layout)
     }

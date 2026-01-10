@@ -42,22 +42,4 @@ impl<'ctx> LLVMCompiler<'ctx> {
         calls::compile_function_call(self, name, args)
     }
 
-    // Result helpers (used by collections, etc.)
-    fn create_result_ok(
-        &mut self,
-        value: BasicValueEnum<'ctx>,
-    ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        super::stdlib_codegen::helpers::create_result_ok(self, value)
-    }
-
-    fn create_result_ok_void(&mut self) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        super::stdlib_codegen::helpers::create_result_ok_void(self)
-    }
-
-    fn create_result_err(
-        &mut self,
-        error: BasicValueEnum<'ctx>,
-    ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        super::stdlib_codegen::helpers::create_result_err(self, error)
-    }
 }

@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 
 use crate::ast::{self, AstType};
 use crate::comptime;

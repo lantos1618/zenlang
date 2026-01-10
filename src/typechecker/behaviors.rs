@@ -245,7 +245,6 @@ impl BehaviorResolver {
     }
 
     /// Register an implementation block
-    #[allow(dead_code)]
     pub fn register_trait_implementation(
         &mut self,
         trait_impl: &TraitImplementation,
@@ -304,7 +303,6 @@ impl BehaviorResolver {
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn register_trait_requirement(&mut self, trait_req: &TraitRequirement) -> Result<()> {
         // Register that a type requires a trait
         // This is mainly for enum variants that must all implement a trait
@@ -319,7 +317,6 @@ impl BehaviorResolver {
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn verify_trait_implementation(&mut self, trait_impl: &TraitImplementation) -> Result<()> {
         // Verify that the implementation satisfies the trait
         if let Some(behavior) = self.behaviors.get(&trait_impl.trait_name) {

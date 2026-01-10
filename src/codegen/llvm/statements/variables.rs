@@ -627,11 +627,3 @@ pub fn compile_assignment<'ctx>(
         )),
     }
 }
-
-pub fn compile_forward_declaration<'ctx>(
-    compiler: &mut LLVMCompiler<'ctx>,
-    statement: &Statement,
-) -> Result<(), CompileError> {
-    // Forward declarations are handled as part of VariableDeclaration
-    compile_variable_declaration(compiler, statement)
-}
