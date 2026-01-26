@@ -1435,4 +1435,146 @@ mod tests {
         ";
         assert!(check_program(input).is_ok());
     }
+
+    // ========================================================================
+    // Nested Struct Tests
+    // ========================================================================
+
+    #[test]
+    fn test_nested_struct_access() {
+        let input = "
+            Inner: { value: i32 }
+            Outer: { inner: Inner }
+            main = () void {
+                o = Outer { inner: Inner { value: 42 } }
+                x: i32 = o.inner.value
+            }
+        ";
+        let result = check_program(input);
+        if let Err(ref e) = result {
+            eprintln!("Error: {:?}", e);
+        }
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_nested_struct_wrong_type() {
+        let input = "
+            Inner: { value: i32 }
+            Outer: { inner: Inner }
+            main = () void {
+                o = Outer { inner: Inner { value: 42 } }
+                x: string = o.inner.value
+            }
+        ";
+        assert!(check_program(input).is_err());
+    }
+
+    // ========================================================================
+    // Unsigned Integer Tests
+    // ========================================================================
+
+    #[test]
+    fn test_unsigned_integer_cast() {
+        // Unsigned integers need explicit casting: cast(value, type)
+        let input = "
+            main = () void {
+                a: u32 = cast(255, u32)
+                b: u64 = cast(1000000, u64)
+            }
+        ";
+        let result = check_program(input);
+        if let Err(ref e) = result {
+            eprintln!("Error: {:?}", e);
+        }
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_signed_unsigned_comparison() {
+        // Comparing signed and unsigned should work
+        let input = "
+            main = () void {
+                a: i32 = 10
+                b: u32 = 20
+                c = a < b
+            }
+        ";
+        let result = check_program(input);
+        // This may or may not be an error depending on language semantics
+        // For now, just verify it doesn't crash
+        let _ = result;
+    }
+
+    // ========================================================================
+    // Array Tests
+    // ========================================================================
+
+    #[test]
+    fn test_array_literal() {
+        let input = "
+            main = () void {
+                arr = [1, 2, 3, 4, 5]
+            }
+        ";
+        let result = check_program(input);
+        if let Err(ref e) = result {
+            eprintln!("Error: {:?}", e);
+        }
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_array_index() {
+        let input = "
+            main = () void {
+                arr = [10, 20, 30]
+                x = arr[0]
+            }
+        ";
+        let result = check_program(input);
+        if let Err(ref e) = result {
+            eprintln!("Error: {:?}", e);
+        }
+        assert!(result.is_ok());
+    }
+
+    // ========================================================================
+    // Multiple Function Tests
+    // ========================================================================
+
+    #[test]
+    fn test_function_calling_function() {
+        let input = "
+            double = (x: i32) i32 { return x * 2 }
+            quadruple = (x: i32) i32 { return double(double(x)) }
+            main = () void {
+                result = quadruple(5)
+            }
+        ";
+        let result = check_program(input);
+        if let Err(ref e) = result {
+            eprintln!("Error: {:?}", e);
+        }
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_recursive_function() {
+        let input = "
+            factorial = (n: i32) i32 {
+                n <= 1 ?
+                    | true { return 1 }
+                    | false { return n * factorial(n - 1) }
+            }
+            main = () void {
+                result = factorial(5)
+            }
+        ";
+        let result = check_program(input);
+        if let Err(ref e) = result {
+            eprintln!("Error: {:?}", e);
+        }
+        assert!(result.is_ok());
+    }
 }
