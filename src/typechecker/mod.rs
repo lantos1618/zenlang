@@ -1088,6 +1088,10 @@ impl TypeChecker {
     fn variable_exists(&self, name: &str) -> bool {
         scope::variable_exists(self, name)
     }
+
+    fn variable_exists_in_current_scope(&self, name: &str) -> bool {
+        scope::variable_exists_in_current_scope(self, name)
+    }
 }
 
 #[cfg(test)]
@@ -1602,5 +1606,42 @@ mod tests {
             eprintln!("Error: {:?}", e);
         }
         assert!(result.is_ok());
+    }
+
+    // ========================================================================
+    // Variable Shadowing Tests
+    // ========================================================================
+
+    #[test]
+    fn test_local_variable_shadows_outer() {
+        // Local variable should be allowed to shadow outer scope variable
+        let input = "
+            ptr = 42
+            get_ptr = () i32 {
+                ptr = 100
+                return ptr
+            }
+            main = () void {
+                result = get_ptr()
+            }
+        ";
+        let result = check_program(input);
+        if let Err(ref e) = result {
+            eprintln!("Error: {:?}", e);
+        }
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_no_reassign_immutable_in_same_scope() {
+        // Should NOT allow reassigning immutable variable in same scope
+        let input = "
+            main = () void {
+                x = 10
+                x = 20
+            }
+        ";
+        let result = check_program(input);
+        assert!(result.is_err());
     }
 }

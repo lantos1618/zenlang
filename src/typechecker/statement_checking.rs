@@ -116,38 +116,67 @@ pub fn check_statement(checker: &mut TypeChecker, statement: &Statement) -> Resu
         }
         Statement::VariableAssignment { name, value, span } => {
             checker.set_current_span(span.clone());
-            if !checker.variable_exists(name) {
-                // This is a new immutable declaration using = operator
-                let value_type = checker.infer_expression_type(value)?;
-                checker.declare_variable_with_init_and_span(
-                    name,
-                    value_type.clone(),
-                    false,
-                    true,
-                    span.clone(),
-                )?;
-            // false = immutable
-            } else {
-                // This is an assignment to existing variable
-                let var_info = checker.get_variable_info(name)?;
-
-                // Check if this is the first assignment to a forward-declared variable
-                if !var_info.is_initialized {
-                    // This is the initial assignment
-                    let value_type = checker.infer_expression_type(value)?;
-                    if !checker.types_compatible(&var_info.type_, &value_type) {
-                        return Err(CompileError::TypeError(
+            // Check if variable exists in CURRENT scope (not outer scopes)
+            // This allows local variables to shadow imports/outer variables
+            if !checker.variable_exists_in_current_scope(name) {
+                // Check if it exists in an outer scope
+                if checker.variable_exists(name) {
+                    let var_info = checker.get_variable_info(name)?;
+                    // If it's uninitialized in outer scope, this initializes it
+                    if !var_info.is_initialized {
+                        let value_type = checker.infer_expression_type(value)?;
+                        if !checker.types_compatible(&var_info.type_, &value_type) {
+                            return Err(CompileError::TypeError(
                                 format!(
                                     "Type mismatch in initial assignment to '{}': expected {:?}, got {:?}",
                                     name, var_info.type_, value_type
                                 ),
-                                checker.get_current_span()
+                                checker.get_current_span(),
                             ));
+                        }
+                        checker.mark_variable_initialized(name)?;
+                    } else {
+                        // Variable exists in outer scope and is initialized
+                        // Create a new local variable that shadows it
+                        let value_type = checker.infer_expression_type(value)?;
+                        checker.declare_variable_with_init_and_span(
+                            name,
+                            value_type.clone(),
+                            false,
+                            true,
+                            span.clone(),
+                        )?;
                     }
-                    // Mark as initialized
+                } else {
+                    // Variable doesn't exist anywhere - create new immutable local
+                    let value_type = checker.infer_expression_type(value)?;
+                    checker.declare_variable_with_init_and_span(
+                        name,
+                        value_type.clone(),
+                        false,
+                        true,
+                        span.clone(),
+                    )?;
+                }
+            } else {
+                // Variable exists in current scope - this is a reassignment
+                let var_info = checker.get_variable_info(name)?;
+
+                if !var_info.is_initialized {
+                    // First assignment to forward-declared variable
+                    let value_type = checker.infer_expression_type(value)?;
+                    if !checker.types_compatible(&var_info.type_, &value_type) {
+                        return Err(CompileError::TypeError(
+                            format!(
+                                "Type mismatch in initial assignment to '{}': expected {:?}, got {:?}",
+                                name, var_info.type_, value_type
+                            ),
+                            checker.get_current_span(),
+                        ));
+                    }
                     checker.mark_variable_initialized(name)?;
                 } else {
-                    // This is a reassignment
+                    // Reassignment to existing variable in current scope
                     if !var_info.is_mutable {
                         return Err(CompileError::TypeError(
                             format!("Cannot reassign to immutable variable '{}'", name),
