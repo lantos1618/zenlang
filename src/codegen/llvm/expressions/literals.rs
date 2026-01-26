@@ -21,7 +21,14 @@ pub fn compile_literal<'ctx>(
         Expression::Boolean(v) => Ok(compiler
             .context
             .bool_type()
-            .const_int(if *v { 1 } else { 0 }, false)
+            .const_int(
+                if *v {
+                    1
+                } else {
+                    0
+                },
+                false,
+            )
             .into()),
         Expression::Unit => Ok(compiler.context.i32_type().const_zero().into()),
         Expression::String(s) => compiler.compile_string_literal(s),

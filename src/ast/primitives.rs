@@ -21,12 +21,7 @@ pub const NUMERIC_TYPES: &[AstType] = &[
 ];
 
 /// Signed integer types
-pub const SIGNED_INT_TYPES: &[AstType] = &[
-    AstType::I8,
-    AstType::I16,
-    AstType::I32,
-    AstType::I64,
-];
+pub const SIGNED_INT_TYPES: &[AstType] = &[AstType::I8, AstType::I16, AstType::I32, AstType::I64];
 
 /// Unsigned integer types
 pub const UNSIGNED_INT_TYPES: &[AstType] = &[

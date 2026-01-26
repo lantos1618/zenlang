@@ -62,10 +62,7 @@ pub enum Statement {
         span: Option<Span>,
     },
     #[allow(dead_code)]
-    ModuleImport {
-        alias: String,
-        module_path: String,
-    },
+    ModuleImport { alias: String, module_path: String },
     // Defer statement for cleanup - traditional defer syntax
     #[allow(dead_code)]
     Defer {

@@ -92,12 +92,19 @@ impl<'ctx> Compiler<'ctx> {
     }
 
     /// Process module imports with a provided ModuleSystem (allows reuse)
-    fn process_imports_with_system(&self, program: &Program, module_system: &mut ModuleSystem) -> Result<Program> {
+    fn process_imports_with_system(
+        &self,
+        program: &Program,
+        module_system: &mut ModuleSystem,
+    ) -> Result<Program> {
         let mut resolver = ModuleResolver::new();
 
         // Process all module imports
         for decl in &program.declarations {
-            if let Declaration::ModuleImport { alias, module_path, .. } = decl {
+            if let Declaration::ModuleImport {
+                alias, module_path, ..
+            } = decl
+            {
                 // Load the module (including @std modules - they'll load from stdlib files)
                 module_system.load_module(module_path)?;
 
@@ -233,7 +240,11 @@ impl<'ctx> Compiler<'ctx> {
                     span,
                 })
             }
-            Statement::PointerAssignment { pointer, value, span } => Ok(Statement::PointerAssignment {
+            Statement::PointerAssignment {
+                pointer,
+                value,
+                span,
+            } => Ok(Statement::PointerAssignment {
                 pointer: self.process_expression_comptime(pointer, interpreter)?,
                 value: self.process_expression_comptime(value, interpreter)?,
                 span,
@@ -246,7 +257,12 @@ impl<'ctx> Compiler<'ctx> {
                 expr: self.process_expression_comptime(expr, interpreter)?,
                 span,
             }),
-            Statement::Loop { kind, label, body, span } => Ok(Statement::Loop {
+            Statement::Loop {
+                kind,
+                label,
+                body,
+                span,
+            } => Ok(Statement::Loop {
                 kind,
                 label,
                 body: self.process_statements_comptime(body, interpreter)?,
@@ -286,7 +302,11 @@ impl<'ctx> Compiler<'ctx> {
                 op,
                 right: Box::new(self.process_expression_comptime(*right, interpreter)?),
             }),
-            Expression::FunctionCall { name, type_args, args } => {
+            Expression::FunctionCall {
+                name,
+                type_args,
+                args,
+            } => {
                 let mut processed_args = Vec::new();
                 for arg in args {
                     processed_args.push(self.process_expression_comptime(arg, interpreter)?);

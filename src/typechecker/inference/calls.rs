@@ -1,13 +1,13 @@
 //! Function and method call type inference
 
+use super::casts::infer_cast_type;
+use super::helpers::extract_type_name;
 use crate::ast::{AstType, Expression};
 use crate::error::{CompileError, Result};
 use crate::stdlib_types::StdlibTypeRegistry;
-use crate::typechecker::TypeChecker;
 use crate::typechecker::intrinsics;
 use crate::typechecker::method_types;
-use super::helpers::extract_type_name;
-use super::casts::infer_cast_type;
+use crate::typechecker::TypeChecker;
 
 /// Infer the return type of a function call
 pub fn infer_function_call_type(
@@ -22,9 +22,7 @@ pub fn infer_function_call_type(
             let module = parts[0];
             let func = parts[1];
 
-            if let Some(result) =
-                intrinsics::check_compiler_intrinsic(module, func, args.len())
-            {
+            if let Some(result) = intrinsics::check_compiler_intrinsic(module, func, args.len()) {
                 if module == "compiler" && func == "inline_c" && args.len() == 1 {
                     let arg_type = checker.infer_expression_type(&args[0])?;
                     match arg_type {
@@ -49,7 +47,9 @@ pub fn infer_function_call_type(
             if func == "new" && !type_args.is_empty() {
                 // If we have explicit type args, return a generic type with those args
                 // Check if it's a known struct type
-                if checker.structs.contains_key(module) || checker.get_stdlib_struct(module).is_some() {
+                if checker.structs.contains_key(module)
+                    || checker.get_stdlib_struct(module).is_some()
+                {
                     return Ok(AstType::Generic {
                         name: module.to_string(),
                         type_args: type_args.to_vec(),
@@ -64,7 +64,9 @@ pub fn infer_function_call_type(
     }
 
     // Handle generic types with explicit type_args from AST
-    if !type_args.is_empty() && (checker.structs.contains_key(name) || checker.get_stdlib_struct(name).is_some()) {
+    if !type_args.is_empty()
+        && (checker.structs.contains_key(name) || checker.get_stdlib_struct(name).is_some())
+    {
         return Ok(AstType::Generic {
             name: name.to_string(),
             type_args: type_args.to_vec(),
@@ -166,8 +168,7 @@ pub fn infer_method_call_type(
         }
     }
 
-    let is_string_struct =
-        matches!(effective_type, AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name));
+    let is_string_struct = matches!(effective_type, AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name));
     if is_string_struct
         || *effective_type == AstType::StaticString
         || *effective_type == AstType::StaticLiteral

@@ -2,11 +2,11 @@
 
 use std::collections::HashMap;
 
+use super::structs::find_struct_definition_in_documents;
+use crate::ast::{AstType, Expression};
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::types::*;
 use crate::lsp::utils::format_type;
-use super::structs::find_struct_definition_in_documents;
-use crate::ast::{AstType, Expression};
 
 /// Analyze expression AST to determine hover information
 pub fn analyze_expression_hover(

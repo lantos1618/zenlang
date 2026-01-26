@@ -57,7 +57,7 @@ pub fn find_pattern_match_question(line: &str) -> Option<usize> {
 pub fn byte_offset_to_lsp_position(content: &str, byte_offset: usize) -> Position {
     let mut line = 0u32;
     let mut line_start_offset = 0usize;
-    
+
     for (idx, ch) in content.char_indices() {
         if idx >= byte_offset {
             break;
@@ -67,7 +67,7 @@ pub fn byte_offset_to_lsp_position(content: &str, byte_offset: usize) -> Positio
             line_start_offset = idx + 1;
         }
     }
-    
+
     // Calculate character offset within the line (in UTF-16 code units for LSP)
     let char_offset = if byte_offset >= line_start_offset {
         content[line_start_offset..byte_offset.min(content.len())]
@@ -77,7 +77,7 @@ pub fn byte_offset_to_lsp_position(content: &str, byte_offset: usize) -> Positio
     } else {
         0
     };
-    
+
     Position {
         line,
         character: char_offset,
@@ -94,7 +94,11 @@ pub fn span_to_lsp_range(span: &Span, content: Option<&str>) -> Range {
     } else {
         // Fallback: use span's line/column for start, estimate end on same line
         let start = Position {
-            line: if span.line > 0 { span.line as u32 - 1 } else { 0 },
+            line: if span.line > 0 {
+                span.line as u32 - 1
+            } else {
+                0
+            },
             character: span.column as u32,
         };
         let end = Position {
@@ -486,10 +490,7 @@ pub fn format_type(ast_type: &AstType) -> String {
         AstType::Function { args, return_type } => {
             format!(
                 "({}) {}",
-                args.iter()
-                    .map(format_type)
-                    .collect::<Vec<_>>()
-                    .join(", "),
+                args.iter().map(format_type).collect::<Vec<_>>().join(", "),
                 format_type(return_type)
             )
         }
@@ -510,19 +511,19 @@ mod tests {
     #[test]
     fn test_byte_offset_to_lsp_position_simple() {
         let content = "hello\nworld";
-        
+
         let pos = byte_offset_to_lsp_position(content, 0);
         assert_eq!((pos.line, pos.character), (0, 0));
-        
+
         let pos = byte_offset_to_lsp_position(content, 3);
         assert_eq!((pos.line, pos.character), (0, 3));
-        
+
         let pos = byte_offset_to_lsp_position(content, 5);
         assert_eq!((pos.line, pos.character), (0, 5));
-        
+
         let pos = byte_offset_to_lsp_position(content, 6);
         assert_eq!((pos.line, pos.character), (1, 0));
-        
+
         let pos = byte_offset_to_lsp_position(content, 9);
         assert_eq!((pos.line, pos.character), (1, 3));
     }
@@ -530,13 +531,13 @@ mod tests {
     #[test]
     fn test_byte_offset_emoji_utf16_surrogate_pairs() {
         let content = "a😀b";
-        
+
         let pos = byte_offset_to_lsp_position(content, 0);
         assert_eq!((pos.line, pos.character), (0, 0));
-        
+
         let pos = byte_offset_to_lsp_position(content, 1);
         assert_eq!((pos.line, pos.character), (0, 1));
-        
+
         let pos = byte_offset_to_lsp_position(content, 5);
         assert_eq!((pos.line, pos.character), (0, 3));
     }
@@ -544,13 +545,13 @@ mod tests {
     #[test]
     fn test_byte_offset_japanese_bmp_characters() {
         let content = "日本語";
-        
+
         let pos = byte_offset_to_lsp_position(content, 0);
         assert_eq!((pos.line, pos.character), (0, 0));
-        
+
         let pos = byte_offset_to_lsp_position(content, 3);
         assert_eq!((pos.line, pos.character), (0, 1));
-        
+
         let pos = byte_offset_to_lsp_position(content, 6);
         assert_eq!((pos.line, pos.character), (0, 2));
     }
@@ -558,16 +559,16 @@ mod tests {
     #[test]
     fn test_byte_offset_multiline_mixed_unicode() {
         let content = "hello\n世界\n😀";
-        
+
         let pos = byte_offset_to_lsp_position(content, 0);
         assert_eq!((pos.line, pos.character), (0, 0));
-        
+
         let pos = byte_offset_to_lsp_position(content, 6);
         assert_eq!((pos.line, pos.character), (1, 0));
-        
+
         let pos = byte_offset_to_lsp_position(content, 9);
         assert_eq!((pos.line, pos.character), (1, 1));
-        
+
         let pos = byte_offset_to_lsp_position(content, 13);
         assert_eq!((pos.line, pos.character), (2, 0));
     }
@@ -576,14 +577,14 @@ mod tests {
     fn test_byte_offset_edge_cases() {
         let pos = byte_offset_to_lsp_position("", 0);
         assert_eq!((pos.line, pos.character), (0, 0));
-        
+
         let pos = byte_offset_to_lsp_position("hi", 100);
         assert_eq!(pos.line, 0);
-        
+
         let content = "a\n\nb";
         let pos = byte_offset_to_lsp_position(content, 2);
         assert_eq!((pos.line, pos.character), (1, 0));
-        
+
         let pos = byte_offset_to_lsp_position(content, 3);
         assert_eq!((pos.line, pos.character), (2, 0));
     }
@@ -591,8 +592,13 @@ mod tests {
     #[test]
     fn test_span_to_lsp_range_with_content() {
         let content = "hello\nworld\ntest";
-        let span = Span { start: 6, end: 11, line: 2, column: 0 };
-        
+        let span = Span {
+            start: 6,
+            end: 11,
+            line: 2,
+            column: 0,
+        };
+
         let range = span_to_lsp_range(&span, Some(content));
         assert_eq!((range.start.line, range.start.character), (1, 0));
         assert_eq!((range.end.line, range.end.character), (1, 5));
@@ -600,8 +606,13 @@ mod tests {
 
     #[test]
     fn test_span_to_lsp_range_fallback_without_content() {
-        let span = Span { start: 10, end: 15, line: 3, column: 5 };
-        
+        let span = Span {
+            start: 10,
+            end: 15,
+            line: 3,
+            column: 5,
+        };
+
         let range = span_to_lsp_range(&span, None);
         assert_eq!((range.start.line, range.start.character), (2, 5));
         assert_eq!((range.end.line, range.end.character), (2, 10));
@@ -610,7 +621,12 @@ mod tests {
     #[test]
     fn test_span_to_lsp_range_multiline_span() {
         let content = "line1\nline2\nline3";
-        let span = Span { start: 0, end: 11, line: 1, column: 0 };
+        let span = Span {
+            start: 0,
+            end: 11,
+            line: 1,
+            column: 0,
+        };
 
         let range = span_to_lsp_range(&span, Some(content));
         assert_eq!((range.start.line, range.start.character), (0, 0));
@@ -663,12 +679,16 @@ mod tests {
         let tokens = tokenize_with_lines(content);
 
         // Find the opening brace
-        let open_brace = tokens.iter().find(|t| matches!(t.token, Token::Symbol('{')));
+        let open_brace = tokens
+            .iter()
+            .find(|t| matches!(t.token, Token::Symbol('{')));
         assert!(open_brace.is_some());
         assert_eq!(open_brace.unwrap().line, 0);
 
         // Find the closing brace
-        let close_brace = tokens.iter().find(|t| matches!(t.token, Token::Symbol('}')));
+        let close_brace = tokens
+            .iter()
+            .find(|t| matches!(t.token, Token::Symbol('}')));
         assert!(close_brace.is_some());
         assert_eq!(close_brace.unwrap().line, 2);
     }

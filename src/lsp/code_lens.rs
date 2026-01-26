@@ -59,14 +59,22 @@ pub fn handle_code_lens(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Resp
                 processed_functions.insert(func_name.clone());
 
                 // Get line from symbol info if available, otherwise fall back to content search
-                let line_num = doc.symbols.get(func_name)
+                let line_num = doc
+                    .symbols
+                    .get(func_name)
                     .map(|s| s.range.start.line as usize)
                     .or_else(|| find_function_line(&doc.content, func_name));
 
                 if let Some(line) = line_num {
                     let range = Range {
-                        start: Position { line: line as u32, character: 0 },
-                        end: Position { line: line as u32, character: 0 },
+                        start: Position {
+                            line: line as u32,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: line as u32,
+                            character: 0,
+                        },
                     };
 
                     // main and build get both Run and Build buttons
@@ -125,7 +133,11 @@ pub fn handle_code_lens(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Resp
         .into_iter()
         .filter(|lens| {
             let line = lens.range.start.line;
-            let title = lens.command.as_ref().map(|c| c.title.clone()).unwrap_or_default();
+            let title = lens
+                .command
+                .as_ref()
+                .map(|c| c.title.clone())
+                .unwrap_or_default();
             let key = (line, title);
             if seen_lens.contains(&key) {
                 false

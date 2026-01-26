@@ -1,5 +1,5 @@
-use crate::codegen::llvm::LLVMCompiler;
 use crate::ast::{LoopKind, Statement};
+use crate::codegen::llvm::LLVMCompiler;
 use crate::error::CompileError;
 use inkwell::values::BasicValueEnum;
 
@@ -32,18 +32,12 @@ pub fn compile_loop<'ctx>(
     statement: &Statement,
 ) -> Result<(), CompileError> {
     match statement {
-        Statement::Loop {
-            kind,
-            body,
-            ..
-        } => {
+        Statement::Loop { kind, body, .. } => {
             match kind {
                 LoopKind::Infinite => {
                     // Create blocks for infinite loop
                     let current_fn = compiler.current_fn()?;
-                    let loop_body = compiler
-                        .context
-                        .append_basic_block(current_fn, "loop_body");
+                    let loop_body = compiler.context.append_basic_block(current_fn, "loop_body");
                     let after_loop_block = compiler
                         .context
                         .append_basic_block(current_fn, "after_loop");
@@ -82,9 +76,7 @@ pub fn compile_loop<'ctx>(
                     let loop_header = compiler
                         .context
                         .append_basic_block(current_fn, "loop_header");
-                    let loop_body = compiler
-                        .context
-                        .append_basic_block(current_fn, "loop_body");
+                    let loop_body = compiler.context.append_basic_block(current_fn, "loop_body");
                     let after_loop_block = compiler
                         .context
                         .append_basic_block(current_fn, "after_loop");
@@ -186,4 +178,3 @@ pub fn compile_continue<'ctx>(compiler: &mut LLVMCompiler<'ctx>) -> Result<(), C
         ))
     }
 }
-

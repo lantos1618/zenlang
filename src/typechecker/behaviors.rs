@@ -388,7 +388,12 @@ impl BehaviorResolver {
             required.param_types.len()
         };
 
-        let impl_param_count = if impl_method.args.first().map(|(n, _)| n == "self").unwrap_or(false) {
+        let impl_param_count = if impl_method
+            .args
+            .first()
+            .map(|(n, _)| n == "self")
+            .unwrap_or(false)
+        {
             impl_method.args.len() - 1
         } else {
             impl_method.args.len()
@@ -411,13 +416,20 @@ impl BehaviorResolver {
             required.param_types.iter().collect()
         };
 
-        let impl_params: Vec<_> = if impl_method.args.first().map(|(n, _)| n == "self").unwrap_or(false) {
+        let impl_params: Vec<_> = if impl_method
+            .args
+            .first()
+            .map(|(n, _)| n == "self")
+            .unwrap_or(false)
+        {
             impl_method.args.iter().skip(1).collect()
         } else {
             impl_method.args.iter().collect()
         };
 
-        for (i, (req_type, (_, impl_type))) in required_params.iter().zip(impl_params.iter()).enumerate() {
+        for (i, (req_type, (_, impl_type))) in
+            required_params.iter().zip(impl_params.iter()).enumerate()
+        {
             if !self.types_compatible(req_type, impl_type, type_name) {
                 return Err(CompileError::TypeError(
                     format!(
@@ -438,7 +450,11 @@ impl BehaviorResolver {
         if let AstType::Generic { name, type_args } = expected {
             if name == "Self" && type_args.is_empty() {
                 // Self should match the implementing type
-                if let AstType::Generic { name: actual_name, type_args: actual_args } = actual {
+                if let AstType::Generic {
+                    name: actual_name,
+                    type_args: actual_args,
+                } = actual
+                {
                     return actual_name == self_type && actual_args.is_empty();
                 }
                 // Also allow direct type name match

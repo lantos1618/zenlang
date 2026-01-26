@@ -1,7 +1,7 @@
-use crate::parser::core::Parser;
 use crate::ast::Expression;
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
+use crate::parser::core::Parser;
 
 pub fn looks_like_generic_type_args(parser: &Parser) -> bool {
     // Try to determine if this is generic type args Vec<T> or vec_new<i32> vs comparison x < y

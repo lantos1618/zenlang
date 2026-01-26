@@ -1,11 +1,11 @@
 // References handler
 
-use crate::lsp::document_store::DocumentStore;
-use crate::lsp::types::SymbolScope;
 use super::scope::determine_symbol_scope;
 use super::utils::{
     find_function_range, find_symbol_at_position, is_in_string_or_comment, is_word_boundary_char,
 };
+use crate::lsp::document_store::DocumentStore;
+use crate::lsp::types::SymbolScope;
 use lsp_server::{Request, Response};
 use lsp_types::*;
 use serde_json::Value;
@@ -144,8 +144,10 @@ pub fn handle_references(
                 }
                 SymbolScope::ModuleLevel | SymbolScope::Unknown => {
                     // Module-level symbol - search across documents (limited for performance)
-                    for (uri, search_doc) in
-                        store_lock.documents.iter().take(crate::lsp::search_limits::REFERENCES_SEARCH)
+                    for (uri, search_doc) in store_lock
+                        .documents
+                        .iter()
+                        .take(crate::lsp::search_limits::REFERENCES_SEARCH)
                     {
                         let refs = find_references_in_document(&search_doc.content, &symbol_name);
                         for range in refs {

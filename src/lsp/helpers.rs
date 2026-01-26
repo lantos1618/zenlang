@@ -58,16 +58,14 @@ pub fn try_parse_params<T: DeserializeOwned>(req: &Request) -> Result<T, Respons
 /// let params = try_parse_params_with_error::<HoverParams>(&req)?;
 /// ```
 pub fn try_parse_params_with_error<T: DeserializeOwned>(req: &Request) -> Result<T, Response> {
-    serde_json::from_value(req.params.clone()).map_err(|e| {
-        Response {
-            id: req.id.clone(),
-            result: Some(Value::Null),
-            error: Some(ResponseError {
-                code: ErrorCode::InvalidParams as i32,
-                message: format!("Invalid params: {}", e),
-                data: None,
-            }),
-        }
+    serde_json::from_value(req.params.clone()).map_err(|e| Response {
+        id: req.id.clone(),
+        result: Some(Value::Null),
+        error: Some(ResponseError {
+            code: ErrorCode::InvalidParams as i32,
+            message: format!("Invalid params: {}", e),
+            data: None,
+        }),
     })
 }
 

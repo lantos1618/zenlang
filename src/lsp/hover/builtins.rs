@@ -45,11 +45,12 @@ fn format_intrinsic_hover(name: &str, intrinsic: &Intrinsic) -> String {
     let return_type = format_ast_type(&intrinsic.return_type);
 
     // Check if it's a generic intrinsic (sizeof, alignof, load, store)
-    let generic_suffix = if name == "sizeof" || name == "alignof" || name == "load" || name == "store" {
-        "<T>"
-    } else {
-        ""
-    };
+    let generic_suffix =
+        if name == "sizeof" || name == "alignof" || name == "load" || name == "store" {
+            "<T>"
+        } else {
+            ""
+        };
 
     let description = get_intrinsic_description(name);
 
@@ -126,9 +127,8 @@ fn get_intrinsic_description(name: &str) -> &'static str {
         "unreachable" => "Mark code as unreachable. UB if reached.",
 
         // Syscalls
-        "syscall0" | "syscall1" | "syscall2" | "syscall3" | "syscall4" | "syscall5" | "syscall6" => {
-            "Linux x86-64 syscall. Number is first arg, then up to 6 arguments."
-        }
+        "syscall0" | "syscall1" | "syscall2" | "syscall3" | "syscall4" | "syscall5"
+        | "syscall6" => "Linux x86-64 syscall. Number is first arg, then up to 6 arguments.",
 
         // FFI
         "load_library" => "Load a dynamic library by path. Returns handle or null.",
@@ -146,46 +146,36 @@ fn get_intrinsic_description(name: &str) -> &'static str {
 /// Format hover for well-known types (Option, Result, Ptr)
 fn format_well_known_hover(_name: &str, wkt: WellKnownType) -> String {
     match wkt {
-        WellKnownType::Option => {
-            "```zen\nOption<T>:\n    Some: T,\n    None\n```\n\n\
+        WellKnownType::Option => "```zen\nOption<T>:\n    Some: T,\n    None\n```\n\n\
              **Optional value type**\n\n\
              - Represents a value that may or may not exist\n\
              - Use `?` for pattern matching: `opt? | Some(v) { ... } | None { ... }`\n\
              - No null in Zen - use Option instead"
-                .to_string()
-        }
-        WellKnownType::Result => {
-            "```zen\nResult<T, E>:\n    Ok: T,\n    Err: E\n```\n\n\
+            .to_string(),
+        WellKnownType::Result => "```zen\nResult<T, E>:\n    Ok: T,\n    Err: E\n```\n\n\
              **Result type for error handling**\n\n\
              - Represents success (Ok) or failure (Err)\n\
              - Use `.raise()` for error propagation (like Rust's `?`)\n\
              - Pattern match with `?` operator"
-                .to_string()
-        }
-        WellKnownType::Ptr => {
-            "```zen\nPtr<T>\n```\n\n\
+            .to_string(),
+        WellKnownType::Ptr => "```zen\nPtr<T>\n```\n\n\
              **Immutable pointer**\n\n\
              - Safe, non-null pointer to T\n\
              - Use `.deref()` to read the value\n\
              - Cannot be reassigned after creation"
-                .to_string()
-        }
-        WellKnownType::MutPtr => {
-            "```zen\nMutPtr<T>\n```\n\n\
+            .to_string(),
+        WellKnownType::MutPtr => "```zen\nMutPtr<T>\n```\n\n\
              **Mutable pointer**\n\n\
              - Safe, non-null pointer to T\n\
              - Use `.val` to read/write the value\n\
              - Required for mutating struct fields"
-                .to_string()
-        }
-        WellKnownType::RawPtr => {
-            "```zen\nRawPtr<T>\n```\n\n\
+            .to_string(),
+        WellKnownType::RawPtr => "```zen\nRawPtr<T>\n```\n\n\
              **Raw/unsafe pointer**\n\n\
              - Can be null - check with `compiler.is_null()`\n\
              - Used for FFI and low-level memory operations\n\
              - No safety guarantees"
-                .to_string()
-        }
+            .to_string(),
     }
 }
 
@@ -201,7 +191,11 @@ fn format_stdlib_struct_hover(struct_def: &crate::ast::StructDefinition) -> Stri
     let generic_params = if struct_def.type_params.is_empty() {
         String::new()
     } else {
-        let params: Vec<_> = struct_def.type_params.iter().map(|p| p.name.as_str()).collect();
+        let params: Vec<_> = struct_def
+            .type_params
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect();
         format!("<{}>", params.join(", "))
     };
 
@@ -255,4 +249,3 @@ fn get_primitive_or_keyword_hover(symbol_name: &str) -> Option<String> {
 
     Some(text.to_string())
 }
-

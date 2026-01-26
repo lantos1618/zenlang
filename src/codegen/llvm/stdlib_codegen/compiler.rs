@@ -20,7 +20,10 @@ fn to_i64<'ctx>(
     signed: bool,
 ) -> Result<IntValue<'ctx>, CompileError> {
     if !val.is_int_value() {
-        return Err(CompileError::TypeError("Expected integer".to_string(), compiler.get_current_span()));
+        return Err(CompileError::TypeError(
+            "Expected integer".to_string(),
+            compiler.get_current_span(),
+        ));
     }
     let int_val = val.into_int_value();
     let bits = int_val.get_type().get_bit_width();
@@ -29,12 +32,18 @@ fn to_i64<'ctx>(
         int_val
     } else if bits < 64 {
         if signed {
-            compiler.builder.build_int_s_extend(int_val, i64_type, "sext")?
+            compiler
+                .builder
+                .build_int_s_extend(int_val, i64_type, "sext")?
         } else {
-            compiler.builder.build_int_z_extend(int_val, i64_type, "zext")?
+            compiler
+                .builder
+                .build_int_z_extend(int_val, i64_type, "zext")?
         }
     } else {
-        compiler.builder.build_int_truncate(int_val, i64_type, "trunc")?
+        compiler
+            .builder
+            .build_int_truncate(int_val, i64_type, "trunc")?
     })
 }
 
@@ -91,7 +100,9 @@ fn get_or_declare_fn<'ctx>(
             },
             None => compiler.context.void_type().fn_type(param_types, false),
         };
-        compiler.module.add_function(name, fn_type, Some(Linkage::External))
+        compiler
+            .module
+            .add_function(name, fn_type, Some(Linkage::External))
     })
 }
 
@@ -103,12 +114,15 @@ fn call_int_intrinsic<'ctx>(
     extra_args: &[BasicValueEnum<'ctx>],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     let span = compiler.get_current_span();
-    let intrinsic = Intrinsic::find(name)
-        .ok_or_else(|| CompileError::InternalError(format!("{} intrinsic not found", name), span.clone()))?;
+    let intrinsic = Intrinsic::find(name).ok_or_else(|| {
+        CompileError::InternalError(format!("{} intrinsic not found", name), span.clone())
+    })?;
     let int_type = val.get_type();
     let intrinsic_fn = intrinsic
         .get_declaration(&compiler.module, &[int_type.into()])
-        .ok_or_else(|| CompileError::InternalError(format!("Failed to get {} declaration", name), span.clone()))?;
+        .ok_or_else(|| {
+            CompileError::InternalError(format!("Failed to get {} declaration", name), span.clone())
+        })?;
 
     let mut args: Vec<BasicValueEnum> = vec![val.into()];
     args.extend_from_slice(extra_args);
@@ -119,7 +133,9 @@ fn call_int_intrinsic<'ctx>(
         .build_call(intrinsic_fn, &args_meta, "intrinsic")?
         .try_as_basic_value()
         .left()
-        .ok_or_else(|| CompileError::InternalError("Intrinsic should return value".to_string(), span))
+        .ok_or_else(|| {
+            CompileError::InternalError("Intrinsic should return value".to_string(), span)
+        })
 }
 
 /// Extract data pointer from String struct or return pointer directly
@@ -134,10 +150,16 @@ fn extract_string_ptr<'ctx>(
             let ptr = compiler.builder.build_extract_value(s, 0, "str_data")?;
             match ptr {
                 BasicValueEnum::PointerValue(p) => Ok(p),
-                _ => Err(CompileError::InternalError("String field 0 not a pointer".to_string(), span)),
+                _ => Err(CompileError::InternalError(
+                    "String field 0 not a pointer".to_string(),
+                    span,
+                )),
             }
         }
-        _ => Err(CompileError::InternalError(format!("Expected String, got {:?}", value.get_type()), span)),
+        _ => Err(CompileError::InternalError(
+            format!("Expected String, got {:?}", value.get_type()),
+            span,
+        )),
     }
 }
 
@@ -145,9 +167,17 @@ fn ptr_type<'ctx>(compiler: &LLVMCompiler<'ctx>) -> inkwell::types::PointerType<
     compiler.context.ptr_type(AddressSpace::default())
 }
 
-fn require_args(args: &[ast::Expression], expected: usize, name: &str, span: Option<crate::error::Span>) -> Result<(), CompileError> {
+fn require_args(
+    args: &[ast::Expression],
+    expected: usize,
+    name: &str,
+    span: Option<crate::error::Span>,
+) -> Result<(), CompileError> {
     if args.len() != expected {
-        Err(CompileError::TypeError(format!("{} expects {} args, got {}", name, expected, args.len()), span))
+        Err(CompileError::TypeError(
+            format!("{} expects {} args, got {}", name, expected, args.len()),
+            span,
+        ))
     } else {
         Ok(())
     }
@@ -164,7 +194,12 @@ pub fn compile_raw_allocate<'ctx>(
     require_args(args, 1, "raw_allocate", compiler.get_current_span())?;
     let size_val = compiler.compile_expression(&args[0])?;
     let size = to_i64(compiler, size_val, false)?;
-    let malloc = get_or_declare_fn(compiler, "malloc", Some(ptr_type(compiler).into()), &[compiler.context.i64_type().into()]);
+    let malloc = get_or_declare_fn(
+        compiler,
+        "malloc",
+        Some(ptr_type(compiler).into()),
+        &[compiler.context.i64_type().into()],
+    );
     let call = compiler.builder.build_call(malloc, &[size.into()], "ptr")?;
     extract_call_result(call, "malloc", compiler)
 }
@@ -190,8 +225,18 @@ pub fn compile_raw_reallocate<'ctx>(
     let _old = compiler.compile_expression(&args[1])?;
     let new_size_val = compiler.compile_expression(&args[2])?;
     let new_size = to_i64(compiler, new_size_val, false)?;
-    let realloc = get_or_declare_fn(compiler, "realloc", Some(ptr_type(compiler).into()), &[ptr_type(compiler).into(), compiler.context.i64_type().into()]);
-    let call = compiler.builder.build_call(realloc, &[ptr.into(), new_size.into()], "ptr")?;
+    let realloc = get_or_declare_fn(
+        compiler,
+        "realloc",
+        Some(ptr_type(compiler).into()),
+        &[
+            ptr_type(compiler).into(),
+            compiler.context.i64_type().into(),
+        ],
+    );
+    let call = compiler
+        .builder
+        .build_call(realloc, &[ptr.into(), new_size.into()], "ptr")?;
     extract_call_result(call, "realloc", compiler)
 }
 
@@ -207,7 +252,11 @@ pub fn compile_raw_ptr_offset<'ctx>(
     let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
     let offset_val = compiler.compile_expression(&args[1])?;
     let offset = to_i64(compiler, offset_val, true)?;
-    let result = unsafe { compiler.builder.build_gep(compiler.context.i8_type(), ptr, &[offset], "offset")? };
+    let result = unsafe {
+        compiler
+            .builder
+            .build_gep(compiler.context.i8_type(), ptr, &[offset], "offset")?
+    };
     Ok(result.into())
 }
 
@@ -233,7 +282,10 @@ pub fn compile_is_null<'ctx>(
     require_args(args, 1, "is_null", compiler.get_current_span())?;
     let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
     let null = ptr_type(compiler).const_null();
-    Ok(compiler.builder.build_int_compare(inkwell::IntPredicate::EQ, ptr, null, "is_null")?.into())
+    Ok(compiler
+        .builder
+        .build_int_compare(inkwell::IntPredicate::EQ, ptr, null, "is_null")?
+        .into())
 }
 
 pub fn compile_ptr_to_int<'ctx>(
@@ -242,7 +294,10 @@ pub fn compile_ptr_to_int<'ctx>(
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, "ptr_to_int", compiler.get_current_span())?;
     let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
-    Ok(compiler.builder.build_ptr_to_int(ptr, compiler.context.i64_type(), "p2i")?.into())
+    Ok(compiler
+        .builder
+        .build_ptr_to_int(ptr, compiler.context.i64_type(), "p2i")?
+        .into())
 }
 
 pub fn compile_int_to_ptr<'ctx>(
@@ -251,7 +306,10 @@ pub fn compile_int_to_ptr<'ctx>(
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, "int_to_ptr", compiler.get_current_span())?;
     let addr = compiler.compile_expression(&args[0])?.into_int_value();
-    Ok(compiler.builder.build_int_to_ptr(addr, ptr_type(compiler), "i2p")?.into())
+    Ok(compiler
+        .builder
+        .build_int_to_ptr(addr, ptr_type(compiler), "i2p")?
+        .into())
 }
 
 // =============================================================================
@@ -265,9 +323,19 @@ pub fn compile_load_library<'ctx>(
     require_args(args, 1, "load_library", compiler.get_current_span())?;
     let path_val = compiler.compile_expression(&args[0])?;
     let path = extract_string_ptr(compiler, path_val)?;
-    let dlopen = get_or_declare_fn(compiler, "dlopen", Some(ptr_type(compiler).into()), &[ptr_type(compiler).into(), compiler.context.i32_type().into()]);
+    let dlopen = get_or_declare_fn(
+        compiler,
+        "dlopen",
+        Some(ptr_type(compiler).into()),
+        &[
+            ptr_type(compiler).into(),
+            compiler.context.i32_type().into(),
+        ],
+    );
     let rtld_lazy = compiler.context.i32_type().const_int(1, false);
-    let call = compiler.builder.build_call(dlopen, &[path.into(), rtld_lazy.into()], "handle")?;
+    let call = compiler
+        .builder
+        .build_call(dlopen, &[path.into(), rtld_lazy.into()], "handle")?;
     extract_call_result(call, "dlopen", compiler)
 }
 
@@ -279,8 +347,15 @@ pub fn compile_get_symbol<'ctx>(
     let handle = compiler.compile_expression(&args[0])?;
     let name_val = compiler.compile_expression(&args[1])?;
     let name = extract_string_ptr(compiler, name_val)?;
-    let dlsym = get_or_declare_fn(compiler, "dlsym", Some(ptr_type(compiler).into()), &[ptr_type(compiler).into(), ptr_type(compiler).into()]);
-    let call = compiler.builder.build_call(dlsym, &[handle.into(), name.into()], "sym")?;
+    let dlsym = get_or_declare_fn(
+        compiler,
+        "dlsym",
+        Some(ptr_type(compiler).into()),
+        &[ptr_type(compiler).into(), ptr_type(compiler).into()],
+    );
+    let call = compiler
+        .builder
+        .build_call(dlsym, &[handle.into(), name.into()], "sym")?;
     extract_call_result(call, "dlsym", compiler)
 }
 
@@ -290,8 +365,15 @@ pub fn compile_unload_library<'ctx>(
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, "unload_library", compiler.get_current_span())?;
     let handle = compiler.compile_expression(&args[0])?;
-    let dlclose = get_or_declare_fn(compiler, "dlclose", Some(compiler.context.i32_type().into()), &[ptr_type(compiler).into()]);
-    let call = compiler.builder.build_call(dlclose, &[handle.into()], "result")?;
+    let dlclose = get_or_declare_fn(
+        compiler,
+        "dlclose",
+        Some(compiler.context.i32_type().into()),
+        &[ptr_type(compiler).into()],
+    );
+    let call = compiler
+        .builder
+        .build_call(dlclose, &[handle.into()], "result")?;
     extract_call_result(call, "dlclose", compiler)
 }
 
@@ -314,7 +396,9 @@ pub fn compile_discriminant<'ctx>(
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, "discriminant", compiler.get_current_span())?;
     let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
-    Ok(compiler.builder.build_load(compiler.context.i32_type(), ptr, "disc")?)
+    Ok(compiler
+        .builder
+        .build_load(compiler.context.i32_type(), ptr, "disc")?)
 }
 
 pub fn compile_set_discriminant<'ctx>(
@@ -336,7 +420,11 @@ pub fn compile_get_payload<'ctx>(
     let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
     // Payload after 4-byte discriminant
     let offset = compiler.context.i32_type().const_int(4, false);
-    let payload = unsafe { compiler.builder.build_gep(compiler.context.i8_type(), ptr, &[offset], "payload")? };
+    let payload = unsafe {
+        compiler
+            .builder
+            .build_gep(compiler.context.i8_type(), ptr, &[offset], "payload")?
+    };
     Ok(payload.into())
 }
 
@@ -363,7 +451,11 @@ pub fn compile_gep<'ctx>(
     let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
     let offset_val = compiler.compile_expression(&args[1])?;
     let offset = to_i64(compiler, offset_val, true)?;
-    let result = unsafe { compiler.builder.build_gep(compiler.context.i8_type(), ptr, &[offset], "gep")? };
+    let result = unsafe {
+        compiler
+            .builder
+            .build_gep(compiler.context.i8_type(), ptr, &[offset], "gep")?
+    };
     Ok(result.into())
 }
 
@@ -376,9 +468,17 @@ pub fn compile_gep_struct<'ctx>(
     let idx = compiler.compile_expression(&args[1])?.into_int_value();
     // Approximate: field_index * 8 bytes
     let idx_i32 = to_int_width(compiler, idx, compiler.context.i32_type(), false)?;
-    let offset = compiler.builder.build_int_mul(idx_i32, compiler.context.i32_type().const_int(8, false), "off")?;
+    let offset = compiler.builder.build_int_mul(
+        idx_i32,
+        compiler.context.i32_type().const_int(8, false),
+        "off",
+    )?;
     let offset_i64 = to_int_width(compiler, offset, compiler.context.i64_type(), true)?;
-    let result = unsafe { compiler.builder.build_gep(compiler.context.i8_type(), ptr, &[offset_i64], "gep_s")? };
+    let result = unsafe {
+        compiler
+            .builder
+            .build_gep(compiler.context.i8_type(), ptr, &[offset_i64], "gep_s")?
+    };
     Ok(result.into())
 }
 
@@ -395,7 +495,12 @@ pub fn compile_load<'ctx>(
     };
     let basic = match load_type {
         Type::Basic(b) => b,
-        _ => return Err(CompileError::TypeError("load: need basic type".to_string(), compiler.get_current_span())),
+        _ => {
+            return Err(CompileError::TypeError(
+                "load: need basic type".to_string(),
+                compiler.get_current_span(),
+            ))
+        }
     };
     Ok(compiler.builder.build_load(basic, ptr, "val")?)
 }
@@ -428,12 +533,15 @@ pub fn compile_sizeof<'ctx>(
             AstType::I64 | AstType::U64 | AstType::F64 | AstType::Usize => 8,
             AstType::Void => 0,
             t if t.is_ptr_type() => 8,
-            AstType::Struct { fields, .. } => fields.iter().map(|(_, ft)| match ft {
-                AstType::I8 | AstType::U8 => 1,
-                AstType::I16 | AstType::U16 => 2,
-                AstType::I32 | AstType::U32 | AstType::F32 => 4,
-                _ => 8,
-            }).sum(),
+            AstType::Struct { fields, .. } => fields
+                .iter()
+                .map(|(_, ft)| match ft {
+                    AstType::I8 | AstType::U8 => 1,
+                    AstType::I16 | AstType::U16 => 2,
+                    AstType::I32 | AstType::U32 | AstType::F32 => 4,
+                    _ => 8,
+                })
+                .sum(),
             _ => 8,
         },
         None => 8,
@@ -455,9 +563,19 @@ pub fn compile_memset<'ctx>(
     let val = to_int_width(compiler, val_expr, compiler.context.i8_type(), false)?;
     let size_val = compiler.compile_expression(&args[2])?;
     let size = to_i64(compiler, size_val, false)?;
-    let memset = get_or_declare_fn(compiler, "memset", Some(ptr_type(compiler).into()),
-        &[ptr_type(compiler).into(), compiler.context.i8_type().into(), compiler.context.i64_type().into()]);
-    compiler.builder.build_call(memset, &[dest.into(), val.into(), size.into()], "")?;
+    let memset = get_or_declare_fn(
+        compiler,
+        "memset",
+        Some(ptr_type(compiler).into()),
+        &[
+            ptr_type(compiler).into(),
+            compiler.context.i8_type().into(),
+            compiler.context.i64_type().into(),
+        ],
+    );
+    compiler
+        .builder
+        .build_call(memset, &[dest.into(), val.into(), size.into()], "")?;
     Ok(compiler.context.i32_type().const_zero().into())
 }
 
@@ -470,9 +588,19 @@ pub fn compile_memcpy<'ctx>(
     let src = compiler.compile_expression(&args[1])?;
     let size_val = compiler.compile_expression(&args[2])?;
     let size = to_i64(compiler, size_val, false)?;
-    let memcpy = get_or_declare_fn(compiler, "memcpy", Some(ptr_type(compiler).into()),
-        &[ptr_type(compiler).into(), ptr_type(compiler).into(), compiler.context.i64_type().into()]);
-    compiler.builder.build_call(memcpy, &[dest.into(), src.into(), size.into()], "")?;
+    let memcpy = get_or_declare_fn(
+        compiler,
+        "memcpy",
+        Some(ptr_type(compiler).into()),
+        &[
+            ptr_type(compiler).into(),
+            ptr_type(compiler).into(),
+            compiler.context.i64_type().into(),
+        ],
+    );
+    compiler
+        .builder
+        .build_call(memcpy, &[dest.into(), src.into(), size.into()], "")?;
     Ok(compiler.context.i32_type().const_zero().into())
 }
 
@@ -485,9 +613,19 @@ pub fn compile_memmove<'ctx>(
     let src = compiler.compile_expression(&args[1])?;
     let size_val = compiler.compile_expression(&args[2])?;
     let size = to_i64(compiler, size_val, false)?;
-    let memmove = get_or_declare_fn(compiler, "memmove", Some(ptr_type(compiler).into()),
-        &[ptr_type(compiler).into(), ptr_type(compiler).into(), compiler.context.i64_type().into()]);
-    compiler.builder.build_call(memmove, &[dest.into(), src.into(), size.into()], "")?;
+    let memmove = get_or_declare_fn(
+        compiler,
+        "memmove",
+        Some(ptr_type(compiler).into()),
+        &[
+            ptr_type(compiler).into(),
+            ptr_type(compiler).into(),
+            compiler.context.i64_type().into(),
+        ],
+    );
+    compiler
+        .builder
+        .build_call(memmove, &[dest.into(), src.into(), size.into()], "")?;
     Ok(compiler.context.i32_type().const_zero().into())
 }
 
@@ -500,9 +638,19 @@ pub fn compile_memcmp<'ctx>(
     let p2 = compiler.compile_expression(&args[1])?;
     let size_val = compiler.compile_expression(&args[2])?;
     let size = to_i64(compiler, size_val, false)?;
-    let memcmp = get_or_declare_fn(compiler, "memcmp", Some(compiler.context.i32_type().into()),
-        &[ptr_type(compiler).into(), ptr_type(compiler).into(), compiler.context.i64_type().into()]);
-    let call = compiler.builder.build_call(memcmp, &[p1.into(), p2.into(), size.into()], "cmp")?;
+    let memcmp = get_or_declare_fn(
+        compiler,
+        "memcmp",
+        Some(compiler.context.i32_type().into()),
+        &[
+            ptr_type(compiler).into(),
+            ptr_type(compiler).into(),
+            compiler.context.i64_type().into(),
+        ],
+    );
+    let call = compiler
+        .builder
+        .build_call(memcmp, &[p1.into(), p2.into(), size.into()], "cmp")?;
     extract_call_result(call, "memcmp", compiler)
 }
 
@@ -522,21 +670,35 @@ fn compile_bswap<'ctx>(
         16 => compiler.context.i16_type(),
         32 => compiler.context.i32_type(),
         64 => compiler.context.i64_type(),
-        _ => return Err(CompileError::InternalError("Invalid bswap width".to_string(), span)),
+        _ => {
+            return Err(CompileError::InternalError(
+                "Invalid bswap width".to_string(),
+                span,
+            ))
+        }
     };
     let converted = to_int_width(compiler, val, target_type, false)?;
     call_int_intrinsic(compiler, &format!("llvm.bswap.i{}", bits), converted, &[])
 }
 
-pub fn compile_bswap16<'ctx>(compiler: &mut LLVMCompiler<'ctx>, args: &[ast::Expression]) -> Result<BasicValueEnum<'ctx>, CompileError> {
+pub fn compile_bswap16<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    args: &[ast::Expression],
+) -> Result<BasicValueEnum<'ctx>, CompileError> {
     compile_bswap(compiler, args, 16)
 }
 
-pub fn compile_bswap32<'ctx>(compiler: &mut LLVMCompiler<'ctx>, args: &[ast::Expression]) -> Result<BasicValueEnum<'ctx>, CompileError> {
+pub fn compile_bswap32<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    args: &[ast::Expression],
+) -> Result<BasicValueEnum<'ctx>, CompileError> {
     compile_bswap(compiler, args, 32)
 }
 
-pub fn compile_bswap64<'ctx>(compiler: &mut LLVMCompiler<'ctx>, args: &[ast::Expression]) -> Result<BasicValueEnum<'ctx>, CompileError> {
+pub fn compile_bswap64<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    args: &[ast::Expression],
+) -> Result<BasicValueEnum<'ctx>, CompileError> {
     compile_bswap(compiler, args, 64)
 }
 
@@ -554,18 +716,32 @@ fn compile_bit_count<'ctx>(
     } else {
         vec![]
     };
-    call_int_intrinsic(compiler, &format!("llvm.{}.i64", intrinsic_name), val_i64, &extra)
+    call_int_intrinsic(
+        compiler,
+        &format!("llvm.{}.i64", intrinsic_name),
+        val_i64,
+        &extra,
+    )
 }
 
-pub fn compile_ctlz<'ctx>(compiler: &mut LLVMCompiler<'ctx>, args: &[ast::Expression]) -> Result<BasicValueEnum<'ctx>, CompileError> {
+pub fn compile_ctlz<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    args: &[ast::Expression],
+) -> Result<BasicValueEnum<'ctx>, CompileError> {
     compile_bit_count(compiler, args, "ctlz", true)
 }
 
-pub fn compile_cttz<'ctx>(compiler: &mut LLVMCompiler<'ctx>, args: &[ast::Expression]) -> Result<BasicValueEnum<'ctx>, CompileError> {
+pub fn compile_cttz<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    args: &[ast::Expression],
+) -> Result<BasicValueEnum<'ctx>, CompileError> {
     compile_bit_count(compiler, args, "cttz", true)
 }
 
-pub fn compile_ctpop<'ctx>(compiler: &mut LLVMCompiler<'ctx>, args: &[ast::Expression]) -> Result<BasicValueEnum<'ctx>, CompileError> {
+pub fn compile_ctpop<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    args: &[ast::Expression],
+) -> Result<BasicValueEnum<'ctx>, CompileError> {
     compile_bit_count(compiler, args, "ctpop", false)
 }
 
@@ -601,20 +777,38 @@ pub fn compile_panic<'ctx>(
 
     // Declare stderr (extern FILE *stderr)
     let stderr_global = compiler.module.get_global("stderr").unwrap_or_else(|| {
-        compiler.module.add_global(ptr_type(compiler), None, "stderr")
+        compiler
+            .module
+            .add_global(ptr_type(compiler), None, "stderr")
     });
-    let stderr_ptr = compiler.builder.build_load(ptr_type(compiler), stderr_global.as_pointer_value(), "stderr")?;
+    let stderr_ptr = compiler.builder.build_load(
+        ptr_type(compiler),
+        stderr_global.as_pointer_value(),
+        "stderr",
+    )?;
 
     // Print "panic: " prefix
-    let prefix = compiler.builder.build_global_string_ptr("panic: ", "panic_prefix")?;
-    compiler.builder.build_call(fputs, &[prefix.as_pointer_value().into(), stderr_ptr.into()], "")?;
+    let prefix = compiler
+        .builder
+        .build_global_string_ptr("panic: ", "panic_prefix")?;
+    compiler.builder.build_call(
+        fputs,
+        &[prefix.as_pointer_value().into(), stderr_ptr.into()],
+        "",
+    )?;
 
     // Print the message
-    compiler.builder.build_call(fputs, &[msg_ptr.into(), stderr_ptr.into()], "")?;
+    compiler
+        .builder
+        .build_call(fputs, &[msg_ptr.into(), stderr_ptr.into()], "")?;
 
     // Print newline
     let newline = compiler.builder.build_global_string_ptr("\n", "newline")?;
-    compiler.builder.build_call(fputs, &[newline.as_pointer_value().into(), stderr_ptr.into()], "")?;
+    compiler.builder.build_call(
+        fputs,
+        &[newline.as_pointer_value().into(), stderr_ptr.into()],
+        "",
+    )?;
 
     // Call abort() to terminate
     let abort = get_or_declare_fn(compiler, "abort", None, &[]);
@@ -702,8 +896,8 @@ pub fn compile_inline_c<'ctx>(
     }
 
     // Load the bitcode and link into current module
-    let memory_buffer = inkwell::memory_buffer::MemoryBuffer::create_from_file(&bc_file)
-        .map_err(|e| {
+    let memory_buffer =
+        inkwell::memory_buffer::MemoryBuffer::create_from_file(&bc_file).map_err(|e| {
             let _ = std::fs::remove_file(&bc_file);
             CompileError::InternalError(format!("Failed to load bitcode: {:?}", e), span.clone())
         })?;
@@ -720,12 +914,9 @@ pub fn compile_inline_c<'ctx>(
     let _ = std::fs::remove_file(&bc_file);
 
     // Link the inline module into our main module
-    compiler
-        .module
-        .link_in_module(inline_module)
-        .map_err(|e| {
-            CompileError::InternalError(format!("Failed to link inline C module: {:?}", e), span)
-        })?;
+    compiler.module.link_in_module(inline_module).map_err(|e| {
+        CompileError::InternalError(format!("Failed to link inline C module: {:?}", e), span)
+    })?;
 
     Ok(compiler.context.i32_type().const_zero().into())
 }
@@ -758,12 +949,37 @@ fn build_syscall<'ctx>(
     let (asm_template, constraints, num_inputs) = match args.len() {
         0 => ("syscall", "={rax},{rax},~{rcx},~{r11},~{memory}", 1),
         1 => ("syscall", "={rax},{rax},{rdi},~{rcx},~{r11},~{memory}", 2),
-        2 => ("syscall", "={rax},{rax},{rdi},{rsi},~{rcx},~{r11},~{memory}", 3),
-        3 => ("syscall", "={rax},{rax},{rdi},{rsi},{rdx},~{rcx},~{r11},~{memory}", 4),
-        4 => ("syscall", "={rax},{rax},{rdi},{rsi},{rdx},{r10},~{rcx},~{r11},~{memory}", 5),
-        5 => ("syscall", "={rax},{rax},{rdi},{rsi},{rdx},{r10},{r8},~{rcx},~{r11},~{memory}", 6),
-        6 => ("syscall", "={rax},{rax},{rdi},{rsi},{rdx},{r10},{r8},{r9},~{rcx},~{r11},~{memory}", 7),
-        _ => return Err(CompileError::InternalError("Too many syscall arguments".to_string(), compiler.get_current_span())),
+        2 => (
+            "syscall",
+            "={rax},{rax},{rdi},{rsi},~{rcx},~{r11},~{memory}",
+            3,
+        ),
+        3 => (
+            "syscall",
+            "={rax},{rax},{rdi},{rsi},{rdx},~{rcx},~{r11},~{memory}",
+            4,
+        ),
+        4 => (
+            "syscall",
+            "={rax},{rax},{rdi},{rsi},{rdx},{r10},~{rcx},~{r11},~{memory}",
+            5,
+        ),
+        5 => (
+            "syscall",
+            "={rax},{rax},{rdi},{rsi},{rdx},{r10},{r8},~{rcx},~{r11},~{memory}",
+            6,
+        ),
+        6 => (
+            "syscall",
+            "={rax},{rax},{rdi},{rsi},{rdx},{r10},{r8},{r9},~{rcx},~{r11},~{memory}",
+            7,
+        ),
+        _ => {
+            return Err(CompileError::InternalError(
+                "Too many syscall arguments".to_string(),
+                compiler.get_current_span(),
+            ))
+        }
     };
 
     // Build input values array
@@ -773,9 +989,8 @@ fn build_syscall<'ctx>(
     }
 
     // Create inline assembly function type
-    let param_types: Vec<inkwell::types::BasicMetadataTypeEnum> = (0..num_inputs)
-        .map(|_| i64_type.into())
-        .collect();
+    let param_types: Vec<inkwell::types::BasicMetadataTypeEnum> =
+        (0..num_inputs).map(|_| i64_type.into()).collect();
     let fn_type = i64_type.fn_type(&param_types, false);
 
     // Build the inline assembly call
@@ -783,16 +998,23 @@ fn build_syscall<'ctx>(
         fn_type,
         asm_template.to_string(),
         constraints.to_string(),
-        true,   // has_side_effects
-        false,  // is_alignstack
-        None,   // dialect (Intel/AT&T) - None uses default
-        false,  // can_throw
+        true,  // has_side_effects
+        false, // is_alignstack
+        None,  // dialect (Intel/AT&T) - None uses default
+        false, // can_throw
     );
 
-    let input_metas: Vec<inkwell::values::BasicMetadataValueEnum> = inputs.iter().map(|v| (*v).into()).collect();
-    let result = compiler.builder.build_indirect_call(fn_type, asm_fn, &input_metas, "syscall_result")?;
+    let input_metas: Vec<inkwell::values::BasicMetadataValueEnum> =
+        inputs.iter().map(|v| (*v).into()).collect();
+    let result =
+        compiler
+            .builder
+            .build_indirect_call(fn_type, asm_fn, &input_metas, "syscall_result")?;
 
-    Ok(result.try_as_basic_value().left().unwrap_or_else(|| i64_type.const_zero().into()))
+    Ok(result
+        .try_as_basic_value()
+        .left()
+        .unwrap_or_else(|| i64_type.const_zero().into()))
 }
 
 pub fn compile_syscall0<'ctx>(

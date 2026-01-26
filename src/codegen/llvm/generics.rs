@@ -98,7 +98,6 @@ impl GenericTypeTracker {
             }
         }
     }
-
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
-use crate::parser::core::Parser;
 use crate::ast::{BinaryOperator, Expression};
 use crate::error::Result;
 use crate::lexer::Token;
+use crate::parser::core::Parser;
 
 /// Parse expressions for use in patterns - doesn't allow `|` as bitwise OR
 /// since `|` is used as pattern alternative separator in pattern context
@@ -13,7 +13,11 @@ pub fn parse_binary_expression(parser: &mut Parser, precedence: u8) -> Result<Ex
     parse_binary_expression_impl(parser, precedence, true)
 }
 
-fn parse_binary_expression_impl(parser: &mut Parser, precedence: u8, allow_pipe_as_bitor: bool) -> Result<Expression> {
+fn parse_binary_expression_impl(
+    parser: &mut Parser,
+    precedence: u8,
+    allow_pipe_as_bitor: bool,
+) -> Result<Expression> {
     let mut left = parse_unary_expression(parser)?;
 
     loop {
@@ -52,7 +56,8 @@ fn parse_binary_expression_impl(parser: &mut Parser, precedence: u8, allow_pipe_
 
                 // Handle range expressions specially
                 if op_clone == ".." || op_clone == "..=" {
-                    let right = parse_binary_expression_impl(parser, next_prec, allow_pipe_as_bitor)?;
+                    let right =
+                        parse_binary_expression_impl(parser, next_prec, allow_pipe_as_bitor)?;
                     left = Expression::Range {
                         start: Box::new(left),
                         end: Box::new(right),
@@ -61,7 +66,8 @@ fn parse_binary_expression_impl(parser: &mut Parser, precedence: u8, allow_pipe_
                 } else {
                     // Parse right-hand side, but stop early if we encounter '?'
                     // so the outer call can handle the ternary operator
-                    let right = parse_binary_expression_impl(parser, next_prec, allow_pipe_as_bitor)?;
+                    let right =
+                        parse_binary_expression_impl(parser, next_prec, allow_pipe_as_bitor)?;
                     left = Expression::BinaryOp {
                         left: Box::new(left),
                         op: token_to_binary_operator(&op_clone)?,
@@ -146,17 +152,17 @@ fn parse_postfix_expression(parser: &mut Parser) -> Result<Expression> {
 
 pub fn get_precedence(op: &str) -> u8 {
     match op {
-        ".." | "..=" => 1,             // Range has lowest precedence
-        "||" => 2,                     // Logical OR
-        "&&" => 3,                     // Logical AND
-        "|" => 4,                      // Bitwise OR
-        "^" => 5,                      // Bitwise XOR
-        "&" => 6,                      // Bitwise AND
-        "==" | "!=" => 7,              // Equality
-        "<" | "<=" | ">" | ">=" => 8,  // Comparison
-        "<<" | ">>" => 9,              // Bit shift
-        "+" | "-" => 10,               // Addition/Subtraction
-        "*" | "/" | "%" => 11,         // Multiplication/Division/Modulo
+        ".." | "..=" => 1,            // Range has lowest precedence
+        "||" => 2,                    // Logical OR
+        "&&" => 3,                    // Logical AND
+        "|" => 4,                     // Bitwise OR
+        "^" => 5,                     // Bitwise XOR
+        "&" => 6,                     // Bitwise AND
+        "==" | "!=" => 7,             // Equality
+        "<" | "<=" | ">" | ">=" => 8, // Comparison
+        "<<" | ">>" => 9,             // Bit shift
+        "+" | "-" => 10,              // Addition/Subtraction
+        "*" | "/" | "%" => 11,        // Multiplication/Division/Modulo
         _ => 0,
     }
 }

@@ -12,9 +12,7 @@ pub fn compile_loop<'ctx>(
     if let Expression::Loop { body } = expr {
         // Create blocks for the loop
         let current_fn = compiler.current_fn()?;
-        let loop_body = compiler
-            .context
-            .append_basic_block(current_fn, "loop_body");
+        let loop_body = compiler.context.append_basic_block(current_fn, "loop_body");
         let after_loop_block = compiler
             .context
             .append_basic_block(current_fn, "after_loop");

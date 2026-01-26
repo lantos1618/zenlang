@@ -174,8 +174,8 @@ mod handler {
                 }
 
                 return create_hover_response_from_string(
-                    request_id, 
-                    format!("```zen\n{}\n```", symbol_name)
+                    request_id,
+                    format!("```zen\n{}\n```", symbol_name),
                 );
             }
             // If no symbol found at position (empty line, whitespace, etc.), return null
@@ -210,9 +210,9 @@ mod handler {
                     .collect::<String>();
 
                 // symbol_name may include receiver: "gpa.default_gpa" vs just "default_gpa"
-                let is_method_hover = method_name == symbol_name 
+                let is_method_hover = method_name == symbol_name
                     || symbol_name.ends_with(&format!(".{}", method_name));
-                
+
                 if is_method_hover {
                     let receiver = before_dot
                         .trim_end()
@@ -338,7 +338,11 @@ mod handler {
         store: &DocumentStore,
         request_id: lsp_server::RequestId,
     ) -> Option<Response> {
-        for (_uri, other_doc) in store.documents.iter().take(crate::lsp::search_limits::HOVER_SEARCH) {
+        for (_uri, other_doc) in store
+            .documents
+            .iter()
+            .take(crate::lsp::search_limits::HOVER_SEARCH)
+        {
             if let Some(symbol_info) = other_doc.symbols.get(symbol_name) {
                 let mut hover_content = Vec::with_capacity(3);
 
@@ -621,7 +625,10 @@ mod handler {
             if let Some(string_literal) = extract_string_literal_from_line(line, byte_pos) {
                 return Some(create_hover_response_from_string(
                     request_id,
-                    format!("```zen\n{}\n```\n\n**Type:** `StaticString`", string_literal),
+                    format!(
+                        "```zen\n{}\n```\n\n**Type:** `StaticString`",
+                        string_literal
+                    ),
                 ));
             }
         }

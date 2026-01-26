@@ -1,6 +1,6 @@
+use crate::ast::{AstType, Expression, Statement, VariableDeclarationType};
 use crate::codegen::llvm::LLVMCompiler;
 use crate::codegen::llvm::Type;
-use crate::ast::{AstType, Expression, Statement, VariableDeclarationType};
 use crate::error::CompileError;
 use inkwell::{types::BasicTypeEnum, values::BasicValueEnum};
 
@@ -179,7 +179,9 @@ pub fn compile_variable_declaration<'ctx>(
                                     type_args[1].clone(),
                                 );
                                 compiler.generic_tracker.track_generic_type(&ast_type, name);
-                            } else if compiler.well_known.is_option(type_name) && type_args.len() == 1 {
+                            } else if compiler.well_known.is_option(type_name)
+                                && type_args.len() == 1
+                            {
                                 compiler.track_generic_type(
                                     format!("{}_Option_Some_Type", name),
                                     type_args[0].clone(),

@@ -1,9 +1,9 @@
 //! Closure type inference
 
 use crate::ast::AstType;
+use crate::ast::Expression;
 use crate::error::Result;
 use crate::typechecker::TypeChecker;
-use crate::ast::Expression;
 
 /// Infer the type of a closure/lambda expression
 pub fn infer_closure_type(

@@ -66,7 +66,8 @@ pub fn compile_closure<'ctx>(
                 .collect();
 
             // Convert param types to LLVM metadata types
-            let mut param_metadata: Vec<BasicMetadataTypeEnum> = Vec::with_capacity(param_types.len());
+            let mut param_metadata: Vec<BasicMetadataTypeEnum> =
+                Vec::with_capacity(param_types.len());
             for t in &param_types {
                 let llvm_ty = compiler.to_llvm_type(t)?;
                 let basic = compiler.expect_basic_type(llvm_ty)?;
@@ -76,7 +77,11 @@ pub fn compile_closure<'ctx>(
             // Build function type using shared helper
             let function_type = match llvm_ret_type {
                 Type::Function(f) => f,
-                _ => function_calls::build_fn_type_from_ret(compiler, llvm_ret_type, &param_metadata)?,
+                _ => function_calls::build_fn_type_from_ret(
+                    compiler,
+                    llvm_ret_type,
+                    &param_metadata,
+                )?,
             };
 
             let closure_fn = compiler
@@ -98,7 +103,10 @@ pub fn compile_closure<'ctx>(
                 let basic_type = compiler.expect_basic_type(llvm_param_type)?;
                 let alloca = compiler.builder.build_alloca(basic_type, param_name)?;
                 let param_value = closure_fn.get_nth_param(i as u32).ok_or_else(|| {
-                    CompileError::InternalError(format!("Missing parameter {}", i), compiler.get_current_span())
+                    CompileError::InternalError(
+                        format!("Missing parameter {}", i),
+                        compiler.get_current_span(),
+                    )
                 })?;
                 compiler.builder.build_store(alloca, param_value)?;
                 compiler.variables.insert(
@@ -115,11 +123,7 @@ pub fn compile_closure<'ctx>(
 
             let result = compiler.compile_expression(body)?;
 
-            if compiler
-                .current_block()?
-                .get_terminator()
-                .is_none()
-            {
+            if compiler.current_block()?.get_terminator().is_none() {
                 if matches!(ret_type, AstType::Void) {
                     compiler.builder.build_return(None)?;
                 } else {

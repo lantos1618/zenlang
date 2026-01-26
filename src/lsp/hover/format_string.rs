@@ -3,14 +3,14 @@
 use lsp_types::Position;
 use std::collections::HashMap;
 
-use crate::lsp::document_store::DocumentStore;
-use crate::lsp::helpers::char_pos_to_byte_pos;
-use crate::lsp::types::*;
-use crate::lsp::utils::format_type;
 use super::expressions::analyze_expression_hover;
 use super::structs::{extract_struct_name_from_type, find_struct_definition_in_documents};
 use crate::ast::AstType;
 use crate::lexer::Lexer;
+use crate::lsp::document_store::DocumentStore;
+use crate::lsp::helpers::char_pos_to_byte_pos;
+use crate::lsp::types::*;
+use crate::lsp::utils::format_type;
 use crate::parser::Parser;
 
 /// Handle format string field access (e.g., ${person.name})

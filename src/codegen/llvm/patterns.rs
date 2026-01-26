@@ -70,9 +70,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
         literal_val: IntValue<'ctx>,
         name: &str,
     ) -> Result<(IntValue<'ctx>, Vec<(String, BasicValueEnum<'ctx>)>), CompileError> {
-        let matches = self
-            .builder
-            .build_int_compare(inkwell::IntPredicate::EQ, scrutinee_int, literal_val, name)?;
+        let matches = self.builder.build_int_compare(
+            inkwell::IntPredicate::EQ,
+            scrutinee_int,
+            literal_val,
+            name,
+        )?;
         Ok((matches, vec![]))
     }
 
@@ -193,12 +196,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let matches = self.compare_with_tag(tag_val.into_int_value(), tag)?;
 
         let bindings = if payload.is_some() {
-            let payload_ptr = self.builder.build_struct_gep(
-                struct_type,
-                scrutinee_ptr,
-                1,
-                "payload_ptr_ptr",
-            )?;
+            let payload_ptr =
+                self.builder
+                    .build_struct_gep(struct_type, scrutinee_ptr, 1, "payload_ptr_ptr")?;
             Self::extract_payload_binding(payload, "__enum_payload_gep__", payload_ptr.into())
         } else {
             vec![]
@@ -243,9 +243,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let matches = self.compare_with_tag(tag_val.into_int_value(), tag)?;
 
         let bindings = if payload.is_some() {
-            let payload_ptr = self
-                .builder
-                .build_extract_value(scrutinee_struct, 1, "payload_ptr")?;
+            let payload_ptr =
+                self.builder
+                    .build_extract_value(scrutinee_struct, 1, "payload_ptr")?;
             Self::extract_payload_binding(payload, "__enum_payload_ptr__", payload_ptr)
         } else {
             vec![]
@@ -365,42 +365,103 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 }
                 Some(AstType::I8 | AstType::U8) => {
                     // Convert ptr to i64, then truncate to i8
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(payload_ptr, self.context.i64_type(), "ptr_to_i64") {
-                        self.builder.build_int_truncate(i64_val, self.context.i8_type(), "trunc_i8").ok().map(|v| v.into())
-                    } else { None }
+                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
+                        payload_ptr,
+                        self.context.i64_type(),
+                        "ptr_to_i64",
+                    ) {
+                        self.builder
+                            .build_int_truncate(i64_val, self.context.i8_type(), "trunc_i8")
+                            .ok()
+                            .map(|v| v.into())
+                    } else {
+                        None
+                    }
                 }
                 Some(AstType::I16 | AstType::U16) => {
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(payload_ptr, self.context.i64_type(), "ptr_to_i64") {
-                        self.builder.build_int_truncate(i64_val, self.context.i16_type(), "trunc_i16").ok().map(|v| v.into())
-                    } else { None }
+                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
+                        payload_ptr,
+                        self.context.i64_type(),
+                        "ptr_to_i64",
+                    ) {
+                        self.builder
+                            .build_int_truncate(i64_val, self.context.i16_type(), "trunc_i16")
+                            .ok()
+                            .map(|v| v.into())
+                    } else {
+                        None
+                    }
                 }
                 Some(AstType::I32 | AstType::U32) => {
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(payload_ptr, self.context.i64_type(), "ptr_to_i64") {
-                        self.builder.build_int_truncate(i64_val, self.context.i32_type(), "trunc_i32").ok().map(|v| v.into())
-                    } else { None }
+                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
+                        payload_ptr,
+                        self.context.i64_type(),
+                        "ptr_to_i64",
+                    ) {
+                        self.builder
+                            .build_int_truncate(i64_val, self.context.i32_type(), "trunc_i32")
+                            .ok()
+                            .map(|v| v.into())
+                    } else {
+                        None
+                    }
                 }
                 Some(AstType::Bool) => {
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(payload_ptr, self.context.i64_type(), "ptr_to_i64") {
-                        self.builder.build_int_truncate(i64_val, self.context.bool_type(), "trunc_bool").ok().map(|v| v.into())
-                    } else { None }
+                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
+                        payload_ptr,
+                        self.context.i64_type(),
+                        "ptr_to_i64",
+                    ) {
+                        self.builder
+                            .build_int_truncate(i64_val, self.context.bool_type(), "trunc_bool")
+                            .ok()
+                            .map(|v| v.into())
+                    } else {
+                        None
+                    }
                 }
                 Some(AstType::F32) => {
                     // Convert ptr to i64, truncate to i32, then bitcast to f32
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(payload_ptr, self.context.i64_type(), "ptr_to_i64") {
-                        if let Ok(i32_val) = self.builder.build_int_truncate(i64_val, self.context.i32_type(), "trunc_i32") {
-                            self.builder.build_bit_cast(i32_val, self.context.f32_type(), "i32_to_f32").ok()
-                        } else { None }
-                    } else { None }
+                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
+                        payload_ptr,
+                        self.context.i64_type(),
+                        "ptr_to_i64",
+                    ) {
+                        if let Ok(i32_val) = self.builder.build_int_truncate(
+                            i64_val,
+                            self.context.i32_type(),
+                            "trunc_i32",
+                        ) {
+                            self.builder
+                                .build_bit_cast(i32_val, self.context.f32_type(), "i32_to_f32")
+                                .ok()
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
                 }
                 Some(AstType::F64) => {
                     // Convert ptr to i64, then bitcast to f64
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(payload_ptr, self.context.i64_type(), "ptr_to_i64") {
-                        self.builder.build_bit_cast(i64_val, self.context.f64_type(), "i64_to_f64").ok()
-                    } else { None }
+                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
+                        payload_ptr,
+                        self.context.i64_type(),
+                        "ptr_to_i64",
+                    ) {
+                        self.builder
+                            .build_bit_cast(i64_val, self.context.f64_type(), "i64_to_f64")
+                            .ok()
+                    } else {
+                        None
+                    }
                 }
                 _ => {
                     // Default: convert to i64 (covers I64, U64, Usize, and unknown types)
-                    self.builder.build_ptr_to_int(payload_ptr, self.context.i64_type(), "ptr_to_i64").ok().map(|v| v.into())
+                    self.builder
+                        .build_ptr_to_int(payload_ptr, self.context.i64_type(), "ptr_to_i64")
+                        .ok()
+                        .map(|v| v.into())
                 }
             };
 

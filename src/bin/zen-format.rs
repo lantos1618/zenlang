@@ -1,7 +1,10 @@
 use clap::{Parser as ClapParser, Subcommand};
 use std::fs;
 use std::path::PathBuf;
-use zen::formatting::{format_braces, format_enum_variants, fix_indentation, normalize_variable_declarations, remove_trailing_whitespace};
+use zen::formatting::{
+    fix_indentation, format_braces, format_enum_variants, normalize_variable_declarations,
+    remove_trailing_whitespace,
+};
 use zen::lexer::Lexer;
 use zen::parser::Parser;
 
@@ -154,8 +157,7 @@ fn format_file(path: &PathBuf, stdout: bool) -> Result<(), String> {
             if stdout {
                 print!("{}", formatted);
             } else if formatted != content {
-                fs::write(path, formatted)
-                    .map_err(|e| format!("Failed to write file: {}", e))?;
+                fs::write(path, formatted).map_err(|e| format!("Failed to write file: {}", e))?;
                 println!("✓ Formatted {}", path.display());
             } else {
                 println!("✓ {} is already formatted", path.display());
@@ -257,4 +259,3 @@ fn fix_comptime_imports(content: &str) -> String {
     println!("Please manually move imports to module level.");
     content.to_string()
 }
-

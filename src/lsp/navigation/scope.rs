@@ -1,8 +1,8 @@
 // Scope-related helper functions for references
 
-use crate::lsp::types::{Document, SymbolScope};
 use super::utils::find_function_range;
 use crate::ast::{Function, Statement};
+use crate::lsp::types::{Document, SymbolScope};
 use lsp_types::*;
 
 /// Determine the scope of a symbol (local, module-level, or unknown)

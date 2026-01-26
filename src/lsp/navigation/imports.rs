@@ -9,12 +9,12 @@ pub struct ImportInfo {
 }
 
 /// Find import information for a symbol using AST (preferred method)
-pub fn find_import_info_from_ast(
-    ast: &[Declaration],
-    symbol_name: &str,
-) -> Option<ImportInfo> {
+pub fn find_import_info_from_ast(ast: &[Declaration], symbol_name: &str) -> Option<ImportInfo> {
     for decl in ast {
-        if let Declaration::ModuleImport { alias, module_path, .. } = decl {
+        if let Declaration::ModuleImport {
+            alias, module_path, ..
+        } = decl
+        {
             if alias == symbol_name {
                 return Some(ImportInfo {
                     import_line: format!("{{ {} }} = {}", alias, module_path),

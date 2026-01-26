@@ -3,7 +3,10 @@ use lsp_types::*;
 use serde_json::Value;
 use std::sync::{Arc, Mutex};
 
-use crate::formatting::{format_braces, format_enum_variants, fix_indentation, normalize_variable_declarations, remove_trailing_whitespace};
+use crate::formatting::{
+    fix_indentation, format_braces, format_enum_variants, normalize_variable_declarations,
+    remove_trailing_whitespace,
+};
 
 use super::document_store::DocumentStore;
 use super::helpers::{null_response, success_response, try_lock, try_parse_params_with_error};
@@ -62,4 +65,3 @@ fn format_document(content: &str) -> String {
     // Finally format enum variants (must be last to preserve enum indentation)
     format_enum_variants(&braced)
 }
-

@@ -88,7 +88,7 @@ fn find_stdlib_location(
                     range: symbol.range,
                 });
             }
-            
+
             // Try Type.method format (e.g., "String.push")
             if let Some(recv_type) = receiver_type {
                 let qualified_name = format!("{}.{}", recv_type, method_name);
@@ -153,14 +153,24 @@ pub fn resolve_ufc_method(method_info: &UfcMethodInfo, store: &DocumentStore) ->
 
     // Look up stdlib path dynamically from the registry
     if let Some(stdlib_path) = stdlib_types().get_type_source_path(&normalized_type) {
-        if let Some(location) = find_stdlib_location(stdlib_path, &method_info.method_name, Some(&normalized_type), store) {
+        if let Some(location) = find_stdlib_location(
+            stdlib_path,
+            &method_info.method_name,
+            Some(&normalized_type),
+            store,
+        ) {
             return Some(location);
         }
     }
 
     // Special case: GPA is an alias for Allocator
     if normalized_type == "GPA" {
-        if let Some(location) = find_stdlib_location("memory/allocator.zen", &method_info.method_name, Some("Allocator"), store) {
+        if let Some(location) = find_stdlib_location(
+            "memory/allocator.zen",
+            &method_info.method_name,
+            Some("Allocator"),
+            store,
+        ) {
             return Some(location);
         }
     }

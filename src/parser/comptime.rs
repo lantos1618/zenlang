@@ -116,7 +116,10 @@ impl<'a> Parser<'a> {
             let span = self.current_span.clone();
             self.next_token(); // consume 'comptime'
             let expr = self.parse_comptime_expression()?;
-            Ok(Statement::Expression { expr, span: Some(span) })
+            Ok(Statement::Expression {
+                expr,
+                span: Some(span),
+            })
         }
     }
 }

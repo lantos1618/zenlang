@@ -42,7 +42,9 @@ impl<'a> Parser<'a> {
                     is_varargs = true;
                     // After ..., expect closing paren
                     if self.current_token != Token::Symbol(')') {
-                        return Err(self.syntax_error("Expected ')' after '...' in variadic function"));
+                        return Err(
+                            self.syntax_error("Expected ')' after '...' in variadic function")
+                        );
                     }
                     break;
                 }
@@ -86,7 +88,9 @@ impl<'a> Parser<'a> {
                     is_varargs = true;
                     // After ..., expect closing paren
                     if self.current_token != Token::Symbol(')') {
-                        return Err(self.syntax_error("Expected ')' after '...' in variadic function"));
+                        return Err(
+                            self.syntax_error("Expected ')' after '...' in variadic function")
+                        );
                     }
                     break;
                 }

@@ -310,10 +310,7 @@ fn find_function_calls_in_range(content: &str, range: &Range) -> Vec<(String, Ve
             // Extract function calls from this line
             let func_calls = extract_function_calls_from_line(line, line_idx as u32);
             for (func_name, call_range) in func_calls {
-                call_map
-                    .entry(func_name)
-                    .or_default()
-                    .push(call_range);
+                call_map.entry(func_name).or_default().push(call_range);
             }
         }
     }

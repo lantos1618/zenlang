@@ -64,8 +64,10 @@ impl<'a> Parser<'a> {
         }
 
         // Now at return type, skip it (identifier with optional generics)
-        while !matches!(self.current_token, Token::Symbol('{') | Token::Eof | Token::Identifier(_))
-            || matches!(&self.current_token, Token::Identifier(_))
+        while !matches!(
+            self.current_token,
+            Token::Symbol('{') | Token::Eof | Token::Identifier(_)
+        ) || matches!(&self.current_token, Token::Identifier(_))
         {
             if matches!(self.current_token, Token::Symbol('{') | Token::Eof) {
                 break;
@@ -89,7 +91,7 @@ impl<'a> Parser<'a> {
     /// Assumes we're at '{'
     fn looks_like_trait(&mut self) -> bool {
         self.next_token(); // consume '{'
-        // Look for pattern: identifier ':' '(' which indicates a trait method
+                           // Look for pattern: identifier ':' '(' which indicates a trait method
         if let Token::Identifier(_) = &self.current_token {
             self.next_token();
             self.current_token == Token::Symbol(':') && {
@@ -105,8 +107,8 @@ impl<'a> Parser<'a> {
     /// Returns (is_struct, is_enum, is_function, is_external_fn, is_behavior, is_trait)
     fn detect_declaration_type(&mut self) -> (bool, bool, bool, bool, bool, bool) {
         // We're past the generics, check what comes next
-        let is_struct = self.current_token == Token::Symbol(':')
-            && self.peek_token == Token::Symbol('{');
+        let is_struct =
+            self.current_token == Token::Symbol(':') && self.peek_token == Token::Symbol('{');
         let is_enum = self.current_token == Token::Symbol(':')
             && (matches!(&self.peek_token, Token::Identifier(_))
                 || self.peek_token == Token::Symbol('.'));
@@ -144,8 +146,13 @@ impl<'a> Parser<'a> {
             // Parse top-level declarations
             else if let Token::Identifier(name) = &self.current_token {
                 // Check for reserved keywords from other languages
-                if let Some(err) = check_declaration_keyword_guard(&self.current_token, &self.current_span) {
-                    return err.map(|_| Program { declarations: vec![], statements: vec![] });
+                if let Some(err) =
+                    check_declaration_keyword_guard(&self.current_token, &self.current_span)
+                {
+                    return err.map(|_| Program {
+                        declarations: vec![],
+                        statements: vec![],
+                    });
                 }
                 // Handle special identifiers "type" and "comptime" first
                 if name == "type" {
@@ -190,7 +197,6 @@ impl<'a> Parser<'a> {
 
                     // If generics, need to look ahead to determine struct vs function
                     if self.peek_token == Token::Operator("<".to_string()) {
-
                         // Skip past name and generics to see what follows
                         self.next_token(); // Move to <
                         let depth = self.skip_generic_params();
@@ -219,7 +225,8 @@ impl<'a> Parser<'a> {
                                             continue;
                                         } else {
                                             // Method definition: Type<T>.method = (params) ReturnType { ... }
-                                            let full_function_name = format!("{}.{}", type_name, method_name);
+                                            let full_function_name =
+                                                format!("{}.{}", type_name, method_name);
                                             let mut func = self.parse_function()?;
                                             func.name = full_function_name;
                                             declarations.push(Declaration::Function(func));
@@ -286,13 +293,18 @@ impl<'a> Parser<'a> {
                         // Check what comes after ':'
                         let is_enum = matches!(&self.current_token, Token::Identifier(_))
                             || matches!(&self.current_token, Token::Symbol('.'));
-                        let is_function_or_external = matches!(&self.current_token, Token::Symbol('('));
+                        let is_function_or_external =
+                            matches!(&self.current_token, Token::Symbol('('));
                         let is_behavior = matches!(&self.current_token, Token::Identifier(name) if name == "behavior");
 
                         // If it looks like a function, check if it's external (no body) or regular
                         let (is_function, is_external_fn) = if is_function_or_external {
                             let has_body = self.with_lookahead(|p| p.function_has_body());
-                            if has_body { (true, false) } else { (false, true) }
+                            if has_body {
+                                (true, false)
+                            } else {
+                                (false, true)
+                            }
                         } else {
                             (false, false)
                         };
@@ -300,7 +312,11 @@ impl<'a> Parser<'a> {
                         // Check if it's a trait or struct (both start with '{')
                         let (is_struct, is_trait) = if self.current_token == Token::Symbol('{') {
                             let looks_like_trait = self.with_lookahead(|p| p.looks_like_trait());
-                            if looks_like_trait { (false, true) } else { (true, false) }
+                            if looks_like_trait {
+                                (false, true)
+                            } else {
+                                (true, false)
+                            }
                         } else {
                             (false, false)
                         };
@@ -347,7 +363,8 @@ impl<'a> Parser<'a> {
                             // This is an impl block: Type.impl = { ... }
                             self.next_token(); // consume 'impl'
                             self.expect_operator("=")?;
-                            declarations.push(Declaration::ImplBlock(self.parse_impl_block(type_name)?));
+                            declarations
+                                .push(Declaration::ImplBlock(self.parse_impl_block(type_name)?));
                         } else if method_name == "implements" {
                             // This is a trait implementation: Type.implements(Trait, { ... })
                             self.next_token(); // consume 'implements'
@@ -393,9 +410,8 @@ impl<'a> Parser<'a> {
                         }
                     } else {
                         // Not an identifier
-                        return Err(self.syntax_error(
-                            format!("Expected method name after '{}.'", type_name)
-                        ));
+                        return Err(self
+                            .syntax_error(format!("Expected method name after '{}.'", type_name)));
                     }
                 } else if self.peek_token == Token::Symbol(':') {
                     // Could be an external function declaration: name: (params) return_type
@@ -596,7 +612,9 @@ impl<'a> Parser<'a> {
         // Parse identifier-based declarations
         if let Token::Identifier(name) = &self.current_token {
             // Check for reserved keywords from other languages
-            if let Some(err) = check_declaration_keyword_guard(&self.current_token, &self.current_span) {
+            if let Some(err) =
+                check_declaration_keyword_guard(&self.current_token, &self.current_span)
+            {
                 return err.map(|_| vec![]);
             }
 
@@ -661,7 +679,9 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            if self.peek_token == Token::Symbol(':') || self.peek_token == Token::Operator("<".to_string()) {
+            if self.peek_token == Token::Symbol(':')
+                || self.peek_token == Token::Operator("<".to_string())
+            {
                 // Determine if struct, enum, function, behavior, trait
                 // Try function first (most common)
                 let func_saved = self.save_state();
@@ -692,7 +712,9 @@ impl<'a> Parser<'a> {
                 if self.try_consume_symbol('.') && self.is_keyword("impl") {
                     self.next_token();
                     self.expect_operator("=")?;
-                    return Ok(vec![Declaration::ImplBlock(self.parse_impl_block(type_name)?)]);
+                    return Ok(vec![Declaration::ImplBlock(
+                        self.parse_impl_block(type_name)?,
+                    )]);
                 }
                 // Restore and try other patterns
                 self.restore_state(impl_saved);
@@ -774,7 +796,9 @@ impl<'a> Parser<'a> {
                 let span = Some(self.current_span.clone());
                 self.next_token();
                 let label = self.current_identifier();
-                if label.is_some() { self.next_token(); }
+                if label.is_some() {
+                    self.next_token();
+                }
                 self.skip_optional_semicolon();
                 Ok(Statement::Break { label, span })
             }
@@ -787,13 +811,18 @@ impl<'a> Parser<'a> {
                 } else {
                     self.parse_statement()?
                 };
-                Ok(Statement::Defer { statement: Box::new(deferred_stmt), span })
+                Ok(Statement::Defer {
+                    statement: Box::new(deferred_stmt),
+                    span,
+                })
             }
             Token::Identifier(id) if id == "continue" => {
                 let span = Some(self.current_span.clone());
                 self.next_token();
                 let label = self.current_identifier();
-                if label.is_some() { self.next_token(); }
+                if label.is_some() {
+                    self.next_token();
+                }
                 self.skip_optional_semicolon();
                 Ok(Statement::Continue { label, span })
             }
@@ -813,7 +842,9 @@ impl<'a> Parser<'a> {
                 self.next_token(); // consume '@this'
                 self.expect_symbol('.')?;
                 if !self.is_keyword("defer") {
-                    return Err(self.syntax_error("Expected 'defer' after '@this.' - only 'defer' is supported"));
+                    return Err(self.syntax_error(
+                        "Expected 'defer' after '@this.' - only 'defer' is supported",
+                    ));
                 }
                 self.next_token(); // consume 'defer'
                 self.expect_symbol('(')?;
@@ -855,13 +886,17 @@ impl<'a> Parser<'a> {
                             self.next_token(); // consume '='
                             let value = self.parse_expression()?;
                             self.skip_optional_semicolon();
-                            Ok(Statement::PointerAssignment { pointer: lhs, value, span })
+                            Ok(Statement::PointerAssignment {
+                                pointer: lhs,
+                                value,
+                                span,
+                            })
                         } else {
                             self.skip_optional_semicolon();
                             Ok(Statement::Expression { expr: lhs, span })
                         }
                     }
-                    _ => self.parse_expression_statement()
+                    _ => self.parse_expression_statement(),
                 }
             }
             Token::Symbol('?') | Token::Symbol('(') => self.parse_expression_statement(),
@@ -1031,7 +1066,12 @@ impl<'a> Parser<'a> {
 
         // Parse loop body using helper
         let body = self.parse_brace_block("loop body")?;
-        Ok(Statement::Loop { kind, label, body, span })
+        Ok(Statement::Loop {
+            kind,
+            label,
+            body,
+            span,
+        })
     }
 
     #[allow(dead_code)]
@@ -1099,19 +1139,19 @@ impl<'a> Parser<'a> {
             } = &stmt
             {
                 let is_import = match expr {
-                        Expression::MemberAccess { object, .. } => {
-                            if let Expression::Identifier(id) = &**object {
-                                id.starts_with("@std") || id == "@std"
-                            } else {
-                                false
-                            }
+                    Expression::MemberAccess { object, .. } => {
+                        if let Expression::Identifier(id) = &**object {
+                            id.starts_with("@std") || id == "@std"
+                        } else {
+                            false
                         }
-                        Expression::FunctionCall { name, .. } => {
-                            name.contains("import") || name == "build.import"
-                        }
-                        Expression::Identifier(id) => id.starts_with("@std"),
-                        _ => false,
-                    };
+                    }
+                    Expression::FunctionCall { name, .. } => {
+                        name.contains("import") || name == "build.import"
+                    }
+                    Expression::Identifier(id) => id.starts_with("@std"),
+                    _ => false,
+                };
 
                 if is_import {
                     return Err(CompileError::SyntaxError(
@@ -1182,6 +1222,10 @@ impl<'a> Parser<'a> {
         // Parse the source (should be @std or @std.something)
         let source = self.parse_expression()?;
         self.skip_optional_semicolon();
-        Ok(Statement::DestructuringImport { names, source, span })
+        Ok(Statement::DestructuringImport {
+            names,
+            source,
+            span,
+        })
     }
 }

@@ -87,10 +87,7 @@ impl CompilerIntegration {
                     // Also index by base receiver type (before generics), e.g., "Vec<T>" -> "Vec"
                     let base = get_base_type_name(recv);
                     if base != *recv {
-                        self.method_index
-                            .entry(base)
-                            .or_default()
-                            .push(method_key);
+                        self.method_index.entry(base).or_default().push(method_key);
                     }
                 }
             }
@@ -148,8 +145,9 @@ impl CompilerIntegration {
         method_name: &str,
     ) -> Option<AstType> {
         use crate::stdlib_types::stdlib_types;
-        
-        if let Some(return_type) = stdlib_types().get_method_return_type(receiver_type, method_name) {
+
+        if let Some(return_type) = stdlib_types().get_method_return_type(receiver_type, method_name)
+        {
             return Some(return_type.clone());
         }
 

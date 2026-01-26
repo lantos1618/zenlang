@@ -281,7 +281,10 @@ pub fn normalize_variable_declarations(content: &str) -> String {
                         // Only transform if we have a valid name and type
                         if !name.is_empty() && !type_part.is_empty() && is_valid_identifier(name) {
                             // Transform: `name: Type ::= value` → `name :: Type = value`
-                            return format!("{}{} :: {} ={}", leading_whitespace, name, type_part, after_dce);
+                            return format!(
+                                "{}{} :: {} ={}",
+                                leading_whitespace, name, type_part, after_dce
+                            );
                         }
                     }
                 }
@@ -319,7 +322,8 @@ pub fn format_braces(content: &str) -> String {
 
         // Analyze the line using the lexer for accurate token detection
         let token_info = analyze_line_tokens(trimmed);
-        let is_closing_brace = token_info.first_token_is_close_brace || token_info.first_token_is_close_bracket;
+        let is_closing_brace =
+            token_info.first_token_is_close_brace || token_info.first_token_is_close_bracket;
         let is_pattern_arm = token_info.starts_with_pipe;
 
         // Exit pattern matches before handling closing braces
@@ -331,9 +335,13 @@ pub fn format_braces(content: &str) -> String {
             // 3. No more arms are coming
             let at_pattern_indent = indent_level == pm_indent + 1;
 
-            if !is_pattern_arm && (at_pattern_indent || (is_closing_brace && indent_level == pm_indent + 2)) {
+            if !is_pattern_arm
+                && (at_pattern_indent || (is_closing_brace && indent_level == pm_indent + 2))
+            {
                 // Check if there are more arms coming (using lexer-based check)
-                let more_arms = lines.iter().skip(i + 1)
+                let more_arms = lines
+                    .iter()
+                    .skip(i + 1)
                     .find(|l| !l.trim().is_empty())
                     .map(|l| is_pattern_arm_line(l))
                     .unwrap_or(false);
@@ -383,7 +391,9 @@ pub fn format_braces(content: &str) -> String {
 
         // Start pattern match (using lexer-based check)
         if token_info.ends_with_question {
-            let has_arms = lines.iter().skip(i + 1)
+            let has_arms = lines
+                .iter()
+                .skip(i + 1)
                 .find(|l| !l.trim().is_empty())
                 .map(|l| is_pattern_arm_line(l))
                 .unwrap_or(false);
@@ -400,13 +410,19 @@ pub fn format_braces(content: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::formatting::{analyze_line_tokens, format_braces, format_enum_variants, is_pattern_arm_line, is_valid_enum_name};
+    use crate::formatting::{
+        analyze_line_tokens, format_braces, format_enum_variants, is_pattern_arm_line,
+        is_valid_enum_name,
+    };
 
     #[test]
     fn test_analyze_line_braces_in_string() {
         // Braces inside strings should NOT be counted
         let info = analyze_line_tokens(r#"msg = "{ braces }""#);
-        assert_eq!(info.open_braces, 0, "braces in string should not be counted");
+        assert_eq!(
+            info.open_braces, 0,
+            "braces in string should not be counted"
+        );
         assert_eq!(info.close_braces, 0);
     }
 
@@ -427,14 +443,20 @@ mod tests {
     fn test_analyze_line_question_in_string() {
         // Question mark in string should NOT trigger pattern match
         let info = analyze_line_tokens(r#"msg = "What?""#);
-        assert!(!info.ends_with_question, "? in string should not trigger pattern match");
+        assert!(
+            !info.ends_with_question,
+            "? in string should not trigger pattern match"
+        );
     }
 
     #[test]
     fn test_analyze_line_real_question() {
         // Real question mark should trigger pattern match
         let info = analyze_line_tokens("result?");
-        assert!(info.ends_with_question, "real ? should trigger pattern match");
+        assert!(
+            info.ends_with_question,
+            "real ? should trigger pattern match"
+        );
 
         let info = analyze_line_tokens("foo.bar?");
         assert!(info.ends_with_question);
@@ -444,7 +466,10 @@ mod tests {
     fn test_analyze_line_pipe_in_string() {
         // Pipe in string should NOT be detected as pattern arm
         let info = analyze_line_tokens(r#"regex = "a|b|c""#);
-        assert!(!info.starts_with_pipe, "| in string should not be pattern arm");
+        assert!(
+            !info.starts_with_pipe,
+            "| in string should not be pattern arm"
+        );
     }
 
     #[test]
@@ -504,8 +529,14 @@ return msg
         // Line 1:     msg = "What?"
         // Line 2:     return msg
         // Line 3: }
-        assert!(lines[1].starts_with("    msg"), "line 1 should be indented msg");
-        assert!(lines[2].starts_with("    return"), "line 2 should be indented return");
+        assert!(
+            lines[1].starts_with("    msg"),
+            "line 1 should be indented msg"
+        );
+        assert!(
+            lines[2].starts_with("    return"),
+            "line 2 should be indented return"
+        );
     }
 
     #[test]
@@ -522,8 +553,8 @@ return msg
         assert!(is_valid_enum_name("Option<T>"));
         assert!(is_valid_enum_name("Result<T, E>"));
         assert!(is_valid_enum_name("Map<K, V>"));
-        assert!(!is_valid_enum_name("Option<"));  // unclosed
-        assert!(!is_valid_enum_name("Option<T> extra"));  // extra content
+        assert!(!is_valid_enum_name("Option<")); // unclosed
+        assert!(!is_valid_enum_name("Option<T> extra")); // extra content
     }
 
     #[test]

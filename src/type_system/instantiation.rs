@@ -1,4 +1,4 @@
-use super::{TypeEnvironment, TypeSubstitution, generate_instantiated_name};
+use super::{generate_instantiated_name, TypeEnvironment, TypeSubstitution};
 use crate::ast::{AstType, EnumDefinition, Expression, Function, Statement, StructDefinition};
 use crate::error::CompileError;
 
@@ -194,7 +194,12 @@ impl<'a, 'prog> TypeInstantiator<'a, 'prog> {
                 expr: self.instantiate_expression(expr, substitution),
                 span: span.clone(),
             }),
-            Statement::Loop { kind, label, body, span } => {
+            Statement::Loop {
+                kind,
+                label,
+                body,
+                span,
+            } => {
                 use crate::ast::LoopKind;
                 let new_kind = match kind {
                     LoopKind::Infinite => LoopKind::Infinite,
@@ -221,7 +226,11 @@ impl<'a, 'prog> TypeInstantiator<'a, 'prog> {
         substitution: &TypeSubstitution,
     ) -> Expression {
         match expr {
-            Expression::FunctionCall { name, type_args, args } => Expression::FunctionCall {
+            Expression::FunctionCall {
+                name,
+                type_args,
+                args,
+            } => Expression::FunctionCall {
                 name: name.clone(),
                 type_args: type_args.clone(),
                 args: args

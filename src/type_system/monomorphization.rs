@@ -12,7 +12,7 @@
 //! - Collects all required instantiations by walking the AST
 //! - Adds instantiated functions/structs/enums to the program
 
-use super::{TypeEnvironment, TypeInstantiator, generate_instantiated_name};
+use super::{generate_instantiated_name, TypeEnvironment, TypeInstantiator};
 use crate::ast::{AstType, Declaration, Expression, Program, Statement};
 use crate::error::CompileError;
 use crate::type_context::TypeContext;
@@ -84,7 +84,10 @@ impl Monomorphizer {
                         new_declarations.push(Declaration::Struct(instantiated_struct));
                     }
                     Err(e) => {
-                        eprintln!("Warning: Failed to instantiate struct {}<...>: {}", base_name, e);
+                        eprintln!(
+                            "Warning: Failed to instantiate struct {}<...>: {}",
+                            base_name, e
+                        );
                     }
                 }
             } else if let Some(generic_enum) = type_env.get_generic_enum(&base_name) {
@@ -96,7 +99,10 @@ impl Monomorphizer {
                         new_declarations.push(Declaration::Enum(instantiated_enum));
                     }
                     Err(e) => {
-                        eprintln!("Warning: Failed to instantiate enum {}<...>: {}", base_name, e);
+                        eprintln!(
+                            "Warning: Failed to instantiate enum {}<...>: {}",
+                            base_name, e
+                        );
                     }
                 }
             }
@@ -157,7 +163,9 @@ impl Monomorphizer {
         match stmt {
             Statement::Expression { expr, .. } => self.collect_from_expression(expr),
             Statement::Return { expr, .. } => self.collect_from_expression(expr),
-            Statement::VariableDeclaration { initializer, type_, .. } => {
+            Statement::VariableDeclaration {
+                initializer, type_, ..
+            } => {
                 if let Some(init) = initializer {
                     self.collect_from_expression(init);
                 }
@@ -184,7 +192,12 @@ impl Monomorphizer {
     /// Collect instantiations from an expression
     fn collect_from_expression(&mut self, expr: &Expression) {
         match expr {
-            Expression::FunctionCall { name, type_args, args, .. } => {
+            Expression::FunctionCall {
+                name,
+                type_args,
+                args,
+                ..
+            } => {
                 // If explicit type args provided, queue for instantiation
                 if !type_args.is_empty() {
                     let base_name = extract_base_name(name);
@@ -201,7 +214,12 @@ impl Monomorphizer {
                     self.collect_from_expression(arg);
                 }
             }
-            Expression::MethodCall { object, type_args, args, .. } => {
+            Expression::MethodCall {
+                object,
+                type_args,
+                args,
+                ..
+            } => {
                 self.collect_from_expression(object);
                 if !type_args.is_empty() {
                     // Method-level type args - would need to track method name too
@@ -243,7 +261,10 @@ impl Monomorphizer {
                     self.collect_from_expression(&arm.body);
                 }
             }
-            Expression::MemberAccess { object, .. } | Expression::StructField { struct_: object, .. } => {
+            Expression::MemberAccess { object, .. }
+            | Expression::StructField {
+                struct_: object, ..
+            } => {
                 self.collect_from_expression(object);
             }
             Expression::ArrayLiteral(items) => {
@@ -258,7 +279,11 @@ impl Monomorphizer {
             Expression::Dereference(inner) | Expression::AddressOf(inner) => {
                 self.collect_from_expression(inner);
             }
-            Expression::VecConstructor { element_type, initial_values, .. } => {
+            Expression::VecConstructor {
+                element_type,
+                initial_values,
+                ..
+            } => {
                 self.collect_from_type(element_type);
                 if let Some(values) = initial_values {
                     for val in values {
@@ -266,7 +291,11 @@ impl Monomorphizer {
                     }
                 }
             }
-            Expression::DynVecConstructor { element_types, allocator, initial_capacity } => {
+            Expression::DynVecConstructor {
+                element_types,
+                allocator,
+                initial_capacity,
+            } => {
                 for ty in element_types {
                     self.collect_from_type(ty);
                 }
@@ -302,7 +331,11 @@ impl Monomorphizer {
             AstType::Slice(inner) | AstType::Ref(inner) => {
                 self.collect_from_type(inner);
             }
-            AstType::Function { args, return_type } | AstType::FunctionPointer { param_types: args, return_type } => {
+            AstType::Function { args, return_type }
+            | AstType::FunctionPointer {
+                param_types: args,
+                return_type,
+            } => {
                 for arg in args {
                     self.collect_from_type(arg);
                 }
@@ -331,9 +364,10 @@ impl Monomorphizer {
         }
 
         // Check if already in pending queue
-        let already_queued = self.pending.iter().any(|(name, args)| {
-            *name == base_name && *args == type_args
-        });
+        let already_queued = self
+            .pending
+            .iter()
+            .any(|(name, args)| *name == base_name && *args == type_args);
 
         if !already_queued {
             self.pending.push((base_name, type_args));

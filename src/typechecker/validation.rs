@@ -68,18 +68,36 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
         (AstType::StaticLiteral, AstType::StaticString) => return true,
 
         // StaticString -> String struct is ok (will need allocator at runtime)
-        (AstType::Struct { name, .. }, AstType::StaticString) if StdlibTypeRegistry::is_string_type(name) => return true,
-        (AstType::Struct { name, .. }, AstType::StaticLiteral) if StdlibTypeRegistry::is_string_type(name) => return true, // Internal literal -> dynamic is ok
+        (AstType::Struct { name, .. }, AstType::StaticString)
+            if StdlibTypeRegistry::is_string_type(name) =>
+        {
+            return true
+        }
+        (AstType::Struct { name, .. }, AstType::StaticLiteral)
+            if StdlibTypeRegistry::is_string_type(name) =>
+        {
+            return true
+        } // Internal literal -> dynamic is ok
 
         // String struct -> StaticString is NOT ok (would lose allocator)
-        (AstType::StaticString, AstType::Struct { name, .. }) if StdlibTypeRegistry::is_string_type(name) => return false,
-        (AstType::StaticLiteral, AstType::Struct { name, .. }) if StdlibTypeRegistry::is_string_type(name) => return false,
+        (AstType::StaticString, AstType::Struct { name, .. })
+            if StdlibTypeRegistry::is_string_type(name) =>
+        {
+            return false
+        }
+        (AstType::StaticLiteral, AstType::Struct { name, .. })
+            if StdlibTypeRegistry::is_string_type(name) =>
+        {
+            return false
+        }
         _ => {}
     }
 
     // Check for pointer compatibility
     if expected.is_ptr_type() && actual.is_ptr_type() {
-        if let (Some(expected_inner), Some(actual_inner)) = (expected.ptr_inner(), actual.ptr_inner()) {
+        if let (Some(expected_inner), Some(actual_inner)) =
+            (expected.ptr_inner(), actual.ptr_inner())
+        {
             return types_compatible(expected_inner, actual_inner);
         }
     }
@@ -280,7 +298,11 @@ pub fn validate_import_not_in_comptime(stmt: &crate::ast::Statement) -> Result<(
     }
 
     // Check for nested comptime blocks that might contain imports
-    if let Statement::ComptimeBlock { statements: nested_stmts, .. } = stmt {
+    if let Statement::ComptimeBlock {
+        statements: nested_stmts,
+        ..
+    } = stmt
+    {
         for nested_stmt in nested_stmts {
             validate_import_not_in_comptime(nested_stmt)?;
         }
@@ -304,4 +326,3 @@ fn contains_import_expression(expr: &crate::ast::Expression) -> bool {
         _ => false,
     }
 }
-

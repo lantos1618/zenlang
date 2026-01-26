@@ -31,7 +31,8 @@ impl<'a> Parser<'a> {
 
                             // Parse additional constraints with '+' operator
                             while self.try_consume_operator("+") {
-                                let constraint_name = self.expect_identifier("trait name after '+'")?;
+                                let constraint_name =
+                                    self.expect_identifier("trait name after '+'")?;
                                 constraints.push(TraitConstraint {
                                     trait_name: constraint_name,
                                 });

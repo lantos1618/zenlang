@@ -35,7 +35,14 @@ pub fn handle_inlay_hints(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Re
     if let Some(ast) = &doc.ast {
         for decl in ast {
             if let Declaration::Function(func) = decl {
-                collect_hints_from_statements(&func.body, &doc.content, doc, &store, &mut hints, &mut seen);
+                collect_hints_from_statements(
+                    &func.body,
+                    &doc.content,
+                    doc,
+                    &store,
+                    &mut hints,
+                    &mut seen,
+                );
             }
         }
     }
@@ -55,7 +62,11 @@ fn empty_response(id: lsp_server::RequestId) -> Response {
     }
 }
 
-fn collect_hints_from_content(content: &str, hints: &mut Vec<InlayHint>, seen: &mut std::collections::HashSet<(u32, u32)>) {
+fn collect_hints_from_content(
+    content: &str,
+    hints: &mut Vec<InlayHint>,
+    seen: &mut std::collections::HashSet<(u32, u32)>,
+) {
     let mut in_struct_def = false;
     let mut brace_depth: i32 = 0;
     let mut pending_struct_def = false; // True when we saw "Name:" and expect "{" next
@@ -149,7 +160,8 @@ fn try_create_hint_for_line(
         return None;
     }
 
-    let (_var_name, hint_pos, has_explicit_type, is_mutable, is_colon_eq, rhs) = parse_var_decl(line)?;
+    let (_var_name, hint_pos, has_explicit_type, is_mutable, is_colon_eq, rhs) =
+        parse_var_decl(line)?;
 
     if has_explicit_type {
         return None;
@@ -184,7 +196,10 @@ fn try_create_hint_for_line(
     };
 
     Some(InlayHint {
-        position: Position { line: line_num, character: hint_char_pos },
+        position: Position {
+            line: line_num,
+            character: hint_char_pos,
+        },
         label: InlayHintLabel::String(hint_label),
         kind: Some(InlayHintKind::TYPE),
         text_edits: None,
@@ -210,7 +225,8 @@ fn parse_var_decl(line: &str) -> Option<(String, u32, bool, bool, bool, String)>
     // - = means immutable with inferred type
     // is_mutable: true for ::=, false for := and =
     // is_colon_eq: true for :=, false for others
-    let (eq_pos, eq_char_count, is_mutable, is_colon_eq) = if let Some(pos) = trimmed.find(" ::= ") {
+    let (eq_pos, eq_char_count, is_mutable, is_colon_eq) = if let Some(pos) = trimmed.find(" ::= ")
+    {
         (pos, 5, true, false)
     } else if let Some(pos) = trimmed.find("::=") {
         (pos, 3, true, false)
@@ -263,7 +279,14 @@ fn parse_var_decl(line: &str) -> Option<(String, u32, bool, bool, bool, String)>
     let var_start = line.find(var_name)?;
     let var_end_pos = (var_start + var_name.len()) as u32;
 
-    Some((var_name.to_string(), var_end_pos, has_explicit_type, is_mutable, is_colon_eq, after_eq.trim().to_string()))
+    Some((
+        var_name.to_string(),
+        var_end_pos,
+        has_explicit_type,
+        is_mutable,
+        is_colon_eq,
+        after_eq.trim().to_string(),
+    ))
 }
 
 fn infer_type(rhs: &str) -> Option<String> {
@@ -308,12 +331,16 @@ fn infer_type_from_expr(expr: &Expression) -> Option<String> {
 
     match expr {
         // Integer literals
-        Expression::Integer8(_) | Expression::Integer16(_) |
-        Expression::Integer32(_) | Expression::Integer64(_) => Some("i32".to_string()),
+        Expression::Integer8(_)
+        | Expression::Integer16(_)
+        | Expression::Integer32(_)
+        | Expression::Integer64(_) => Some("i32".to_string()),
 
         // Unsigned integer literals
-        Expression::Unsigned8(_) | Expression::Unsigned16(_) |
-        Expression::Unsigned32(_) | Expression::Unsigned64(_) => Some("u64".to_string()),
+        Expression::Unsigned8(_)
+        | Expression::Unsigned16(_)
+        | Expression::Unsigned32(_)
+        | Expression::Unsigned64(_) => Some("u64".to_string()),
 
         // Float literals
         Expression::Float32(_) | Expression::Float64(_) => Some("f64".to_string()),
@@ -350,7 +377,9 @@ fn infer_type_from_expr(expr: &Expression) -> Option<String> {
         Expression::StructLiteral { name, .. } => Some(name.clone()),
 
         // Enum variant construction
-        Expression::EnumVariant { enum_name, variant, .. } => {
+        Expression::EnumVariant {
+            enum_name, variant, ..
+        } => {
             if wk.is_option(enum_name) || variant == "Some" || variant == "None" {
                 Some(wk.option_name().to_string())
             } else if wk.is_result(enum_name) || variant == "Ok" || variant == "Err" {
@@ -398,7 +427,12 @@ fn collect_hints_from_statements(
 ) {
     for stmt in statements {
         match stmt {
-            Statement::VariableDeclaration { name, type_, initializer, .. } => {
+            Statement::VariableDeclaration {
+                name,
+                type_,
+                initializer,
+                ..
+            } => {
                 if type_.is_none() {
                     if let Some(init) = initializer {
                         if let Some(inferred) = infer_expr_type(init, doc, store) {
@@ -478,13 +512,22 @@ fn find_var_pos(content: &str, var_name: &str) -> Option<Position> {
 
         // Look for variable declaration (must have = operator, not just :)
         if let Some(pos) = line.find(var_name) {
-            let before = pos == 0 || line.as_bytes().get(pos - 1).map(|&b| b.is_ascii_whitespace()).unwrap_or(true);
+            let before = pos == 0
+                || line
+                    .as_bytes()
+                    .get(pos - 1)
+                    .map(|&b| b.is_ascii_whitespace())
+                    .unwrap_or(true);
             let after = &line[pos + var_name.len()..].trim_start();
 
             // Only match if followed by = (with optional : for type annotation)
             // This excludes struct field definitions like "name: Type"
-            if before && (after.starts_with('=') || after.starts_with(":=") || after.starts_with("::=")
-                || (after.starts_with(':') && after.contains('='))) {
+            if before
+                && (after.starts_with('=')
+                    || after.starts_with(":=")
+                    || after.starts_with("::=")
+                    || (after.starts_with(':') && after.contains('=')))
+            {
                 return Some(Position {
                     line: line_num as u32,
                     character: (pos + var_name.len()) as u32,
@@ -503,20 +546,27 @@ fn infer_expr_type(expr: &Expression, doc: &Document, store: &DocumentStore) -> 
         Expression::Float64(_) => Some("f64".to_string()),
         Expression::String(_) => Some("StaticString".to_string()),
         Expression::Boolean(_) => Some("bool".to_string()),
-        
+
         Expression::BinaryOp { left, right, .. } => {
             let l = infer_expr_type(left, doc, store)?;
             let r = infer_expr_type(right, doc, store)?;
-            Some(if l == "f64" || r == "f64" { "f64" } 
-                 else if l == "i64" || r == "i64" { "i64" } 
-                 else { "i32" }.to_string())
+            Some(
+                if l == "f64" || r == "f64" {
+                    "f64"
+                } else if l == "i64" || r == "i64" {
+                    "i64"
+                } else {
+                    "i32"
+                }
+                .to_string(),
+            )
         }
-        
+
         Expression::FunctionCall { name, .. } => {
             if let Some(dot_pos) = name.rfind('.') {
                 let receiver = &name[..dot_pos];
                 let method = &name[dot_pos + 1..];
-                
+
                 if let Some(ret) = stdlib_types().get_function_return_type(receiver, method) {
                     return Some(format_type(ret));
                 }
@@ -524,8 +574,12 @@ fn infer_expr_type(expr: &Expression, doc: &Document, store: &DocumentStore) -> 
                     return Some(format_type(ret));
                 }
             }
-            
-            for symbols in [&doc.symbols, &store.stdlib_symbols, &store.workspace_symbols] {
+
+            for symbols in [
+                &doc.symbols,
+                &store.stdlib_symbols,
+                &store.workspace_symbols,
+            ] {
                 if let Some(sym) = symbols.get(name) {
                     if let Some(AstType::Function { return_type, .. }) = sym.type_info.as_ref() {
                         return Some(format_type(return_type));
@@ -539,9 +593,9 @@ fn infer_expr_type(expr: &Expression, doc: &Document, store: &DocumentStore) -> 
             }
             None
         }
-        
+
         Expression::StructLiteral { name, .. } => Some(name.clone()),
-        
+
         Expression::MethodCall { object, method, .. } => {
             let recv_type = infer_expr_type(object, doc, store)?;
             if let Some(ret) = stdlib_types().get_method_return_type(&recv_type, method) {
@@ -549,7 +603,7 @@ fn infer_expr_type(expr: &Expression, doc: &Document, store: &DocumentStore) -> 
             }
             None
         }
-        
+
         Expression::Identifier(name) => {
             if let Some(sym) = doc.symbols.get(name) {
                 if let Some(ref ti) = sym.type_info {
@@ -566,7 +620,7 @@ fn infer_expr_type(expr: &Expression, doc: &Document, store: &DocumentStore) -> 
             }
             find_variable_type_in_content(&doc.content, name)
         }
-        
+
         _ => None,
     }
 }
@@ -574,25 +628,37 @@ fn infer_expr_type(expr: &Expression, doc: &Document, store: &DocumentStore) -> 
 fn extract_return_type(sig: &str) -> Option<String> {
     let close = sig.rfind(')')?;
     let ret = sig[close + 1..].trim();
-    if ret.is_empty() || ret == "{" { None } else { Some(ret.split_whitespace().next()?.to_string()) }
+    if ret.is_empty() || ret == "{" {
+        None
+    } else {
+        Some(ret.split_whitespace().next()?.to_string())
+    }
 }
 
 fn find_variable_type_in_content(content: &str, var_name: &str) -> Option<String> {
     for line in content.lines() {
         let trimmed = line.trim();
-        
+
         let pattern = format!("{} = ", var_name);
         let pattern2 = format!("{} ::= ", var_name);
-        
+
         if trimmed.starts_with(&pattern) || trimmed.starts_with(&pattern2) {
             let eq_pos = trimmed.find('=').unwrap();
             let rhs = trimmed[eq_pos + 1..].trim().trim_start_matches('=').trim();
-            
+
             if let Some(dot_pos) = rhs.find('.') {
                 let type_name = &rhs[..dot_pos];
-                if type_name.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) {
+                if type_name
+                    .chars()
+                    .next()
+                    .map(|c| c.is_uppercase())
+                    .unwrap_or(false)
+                {
                     let method = rhs[dot_pos + 1..].split('(').next().unwrap_or("");
-                    if matches!(method, "new" | "init" | "create" | "default" | "from" | "with_capacity") {
+                    if matches!(
+                        method,
+                        "new" | "init" | "create" | "default" | "from" | "with_capacity"
+                    ) {
                         return Some(type_name.to_string());
                     }
                 }

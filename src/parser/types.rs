@@ -1,5 +1,5 @@
 use super::core::Parser;
-use crate::ast::{AstType, primitive_from_str};
+use crate::ast::{primitive_from_str, AstType};
 use crate::error::Result;
 use crate::lexer::Token;
 use crate::well_known::well_known;
@@ -47,7 +47,10 @@ impl<'a> Parser<'a> {
                                 Ok(AstType::raw_ptr(inner_type))
                             }
                         } else {
-                            Err(self.syntax_error(format!("{} type requires type argument: {}<T>", type_name, type_name)))
+                            Err(self.syntax_error(format!(
+                                "{} type requires type argument: {}<T>",
+                                type_name, type_name
+                            )))
                         }
                     }
                     // Vec<T> and DynVec<T> are stdlib generic types, not special AST types
@@ -69,7 +72,9 @@ impl<'a> Parser<'a> {
                                 if self.try_consume_operator(">") {
                                     break;
                                 } else if !self.try_consume_symbol(',') {
-                                    return Err(self.syntax_error("Expected ',' or '>' in type arguments"));
+                                    return Err(
+                                        self.syntax_error("Expected ',' or '>' in type arguments")
+                                    );
                                 }
                             }
 
@@ -181,7 +186,9 @@ impl<'a> Parser<'a> {
                     }
 
                     if !self.try_consume_symbol(',') && self.current_token != Token::Symbol(')') {
-                        return Err(self.syntax_error("Expected ',' or ')' in function type parameters"));
+                        return Err(
+                            self.syntax_error("Expected ',' or ')' in function type parameters")
+                        );
                     }
                 }
 
@@ -209,7 +216,8 @@ impl<'a> Parser<'a> {
 
                 while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
                     // Parse field name
-                    let field_name = self.expect_identifier("field name in anonymous struct type")?;
+                    let field_name =
+                        self.expect_identifier("field name in anonymous struct type")?;
 
                     // Expect ':'
                     self.expect_symbol(':')?;
@@ -220,7 +228,9 @@ impl<'a> Parser<'a> {
 
                     // Check for comma or end of struct
                     if !self.try_consume_symbol(',') && self.current_token != Token::Symbol('}') {
-                        return Err(self.syntax_error("Expected ',' or '}' in anonymous struct type"));
+                        return Err(
+                            self.syntax_error("Expected ',' or '}' in anonymous struct type")
+                        );
                     }
                 }
 
@@ -234,7 +244,10 @@ impl<'a> Parser<'a> {
                     fields,
                 })
             }
-            _ => Err(self.syntax_error(format!("Unexpected token in type: {:?}", self.current_token))),
+            _ => Err(self.syntax_error(format!(
+                "Unexpected token in type: {:?}",
+                self.current_token
+            ))),
         }
     }
 
@@ -250,7 +263,9 @@ impl<'a> Parser<'a> {
                 param_types.push(self.parse_type()?);
 
                 if !self.try_consume_symbol(',') && self.current_token != Token::Symbol(')') {
-                    return Err(self.syntax_error("Expected ',' or ')' in function pointer parameters"));
+                    return Err(
+                        self.syntax_error("Expected ',' or ')' in function pointer parameters")
+                    );
                 }
             }
 

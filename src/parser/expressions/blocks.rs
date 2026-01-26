@@ -1,7 +1,7 @@
-use crate::parser::core::Parser;
 use crate::ast::Expression;
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
+use crate::parser::core::Parser;
 
 pub fn parse_block_expression(parser: &mut Parser) -> Result<Expression> {
     parser.next_token(); // consume '{'

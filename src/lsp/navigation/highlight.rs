@@ -1,8 +1,8 @@
 // Document highlight handler
 
+use super::utils::{find_symbol_at_position, is_word_boundary_char};
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::helpers::{null_response, success_response, try_lock, try_parse_params};
-use super::utils::{find_symbol_at_position, is_word_boundary_char};
 use lsp_server::{Request, Response};
 use lsp_types::*;
 

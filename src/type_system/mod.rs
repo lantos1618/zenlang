@@ -32,7 +32,9 @@ pub(crate) fn type_to_string(ast_type: &AstType) -> String {
     }
 
     match ast_type {
-        AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name) => "string".to_string(),
+        AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name) => {
+            "string".to_string()
+        }
         t if t.is_ptr_type() => {
             if let Some(inner) = t.ptr_inner() {
                 format!("ptr_{}", type_to_string(inner))
@@ -120,4 +122,3 @@ impl TypeSubstitution {
         }
     }
 }
-

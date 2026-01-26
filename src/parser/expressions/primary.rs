@@ -8,8 +8,8 @@ use crate::well_known::well_known;
 use super::calls::parse_method_chain;
 // Use control flow parsers
 use super::control_flow::{
-    parse_loop_expression, parse_break_expression, parse_continue_expression,
-    parse_return_expression, parse_comptime_expression,
+    parse_break_expression, parse_comptime_expression, parse_continue_expression,
+    parse_loop_expression, parse_return_expression,
 };
 
 pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
@@ -243,7 +243,10 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
                 // Handle None without parentheses
                 let wk = well_known();
                 Expression::EnumVariant {
-                    enum_name: wk.get_variant_parent_name(&name).unwrap_or(wk.option_name()).to_string(),
+                    enum_name: wk
+                        .get_variant_parent_name(&name)
+                        .unwrap_or(wk.option_name())
+                        .to_string(),
                     variant: name.clone(),
                     payload: None,
                 }

@@ -1,5 +1,5 @@
-use crate::codegen::llvm::LLVMCompiler;
 use crate::ast::Statement;
+use crate::codegen::llvm::LLVMCompiler;
 use crate::error::CompileError;
 
 pub fn compile_defer<'ctx>(

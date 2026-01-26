@@ -5,11 +5,13 @@ use lsp_server::{Request, Response};
 use lsp_types::*;
 use std::sync::{Arc, Mutex};
 
+use super::document_store::DocumentStore;
+use super::helpers::{
+    char_pos_to_byte_pos, null_response, success_response, try_lock, try_parse_params,
+};
+use super::types::SymbolInfo;
 use crate::ast::Declaration;
 use crate::lsp::utils::format_type;
-use super::document_store::DocumentStore;
-use super::helpers::{char_pos_to_byte_pos, null_response, success_response, try_lock, try_parse_params};
-use super::types::SymbolInfo;
 
 // ============================================================================
 // PUBLIC HANDLER FUNCTION
@@ -46,7 +48,9 @@ pub fn handle_signature_help(req: Request, store: &Arc<Mutex<DocumentStore>>) ->
 
     log::debug!(
         "[LSP] Signature help at {}:{} - function_call: {:?}",
-        position.line, position.character, function_call
+        position.line,
+        position.character,
+        function_call
     );
 
     let signature_help = match function_call {
@@ -207,18 +211,29 @@ fn find_function_in_ast(ast: &[Declaration], function_name: &str) -> Option<Sign
         match decl {
             Declaration::Function(func) if func.name == function_name => {
                 // Build label from AST
-                let args_str: String = func.args
+                let args_str: String = func
+                    .args
                     .iter()
                     .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
                     .collect::<Vec<_>>()
                     .join(", ");
-                let label = format!("{} = ({}) {}", func.name, args_str, format_type(&func.return_type));
+                let label = format!(
+                    "{} = ({}) {}",
+                    func.name,
+                    args_str,
+                    format_type(&func.return_type)
+                );
 
                 // Build parameters directly from AST
-                let parameters: Vec<ParameterInformation> = func.args
+                let parameters: Vec<ParameterInformation> = func
+                    .args
                     .iter()
                     .map(|(name, ty)| ParameterInformation {
-                        label: lsp_types::ParameterLabel::Simple(format!("{}: {}", name, format_type(ty))),
+                        label: lsp_types::ParameterLabel::Simple(format!(
+                            "{}: {}",
+                            name,
+                            format_type(ty)
+                        )),
                         documentation: None,
                     })
                     .collect();
@@ -237,18 +252,32 @@ fn find_function_in_ast(ast: &[Declaration], function_name: &str) -> Option<Sign
             Declaration::Struct(struct_def) => {
                 // Check methods in struct
                 for method in &struct_def.methods {
-                    if method.name == function_name || method.name == format!("{}.{}", struct_def.name, function_name) {
-                        let args_str: String = method.args
+                    if method.name == function_name
+                        || method.name == format!("{}.{}", struct_def.name, function_name)
+                    {
+                        let args_str: String = method
+                            .args
                             .iter()
                             .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
                             .collect::<Vec<_>>()
                             .join(", ");
-                        let label = format!("{}.{} = ({}) {}", struct_def.name, method.name, args_str, format_type(&method.return_type));
+                        let label = format!(
+                            "{}.{} = ({}) {}",
+                            struct_def.name,
+                            method.name,
+                            args_str,
+                            format_type(&method.return_type)
+                        );
 
-                        let parameters: Vec<ParameterInformation> = method.args
+                        let parameters: Vec<ParameterInformation> = method
+                            .args
                             .iter()
                             .map(|(name, ty)| ParameterInformation {
-                                label: lsp_types::ParameterLabel::Simple(format!("{}: {}", name, format_type(ty))),
+                                label: lsp_types::ParameterLabel::Simple(format!(
+                                    "{}: {}",
+                                    name,
+                                    format_type(ty)
+                                )),
                                 documentation: None,
                             })
                             .collect();

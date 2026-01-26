@@ -14,9 +14,8 @@ use zen::parser::Parser;
 
 fn main() -> std::io::Result<()> {
     // Initialize LLVM
-    Target::initialize_native(&inkwell::targets::InitializationConfig::default()).map_err(|e| {
-        io::Error::other(format!("LLVM initialization failed: {}", e))
-    })?;
+    Target::initialize_native(&inkwell::targets::InitializationConfig::default())
+        .map_err(|e| io::Error::other(format!("LLVM initialization failed: {}", e)))?;
 
     // CRITICAL: Force MCJIT linkage to prevent LTO dead code elimination.
     // Without this call, LTO removes MCJIT's static constructors that register

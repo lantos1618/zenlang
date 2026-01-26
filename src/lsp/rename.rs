@@ -38,7 +38,10 @@ pub fn handle_rename(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Respons
         if let Some(symbol_name) = find_symbol_at_position(&doc.content, position) {
             log::debug!(
                 "[LSP] Rename: symbol='{}' -> '{}' at {}:{}",
-                symbol_name, new_name, position.line, position.character
+                symbol_name,
+                new_name,
+                position.line,
+                position.character
             );
 
             // Determine the scope of the symbol

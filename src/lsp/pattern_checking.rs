@@ -217,7 +217,7 @@ pub fn find_missing_variants(
     stdlib_symbols: &std::collections::HashMap<String, SymbolInfo>,
 ) -> Vec<String> {
     let wk = well_known();
-    
+
     // First check if it's a built-in enum type
     let base_type = get_base_type_name(scrutinee_type);
     let known_enum_variants: Vec<String> = if wk.is_option(&base_type) {
@@ -227,17 +227,16 @@ pub fn find_missing_variants(
     } else {
         // Try to look up custom enum from symbol tables
         // Extract just the enum name (before any :: - get_base_type_name already removes generics)
-        let enum_name = base_type
-            .split("::")
-            .next()
-            .unwrap_or(&base_type)
-            .trim();
+        let enum_name = base_type.split("::").next().unwrap_or(&base_type).trim();
 
         // Search in all available symbol sources
         let mut found_variants: Option<Vec<String>> = None;
 
         // 1. Check current document symbols (limit search for performance)
-        for doc in documents.values().take(crate::lsp::search_limits::ENUM_SEARCH) {
+        for doc in documents
+            .values()
+            .take(crate::lsp::search_limits::ENUM_SEARCH)
+        {
             if let Some(symbol) = doc.symbols.get(enum_name) {
                 if let Some(ref variants) = symbol.enum_variants {
                     found_variants = Some(variants.clone());

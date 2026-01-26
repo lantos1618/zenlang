@@ -1,12 +1,15 @@
-use crate::codegen::llvm::LLVMCompiler;
 use crate::ast::{Expression, Statement};
+use crate::codegen::llvm::LLVMCompiler;
 use crate::error::CompileError;
-use inkwell::values::BasicValueEnum;
 use inkwell::context::Context;
 use inkwell::types::BasicType;
+use inkwell::values::BasicValueEnum;
 
 /// Create a zero/null value matching the type of the given value
-fn zero_value_like<'ctx>(_context: &'ctx Context, val: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
+fn zero_value_like<'ctx>(
+    _context: &'ctx Context,
+    val: BasicValueEnum<'ctx>,
+) -> BasicValueEnum<'ctx> {
     match val {
         BasicValueEnum::IntValue(v) => v.get_type().const_zero().into(),
         BasicValueEnum::FloatValue(v) => v.get_type().const_zero().into(),
@@ -29,9 +32,15 @@ fn build_phi_for_value<'ctx>(
         BasicValueEnum::FloatValue(v) => Some(compiler.builder.build_phi(v.get_type(), name)?),
         BasicValueEnum::PointerValue(v) => Some(compiler.builder.build_phi(v.get_type(), name)?),
         BasicValueEnum::StructValue(v) => Some(compiler.builder.build_phi(v.get_type(), name)?),
-        BasicValueEnum::ArrayValue(v) => Some(compiler.builder.build_phi(v.get_type().as_basic_type_enum(), name)?),
+        BasicValueEnum::ArrayValue(v) => Some(
+            compiler
+                .builder
+                .build_phi(v.get_type().as_basic_type_enum(), name)?,
+        ),
         BasicValueEnum::VectorValue(v) => Some(compiler.builder.build_phi(v.get_type(), name)?),
-        BasicValueEnum::ScalableVectorValue(v) => Some(compiler.builder.build_phi(v.get_type(), name)?),
+        BasicValueEnum::ScalableVectorValue(v) => {
+            Some(compiler.builder.build_phi(v.get_type(), name)?)
+        }
     };
     Ok(phi)
 }
@@ -87,7 +96,10 @@ pub fn compile_pattern_match<'ctx>(
                 .builder
                 .build_unconditional_branch(test_blocks[0])?;
 
-            let mut incoming_values: Vec<(BasicValueEnum<'ctx>, inkwell::basic_block::BasicBlock<'ctx>)> = Vec::new();
+            let mut incoming_values: Vec<(
+                BasicValueEnum<'ctx>,
+                inkwell::basic_block::BasicBlock<'ctx>,
+            )> = Vec::new();
             let mut first_arm_value: Option<BasicValueEnum<'ctx>> = None;
 
             for (i, arm) in arms.iter().enumerate() {
@@ -131,9 +143,7 @@ pub fn compile_pattern_match<'ctx>(
                             }
                         }
                     }
-                    _ => {
-                        compiler.compile_expression(&arm.body)?
-                    }
+                    _ => compiler.compile_expression(&arm.body)?,
                 };
 
                 if first_arm_value.is_none() {
@@ -200,7 +210,10 @@ pub fn compile_pattern_match<'ctx>(
                 else_block,
             )?;
 
-            let mut incoming_values: Vec<(BasicValueEnum<'ctx>, inkwell::basic_block::BasicBlock<'ctx>)> = Vec::new();
+            let mut incoming_values: Vec<(
+                BasicValueEnum<'ctx>,
+                inkwell::basic_block::BasicBlock<'ctx>,
+            )> = Vec::new();
 
             compiler.builder.position_at_end(then_block);
             let then_value = if let Some(then_arm) = arms.first() {
@@ -221,9 +234,7 @@ pub fn compile_pattern_match<'ctx>(
                             }
                         }
                     }
-                    _ => {
-                        compiler.compile_expression(&then_arm.body)?
-                    }
+                    _ => compiler.compile_expression(&then_arm.body)?,
                 }
             } else {
                 compiler.context.i32_type().const_int(0, false).into()
@@ -255,9 +266,7 @@ pub fn compile_pattern_match<'ctx>(
                                 }
                             }
                         }
-                        _ => {
-                            compiler.compile_expression(&else_arm.body)?
-                        }
+                        _ => compiler.compile_expression(&else_arm.body)?,
                     }
                 } else {
                     compiler.context.i32_type().const_int(0, false).into()
@@ -314,9 +323,19 @@ fn coerce_to_match_type<'ctx>(
         // Integer coercion (truncate or extend)
         (BasicValueEnum::IntValue(val), BasicValueEnum::IntValue(tgt)) => {
             let target_type = tgt.get_type();
-            match val.get_type().get_bit_width().cmp(&target_type.get_bit_width()) {
-                Ordering::Greater => Ok(compiler.builder.build_int_truncate(val, target_type, "trunc")?.into()),
-                Ordering::Less => Ok(compiler.builder.build_int_z_extend(val, target_type, "ext")?.into()),
+            match val
+                .get_type()
+                .get_bit_width()
+                .cmp(&target_type.get_bit_width())
+            {
+                Ordering::Greater => Ok(compiler
+                    .builder
+                    .build_int_truncate(val, target_type, "trunc")?
+                    .into()),
+                Ordering::Less => Ok(compiler
+                    .builder
+                    .build_int_z_extend(val, target_type, "ext")?
+                    .into()),
                 Ordering::Equal => Ok(value),
             }
         }
@@ -324,7 +343,10 @@ fn coerce_to_match_type<'ctx>(
         (BasicValueEnum::FloatValue(val), BasicValueEnum::FloatValue(tgt)) => {
             let target_type = tgt.get_type();
             if val.get_type() != target_type {
-                Ok(compiler.builder.build_float_cast(val, target_type, "fcast")?.into())
+                Ok(compiler
+                    .builder
+                    .build_float_cast(val, target_type, "fcast")?
+                    .into())
             } else {
                 Ok(value)
             }
@@ -332,7 +354,9 @@ fn coerce_to_match_type<'ctx>(
         // Non-struct to struct: use target's zero
         (_, BasicValueEnum::StructValue(tgt)) => Ok(tgt.get_type().const_zero().into()),
         // Struct to int: use target's zero
-        (BasicValueEnum::StructValue(_), BasicValueEnum::IntValue(tgt)) => Ok(tgt.get_type().const_zero().into()),
+        (BasicValueEnum::StructValue(_), BasicValueEnum::IntValue(tgt)) => {
+            Ok(tgt.get_type().const_zero().into())
+        }
         // Fallback: return original value
         _ => Ok(value),
     }

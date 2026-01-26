@@ -76,10 +76,14 @@ impl WellKnownTypes {
         wkt.types.insert("RawPtr".into(), WellKnownType::RawPtr);
 
         // Well-known variants (for Option and Result pattern matching)
-        wkt.variants
-            .insert("Some".into(), (WellKnownType::Option, WellKnownVariant::Some));
-        wkt.variants
-            .insert("None".into(), (WellKnownType::Option, WellKnownVariant::None));
+        wkt.variants.insert(
+            "Some".into(),
+            (WellKnownType::Option, WellKnownVariant::Some),
+        );
+        wkt.variants.insert(
+            "None".into(),
+            (WellKnownType::Option, WellKnownVariant::None),
+        );
         wkt.variants
             .insert("Ok".into(), (WellKnownType::Result, WellKnownVariant::Ok));
         wkt.variants
@@ -301,4 +305,3 @@ pub fn well_known() -> &'static WellKnownTypes {
     static INSTANCE: OnceLock<WellKnownTypes> = OnceLock::new();
     INSTANCE.get_or_init(WellKnownTypes::new)
 }
-

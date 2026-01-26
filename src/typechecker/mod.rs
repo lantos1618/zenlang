@@ -324,9 +324,11 @@ impl TypeChecker {
             Expression::BinaryOp { left, op, right } => {
                 inference::infer_binary_op_type(self, left, op, right)
             }
-            Expression::FunctionCall { name, type_args, args } => {
-                inference::infer_function_call_type(self, name, type_args, args)
-            }
+            Expression::FunctionCall {
+                name,
+                type_args,
+                args,
+            } => inference::infer_function_call_type(self, name, type_args, args),
             Expression::MemberAccess { object, member } => {
                 // Check if accessing @std namespace
                 if let Expression::Identifier(name) = &**object {
@@ -719,16 +721,22 @@ impl TypeChecker {
             Expression::Some(inner) => {
                 let inner_type = self.infer_expression_type(inner)?;
                 Ok(AstType::Generic {
-                    name: self.well_known.get_variant_parent_name(self.well_known.some_name()).unwrap().to_string(),
+                    name: self
+                        .well_known
+                        .get_variant_parent_name(self.well_known.some_name())
+                        .unwrap()
+                        .to_string(),
                     type_args: vec![inner_type],
                 })
             }
-            Expression::None => {
-                Ok(AstType::Generic {
-                    name: self.well_known.get_variant_parent_name(self.well_known.none_name()).unwrap().to_string(),
-                    type_args: vec![AstType::Void],
-                })
-            }
+            Expression::None => Ok(AstType::Generic {
+                name: self
+                    .well_known
+                    .get_variant_parent_name(self.well_known.none_name())
+                    .unwrap()
+                    .to_string(),
+                type_args: vec![AstType::Void],
+            }),
             Expression::CollectionLoop { .. } => {
                 // collection.loop() returns unit/void
                 Ok(AstType::Void)
@@ -751,7 +759,8 @@ impl TypeChecker {
         type_name: &str,
         method_name: &str,
     ) -> Option<behaviors::MethodInfo> {
-        self.behavior_resolver.resolve_method(type_name, method_name)
+        self.behavior_resolver
+            .resolve_method(type_name, method_name)
     }
 
     fn register_stdlib_module(&mut self, _alias: &str, _module_path: &str) -> Result<()> {
@@ -776,7 +785,8 @@ impl TypeChecker {
         for decl in &program.declarations {
             match decl {
                 Declaration::Struct(def) => {
-                    let fields: Vec<(String, AstType)> = def.fields
+                    let fields: Vec<(String, AstType)> = def
+                        .fields
                         .iter()
                         .map(|f| (f.name.clone(), f.type_.clone()))
                         .collect();
@@ -791,7 +801,9 @@ impl TypeChecker {
                             method_name: method.to_string(),
                             params: func.args.clone(),
                             return_type: func.return_type.clone(),
-                            is_static: func.args.first()
+                            is_static: func
+                                .args
+                                .first()
                                 .map(|(name, _)| name != "self")
                                 .unwrap_or(true),
                         };
@@ -808,7 +820,8 @@ impl TypeChecker {
                     }
                 }
                 Declaration::Enum(def) => {
-                    let variants: Vec<(String, Option<AstType>)> = def.variants
+                    let variants: Vec<(String, Option<AstType>)> = def
+                        .variants
                         .iter()
                         .map(|v| (v.name.clone(), v.payload.clone()))
                         .collect();
@@ -822,7 +835,9 @@ impl TypeChecker {
                             method_name: method.name.clone(),
                             params: method.args.clone(),
                             return_type: method.return_type.clone(),
-                            is_static: method.args.first()
+                            is_static: method
+                                .args
+                                .first()
                                 .map(|(n, _)| n != "self")
                                 .unwrap_or(true),
                         };
@@ -939,7 +954,10 @@ impl TypeChecker {
     /// Helper to resolve the payload type for an enum variant pattern match
     fn resolve_enum_payload_type(&self, variant: &str, scrutinee_type: &AstType) -> AstType {
         match scrutinee_type {
-            AstType::Generic { name: enum_name, type_args } => {
+            AstType::Generic {
+                name: enum_name,
+                type_args,
+            } => {
                 if self.well_known.is_result(enum_name) && type_args.len() >= 2 {
                     if self.well_known.is_ok(variant) {
                         type_args[0].clone()
@@ -958,7 +976,10 @@ impl TypeChecker {
                     scrutinee_type.clone()
                 }
             }
-            AstType::Enum { name: enum_name, variants } => {
+            AstType::Enum {
+                name: enum_name,
+                variants,
+            } => {
                 if self.well_known.is_option(enum_name) || self.well_known.is_result(enum_name) {
                     if let Some(enum_variant) = variants.iter().find(|v| v.name == variant) {
                         if let Some(payload_ty) = &enum_variant.payload {
@@ -975,7 +996,11 @@ impl TypeChecker {
 
     /// Helper to unwrap primitive types from Generic wrapper
     fn unwrap_primitive_generic(&self, scrutinee_type: &AstType) -> AstType {
-        if let AstType::Generic { name: type_name, type_args } = scrutinee_type {
+        if let AstType::Generic {
+            name: type_name,
+            type_args,
+        } = scrutinee_type
+        {
             if type_args.is_empty() {
                 return match type_name.as_str() {
                     "i32" | "I32" => AstType::I32,
@@ -1010,7 +1035,9 @@ impl TypeChecker {
                     self.add_pattern_bindings_to_scope_with_type(payload_pattern, &payload_type)?;
                 }
             }
-            Pattern::EnumVariant { variant, payload, .. } => {
+            Pattern::EnumVariant {
+                variant, payload, ..
+            } => {
                 if let Some(payload_pattern) = payload {
                     let payload_type = self.resolve_enum_payload_type(variant, scrutinee_type);
                     self.add_pattern_bindings_to_scope_with_type(payload_pattern, &payload_type)?;
@@ -1075,9 +1102,9 @@ mod tests {
     fn check_program(input: &str) -> Result<TypeChecker, CompileError> {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
-        let program = parser.parse_program().map_err(|e| {
-            CompileError::SyntaxError(format!("Parse error: {:?}", e), None)
-        })?;
+        let program = parser
+            .parse_program()
+            .map_err(|e| CompileError::SyntaxError(format!("Parse error: {:?}", e), None))?;
         let mut type_checker = TypeChecker::new();
         type_checker.check_program(&program)?;
         Ok(type_checker)

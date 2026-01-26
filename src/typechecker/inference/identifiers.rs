@@ -45,7 +45,10 @@ pub fn infer_identifier_type(checker: &mut TypeChecker, name: &str) -> Result<As
             Ok(parsed_type) => {
                 // Handle parsed generic types
                 match &parsed_type {
-                    AstType::Generic { name: base_name, type_args } => {
+                    AstType::Generic {
+                        name: base_name,
+                        type_args,
+                    } => {
                         let wk = &checker.well_known;
                         // Handle pointer types specially
                         if wk.is_immutable_ptr(base_name) {

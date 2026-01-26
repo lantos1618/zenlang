@@ -21,7 +21,9 @@ pub fn track_result_types<'ctx>(
     compiler.track_generic_type("Result_Ok_Type".to_string(), type_args[0].clone());
     compiler.track_generic_type("Result_Err_Type".to_string(), type_args[1].clone());
     compiler.track_complex_generic(result_type, compiler.well_known.result_name());
-    compiler.generic_tracker.track_generic_type(result_type, compiler.well_known.result_name());
+    compiler
+        .generic_tracker
+        .track_generic_type(result_type, compiler.well_known.result_name());
 }
 
 /// Convert AstType to LLVM BasicTypeEnum for loading values
@@ -43,7 +45,9 @@ pub fn ast_type_to_basic_type<'ctx>(
 }
 
 /// Get the LLVM struct type for Result/Option (tag + payload pointer)
-pub fn generic_enum_struct_type<'ctx>(compiler: &LLVMCompiler<'ctx>) -> inkwell::types::StructType<'ctx> {
+pub fn generic_enum_struct_type<'ctx>(
+    compiler: &LLVMCompiler<'ctx>,
+) -> inkwell::types::StructType<'ctx> {
     compiler.context.struct_type(
         &[
             compiler.context.i64_type().into(), // discriminant/tag
@@ -85,8 +89,8 @@ pub fn compile_comptime_expression<'ctx>(
         }
         Err(e) => Err(CompileError::InternalError(
             format!("Comptime evaluation error: {}", e),
-            compiler.get_current_span()
-        ))
+            compiler.get_current_span(),
+        )),
     }
 }
 /// Thread-safe counter for generating unique raise block IDs
@@ -100,7 +104,10 @@ pub fn compile_raise_expression<'ctx>(
     let raise_id = RAISE_ID.fetch_add(1, Ordering::Relaxed);
 
     let parent_function = compiler.current_function.ok_or_else(|| {
-        CompileError::InternalError("No current function for .raise()".to_string(), compiler.get_current_span())
+        CompileError::InternalError(
+            "No current function for .raise()".to_string(),
+            compiler.get_current_span(),
+        )
     })?;
 
     // Get the current function's name to look up its return type
@@ -112,18 +119,19 @@ pub fn compile_raise_expression<'ctx>(
 
     // Check if the function returns a Result type and if it's void
     // Try TypeContext first, then fall back to local cache
-    let return_type_opt = compiler.type_ctx.get_function_return_type(&function_name)
+    let return_type_opt = compiler
+        .type_ctx
+        .get_function_return_type(&function_name)
         .or_else(|| compiler.function_types.get(&function_name).cloned());
-    let (returns_result, is_void_function) =
-        if let Some(return_type) = return_type_opt {
-            match &return_type {
-                AstType::Generic { name, .. } if compiler.well_known.is_result(name) => (true, false),
-                AstType::Void => (false, true),
-                _ => (false, false),
-            }
-        } else {
-            (false, true) // Default to void if we don't know
-        };
+    let (returns_result, is_void_function) = if let Some(return_type) = return_type_opt {
+        match &return_type {
+            AstType::Generic { name, .. } if compiler.well_known.is_result(name) => (true, false),
+            AstType::Void => (false, true),
+            _ => (false, false),
+        }
+    } else {
+        (false, true) // Default to void if we don't know
+    };
 
     // Compile the expression that should return a Result<T, E>
     let result_value = compiler.compile_expression(expr)?;
@@ -132,11 +140,17 @@ pub fn compile_raise_expression<'ctx>(
     match expr {
         Expression::FunctionCall { name, .. } => {
             // Check TypeContext first, then local cache
-            let return_type = compiler.type_ctx.get_function_return_type(name)
+            let return_type = compiler
+                .type_ctx
+                .get_function_return_type(name)
                 .or_else(|| compiler.function_types.get(name).cloned());
             if let Some(return_type) = return_type {
                 compiler.track_complex_generic(&return_type, compiler.well_known.result_name());
-                if let AstType::Generic { name: type_name, type_args } = &return_type {
+                if let AstType::Generic {
+                    name: type_name,
+                    type_args,
+                } = &return_type
+                {
                     if compiler.well_known.is_result(type_name) {
                         track_result_types(compiler, &return_type, type_args);
                     }
@@ -146,7 +160,11 @@ pub fn compile_raise_expression<'ctx>(
         Expression::Identifier(_name) => {
             // For identifiers/variables, try to infer their type
             if let Ok(var_type) = compiler.infer_expression_type(expr) {
-                if let AstType::Generic { name: type_name, type_args } = &var_type {
+                if let AstType::Generic {
+                    name: type_name,
+                    type_args,
+                } = &var_type
+                {
                     if compiler.well_known.is_result(type_name) {
                         track_result_types(compiler, &var_type, type_args);
                     }
@@ -194,13 +212,22 @@ pub fn compile_raise_expression<'ctx>(
             // Special handling for chained method calls like get_chained().raise()
             // First try to infer what the object returns
             if let Ok(object_type) = compiler.infer_expression_type(object) {
-                if let AstType::Generic { name: type_name, type_args } = &object_type {
+                if let AstType::Generic {
+                    name: type_name,
+                    type_args,
+                } = &object_type
+                {
                     if compiler.well_known.is_result(type_name) {
                         track_result_types(compiler, &object_type, type_args);
                         // For nested Result types, track the inner type
-                        if let Some(AstType::Generic { name: inner_name, .. }) = type_args.first() {
+                        if let Some(AstType::Generic {
+                            name: inner_name, ..
+                        }) = type_args.first()
+                        {
                             if compiler.well_known.is_result(inner_name) {
-                                compiler.generic_tracker.track_generic_type(&type_args[0], "Result_Ok");
+                                compiler
+                                    .generic_tracker
+                                    .track_generic_type(&type_args[0], "Result_Ok");
                             }
                         }
                     }
@@ -208,7 +235,11 @@ pub fn compile_raise_expression<'ctx>(
             }
             // Now infer the type of the full method call expression
             if let Ok(expr_type) = compiler.infer_expression_type(expr) {
-                if let AstType::Generic { name: type_name, type_args } = &expr_type {
+                if let AstType::Generic {
+                    name: type_name,
+                    type_args,
+                } = &expr_type
+                {
                     if compiler.well_known.is_result(type_name) {
                         track_result_types(compiler, &expr_type, type_args);
                     }
@@ -218,7 +249,11 @@ pub fn compile_raise_expression<'ctx>(
         _ => {
             // Try to infer the type for other expressions
             if let Ok(expr_type) = compiler.infer_expression_type(expr) {
-                if let AstType::Generic { name: type_name, type_args } = &expr_type {
+                if let AstType::Generic {
+                    name: type_name,
+                    type_args,
+                } = &expr_type
+                {
                     if compiler.well_known.is_result(type_name) {
                         track_result_types(compiler, &expr_type, type_args);
                     }
@@ -288,7 +323,10 @@ pub fn compile_raise_expression<'ctx>(
                     .build_struct_gep(struct_type, temp_alloca, 1, "payload_ptr")?;
             // Get the actual payload type from the struct
             let payload_field_type = struct_type.get_field_type_at_index(1).ok_or_else(|| {
-                CompileError::InternalError("Result payload field not found".to_string(), compiler.get_current_span())
+                CompileError::InternalError(
+                    "Result payload field not found".to_string(),
+                    compiler.get_current_span(),
+                )
             })?;
 
             // Load the payload value (which is a pointer to the actual value)
@@ -309,18 +347,22 @@ pub fn compile_raise_expression<'ctx>(
                     {
                         // Try basic types first using helper
                         if let Some(load_type) = ast_type_to_basic_type(compiler, &ast_type) {
-                            Ok(compiler.builder.build_load(load_type, ptr_val, "ok_value_deref")?)
+                            Ok(compiler
+                                .builder
+                                .build_load(load_type, ptr_val, "ok_value_deref")?)
                         } else {
                             // Handle complex types that need special logic
                             match &ast_type {
                                 AstType::Generic { name, type_args }
-                                    if compiler.well_known.is_result(name) && type_args.len() == 2 =>
+                                    if compiler.well_known.is_result(name)
+                                        && type_args.len() == 2 =>
                                 {
                                     // Handle nested Result<T,E> - payload is a heap-allocated struct
                                     // Track with more specific keys for nested context
-                                    compiler
-                                        .generic_tracker
-                                        .track_generic_type(&ast_type, compiler.well_known.result_name());
+                                    compiler.generic_tracker.track_generic_type(
+                                        &ast_type,
+                                        compiler.well_known.result_name(),
+                                    );
 
                                     let result_struct_type = generic_enum_struct_type(compiler);
                                     // Load the nested Result struct from heap
@@ -332,7 +374,8 @@ pub fn compile_raise_expression<'ctx>(
                                     Ok(loaded_struct)
                                 }
                                 AstType::Generic { name, type_args }
-                                    if compiler.well_known.is_option(name) && type_args.len() == 1 =>
+                                    if compiler.well_known.is_option(name)
+                                        && type_args.len() == 1 =>
                                 {
                                     // Handle Option<T> - similar to Result
                                     let option_struct_type = generic_enum_struct_type(compiler);
@@ -348,7 +391,9 @@ pub fn compile_raise_expression<'ctx>(
                                     );
                                     Ok(loaded)
                                 }
-                                AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name) => {
+                                AstType::Struct { name, .. }
+                                    if StdlibTypeRegistry::is_string_type(name) =>
+                                {
                                     Ok(ptr_val.into())
                                 }
                                 AstType::StaticString | AstType::StaticLiteral => {
@@ -357,15 +402,22 @@ pub fn compile_raise_expression<'ctx>(
                                 }
                                 _ => {
                                     // Default fallback to i32
-                                    let load_type: BasicTypeEnum = compiler.context.i32_type().into();
-                                    Ok(compiler.builder.build_load(load_type, ptr_val, "ok_value_deref")?)
+                                    let load_type: BasicTypeEnum =
+                                        compiler.context.i32_type().into();
+                                    Ok(compiler.builder.build_load(
+                                        load_type,
+                                        ptr_val,
+                                        "ok_value_deref",
+                                    )?)
                                 }
                             }
                         }
                     } else {
                         // Default to i32 for backward compatibility
                         let load_type: BasicTypeEnum = compiler.context.i32_type().into();
-                        Ok(compiler.builder.build_load(load_type, ptr_val, "ok_value_deref")?)
+                        Ok(compiler
+                            .builder
+                            .build_load(load_type, ptr_val, "ok_value_deref")?)
                     };
 
                 load_result?
@@ -384,17 +436,12 @@ pub fn compile_raise_expression<'ctx>(
             if let Some(AstType::Generic { name, type_args }) = extracted_type.as_ref() {
                 if compiler.well_known.is_result(name) && type_args.len() == 2 {
                     // We're extracting a Result<T,E>, update context for next raise()
+                    compiler.track_generic_type("Result_Ok_Type".to_string(), type_args[0].clone());
                     compiler
-                        .track_generic_type("Result_Ok_Type".to_string(), type_args[0].clone());
-                    compiler.track_generic_type(
-                        "Result_Err_Type".to_string(),
-                        type_args[1].clone(),
-                    );
+                        .track_generic_type("Result_Err_Type".to_string(), type_args[1].clone());
                 } else if compiler.well_known.is_option(name) && type_args.len() == 1 {
-                    compiler.track_generic_type(
-                        "Option_Some_Type".to_string(),
-                        type_args[0].clone(),
-                    );
+                    compiler
+                        .track_generic_type("Option_Some_Type".to_string(), type_args[0].clone());
                 }
             }
 
@@ -753,7 +800,8 @@ pub fn compile_raise_expression<'ctx>(
                                 // Handle complex types
                                 match ast_type {
                                     AstType::Generic { name, .. }
-                                        if compiler.well_known.is_result(name) || compiler.well_known.is_option(name) =>
+                                        if compiler.well_known.is_result(name)
+                                            || compiler.well_known.is_option(name) =>
                                     {
                                         // For nested generics, load the struct from heap pointer
                                         generic_enum_struct_type(compiler).into()

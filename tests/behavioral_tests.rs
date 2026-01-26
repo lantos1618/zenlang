@@ -502,7 +502,10 @@ fn test_variable_immutable_explicit_type() {
     "#;
 
     let result = run_expecting_success(source);
-    assert_eq!(result.exit_code, 0, "Immutable explicit type variable failed");
+    assert_eq!(
+        result.exit_code, 0,
+        "Immutable explicit type variable failed"
+    );
 }
 
 /// Test mutable variable with inference: x ::= 10
@@ -713,7 +716,10 @@ fn test_comparison_greater_equal() {
     "#;
 
     let result = run_expecting_success(source);
-    assert_eq!(result.exit_code, 0, "Greater than or equal comparison failed");
+    assert_eq!(
+        result.exit_code, 0,
+        "Greater than or equal comparison failed"
+    );
 }
 
 // ============================================================================

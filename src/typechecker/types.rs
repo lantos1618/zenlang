@@ -1,5 +1,7 @@
-use crate::ast::{AstType, NUMERIC_TYPES, INTEGER_TYPES, FLOAT_TYPES, SIGNED_INT_TYPES, UNSIGNED_INT_TYPES};
 use crate::ast::primitives::bit_size as primitive_bit_size;
+use crate::ast::{
+    AstType, FLOAT_TYPES, INTEGER_TYPES, NUMERIC_TYPES, SIGNED_INT_TYPES, UNSIGNED_INT_TYPES,
+};
 use crate::stdlib_types::StdlibTypeRegistry;
 
 /// Helper functions for working with types
@@ -54,7 +56,9 @@ impl AstType {
         }
         match self {
             AstType::Bool => "false".to_string(),
-            AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name) => "\"\"".to_string(),
+            AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name) => {
+                "\"\"".to_string()
+            }
             t if t.is_ptr_type() => "null".to_string(),
             _ => "null".to_string(),
         }

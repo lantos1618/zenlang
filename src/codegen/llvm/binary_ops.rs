@@ -19,7 +19,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
         left: BasicValueEnum<'ctx>,
         right: BasicValueEnum<'ctx>,
     ) -> Result<NumericOperands<'ctx>, CompileError> {
-        match (left.is_int_value(), left.is_float_value(), right.is_int_value(), right.is_float_value()) {
+        match (
+            left.is_int_value(),
+            left.is_float_value(),
+            right.is_int_value(),
+            right.is_float_value(),
+        ) {
             // Both integers: normalize to same width
             (true, _, true, _) => {
                 let left_int = left.into_int_value();
@@ -28,9 +33,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 Ok(NumericOperands::Integers(l, r))
             }
             // Both floats: use as-is
-            (_, true, _, true) => {
-                Ok(NumericOperands::Floats(left.into_float_value(), right.into_float_value()))
-            }
+            (_, true, _, true) => Ok(NumericOperands::Floats(
+                left.into_float_value(),
+                right.into_float_value(),
+            )),
             // Left int, right float: promote int to float
             (true, _, _, true) => {
                 let left_float = self.builder.build_signed_int_to_float(
@@ -38,7 +44,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     self.context.f64_type(),
                     "int_to_float",
                 )?;
-                Ok(NumericOperands::Floats(left_float, right.into_float_value()))
+                Ok(NumericOperands::Floats(
+                    left_float,
+                    right.into_float_value(),
+                ))
             }
             // Left float, right int: promote int to float
             (_, true, true, _) => {
@@ -47,7 +56,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     self.context.f64_type(),
                     "int_to_float",
                 )?;
-                Ok(NumericOperands::Floats(left.into_float_value(), right_float))
+                Ok(NumericOperands::Floats(
+                    left.into_float_value(),
+                    right_float,
+                ))
             }
             _ => Err(CompileError::TypeMismatch {
                 expected: "int or float".to_string(),
@@ -71,10 +83,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let right_width = right.get_type().get_bit_width();
 
         if left_width > right_width {
-            let right_ext = self.builder.build_int_s_extend(right, left.get_type(), "ext_right")?;
+            let right_ext = self
+                .builder
+                .build_int_s_extend(right, left.get_type(), "ext_right")?;
             Ok((left, right_ext))
         } else {
-            let left_ext = self.builder.build_int_s_extend(left, right.get_type(), "ext_left")?;
+            let left_ext = self
+                .builder
+                .build_int_s_extend(left, right.get_type(), "ext_left")?;
             Ok((left_ext, right))
         }
     }
@@ -94,16 +110,20 @@ impl<'ctx> LLVMCompiler<'ctx> {
 
         if left_width > right_width {
             let right_ext = if right_width == 1 {
-                self.builder.build_int_z_extend(right, left.get_type(), "zext_right")?
+                self.builder
+                    .build_int_z_extend(right, left.get_type(), "zext_right")?
             } else {
-                self.builder.build_int_s_extend(right, left.get_type(), "ext_right")?
+                self.builder
+                    .build_int_s_extend(right, left.get_type(), "ext_right")?
             };
             Ok((left, right_ext))
         } else {
             let left_ext = if left_width == 1 {
-                self.builder.build_int_z_extend(left, right.get_type(), "zext_left")?
+                self.builder
+                    .build_int_z_extend(left, right.get_type(), "zext_left")?
             } else {
-                self.builder.build_int_s_extend(left, right.get_type(), "ext_left")?
+                self.builder
+                    .build_int_s_extend(left, right.get_type(), "ext_left")?
             };
             Ok((left_ext, right))
         }
@@ -119,8 +139,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
         name: &str,
     ) -> Result<BasicValueEnum<'ctx>, CompileError>
     where
-        FInt: FnOnce(&mut Self, IntValue<'ctx>, IntValue<'ctx>, &str) -> Result<IntValue<'ctx>, CompileError>,
-        FFloat: FnOnce(&mut Self, FloatValue<'ctx>, FloatValue<'ctx>, &str) -> Result<FloatValue<'ctx>, CompileError>,
+        FInt: FnOnce(
+            &mut Self,
+            IntValue<'ctx>,
+            IntValue<'ctx>,
+            &str,
+        ) -> Result<IntValue<'ctx>, CompileError>,
+        FFloat: FnOnce(
+            &mut Self,
+            FloatValue<'ctx>,
+            FloatValue<'ctx>,
+            &str,
+        ) -> Result<FloatValue<'ctx>, CompileError>,
     {
         match self.normalize_numeric_operands(left, right)? {
             NumericOperands::Integers(l, r) => Ok(int_op(self, l, r, name)?.into()),
@@ -147,7 +177,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
             BinaryOperator::LessThan => self.compile_less_than(left_val, right_val),
             BinaryOperator::GreaterThan => self.compile_greater_than(left_val, right_val),
             BinaryOperator::LessThanEquals => self.compile_less_than_equals(left_val, right_val),
-            BinaryOperator::GreaterThanEquals => self.compile_greater_than_equals(left_val, right_val),
+            BinaryOperator::GreaterThanEquals => {
+                self.compile_greater_than_equals(left_val, right_val)
+            }
             BinaryOperator::StringConcat => self.compile_string_concat(left_val, right_val),
             BinaryOperator::Modulo => self.compile_modulo(left_val, right_val),
             BinaryOperator::And => self.compile_and(left_val, right_val),
@@ -168,7 +200,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         // Special case: pointer + int error
         if (left.is_pointer_value() && right.is_int_value())
-            || (right.is_pointer_value() && left.is_int_value()) {
+            || (right.is_pointer_value() && left.is_int_value())
+        {
             return Err(CompileError::TypeMismatch {
                 expected: "i64".to_string(),
                 found: "String".to_string(),
@@ -177,9 +210,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
         }
 
         self.compile_arithmetic_op(
-            left, right,
-            |s, l, r, name| s.builder.build_int_add(l, r, name).map_err(CompileError::from),
-            |s, l, r, name| s.builder.build_float_add(l, r, name).map_err(CompileError::from),
+            left,
+            right,
+            |s, l, r, name| {
+                s.builder
+                    .build_int_add(l, r, name)
+                    .map_err(CompileError::from)
+            },
+            |s, l, r, name| {
+                s.builder
+                    .build_float_add(l, r, name)
+                    .map_err(CompileError::from)
+            },
             "addtmp",
         )
     }
@@ -190,9 +232,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         self.compile_arithmetic_op(
-            left, right,
-            |s, l, r, name| s.builder.build_int_sub(l, r, name).map_err(CompileError::from),
-            |s, l, r, name| s.builder.build_float_sub(l, r, name).map_err(CompileError::from),
+            left,
+            right,
+            |s, l, r, name| {
+                s.builder
+                    .build_int_sub(l, r, name)
+                    .map_err(CompileError::from)
+            },
+            |s, l, r, name| {
+                s.builder
+                    .build_float_sub(l, r, name)
+                    .map_err(CompileError::from)
+            },
             "subtmp",
         )
     }
@@ -203,9 +254,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         self.compile_arithmetic_op(
-            left, right,
-            |s, l, r, name| s.builder.build_int_mul(l, r, name).map_err(CompileError::from),
-            |s, l, r, name| s.builder.build_float_mul(l, r, name).map_err(CompileError::from),
+            left,
+            right,
+            |s, l, r, name| {
+                s.builder
+                    .build_int_mul(l, r, name)
+                    .map_err(CompileError::from)
+            },
+            |s, l, r, name| {
+                s.builder
+                    .build_float_mul(l, r, name)
+                    .map_err(CompileError::from)
+            },
             "multmp",
         )
     }
@@ -216,9 +276,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         self.compile_arithmetic_op(
-            left, right,
-            |s, l, r, name| s.builder.build_int_signed_div(l, r, name).map_err(CompileError::from),
-            |s, l, r, name| s.builder.build_float_div(l, r, name).map_err(CompileError::from),
+            left,
+            right,
+            |s, l, r, name| {
+                s.builder
+                    .build_int_signed_div(l, r, name)
+                    .map_err(CompileError::from)
+            },
+            |s, l, r, name| {
+                s.builder
+                    .build_float_div(l, r, name)
+                    .map_err(CompileError::from)
+            },
             "divtmp",
         )
     }
@@ -255,11 +324,15 @@ impl<'ctx> LLVMCompiler<'ctx> {
 
         match self.normalize_numeric_operands(left, right)? {
             NumericOperands::Integers(l, r) => {
-                let result = self.builder.build_int_compare(IntPredicate::EQ, l, r, "eqtmp")?;
+                let result = self
+                    .builder
+                    .build_int_compare(IntPredicate::EQ, l, r, "eqtmp")?;
                 Ok(result.into())
             }
             NumericOperands::Floats(l, r) => {
-                let result = self.builder.build_float_compare(FloatPredicate::OEQ, l, r, "eqtmp")?;
+                let result =
+                    self.builder
+                        .build_float_compare(FloatPredicate::OEQ, l, r, "eqtmp")?;
                 Ok(result.into())
             }
         }
@@ -277,11 +350,15 @@ impl<'ctx> LLVMCompiler<'ctx> {
 
         match self.normalize_numeric_operands(left, right)? {
             NumericOperands::Integers(l, r) => {
-                let result = self.builder.build_int_compare(IntPredicate::NE, l, r, "netmp")?;
+                let result = self
+                    .builder
+                    .build_int_compare(IntPredicate::NE, l, r, "netmp")?;
                 Ok(result.into())
             }
             NumericOperands::Floats(l, r) => {
-                let result = self.builder.build_float_compare(FloatPredicate::ONE, l, r, "netmp")?;
+                let result =
+                    self.builder
+                        .build_float_compare(FloatPredicate::ONE, l, r, "netmp")?;
                 Ok(result.into())
             }
         }
@@ -298,25 +375,38 @@ impl<'ctx> LLVMCompiler<'ctx> {
             Some(f) => f,
             None => {
                 let i8_ptr_type = self.context.ptr_type(AddressSpace::default());
-                let fn_type = self.context.i32_type().fn_type(&[i8_ptr_type.into(), i8_ptr_type.into()], false);
+                let fn_type = self
+                    .context
+                    .i32_type()
+                    .fn_type(&[i8_ptr_type.into(), i8_ptr_type.into()], false);
                 self.module.add_function("strcmp", fn_type, None)
             }
         };
 
         let call = self.builder.build_call(
             strcmp_fn,
-            &[left.into_pointer_value().into(), right.into_pointer_value().into()],
+            &[
+                left.into_pointer_value().into(),
+                right.into_pointer_value().into(),
+            ],
             "strcmp_call",
         )?;
 
         let cmp_result = call
             .try_as_basic_value()
             .left()
-            .ok_or_else(|| CompileError::InternalError("strcmp did not return a value".to_string(), self.get_current_span()))?
+            .ok_or_else(|| {
+                CompileError::InternalError(
+                    "strcmp did not return a value".to_string(),
+                    self.get_current_span(),
+                )
+            })?
             .into_int_value();
 
         let zero = self.context.i32_type().const_int(0, false);
-        let result = self.builder.build_int_compare(predicate, cmp_result, zero, name)?;
+        let result = self
+            .builder
+            .build_int_compare(predicate, cmp_result, zero, name)?;
         Ok(result.into())
     }
 
@@ -327,14 +417,22 @@ impl<'ctx> LLVMCompiler<'ctx> {
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         match self.normalize_numeric_operands(left, right)? {
             NumericOperands::Integers(l, r) => {
-                let result = self.builder.build_int_compare(IntPredicate::SLT, l, r, "lttmp")?;
+                let result = self
+                    .builder
+                    .build_int_compare(IntPredicate::SLT, l, r, "lttmp")?;
                 // Zero-extend i1 to i64 for test compatibility
-                let zext = self.builder.build_int_z_extend(result, self.context.i64_type(), "zext_lt")?;
+                let zext =
+                    self.builder
+                        .build_int_z_extend(result, self.context.i64_type(), "zext_lt")?;
                 Ok(zext.into())
             }
             NumericOperands::Floats(l, r) => {
-                let result = self.builder.build_float_compare(FloatPredicate::OLT, l, r, "lttmp")?;
-                let zext = self.builder.build_int_z_extend(result, self.context.i64_type(), "zext_lt")?;
+                let result =
+                    self.builder
+                        .build_float_compare(FloatPredicate::OLT, l, r, "lttmp")?;
+                let zext =
+                    self.builder
+                        .build_int_z_extend(result, self.context.i64_type(), "zext_lt")?;
                 Ok(zext.into())
             }
         }
@@ -347,11 +445,15 @@ impl<'ctx> LLVMCompiler<'ctx> {
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         match self.normalize_numeric_operands(left, right)? {
             NumericOperands::Integers(l, r) => {
-                let result = self.builder.build_int_compare(IntPredicate::SGT, l, r, "gttmp")?;
+                let result = self
+                    .builder
+                    .build_int_compare(IntPredicate::SGT, l, r, "gttmp")?;
                 Ok(result.into())
             }
             NumericOperands::Floats(l, r) => {
-                let result = self.builder.build_float_compare(FloatPredicate::OGT, l, r, "gttmp")?;
+                let result =
+                    self.builder
+                        .build_float_compare(FloatPredicate::OGT, l, r, "gttmp")?;
                 Ok(result.into())
             }
         }
@@ -364,11 +466,15 @@ impl<'ctx> LLVMCompiler<'ctx> {
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         match self.normalize_numeric_operands(left, right)? {
             NumericOperands::Integers(l, r) => {
-                let result = self.builder.build_int_compare(IntPredicate::SLE, l, r, "letmp")?;
+                let result = self
+                    .builder
+                    .build_int_compare(IntPredicate::SLE, l, r, "letmp")?;
                 Ok(result.into())
             }
             NumericOperands::Floats(l, r) => {
-                let result = self.builder.build_float_compare(FloatPredicate::OLE, l, r, "letmp")?;
+                let result =
+                    self.builder
+                        .build_float_compare(FloatPredicate::OLE, l, r, "letmp")?;
                 Ok(result.into())
             }
         }
@@ -381,11 +487,15 @@ impl<'ctx> LLVMCompiler<'ctx> {
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         match self.normalize_numeric_operands(left, right)? {
             NumericOperands::Integers(l, r) => {
-                let result = self.builder.build_int_compare(IntPredicate::SGE, l, r, "getmp")?;
+                let result = self
+                    .builder
+                    .build_int_compare(IntPredicate::SGE, l, r, "getmp")?;
                 Ok(result.into())
             }
             NumericOperands::Floats(l, r) => {
-                let result = self.builder.build_float_compare(FloatPredicate::OGE, l, r, "getmp")?;
+                let result =
+                    self.builder
+                        .build_float_compare(FloatPredicate::OGE, l, r, "getmp")?;
                 Ok(result.into())
             }
         }
@@ -415,7 +525,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
             });
         }
 
-        let (l, r) = self.normalize_int_widths_for_logical(left.into_int_value(), right.into_int_value())?;
+        let (l, r) =
+            self.normalize_int_widths_for_logical(left.into_int_value(), right.into_int_value())?;
         let result = self.builder.build_and(l, r, "andtmp")?;
         Ok(result.into())
     }
@@ -433,7 +544,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
             });
         }
 
-        let (l, r) = self.normalize_int_widths_for_logical(left.into_int_value(), right.into_int_value())?;
+        let (l, r) =
+            self.normalize_int_widths_for_logical(left.into_int_value(), right.into_int_value())?;
         let result = self.builder.build_or(l, r, "ortmp")?;
         Ok(result.into())
     }
@@ -510,7 +622,11 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let right_int = right.into_int_value();
         // Shift amount should match the type being shifted
         let shift_amt = if right_int.get_type() != left_int.get_type() {
-            self.builder.build_int_z_extend_or_bit_cast(right_int, left_int.get_type(), "shift_ext")?
+            self.builder.build_int_z_extend_or_bit_cast(
+                right_int,
+                left_int.get_type(),
+                "shift_ext",
+            )?
         } else {
             right_int
         };
@@ -535,12 +651,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let right_int = right.into_int_value();
         // Shift amount should match the type being shifted
         let shift_amt = if right_int.get_type() != left_int.get_type() {
-            self.builder.build_int_z_extend_or_bit_cast(right_int, left_int.get_type(), "shift_ext")?
+            self.builder.build_int_z_extend_or_bit_cast(
+                right_int,
+                left_int.get_type(),
+                "shift_ext",
+            )?
         } else {
             right_int
         };
         // Use logical (unsigned) right shift
-        let result = self.builder.build_right_shift(left_int, shift_amt, false, "shr")?;
+        let result = self
+            .builder
+            .build_right_shift(left_int, shift_amt, false, "shr")?;
         Ok(result.into())
     }
 }

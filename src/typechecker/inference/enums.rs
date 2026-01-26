@@ -171,7 +171,10 @@ pub fn infer_enum_variant_type(
     if enum_type_name.contains('<') {
         if let Ok(parsed_type) = crate::parser::parse_type_from_string(&enum_type_name) {
             match &parsed_type {
-                AstType::Generic { name: base_name, type_args } => {
+                AstType::Generic {
+                    name: base_name,
+                    type_args,
+                } => {
                     // Handle pointer types specially
                     if wk.is_immutable_ptr(base_name) && type_args.len() == 1 {
                         return Ok(AstType::ptr(type_args[0].clone()));

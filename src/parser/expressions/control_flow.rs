@@ -1,10 +1,10 @@
 //! Control flow expression parsing: loop, break, continue, return, comptime
 //! Extracted from primary.rs
 
-use crate::parser::core::Parser;
 use crate::ast::Expression;
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
+use crate::parser::core::Parser;
 
 /// Parse loop() function syntax
 pub fn parse_loop_expression(parser: &mut Parser) -> Result<Expression> {

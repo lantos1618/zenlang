@@ -9,10 +9,12 @@ use std::sync::OnceLock;
 static STDLIB_TYPES: OnceLock<StdlibTypeRegistry> = OnceLock::new();
 
 pub fn stdlib_types() -> &'static StdlibTypeRegistry {
-    STDLIB_TYPES.get_or_init(|| StdlibTypeRegistry::load().unwrap_or_else(|e| {
-        eprintln!("Warning: Failed to load stdlib types: {}", e);
-        StdlibTypeRegistry::empty()
-    }))
+    STDLIB_TYPES.get_or_init(|| {
+        StdlibTypeRegistry::load().unwrap_or_else(|e| {
+            eprintln!("Warning: Failed to load stdlib types: {}", e);
+            StdlibTypeRegistry::empty()
+        })
+    })
 }
 
 #[derive(Debug, Clone)]
@@ -56,7 +58,7 @@ impl StdlibTypeRegistry {
     fn load() -> Result<Self> {
         let mut registry = Self::empty();
         let stdlib_root = Self::find_stdlib_root();
-        
+
         if !stdlib_root.exists() {
             return Ok(registry);
         }
@@ -143,7 +145,8 @@ impl StdlibTypeRegistry {
                     let name = struct_def.name.clone();
                     let ast_type = self.struct_def_to_ast_type(&struct_def);
                     self.struct_types.insert(name.clone(), ast_type);
-                    self.struct_sources.insert(name.clone(), relative_path.to_string());
+                    self.struct_sources
+                        .insert(name.clone(), relative_path.to_string());
                     self.structs.insert(name, struct_def);
                 }
                 Declaration::Function(func) => {
@@ -156,7 +159,11 @@ impl StdlibTypeRegistry {
                             method_name: method.name.clone(),
                             params: method.args.clone(),
                             return_type: method.return_type.clone(),
-                            is_static: method.args.first().map(|(n, _)| n != "self").unwrap_or(true),
+                            is_static: method
+                                .args
+                                .first()
+                                .map(|(n, _)| n != "self")
+                                .unwrap_or(true),
                         };
                         let key = format!("{}::{}", trait_impl.type_name, method.name);
                         self.methods.insert(key, sig);
@@ -171,7 +178,9 @@ impl StdlibTypeRegistry {
 
     fn register_function(&mut self, func: &crate::ast::Function, module_name: &str) {
         if let Some((receiver, method)) = func.name.split_once('.') {
-            let is_static = func.args.first()
+            let is_static = func
+                .args
+                .first()
                 .map(|(name, _)| name != "self")
                 .unwrap_or(true);
 
@@ -192,7 +201,7 @@ impl StdlibTypeRegistry {
                 params: func.args.clone(),
                 return_type: func.return_type.clone(),
             };
-            
+
             let key = format!("{}::{}", module_name, &func.name);
             self.functions.insert(key, sig);
         }
@@ -260,7 +269,11 @@ impl StdlibTypeRegistry {
             .map(|sig| &sig.return_type)
     }
 
-    pub fn get_function_signature(&self, module: &str, func_name: &str) -> Option<&FunctionSignature> {
+    pub fn get_function_signature(
+        &self,
+        module: &str,
+        func_name: &str,
+    ) -> Option<&FunctionSignature> {
         let key = format!("{}::{}", module, func_name);
         self.functions.get(&key)
     }
@@ -279,7 +292,8 @@ impl StdlibTypeRegistry {
     pub fn requires_allocator(&self, type_name: &str) -> bool {
         if let Some(struct_def) = self.structs.get(type_name) {
             struct_def.fields.iter().any(|f| {
-                f.name == "allocator" || matches!(&f.type_, AstType::Generic { name, .. } if name == "Allocator")
+                f.name == "allocator"
+                    || matches!(&f.type_, AstType::Generic { name, .. } if name == "Allocator")
             })
         } else {
             false
@@ -296,6 +310,10 @@ impl StdlibTypeRegistry {
     /// Check if a type is known to be a generic collection type
     /// This is determined by whether the type has a .new() method in stdlib
     pub fn is_known_type(&self, type_name: &str) -> bool {
-        self.structs.contains_key(type_name) || self.methods.keys().any(|k| k.starts_with(&format!("{}::", type_name)))
+        self.structs.contains_key(type_name)
+            || self
+                .methods
+                .keys()
+                .any(|k| k.starts_with(&format!("{}::", type_name)))
     }
 }

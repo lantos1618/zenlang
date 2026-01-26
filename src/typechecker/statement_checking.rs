@@ -1,9 +1,9 @@
 //! Statement type checking
 
+use super::validation::types_compatible;
 use crate::ast::{AstType, LoopKind, Statement};
 use crate::error::{CompileError, Result};
 use crate::typechecker::TypeChecker;
-use super::validation::types_compatible;
 
 /// Type check a statement
 pub fn check_statement(checker: &mut TypeChecker, statement: &Statement) -> Result<()> {
@@ -227,7 +227,11 @@ pub fn check_statement(checker: &mut TypeChecker, statement: &Statement) -> Resu
             }
             checker.exit_scope();
         }
-        Statement::PointerAssignment { pointer, value, span } => {
+        Statement::PointerAssignment {
+            pointer,
+            value,
+            span,
+        } => {
             checker.set_current_span(span.clone());
             // For array indexing like arr[i] = value
             // The pointer expression should be a pointer type

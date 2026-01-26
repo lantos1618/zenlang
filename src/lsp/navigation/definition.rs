@@ -1,10 +1,10 @@
 // Definition handler - go-to-definition
 
-use crate::lsp::document_store::DocumentStore;
-use crate::lsp::helpers::{null_response, try_parse_params};
 use super::imports::{find_import_info, find_import_info_from_ast};
 use super::ufc::{find_ufc_method_at_position, resolve_ufc_method};
 use super::utils::{find_symbol_at_position, find_symbol_definition_in_content};
+use crate::lsp::document_store::DocumentStore;
+use crate::lsp::helpers::{null_response, try_parse_params};
 use lsp_server::{Request, Response};
 use lsp_types::*;
 use serde_json::Value;
@@ -27,9 +27,12 @@ pub fn handle_definition(
     let lock_start = std::time::Instant::now();
     let store = match store.lock() {
         Ok(s) => {
-            log::debug!("[LSP DEFINITION] Got store lock in {:?}", lock_start.elapsed());
+            log::debug!(
+                "[LSP DEFINITION] Got store lock in {:?}",
+                lock_start.elapsed()
+            );
             s
-        },
+        }
         Err(e) => {
             log::debug!("[LSP DEFINITION] Failed to get store lock: {:?}", e);
             return null_response(&req);
@@ -131,11 +134,12 @@ pub fn handle_definition(
 
                     // Look for import of module_alias (e.g., "{ build } = @std")
                     // Prefer AST-based lookup, fall back to string parsing
-                    let import_info = doc.ast.as_ref()
+                    let import_info = doc
+                        .ast
+                        .as_ref()
                         .and_then(|ast| find_import_info_from_ast(ast, module_alias))
                         .or_else(|| find_import_info(&doc.content, module_alias, position));
-                    if let Some(import_info) = import_info
-                    {
+                    if let Some(import_info) = import_info {
                         log::debug!(
                             "[LSP] Found import for {}: source={}",
                             module_alias,
@@ -151,7 +155,8 @@ pub fn handle_definition(
                         };
 
                         // Try to resolve and find the symbol
-                        if let Some(file_path) = store.stdlib_resolver.resolve_module_path(&module_path)
+                        if let Some(file_path) =
+                            store.stdlib_resolver.resolve_module_path(&module_path)
                         {
                             log::debug!(
                                 "[LSP] Resolved module path {} to file: {:?}",
@@ -173,12 +178,12 @@ pub fn handle_definition(
                                             return Response {
                                                 id: req.id,
                                                 result: Some(
-                                                    serde_json::to_value(GotoDefinitionResponse::Scalar(
-                                                        Location {
+                                                    serde_json::to_value(
+                                                        GotoDefinitionResponse::Scalar(Location {
                                                             uri: def_uri.clone(),
                                                             range: symbol_info.range,
-                                                        },
-                                                    ))
+                                                        }),
+                                                    )
                                                     .unwrap_or(Value::Null),
                                                 ),
                                                 error: None,
@@ -189,16 +194,17 @@ pub fn handle_definition(
 
                                 // Check if we have this document open
                                 if let Some(module_doc) = store.documents.get(&module_uri) {
-                                    if let Some(symbol_info) = module_doc.symbols.get(&member_name) {
+                                    if let Some(symbol_info) = module_doc.symbols.get(&member_name)
+                                    {
                                         return Response {
                                             id: req.id,
                                             result: Some(
-                                                serde_json::to_value(GotoDefinitionResponse::Scalar(
-                                                    Location {
+                                                serde_json::to_value(
+                                                    GotoDefinitionResponse::Scalar(Location {
                                                         uri: module_uri,
                                                         range: symbol_info.range,
-                                                    },
-                                                ))
+                                                    }),
+                                                )
                                                 .unwrap_or(Value::Null),
                                             ),
                                             error: None,
@@ -214,9 +220,10 @@ pub fn handle_definition(
                                         file_path
                                     );
                                     if let Ok(content) = std::fs::read_to_string(&file_path) {
-                                        if let Some(range) =
-                                            find_symbol_definition_in_content(&content, &member_name)
-                                        {
+                                        if let Some(range) = find_symbol_definition_in_content(
+                                            &content,
+                                            &member_name,
+                                        ) {
                                             log::debug!(
                                                 "[LSP] Found {} at line {} in {:?}",
                                                 member_name,
@@ -226,12 +233,12 @@ pub fn handle_definition(
                                             return Response {
                                                 id: req.id,
                                                 result: Some(
-                                                    serde_json::to_value(GotoDefinitionResponse::Scalar(
-                                                        Location {
+                                                    serde_json::to_value(
+                                                        GotoDefinitionResponse::Scalar(Location {
                                                             uri: module_uri,
                                                             range,
-                                                        },
-                                                    ))
+                                                        }),
+                                                    )
                                                     .unwrap_or(Value::Null),
                                                 ),
                                                 error: None,
@@ -246,8 +253,10 @@ pub fn handle_definition(
                         for (uri, stdlib_doc) in &store.documents {
                             let uri_path = uri.path();
                             if uri_path.contains("stdlib")
-                                && (uri_path.ends_with(&format!("{}/{}.zen", module_alias, module_alias))
-                                    || uri_path.contains(&format!("{}/{}", module_alias, module_alias)))
+                                && (uri_path
+                                    .ends_with(&format!("{}/{}.zen", module_alias, module_alias))
+                                    || uri_path
+                                        .contains(&format!("{}/{}", module_alias, module_alias)))
                             {
                                 if let Some(symbol_info) = stdlib_doc.symbols.get(&member_name) {
                                     return Response {
@@ -303,9 +312,10 @@ pub fn handle_definition(
                                 // Direct file search
                                 if file_path.exists() {
                                     if let Ok(content) = std::fs::read_to_string(&file_path) {
-                                        if let Some(range) =
-                                            find_symbol_definition_in_content(&content, &member_name)
-                                        {
+                                        if let Some(range) = find_symbol_definition_in_content(
+                                            &content,
+                                            &member_name,
+                                        ) {
                                             return Response {
                                                 id: req.id,
                                                 result: Some(
@@ -407,13 +417,16 @@ pub fn handle_definition(
 
             // Check if this is an imported symbol (e.g., { io } = @std)
             // Prefer AST-based lookup, fall back to string parsing
-            let import_info = doc.ast.as_ref()
+            let import_info = doc
+                .ast
+                .as_ref()
                 .and_then(|ast| find_import_info_from_ast(ast, &symbol_name))
                 .or_else(|| find_import_info(&doc.content, &symbol_name, position));
             if let Some(import_info) = import_info {
                 log::debug!(
                     "[LSP] Found import: {} from {}",
-                    symbol_name, import_info.source
+                    symbol_name,
+                    import_info.source
                 );
 
                 if import_info.source.starts_with("@std") {
@@ -541,8 +554,9 @@ pub fn handle_definition(
                         }
 
                         // Use stdlib_resolver to find the actual file path
-                        if let Some(file_path) =
-                            store.stdlib_resolver.resolve_module_path(&import_info.source)
+                        if let Some(file_path) = store
+                            .stdlib_resolver
+                            .resolve_module_path(&import_info.source)
                         {
                             if let Ok(module_uri) = Url::from_file_path(&file_path) {
                                 // Check if we have this document open
@@ -662,7 +676,11 @@ pub fn handle_definition(
             let mut test_match: Option<(Url, Range)> = None;
             let current_uri = &params.text_document_position_params.text_document.uri;
 
-            for (uri, other_doc) in store.documents.iter().take(crate::lsp::search_limits::DEFINITION_SEARCH) {
+            for (uri, other_doc) in store
+                .documents
+                .iter()
+                .take(crate::lsp::search_limits::DEFINITION_SEARCH)
+            {
                 if uri == current_uri {
                     continue;
                 }

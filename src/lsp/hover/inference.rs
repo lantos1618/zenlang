@@ -1,11 +1,11 @@
 use lsp_types::Url;
 use std::collections::HashMap;
 
+use crate::ast::Program;
 use crate::ast::{Declaration, Expression, Statement};
+use crate::lsp::compiler_integration::CompilerIntegration;
 use crate::lsp::types::*;
 use crate::lsp::utils::format_type;
-use crate::lsp::compiler_integration::CompilerIntegration;
-use crate::ast::Program;
 use crate::stdlib_types::stdlib_types;
 
 /// Extract type from a definition line (fallback for when AST is not available)
@@ -28,7 +28,10 @@ pub fn extract_type_from_line(line: &str) -> Option<String> {
 }
 
 /// Find variable declaration in AST and return type info
-fn find_variable_in_ast(ast: &[Declaration], var_name: &str) -> Option<(Option<crate::ast::AstType>, Option<Expression>)> {
+fn find_variable_in_ast(
+    ast: &[Declaration],
+    var_name: &str,
+) -> Option<(Option<crate::ast::AstType>, Option<Expression>)> {
     for decl in ast {
         if let Declaration::Function(func) = decl {
             if let Some(result) = find_variable_in_statements(&func.body, var_name) {
@@ -39,10 +42,18 @@ fn find_variable_in_ast(ast: &[Declaration], var_name: &str) -> Option<(Option<c
     None
 }
 
-fn find_variable_in_statements(stmts: &[Statement], var_name: &str) -> Option<(Option<crate::ast::AstType>, Option<Expression>)> {
+fn find_variable_in_statements(
+    stmts: &[Statement],
+    var_name: &str,
+) -> Option<(Option<crate::ast::AstType>, Option<Expression>)> {
     for stmt in stmts {
         match stmt {
-            Statement::VariableDeclaration { name, type_, initializer, .. } if name == var_name => {
+            Statement::VariableDeclaration {
+                name,
+                type_,
+                initializer,
+                ..
+            } if name == var_name => {
                 return Some((type_.clone(), initializer.clone()));
             }
             Statement::Loop { body, .. } => {
@@ -86,7 +97,10 @@ pub fn infer_variable_type(
 
                     // Try to infer from initializer using compiler integration
                     if let Some(init) = init_opt {
-                        let program = Program { declarations: ast.clone(), statements: vec![] };
+                        let program = Program {
+                            declarations: ast.clone(),
+                            statements: vec![],
+                        };
                         let mut compiler = CompilerIntegration::new();
                         if let Ok(inferred_type) = compiler.infer_expression_type(&program, &init) {
                             let type_str = format_type(&inferred_type);
@@ -110,7 +124,8 @@ pub fn infer_variable_type(
     }
 
     // Fallback: look up in symbol tables
-    if let Some(sym) = local_symbols.get(var_name)
+    if let Some(sym) = local_symbols
+        .get(var_name)
         .or_else(|| stdlib_symbols.get(var_name))
         .or_else(|| workspace_symbols.get(var_name))
     {
@@ -145,7 +160,9 @@ fn infer_type_from_ast_expr(expr: &Expression) -> Option<String> {
 
         Expression::FunctionCall { name, .. } => {
             // Look up function return type from stdlib
-            stdlib_types().get_function_return_type("", name).map(format_type)
+            stdlib_types()
+                .get_function_return_type("", name)
+                .map(format_type)
         }
 
         Expression::MethodCall { object, method, .. } => {

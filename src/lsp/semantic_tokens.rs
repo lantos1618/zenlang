@@ -53,7 +53,10 @@ pub fn handle_semantic_tokens(
     };
 
     let tokens = generate_semantic_tokens(&doc.content);
-    let result = SemanticTokens { result_id: None, data: tokens };
+    let result = SemanticTokens {
+        result_id: None,
+        data: tokens,
+    };
 
     Response {
         id: req.id,
@@ -83,7 +86,11 @@ fn empty_response(id: lsp_server::RequestId) -> Response {
 }
 
 fn null_response(id: lsp_server::RequestId) -> Response {
-    Response { id, result: Some(Value::Null), error: None }
+    Response {
+        id,
+        result: Some(Value::Null),
+        error: None,
+    }
 }
 
 // ============================================================================
@@ -158,7 +165,13 @@ fn generate_semantic_tokens(content: &str) -> Vec<SemanticToken> {
             Token::InterpolationStart | Token::InterpolationEnd | Token::Eof => continue,
         };
 
-        raw_tokens.push(RawToken { line, column, length, token_type, modifiers });
+        raw_tokens.push(RawToken {
+            line,
+            column,
+            length,
+            token_type,
+            modifiers,
+        });
     }
 
     // Sort by position and encode
@@ -228,7 +241,11 @@ fn extract_block_comment(
         if chars[*i] == '*' && matches!(chars.get(*i + 1), Some('/')) {
             // End of comment
             let len = (*i + 2 - seg_start) as u32;
-            let (c, extra) = if seg_line == start_line { (start_col, 2) } else { (0, 0) };
+            let (c, extra) = if seg_line == start_line {
+                (start_col, 2)
+            } else {
+                (0, 0)
+            };
             tokens.push(RawToken {
                 line: seg_line,
                 column: c,
@@ -305,9 +322,28 @@ fn classify_identifier(name: &str, after_fn: bool, after_dot: bool) -> (u32, u32
 fn is_keyword(name: &str) -> bool {
     matches!(
         name,
-        "fn" | "let" | "mut" | "const" | "if" | "else" | "match" | "while" | "for" | "loop"
-            | "break" | "continue" | "return" | "raise" | "import" | "export" | "struct"
-            | "enum" | "type" | "defer" | "true" | "false" | "null"
+        "fn" | "let"
+            | "mut"
+            | "const"
+            | "if"
+            | "else"
+            | "match"
+            | "while"
+            | "for"
+            | "loop"
+            | "break"
+            | "continue"
+            | "return"
+            | "raise"
+            | "import"
+            | "export"
+            | "struct"
+            | "enum"
+            | "type"
+            | "defer"
+            | "true"
+            | "false"
+            | "null"
     )
 }
 
@@ -343,7 +379,11 @@ fn encode_tokens(raw_tokens: &[RawToken]) -> Vec<SemanticToken> {
 
     for tok in raw_tokens {
         let delta_line = tok.line - prev_line;
-        let delta_start = if delta_line == 0 { tok.column - prev_col } else { tok.column };
+        let delta_start = if delta_line == 0 {
+            tok.column - prev_col
+        } else {
+            tok.column
+        };
 
         result.push(SemanticToken {
             delta_line,

@@ -35,10 +35,7 @@ pub fn get_semantic_dot_completions(
                 label: field_name.clone(),
                 kind: Some(CompletionItemKind::FIELD),
                 detail: Some(format!("{}: {}", field_name, format_type(field_type))),
-                documentation: Some(Documentation::String(format!(
-                    "Field of `{}`",
-                    type_name
-                ))),
+                documentation: Some(Documentation::String(format!("Field of `{}`", type_name))),
                 sort_text: Some(format!("0{}", field_name)), // Fields first
                 ..Default::default()
             });
@@ -63,7 +60,10 @@ fn get_type_name(ty: &AstType) -> String {
         AstType::Struct { name, .. } => name.clone(),
         AstType::Generic { name, .. } => name.clone(),
         // Use centralized primitive name lookup
-        _ => ty.primitive_name().map(|s| s.to_string()).unwrap_or_else(|| format!("{}", ty)),
+        _ => ty
+            .primitive_name()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("{}", ty)),
     }
 }
 
@@ -83,7 +83,8 @@ fn add_methods_from_context(
 
             // Get parameters if available
             let params_str = if let Some(params) = type_ctx.method_params.get(key) {
-                params.iter()
+                params
+                    .iter()
                     .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
                     .collect::<Vec<_>>()
                     .join(", ")
@@ -97,11 +98,12 @@ fn add_methods_from_context(
             completions.push(CompletionItem {
                 label: method_name.to_string(),
                 kind: Some(CompletionItemKind::METHOD),
-                detail: Some(format!("({}) -> {}", params_str, format_type(&specialized_return))),
-                documentation: Some(Documentation::String(format!(
-                    "Method of `{}`",
-                    type_name
-                ))),
+                detail: Some(format!(
+                    "({}) -> {}",
+                    params_str,
+                    format_type(&specialized_return)
+                )),
+                documentation: Some(Documentation::String(format!("Method of `{}`", type_name))),
                 sort_text: Some(format!("1{}", method_name)), // Methods after fields
                 insert_text: Some(format!("{}($0)", method_name)),
                 insert_text_format: Some(InsertTextFormat::SNIPPET),
@@ -144,11 +146,7 @@ fn add_methods_from_stdlib(
 }
 
 /// Add UFC (Uniform Function Call) methods - free functions whose first param matches the type
-fn add_ufc_methods(
-    type_name: &str,
-    type_ctx: &TypeContext,
-    completions: &mut Vec<CompletionItem>,
-) {
+fn add_ufc_methods(type_name: &str, type_ctx: &TypeContext, completions: &mut Vec<CompletionItem>) {
     for (func_name, func_type) in &type_ctx.functions {
         // Skip if no parameters
         if func_type.params.is_empty() {
@@ -166,7 +164,9 @@ fn add_ufc_methods(
             }
 
             // Format remaining parameters (skip self)
-            let other_params: Vec<String> = func_type.params.iter()
+            let other_params: Vec<String> = func_type
+                .params
+                .iter()
                 .skip(1)
                 .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
                 .collect();
@@ -180,7 +180,7 @@ fn add_ufc_methods(
                     format_type(&func_type.return_type)
                 )),
                 documentation: Some(Documentation::String(
-                    "Uniform Function Call - free function callable as method".to_string()
+                    "Uniform Function Call - free function callable as method".to_string(),
                 )),
                 sort_text: Some(format!("3{}", func_name)), // UFC methods lowest priority
                 insert_text: Some(format!("{}($0)", func_name)),
@@ -226,7 +226,8 @@ fn substitute_type_params(ty: &AstType, substitutions: &[AstType]) -> AstType {
             }
 
             // Recursively substitute in type args
-            let new_args: Vec<AstType> = type_args.iter()
+            let new_args: Vec<AstType> = type_args
+                .iter()
                 .map(|arg| substitute_type_params(arg, substitutions))
                 .collect();
 
@@ -299,9 +300,7 @@ fn resolve_type_from_parsed_expr(
         }
 
         // Function call - get return type
-        Expression::FunctionCall { name, .. } => {
-            type_ctx.get_function_return_type(name)
-        }
+        Expression::FunctionCall { name, .. } => type_ctx.get_function_return_type(name),
 
         // Method call - resolve receiver type, then get method return type
         Expression::MethodCall { object, method, .. } => {
@@ -320,12 +319,10 @@ fn resolve_type_from_parsed_expr(
         }
 
         // Struct literal - the type is the struct name
-        Expression::StructLiteral { name, .. } => {
-            Some(AstType::Generic {
-                name: name.clone(),
-                type_args: vec![],
-            })
-        }
+        Expression::StructLiteral { name, .. } => Some(AstType::Generic {
+            name: name.clone(),
+            type_args: vec![],
+        }),
 
         // Field access - resolve base type, then look up field type
         Expression::StructField { struct_, field } => {

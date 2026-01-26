@@ -39,21 +39,41 @@ impl<'ctx> BehaviorCodegen<'ctx> {
 
         let method_values: Vec<BasicValueEnum> = methods
             .iter()
-            .map(|(_, func)| func.as_global_value().as_pointer_value().const_cast(fn_ptr_type).into())
+            .map(|(_, func)| {
+                func.as_global_value()
+                    .as_pointer_value()
+                    .const_cast(fn_ptr_type)
+                    .into()
+            })
             .collect();
 
         vtable_global.set_initializer(&vtable_type.const_named_struct(&method_values));
         let vtable_ptr = vtable_global.as_pointer_value();
-        self.vtables.insert((type_name.to_string(), behavior_name.to_string()), vtable_ptr);
+        self.vtables.insert(
+            (type_name.to_string(), behavior_name.to_string()),
+            vtable_ptr,
+        );
         Ok(vtable_ptr)
     }
 
-    pub fn register_method(&mut self, type_name: &str, method_name: &str, function: FunctionValue<'ctx>) {
-        self.method_impls.insert((type_name.to_string(), method_name.to_string()), function);
+    pub fn register_method(
+        &mut self,
+        type_name: &str,
+        method_name: &str,
+        function: FunctionValue<'ctx>,
+    ) {
+        self.method_impls
+            .insert((type_name.to_string(), method_name.to_string()), function);
     }
 
-    pub fn resolve_method(&self, type_name: &str, method_name: &str) -> Option<FunctionValue<'ctx>> {
-        self.method_impls.get(&(type_name.to_string(), method_name.to_string())).copied()
+    pub fn resolve_method(
+        &self,
+        type_name: &str,
+        method_name: &str,
+    ) -> Option<FunctionValue<'ctx>> {
+        self.method_impls
+            .get(&(type_name.to_string(), method_name.to_string()))
+            .copied()
     }
 }
 
@@ -80,23 +100,39 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 BasicTypeEnum::ScalableVectorType(t) => t.fn_type(param_types, false),
             },
             super::Type::Struct(st) => st.fn_type(param_types, false),
-            _ => return Err(CompileError::UnsupportedFeature(
-                format!("Unsupported return type: {:?}", return_type), None
-            )),
+            _ => {
+                return Err(CompileError::UnsupportedFeature(
+                    format!("Unsupported return type: {:?}", return_type),
+                    None,
+                ))
+            }
         })
     }
 
     /// Resolve Self type to concrete type
-    fn resolve_self_type(&self, param_type: &AstType, type_name: &str, _type_params: &[crate::ast::TypeParameter]) -> AstType {
+    fn resolve_self_type(
+        &self,
+        param_type: &AstType,
+        type_name: &str,
+        _type_params: &[crate::ast::TypeParameter],
+    ) -> AstType {
         match param_type {
             AstType::Generic { name, .. } if name == "Self" || name.starts_with("Self_") => {
                 if let Some(struct_info) = self.struct_types.get(type_name) {
-                    let fields: Vec<_> = struct_info.fields.iter()
+                    let fields: Vec<_> = struct_info
+                        .fields
+                        .iter()
                         .map(|(n, (_, t))| (n.clone(), t.clone()))
                         .collect();
-                    AstType::Struct { name: type_name.to_string(), fields }
+                    AstType::Struct {
+                        name: type_name.to_string(),
+                        fields,
+                    }
                 } else {
-                    AstType::Struct { name: type_name.to_string(), fields: vec![] }
+                    AstType::Struct {
+                        name: type_name.to_string(),
+                        fields: vec![],
+                    }
                 }
             }
             _ => param_type.clone(),
@@ -104,13 +140,22 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     /// Convert parameter to LLVM metadata type, handling structs by pointer
-    fn param_to_metadata(&self, llvm_type: super::Type<'ctx>) -> Result<BasicMetadataTypeEnum<'ctx>, CompileError> {
+    fn param_to_metadata(
+        &self,
+        llvm_type: super::Type<'ctx>,
+    ) -> Result<BasicMetadataTypeEnum<'ctx>, CompileError> {
         Ok(match llvm_type {
             super::Type::Basic(basic) => basic.into(),
-            super::Type::Struct(_) => self.context.ptr_type(inkwell::AddressSpace::default()).into(),
-            _ => return Err(CompileError::UnsupportedFeature(
-                "Unsupported parameter type in method".to_string(), None
-            )),
+            super::Type::Struct(_) => self
+                .context
+                .ptr_type(inkwell::AddressSpace::default())
+                .into(),
+            _ => {
+                return Err(CompileError::UnsupportedFeature(
+                    "Unsupported parameter type in method".to_string(),
+                    None,
+                ))
+            }
         })
     }
 
@@ -118,8 +163,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
     fn type_name_from_ast(ast_type: &AstType) -> Option<String> {
         match ast_type {
             // Vec, DynVec, HashMap etc. are now Generic types from stdlib
-            AstType::Struct { name, .. } | AstType::Generic { name, .. }
-            | AstType::Enum { name, .. } | AstType::EnumType { name } => Some(name.clone()),
+            AstType::Struct { name, .. }
+            | AstType::Generic { name, .. }
+            | AstType::Enum { name, .. }
+            | AstType::EnumType { name } => Some(name.clone()),
             _ => None,
         }
     }
@@ -130,7 +177,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
 // ============================================================================
 
 impl<'ctx> LLVMCompiler<'ctx> {
-    pub fn compile_impl_block(&mut self, impl_block: &crate::ast::ImplBlock) -> Result<(), CompileError> {
+    pub fn compile_impl_block(
+        &mut self,
+        impl_block: &crate::ast::ImplBlock,
+    ) -> Result<(), CompileError> {
         let type_name = &impl_block.type_name;
         self.current_impl_type = Some(type_name.clone());
 
@@ -146,8 +196,13 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     } else {
                         AstType::ptr(AstType::Generic {
                             name: type_name.clone(),
-                            type_args: impl_block.type_params.iter()
-                                .map(|tp| AstType::Generic { name: tp.name.clone(), type_args: vec![] })
+                            type_args: impl_block
+                                .type_params
+                                .iter()
+                                .map(|tp| AstType::Generic {
+                                    name: tp.name.clone(),
+                                    type_args: vec![],
+                                })
                                 .collect(),
                         })
                     }
@@ -163,7 +218,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
             let function = self.module.add_function(&mangled_name, fn_type, None);
 
             if let Some(ref mut bc) = self.behavior_codegen {
-                bc.method_impls.insert((type_name.clone(), method.name.clone()), function);
+                bc.method_impls
+                    .insert((type_name.clone(), method.name.clone()), function);
             }
         }
 
@@ -176,7 +232,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
 // ============================================================================
 
 impl<'ctx> LLVMCompiler<'ctx> {
-    pub fn compile_trait_implementation(&mut self, trait_impl: &TraitImplementation) -> Result<(), CompileError> {
+    pub fn compile_trait_implementation(
+        &mut self,
+        trait_impl: &TraitImplementation,
+    ) -> Result<(), CompileError> {
         let type_name = &trait_impl.type_name;
         let trait_name = &trait_impl.trait_name;
         self.current_impl_type = Some(type_name.clone());
@@ -193,14 +252,21 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     param_type.clone()
                 };
 
-                let llvm_param = if param_name == "self" || matches!(actual_type, AstType::Struct { .. }) {
-                    let st = self.to_llvm_type(&actual_type)?;
-                    if matches!(st, super::Type::Struct(_)) {
-                        super::Type::Basic(self.context.ptr_type(inkwell::AddressSpace::default()).into())
-                    } else { st }
-                } else {
-                    self.to_llvm_type(&actual_type)?
-                };
+                let llvm_param =
+                    if param_name == "self" || matches!(actual_type, AstType::Struct { .. }) {
+                        let st = self.to_llvm_type(&actual_type)?;
+                        if matches!(st, super::Type::Struct(_)) {
+                            super::Type::Basic(
+                                self.context
+                                    .ptr_type(inkwell::AddressSpace::default())
+                                    .into(),
+                            )
+                        } else {
+                            st
+                        }
+                    } else {
+                        self.to_llvm_type(&actual_type)?
+                    };
 
                 if let Ok(meta) = self.param_to_metadata(llvm_param) {
                     param_types.push(meta);
@@ -225,9 +291,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
                             self.get_current_span(),
                         )
                     })?;
-                    let alloca = self.builder.build_alloca(param_value.get_type(), param_name)?;
+                    let alloca = self
+                        .builder
+                        .build_alloca(param_value.get_type(), param_name)?;
                     self.builder.build_store(alloca, param_value)?;
-                    self.symbols.insert(param_name.clone(), super::symbols::Symbol::Variable(alloca));
+                    self.symbols
+                        .insert(param_name.clone(), super::symbols::Symbol::Variable(alloca));
 
                     let actual_type = if param_name == "self" {
                         let resolved = self.resolve_self_type(param_type, type_name, &[]);
@@ -236,13 +305,16 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         param_type.clone()
                     };
 
-                    self.variables.insert(param_name.clone(), super::VariableInfo {
-                        pointer: alloca,
-                        ast_type: actual_type,
-                        is_mutable: false,
-                        is_initialized: true,
-                        definition_span: self.get_current_span(),
-                    });
+                    self.variables.insert(
+                        param_name.clone(),
+                        super::VariableInfo {
+                            pointer: alloca,
+                            ast_type: actual_type,
+                            is_mutable: false,
+                            is_initialized: true,
+                            definition_span: self.get_current_span(),
+                        },
+                    );
                 }
             }
 
@@ -271,10 +343,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
         }
 
         // Generate vtable
-        let methods: Vec<_> = trait_impl.methods.iter()
+        let methods: Vec<_> = trait_impl
+            .methods
+            .iter()
             .filter_map(|m| {
                 let name = format!("{}_{}_{}", type_name, trait_name, m.name);
-                self.module.get_function(&name).map(|f| (m.name.as_str(), f))
+                self.module
+                    .get_function(&name)
+                    .map(|f| (m.name.as_str(), f))
             })
             .collect();
 
@@ -297,7 +373,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         &mut self,
         object: &Expression,
         method_name: &str,
-        _type_args: &[AstType],  // Reserved for generic method instantiation
+        _type_args: &[AstType], // Reserved for generic method instantiation
         args: &[Expression],
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         // For now, delegate to the existing method
@@ -337,7 +413,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
         }
 
         // Try qualified method name
-        if let Some(result) = self.try_qualified_method_call(object, &type_name, method_name, args)? {
+        if let Some(result) =
+            self.try_qualified_method_call(object, &type_name, method_name, args)?
+        {
             return Ok(result);
         }
 
@@ -352,8 +430,13 @@ impl<'ctx> LLVMCompiler<'ctx> {
         ))
     }
 
-    fn compile_std_method_call(&mut self, method_name: &str, args: &[Expression]) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        if let Ok(result) = super::functions::calls::compile_function_call(self, method_name, args) {
+    fn compile_std_method_call(
+        &mut self,
+        method_name: &str,
+        args: &[Expression],
+    ) -> Result<BasicValueEnum<'ctx>, CompileError> {
+        if let Ok(result) = super::functions::calls::compile_function_call(self, method_name, args)
+        {
             return Ok(result);
         }
         let qualified = format!("Std.{}", method_name);
@@ -370,8 +453,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
         method_name: &str,
         args: &[Expression],
     ) -> Result<Option<BasicValueEnum<'ctx>>, CompileError> {
-        let Some(ref bc) = self.behavior_codegen else { return Ok(None) };
-        let Some(function) = bc.resolve_method(type_name, method_name) else { return Ok(None) };
+        let Some(ref bc) = self.behavior_codegen else {
+            return Ok(None);
+        };
+        let Some(function) = bc.resolve_method(type_name, method_name) else {
+            return Ok(None);
+        };
 
         let self_value = match object {
             Expression::Identifier(name) => {
@@ -394,14 +481,23 @@ impl<'ctx> LLVMCompiler<'ctx> {
             compiled_args.push(self.compile_expression(arg)?);
         }
 
-        let args_meta: Vec<_> = compiled_args.iter()
+        let args_meta: Vec<_> = compiled_args
+            .iter()
             .map(|a| inkwell::values::BasicMetadataValueEnum::from(*a))
             .collect();
 
-        let call = self.builder.build_call(function, &args_meta, "method_call")?;
-        call.try_as_basic_value().left().ok_or_else(|| {
-            CompileError::TypeError("Method call returned void where value expected".to_string(), self.get_current_span())
-        }).map(Some)
+        let call = self
+            .builder
+            .build_call(function, &args_meta, "method_call")?;
+        call.try_as_basic_value()
+            .left()
+            .ok_or_else(|| {
+                CompileError::TypeError(
+                    "Method call returned void where value expected".to_string(),
+                    self.get_current_span(),
+                )
+            })
+            .map(Some)
     }
 
     fn try_qualified_method_call(
@@ -414,9 +510,13 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let qualified = format!("{}.{}", type_name, method_name);
         let qualified_generic = format!("{}<T>.{}", type_name, method_name);
 
-        let method_to_use = if self.function_types.contains_key(&qualified) || self.module.get_function(&qualified).is_some() {
+        let method_to_use = if self.function_types.contains_key(&qualified)
+            || self.module.get_function(&qualified).is_some()
+        {
             Some(qualified)
-        } else if self.function_types.contains_key(&qualified_generic) || self.module.get_function(&qualified_generic).is_some() {
+        } else if self.function_types.contains_key(&qualified_generic)
+            || self.module.get_function(&qualified_generic).is_some()
+        {
             Some(qualified_generic)
         } else {
             None
@@ -426,8 +526,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
             // Check if object is a type name (not a variable) - for static method calls
             let is_static_call = if let Expression::Identifier(id) = object {
                 // It's static if the identifier is a type name, not a variable
-                !self.variables.contains_key(id) &&
-                (self.type_ctx.has_struct(id) || self.type_ctx.has_enum(id) || self.struct_types.contains_key(id))
+                !self.variables.contains_key(id)
+                    && (self.type_ctx.has_struct(id)
+                        || self.type_ctx.has_enum(id)
+                        || self.struct_types.contains_key(id))
             } else {
                 false
             };
@@ -442,7 +544,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ufc_args
             };
 
-            if let Ok(result) = super::functions::calls::compile_function_call(self, &name, &call_args) {
+            if let Ok(result) =
+                super::functions::calls::compile_function_call(self, &name, &call_args)
+            {
                 return Ok(Some(result));
             }
         }
@@ -458,7 +562,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
         if self.function_types.contains_key(method_name) {
             let mut ufc_args = vec![object.clone()];
             ufc_args.extend_from_slice(args);
-            if let Ok(result) = super::functions::calls::compile_function_call(self, method_name, &ufc_args) {
+            if let Ok(result) =
+                super::functions::calls::compile_function_call(self, method_name, &ufc_args)
+            {
                 return Ok(Some(result));
             }
         }

@@ -73,8 +73,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 // For now, represent as pointer to element type
                 let inner_type = self.to_llvm_type(inner)?;
                 match inner_type {
-                    Type::Basic(_) => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
-                    _ => Ok(Type::Basic(self.context.ptr_type(AddressSpace::default()).into())),
+                    Type::Basic(_) => Ok(Type::Basic(
+                        self.context.ptr_type(AddressSpace::default()).into(),
+                    )),
+                    _ => Ok(Type::Basic(
+                        self.context.ptr_type(AddressSpace::default()).into(),
+                    )),
                 }
             }
             AstType::FixedArray { element_type, size } => {
@@ -332,7 +336,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             _ => Err(CompileError::UnsupportedFeature(
                 format!("Unhandled type in LLVM conversion: {:?}", type_),
                 self.get_current_span(),
-            ))
+            )),
         };
         result
     }
@@ -370,64 +374,67 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 basic
             } else {
                 match &field.type_ {
-                AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name) => self
-                    .context
-                    .ptr_type(AddressSpace::default())
-                    .as_basic_type_enum(),
-                AstType::Void => {
-                    return Err(CompileError::TypeError(
-                        "Void type not allowed in struct fields".to_string(),
-                        None,
-                    ))
-                }
-                t if t.is_ptr_type() => {
-                    // Ptr<T> and MutPtr<T> are enums with { i64 discriminant, ptr payload } (16 bytes)
-                    // RawPtr<T> is just a plain pointer (8 bytes)
-                    if t.is_raw_ptr() {
-                        self.context
-                            .ptr_type(AddressSpace::default())
-                            .as_basic_type_enum()
-                    } else {
-                        // Ptr<T> and MutPtr<T> are enums: { i64 discriminant, ptr payload }
-                        self.context.struct_type(
-                            &[
-                                self.context.i64_type().into(),
-                                self.context.ptr_type(AddressSpace::default()).into(),
-                            ],
-                            false,
-                        ).as_basic_type_enum()
-                    }
-                }
-                AstType::Generic { name, .. } => {
-                    if let Some(struct_info) = self.struct_types.get(name) {
-                        struct_info.llvm_type.as_basic_type_enum()
-                    } else {
+                    AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name) => {
                         self.context
                             .ptr_type(AddressSpace::default())
                             .as_basic_type_enum()
                     }
-                }
-                AstType::Struct { name, .. } => {
-                    if let Some(struct_info) = self.struct_types.get(name) {
-                        struct_info.llvm_type.as_basic_type_enum()
-                    } else {
+                    AstType::Void => {
                         return Err(CompileError::TypeError(
+                            "Void type not allowed in struct fields".to_string(),
+                            None,
+                        ))
+                    }
+                    t if t.is_ptr_type() => {
+                        // Ptr<T> and MutPtr<T> are enums with { i64 discriminant, ptr payload } (16 bytes)
+                        // RawPtr<T> is just a plain pointer (8 bytes)
+                        if t.is_raw_ptr() {
+                            self.context
+                                .ptr_type(AddressSpace::default())
+                                .as_basic_type_enum()
+                        } else {
+                            // Ptr<T> and MutPtr<T> are enums: { i64 discriminant, ptr payload }
+                            self.context
+                                .struct_type(
+                                    &[
+                                        self.context.i64_type().into(),
+                                        self.context.ptr_type(AddressSpace::default()).into(),
+                                    ],
+                                    false,
+                                )
+                                .as_basic_type_enum()
+                        }
+                    }
+                    AstType::Generic { name, .. } => {
+                        if let Some(struct_info) = self.struct_types.get(name) {
+                            struct_info.llvm_type.as_basic_type_enum()
+                        } else {
+                            self.context
+                                .ptr_type(AddressSpace::default())
+                                .as_basic_type_enum()
+                        }
+                    }
+                    AstType::Struct { name, .. } => {
+                        if let Some(struct_info) = self.struct_types.get(name) {
+                            struct_info.llvm_type.as_basic_type_enum()
+                        } else {
+                            return Err(CompileError::TypeError(
                             format!("Struct '{}' not yet registered. This may be a forward reference issue. Structs should be defined before use, or the typechecker should resolve Generic types to Struct types.", name),
                             None
                         ));
+                        }
+                    }
+                    AstType::FunctionPointer { .. } => self
+                        .context
+                        .ptr_type(AddressSpace::default())
+                        .as_basic_type_enum(),
+                    _ => {
+                        return Err(CompileError::TypeError(
+                            format!("Unsupported type in struct: {:?}", field.type_),
+                            None,
+                        ))
                     }
                 }
-                AstType::FunctionPointer { .. } => self
-                    .context
-                    .ptr_type(AddressSpace::default())
-                    .as_basic_type_enum(),
-                _ => {
-                    return Err(CompileError::TypeError(
-                        format!("Unsupported type in struct: {:?}", field.type_),
-                        None,
-                    ))
-                }
-            }
             };
 
             field_types.push(llvm_type);
@@ -481,11 +488,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 if !matches!(payload_type, AstType::Void) {
                     has_payloads = true;
                     // Use centralized bit_size for numeric types, otherwise default to 64 bits
-                    let payload_size = crate::ast::bit_size(payload_type).unwrap_or(match payload_type {
-                        AstType::Bool => 8,  // Bool stored as 1 byte in LLVM
-                        AstType::Void => 0,
-                        _ => 64,  // Pointers, strings, structs, generics are 64-bit
-                    });
+                    let payload_size =
+                        crate::ast::bit_size(payload_type).unwrap_or(match payload_type {
+                            AstType::Bool => 8, // Bool stored as 1 byte in LLVM
+                            AstType::Void => 0,
+                            _ => 64, // Pointers, strings, structs, generics are 64-bit
+                        });
                     max_payload_size = max_payload_size.max(payload_size);
                 }
             }

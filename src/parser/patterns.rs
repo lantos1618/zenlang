@@ -67,7 +67,7 @@ impl<'a> Parser<'a> {
                     _ => Err(CompileError::SyntaxError(
                         "Expected number after '-' in pattern".to_string(),
                         Some(self.current_span.clone()),
-                    ))
+                    )),
                 }
             }
             Token::Symbol('.') => {

@@ -47,9 +47,14 @@ pub fn handle_completion(
                 ZenCompletionContext::UfcMethod { receiver_type } => {
                     // Try semantic completion first (using TypeContext)
                     if let Some(ast_type) = resolve_receiver_type(&receiver_type, doc, position) {
-                        if let Some(semantic_completions) = get_semantic_dot_completions(doc, &ast_type, store) {
+                        if let Some(semantic_completions) =
+                            get_semantic_dot_completions(doc, &ast_type, store)
+                        {
                             if !semantic_completions.is_empty() {
-                                return success_response(&req, CompletionResponse::Array(semantic_completions));
+                                return success_response(
+                                    &req,
+                                    CompletionResponse::Array(semantic_completions),
+                                );
                             }
                         }
                     }
@@ -300,7 +305,12 @@ pub fn handle_completion(
         // Try to get module path from definition URI for auto-import
         if let Some(ref uri) = symbol.definition_uri {
             if let Some(module_path) = get_module_path_from_uri(uri) {
-                completions.push(create_completion_with_import(name, symbol, &module_path, doc_content));
+                completions.push(create_completion_with_import(
+                    name,
+                    symbol,
+                    &module_path,
+                    doc_content,
+                ));
                 continue;
             }
         }
@@ -380,7 +390,11 @@ fn get_completion_context(
     if char_pos > 0 && line.chars().nth(char_pos - 1) == Some('.') {
         // Extract the receiver expression before the dot
         let chars: Vec<char> = line.chars().collect();
-        let mut start = if char_pos > 1 { char_pos - 2 } else { 0 };
+        let mut start = if char_pos > 1 {
+            char_pos - 2
+        } else {
+            0
+        };
         let mut paren_depth = 0;
 
         // Find the start of the receiver expression
@@ -580,7 +594,6 @@ fn get_module_path_completions(base: &str, store: &DocumentStore) -> Vec<Complet
                 ..Default::default()
             });
         }
-
     } else if base.starts_with("@std.") {
         // Handle nested paths like @std.collections -> show hashmap, list, etc.
         let submodule = base.strip_prefix("@std.").unwrap_or("");
@@ -690,9 +703,7 @@ fn get_module_path_from_uri(uri: &Url) -> Option<String> {
     // Check if it's a stdlib file
     if let Some(stdlib_pos) = path.find("/stdlib/") {
         let relative = &path[stdlib_pos + 8..]; // Skip "/stdlib/"
-        let module_path = relative
-            .trim_end_matches(".zen")
-            .replace('/', ".");
+        let module_path = relative.trim_end_matches(".zen").replace('/', ".");
 
         // Handle module names that match directory (e.g., collections/vec.zen -> @std.collections.vec)
         return Some(format!("@std.{}", module_path));

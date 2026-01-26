@@ -215,16 +215,27 @@ pub fn compile_enum_variant<'ctx>(
 
                 // Extend smaller integers to i64 first
                 let i64_val = if int_type.get_bit_width() < 64 {
-                    compiler.builder.build_int_z_extend(int_val, compiler.context.i64_type(), "extend_payload")?
+                    compiler.builder.build_int_z_extend(
+                        int_val,
+                        compiler.context.i64_type(),
+                        "extend_payload",
+                    )?
                 } else if int_type.get_bit_width() > 64 {
                     // Truncate if somehow larger (shouldn't happen for standard types)
-                    compiler.builder.build_int_truncate(int_val, compiler.context.i64_type(), "trunc_payload")?
+                    compiler.builder.build_int_truncate(
+                        int_val,
+                        compiler.context.i64_type(),
+                        "trunc_payload",
+                    )?
                 } else {
                     int_val
                 };
 
                 // Convert i64 to pointer - this stores the VALUE in the pointer field
-                compiler.builder.build_int_to_ptr(i64_val, ptr_type, "val_as_ptr")?.into()
+                compiler
+                    .builder
+                    .build_int_to_ptr(i64_val, ptr_type, "val_as_ptr")?
+                    .into()
             } else if compiled.is_float_value() {
                 // Float values: bitcast to i64, then inttoptr
                 let float_val = compiled.into_float_value();
@@ -232,14 +243,28 @@ pub fn compile_enum_variant<'ctx>(
 
                 let i64_val = if float_type == compiler.context.f32_type() {
                     // f32 -> i32 -> i64
-                    let i32_val = compiler.builder.build_bit_cast(float_val, compiler.context.i32_type(), "f32_as_i32")?;
-                    compiler.builder.build_int_z_extend(i32_val.into_int_value(), compiler.context.i64_type(), "extend_f32")?
+                    let i32_val = compiler.builder.build_bit_cast(
+                        float_val,
+                        compiler.context.i32_type(),
+                        "f32_as_i32",
+                    )?;
+                    compiler.builder.build_int_z_extend(
+                        i32_val.into_int_value(),
+                        compiler.context.i64_type(),
+                        "extend_f32",
+                    )?
                 } else {
                     // f64 -> i64
-                    compiler.builder.build_bit_cast(float_val, compiler.context.i64_type(), "f64_as_i64")?.into_int_value()
+                    compiler
+                        .builder
+                        .build_bit_cast(float_val, compiler.context.i64_type(), "f64_as_i64")?
+                        .into_int_value()
                 };
 
-                compiler.builder.build_int_to_ptr(i64_val, ptr_type, "float_as_ptr")?.into()
+                compiler
+                    .builder
+                    .build_int_to_ptr(i64_val, ptr_type, "float_as_ptr")?
+                    .into()
             } else if compiled.is_struct_value() {
                 // Struct values: check size
                 let struct_val = compiled.into_struct_value();
@@ -302,7 +327,12 @@ pub fn compile_enum_literal<'ctx>(
     // Delegate to the existing implementation
     if let Expression::EnumLiteral { variant, payload } = expr {
         // Try to infer the enum name from context or use Option as default
-        compile_enum_variant(compiler, compiler.well_known.option_name(), variant, payload)
+        compile_enum_variant(
+            compiler,
+            compiler.well_known.option_name(),
+            variant,
+            payload,
+        )
     } else {
         Err(CompileError::InternalError(
             "Expected EnumLiteral".to_string(),
@@ -316,14 +346,24 @@ pub fn compile_some<'ctx>(
     value: &Expression,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     // Some(value) is Option::Some(value)
-    compile_enum_variant(compiler, compiler.well_known.option_name(), compiler.well_known.some_name(), &Some(Box::new(value.clone())))
+    compile_enum_variant(
+        compiler,
+        compiler.well_known.option_name(),
+        compiler.well_known.some_name(),
+        &Some(Box::new(value.clone())),
+    )
 }
 
 pub fn compile_none<'ctx>(
     compiler: &mut LLVMCompiler<'ctx>,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     // None is Option::None
-    compile_enum_variant(compiler, compiler.well_known.option_name(), compiler.well_known.none_name(), &None)
+    compile_enum_variant(
+        compiler,
+        compiler.well_known.option_name(),
+        compiler.well_known.none_name(),
+        &None,
+    )
 }
 
 /// Compile thin pointer types (Ptr<T>, MutPtr<T>, RawPtr<T>)
@@ -357,19 +397,31 @@ fn compile_thin_pointer_variant<'ctx>(
 
             // Extend to i64 if needed
             let i64_val = if int_type.get_bit_width() < 64 {
-                compiler.builder.build_int_z_extend(int_val, compiler.context.i64_type(), "extend_addr")?
+                compiler.builder.build_int_z_extend(
+                    int_val,
+                    compiler.context.i64_type(),
+                    "extend_addr",
+                )?
             } else if int_type.get_bit_width() > 64 {
-                compiler.builder.build_int_truncate(int_val, compiler.context.i64_type(), "trunc_addr")?
+                compiler.builder.build_int_truncate(
+                    int_val,
+                    compiler.context.i64_type(),
+                    "trunc_addr",
+                )?
             } else {
                 int_val
             };
 
-            Ok(compiler.builder.build_int_to_ptr(i64_val, ptr_type, "addr_as_ptr")?.into())
+            Ok(compiler
+                .builder
+                .build_int_to_ptr(i64_val, ptr_type, "addr_as_ptr")?
+                .into())
         } else {
             Err(CompileError::TypeError(
                 format!(
                     "{}.Some expects an address (i64 or pointer), got {:?}",
-                    enum_name, compiled.get_type()
+                    enum_name,
+                    compiled.get_type()
                 ),
                 compiler.get_current_span(),
             ))

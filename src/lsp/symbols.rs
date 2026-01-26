@@ -35,7 +35,7 @@ pub fn handle_document_symbols(
         Ok(s) => {
             log::debug!("[LSP SYMBOLS] Got store lock in {:?}", lock_start.elapsed());
             s
-        },
+        }
         Err(e) => {
             log::debug!("[LSP SYMBOLS] Failed to get store lock: {:?}", e);
             return Response {
@@ -48,9 +48,15 @@ pub fn handle_document_symbols(
             };
         }
     };
-    log::debug!("[LSP SYMBOLS] Looking up document: {}", params.text_document.uri);
+    log::debug!(
+        "[LSP SYMBOLS] Looking up document: {}",
+        params.text_document.uri
+    );
     if let Some(doc) = store.documents.get(&params.text_document.uri) {
-        log::debug!("[LSP SYMBOLS] Found document with {} symbols", doc.symbols.len());
+        log::debug!(
+            "[LSP SYMBOLS] Found document with {} symbols",
+            doc.symbols.len()
+        );
         let symbols: Vec<DocumentSymbol> = doc
             .symbols
             .values()

@@ -16,11 +16,7 @@ use std::sync::OnceLock;
 // ============================================================================
 
 /// Modules that are always available without explicit import
-pub const BUILTIN_MODULES: &[(&str, u64)] = &[
-    ("io", 1),
-    ("core", 3),
-    ("compiler", 6),
-];
+pub const BUILTIN_MODULES: &[(&str, u64)] = &[("io", 1), ("core", 3), ("compiler", 6)];
 
 /// Check if a name is a built-in module
 pub fn is_builtin_module(name: &str) -> bool {
@@ -59,7 +55,9 @@ fn get_intrinsics() -> &'static HashMap<String, Intrinsic> {
 
 /// Quick lookup for intrinsic return type
 pub fn get_intrinsic_return_type(func_name: &str) -> Option<AstType> {
-    get_intrinsics().get(func_name).map(|f| f.return_type.clone())
+    get_intrinsics()
+        .get(func_name)
+        .map(|f| f.return_type.clone())
 }
 
 /// Get full intrinsic definition (params and return type)
@@ -228,52 +226,64 @@ fn build_intrinsics() -> HashMap<String, Intrinsic> {
     intrinsic!(m, "syscall2" => ("number", AstType::I64, "arg0", AstType::I64, "arg1", AstType::I64) -> AstType::I64);
 
     // syscall3-6 need more params - add manually
-    m.insert("syscall3".to_string(), Intrinsic {
-        name: "syscall3".to_string(),
-        params: vec![
-            ("number".to_string(), AstType::I64),
-            ("arg0".to_string(), AstType::I64),
-            ("arg1".to_string(), AstType::I64),
-            ("arg2".to_string(), AstType::I64),
-        ],
-        return_type: AstType::I64,
-    });
-    m.insert("syscall4".to_string(), Intrinsic {
-        name: "syscall4".to_string(),
-        params: vec![
-            ("number".to_string(), AstType::I64),
-            ("arg0".to_string(), AstType::I64),
-            ("arg1".to_string(), AstType::I64),
-            ("arg2".to_string(), AstType::I64),
-            ("arg3".to_string(), AstType::I64),
-        ],
-        return_type: AstType::I64,
-    });
-    m.insert("syscall5".to_string(), Intrinsic {
-        name: "syscall5".to_string(),
-        params: vec![
-            ("number".to_string(), AstType::I64),
-            ("arg0".to_string(), AstType::I64),
-            ("arg1".to_string(), AstType::I64),
-            ("arg2".to_string(), AstType::I64),
-            ("arg3".to_string(), AstType::I64),
-            ("arg4".to_string(), AstType::I64),
-        ],
-        return_type: AstType::I64,
-    });
-    m.insert("syscall6".to_string(), Intrinsic {
-        name: "syscall6".to_string(),
-        params: vec![
-            ("number".to_string(), AstType::I64),
-            ("arg0".to_string(), AstType::I64),
-            ("arg1".to_string(), AstType::I64),
-            ("arg2".to_string(), AstType::I64),
-            ("arg3".to_string(), AstType::I64),
-            ("arg4".to_string(), AstType::I64),
-            ("arg5".to_string(), AstType::I64),
-        ],
-        return_type: AstType::I64,
-    });
+    m.insert(
+        "syscall3".to_string(),
+        Intrinsic {
+            name: "syscall3".to_string(),
+            params: vec![
+                ("number".to_string(), AstType::I64),
+                ("arg0".to_string(), AstType::I64),
+                ("arg1".to_string(), AstType::I64),
+                ("arg2".to_string(), AstType::I64),
+            ],
+            return_type: AstType::I64,
+        },
+    );
+    m.insert(
+        "syscall4".to_string(),
+        Intrinsic {
+            name: "syscall4".to_string(),
+            params: vec![
+                ("number".to_string(), AstType::I64),
+                ("arg0".to_string(), AstType::I64),
+                ("arg1".to_string(), AstType::I64),
+                ("arg2".to_string(), AstType::I64),
+                ("arg3".to_string(), AstType::I64),
+            ],
+            return_type: AstType::I64,
+        },
+    );
+    m.insert(
+        "syscall5".to_string(),
+        Intrinsic {
+            name: "syscall5".to_string(),
+            params: vec![
+                ("number".to_string(), AstType::I64),
+                ("arg0".to_string(), AstType::I64),
+                ("arg1".to_string(), AstType::I64),
+                ("arg2".to_string(), AstType::I64),
+                ("arg3".to_string(), AstType::I64),
+                ("arg4".to_string(), AstType::I64),
+            ],
+            return_type: AstType::I64,
+        },
+    );
+    m.insert(
+        "syscall6".to_string(),
+        Intrinsic {
+            name: "syscall6".to_string(),
+            params: vec![
+                ("number".to_string(), AstType::I64),
+                ("arg0".to_string(), AstType::I64),
+                ("arg1".to_string(), AstType::I64),
+                ("arg2".to_string(), AstType::I64),
+                ("arg3".to_string(), AstType::I64),
+                ("arg4".to_string(), AstType::I64),
+                ("arg5".to_string(), AstType::I64),
+            ],
+            return_type: AstType::I64,
+        },
+    );
 
     // FFI/dynamic loading
     intrinsic!(m, "load_library" => ("path", AstType::StaticString) -> ptr.clone());
@@ -286,7 +296,10 @@ fn build_intrinsics() -> HashMap<String, Intrinsic> {
     intrinsic!(m, "libc_read" => ("fd", AstType::I32, "buf", ptr.clone(), "len", AstType::Usize) -> AstType::I64);
 
     // Generic load/store (type determined by context)
-    let generic_t = AstType::Generic { name: "T".to_string(), type_args: vec![] };
+    let generic_t = AstType::Generic {
+        name: "T".to_string(),
+        type_args: vec![],
+    };
     intrinsic!(m, "load" => ("ptr", ptr.clone()) -> generic_t.clone());
     intrinsic!(m, "store" => ("ptr", ptr.clone(), "value", generic_t.clone()) -> AstType::Void);
 

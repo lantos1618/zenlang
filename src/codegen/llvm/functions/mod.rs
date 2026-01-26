@@ -2,9 +2,9 @@ pub mod calls;
 pub mod decl;
 
 use super::LLVMCompiler;
+use crate::ast;
 use crate::error::CompileError;
 use inkwell::values::{BasicValueEnum, FunctionValue};
-use crate::ast;
 
 impl<'ctx> LLVMCompiler<'ctx> {
     // Function declaration/definition

@@ -76,7 +76,11 @@ fn main() {
         println!("Files without errors: {}", total_files - files_with_errors);
     }
 
-    process::exit(if has_errors { 1 } else { 0 });
+    process::exit(if has_errors {
+        1
+    } else {
+        0
+    });
 }
 
 /// Check for imports inside comptime blocks

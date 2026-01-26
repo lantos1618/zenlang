@@ -192,16 +192,24 @@ impl<'ctx> LLVMCompiler<'ctx> {
 
     /// Get module ID for import tracking
     fn get_module_id(&self, module_name: &str) -> u64 {
-        if self.well_known.is_option(module_name) || self.well_known.is_option_variant(module_name) {
+        if self.well_known.is_option(module_name) || self.well_known.is_option_variant(module_name)
+        {
             100
-        } else if self.well_known.is_result(module_name) || self.well_known.is_result_variant(module_name) {
+        } else if self.well_known.is_result(module_name)
+            || self.well_known.is_result_variant(module_name)
+        {
             101
         } else {
             match module_name {
                 "HashMap" | "HashSet" | "DynVec" | "Array" | "Vec" => 102,
                 "Allocator" | "get_default_allocator" => 103,
                 "min" | "max" | "abs" | "sqrt" | "pow" | "sin" | "cos" | "tan" => 104,
-                "io" => 1, "math" => 2, "core" => 3, "GPA" => 4, "AsyncPool" => 5, "build" => 7,
+                "io" => 1,
+                "math" => 2,
+                "core" => 3,
+                "GPA" => 4,
+                "AsyncPool" => 5,
+                "build" => 7,
                 _ => 0,
             }
         }
@@ -537,7 +545,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ast::Declaration::Export { .. } => {
                     // Exports are handled at module level, no codegen needed
                 }
-                ast::Declaration::ModuleImport { alias, module_path, .. } => {
+                ast::Declaration::ModuleImport {
+                    alias, module_path, ..
+                } => {
                     let module_name = module_path.split('.').next_back().unwrap_or(alias);
                     let module_id = self.get_module_id(module_name);
                     self.module_imports.insert(alias.clone(), module_id);

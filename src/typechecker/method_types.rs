@@ -128,7 +128,7 @@ pub fn infer_pointer_method_type(method: &str, inner_type: &AstType) -> Option<A
         "addr" => Some(AstType::raw_ptr(AstType::U8)), // Get address as RawPtr<u8>
         "is_some" | "is_none" => Some(AstType::Bool), // Check if pointer is valid/null
         "at" => Some(AstType::ptr(inner_type.clone())), // Get pointer at index offset
-        "eq" => Some(AstType::Bool), // Compare pointer addresses
+        "eq" => Some(AstType::Bool),       // Compare pointer addresses
         "unwrap" => Some(AstType::raw_ptr(AstType::U8)), // Unsafe unwrap to RawPtr<u8>
         _ => None,
     }

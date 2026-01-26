@@ -2,10 +2,10 @@
 
 use std::collections::HashMap;
 
+use crate::ast::{AstType, Declaration};
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::types::*;
 use crate::lsp::utils::format_type;
-use crate::ast::{AstType, Declaration};
 
 /// Format struct definition with fields for display
 pub fn format_struct_definition(struct_def: &crate::ast::StructDefinition) -> String {

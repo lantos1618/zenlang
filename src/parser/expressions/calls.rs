@@ -35,8 +35,8 @@ fn extract_type_args_from_name(name: &str) -> (String, Vec<AstType>) {
     if let Some(angle_pos) = name.find('<') {
         let base_name = name[..angle_pos].to_string();
         let type_args_str = &name[angle_pos + 1..name.len() - 1];
-        let type_args = crate::parser::parse_type_args_from_string(type_args_str)
-            .unwrap_or_default();
+        let type_args =
+            crate::parser::parse_type_args_from_string(type_args_str).unwrap_or_default();
         (base_name, type_args)
     } else {
         (name.to_string(), vec![])
@@ -55,7 +55,10 @@ pub fn parse_call_expression_with_object(
     let is_builtin_syntax = match &object {
         Expression::BuiltinReference => true,
         Expression::MemberAccess { object: base, .. } => {
-            matches!(base.as_ref(), Expression::StdReference | Expression::BuiltinReference)
+            matches!(
+                base.as_ref(),
+                Expression::StdReference | Expression::BuiltinReference
+            )
         }
         _ => false,
     };
@@ -187,7 +190,10 @@ fn try_parse_closure(parser: &mut Parser) -> Result<Option<Expression>> {
 /// Build a function call for @std or @builtin syntax
 fn build_builtin_call(object: &Expression, method_name: &str, args: Vec<Expression>) -> Expression {
     match object {
-        Expression::MemberAccess { object: base, member } => match base.as_ref() {
+        Expression::MemberAccess {
+            object: base,
+            member,
+        } => match base.as_ref() {
             Expression::StdReference => Expression::FunctionCall {
                 name: format!("{}.{}", member, method_name),
                 type_args: vec![],

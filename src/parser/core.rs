@@ -56,7 +56,10 @@ impl<'a> Parser<'a> {
             self.next_token();
             Ok(())
         } else {
-            Err(self.syntax_error(format!("Expected '{}', got {:?}", expected, self.current_token)))
+            Err(self.syntax_error(format!(
+                "Expected '{}', got {:?}",
+                expected, self.current_token
+            )))
         }
     }
 
@@ -77,10 +80,16 @@ impl<'a> Parser<'a> {
                 self.current_token = Token::Operator(">=".to_string());
                 Ok(())
             } else {
-                Err(self.syntax_error(format!("Expected '{}', got {:?}", expected, self.current_token)))
+                Err(self.syntax_error(format!(
+                    "Expected '{}', got {:?}",
+                    expected, self.current_token
+                )))
             }
         } else {
-            Err(self.syntax_error(format!("Expected '{}', got {:?}", expected, self.current_token)))
+            Err(self.syntax_error(format!(
+                "Expected '{}', got {:?}",
+                expected, self.current_token
+            )))
         }
     }
 
@@ -125,7 +134,10 @@ impl<'a> Parser<'a> {
             self.next_token();
             Ok(name)
         } else {
-            Err(self.syntax_error(format!("Expected {} (identifier), got {:?}", context, self.current_token)))
+            Err(self.syntax_error(format!(
+                "Expected {} (identifier), got {:?}",
+                context, self.current_token
+            )))
         }
     }
 
@@ -277,5 +289,4 @@ impl<'a> Parser<'a> {
             -1 // malformed
         }
     }
-
 }

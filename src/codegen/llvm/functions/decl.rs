@@ -1,6 +1,6 @@
+use crate::ast::{self, AstType};
 use crate::codegen::llvm::LLVMCompiler;
 use crate::codegen::llvm::Type;
-use crate::ast::{self, AstType};
 use crate::error::CompileError;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicMetadataTypeEnum, BasicTypeEnum};
@@ -20,9 +20,15 @@ pub fn declare_external_function<'ctx>(
         .map(|t| {
             compiler.to_llvm_type(t).and_then(|t| {
                 t.into_basic_type().map_err(|e| match e {
-                    CompileError::TypeMismatch { expected, found, span: None } => {
-                        CompileError::TypeMismatch { expected, found, span: span.clone() }
-                    }
+                    CompileError::TypeMismatch {
+                        expected,
+                        found,
+                        span: None,
+                    } => CompileError::TypeMismatch {
+                        expected,
+                        found,
+                        span: span.clone(),
+                    },
                     other => other,
                 })
             })
@@ -233,10 +239,12 @@ pub fn compile_function_body<'ctx>(
         if compiler.well_known.is_result(name) && type_args.len() == 2 {
             compiler.track_generic_type("Result_Ok_Type".to_string(), type_args[0].clone());
             compiler.track_generic_type("Result_Err_Type".to_string(), type_args[1].clone());
-            compiler.track_complex_generic(&function.return_type, compiler.well_known.result_name());
+            compiler
+                .track_complex_generic(&function.return_type, compiler.well_known.result_name());
         } else if compiler.well_known.is_option(name) && type_args.len() == 1 {
             compiler.track_generic_type("Option_Some_Type".to_string(), type_args[0].clone());
-            compiler.track_complex_generic(&function.return_type, compiler.well_known.option_name());
+            compiler
+                .track_complex_generic(&function.return_type, compiler.well_known.option_name());
         }
     }
 
@@ -324,12 +332,22 @@ pub fn compile_function_body<'ctx>(
 
                                 if actual_width != expected_width {
                                     if actual_width < expected_width {
-                                        value = compiler.builder
-                                            .build_int_s_extend(int_val, expected_int_type, "ret_extend")?
+                                        value = compiler
+                                            .builder
+                                            .build_int_s_extend(
+                                                int_val,
+                                                expected_int_type,
+                                                "ret_extend",
+                                            )?
                                             .into();
                                     } else {
-                                        value = compiler.builder
-                                            .build_int_truncate(int_val, expected_int_type, "ret_trunc")?
+                                        value = compiler
+                                            .builder
+                                            .build_int_truncate(
+                                                int_val,
+                                                expected_int_type,
+                                                "ret_trunc",
+                                            )?
                                             .into();
                                     }
                                 }

@@ -137,10 +137,16 @@ pub fn is_in_string_or_comment(line: &str, col: usize) -> bool {
 }
 
 /// Find function range - prefers symbol info, falls back to content parsing
-pub fn find_function_range_from_doc(doc: &super::super::types::Document, func_name: &str) -> Option<Range> {
+pub fn find_function_range_from_doc(
+    doc: &super::super::types::Document,
+    func_name: &str,
+) -> Option<Range> {
     // Try to get range from symbol info first (most accurate)
     if let Some(symbol) = doc.symbols.get(func_name) {
-        if matches!(symbol.kind, lsp_types::SymbolKind::FUNCTION | lsp_types::SymbolKind::METHOD) {
+        if matches!(
+            symbol.kind,
+            lsp_types::SymbolKind::FUNCTION | lsp_types::SymbolKind::METHOD
+        ) {
             return Some(symbol.range);
         }
     }

@@ -21,7 +21,7 @@ pub enum Pattern {
         variant: String,
         payload: Option<Box<Pattern>>,
     },
-    Or(Vec<Pattern>),   // | pattern1 | pattern2
+    Or(Vec<Pattern>),    // | pattern1 | pattern2
     Tuple(Vec<Pattern>), // (pattern1, pattern2, ...)
     Range {
         start: Box<Expression>,

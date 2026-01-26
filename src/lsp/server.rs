@@ -62,15 +62,23 @@ fn apply_text_edit(content: &str, range: &Range, new_text: &str) -> String {
     let (start_line, start_char) = (range.start.line as usize, range.start.character as usize);
     let (end_line, end_char) = (range.end.line as usize, range.end.character as usize);
 
-    log::debug!("[LSP] apply_text_edit: range=({}:{} -> {}:{}), new_text len={}, content len={}",
-              start_line, start_char, end_line, end_char, new_text.len(), content.len());
+    log::debug!(
+        "[LSP] apply_text_edit: range=({}:{} -> {}:{}), new_text len={}, content len={}",
+        start_line,
+        start_char,
+        end_line,
+        end_char,
+        new_text.len(),
+        content.len()
+    );
 
     let start_byte = position_to_byte_offset(content, start_line, start_char);
     let end_byte = position_to_byte_offset(content, end_line, end_char);
 
     log::debug!(
         "[LSP DEBUG] Converted positions: start_byte={}, end_byte={}",
-        start_byte, end_byte
+        start_byte,
+        end_byte
     );
     log::debug!(
         "[LSP DEBUG] Will replace: '{}'",
@@ -88,7 +96,8 @@ fn apply_text_edit(content: &str, range: &Range, new_text: &str) -> String {
     } else {
         log::debug!(
             "[LSP WARN] Start byte > end byte, swapping: {} > {}",
-            start_byte, end_byte
+            start_byte,
+            end_byte
         );
         (end_byte, start_byte)
     };
@@ -121,20 +130,44 @@ fn extract_error_info(error: &CompileError) -> (Option<Span>, DiagnosticSeverity
         SyntaxError(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "syntax-error"),
         TypeError(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "type-error"),
         TypeMismatch { span, .. } => (span.clone(), DiagnosticSeverity::ERROR, "type-mismatch"),
-        UndeclaredVariable(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "undeclared-variable"),
-        UndeclaredFunction(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "undeclared-function"),
-        UnexpectedToken { span, .. } => (span.clone(), DiagnosticSeverity::ERROR, "unexpected-token"),
+        UndeclaredVariable(_, span) => (
+            span.clone(),
+            DiagnosticSeverity::ERROR,
+            "undeclared-variable",
+        ),
+        UndeclaredFunction(_, span) => (
+            span.clone(),
+            DiagnosticSeverity::ERROR,
+            "undeclared-function",
+        ),
+        UnexpectedToken { span, .. } => {
+            (span.clone(), DiagnosticSeverity::ERROR, "unexpected-token")
+        }
         InvalidPattern(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "invalid-pattern"),
         InvalidSyntax { span, .. } => (span.clone(), DiagnosticSeverity::ERROR, "invalid-syntax"),
-        DuplicateDeclaration { duplicate_location, .. } => (duplicate_location.clone(), DiagnosticSeverity::ERROR, "duplicate-declaration"),
+        DuplicateDeclaration {
+            duplicate_location, ..
+        } => (
+            duplicate_location.clone(),
+            DiagnosticSeverity::ERROR,
+            "duplicate-declaration",
+        ),
         ImportError(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "import-error"),
         FFIError(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "ffi-error"),
         InvalidLoopCondition(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "invalid-loop"),
         InternalError(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "internal-error"),
         // Warnings
-        MissingTypeAnnotation(_, span) => (span.clone(), DiagnosticSeverity::WARNING, "missing-type"),
-        MissingReturnStatement(_, span) => (span.clone(), DiagnosticSeverity::WARNING, "missing-return"),
-        UnsupportedFeature(_, span) => (span.clone(), DiagnosticSeverity::WARNING, "unsupported-feature"),
+        MissingTypeAnnotation(_, span) => {
+            (span.clone(), DiagnosticSeverity::WARNING, "missing-type")
+        }
+        MissingReturnStatement(_, span) => {
+            (span.clone(), DiagnosticSeverity::WARNING, "missing-return")
+        }
+        UnsupportedFeature(_, span) => (
+            span.clone(),
+            DiagnosticSeverity::WARNING,
+            "unsupported-feature",
+        ),
         // Errors without spans
         FileNotFound(_, _) => (None, DiagnosticSeverity::ERROR, "file-not-found"),
         ComptimeError(_) => (None, DiagnosticSeverity::ERROR, "comptime-error"),
@@ -147,15 +180,31 @@ fn extract_error_info(error: &CompileError) -> (Option<Span>, DiagnosticSeverity
 /// Convert span to LSP Range (Position pair)
 fn span_to_lsp_range(span: Option<Span>) -> Range {
     if let Some(span) = span {
-        let line = if span.line > 0 { span.line as u32 - 1 } else { 0 };
+        let line = if span.line > 0 {
+            span.line as u32 - 1
+        } else {
+            0
+        };
         Range {
-            start: Position { line, character: span.column as u32 },
-            end: Position { line, character: (span.column + (span.end - span.start).max(1)) as u32 },
+            start: Position {
+                line,
+                character: span.column as u32,
+            },
+            end: Position {
+                line,
+                character: (span.column + (span.end - span.start).max(1)) as u32,
+            },
         }
     } else {
         Range {
-            start: Position { line: 0, character: 0 },
-            end: Position { line: 0, character: 1 },
+            start: Position {
+                line: 0,
+                character: 0,
+            },
+            end: Position {
+                line: 0,
+                character: 1,
+            },
         }
     }
 }
@@ -375,7 +424,10 @@ impl ZenLanguageServer {
             let type_context = {
                 use crate::typechecker::TypeChecker;
                 let mut type_checker = TypeChecker::new();
-                type_checker.check_program(&job.program).ok().map(std::sync::Arc::new)
+                type_checker
+                    .check_program(&job.program)
+                    .ok()
+                    .map(std::sync::Arc::new)
             };
 
             let result = AnalysisResult {
@@ -671,7 +723,9 @@ impl ZenLanguageServer {
             Err(_) => {
                 return Response {
                     id: req.id,
-                    result: Some(serde_json::to_value(Vec::<FoldingRange>::new()).unwrap_or(Value::Null)),
+                    result: Some(
+                        serde_json::to_value(Vec::<FoldingRange>::new()).unwrap_or(Value::Null),
+                    ),
                     error: None,
                 };
             }

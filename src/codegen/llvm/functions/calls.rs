@@ -90,9 +90,15 @@ fn maybe_cast_int_arg<'ctx>(
         let (src, dst) = (int_val.get_type().get_bit_width(), expected.get_bit_width());
         if src != dst {
             return Ok(if src < dst {
-                compiler.builder.build_int_s_extend(int_val, expected, "extend")?.into()
+                compiler
+                    .builder
+                    .build_int_s_extend(int_val, expected, "extend")?
+                    .into()
             } else {
-                compiler.builder.build_int_truncate(int_val, expected, "trunc")?.into()
+                compiler
+                    .builder
+                    .build_int_truncate(int_val, expected, "trunc")?
+                    .into()
             });
         }
     }
@@ -106,15 +112,27 @@ fn get_function_type_from_ast<'a, 'ctx>(
     var_type: &'a AstType,
 ) -> Result<(FunctionType<'ctx>, Option<&'a AstType>), CompileError> {
     match var_type {
-        AstType::Function { args: param_types, return_type }
-        | AstType::FunctionPointer { param_types, return_type } => {
+        AstType::Function {
+            args: param_types,
+            return_type,
+        }
+        | AstType::FunctionPointer {
+            param_types,
+            return_type,
+        } => {
             let fn_type = build_fn_type_from_params(compiler, param_types, return_type)?;
             Ok((fn_type, Some(return_type.as_ref())))
         }
         t if t.is_ptr_type()
-            && t.ptr_inner().map(|i| matches!(i, AstType::FunctionPointer { .. })).unwrap_or(false) =>
+            && t.ptr_inner()
+                .map(|i| matches!(i, AstType::FunctionPointer { .. }))
+                .unwrap_or(false) =>
         {
-            if let Some(AstType::FunctionPointer { param_types, return_type }) = t.ptr_inner() {
+            if let Some(AstType::FunctionPointer {
+                param_types,
+                return_type,
+            }) = t.ptr_inner()
+            {
                 let fn_type = build_fn_type_from_params(compiler, param_types, return_type)?;
                 Ok((fn_type, Some(return_type.as_ref())))
             } else {
@@ -240,13 +258,19 @@ fn try_compile_direct_call<'ctx>(
     name: &str,
     args: &[ast::Expression],
 ) -> Result<Option<BasicValueEnum<'ctx>>, CompileError> {
-    let Some(function) = compiler.module.get_function(name) else { return Ok(None) };
+    let Some(function) = compiler.module.get_function(name) else {
+        return Ok(None);
+    };
     let param_types = function.get_type().get_param_types();
     let args_metadata = compile_and_convert_args(compiler, args, &param_types)?;
-    let call = compiler.builder.build_call(function, &args_metadata, "calltmp")?;
+    let call = compiler
+        .builder
+        .build_call(function, &args_metadata, "calltmp")?;
 
     // Check TypeContext first, then local cache
-    let return_type = compiler.type_ctx.get_function_return_type(name)
+    let return_type = compiler
+        .type_ctx
+        .get_function_return_type(name)
         .or_else(|| compiler.function_types.get(name).cloned());
     if let Some(return_type) = return_type {
         track_generic_return_type(compiler, &return_type);
@@ -255,7 +279,10 @@ fn try_compile_direct_call<'ctx>(
         Ok(Some(compiler.context.i32_type().const_zero().into()))
     } else {
         Ok(Some(call.try_as_basic_value().left().ok_or_else(|| {
-            CompileError::InternalError("Function call did not return a value".to_string(), compiler.get_current_span())
+            CompileError::InternalError(
+                "Function call did not return a value".to_string(),
+                compiler.get_current_span(),
+            )
         })?))
     }
 }
@@ -265,9 +292,13 @@ fn try_compile_indirect_call<'ctx>(
     name: &str,
     args: &[ast::Expression],
 ) -> Result<Option<BasicValueEnum<'ctx>>, CompileError> {
-    let Ok((alloca, var_type)) = compiler.get_variable(name) else { return Ok(None) };
+    let Ok((alloca, var_type)) = compiler.get_variable(name) else {
+        return Ok(None);
+    };
 
-    let function_ptr = compiler.builder.build_load(alloca.get_type(), alloca, "func_ptr")?;
+    let function_ptr = compiler
+        .builder
+        .build_load(alloca.get_type(), alloca, "func_ptr")?;
     let (function_type, return_type_ref) = get_function_type_from_ast(compiler, &var_type)?;
     let args_metadata = compile_and_convert_args(compiler, args, &function_type.get_param_types())?;
 
@@ -276,7 +307,12 @@ fn try_compile_indirect_call<'ctx>(
         compiler.context.ptr_type(AddressSpace::default()),
         "casted_func_ptr",
     )?;
-    let call = compiler.builder.build_indirect_call(function_type, casted_ptr, &args_metadata, "indirect_call")?;
+    let call = compiler.builder.build_indirect_call(
+        function_type,
+        casted_ptr,
+        &args_metadata,
+        "indirect_call",
+    )?;
 
     if let Some(ret_type) = return_type_ref {
         track_generic_return_type(compiler, ret_type);
@@ -285,7 +321,10 @@ fn try_compile_indirect_call<'ctx>(
         Ok(Some(compiler.context.i32_type().const_zero().into()))
     } else {
         Ok(Some(call.try_as_basic_value().left().ok_or_else(|| {
-            CompileError::InternalError("Function call did not return a value".to_string(), compiler.get_current_span())
+            CompileError::InternalError(
+                "Function call did not return a value".to_string(),
+                compiler.get_current_span(),
+            )
         })?))
     }
 }
@@ -323,7 +362,10 @@ pub fn compile_function_call<'ctx>(
     if let Some(result) = try_compile_indirect_call(compiler, name, args)? {
         return Ok(result);
     }
-    Err(CompileError::UndeclaredFunction(name.to_string(), compiler.get_current_span()))
+    Err(CompileError::UndeclaredFunction(
+        name.to_string(),
+        compiler.get_current_span(),
+    ))
 }
 
 // --- Cast Builtin ---
@@ -334,7 +376,10 @@ fn compile_cast_builtin<'ctx>(
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     if args.len() != 2 {
         return Err(CompileError::TypeError(
-            format!("cast() expects 2 arguments (value, type), got {}", args.len()),
+            format!(
+                "cast() expects 2 arguments (value, type), got {}",
+                args.len()
+            ),
             compiler.get_current_span(),
         ));
     }
@@ -345,19 +390,25 @@ fn compile_cast_builtin<'ctx>(
     let target_type = parse_cast_target_type(&args[1], compiler.get_current_span())?;
     let llvm_target = compiler.to_llvm_type(&target_type)?;
     let Type::Basic(target_basic) = llvm_target else {
-        return Err(CompileError::TypeError("cast() target must be a basic type".to_string(), compiler.get_current_span()));
+        return Err(CompileError::TypeError(
+            "cast() target must be a basic type".to_string(),
+            compiler.get_current_span(),
+        ));
     };
     perform_cast(compiler, value, target_basic, &source_type, &target_type)
 }
 
-fn parse_cast_target_type(expr: &ast::Expression, span: Option<crate::error::Span>) -> Result<AstType, CompileError> {
+fn parse_cast_target_type(
+    expr: &ast::Expression,
+    span: Option<crate::error::Span>,
+) -> Result<AstType, CompileError> {
     let ast::Expression::Identifier(name) = expr else {
         return Err(CompileError::TypeError(
             "cast() second argument must be a type name (e.g., i32, f64)".to_string(),
             span.clone(),
         ));
     };
-    
+
     // Use the centralized type parser instead of manual matching
     match crate::parser::parse_type_from_string(name) {
         Ok(ast_type) => {
@@ -394,16 +445,28 @@ fn perform_cast<'ctx>(
         }
         (BasicValueEnum::IntValue(v), BasicTypeEnum::FloatType(t)) => {
             Ok(if source_type.is_unsigned_integer() {
-                compiler.builder.build_unsigned_int_to_float(v, t, "cast_uitofp")?.into()
+                compiler
+                    .builder
+                    .build_unsigned_int_to_float(v, t, "cast_uitofp")?
+                    .into()
             } else {
-                compiler.builder.build_signed_int_to_float(v, t, "cast_sitofp")?.into()
+                compiler
+                    .builder
+                    .build_signed_int_to_float(v, t, "cast_sitofp")?
+                    .into()
             })
         }
         (BasicValueEnum::FloatValue(v), BasicTypeEnum::IntType(t)) => {
             Ok(if target_type.is_unsigned_integer() {
-                compiler.builder.build_float_to_unsigned_int(v, t, "cast_fptoui")?.into()
+                compiler
+                    .builder
+                    .build_float_to_unsigned_int(v, t, "cast_fptoui")?
+                    .into()
             } else {
-                compiler.builder.build_float_to_signed_int(v, t, "cast_fptosi")?.into()
+                compiler
+                    .builder
+                    .build_float_to_signed_int(v, t, "cast_fptosi")?
+                    .into()
             })
         }
         _ => Err(CompileError::TypeError(
@@ -424,12 +487,21 @@ fn cast_int_to_int<'ctx>(
         val.into()
     } else if src < dst {
         if source_type.is_unsigned_integer() {
-            compiler.builder.build_int_z_extend(val, target, "cast_zext")?.into()
+            compiler
+                .builder
+                .build_int_z_extend(val, target, "cast_zext")?
+                .into()
         } else {
-            compiler.builder.build_int_s_extend(val, target, "cast_sext")?.into()
+            compiler
+                .builder
+                .build_int_s_extend(val, target, "cast_sext")?
+                .into()
         }
     } else {
-        compiler.builder.build_int_truncate(val, target, "cast_trunc")?.into()
+        compiler
+            .builder
+            .build_int_truncate(val, target, "cast_trunc")?
+            .into()
     })
 }
 
@@ -438,14 +510,28 @@ fn cast_float_to_float<'ctx>(
     val: inkwell::values::FloatValue<'ctx>,
     target: inkwell::types::FloatType<'ctx>,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-    let src = if val.get_type() == compiler.context.f32_type() { 32 } else { 64 };
-    let dst = if target == compiler.context.f32_type() { 32 } else { 64 };
+    let src = if val.get_type() == compiler.context.f32_type() {
+        32
+    } else {
+        64
+    };
+    let dst = if target == compiler.context.f32_type() {
+        32
+    } else {
+        64
+    };
     Ok(if src == dst {
         val.into()
     } else if src < dst {
-        compiler.builder.build_float_ext(val, target, "cast_fext")?.into()
+        compiler
+            .builder
+            .build_float_ext(val, target, "cast_fext")?
+            .into()
     } else {
-        compiler.builder.build_float_trunc(val, target, "cast_ftrunc")?.into()
+        compiler
+            .builder
+            .build_float_trunc(val, target, "cast_ftrunc")?
+            .into()
     })
 }
 
@@ -472,7 +558,9 @@ fn maybe_convert_ptr_to_string_struct<'ctx>(
     if !val.is_pointer_value() {
         return Ok(val);
     }
-    let Some(basic_type) = metadata_to_basic_type(expected_type) else { return Ok(val) };
+    let Some(basic_type) = metadata_to_basic_type(expected_type) else {
+        return Ok(val);
+    };
     if !basic_type.is_struct_type() {
         return Ok(val);
     }
@@ -522,17 +610,36 @@ fn build_string_struct_from_ptr<'ctx>(
         .build_call(strlen_fn, &[ptr_val.into()], "str_len")?
         .try_as_basic_value()
         .left()
-        .ok_or_else(|| CompileError::InternalError("strlen should return a value".to_string(), compiler.get_current_span()))?
+        .ok_or_else(|| {
+            CompileError::InternalError(
+                "strlen should return a value".to_string(),
+                compiler.get_current_span(),
+            )
+        })?
         .into_int_value();
 
-    let null_ptr = compiler.context.ptr_type(AddressSpace::default()).const_null();
-    let alloca = compiler.builder.build_alloca(struct_type, "string_struct")?;
+    let null_ptr = compiler
+        .context
+        .ptr_type(AddressSpace::default())
+        .const_null();
+    let alloca = compiler
+        .builder
+        .build_alloca(struct_type, "string_struct")?;
 
     // Populate struct fields: { data, len, capacity, allocator }
-    let values: [BasicValueEnum; 4] = [ptr_val.into(), len_val.into(), len_val.into(), null_ptr.into()];
+    let values: [BasicValueEnum; 4] = [
+        ptr_val.into(),
+        len_val.into(),
+        len_val.into(),
+        null_ptr.into(),
+    ];
     for (idx, value) in values.into_iter().enumerate() {
-        let field_ptr = compiler.builder.build_struct_gep(struct_type, alloca, idx as u32, "")?;
+        let field_ptr = compiler
+            .builder
+            .build_struct_gep(struct_type, alloca, idx as u32, "")?;
         compiler.builder.build_store(field_ptr, value)?;
     }
-    Ok(compiler.builder.build_load(struct_type, alloca, "string_val")?)
+    Ok(compiler
+        .builder
+        .build_load(struct_type, alloca, "string_val")?)
 }

@@ -66,7 +66,14 @@ fn perform_type_cast<'ctx>(
     };
 
     // Handle different conversion cases
-    match (source_is_int, source_is_float, source_is_ptr, target_is_int, target_is_float, target_is_ptr) {
+    match (
+        source_is_int,
+        source_is_float,
+        source_is_ptr,
+        target_is_int,
+        target_is_float,
+        target_is_ptr,
+    ) {
         // Int to Int: resize with sign extension
         (true, false, false, true, false, false) => {
             let source_int = source_value.into_int_value();
@@ -82,15 +89,27 @@ fn perform_type_cast<'ctx>(
                 // Extend to larger type (sign extend for signed types, zero extend for bool)
                 let result = if source_width == 1 {
                     // Bool to int: zero extend
-                    compiler.builder.build_int_z_extend(source_int, target_int_type, "bool_to_int")?
+                    compiler.builder.build_int_z_extend(
+                        source_int,
+                        target_int_type,
+                        "bool_to_int",
+                    )?
                 } else {
                     // Regular int extension (sign extend)
-                    compiler.builder.build_int_s_extend(source_int, target_int_type, "int_extend")?
+                    compiler.builder.build_int_s_extend(
+                        source_int,
+                        target_int_type,
+                        "int_extend",
+                    )?
                 };
                 Ok(result.into())
             } else {
                 // Truncate to smaller type
-                let result = compiler.builder.build_int_truncate(source_int, target_int_type, "int_trunc")?;
+                let result = compiler.builder.build_int_truncate(
+                    source_int,
+                    target_int_type,
+                    "int_trunc",
+                )?;
                 Ok(result.into())
             }
         }
@@ -111,11 +130,19 @@ fn perform_type_cast<'ctx>(
 
                 if is_f32_source && is_f64_target {
                     // f32 to f64: extend
-                    let result = compiler.builder.build_float_ext(source_float, target_float_type, "float_ext")?;
+                    let result = compiler.builder.build_float_ext(
+                        source_float,
+                        target_float_type,
+                        "float_ext",
+                    )?;
                     Ok(result.into())
                 } else {
                     // f64 to f32: truncate (or other float conversion)
-                    let result = compiler.builder.build_float_trunc(source_float, target_float_type, "float_trunc")?;
+                    let result = compiler.builder.build_float_trunc(
+                        source_float,
+                        target_float_type,
+                        "float_trunc",
+                    )?;
                     Ok(result.into())
                 }
             }
@@ -125,7 +152,11 @@ fn perform_type_cast<'ctx>(
         (true, false, false, false, true, false) => {
             let source_int = source_value.into_int_value();
             let target_float_type = target_type.into_float_type();
-            let result = compiler.builder.build_signed_int_to_float(source_int, target_float_type, "int_to_float")?;
+            let result = compiler.builder.build_signed_int_to_float(
+                source_int,
+                target_float_type,
+                "int_to_float",
+            )?;
             Ok(result.into())
         }
 
@@ -133,7 +164,11 @@ fn perform_type_cast<'ctx>(
         (false, true, false, true, false, false) => {
             let source_float = source_value.into_float_value();
             let target_int_type = target_type.into_int_type();
-            let result = compiler.builder.build_float_to_signed_int(source_float, target_int_type, "float_to_int")?;
+            let result = compiler.builder.build_float_to_signed_int(
+                source_float,
+                target_int_type,
+                "float_to_int",
+            )?;
             Ok(result.into())
         }
 
@@ -141,7 +176,10 @@ fn perform_type_cast<'ctx>(
         (true, false, false, false, false, true) => {
             let source_int = source_value.into_int_value();
             let target_ptr_type = target_type.into_pointer_type();
-            let result = compiler.builder.build_int_to_ptr(source_int, target_ptr_type, "int_to_ptr")?;
+            let result =
+                compiler
+                    .builder
+                    .build_int_to_ptr(source_int, target_ptr_type, "int_to_ptr")?;
             Ok(result.into())
         }
 
@@ -149,7 +187,10 @@ fn perform_type_cast<'ctx>(
         (false, false, true, true, false, false) => {
             let source_ptr = source_value.into_pointer_value();
             let target_int_type = target_type.into_int_type();
-            let result = compiler.builder.build_ptr_to_int(source_ptr, target_int_type, "ptr_to_int")?;
+            let result =
+                compiler
+                    .builder
+                    .build_ptr_to_int(source_ptr, target_int_type, "ptr_to_int")?;
             Ok(result.into())
         }
 
@@ -157,17 +198,22 @@ fn perform_type_cast<'ctx>(
         (false, false, true, false, false, true) => {
             let source_ptr = source_value.into_pointer_value();
             let target_ptr_type = target_type.into_pointer_type();
-            let result = compiler.builder.build_pointer_cast(source_ptr, target_ptr_type, "ptr_cast")?;
+            let result =
+                compiler
+                    .builder
+                    .build_pointer_cast(source_ptr, target_ptr_type, "ptr_cast")?;
             Ok(result.into())
         }
 
         // Default case: unsupported conversion
-        _ => {
-            Err(CompileError::TypeMismatch {
-                expected: format!("Cannot cast from {:?} to {:?}", source_value.get_type(), target_type),
-                found: "unsupported type conversion".to_string(),
-                span: compiler.get_current_span(),
-            })
-        }
+        _ => Err(CompileError::TypeMismatch {
+            expected: format!(
+                "Cannot cast from {:?} to {:?}",
+                source_value.get_type(),
+                target_type
+            ),
+            found: "unsupported type conversion".to_string(),
+            span: compiler.get_current_span(),
+        }),
     }
 }

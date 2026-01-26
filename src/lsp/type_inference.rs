@@ -28,8 +28,14 @@ fn split_generic_args(args: &str) -> Vec<String> {
 
     for ch in args.chars() {
         match ch {
-            '<' => { depth += 1; current.push(ch); }
-            '>' => { depth -= 1; current.push(ch); }
+            '<' => {
+                depth += 1;
+                current.push(ch);
+            }
+            '>' => {
+                depth -= 1;
+                current.push(ch);
+            }
             ',' if depth == 0 => {
                 if !current.trim().is_empty() {
                     result.push(current.trim().to_string());
@@ -96,12 +102,16 @@ fn infer_type_from_ast_expr(expr: &crate::ast::Expression) -> Option<String> {
 
     match expr {
         // Integer literals
-        Expression::Integer8(_) | Expression::Integer16(_) |
-        Expression::Integer32(_) | Expression::Integer64(_) => Some("i32".to_string()),
+        Expression::Integer8(_)
+        | Expression::Integer16(_)
+        | Expression::Integer32(_)
+        | Expression::Integer64(_) => Some("i32".to_string()),
 
         // Unsigned integer literals
-        Expression::Unsigned8(_) | Expression::Unsigned16(_) |
-        Expression::Unsigned32(_) | Expression::Unsigned64(_) => Some("u64".to_string()),
+        Expression::Unsigned8(_)
+        | Expression::Unsigned16(_)
+        | Expression::Unsigned32(_)
+        | Expression::Unsigned64(_) => Some("u64".to_string()),
 
         // Float literals
         Expression::Float32(_) | Expression::Float64(_) => Some("f64".to_string()),
@@ -124,12 +134,12 @@ fn infer_type_from_ast_expr(expr: &crate::ast::Expression) -> Option<String> {
         }
 
         // Struct literal - the name IS the type
-        Expression::StructLiteral { name, .. } => {
-            Some(name.clone())
-        }
+        Expression::StructLiteral { name, .. } => Some(name.clone()),
 
         // Enum variant construction
-        Expression::EnumVariant { enum_name, variant, .. } => {
+        Expression::EnumVariant {
+            enum_name, variant, ..
+        } => {
             // Some(...) -> Option, Ok(...)/Err(...) -> Result
             if wk.is_option(enum_name) || variant == "Some" || variant == "None" {
                 Some(wk.option_name().to_string())
@@ -166,8 +176,12 @@ fn is_type_constructor(name: &str) -> bool {
     let wk = well_known();
 
     // Check well-known types (Option, Result, Ptr variants)
-    if wk.is_option(name) || wk.is_result(name) ||
-       wk.is_ptr(name) || wk.is_mutable_ptr(name) || wk.is_raw_ptr(name) {
+    if wk.is_option(name)
+        || wk.is_result(name)
+        || wk.is_ptr(name)
+        || wk.is_mutable_ptr(name)
+        || wk.is_raw_ptr(name)
+    {
         return true;
     }
 
@@ -202,12 +216,26 @@ pub fn infer_receiver_type(receiver: &str, documents: &HashMap<Url, Document>) -
 
     // Check for numeric literals
     let trimmed = receiver.trim();
-    if trimmed.chars().all(|c| c.is_numeric() || c == '.' || c == '-') && !trimmed.is_empty() {
-        return Some(if trimmed.contains('.') { "f64" } else { "i32" }.to_string());
+    if trimmed
+        .chars()
+        .all(|c| c.is_numeric() || c == '.' || c == '-')
+        && !trimmed.is_empty()
+    {
+        return Some(
+            if trimmed.contains('.') {
+                "f64"
+            } else {
+                "i32"
+            }
+            .to_string(),
+        );
     }
 
     // Check if receiver is a known variable in symbols (limit search)
-    for doc in documents.values().take(crate::lsp::search_limits::TYPE_INFERENCE_SEARCH) {
+    for doc in documents
+        .values()
+        .take(crate::lsp::search_limits::TYPE_INFERENCE_SEARCH)
+    {
         if let Some(symbol) = doc.symbols.get(receiver) {
             if let Some(type_info) = &symbol.type_info {
                 return Some(format_type(type_info));
@@ -259,7 +287,16 @@ fn extract_type_from_detail(detail: &str) -> Option<String> {
 
     // Fallback: check for known type names
     let wk = well_known();
-    let known_types = ["HashMap", "DynVec", "Vec", "Array", wk.option_name(), wk.result_name(), "String", "StaticString"];
+    let known_types = [
+        "HashMap",
+        "DynVec",
+        "Vec",
+        "Array",
+        wk.option_name(),
+        wk.result_name(),
+        "String",
+        "StaticString",
+    ];
     for type_name in known_types {
         if detail.contains(type_name) {
             return Some(type_name.to_string());
@@ -316,7 +353,10 @@ pub fn infer_base_expression_type(
 
     // Check if it's a known variable
     if let Some(type_name) = expr.split('(').next() {
-        for doc in documents.values().take(crate::lsp::search_limits::TYPE_INFERENCE_SEARCH) {
+        for doc in documents
+            .values()
+            .take(crate::lsp::search_limits::TYPE_INFERENCE_SEARCH)
+        {
             if let Some(symbol) = doc.symbols.get(type_name) {
                 if let Some(type_info) = &symbol.type_info {
                     let type_str = format_type(type_info);
@@ -429,9 +469,7 @@ pub fn find_self_type_in_enclosing_function(content: &str, position: Position) -
 
         if let Some(self_pos) = line.find("self:") {
             let after_self = &line[self_pos + 5..];
-            let type_end = after_self
-                .find([',', ')'])
-                .unwrap_or(after_self.len());
+            let type_end = after_self.find([',', ')']).unwrap_or(after_self.len());
             let self_type = after_self[..type_end].trim();
             if !self_type.is_empty() {
                 return Some(self_type.to_string());

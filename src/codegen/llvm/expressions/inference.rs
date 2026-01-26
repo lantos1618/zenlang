@@ -16,8 +16,8 @@
 //! Only Layer 1 primitives (i32, bool, intrinsics) and Layer 2 well-known types
 //! (Option, Result, Ptr via compiler.well_known) should have special handling.
 
-use crate::codegen::llvm::{symbols, LLVMCompiler};
 use crate::ast::{AstType, Expression};
+use crate::codegen::llvm::{symbols, LLVMCompiler};
 use crate::error::CompileError;
 use crate::intrinsics as compiler_intrinsics;
 
@@ -98,7 +98,9 @@ pub fn infer_expression_type(
             variant,
             payload,
         } => infer_enum_variant_type(compiler, enum_name, variant, payload),
-        Expression::FunctionCall { name, type_args, .. } => {
+        Expression::FunctionCall {
+            name, type_args, ..
+        } => {
             // Check TypeContext for function return type (includes Type.method style)
             if let Some(return_type) = compiler.type_ctx.get_function_return_type(name) {
                 return Ok(return_type);
@@ -119,11 +121,13 @@ pub fn infer_expression_type(
 
             // Handle both "compiler." and "builtin." prefixes for intrinsics
             if name.starts_with("compiler.") || name.starts_with("builtin.") {
-                let prefix_len = if name.starts_with("compiler.") { 9 } else { 8 };
+                let prefix_len = if name.starts_with("compiler.") {
+                    9
+                } else {
+                    8
+                };
                 let method = &name[prefix_len..];
-                if let Some(return_type) =
-                    compiler_intrinsics::get_intrinsic_return_type(method)
-                {
+                if let Some(return_type) = compiler_intrinsics::get_intrinsic_return_type(method) {
                     return Ok(return_type);
                 }
             }
@@ -279,12 +283,19 @@ pub fn infer_expression_type(
         Expression::Some(value) => {
             let inner_type = compiler.infer_expression_type(value)?;
             Ok(AstType::Generic {
-                name: compiler.well_known.get_variant_parent_name(compiler.well_known.some_name()).unwrap_or(compiler.well_known.option_name()).to_string(),
+                name: compiler
+                    .well_known
+                    .get_variant_parent_name(compiler.well_known.some_name())
+                    .unwrap_or(compiler.well_known.option_name())
+                    .to_string(),
                 type_args: vec![inner_type],
             })
         }
         Expression::None => {
-            let option_name = compiler.well_known.get_variant_parent_name(compiler.well_known.none_name()).unwrap_or(compiler.well_known.option_name());
+            let option_name = compiler
+                .well_known
+                .get_variant_parent_name(compiler.well_known.none_name())
+                .unwrap_or(compiler.well_known.option_name());
             if let Some(t) = compiler.generic_type_context.get("Option_Some_Type") {
                 Ok(AstType::Generic {
                     name: option_name.to_string(),
@@ -316,9 +327,7 @@ pub fn infer_expression_type(
                 })
             }
         }
-        Expression::VecConstructor {
-            element_type, ..
-        } => {
+        Expression::VecConstructor { element_type, .. } => {
             // Vec<T> constructor returns Vec generic type (stdlib struct)
             Ok(AstType::Generic {
                 name: "Vec".to_string(),
@@ -590,7 +599,9 @@ fn infer_option_variant_type(
     payload: &Option<Box<Expression>>,
 ) -> Result<AstType, CompileError> {
     let wk = &compiler.well_known;
-    let parent_name = wk.get_variant_parent_name(variant).unwrap_or(wk.option_name());
+    let parent_name = wk
+        .get_variant_parent_name(variant)
+        .unwrap_or(wk.option_name());
 
     if wk.is_some(variant) && payload.is_some() {
         if let Some(ref p) = payload {
@@ -622,7 +633,9 @@ fn infer_result_variant_type(
     payload: &Option<Box<Expression>>,
 ) -> Result<AstType, CompileError> {
     let wk = &compiler.well_known;
-    let parent_name = wk.get_variant_parent_name(variant).unwrap_or(wk.result_name());
+    let parent_name = wk
+        .get_variant_parent_name(variant)
+        .unwrap_or(wk.result_name());
 
     if wk.is_ok(variant) && payload.is_some() {
         if let Some(ref p) = payload {
@@ -984,7 +997,10 @@ fn infer_set_operation_type(
     // First try TypeContext for method return type
     if let Some(type_name) = object_type.get_type_name() {
         // Set operations don't have separate method names, check any of them
-        if let Some(return_type) = compiler.type_ctx.get_method_return_type(&type_name, "union") {
+        if let Some(return_type) = compiler
+            .type_ctx
+            .get_method_return_type(&type_name, "union")
+        {
             return Ok(return_type);
         }
     }
@@ -1017,7 +1033,8 @@ fn infer_ufc_method_type(
         }
 
         let qualified_name = format!("{}.{}", type_name, method);
-        if let Some(func_return_type) = compiler.type_ctx.get_function_return_type(&qualified_name) {
+        if let Some(func_return_type) = compiler.type_ctx.get_function_return_type(&qualified_name)
+        {
             return Ok(func_return_type);
         }
         if let Some(func_return_type) = compiler.function_types.get(&qualified_name) {

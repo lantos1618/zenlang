@@ -1,7 +1,7 @@
-use crate::parser::core::Parser;
 use crate::ast::{Expression, MatchArm, Pattern};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
+use crate::parser::core::Parser;
 
 /// Parse an expression for a match arm body, but stop at tokens that could start a new pattern
 /// This prevents "-13" being interpreted as subtraction in cases like:
@@ -27,8 +27,11 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
         // Peek ahead to see if this is pattern match (pattern => expr) or bool short form
         // First check if it could be a pattern (starts with identifier, number, _, -, etc.)
         let is_pattern_match = match &parser.current_token {
-            Token::Integer(_) | Token::Float(_) | Token::StringLiteral(_) |
-            Token::Underscore | Token::Symbol('.') => true,
+            Token::Integer(_)
+            | Token::Float(_)
+            | Token::StringLiteral(_)
+            | Token::Underscore
+            | Token::Symbol('.') => true,
             Token::Operator(op) if op == "-" => true, // negative number pattern
             Token::Identifier(name) if name == "true" || name == "false" => true,
             _ => false,
@@ -157,7 +160,10 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
                     if parser.current_token == Token::Symbol(';') {
                         // It's a statement, not the final expression
                         parser.next_token();
-                        statements.push(crate::ast::Statement::Expression { expr, span: Some(parser.current_span.clone()) });
+                        statements.push(crate::ast::Statement::Expression {
+                            expr,
+                            span: Some(parser.current_span.clone()),
+                        });
                     } else {
                         // It's the final expression
                         final_expr = Some(expr);
@@ -182,7 +188,10 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
             if !statements.is_empty() || final_expr.is_some() {
                 // If there's a final expression, add it to the statements
                 if let Some(expr) = final_expr {
-                    statements.push(crate::ast::Statement::Expression { expr, span: Some(parser.current_span.clone()) });
+                    statements.push(crate::ast::Statement::Expression {
+                        expr,
+                        span: Some(parser.current_span.clone()),
+                    });
                 }
                 Expression::Block(statements)
             } else {
@@ -196,9 +205,9 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
             if let Token::Identifier(id) = &parser.current_token {
                 if id == "return" {
                     parser.next_token(); // consume 'return'
-                    // Wrap return in a special expression type or handle it differently
-                    // For now, we'll just use the return expression directly
-                    // In a full implementation, we'd need a Block expression type with statements
+                                         // Wrap return in a special expression type or handle it differently
+                                         // For now, we'll just use the return expression directly
+                                         // In a full implementation, we'd need a Block expression type with statements
                     parser.parse_expression()?
                 } else {
                     parser.parse_expression()?

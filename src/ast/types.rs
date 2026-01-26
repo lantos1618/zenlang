@@ -148,7 +148,9 @@ impl AstType {
 
     pub fn ptr_inner(&self) -> Option<&AstType> {
         match self {
-            AstType::Generic { name, type_args } if type_args.len() == 1 && well_known().is_ptr(name) => {
+            AstType::Generic { name, type_args }
+                if type_args.len() == 1 && well_known().is_ptr(name) =>
+            {
                 Some(&type_args[0])
             }
             _ => None,

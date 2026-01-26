@@ -33,7 +33,7 @@ pub fn infer_cast_type(args: &[Expression], span: Option<crate::error::Span>) ->
             };
         }
     }
-    
+
     Err(CompileError::TypeError(
         "cast() expects 2 arguments: cast(value, type)".to_string(),
         span,

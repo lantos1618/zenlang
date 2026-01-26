@@ -9,10 +9,10 @@ use super::utils::{
     compile_error_to_diagnostic, compile_error_to_diagnostic_with_content, format_type,
 };
 use crate::ast::{Declaration, Expression, Program, Statement};
-use crate::stdlib_types::stdlib_types;
 use crate::lexer::Lexer;
 use crate::module_system::ModuleSystem;
 use crate::parser::Parser;
+use crate::stdlib_types::stdlib_types;
 use crate::type_context::TypeContext;
 use crate::typechecker::TypeChecker;
 use lsp_types::*;
@@ -68,7 +68,10 @@ fn run_compiler_analysis(program: &Program, content: &str) -> Vec<Diagnostic> {
 
 /// Run type checker analysis and return both diagnostics and TypeContext.
 /// This is the semantic analysis entry point for intelligent LSP features.
-pub fn run_compiler_analysis_with_context(program: &Program, content: &str) -> (Vec<Diagnostic>, Option<Arc<TypeContext>>) {
+pub fn run_compiler_analysis_with_context(
+    program: &Program,
+    content: &str,
+) -> (Vec<Diagnostic>, Option<Arc<TypeContext>>) {
     let mut diagnostics = Vec::new();
 
     // Load imported modules using the module system
@@ -302,7 +305,10 @@ pub fn infer_expression_type_string(
     expr: &Expression,
     documents: &HashMap<Url, super::types::Document>,
 ) -> Option<String> {
-    for doc in documents.values().take(crate::lsp::search_limits::QUICK_TYPE_SEARCH) {
+    for doc in documents
+        .values()
+        .take(crate::lsp::search_limits::QUICK_TYPE_SEARCH)
+    {
         if let Some(ast) = &doc.ast {
             let program = Program {
                 declarations: ast.clone(),
@@ -320,7 +326,10 @@ pub fn infer_expression_type_string(
     // Fallback to AST-based lookup for variables
     match expr {
         Expression::Identifier(name) => {
-            for doc in documents.values().take(crate::lsp::search_limits::QUICK_TYPE_SEARCH) {
+            for doc in documents
+                .values()
+                .take(crate::lsp::search_limits::QUICK_TYPE_SEARCH)
+            {
                 if let Some(ast) = &doc.ast {
                     if let Some(type_str) = find_variable_type_in_ast(name, ast) {
                         return Some(type_str);
@@ -331,7 +340,10 @@ pub fn infer_expression_type_string(
         }
         Expression::FunctionCall { name, .. } => {
             // Look up function return type from AST or stdlib
-            for doc in documents.values().take(crate::lsp::search_limits::QUICK_TYPE_SEARCH) {
+            for doc in documents
+                .values()
+                .take(crate::lsp::search_limits::QUICK_TYPE_SEARCH)
+            {
                 if let Some(ast) = &doc.ast {
                     for decl in ast {
                         if let Declaration::Function(func) = decl {
@@ -428,7 +440,10 @@ pub fn infer_type_from_expression(
     compiler: &CompilerIntegration,
 ) -> Option<String> {
     // Use smaller limit for this fast-path lookup
-    for doc in documents.values().take(crate::lsp::search_limits::QUICK_TYPE_SEARCH / 2) {
+    for doc in documents
+        .values()
+        .take(crate::lsp::search_limits::QUICK_TYPE_SEARCH / 2)
+    {
         if let Some(ast) = &doc.ast {
             let program = Program {
                 declarations: ast.clone(),

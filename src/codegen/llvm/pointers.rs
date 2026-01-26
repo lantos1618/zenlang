@@ -30,7 +30,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
             // Handle &expr.method() - compile the method call and return its result
             // This is commonly used with .ref() which returns a pointer
-            Expression::MethodCall { object, method, args, .. } => {
+            Expression::MethodCall {
+                object,
+                method,
+                args,
+                ..
+            } => {
                 // Compile the method call - for .ref() this returns a pointer
                 let result = self.compile_method_call(object, method, args)?;
                 // The result should already be a pointer value
@@ -80,12 +85,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     // 2. Load the value from the address stored in the pointer
                     let llvm_type = self.to_llvm_type(inner)?;
                     return match llvm_type {
-                        super::Type::Basic(basic_type) => Ok(self
-                            .builder
-                            .build_load(basic_type, ptr, "deref_value")?),
-                        super::Type::Struct(struct_type) => Ok(self
-                            .builder
-                            .build_load(struct_type, ptr, "deref_struct")?),
+                        super::Type::Basic(basic_type) => {
+                            Ok(self.builder.build_load(basic_type, ptr, "deref_value")?)
+                        }
+                        super::Type::Struct(struct_type) => {
+                            Ok(self.builder.build_load(struct_type, ptr, "deref_struct")?)
+                        }
                         _ => Err(CompileError::TypeError(
                             "Cannot dereference non-basic/non-struct type".to_string(),
                             self.current_span.clone(),
@@ -134,12 +139,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
             };
 
             return match llvm_type {
-                super::Type::Basic(basic_type) => Ok(self
-                    .builder
-                    .build_load(basic_type, ptr, "deref_value")?),
-                super::Type::Struct(struct_type) => Ok(self
-                    .builder
-                    .build_load(struct_type, ptr, "deref_struct")?),
+                super::Type::Basic(basic_type) => {
+                    Ok(self.builder.build_load(basic_type, ptr, "deref_value")?)
+                }
+                super::Type::Struct(struct_type) => {
+                    Ok(self.builder.build_load(struct_type, ptr, "deref_struct")?)
+                }
                 _ => Err(CompileError::TypeError(
                     "Cannot dereference non-basic/non-struct type".to_string(),
                     self.current_span.clone(),
@@ -164,9 +169,11 @@ impl<'ctx> LLVMCompiler<'ctx> {
             super::Type::Basic(basic_type) => {
                 Ok(self.builder.build_load(basic_type, ptr, "load_tmp")?)
             }
-            super::Type::Struct(struct_type) => Ok(self
-                .builder
-                .build_load(struct_type, ptr, "load_struct_tmp")?),
+            super::Type::Struct(struct_type) => {
+                Ok(self
+                    .builder
+                    .build_load(struct_type, ptr, "load_struct_tmp")?)
+            }
             _ => Err(CompileError::TypeError(
                 "Cannot dereference non-basic/non-struct type".to_string(),
                 self.current_span.clone(),

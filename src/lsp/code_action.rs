@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use super::document_store::DocumentStore;
-use super::helpers::{try_lock, try_parse_params, success_response};
+use super::helpers::{success_response, try_lock, try_parse_params};
 
 // ============================================================================
 // PUBLIC HANDLER FUNCTION
@@ -52,9 +52,11 @@ pub fn handle_code_action(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Re
             }
 
             if diagnostic.message.contains("Result") && diagnostic.message.contains("unwrap") {
-                if let Some(action) =
-                    create_error_handling_action(diagnostic, &params.text_document.uri, &doc.content)
-                {
+                if let Some(action) = create_error_handling_action(
+                    diagnostic,
+                    &params.text_document.uri,
+                    &doc.content,
+                ) {
                     actions.push(action);
                 }
             }
@@ -135,10 +137,7 @@ fn create_allocator_fix_action(diagnostic: &Diagnostic, uri: &Url, content: &str
         )
     } else {
         // No parentheses - add full call
-        (
-            "(get_default_allocator())".to_string(),
-            diagnostic.range,
-        )
+        ("(get_default_allocator())".to_string(), diagnostic.range)
     };
 
     let text_edit = TextEdit {
@@ -176,10 +175,10 @@ fn create_string_conversion_action(
     let lines: Vec<&str> = content.lines().collect();
     let line_idx = diagnostic.range.start.line as usize;
     let line = lines.get(line_idx)?;
-    
+
     let start_char = diagnostic.range.start.character as usize;
     let end_char = (diagnostic.range.end.character as usize).min(line.len());
-    
+
     // Extract the text at the diagnostic range
     let selected = if start_char < line.len() && start_char < end_char {
         &line[start_char..end_char]
@@ -190,7 +189,10 @@ fn create_string_conversion_action(
     // Determine conversion direction and create actual edit
     let (title, new_text) = if diagnostic.message.contains("expected StaticString") {
         // If it's a String, call .as_static() - common pattern
-        ("Convert to StaticString", format!("{}.as_static()", selected))
+        (
+            "Convert to StaticString",
+            format!("{}.as_static()", selected),
+        )
     } else if diagnostic.message.contains("expected String") {
         // If it's a StaticString (literal), wrap with String.from()
         ("Convert to String", format!("String.from({})", selected))
@@ -595,7 +597,8 @@ fn generate_variable_name(expression: &str) -> String {
 }
 
 fn create_add_import_action(uri: &Url, content: &str) -> Option<CodeAction> {
-    let needs_io = content.contains("io.") && !content.contains("{ io }") && !content.contains("{io}");
+    let needs_io =
+        content.contains("io.") && !content.contains("{ io }") && !content.contains("{io}");
     let needs_allocator = (content.contains("get_default_allocator")
         || content.contains("GPA")
         || content.contains("AsyncPool"))
@@ -615,8 +618,14 @@ fn create_add_import_action(uri: &Url, content: &str) -> Option<CodeAction> {
 
     let text_edit = TextEdit {
         range: Range {
-            start: Position { line: 0, character: 0 },
-            end: Position { line: 0, character: 0 },
+            start: Position {
+                line: 0,
+                character: 0,
+            },
+            end: Position {
+                line: 0,
+                character: 0,
+            },
         },
         new_text: import_statement.to_string(),
     };

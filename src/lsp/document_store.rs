@@ -20,16 +20,28 @@ use std::time::Instant;
 /// Create a Range from line/char position and symbol length
 fn make_range(line: usize, char_pos: usize, symbol_len: usize) -> Range {
     Range {
-        start: Position { line: line as u32, character: char_pos as u32 },
-        end: Position { line: line as u32, character: (char_pos + symbol_len) as u32 },
+        start: Position {
+            line: line as u32,
+            character: char_pos as u32,
+        },
+        end: Position {
+            line: line as u32,
+            character: (char_pos + symbol_len) as u32,
+        },
     }
 }
 
 /// Create a dummy range for built-in types (no source location)
 fn dummy_range() -> Range {
     Range {
-        start: Position { line: 0, character: 0 },
-        end: Position { line: 0, character: 0 },
+        start: Position {
+            line: 0,
+            character: 0,
+        },
+        end: Position {
+            line: 0,
+            character: 0,
+        },
     }
 }
 
@@ -112,7 +124,7 @@ impl DocumentStore {
         store.register_builtin_types();
         store
     }
-    
+
     pub fn index_stdlib_deferred(&mut self) {
         self.index_stdlib();
     }
@@ -130,7 +142,10 @@ impl DocumentStore {
                     SymbolKind::TYPE_PARAMETER,
                     range,
                     Some(format!("{} - Built-in primitive type", name)),
-                    Some(format!("Built-in primitive type `{}`. Always available, no import needed.", name)),
+                    Some(format!(
+                        "Built-in primitive type `{}`. Always available, no import needed.",
+                        name
+                    )),
                     Some(type_.clone()),
                 ),
             );
@@ -139,7 +154,10 @@ impl DocumentStore {
         // Also register built-in generic types (Option, Result)
         let wk = well_known();
         for name in [wk.option_name(), wk.result_name()] {
-            let type_ = AstType::Generic { name: name.to_string(), type_args: vec![] };
+            let type_ = AstType::Generic {
+                name: name.to_string(),
+                type_args: vec![],
+            };
             self.stdlib_symbols.insert(
                 name.to_string(),
                 make_symbol(
@@ -147,7 +165,10 @@ impl DocumentStore {
                     SymbolKind::ENUM,
                     range,
                     Some(format!("{}<T> - Built-in generic type", name)),
-                    Some(format!("Built-in generic type `{}`. Always available, no import needed.", name)),
+                    Some(format!(
+                        "Built-in generic type `{}`. Always available, no import needed.",
+                        name
+                    )),
                     Some(type_),
                 ),
             );
@@ -161,19 +182,43 @@ impl DocumentStore {
 
         // (name, description, category)
         let intrinsics: &[(&str, &str, &str)] = &[
-            ("raw_allocate", "Allocates raw memory using malloc", "Memory"),
+            (
+                "raw_allocate",
+                "Allocates raw memory using malloc",
+                "Memory",
+            ),
             ("raw_deallocate", "Deallocates memory", "Memory"),
-            ("raw_reallocate", "Reallocates memory to a new size", "Memory"),
-            ("raw_ptr_offset", "Offset a pointer by byte count", "Pointer"),
+            (
+                "raw_reallocate",
+                "Reallocates memory to a new size",
+                "Memory",
+            ),
+            (
+                "raw_ptr_offset",
+                "Offset a pointer by byte count",
+                "Pointer",
+            ),
             ("raw_ptr_cast", "Reinterprets a pointer type", "Pointer"),
-            ("gep", "GetElementPointer - byte-level pointer arithmetic", "Pointer"),
+            (
+                "gep",
+                "GetElementPointer - byte-level pointer arithmetic",
+                "Pointer",
+            ),
             ("gep_struct", "Struct field access using GEP", "Pointer"),
             ("null_ptr", "Returns a null pointer", "Pointer"),
             ("nullptr", "Alias for null_ptr", "Pointer"),
             ("sizeof", "Returns the size of a type in bytes", "Type"),
             ("alignof", "Returns the alignment of a type", "Type"),
-            ("discriminant", "Reads the discriminant from an enum", "Enum"),
-            ("set_discriminant", "Sets the discriminant of an enum", "Enum"),
+            (
+                "discriminant",
+                "Reads the discriminant from an enum",
+                "Enum",
+            ),
+            (
+                "set_discriminant",
+                "Sets the discriminant of an enum",
+                "Enum",
+            ),
             ("get_payload", "Returns pointer to enum payload", "Enum"),
             ("set_payload", "Copies payload into enum", "Enum"),
             ("load", "Load a value from a pointer", "Memory"),
@@ -202,8 +247,16 @@ impl DocumentStore {
             ("atomic_xchg", "Atomic exchange", "Atomic"),
             ("fence", "Memory fence", "Atomic"),
             ("add_overflow", "Add with overflow detection", "Overflow"),
-            ("sub_overflow", "Subtract with overflow detection", "Overflow"),
-            ("mul_overflow", "Multiply with overflow detection", "Overflow"),
+            (
+                "sub_overflow",
+                "Subtract with overflow detection",
+                "Overflow",
+            ),
+            (
+                "mul_overflow",
+                "Multiply with overflow detection",
+                "Overflow",
+            ),
             ("unreachable", "Mark code as unreachable", "Debug"),
             ("trap", "Trigger a trap/abort", "Debug"),
             ("debugtrap", "Trigger a debug trap", "Debug"),
@@ -216,18 +269,35 @@ impl DocumentStore {
 
         for &(name, doc, category) in intrinsics {
             if let Some(func) = get_intrinsic(name) {
-                let params_str = func.params.iter()
+                let params_str = func
+                    .params
+                    .iter()
                     .map(|(pname, ptype)| format!("{}: {}", pname, format_type(ptype)))
-                    .collect::<Vec<_>>().join(", ");
-                let detail = format!("@std.compiler.{}({}) -> {}", name, params_str, format_type(&func.return_type));
-                let full_doc = format!("{}\n\n**Category:** {}\n\n**Signature:**\n```zen\n{}\n```", doc, category, detail);
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let detail = format!(
+                    "@std.compiler.{}({}) -> {}",
+                    name,
+                    params_str,
+                    format_type(&func.return_type)
+                );
+                let full_doc = format!(
+                    "{}\n\n**Category:** {}\n\n**Signature:**\n```zen\n{}\n```",
+                    doc, category, detail
+                );
 
                 // Register both "compiler.name" and "@std.compiler.name" variants
                 for prefix in ["compiler.", "@std.compiler."] {
                     self.stdlib_symbols.insert(
                         format!("{}{}", prefix, name),
-                        make_symbol(name.to_string(), SymbolKind::FUNCTION, *range,
-                            Some(detail.clone()), Some(full_doc.clone()), Some(func.return_type.clone())),
+                        make_symbol(
+                            name.to_string(),
+                            SymbolKind::FUNCTION,
+                            *range,
+                            Some(detail.clone()),
+                            Some(full_doc.clone()),
+                            Some(func.return_type.clone()),
+                        ),
                     );
                 }
             }
@@ -260,7 +330,8 @@ impl DocumentStore {
             let duration = start.elapsed();
             log::debug!(
                 "[LSP] Indexed {} symbols from workspace in {:?}",
-                count, duration
+                count,
+                duration
             );
         }
     }
@@ -329,15 +400,18 @@ impl DocumentStore {
     fn index_stdlib(&mut self) {
         if let Some(stdlib_path) = find_stdlib_path() {
             index_stdlib_directory(&stdlib_path, &mut self.stdlib_symbols);
-            log::debug!("[LSP] Indexed {} stdlib symbols from: {}", 
-                     self.stdlib_symbols.len(), stdlib_path.display());
+            log::debug!(
+                "[LSP] Indexed {} stdlib symbols from: {}",
+                self.stdlib_symbols.len(),
+                stdlib_path.display()
+            );
         }
     }
 
     pub fn open(&mut self, uri: Url, version: i32, content: String) -> Vec<Diagnostic> {
         let tokens = self.tokenize(&content);
         let ast = self.parse(&content);
-        
+
         let symbols = if let Some(ref ast_decls) = ast {
             self.extract_symbols_from_ast(ast_decls, &content)
         } else {
@@ -357,7 +431,7 @@ impl DocumentStore {
         };
 
         self.documents.insert(uri.clone(), doc);
-        
+
         if let Some(ast_decls) = ast {
             if let Some(sender) = &self.analysis_sender {
                 let job = AnalysisJob {
@@ -372,7 +446,7 @@ impl DocumentStore {
                 let _ = sender.send(job);
             }
         }
-        
+
         Vec::new()
     }
 
@@ -526,7 +600,9 @@ impl DocumentStore {
             if let Some(colon_pos) = trimmed.find(':') {
                 let before_colon = trimmed[..colon_pos].trim();
                 if !before_colon.is_empty()
-                    && before_colon.chars().all(|c| c.is_alphanumeric() || c == '_')
+                    && before_colon
+                        .chars()
+                        .all(|c| c.is_alphanumeric() || c == '_')
                     && trimmed[colon_pos + 1..].trim().starts_with('{')
                 {
                     let char_pos = line.find(before_colon).unwrap_or(0);
@@ -593,26 +669,56 @@ impl DocumentStore {
 
             match decl {
                 Declaration::Function(func) => {
-                    let args_str = func.args.iter()
+                    let args_str = func
+                        .args
+                        .iter()
                         .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
                         .collect::<Vec<_>>()
                         .join(", ");
-                    let detail = format!("{} = ({}) {}", func.name, args_str, format_type(&func.return_type));
+                    let detail = format!(
+                        "{} = ({}) {}",
+                        func.name,
+                        args_str,
+                        format_type(&func.return_type)
+                    );
                     symbols.insert(
                         func.name.clone(),
-                        make_symbol(func.name.clone(), SymbolKind::FUNCTION, range, Some(detail), None, Some(func.return_type.clone())),
+                        make_symbol(
+                            func.name.clone(),
+                            SymbolKind::FUNCTION,
+                            range,
+                            Some(detail),
+                            None,
+                            Some(func.return_type.clone()),
+                        ),
                     );
                 }
                 Declaration::Struct(struct_def) => {
-                    let detail = format!("{} struct with {} fields", struct_def.name, struct_def.fields.len());
+                    let detail = format!(
+                        "{} struct with {} fields",
+                        struct_def.name,
+                        struct_def.fields.len()
+                    );
                     symbols.insert(
                         struct_def.name.clone(),
-                        make_symbol(struct_def.name.clone(), SymbolKind::STRUCT, range, Some(detail), None, None),
+                        make_symbol(
+                            struct_def.name.clone(),
+                            SymbolKind::STRUCT,
+                            range,
+                            Some(detail),
+                            None,
+                            None,
+                        ),
                     );
                 }
                 Declaration::Enum(enum_def) => {
-                    let detail = format!("{} enum with {} variants", enum_def.name, enum_def.variants.len());
-                    let variant_names: Vec<String> = enum_def.variants.iter().map(|v| v.name.clone()).collect();
+                    let detail = format!(
+                        "{} enum with {} variants",
+                        enum_def.name,
+                        enum_def.variants.len()
+                    );
+                    let variant_names: Vec<String> =
+                        enum_def.variants.iter().map(|v| v.name.clone()).collect();
                     symbols.insert(
                         enum_def.name.clone(),
                         make_enum_symbol(enum_def.name.clone(), range, detail, variant_names),
@@ -622,14 +728,28 @@ impl DocumentStore {
                         let variant_key = format!("{}::{}", enum_def.name, variant.name);
                         symbols.insert(
                             variant_key.clone(),
-                            make_symbol(variant.name.clone(), SymbolKind::ENUM_MEMBER, range, Some(variant_key.clone()), None, None),
+                            make_symbol(
+                                variant.name.clone(),
+                                SymbolKind::ENUM_MEMBER,
+                                range,
+                                Some(variant_key.clone()),
+                                None,
+                                None,
+                            ),
                         );
                     }
                 }
                 Declaration::Constant { name, type_, .. } => {
                     symbols.insert(
                         name.clone(),
-                        make_symbol(name.clone(), SymbolKind::CONSTANT, range, type_.as_ref().map(format_type), None, type_.clone()),
+                        make_symbol(
+                            name.clone(),
+                            SymbolKind::CONSTANT,
+                            range,
+                            type_.as_ref().map(format_type),
+                            None,
+                            type_.clone(),
+                        ),
                     );
                 }
                 _ => {}
@@ -647,15 +767,33 @@ impl DocumentStore {
                     let impl_range = self.find_impl_block_range(content, &impl_block.type_name);
                     for method in &impl_block.methods {
                         let method_name = format!("{}.{}", impl_block.type_name, method.name);
-                        let args_str = method.args.iter()
+                        let args_str = method
+                            .args
+                            .iter()
                             .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
                             .collect::<Vec<_>>()
                             .join(", ");
-                        let detail = format!("{}.{} = ({}) {}", impl_block.type_name, method.name, args_str, format_type(&method.return_type));
-                        let doc = format!("Method from {}.implements({})", impl_block.type_name, impl_block.trait_name);
+                        let detail = format!(
+                            "{}.{} = ({}) {}",
+                            impl_block.type_name,
+                            method.name,
+                            args_str,
+                            format_type(&method.return_type)
+                        );
+                        let doc = format!(
+                            "Method from {}.implements({})",
+                            impl_block.type_name, impl_block.trait_name
+                        );
                         symbols.insert(
                             method_name,
-                            make_symbol(method.name.clone(), SymbolKind::METHOD, impl_range, Some(detail), Some(doc), Some(method.return_type.clone())),
+                            make_symbol(
+                                method.name.clone(),
+                                SymbolKind::METHOD,
+                                impl_range,
+                                Some(detail),
+                                Some(doc),
+                                Some(method.return_type.clone()),
+                            ),
                         );
                     }
                 }
@@ -765,13 +903,19 @@ impl DocumentStore {
 
         // Prevent stack overflow from deep recursion
         if depth >= MAX_DIRECTORY_DEPTH {
-            log::debug!("[LSP] search_directory_for_symbol: max depth {} reached", depth);
+            log::debug!(
+                "[LSP] search_directory_for_symbol: max depth {} reached",
+                depth
+            );
             return None;
         }
 
         // Prevent OOM from parsing too many files
         if *files_parsed >= MAX_FILES_TO_PARSE {
-            log::debug!("[LSP] search_directory_for_symbol: max files {} reached", *files_parsed);
+            log::debug!(
+                "[LSP] search_directory_for_symbol: max files {} reached",
+                *files_parsed
+            );
             return None;
         }
 
@@ -812,7 +956,12 @@ impl DocumentStore {
                     continue;
                 }
 
-                if let Some(result) = self.search_directory_for_symbol_bounded(&path, symbol_name, depth + 1, files_parsed) {
+                if let Some(result) = self.search_directory_for_symbol_bounded(
+                    &path,
+                    symbol_name,
+                    depth + 1,
+                    files_parsed,
+                ) {
                     return Some(result);
                 }
             }
@@ -936,7 +1085,14 @@ impl DocumentStore {
                         let detail = self.format_variable_detail(name, &type_info, initializer);
                         symbols.insert(
                             name.clone(),
-                            make_symbol(name.clone(), SymbolKind::VARIABLE, range, detail, None, type_info),
+                            make_symbol(
+                                name.clone(),
+                                SymbolKind::VARIABLE,
+                                range,
+                                detail,
+                                None,
+                                type_info,
+                            ),
                         );
                     }
                 }
@@ -974,16 +1130,24 @@ impl DocumentStore {
     }
 
     /// Infer type from explicit type annotation or initializer
-    fn infer_variable_type(&self, type_: &Option<AstType>, initializer: &Option<Expression>) -> Option<AstType> {
+    fn infer_variable_type(
+        &self,
+        type_: &Option<AstType>,
+        initializer: &Option<Expression>,
+    ) -> Option<AstType> {
         if type_.is_some() {
             return type_.clone();
         }
         if let Some(init) = initializer {
             for doc in self.documents.values().take(5) {
                 if let Some(ast) = &doc.ast {
-                    let program = Program { declarations: ast.clone(), statements: vec![] };
+                    let program = Program {
+                        declarations: ast.clone(),
+                        statements: vec![],
+                    };
                     let mut compiler_integration = CompilerIntegration::new();
-                    if let Ok(ast_type) = compiler_integration.infer_expression_type(&program, init) {
+                    if let Ok(ast_type) = compiler_integration.infer_expression_type(&program, init)
+                    {
                         return Some(ast_type);
                     }
                 }
@@ -993,7 +1157,12 @@ impl DocumentStore {
     }
 
     /// Format variable detail string for display
-    fn format_variable_detail(&self, name: &str, type_info: &Option<AstType>, initializer: &Option<Expression>) -> Option<String> {
+    fn format_variable_detail(
+        &self,
+        name: &str,
+        type_info: &Option<AstType>,
+        initializer: &Option<Expression>,
+    ) -> Option<String> {
         if let Some(t) = type_info {
             return Some(format!("{}: {}", name, format_type(t)));
         }

@@ -389,7 +389,9 @@ impl ComptimeInterpreter {
                 Ok(Some(value))
             }
 
-            Statement::ComptimeBlock { statements: stmts, .. } => {
+            Statement::ComptimeBlock {
+                statements: stmts, ..
+            } => {
                 // Nested comptime block
                 self.execute_comptime_block(stmts)?;
                 Ok(None)
@@ -462,7 +464,11 @@ impl ComptimeInterpreter {
                 match (start_val, end_val) {
                     (ComptimeValue::I32(start_i), ComptimeValue::I32(end_i)) => {
                         let mut values = Vec::new();
-                        let end_val = if *inclusive { end_i + 1 } else { end_i };
+                        let end_val = if *inclusive {
+                            end_i + 1
+                        } else {
+                            end_i
+                        };
 
                         for i in start_i..end_val {
                             values.push(ComptimeValue::I32(i));

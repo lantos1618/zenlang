@@ -1,9 +1,9 @@
 //! Binary operation type inference
 
+use super::helpers::is_string_type;
 use crate::ast::{AstType, BinaryOperator, Expression};
 use crate::error::{CompileError, Result};
 use crate::typechecker::TypeChecker;
-use super::helpers::is_string_type;
 
 /// Infer the type of a binary operation
 pub fn infer_binary_op_type(
@@ -121,7 +121,11 @@ pub fn infer_binary_op_type(
 }
 
 /// Promote two numeric types to their common type
-pub fn promote_numeric_types(left: &AstType, right: &AstType, span: Option<crate::error::Span>) -> Result<AstType> {
+pub fn promote_numeric_types(
+    left: &AstType,
+    right: &AstType,
+    span: Option<crate::error::Span>,
+) -> Result<AstType> {
     // If either is a float, promote to float
     if left.is_float() || right.is_float() {
         if matches!(left, AstType::F64) || matches!(right, AstType::F64) {

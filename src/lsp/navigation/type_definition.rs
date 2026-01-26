@@ -1,7 +1,7 @@
 // Type definition handler
 
-use crate::lsp::document_store::DocumentStore;
 use super::utils::find_symbol_at_position;
+use crate::lsp::document_store::DocumentStore;
 use lsp_server::{Request, Response};
 use lsp_types::*;
 use serde_json::Value;

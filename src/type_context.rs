@@ -63,8 +63,21 @@ impl TypeContext {
     // Registration methods (called by typechecker)
     // ========================================================================
 
-    pub fn register_function(&mut self, name: String, params: Vec<(String, AstType)>, return_type: AstType, is_external: bool) {
-        self.functions.insert(name, FunctionType { params, return_type, is_external });
+    pub fn register_function(
+        &mut self,
+        name: String,
+        params: Vec<(String, AstType)>,
+        return_type: AstType,
+        is_external: bool,
+    ) {
+        self.functions.insert(
+            name,
+            FunctionType {
+                params,
+                return_type,
+                is_external,
+            },
+        );
     }
 
     pub fn register_struct(&mut self, name: String, fields: Vec<(String, AstType)>) {
@@ -100,7 +113,12 @@ impl TypeContext {
     }
 
     /// Register a constructor return type (e.g., "Vec<i32>.new" -> Vec<i32>)
-    pub fn register_constructor(&mut self, type_name: &str, method_name: &str, return_type: AstType) {
+    pub fn register_constructor(
+        &mut self,
+        type_name: &str,
+        method_name: &str,
+        return_type: AstType,
+    ) {
         let key = format!("{}.{}", type_name, method_name);
         self.constructors.insert(key, return_type);
     }
@@ -124,7 +142,8 @@ impl TypeContext {
     }
 
     pub fn get_struct_field_type(&self, struct_name: &str, field_name: &str) -> Option<AstType> {
-        self.structs.get(struct_name)
+        self.structs
+            .get(struct_name)
             .and_then(|fields| fields.iter().find(|(n, _)| n == field_name))
             .map(|(_, t)| t.clone())
     }
@@ -138,7 +157,11 @@ impl TypeContext {
         self.methods.get(&key).cloned()
     }
 
-    pub fn get_method_params(&self, type_name: &str, method_name: &str) -> Option<&Vec<(String, AstType)>> {
+    pub fn get_method_params(
+        &self,
+        type_name: &str,
+        method_name: &str,
+    ) -> Option<&Vec<(String, AstType)>> {
         let key = format!("{}.{}", type_name, method_name);
         self.method_params.get(&key)
     }
@@ -147,8 +170,13 @@ impl TypeContext {
         self.functions.get(name).map(|f| &f.params)
     }
 
-    pub fn get_enum_variant_type(&self, enum_name: &str, variant_name: &str) -> Option<Option<AstType>> {
-        self.enums.get(enum_name)
+    pub fn get_enum_variant_type(
+        &self,
+        enum_name: &str,
+        variant_name: &str,
+    ) -> Option<Option<AstType>> {
+        self.enums
+            .get(enum_name)
             .and_then(|variants| variants.iter().find(|(n, _)| n == variant_name))
             .map(|(_, payload)| payload.clone())
     }

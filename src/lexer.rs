@@ -119,7 +119,11 @@ impl<'a> Lexer<'a> {
         let start_line = self.line;
         // Column tracks position AFTER read, so subtract 1 to get 0-based position of current_char
         // (column is 1-based count of chars read, we want 0-based index of current char)
-        let start_column = if self.column > 0 { self.column - 1 } else { 0 };
+        let start_column = if self.column > 0 {
+            self.column - 1
+        } else {
+            0
+        };
 
         let token = match self.current_char {
             Some('@') => {
