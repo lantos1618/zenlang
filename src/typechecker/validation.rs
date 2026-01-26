@@ -10,7 +10,7 @@ fn is_type_parameter_name(name: &str) -> bool {
         return false;
     }
     // Single uppercase letter is definitely a type parameter
-    if name.len() == 1 && name.chars().next().map_or(false, |c| c.is_uppercase()) {
+    if name.len() == 1 && name.chars().next().is_some_and(|c| c.is_uppercase()) {
         return true;
     }
     // "Self" is a special type parameter

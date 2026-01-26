@@ -813,3 +813,272 @@ fn test_enum_multiple_branches() {
     let result = run_expecting_success(source);
     assert_eq!(result.exit_code, 0, "Enum multiple branches failed");
 }
+
+// ============================================================================
+// BOOLEAN LOGIC TESTS
+// ============================================================================
+
+/// Test logical AND
+#[test]
+fn test_logical_and() {
+    let source = r#"
+        main = () i32 {
+            a = true
+            b = true
+            c = false
+
+            // true && true = true
+            (a && b) ?
+                | true {
+                    // true && false = false
+                    (a && c) ?
+                        | true { return 1 }
+                        | false { return 0 }
+                }
+                | false { return 2 }
+        }
+    "#;
+
+    let result = run_expecting_success(source);
+    assert_eq!(result.exit_code, 0, "Logical AND failed");
+}
+
+/// Test logical OR
+#[test]
+fn test_logical_or() {
+    let source = r#"
+        main = () i32 {
+            a = true
+            b = false
+            c = false
+
+            // true || false = true
+            (a || b) ?
+                | true {
+                    // false || false = false
+                    (b || c) ?
+                        | true { return 1 }
+                        | false { return 0 }
+                }
+                | false { return 2 }
+        }
+    "#;
+
+    let result = run_expecting_success(source);
+    assert_eq!(result.exit_code, 0, "Logical OR failed");
+}
+
+/// Test boolean negation via conditional
+#[test]
+fn test_boolean_negation() {
+    let source = r#"
+        negate = (x: bool) bool {
+            x ?
+                | true { return false }
+                | false { return true }
+        }
+
+        main = () i32 {
+            a = true
+            b = false
+
+            // negate(true) = false, negate(false) = true
+            na = negate(a)
+            nb = negate(b)
+
+            na ?
+                | true { return 1 }
+                | false {
+                    nb ?
+                        | true { return 0 }
+                        | false { return 2 }
+                }
+        }
+    "#;
+
+    let result = run_expecting_success(source);
+    assert_eq!(result.exit_code, 0, "Boolean negation failed");
+}
+
+// ============================================================================
+// WHILE LOOP TESTS
+// ============================================================================
+
+/// Test loop with conditional break (simulates while)
+#[test]
+fn test_loop_conditional_break() {
+    let source = r#"
+        main = () i32 {
+            i ::= 0
+            sum ::= 0
+
+            loop(() {
+                (i >= 5) ? { break }
+                sum = sum + i
+                i = i + 1
+            })
+
+            // sum = 0+1+2+3+4 = 10
+            sum == 10 ?
+                | true { return 0 }
+                | false { return 1 }
+        }
+    "#;
+
+    let result = run_expecting_success(source);
+    assert_eq!(result.exit_code, 0, "Loop conditional break failed");
+}
+
+// ============================================================================
+// NESTED FUNCTION TESTS
+// ============================================================================
+
+/// Test deeply nested function calls
+#[test]
+fn test_deeply_nested_calls() {
+    let source = r#"
+        add = (a: i32, b: i32) i32 { return a + b }
+        mul = (a: i32, b: i32) i32 { return a * b }
+        sub = (a: i32, b: i32) i32 { return a - b }
+
+        main = () i32 {
+            // ((2 + 3) * (4 - 1)) = 5 * 3 = 15
+            result = mul(add(2, 3), sub(4, 1))
+            result == 15 ?
+                | true { return 0 }
+                | false { return 1 }
+        }
+    "#;
+
+    let result = run_expecting_success(source);
+    assert_eq!(result.exit_code, 0, "Deeply nested calls failed");
+}
+
+// ============================================================================
+// TYPE INFERENCE TESTS
+// ============================================================================
+
+/// Test type inference with arithmetic
+#[test]
+fn test_type_inference_arithmetic() {
+    let source = r#"
+        main = () i32 {
+            // All inferred as i32
+            a = 10
+            b = 20
+            c = a + b
+            d = c * 2
+
+            d == 60 ?
+                | true { return 0 }
+                | false { return 1 }
+        }
+    "#;
+
+    let result = run_expecting_success(source);
+    assert_eq!(result.exit_code, 0, "Type inference arithmetic failed");
+}
+
+/// Test type inference with conditionals
+#[test]
+fn test_type_inference_conditional() {
+    let source = r#"
+        main = () i32 {
+            flag = true
+            // Result type inferred from branches
+            value = flag ?
+                | true { 42 }
+                | false { 0 }
+
+            value == 42 ?
+                | true { return 0 }
+                | false { return 1 }
+        }
+    "#;
+
+    let result = run_expecting_success(source);
+    assert_eq!(result.exit_code, 0, "Type inference conditional failed");
+}
+
+// ============================================================================
+// STRUCT METHOD TESTS
+// ============================================================================
+
+/// Test struct with computed field
+#[test]
+fn test_struct_computed() {
+    let source = r#"
+        Point: {
+            x: i32,
+            y: i32
+        }
+
+        magnitude_squared = (p: Point) i32 {
+            return p.x * p.x + p.y * p.y
+        }
+
+        main = () i32 {
+            p = Point { x: 3, y: 4 }
+            // 3^2 + 4^2 = 9 + 16 = 25
+            mag = magnitude_squared(p)
+            mag == 25 ?
+                | true { return 0 }
+                | false { return 1 }
+        }
+    "#;
+
+    let result = run_expecting_success(source);
+    assert_eq!(result.exit_code, 0, "Struct computed field failed");
+}
+
+// ============================================================================
+// EARLY RETURN TESTS
+// ============================================================================
+
+/// Test early return in function
+#[test]
+fn test_early_return() {
+    let source = r#"
+        find_first_positive = (a: i32, b: i32, c: i32) i32 {
+            (a > 0) ? { return a }
+            (b > 0) ? { return b }
+            (c > 0) ? { return c }
+            return 0
+        }
+
+        main = () i32 {
+            // Should return 5 (second arg)
+            result = find_first_positive(-1, 5, 10)
+            result == 5 ?
+                | true { return 0 }
+                | false { return 1 }
+        }
+    "#;
+
+    let result = run_expecting_success(source);
+    assert_eq!(result.exit_code, 0, "Early return failed");
+}
+
+// ============================================================================
+// INTEGER OVERFLOW TESTS (behavior verification)
+// ============================================================================
+
+/// Test i32 wrapping behavior
+#[test]
+fn test_i32_max_plus_one() {
+    let source = r#"
+        main = () i32 {
+            // 2147483647 + 1 wraps to -2147483648 in two's complement
+            max_i32 = 2147483647
+            wrapped = max_i32 + 1
+
+            // Check it wrapped to negative
+            (wrapped < 0) ?
+                | true { return 0 }
+                | false { return 1 }
+        }
+    "#;
+
+    let result = run_expecting_success(source);
+    assert_eq!(result.exit_code, 0, "i32 overflow wrap failed");
+}
