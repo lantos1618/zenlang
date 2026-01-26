@@ -12,8 +12,7 @@ pub fn check_function(checker: &mut TypeChecker, function: &Function) -> Result<
     checker.set_function_return_type(Some(function.return_type.clone()));
 
     // Add function parameters to scope
-    // TODO: Parse and handle mutable parameters (:: syntax)
-    // For now, all parameters are immutable
+    // All parameters are immutable (mutable params via :: syntax not yet supported)
     for (param_name, param_type) in &function.args {
         // Special handling for 'self' parameter in trait implementations
         let actual_type = if param_name == "self" {

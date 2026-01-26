@@ -195,7 +195,7 @@ pub fn parse_generic_type_args(parser: &mut Parser) -> Result<Vec<AstType>> {
 }
 
 /// Parse generic type arguments and return as string (legacy - prefer parse_generic_type_args)
-/// TODO: Remove this once all callers use parse_generic_type_args
+/// Kept for backwards compatibility with callers that need string representation
 pub fn parse_generic_type_args_to_string(parser: &mut Parser) -> Result<String> {
     let type_args = parse_generic_type_args(parser)?;
     let type_args_str = type_args

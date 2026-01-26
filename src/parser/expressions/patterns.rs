@@ -135,8 +135,7 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
         // Check for destructuring/guard with ->
         let guard = if parser.current_token == Token::Operator("->".to_string()) {
             parser.next_token();
-            // TODO: Properly handle destructuring vs guards
-            // For now, treat it as a guard
+            // Currently treats -> as guard; destructuring would need separate syntax
             Some(parser.parse_expression()?)
         } else {
             None

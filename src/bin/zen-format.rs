@@ -252,7 +252,7 @@ fn fix_comptime_imports(content: &str) -> String {
         return content.to_string();
     }
 
-    // TODO: Implement proper AST-based refactoring to move imports out of comptime blocks
+    // AST-based refactoring for comptime imports not implemented
     println!("Warning: Automatic fixing of comptime imports not yet implemented.");
     println!("Please manually move imports to module level.");
     content.to_string()

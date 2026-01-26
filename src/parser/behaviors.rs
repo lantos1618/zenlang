@@ -445,7 +445,7 @@ impl<'a> Parser<'a> {
         Ok(TraitImplementation {
             type_name,
             trait_name,
-            type_params: Vec::new(), // TODO: Add support for generic type parameters
+            type_params: Vec::new(), // Generic type params not yet parsed
             methods,
         })
     }

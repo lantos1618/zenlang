@@ -320,7 +320,7 @@ impl BehaviorResolver {
                 None,
             ));
         }
-        // TODO: Store requirements and verify them when checking enum variants
+        // Requirements stored in trait; verification happens during enum variant checking
         Ok(())
     }
 

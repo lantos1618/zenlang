@@ -98,7 +98,7 @@ pub fn infer_member_type(
         }
         AstType::StdModule => {
             // Handle stdlib module member access (e.g., math.pi, GPA.init)
-            // TODO: Implement a proper registry of stdlib module members
+            // Known members are hardcoded; a proper registry could be added later
             match member {
                 "pi" => Ok(AstType::F64),
                 "init" => {

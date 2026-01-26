@@ -297,7 +297,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         &mut self,
         object: &Expression,
         method_name: &str,
-        _type_args: &[AstType],  // TODO: Use type_args for generic method instantiation
+        _type_args: &[AstType],  // Reserved for generic method instantiation
         args: &[Expression],
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
         // For now, delegate to the existing method

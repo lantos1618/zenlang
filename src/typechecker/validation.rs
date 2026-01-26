@@ -153,9 +153,8 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
                 name: _struct_name, ..
             },
         ) if type_args.is_empty() => {
-            // This is a workaround - we'd need to look up the actual enum type to verify
-            // For now, we'll assume it's valid if the names are plausible
-            // TODO: Improve this by looking up the actual enum definition
+            // Permissive: allow struct-to-generic-enum assignment without lookup.
+            // Full verification would require enum registry access here.
             true
         }
         // Option and Result are now Generic types - handled in Generic match below

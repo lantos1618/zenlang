@@ -89,7 +89,7 @@ impl<'prog> TypeEnvironment<'prog> {
 
         for (param, _arg) in expected.iter().zip(provided.iter()) {
             if !param.constraints.is_empty() {
-                // TODO: Check trait bounds when trait system is implemented
+                // Trait bounds checking deferred until trait system is implemented
             }
         }
 

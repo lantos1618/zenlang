@@ -347,7 +347,7 @@ pub fn compile_set_payload<'ctx>(
     require_args(args, 2, "set_payload", compiler.get_current_span())?;
     let _ptr = compiler.compile_expression(&args[0])?;
     let _payload = compiler.compile_expression(&args[1])?;
-    // TODO: needs size information for proper copy
+    // Stub: full implementation needs payload size for memcpy
     Ok(compiler.context.i32_type().const_zero().into())
 }
 

@@ -1032,9 +1032,8 @@ impl TypeChecker {
             }
             Pattern::Struct { fields, .. } => {
                 // For struct patterns, add bindings for all fields
+                // Uses scrutinee_type for all bindings; field-specific types need struct lookup
                 for field in fields {
-                    // field is (String, Pattern)
-                    // TODO: Should extract field type from struct type
                     self.add_pattern_bindings_to_scope_with_type(&field.1, scrutinee_type)?;
                 }
             }

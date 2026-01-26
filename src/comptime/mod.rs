@@ -99,7 +99,7 @@ impl ComptimeValue {
             }
             ComptimeValue::Struct { name, .. } => AstType::Struct {
                 name: name.clone(),
-                fields: vec![], // TODO: Track field types
+                fields: vec![], // Field types not tracked at comptime
             },
             ComptimeValue::Type(_) => {
                 // Meta-type
@@ -111,7 +111,7 @@ impl ComptimeValue {
             ComptimeValue::Void => AstType::Void,
             ComptimeValue::Null => AstType::ptr(AstType::Void),
             ComptimeValue::Function { .. } => {
-                // TODO: Function type
+                // Opaque function type (full signature not tracked)
                 AstType::Generic {
                     name: "Function".to_string(),
                     type_args: vec![],
@@ -547,8 +547,27 @@ impl ComptimeInterpreter {
         // Check for built-in compile-time functions
         match name {
             "sizeof" => {
-                // TODO: Implement sizeof
-                Ok(ComptimeValue::I64(8))
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "sizeof expects exactly one argument".to_string(),
+                    ));
+                }
+                // Evaluate expression to determine its type
+                let val = self.evaluate_expression(&args[0])?;
+                let arg_type = val.get_type();
+                // Return size in bytes for the type
+                let size = match &arg_type {
+                    AstType::I8 | AstType::U8 | AstType::Bool => 1,
+                    AstType::I16 | AstType::U16 => 2,
+                    AstType::I32 | AstType::U32 | AstType::F32 => 4,
+                    AstType::I64 | AstType::U64 | AstType::F64 | AstType::Usize => 8,
+                    // Pointers and references are 8 bytes on 64-bit systems
+                    t if t.is_ptr_type() => 8,
+                    AstType::Ref(_) => 8,
+                    // Default to pointer size for unknown types
+                    _ => 8,
+                };
+                Ok(ComptimeValue::I64(size))
             }
 
             "typeof" => {
