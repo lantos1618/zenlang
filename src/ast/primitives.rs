@@ -225,26 +225,27 @@ pub fn is_reserved_identifier(name: &str) -> bool {
 }
 
 // ============================================================================
-// STDLIB TYPES AND METHODS
+// STDLIB TYPE QUERIES - Use stdlib_types module for dynamic discovery
 // ============================================================================
+//
+// DO NOT add hardcoded lists of stdlib types, functions, or identifiers here!
+// The stdlib is written in Zen source code and should be parsed dynamically.
+//
+// Use crate::stdlib_types::stdlib_types() for all stdlib queries:
+//   - is_collection_type(name) - checks if type has collection-like methods
+//   - is_math_function(name)   - checks if function is in math module
+//   - is_allocator_type(name)  - checks if type has allocator methods
+//   - has_struct(name)         - checks if struct is defined in stdlib
+//   - get_modules()            - gets list of stdlib modules
+//
+// The stdlib_types module parses actual .zen files at startup, ensuring
+// the compiler always reflects the current state of the stdlib.
 
-/// Collection type names from stdlib
-pub const COLLECTION_TYPES: &[&str] = &[
-    "Vec",
-    "DynVec",
-    "Array",
-    "HashMap",
-    "HashSet",
-    "String",
-    "Queue",
-    "Stack",
-    "LinkedList",
-];
-
-/// Pointer type names
+/// Pointer type names - these are language primitives, not stdlib types
 pub const POINTER_TYPES: &[&str] = &["Ptr", "MutPtr", "RawPtr"];
 
 /// Constructor method names (methods that typically create new instances)
+/// These are language conventions, not stdlib-specific
 pub const CONSTRUCTOR_METHODS: &[&str] = &[
     "new",
     "init",
@@ -255,17 +256,12 @@ pub const CONSTRUCTOR_METHODS: &[&str] = &[
     "with_step",
 ];
 
-/// Check if a type name is a collection type
-pub fn is_collection_type(name: &str) -> bool {
-    COLLECTION_TYPES.contains(&name)
-}
-
-/// Check if a type name is a pointer type
+/// Check if a type name is a pointer type (language primitive)
 pub fn is_pointer_type(name: &str) -> bool {
     POINTER_TYPES.contains(&name)
 }
 
-/// Check if a method name is a constructor
+/// Check if a method name is a constructor (language convention)
 pub fn is_constructor_method(name: &str) -> bool {
     CONSTRUCTOR_METHODS.contains(&name)
 }
@@ -278,55 +274,6 @@ pub fn is_boolean_literal(name: &str) -> bool {
 /// Check if an identifier is a null/void literal
 pub fn is_null_literal(name: &str) -> bool {
     name == "null"
-}
-
-// ============================================================================
-// STDLIB MODULES (defined in stdlib/*.zen, referenced by compiler)
-// ============================================================================
-//
-// NOTE: These are FALLBACK lists used when stdlib parsing isn't available.
-// The preferred way to check stdlib contents is via stdlib_types::stdlib_types()
-// which actually parses the .zen files. These constants exist for:
-// 1. Bootstrap/early compilation before stdlib is loaded
-// 2. Static analysis where dynamic lookup isn't possible
-// 3. LSP features that need quick checks without full parsing
-
-/// Core stdlib modules (fallback - prefer stdlib_types() queries)
-pub const STDLIB_MODULES: &[&str] = &["io", "math", "core", "memory", "build", "testing"];
-
-/// Math functions from stdlib/math.zen (fallback - prefer stdlib_types().is_math_function())
-/// Actual functions: abs, abs64, factorial, is_even, is_odd, max, min, clamp, fmin, fmax
-pub const MATH_FUNCTIONS: &[&str] = &[
-    "abs",
-    "abs64",
-    "factorial",
-    "is_even",
-    "is_odd",
-    "max",
-    "min",
-    "clamp",
-    "fmin",
-    "fmax",
-];
-
-/// Memory/allocator-related identifiers (fallback - these are defined in stdlib/memory/*.zen)
-pub const ALLOCATOR_IDENTIFIERS: &[&str] =
-    &["Allocator", "get_default_allocator", "GPA", "AsyncPool"];
-
-/// Check if an identifier is a stdlib module
-pub fn is_stdlib_module(name: &str) -> bool {
-    STDLIB_MODULES.contains(&name)
-}
-
-/// Check if an identifier is a math function (fallback check)
-/// Prefer: stdlib_types::stdlib_types().is_math_function(name)
-pub fn is_math_function(name: &str) -> bool {
-    MATH_FUNCTIONS.contains(&name)
-}
-
-/// Check if an identifier is allocator-related (fallback check)
-pub fn is_allocator_identifier(name: &str) -> bool {
-    ALLOCATOR_IDENTIFIERS.contains(&name)
 }
 
 #[cfg(test)]

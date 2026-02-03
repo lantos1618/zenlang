@@ -333,6 +333,34 @@ impl StdlibTypeRegistry {
     pub fn is_math_function(&self, func_name: &str) -> bool {
         self.has_function("math", func_name)
     }
+
+    /// Check if a type is an allocator-related type from stdlib/memory
+    /// Looks for types with allocator-like methods (allocate, deallocate)
+    pub fn is_allocator_type(&self, type_name: &str) -> bool {
+        // Check if it has allocator-like methods
+        let alloc_key = format!("{}::allocate", type_name);
+        let dealloc_key = format!("{}::deallocate", type_name);
+        self.methods.contains_key(&alloc_key) || self.methods.contains_key(&dealloc_key)
+    }
+
+    /// Check if a struct type is defined in stdlib
+    pub fn has_struct(&self, name: &str) -> bool {
+        self.structs.contains_key(name)
+    }
+
+    /// Get list of stdlib modules by checking what files were parsed
+    pub fn get_modules(&self) -> Vec<&str> {
+        // Return modules based on what types we've seen in struct_sources
+        let mut modules = std::collections::HashSet::new();
+        for path in self.struct_sources.values() {
+            if let Some(module) = path.split('/').next() {
+                // Remove .zen extension if top-level file
+                let module = module.trim_end_matches(".zen");
+                modules.insert(module);
+            }
+        }
+        modules.into_iter().collect()
+    }
 }
 
 // ========================================================================

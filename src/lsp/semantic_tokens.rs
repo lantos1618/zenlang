@@ -332,8 +332,8 @@ fn classify_type(name: &str) -> Option<(u32, u32)> {
         return Some((TYPE_TYPE, MOD_DEFAULT_LIBRARY));
     }
 
-    // Collection types
-    if primitives::is_collection_type(name) {
+    // Collection types (dynamically discovered from stdlib)
+    if crate::stdlib_types::stdlib_types().is_collection_type(name) {
         return Some((TYPE_CLASS, MOD_DEFAULT_LIBRARY));
     }
 

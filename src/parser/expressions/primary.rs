@@ -174,8 +174,9 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
             {
                 if name == "Array" {
                     (name.clone(), false)
-                // Use centralized collection type check
-                } else if primitives::is_collection_type(&name)
+                // Check if this is a generic type (collection or user-defined)
+                // Using stdlib lookup first, then fallback to heuristic for generic args
+                } else if crate::stdlib_types::stdlib_types().is_collection_type(&name)
                     || super::collections::looks_like_generic_type_args(parser)
                 {
                     let type_args_str = super::literals::parse_generic_type_args_to_string(parser)?;

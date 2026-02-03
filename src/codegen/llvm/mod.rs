@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use crate::ast::primitives;
 use crate::ast::{self, AstType};
 use crate::comptime;
 use crate::error::{CompileError, Span};
@@ -206,17 +205,16 @@ impl<'ctx> LLVMCompiler<'ctx> {
             // Fall back to primitives for bootstrap/static analysis
             let stdlib = stdlib_types();
 
-            // Collection types (from stdlib or fallback)
-            if stdlib.is_collection_type(module_name) || primitives::is_collection_type(module_name)
-            {
+            // Collection types (dynamically discovered from stdlib)
+            if stdlib.is_collection_type(module_name) {
                 return 102;
             }
-            // Allocator-related (from stdlib/memory/*.zen or fallback)
-            if primitives::is_allocator_identifier(module_name) {
+            // Allocator-related (dynamically discovered from stdlib/memory/*.zen)
+            if stdlib.is_allocator_type(module_name) {
                 return 103;
             }
-            // Math functions (from stdlib/math.zen or fallback)
-            if stdlib.is_math_function(module_name) || primitives::is_math_function(module_name) {
+            // Math functions (dynamically discovered from stdlib/math.zen)
+            if stdlib.is_math_function(module_name) {
                 return 104;
             }
             // Stdlib module priorities
