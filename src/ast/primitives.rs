@@ -228,18 +228,12 @@ pub fn is_reserved_identifier(name: &str) -> bool {
 // STDLIB TYPE QUERIES - Use stdlib_types module for dynamic discovery
 // ============================================================================
 //
-// DO NOT add hardcoded lists of stdlib types, functions, or identifiers here!
-// The stdlib is written in Zen source code and should be parsed dynamically.
+// All stdlib type queries should use crate::stdlib_types::stdlib_types()
+// which parses actual .zen files at startup and stays in sync with the stdlib.
 //
-// Use crate::stdlib_types::stdlib_types() for all stdlib queries:
-//   - is_collection_type(name) - checks if type has collection-like methods
-//   - is_math_function(name)   - checks if function is in math module
-//   - is_allocator_type(name)  - checks if type has allocator methods
-//   - has_struct(name)         - checks if struct is defined in stdlib
-//   - get_modules()            - gets list of stdlib modules
-//
-// The stdlib_types module parses actual .zen files at startup, ensuring
-// the compiler always reflects the current state of the stdlib.
+// IMPORTANT: stdlib_types() is pre-initialized in main() before any user file
+// parsing begins. This prevents deadlock (since stdlib_types() itself uses
+// the parser internally).
 
 /// Pointer type names - these are language primitives, not stdlib types
 pub const POINTER_TYPES: &[&str] = &["Ptr", "MutPtr", "RawPtr"];

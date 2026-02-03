@@ -174,10 +174,10 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
             {
                 if name == "Array" {
                     (name.clone(), false)
-                // Check if this is a generic type (collection or user-defined)
-                // Using stdlib lookup first, then fallback to heuristic for generic args
-                } else if crate::stdlib_types::stdlib_types().is_collection_type(&name)
-                    || super::collections::looks_like_generic_type_args(parser)
+                // Check if this looks like generic type args (e.g., Vec<i32>)
+                // We use a heuristic that doesn't require stdlib lookups to avoid
+                // deadlock during stdlib parsing - checks if followed by <TypeName>
+                } else if super::collections::looks_like_generic_type_args(parser)
                 {
                     let type_args_str = super::literals::parse_generic_type_args_to_string(parser)?;
                     (format!("{}<{}>", name, type_args_str), true)
