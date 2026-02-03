@@ -184,7 +184,9 @@ pub fn is_valid_identifier(s: &str) -> bool {
         return false;
     }
     let mut chars = s.chars();
-    let first = chars.next().unwrap();
+    let first = chars
+        .next()
+        .expect("is_valid_identifier: string checked as non-empty");
     if !first.is_alphabetic() && first != '_' {
         return false;
     }

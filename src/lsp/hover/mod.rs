@@ -20,6 +20,7 @@ use super::navigation::find_symbol_at_position;
 use super::navigation::find_symbol_definition_in_content;
 use super::types::*;
 use super::utils::{format_symbol_kind, format_type};
+use crate::ast::primitives;
 use crate::ast::AstType;
 
 pub use expressions::*;
@@ -490,9 +491,9 @@ mod handler {
 
     fn is_inside_format_expression(line: &str, byte_pos: usize) -> bool {
         // Find the nearest ${ before the cursor
+        use crate::lsp::search_limits::MAX_ITERATIONS;
         let mut search_pos = 0;
         let mut iterations = 0;
-        const MAX_ITERATIONS: usize = 100;
 
         while iterations < MAX_ITERATIONS {
             iterations += 1;
@@ -614,7 +615,8 @@ mod handler {
             ));
         }
 
-        if trimmed == "true" || trimmed == "false" {
+        // Use centralized boolean literal check
+        if primitives::is_boolean_literal(trimmed) {
             return Some(create_hover_response_from_string(
                 request_id,
                 format!("```zen\n{}\n```\n\n**Type:** `bool`", trimmed),

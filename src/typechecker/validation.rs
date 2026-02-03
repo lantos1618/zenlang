@@ -123,6 +123,27 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
                 name: actual_name, ..
             },
         ) => expected_name == actual_name,
+        // Allow Generic type to match Struct type when name matches (for return types)
+        (
+            AstType::Generic {
+                name: expected_name,
+                type_args,
+            },
+            AstType::Struct {
+                name: actual_name, ..
+            },
+        ) => expected_name == actual_name && type_args.is_empty(),
+        // Allow Struct type to match Generic type when name matches
+        (
+            AstType::Struct {
+                name: expected_name,
+                ..
+            },
+            AstType::Generic {
+                name: actual_name,
+                type_args,
+            },
+        ) => expected_name == actual_name && type_args.is_empty(),
         // Check enum compatibility
         (
             AstType::Enum {
@@ -161,20 +182,6 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
                 name: struct_name, ..
             },
         ) => variants.iter().any(|v| v.name == *struct_name),
-        // Allow struct type to be assigned to generic enum type
-        (
-            AstType::Generic {
-                name: _enum_name,
-                type_args,
-            },
-            AstType::Struct {
-                name: _struct_name, ..
-            },
-        ) if type_args.is_empty() => {
-            // Permissive: allow struct-to-generic-enum assignment without lookup.
-            // Full verification would require enum registry access here.
-            true
-        }
         // Option and Result are now Generic types - handled in Generic match below
         // Check Option<T> compatibility using generic syntax
         (

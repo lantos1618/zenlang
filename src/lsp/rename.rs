@@ -1,5 +1,5 @@
 // Rename Module for Zen LSP
-// Handles textDocument/rename requests
+// Handles textDocument/rename and textDocument/prepareRename requests
 
 use lsp_server::{Request, Response};
 use lsp_types::*;
@@ -7,13 +7,205 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use crate::ast::primitives;
 use crate::ast::{Declaration, Statement};
+use crate::lexer::{Lexer, Token};
 
 use super::document_store::DocumentStore;
 use super::helpers::{null_response, success_response, try_lock, try_parse_params};
 use super::navigation::find_symbol_at_position;
 use super::navigation::utils::{find_function_range, find_function_range_from_doc};
 use super::types::{Document, SymbolScope};
+
+// ============================================================================
+// IDENTIFIER VALIDATION USING LEXER
+// ============================================================================
+
+/// Check if a name is a valid Zen identifier that can be used/renamed.
+/// Uses the lexer to properly tokenize and validate.
+fn is_valid_identifier(name: &str) -> bool {
+    if name.is_empty() {
+        return false;
+    }
+
+    // Use the lexer to tokenize the name
+    let mut lexer = Lexer::new(name);
+    let token = lexer.next_token_with_span();
+
+    // Must be an Identifier token and consume the entire input
+    matches!(token.token, Token::Identifier(_)) && lexer.next_token_with_span().token == Token::Eof
+}
+
+/// Check if a name is a keyword or special token that cannot be renamed.
+/// Returns an error message if it cannot be renamed, None if it's valid.
+fn check_rename_target(name: &str) -> Option<String> {
+    if name.is_empty() {
+        return Some("Empty name".to_string());
+    }
+
+    // Use the lexer to tokenize
+    let mut lexer = Lexer::new(name);
+    let token = lexer.next_token_with_span();
+
+    match &token.token {
+        // Actual keyword tokens in Zen
+        Token::Pub => Some("Cannot rename keyword 'pub'".to_string()),
+        Token::AtStd => Some("Cannot rename builtin '@std'".to_string()),
+        Token::AtThis => Some("Cannot rename builtin '@this'".to_string()),
+        Token::AtMeta => Some("Cannot rename builtin '@meta'".to_string()),
+        Token::AtExport => Some("Cannot rename builtin '@export'".to_string()),
+        Token::AtBuiltin => Some("Cannot rename builtin '@builtin'".to_string()),
+
+        // Numeric literals
+        Token::Integer(_) | Token::Float(_) => Some("Cannot rename numeric literal".to_string()),
+
+        // String literals
+        Token::StringLiteral(_) => Some("Cannot rename string literal".to_string()),
+
+        // Identifiers are generally valid, but check for reserved names
+        // using the centralized definitions
+        Token::Identifier(ident) => {
+            // Use shared reserved identifier check (primitives, literals, self)
+            if primitives::is_reserved_identifier(ident) {
+                if primitives::is_primitive_name(ident) {
+                    return Some(format!("Cannot rename primitive type '{}'", ident));
+                }
+                if primitives::is_literal_identifier(ident) {
+                    return Some(format!("Cannot rename literal '{}'", ident));
+                }
+                // self/Self
+                return Some(format!("Cannot rename '{}'", ident));
+            }
+
+            // Valid identifier
+            None
+        }
+
+        // Any other token type cannot be renamed
+        _ => Some(format!("Cannot rename '{}'", name)),
+    }
+}
+
+/// Validate a new name for an identifier.
+/// Returns an error message if invalid, None if valid.
+pub fn validate_new_name(new_name: &str) -> Option<String> {
+    if new_name.is_empty() {
+        return Some("New name cannot be empty".to_string());
+    }
+
+    // Must be a valid identifier according to the lexer
+    if !is_valid_identifier(new_name) {
+        return Some(format!("'{}' is not a valid identifier", new_name));
+    }
+
+    // Check if it's a reserved name
+    if let Some(error) = check_rename_target(new_name) {
+        // Rephrase error for "new name" context
+        if error.contains("Cannot rename") {
+            return Some(format!(
+                "'{}' cannot be used as an identifier name",
+                new_name
+            ));
+        }
+        return Some(error);
+    }
+
+    None
+}
+
+// ============================================================================
+// PREPARE RENAME HANDLER
+// ============================================================================
+
+/// Handle textDocument/prepareRename requests
+/// Returns the range of the symbol to be renamed, or null if rename is not valid
+pub fn handle_prepare_rename(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Response {
+    let params: TextDocumentPositionParams = match try_parse_params(&req) {
+        Ok(p) => p,
+        Err(resp) => return resp,
+    };
+
+    let store = match try_lock(store.as_ref(), &req) {
+        Ok(s) => s,
+        Err(_) => return null_response(&req),
+    };
+
+    if let Some(doc) = store.documents.get(&params.text_document.uri) {
+        let position = params.position;
+
+        if let Some(symbol_name) = find_symbol_at_position(&doc.content, position) {
+            // Check if symbol can be renamed
+            if let Some(error) = check_rename_target(&symbol_name) {
+                // Return error - cannot rename this symbol
+                return Response {
+                    id: req.id,
+                    result: None,
+                    error: Some(lsp_server::ResponseError {
+                        code: lsp_server::ErrorCode::InvalidRequest as i32,
+                        message: error,
+                        data: None,
+                    }),
+                };
+            }
+
+            // Find the range of the symbol
+            let lines: Vec<&str> = doc.content.lines().collect();
+            if let Some(line) = lines.get(position.line as usize) {
+                if let Some(start) =
+                    find_symbol_start(line, position.character as usize, &symbol_name)
+                {
+                    let range = Range {
+                        start: Position {
+                            line: position.line,
+                            character: start as u32,
+                        },
+                        end: Position {
+                            line: position.line,
+                            character: (start + symbol_name.len()) as u32,
+                        },
+                    };
+
+                    // Return PrepareRenameResponse with range and placeholder
+                    let response = PrepareRenameResponse::RangeWithPlaceholder {
+                        range,
+                        placeholder: symbol_name,
+                    };
+
+                    return Response {
+                        id: req.id,
+                        result: Some(serde_json::to_value(response).unwrap_or(Value::Null)),
+                        error: None,
+                    };
+                }
+            }
+        }
+    }
+
+    null_response(&req)
+}
+
+/// Find the start position of a symbol in a line
+fn find_symbol_start(line: &str, cursor_pos: usize, symbol_name: &str) -> Option<usize> {
+    // Search backwards from cursor to find symbol start
+    let mut pos = 0;
+    while let Some(found) = line[pos..].find(symbol_name) {
+        let start = pos + found;
+        let end = start + symbol_name.len();
+
+        // Check word boundaries
+        let before_ok = start == 0 || !line.chars().nth(start - 1).unwrap_or(' ').is_alphanumeric();
+        let after_ok = end >= line.len() || !line.chars().nth(end).unwrap_or(' ').is_alphanumeric();
+
+        if before_ok && after_ok && cursor_pos >= start && cursor_pos <= end {
+            return Some(start);
+        }
+        pos = start + 1;
+        if pos >= line.len() {
+            break;
+        }
+    }
+    None
+}
 
 // ============================================================================
 // PUBLIC HANDLER FUNCTION
@@ -24,6 +216,19 @@ pub fn handle_rename(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Respons
         Ok(p) => p,
         Err(resp) => return resp,
     };
+
+    // Validate the new name before proceeding
+    if let Some(error) = validate_new_name(&params.new_name) {
+        return Response {
+            id: req.id,
+            result: None,
+            error: Some(lsp_server::ResponseError {
+                code: lsp_server::ErrorCode::InvalidParams as i32,
+                message: error,
+                data: None,
+            }),
+        };
+    }
 
     let store = match try_lock(store.as_ref(), &req) {
         Ok(s) => s,
@@ -187,8 +392,6 @@ fn is_symbol_in_statements(statements: &[Statement], symbol_name: &str) -> bool 
     }
     false
 }
-
-// Use find_function_range from navigation::utils
 
 fn rename_local_symbol(
     content: &str,
@@ -354,4 +557,71 @@ fn rename_in_file(content: &str, symbol_name: &str, new_name: &str) -> Option<Ve
     }
 
     Some(edits)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_valid_identifier() {
+        // Valid identifiers
+        assert!(is_valid_identifier("foo"));
+        assert!(is_valid_identifier("_bar"));
+        assert!(is_valid_identifier("my_var123"));
+        assert!(is_valid_identifier("CamelCase"));
+
+        // Invalid identifiers
+        assert!(!is_valid_identifier("")); // empty
+        assert!(!is_valid_identifier("123")); // starts with number
+        assert!(!is_valid_identifier("foo bar")); // space
+        assert!(!is_valid_identifier("pub")); // keyword
+    }
+
+    #[test]
+    fn test_check_rename_target() {
+        // Keywords cannot be renamed
+        assert!(check_rename_target("pub").is_some());
+
+        // Builtins cannot be renamed
+        assert!(check_rename_target("@std").is_some());
+        assert!(check_rename_target("@this").is_some());
+        assert!(check_rename_target("@meta").is_some());
+
+        // Primitives cannot be renamed
+        assert!(check_rename_target("i32").is_some());
+        assert!(check_rename_target("bool").is_some());
+        assert!(check_rename_target("void").is_some());
+
+        // Literals cannot be renamed
+        assert!(check_rename_target("true").is_some());
+        assert!(check_rename_target("false").is_some());
+        assert!(check_rename_target("null").is_some());
+
+        // Regular identifiers CAN be renamed
+        assert!(check_rename_target("my_function").is_none());
+        assert!(check_rename_target("MyStruct").is_none());
+        assert!(check_rename_target("foo").is_none());
+
+        // Note: fn, struct, enum, etc. ARE valid identifiers in Zen!
+        // They only have special meaning in parser context
+        assert!(check_rename_target("fn").is_none());
+        assert!(check_rename_target("struct").is_none());
+        assert!(check_rename_target("enum").is_none());
+    }
+
+    #[test]
+    fn test_validate_new_name() {
+        // Valid new names
+        assert!(validate_new_name("new_name").is_none());
+        assert!(validate_new_name("_private").is_none());
+        assert!(validate_new_name("MyType").is_none());
+
+        // Invalid new names
+        assert!(validate_new_name("").is_some()); // empty
+        assert!(validate_new_name("123abc").is_some()); // starts with number
+        assert!(validate_new_name("pub").is_some()); // keyword
+        assert!(validate_new_name("i32").is_some()); // primitive type
+        assert!(validate_new_name("true").is_some()); // literal
+    }
 }

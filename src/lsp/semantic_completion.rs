@@ -218,10 +218,14 @@ fn substitute_type_params(ty: &AstType, substitutions: &[AstType]) -> AstType {
     match ty {
         AstType::Generic { name, type_args } => {
             // If it's a single-letter generic like "T", substitute
-            if name.len() == 1 && name.chars().next().unwrap().is_uppercase() {
-                let index = (name.chars().next().unwrap() as usize) - ('T' as usize);
-                if index < substitutions.len() {
-                    return substitutions[index].clone();
+            if name.len() == 1 {
+                if let Some(first_char) = name.chars().next() {
+                    if first_char.is_uppercase() && first_char >= 'T' {
+                        let index = (first_char as usize) - ('T' as usize);
+                        if index < substitutions.len() {
+                            return substitutions[index].clone();
+                        }
+                    }
                 }
             }
 

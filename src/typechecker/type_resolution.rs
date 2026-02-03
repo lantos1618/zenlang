@@ -73,15 +73,15 @@ fn resolve_generic_to_struct_impl(
             }
         }
         t if t.is_immutable_ptr() => {
-            let inner = t.ptr_inner().unwrap();
+            let inner = t.ptr_inner().expect("immutable ptr should have inner type");
             AstType::ptr(resolve_generic_to_struct_impl(checker, inner, visited))
         }
         t if t.is_mutable_ptr() => {
-            let inner = t.ptr_inner().unwrap();
+            let inner = t.ptr_inner().expect("mutable ptr should have inner type");
             AstType::mut_ptr(resolve_generic_to_struct_impl(checker, inner, visited))
         }
         t if t.is_raw_ptr() => {
-            let inner = t.ptr_inner().unwrap();
+            let inner = t.ptr_inner().expect("raw ptr should have inner type");
             AstType::raw_ptr(resolve_generic_to_struct_impl(checker, inner, visited))
         }
         AstType::Struct { name, fields } => {

@@ -81,6 +81,72 @@ impl From<String> for CompileError {
 }
 
 impl CompileError {
+    // ========================================================================
+    // CONVENIENCE CONSTRUCTORS
+    // Use these instead of manually formatting error messages to ensure
+    // consistent error formatting across the codebase
+    // ========================================================================
+
+    /// Create a type mismatch error with formatted types
+    pub fn type_mismatch<E: std::fmt::Debug, F: std::fmt::Debug>(
+        expected: E,
+        found: F,
+        span: Option<Span>,
+    ) -> Self {
+        CompileError::TypeMismatch {
+            expected: format!("{:?}", expected),
+            found: format!("{:?}", found),
+            span,
+        }
+    }
+
+    /// Create an "unknown function" type error
+    pub fn unknown_function(name: &str, span: Option<Span>) -> Self {
+        CompileError::TypeError(format!("Unknown function: {}", name), span)
+    }
+
+    /// Create an "unknown variable" type error
+    pub fn unknown_variable(name: &str, span: Option<Span>) -> Self {
+        CompileError::UndeclaredVariable(name.to_string(), span)
+    }
+
+    /// Create a "not a function" type error
+    pub fn not_a_function(name: &str, span: Option<Span>) -> Self {
+        CompileError::TypeError(format!("'{}' is not a function", name), span)
+    }
+
+    /// Create a variable type mismatch error (for assignments)
+    pub fn variable_type_mismatch<E: std::fmt::Debug, F: std::fmt::Debug>(
+        var_name: &str,
+        expected: E,
+        found: F,
+        span: Option<Span>,
+    ) -> Self {
+        CompileError::TypeError(
+            format!(
+                "Type mismatch: cannot assign {:?} to variable '{}' of type {:?}",
+                found, var_name, expected
+            ),
+            span,
+        )
+    }
+
+    /// Create a declaration type mismatch error
+    pub fn declaration_type_mismatch<E: std::fmt::Debug, F: std::fmt::Debug>(
+        name: &str,
+        declared_type: E,
+        actual_type: F,
+        span: Option<Span>,
+    ) -> Self {
+        CompileError::TypeError(
+            format!(
+                "Type mismatch: '{}' declared as {:?} but has value of type {:?}",
+                name, declared_type, actual_type
+            ),
+            span,
+        )
+    }
+
     #[allow(dead_code)]
     pub fn span(&self) -> Option<&Span> {
         match self {
@@ -417,10 +483,13 @@ impl CompileError {
                 // Add surrounding context (lines before and after)
                 if line_idx > 0 {
                     let prev_line = source_lines[line_idx - 1];
-                    result.insert_str(
-                        result.find("📍 Error Location:").unwrap() + 18,
-                        &format!("\n   {} | {}", span.line - 1, prev_line),
-                    );
+                    // Find the error location marker to insert context before it
+                    if let Some(marker_pos) = result.find("📍 Error Location:") {
+                        result.insert_str(
+                            marker_pos + 18, // Length of "📍 Error Location:" in bytes
+                            &format!("\n   {} | {}", span.line - 1, prev_line),
+                        );
+                    }
                 }
                 if line_idx + 1 < source_lines.len() {
                     let next_line = source_lines[line_idx + 1];

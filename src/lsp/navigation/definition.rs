@@ -1,6 +1,7 @@
 // Definition handler - go-to-definition
 
 use super::imports::{find_import_info, find_import_info_from_ast};
+use super::struct_fields::find_struct_field_definition;
 use super::ufc::{find_ufc_method_at_position, resolve_ufc_method};
 use super::utils::{find_symbol_at_position, find_symbol_definition_in_content};
 use crate::lsp::document_store::DocumentStore;
@@ -57,6 +58,18 @@ pub fn handle_definition(
                     error: None,
                 };
             }
+        }
+
+        // Check if we're on a struct field access (e.g., `point.x` where x is a field)
+        if let Some(location) = find_struct_field_definition(&doc.content, position, doc, &store) {
+            return Response {
+                id: req.id,
+                result: Some(
+                    serde_json::to_value(GotoDefinitionResponse::Scalar(location))
+                        .unwrap_or(Value::Null),
+                ),
+                error: None,
+            };
         }
 
         // Find the symbol at the cursor position
@@ -627,6 +640,38 @@ pub fn handle_definition(
                             }
                         }
                     }
+                }
+            }
+
+            // Check for local variable definitions (not in symbols HashMap, need text search)
+            // This handles variables like `x = 5` or `result: i32 = 10`
+            if !symbol_name.contains('.')
+                && !symbol_name.starts_with('@')
+                && symbol_name.chars().next().is_some_and(|c| c.is_lowercase())
+            {
+                // Lowercase names are likely variables - search for definition in content
+                if let Some(range) = find_symbol_definition_in_content(&doc.content, &symbol_name) {
+                    log::debug!(
+                        "[LSP] Found local variable '{}' definition at line {}",
+                        symbol_name,
+                        range.start.line
+                    );
+                    let location = Location {
+                        uri: params
+                            .text_document_position_params
+                            .text_document
+                            .uri
+                            .clone(),
+                        range,
+                    };
+                    return Response {
+                        id: req.id,
+                        result: Some(
+                            serde_json::to_value(GotoDefinitionResponse::Scalar(location))
+                                .unwrap_or(Value::Null),
+                        ),
+                        error: None,
+                    };
                 }
             }
 

@@ -45,6 +45,10 @@ pub struct TypeContext {
     /// Variable types by scope: "function_name::var_name" -> type
     /// Populated during typechecking to avoid re-inference in codegen
     pub variables: HashMap<String, AstType>,
+
+    /// Type aliases: "CompletionFn" -> function type
+    /// Used to resolve type alias names to their underlying types
+    pub type_aliases: HashMap<String, AstType>,
 }
 
 #[derive(Debug, Clone)]

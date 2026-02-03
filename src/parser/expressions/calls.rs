@@ -33,7 +33,7 @@ pub fn parse_call_expression(parser: &mut Parser, function_name: String) -> Resu
 /// Returns (base_name, type_args)
 fn extract_type_args_from_name(name: &str) -> (String, Vec<AstType>) {
     if let Some(angle_pos) = name.find('<') {
-        let base_name = name[..angle_pos].to_string();
+        let base_name = crate::ast::strip_generic_params(name).to_string();
         let type_args_str = &name[angle_pos + 1..name.len() - 1];
         let type_args =
             crate::parser::parse_type_args_from_string(type_args_str).unwrap_or_default();
@@ -70,7 +70,7 @@ pub fn parse_call_expression_with_object(
     let (base_method, type_args) = extract_type_args_from_name(&method_name);
 
     let expr = if is_builtin_syntax {
-        build_builtin_call(&object, &method_name, arguments)
+        build_builtin_call(&object, &base_method, arguments, type_args)
     } else {
         Expression::MethodCall {
             object: Box::new(object),
@@ -188,7 +188,14 @@ fn try_parse_closure(parser: &mut Parser) -> Result<Option<Expression>> {
 }
 
 /// Build a function call for @std or @builtin syntax
-fn build_builtin_call(object: &Expression, method_name: &str, args: Vec<Expression>) -> Expression {
+/// Note: This function expects specific expression types. Passing other types indicates
+/// a parser bug (the caller should have validated the expression type before calling).
+fn build_builtin_call(
+    object: &Expression,
+    method_name: &str,
+    args: Vec<Expression>,
+    type_args: Vec<AstType>,
+) -> Expression {
     match object {
         Expression::MemberAccess {
             object: base,
@@ -196,22 +203,28 @@ fn build_builtin_call(object: &Expression, method_name: &str, args: Vec<Expressi
         } => match base.as_ref() {
             Expression::StdReference => Expression::FunctionCall {
                 name: format!("{}.{}", member, method_name),
-                type_args: vec![],
+                type_args,
                 args,
             },
             Expression::BuiltinReference => Expression::FunctionCall {
                 name: format!("builtin.{}.{}", member, method_name),
-                type_args: vec![],
+                type_args,
                 args,
             },
-            _ => unreachable!(),
+            other => panic!(
+                "Parser bug: build_builtin_call received unexpected base expression: {:?}",
+                other
+            ),
         },
         Expression::BuiltinReference => Expression::FunctionCall {
             name: format!("builtin.{}", method_name),
-            type_args: vec![],
+            type_args,
             args,
         },
-        _ => unreachable!(),
+        other => panic!(
+            "Parser bug: build_builtin_call received unexpected object expression: {:?}",
+            other
+        ),
     }
 }
 

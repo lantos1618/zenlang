@@ -46,7 +46,6 @@ impl<'ctx> LLVMCompiler<'ctx> {
 
             // Operations
             Expression::BinaryOp { .. } => operations::compile_binary_operation(self, expr),
-            Expression::TypeCast { .. } => operations::compile_type_cast(self, expr),
 
             // Function calls
             Expression::FunctionCall { .. } => calls::compile_function_call(self, expr),

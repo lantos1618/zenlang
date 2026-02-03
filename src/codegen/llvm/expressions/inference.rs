@@ -16,7 +16,7 @@
 //! Only Layer 1 primitives (i32, bool, intrinsics) and Layer 2 well-known types
 //! (Option, Result, Ptr via compiler.well_known) should have special handling.
 
-use crate::ast::{AstType, Expression};
+use crate::ast::{strip_generic_params, AstType, Expression};
 use crate::codegen::llvm::{symbols, LLVMCompiler};
 use crate::error::CompileError;
 use crate::intrinsics as compiler_intrinsics;
@@ -170,9 +170,12 @@ pub fn infer_expression_type(
             }
             Ok(AstType::Void)
         }
-        Expression::MethodCall { object, method, .. } => {
-            infer_method_call_type(compiler, object, method)
-        }
+        Expression::MethodCall {
+            object,
+            method,
+            type_args,
+            ..
+        } => infer_method_call_type_with_args(compiler, object, method, type_args),
         Expression::PatternMatch { arms, .. } => {
             // Pattern match takes the type of its first arm's body
             if let Some(first_arm) = arms.first() {
@@ -352,10 +355,6 @@ pub fn infer_expression_type(
         Expression::StringInterpolation { .. } => {
             // String interpolation always returns a string
             Ok(AstType::StaticString)
-        }
-        Expression::TypeCast { target_type, .. } => {
-            // Type cast returns the target type
-            Ok(target_type.clone())
         }
         Expression::Closure {
             return_type, body, ..
@@ -755,6 +754,41 @@ fn make_generic_result(parent_name: &str) -> AstType {
     }
 }
 
+/// Infer type for method call expressions with explicit type arguments
+fn infer_method_call_type_with_args(
+    compiler: &LLVMCompiler,
+    object: &Expression,
+    method: &str,
+    type_args: &[AstType],
+) -> Result<AstType, CompileError> {
+    // Check for compiler intrinsics
+    if let Expression::Identifier(name) = object {
+        if name == "compiler" || name == "builtin" || name == "@builtin" {
+            let base_method = strip_generic_params(method);
+            if let Some(return_type) = compiler_intrinsics::get_intrinsic_return_type(base_method) {
+                // Handle generic intrinsics: if return type is Generic<T> and type_args provided, substitute
+                if !type_args.is_empty() {
+                    if let AstType::Generic {
+                        name: type_name, ..
+                    } = &return_type
+                    {
+                        // Single-letter generic names like "T" should be substituted
+                        if type_name.len() == 1 && type_name.chars().all(|c| c.is_ascii_uppercase())
+                        {
+                            // Substitute with the first type argument
+                            return Ok(type_args[0].clone());
+                        }
+                    }
+                }
+                return Ok(return_type);
+            }
+        }
+    }
+
+    // Fall back to original method call type inference without type args
+    infer_method_call_type(compiler, object, method)
+}
+
 /// Infer type for method call expressions
 fn infer_method_call_type(
     compiler: &LLVMCompiler,
@@ -764,11 +798,7 @@ fn infer_method_call_type(
     // Check for compiler intrinsics
     if let Expression::Identifier(name) = object {
         if name == "compiler" {
-            let base_method = if let Some(angle_pos) = method.find('<') {
-                &method[..angle_pos]
-            } else {
-                method
-            };
+            let base_method = strip_generic_params(method);
             if let Some(return_type) = compiler_intrinsics::get_intrinsic_return_type(base_method) {
                 return Ok(return_type);
             }
@@ -788,6 +818,27 @@ fn infer_method_call_type(
     };
     if base_method == "new" || base_method == "init" || base_method == "with_step" {
         return infer_constructor_type(compiler, object, method);
+    }
+
+    // Handle Type.method style calls where object is a type identifier
+    // This handles cases like Heap.sync(), Arena.async(), etc.
+    if let Expression::Identifier(type_name) = object {
+        // Check if it's a qualified function in TypeContext (e.g., "Heap.sync")
+        let qualified_name = format!("{}.{}", type_name, base_method);
+        if let Some(return_type) = compiler.type_ctx.get_function_return_type(&qualified_name) {
+            return Ok(return_type);
+        }
+        // Also check methods map
+        if let Some(return_type) = compiler
+            .type_ctx
+            .get_method_return_type(type_name, base_method)
+        {
+            return Ok(return_type);
+        }
+        // Check function_types cache
+        if let Some(return_type) = compiler.function_types.get(&qualified_name) {
+            return Ok(return_type.clone());
+        }
     }
 
     // Handle common methods by name

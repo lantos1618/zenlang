@@ -19,6 +19,10 @@ pub mod search_limits {
     pub const MAX_DIRECTORY_DEPTH: usize = 20;
     /// Maximum files to parse during workspace symbol search
     pub const MAX_FILES_TO_PARSE: usize = 100;
+    /// Maximum iterations for loops that process unknown-length data (safety limit)
+    pub const MAX_ITERATIONS: usize = 100;
+    /// Timeout in milliseconds for LSP message polling (allows checking background results)
+    pub const LSP_POLL_TIMEOUT_MS: u64 = 100;
 }
 
 // Submodules

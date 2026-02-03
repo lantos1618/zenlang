@@ -1,0 +1,16 @@
+// Test raw allocate/deallocate
+{ io } = @std
+{ compiler } = @std
+
+main = () i32 {
+    io.println("Testing compiler.raw_allocate...")
+
+    ptr = compiler.raw_allocate(64)
+    io.println("Allocated 64 bytes")
+
+    compiler.raw_deallocate(ptr, 64)
+    io.println("Deallocated")
+
+    io.println("Success!")
+    return 0
+}

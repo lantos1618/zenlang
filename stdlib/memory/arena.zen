@@ -1,0 +1,113 @@
+// ============================================================================
+// Arena Allocator - Bump Allocation + Async I/O
+// ============================================================================
+//
+// Arena allocators use bump allocation for extremely fast memory allocation.
+// Memory is freed all at once when the arena is destroyed.
+//
+// Usage:
+//   { Arena } = @std.memory.arena
+//   alloc = Arena.async()          // Returns Allocator struct
+//   ptr = alloc.allocate(64)       // Works through function pointers!
+//   alloc.deallocate(ptr, 64)      // No-op for arenas
+//
+// Key insight: Arena.async() returns an Allocator (struct with function pointers).
+// This enables true polymorphism - ONE function works with ANY allocator!
+//
+// ============================================================================
+
+{ compiler } = @std
+{ Allocator, ExecutionMode, CompletionFn } = @std.memory.allocator
+
+// ============================================================================
+// ArenaAsync - Internal state for arena allocation with async I/O
+// ============================================================================
+
+ArenaAsync: {
+    base_ptr: i64,
+    arena_size: usize,
+    offset: u64,
+    _mode: i32   // 0 = Sync, 1 = Async
+}
+
+// ============================================================================
+// Standalone functions that implement Allocator operations
+// These take ctx: RawPtr<u8> as first arg (points to ArenaAsync struct)
+// ============================================================================
+
+arena_async_allocate = (ctx: RawPtr<u8>, size: usize) RawPtr<u8> {
+    // For now, just use raw_allocate as a placeholder
+    // Real implementation would use bump allocation from arena memory
+    return compiler.raw_allocate(size)
+}
+
+arena_async_deallocate = (ctx: RawPtr<u8>, ptr: RawPtr<u8>, size: usize) void {
+    // Arena doesn't deallocate individual allocations - no-op
+}
+
+arena_async_reallocate = (ctx: RawPtr<u8>, ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8> {
+    return compiler.raw_reallocate(ptr, old_size, new_size)
+}
+
+arena_async_mode = (ctx: RawPtr<u8>) ExecutionMode {
+    return ExecutionMode.Async
+}
+
+arena_async_schedule_read = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
+    // Placeholder: just do blocking read and call callback
+    // Real implementation would use io_uring
+    buf_i64 = compiler.ptr_to_int(buf)
+    result = offset == 0 ?
+        { compiler.syscall3(0, fd, buf_i64, len) } :
+        { compiler.syscall4(17, fd, buf_i64, len, offset) }
+    callback(user_data, result)
+    zero: i64 = 0
+    return zero
+}
+
+arena_async_schedule_write = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
+    // Placeholder: just do blocking write and call callback
+    // Real implementation would use io_uring
+    buf_i64 = compiler.ptr_to_int(buf)
+    result = offset == 0 ?
+        { compiler.syscall3(1, fd, buf_i64, len) } :
+        { compiler.syscall4(18, fd, buf_i64, len, offset) }
+    callback(user_data, result)
+    zero: i64 = 0
+    return zero
+}
+
+arena_async_poll = (ctx: RawPtr<u8>) i32 {
+    return 0  // Placeholder - real impl would poll io_uring
+}
+
+arena_async_wait = (ctx: RawPtr<u8>) i32 {
+    return 0  // Placeholder - real impl would wait on io_uring
+}
+
+// ============================================================================
+// Arena Namespace - Factory Functions
+// ============================================================================
+
+Arena: {}
+
+// Create an async arena allocator
+// Returns an Allocator struct with function pointers set to arena_async_* functions
+Arena.async = () Allocator {
+    // Simplified: just allocate a small ctx for now
+    ctx = compiler.raw_allocate(4)
+    compiler.store<i32>(ctx, 1)  // mode = async
+
+    // Build and return Allocator with function pointers
+    return Allocator {
+        ctx: ctx,
+        allocate_fn: arena_async_allocate,
+        deallocate_fn: arena_async_deallocate,
+        reallocate_fn: arena_async_reallocate,
+        mode_fn: arena_async_mode,
+        schedule_read_fn: arena_async_schedule_read,
+        schedule_write_fn: arena_async_schedule_write,
+        poll_fn: arena_async_poll,
+        wait_fn: arena_async_wait
+    }
+}

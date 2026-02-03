@@ -16,7 +16,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
             AstType::I8 | AstType::U8 => self.context.i8_type().into(),
             AstType::I16 | AstType::U16 => self.context.i16_type().into(),
             AstType::I32 | AstType::U32 => self.context.i32_type().into(),
-            AstType::I64 | AstType::U64 | AstType::Usize => self.context.i64_type().into(),
+            AstType::I64 | AstType::U64 => self.context.i64_type().into(),
+            AstType::Usize => self.ptr_sized_int_type().into(),
             AstType::F32 => self.context.f32_type().into(),
             AstType::F64 => self.context.f64_type().into(),
             AstType::Bool => self.context.bool_type().into(),
@@ -181,12 +182,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 } else {
                     // Fallback to a simple tag-only enum if not registered
                     // This should rarely happen as enums should be registered during declaration phase
-                    let enum_struct_type = self.context.struct_type(
-                        &[
-                            self.context.i64_type().into(), // discriminant/tag only
-                        ],
-                        false,
-                    );
+                    // Use i8 discriminant as minimum (1 variant minimum)
+                    let enum_struct_type = self
+                        .context
+                        .struct_type(&[self.enum_discriminant_type(1).into()], false);
                     Ok(Type::Struct(enum_struct_type))
                 }
             }
@@ -207,14 +206,25 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 inclusive: _,
             } => {
                 // Range is represented as a struct with start, end, and inclusive values
-                let _start_type = self.to_llvm_type(start_type)?;
-                let _end_type = self.to_llvm_type(end_type)?;
-                // For now, just use i64 for both start and end, and bool for inclusive
+                // Use actual types instead of hardcoded i64 for proper memory layout
+                let start_llvm = self.to_llvm_type(start_type)?;
+                let end_llvm = self.to_llvm_type(end_type)?;
+
+                // Extract BasicTypeEnum from Type, defaulting to ptr_sized_int for unknown types
+                let start_basic = match start_llvm {
+                    Type::Basic(b) => b,
+                    _ => self.ptr_sized_int_type().into(),
+                };
+                let end_basic = match end_llvm {
+                    Type::Basic(b) => b,
+                    _ => self.ptr_sized_int_type().into(),
+                };
+
                 let range_struct = self.context.struct_type(
                     &[
-                        self.context.i64_type().into(),
-                        self.context.i64_type().into(),
-                        self.context.bool_type().into(), // Add inclusive field
+                        start_basic,
+                        end_basic,
+                        self.context.bool_type().into(), // inclusive field
                     ],
                     false,
                 );
@@ -228,7 +238,11 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 }
 
                 if name.len() == 1
-                    && name.chars().next().unwrap().is_uppercase()
+                    && name
+                        .chars()
+                        .next()
+                        .map(|c| c.is_uppercase())
+                        .unwrap_or(false)
                     && type_args.is_empty()
                 {
                     let placeholder = self.context.struct_type(&[], false);
@@ -237,16 +251,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
 
                 // Well-known types: Option and Result use tagged union representation
                 if self.well_known.is_result(name) || self.well_known.is_option(name) {
-                    let enum_struct_type = self.context.struct_type(
-                        &[
-                            self.context.i64_type().into(), // discriminant
-                            self.context
-                                .ptr_type(inkwell::AddressSpace::default())
-                                .into(), // payload pointer
-                        ],
-                        false,
-                    );
-                    return Ok(Type::Struct(enum_struct_type));
+                    return Ok(Type::Struct(self.well_known_enum_type()));
                 }
 
                 // Try to get struct definition from StdlibTypeRegistry
@@ -261,17 +266,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     if let Some(symbols::Symbol::EnumType(enum_info)) = self.symbols.lookup(name) {
                         return Ok(Type::Struct(enum_info.llvm_type));
                     } else {
-                        // Fallback to standard enum struct if not registered (shouldn't happen)
-                        let enum_struct_type = self.context.struct_type(
-                            &[
-                                self.context.i64_type().into(), // discriminant
-                                self.context
-                                    .ptr_type(inkwell::AddressSpace::default())
-                                    .into(), // payload pointer
-                            ],
-                            false,
-                        );
-                        return Ok(Type::Struct(enum_struct_type));
+                        // Fallback to well-known enum struct if not registered (shouldn't happen)
+                        return Ok(Type::Struct(self.well_known_enum_type()));
                     }
                 }
 
@@ -285,12 +281,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 } else if (name == "Vec" || name == "DynVec") && !type_args.is_empty() {
                     // Vec<T> and DynVec<T> are stdlib structs: { ptr, len, capacity, allocator }
                     let ptr_type = self.context.ptr_type(AddressSpace::default());
-                    let len_type = self.context.i64_type();
+                    let len_type = self.ptr_sized_int_type(); // Use platform-sized int for len/capacity
                     let vec_struct = self.context.struct_type(
                         &[
                             ptr_type.into(), // data: Ptr<T>
-                            len_type.into(), // len: usize
-                            len_type.into(), // capacity: usize
+                            len_type.into(), // len: usize (platform-sized)
+                            len_type.into(), // capacity: usize (platform-sized)
                             ptr_type.into(), // allocator: Allocator (pointer)
                         ],
                         false,
@@ -302,6 +298,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 {
                     let placeholder = self.context.struct_type(&[], false);
                     Ok(Type::Struct(placeholder))
+                } else if let Some(aliased_type) = self.type_ctx.type_aliases.get(name).cloned() {
+                    // Resolve type alias (e.g., CompletionFn -> FunctionPointer)
+                    self.to_llvm_type(&aliased_type)
                 } else {
                     Err(CompileError::InternalError(
                         format!("Unresolved generic type '{}' found after monomorphization. This is a compiler bug.", name),
@@ -314,15 +313,16 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 // Look up the registered enum type
                 if let Some(symbols::Symbol::EnumType(enum_info)) = self.symbols.lookup(name) {
                     Ok(Type::Struct(enum_info.llvm_type))
+                } else if self.well_known.is_option(name) || self.well_known.is_result(name) {
+                    // Well-known enums use the centralized type
+                    Ok(Type::Struct(self.well_known_enum_type()))
                 } else {
-                    // Fallback to a default enum structure if not registered
-                    let enum_struct_type = self.context.struct_type(
-                        &[
-                            self.context.i64_type().into(), // discriminant/tag
-                            self.context.i64_type().into(), // payload (simplified)
-                        ],
-                        false,
-                    );
+                    // Fallback: 2-variant enum with pointer payload (common case)
+                    let discriminant = self.enum_discriminant_type(2);
+                    let ptr_type = self.context.ptr_type(AddressSpace::default());
+                    let enum_struct_type = self
+                        .context
+                        .struct_type(&[discriminant.into(), ptr_type.into()], false);
                     Ok(Type::Struct(enum_struct_type))
                 }
             }
@@ -499,14 +499,15 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
         }
 
+        // Size discriminant based on variant count to save memory
+        let discriminant_type = self.enum_discriminant_type(enum_def.variants.len());
+
         let enum_struct_type = if has_payloads {
             let ptr_type = self.context.ptr_type(AddressSpace::default());
-
             self.context
-                .struct_type(&[self.context.i64_type().into(), ptr_type.into()], false)
+                .struct_type(&[discriminant_type.into(), ptr_type.into()], false)
         } else {
-            self.context
-                .struct_type(&[self.context.i64_type().into()], false)
+            self.context.struct_type(&[discriminant_type.into()], false)
         };
 
         let enum_info = symbols::EnumInfo {

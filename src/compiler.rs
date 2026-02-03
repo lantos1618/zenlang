@@ -388,8 +388,10 @@ impl<'ctx> Compiler<'ctx> {
     pub fn analyze_for_diagnostics(&self, program: &Program) -> Vec<CompileError> {
         let mut errors = Vec::new();
 
-        // Try to process imports
-        let processed_program = match self.process_imports(program) {
+        // Try to process imports - use process_imports_with_system to get module access
+        let mut module_system = ModuleSystem::new();
+        let processed_program = match self.process_imports_with_system(program, &mut module_system)
+        {
             Ok(p) => p,
             Err(err) => {
                 errors.push(err);
@@ -415,8 +417,9 @@ impl<'ctx> Compiler<'ctx> {
             }
         };
 
-        // Try to typecheck
+        // Try to typecheck - pass loaded stdlib modules for type alias resolution
         let mut typechecker = TypeChecker::new();
+        typechecker.with_stdlib_modules(module_system.get_modules());
         let type_ctx = match typechecker.check_program(&processed_program) {
             Ok(ctx) => ctx,
             Err(err) => {

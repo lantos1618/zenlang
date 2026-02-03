@@ -122,20 +122,30 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
             let ptr = ptr_val.into_pointer_value();
 
-            // Try to infer the type of the inner expression
-            // For now, we'll use i32 as the default for integer literals
-            let llvm_type = if let Expression::Integer32(_) = &**inner_expr {
-                super::Type::Basic(self.context.i32_type().as_basic_type_enum())
+            // Infer the type of the inner expression using the type system
+            let llvm_type = if let Ok(ast_type) = self.infer_expression_type(inner_expr) {
+                self.to_llvm_type(&ast_type)?
             } else if let Expression::Identifier(name) = &**inner_expr {
-                // Look up the type of the identifier
+                // Fallback: look up the type of the identifier directly
                 if let Ok((_, ast_type)) = self.get_variable(name) {
                     self.to_llvm_type(&ast_type)?
                 } else {
-                    super::Type::Basic(self.context.i32_type().as_basic_type_enum())
+                    return Err(CompileError::TypeError(
+                        format!(
+                            "Cannot determine type of expression for dereference: {:?}",
+                            inner_expr
+                        ),
+                        self.current_span.clone(),
+                    ));
                 }
             } else {
-                // Default to i32 for now
-                super::Type::Basic(self.context.i32_type().as_basic_type_enum())
+                return Err(CompileError::TypeError(
+                    format!(
+                        "Cannot determine type of expression for dereference: {:?}",
+                        inner_expr
+                    ),
+                    self.current_span.clone(),
+                ));
             };
 
             return match llvm_type {
@@ -189,8 +199,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let val = self.compile_expression(expr)?;
         if let Ok(ptr) = val.try_into() {
             let ptr: inkwell::values::PointerValue = ptr;
-            // Use i64 as usize for now (TODO: get proper target-specific size)
-            let usize_type = self.context.i64_type();
+            let usize_type = self.ptr_sized_int_type();
             let int_val = self
                 .builder
                 .build_ptr_to_int(ptr, usize_type, "ptr_to_int")?;
@@ -225,19 +234,17 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 span: self.current_span.clone(),
             });
         }
-        unsafe {
-            let ptr_type = base_val.get_type();
-            let _offset = offset_val.into_int_value();
-            let ptr = base_val.into_pointer_value();
-            Ok(self
-                .builder
-                .build_gep(
-                    ptr_type,
-                    ptr,
-                    &[self.context.i32_type().const_int(0, false)],
-                    "gep_tmp",
-                )?
-                .into())
+        // LLVM GEP (GetElementPtr) advances the pointer by the offset
+        let ptr = base_val.into_pointer_value();
+        let offset = offset_val.into_int_value();
+
+        // For opaque pointers (LLVM 15+), we use i8 as the element type for byte-level addressing
+        let i8_type = self.context.i8_type();
+
+        Ok(unsafe {
+            self.builder
+                .build_gep(i8_type, ptr, &[offset], "ptr_offset")?
         }
+        .into())
     }
 }

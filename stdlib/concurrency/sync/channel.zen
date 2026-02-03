@@ -70,16 +70,18 @@ Channel.send = (self: MutPtr<Channel<T>>, value: T) Result<(), ChannelError> {
     closed = compiler.atomic_load(&self.val.closed.ref() as Ptr<u64>) as i32
     closed != 0 ? { return Result.Err(ChannelError { code: CHANNEL_CLOSED }) }
 
-    // Wait for space
-    count = compiler.atomic_load(&self.val.count.ref() as Ptr<u64>) as i32
-    count >= self.val.capacity as i32 ? {
+    // Reserve a slot atomically
+    old_count = compiler.atomic_add(&self.val.count.ref() as Ptr<u64>, 1) as i32
+    old_count >= self.val.capacity as i32 ? {
+        // Undo reservation - no space
+        compiler.atomic_sub(&self.val.count.ref() as Ptr<u64>, 1)
         // Block until space available
         self.send_slow(value)
         return Result.Ok(())
     }
 
-    // Fast path: write directly
-    self.write_item(value)
+    // Fast path: write to reserved slot
+    self.write_item_reserved(value)
     return Result.Ok(())
 }
 
@@ -97,29 +99,30 @@ Channel.send_slow = (self: MutPtr<Channel<T>>, value: T) void {
         closed = compiler.atomic_load(&self.val.closed.ref() as Ptr<u64>) as i32
         closed != 0 ? { return }
 
-        // Try to write
-        count = compiler.atomic_load(&self.val.count.ref() as Ptr<u64>) as i32
-        count < self.val.capacity as i32 ? {
-            self.write_item(value)
+        // Try to reserve a slot
+        old_count = compiler.atomic_add(&self.val.count.ref() as Ptr<u64>, 1) as i32
+        old_count < self.val.capacity as i32 ? {
+            self.write_item_reserved(value)
             sent = true
+        }
+        old_count >= self.val.capacity as i32 ? {
+            // Undo reservation
+            compiler.atomic_sub(&self.val.count.ref() as Ptr<u64>, 1)
         }
     }
 }
 
-// Write item to buffer (internal)
-Channel.write_item = (self: MutPtr<Channel<T>>, value: T) void {
-    // Get write position
-    tail = compiler.atomic_load(&self.val.tail.ref() as Ptr<u64>) as i32
+// Write item to buffer after slot has been reserved (internal)
+// Assumes count has already been incremented atomically
+Channel.write_item_reserved = (self: MutPtr<Channel<T>>, value: T) void {
+    // Reserve tail position atomically
+    tail = compiler.atomic_add(&self.val.tail.ref() as Ptr<u64>, 1) as i32
     idx = tail % (self.val.capacity as i32)
 
-    // Write value
+    // Write value to reserved slot
     buf_addr = compiler.ptr_to_int(self.val.buffer)
     item_addr = buf_addr + (idx as usize * compiler.sizeof<T>())
     compiler.store<T>(compiler.int_to_ptr(item_addr), value)
-
-    // Update tail and count
-    compiler.atomic_add(&self.val.tail.ref() as Ptr<u64>, 1)
-    compiler.atomic_add(&self.val.count.ref() as Ptr<u64>, 1)
 
     // Wake a receiver
     futex_wake_one(&self.val.count.ref())
@@ -130,12 +133,16 @@ Channel.try_send = (self: MutPtr<Channel<T>>, value: T) Result<(), ChannelError>
     closed = compiler.atomic_load(&self.val.closed.ref() as Ptr<u64>) as i32
     closed != 0 ? { return Result.Err(ChannelError { code: CHANNEL_CLOSED }) }
 
-    count = compiler.atomic_load(&self.val.count.ref() as Ptr<u64>) as i32
-    count >= self.val.capacity as i32 ? {
+    // Reserve a slot atomically
+    old_count = compiler.atomic_add(&self.val.count.ref() as Ptr<u64>, 1) as i32
+    old_count >= self.val.capacity as i32 ? {
+        // Undo reservation - no space
+        compiler.atomic_sub(&self.val.count.ref() as Ptr<u64>, 1)
         return Result.Err(ChannelError { code: CHANNEL_FULL })
     }
 
-    self.write_item(value)
+    // Write to reserved slot
+    self.write_item_reserved(value)
     return Result.Ok(())
 }
 
@@ -146,11 +153,15 @@ Channel.try_send = (self: MutPtr<Channel<T>>, value: T) Result<(), ChannelError>
 // Receive a value, blocking if empty
 // Returns None if channel is closed and empty
 Channel.recv = (self: MutPtr<Channel<T>>) Option<T> {
-    // Check for available items
-    count = compiler.atomic_load(&self.val.count.ref() as Ptr<u64>) as i32
-    count > 0 ? {
-        return Option.Some(self.read_item())
+    // Reserve an item atomically
+    old_count = compiler.atomic_sub(&self.val.count.ref() as Ptr<u64>, 1) as i32
+    old_count > 0 ? {
+        // Fast path: read reserved item
+        return Option.Some(self.read_item_reserved())
     }
+
+    // Undo reservation - no items
+    compiler.atomic_add(&self.val.count.ref() as Ptr<u64>, 1)
 
     // Check if closed
     closed = compiler.atomic_load(&self.val.closed.ref() as Ptr<u64>) as i32
@@ -178,36 +189,42 @@ Channel.recv_slow = (self: MutPtr<Channel<T>>) Option<T> {
         // Check closed after waking
         closed = compiler.atomic_load(&self.val.closed.ref() as Ptr<u64>) as i32
         closed != 0 ? {
-            // Drain remaining items
-            count = compiler.atomic_load(&self.val.count.ref() as Ptr<u64>) as i32
-            count == 0 ? { return Option.None }
+            // Try to drain remaining items atomically
+            old_count = compiler.atomic_sub(&self.val.count.ref() as Ptr<u64>, 1) as i32
+            old_count <= 0 ? {
+                // Undo reservation - no items
+                compiler.atomic_add(&self.val.count.ref() as Ptr<u64>, 1)
+                return Option.None
+            }
+            return Option.Some(self.read_item_reserved())
         }
 
-        // Try to read
-        count = compiler.atomic_load(&self.val.count.ref() as Ptr<u64>) as i32
-        count > 0 ? {
-            result = Option.Some(self.read_item())
+        // Try to reserve an item
+        old_count = compiler.atomic_sub(&self.val.count.ref() as Ptr<u64>, 1) as i32
+        old_count > 0 ? {
+            result = Option.Some(self.read_item_reserved())
             received = true
+        }
+        old_count <= 0 ? {
+            // Undo reservation
+            compiler.atomic_add(&self.val.count.ref() as Ptr<u64>, 1)
         }
     }
 
     return result
 }
 
-// Read item from buffer (internal)
-Channel.read_item = (self: MutPtr<Channel<T>>) T {
-    // Get read position
-    head = compiler.atomic_load(&self.val.head.ref() as Ptr<u64>) as i32
+// Read item from buffer after slot has been reserved (internal)
+// Assumes count has already been decremented atomically
+Channel.read_item_reserved = (self: MutPtr<Channel<T>>) T {
+    // Reserve head position atomically
+    head = compiler.atomic_add(&self.val.head.ref() as Ptr<u64>, 1) as i32
     idx = head % (self.val.capacity as i32)
 
-    // Read value
+    // Read value from reserved slot
     buf_addr = compiler.ptr_to_int(self.val.buffer)
     item_addr = buf_addr + (idx as usize * compiler.sizeof<T>())
     value = compiler.load<T>(compiler.int_to_ptr(item_addr))
-
-    // Update head and count
-    compiler.atomic_add(&self.val.head.ref() as Ptr<u64>, 1)
-    compiler.atomic_sub(&self.val.count.ref() as Ptr<u64>, 1)
 
     // Wake a sender
     futex_wake_one(&self.val.count.ref())
@@ -217,10 +234,13 @@ Channel.read_item = (self: MutPtr<Channel<T>>) T {
 
 // Try to receive without blocking
 Channel.try_recv = (self: MutPtr<Channel<T>>) Option<T> {
-    count = compiler.atomic_load(&self.val.count.ref() as Ptr<u64>) as i32
-    count > 0 ? {
-        return Option.Some(self.read_item())
+    // Reserve an item atomically
+    old_count = compiler.atomic_sub(&self.val.count.ref() as Ptr<u64>, 1) as i32
+    old_count > 0 ? {
+        return Option.Some(self.read_item_reserved())
     }
+    // Undo reservation - no items
+    compiler.atomic_add(&self.val.count.ref() as Ptr<u64>, 1)
     return Option.None
 }
 

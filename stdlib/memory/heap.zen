@@ -1,0 +1,117 @@
+// ============================================================================
+// Heap Allocator - General Purpose Memory + I/O
+// ============================================================================
+//
+// Heap allocators use system malloc/free for memory management.
+// This is the most flexible allocator - no size limits, thread-safe.
+//
+// Usage:
+//   { Heap } = @std.memory.heap
+//   alloc = Heap.sync()           // Returns Allocator struct
+//   ptr = alloc.allocate(64)      // Works through function pointers!
+//   alloc.deallocate(ptr, 64)
+//
+// Key insight: Heap.sync() returns an Allocator (struct with function pointers).
+// This enables true polymorphism - ONE function works with ANY allocator!
+//
+// ============================================================================
+
+{ compiler } = @std
+{ Allocator, ExecutionMode, CompletionFn } = @std.memory.allocator
+
+// ============================================================================
+// HeapSync - Internal state for heap allocation with blocking I/O
+// ============================================================================
+
+HeapSync: {
+    _placeholder: i32  // Struct needs at least one field
+}
+
+// ============================================================================
+// Standalone functions that implement Allocator operations
+// These take ctx: RawPtr<u8> as first arg (points to HeapSync struct)
+// ============================================================================
+
+heap_sync_allocate = (ctx: RawPtr<u8>, size: usize) RawPtr<u8> {
+    return compiler.raw_allocate(size)
+}
+
+heap_sync_deallocate = (ctx: RawPtr<u8>, ptr: RawPtr<u8>, size: usize) void {
+    compiler.raw_deallocate(ptr, size)
+}
+
+heap_sync_reallocate = (ctx: RawPtr<u8>, ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8> {
+    return compiler.raw_reallocate(ptr, old_size, new_size)
+}
+
+heap_sync_mode = (ctx: RawPtr<u8>) ExecutionMode {
+    return ExecutionMode.Sync
+}
+
+heap_sync_schedule_read = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
+    buf_i64 = compiler.ptr_to_int(buf)
+    // Use pread64 for offset support (syscall 17), or read (syscall 0) if offset is 0
+    result = offset == 0 ?
+        { compiler.syscall3(0, fd, buf_i64, len) } :
+        { compiler.syscall4(17, fd, buf_i64, len, offset) }
+    callback(user_data, result)
+    zero: i64 = 0
+    return zero
+}
+
+heap_sync_schedule_write = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
+    buf_i64 = compiler.ptr_to_int(buf)
+    // Use pwrite64 for offset support (syscall 18), or write (syscall 1) if offset is 0
+    result = offset == 0 ?
+        { compiler.syscall3(1, fd, buf_i64, len) } :
+        { compiler.syscall4(18, fd, buf_i64, len, offset) }
+    callback(user_data, result)
+    zero: i64 = 0
+    return zero
+}
+
+heap_sync_poll = (ctx: RawPtr<u8>) i32 {
+    return 0  // No-op for sync - operations complete immediately
+}
+
+heap_sync_wait = (ctx: RawPtr<u8>) i32 {
+    return 0  // No-op for sync - nothing to wait for
+}
+
+// ============================================================================
+// Heap Namespace - Factory Functions
+// ============================================================================
+
+Heap: {}
+
+// Create a synchronous heap allocator (blocking I/O)
+// Returns an Allocator struct with function pointers set to heap_sync_* functions
+Heap.sync = () Allocator {
+    // Allocate space for HeapSync state
+    ctx = compiler.raw_allocate(4)  // HeapSync is just 4 bytes (i32 placeholder)
+
+    // Initialize the placeholder field
+    compiler.store<i32>(ctx, 0)
+
+    // Build and return Allocator with function pointers
+    return Allocator {
+        ctx: ctx,
+        allocate_fn: heap_sync_allocate,
+        deallocate_fn: heap_sync_deallocate,
+        reallocate_fn: heap_sync_reallocate,
+        mode_fn: heap_sync_mode,
+        schedule_read_fn: heap_sync_schedule_read,
+        schedule_write_fn: heap_sync_schedule_write,
+        poll_fn: heap_sync_poll,
+        wait_fn: heap_sync_wait
+    }
+}
+
+// ============================================================================
+// Convenience: Default allocator
+// ============================================================================
+
+// Default allocator for most use cases
+default_allocator = () Allocator {
+    return Heap.sync()
+}

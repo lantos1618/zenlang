@@ -1,14 +1,106 @@
-// Allocator trait - defines interface for memory management
-// All memory operations go through allocators
+// Zen Standard Library: Unified Allocator
+// ============================================================================
+//
+// Allocator is a STRUCT with function pointers - a manual vtable.
+// This enables true polymorphism: ONE function works with ANY allocator.
+//
+// Example:
+//   process = (alloc: Allocator) void {
+//       buf = alloc.allocate(1024)    // Works with ANY allocator!
+//       alloc.deallocate(buf, 1024)
+//   }
+//
+//   process(Heap.sync())    // Blocking I/O
+//   process(Arena.async())  // Async I/O via io_uring
+//
+// ============================================================================
+
+{ compiler } = @std
+
+// ============================================================================
+// Execution Mode
+// ============================================================================
+
+ExecutionMode:
+    Sync,
+    Async
+
+// ============================================================================
+// Callback type for async I/O completion
+// ============================================================================
+
+type CompletionFn: (user_data: u64, result: i64) void
+
+// ============================================================================
+// Allocator - Struct with function pointers (manual vtable)
+// ============================================================================
+//
+// The `ctx` field holds a pointer to the concrete allocator's state
+// (HeapSync data, ArenaAsync data, etc.)
+//
+// Each function pointer takes ctx as first argument to access that state.
 
 Allocator: {
-    allocate: (self, size: usize) RawPtr<u8>,
-    deallocate: (self, ptr: RawPtr<u8>, size: usize) void,
-    reallocate: (self, ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8>
+    // Pointer to concrete allocator state
+    ctx: RawPtr<u8>,
+
+    // Memory operations
+    allocate_fn: (RawPtr<u8>, usize) RawPtr<u8>,
+    deallocate_fn: (RawPtr<u8>, RawPtr<u8>, usize) void,
+    reallocate_fn: (RawPtr<u8>, RawPtr<u8>, usize, usize) RawPtr<u8>,
+
+    // Execution mode
+    mode_fn: (RawPtr<u8>) ExecutionMode,
+
+    // I/O scheduling
+    schedule_read_fn: (RawPtr<u8>, i32, RawPtr<u8>, usize, i64, CompletionFn, u64) i64,
+    schedule_write_fn: (RawPtr<u8>, i32, RawPtr<u8>, usize, i64, CompletionFn, u64) i64,
+
+    // Event loop
+    poll_fn: (RawPtr<u8>) i32,
+    wait_fn: (RawPtr<u8>) i32
 }
 
-// Check if allocator succeeded
-allocate_ok = (ptr: RawPtr<u8>) bool {
-    null_ptr = compiler.int_to_ptr(0)
-    return ptr != null_ptr
+// ============================================================================
+// Allocator Methods - Convenient wrappers that call through function pointers
+// ============================================================================
+
+Allocator.allocate = (self: Allocator, size: usize) RawPtr<u8> {
+    f = self.allocate_fn
+    return f(self.ctx, size)
+}
+
+Allocator.deallocate = (self: Allocator, ptr: RawPtr<u8>, size: usize) void {
+    f = self.deallocate_fn
+    f(self.ctx, ptr, size)
+}
+
+Allocator.reallocate = (self: Allocator, ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8> {
+    f = self.reallocate_fn
+    return f(self.ctx, ptr, old_size, new_size)
+}
+
+Allocator.mode = (self: Allocator) ExecutionMode {
+    f = self.mode_fn
+    return f(self.ctx)
+}
+
+Allocator.schedule_read = (self: Allocator, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
+    f = self.schedule_read_fn
+    return f(self.ctx, fd, buf, len, offset, callback, user_data)
+}
+
+Allocator.schedule_write = (self: Allocator, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
+    f = self.schedule_write_fn
+    return f(self.ctx, fd, buf, len, offset, callback, user_data)
+}
+
+Allocator.poll = (self: Allocator) i32 {
+    f = self.poll_fn
+    return f(self.ctx)
+}
+
+Allocator.wait = (self: Allocator) i32 {
+    f = self.wait_fn
+    return f(self.ctx)
 }

@@ -589,7 +589,28 @@ impl<'a> Lexer<'a> {
                     'r' => result.push('\r'),
                     '\\' => result.push('\\'),
                     '"' => result.push('"'),
+                    '0' => result.push('\0'),
                     '$' => result.push('$'), // Allow escaping $ for literal $
+                    'x' => {
+                        // Hex escape: \xNN
+                        self.read_char(); // consume 'x'
+                        let mut hex = String::new();
+                        for _ in 0..2 {
+                            if let Some(h) = self.current_char {
+                                if h.is_ascii_hexdigit() {
+                                    hex.push(h);
+                                    self.read_char();
+                                }
+                            }
+                        }
+                        if hex.len() == 2 {
+                            if let Ok(byte) = u8::from_str_radix(&hex, 16) {
+                                result.push(byte as char);
+                            }
+                        }
+                        escape_next = false;
+                        continue;
+                    }
                     _ => {
                         result.push('\\');
                         result.push(c);
@@ -635,7 +656,9 @@ impl<'a> Lexer<'a> {
 
     fn read_operator(&mut self) -> String {
         let _start = self.position;
-        let first_char = self.current_char.unwrap();
+        let first_char = self
+            .current_char
+            .expect("read_operator called with no current char");
         self.read_char();
 
         // Handle three-character operators first

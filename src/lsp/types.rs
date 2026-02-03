@@ -14,6 +14,7 @@ pub struct Document {
     pub uri: Url,
     pub version: i32,
     pub content: String,
+    pub content_hash: u64,
     pub tokens: Vec<Token>,
     pub ast: Option<Vec<Declaration>>,
     pub diagnostics: Vec<Diagnostic>,
@@ -22,6 +23,19 @@ pub struct Document {
     /// Type context from TypeChecker - the source of truth for semantic analysis.
     /// Populated during full document analysis for intelligent completions.
     pub type_context: Option<Arc<TypeContext>>,
+}
+
+/// Fast hash for content comparison (using FNV-1a algorithm)
+pub fn hash_content(content: &str) -> u64 {
+    const FNV_PRIME: u64 = 0x00000100000001B3;
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+
+    let mut hash = FNV_OFFSET;
+    for byte in content.bytes() {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash
 }
 
 impl Document {
@@ -59,8 +73,20 @@ pub struct UfcMethodInfo {
 #[derive(Debug)]
 pub enum ZenCompletionContext {
     General,
-    UfcMethod { receiver_type: String },
-    ModulePath { base: String },
+    UfcMethod {
+        receiver_type: String,
+    },
+    ModulePath {
+        base: String,
+    },
+    /// Inside a struct literal: `Point { x: 1, ▊` - suggests remaining fields
+    StructLiteral {
+        struct_name: String,
+    },
+    /// After `|` in pattern matching: `expr ? | ▊` - suggests enum variants
+    PatternMatch {
+        matched_type: String,
+    },
 }
 
 #[derive(Debug)]

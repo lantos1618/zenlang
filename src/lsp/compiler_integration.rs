@@ -4,6 +4,7 @@
 //! indexing function signatures, and answering type/method lookups. Method completion
 //! performance is optimized via a receiver-type index to avoid linear scans.
 
+use crate::ast::primitives;
 use crate::ast::{AstType, Declaration, Program};
 use crate::error::Result;
 use crate::lexer::Lexer;
@@ -209,8 +210,8 @@ impl CompilerIntegration {
                 // If parsing fails, fall back to simple heuristics for common cases
                 let s = expr_str.trim();
 
-                // Simple literals
-                if s == "true" || s == "false" {
+                // Simple literals - use centralized check
+                if primitives::is_boolean_literal(s) {
                     return Ok(AstType::Bool);
                 }
                 if (s.starts_with('"') && s.ends_with('"'))

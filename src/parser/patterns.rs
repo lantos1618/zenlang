@@ -1,4 +1,5 @@
 use super::core::Parser;
+use crate::ast::primitives;
 use crate::ast::{BinaryOperator, Expression, Pattern};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
@@ -119,8 +120,8 @@ impl<'a> Parser<'a> {
                     return Ok(Pattern::Wildcard);
                 }
 
-                // Check if it's a boolean literal pattern
-                if name == "true" || name == "false" {
+                // Check if it's a boolean literal pattern - use centralized check
+                if primitives::is_boolean_literal(&name) {
                     return Ok(Pattern::Literal(Expression::Boolean(name == "true")));
                 }
 

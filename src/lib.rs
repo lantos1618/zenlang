@@ -9,6 +9,7 @@ pub mod lexer;
 pub mod lsp;
 pub mod module_system;
 pub mod parser;
+pub mod stdlib_discovery;
 pub mod stdlib_types;
 pub mod type_context;
 pub mod type_system;

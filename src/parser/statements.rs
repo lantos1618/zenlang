@@ -32,7 +32,10 @@ impl<'a> Parser<'a> {
                 expr: Expression::Boolean(true),
                 span: Some(self.current_span.clone()),
             },
-            1 => statements.into_iter().next().unwrap(),
+            1 => statements
+                .into_iter()
+                .next()
+                .expect("statements.len() is 1, so next() must return Some"),
             _ => Statement::Block {
                 statements,
                 span: Some(self.current_span.clone()),
@@ -89,18 +92,35 @@ impl<'a> Parser<'a> {
 
     /// Check if a brace block looks like a trait (has method signatures) vs struct (has fields)
     /// Assumes we're at '{'
+    ///
+    /// Key distinction:
+    /// - Trait methods: `methodName: (self, params...) ReturnType`  (first param is `self`)
+    /// - Struct function pointer fields: `fieldName: (ParamType, ...) ReturnType` (no `self`)
+    ///
+    /// We detect traits by checking if the first parameter is `self`
     fn looks_like_trait(&mut self) -> bool {
         self.next_token(); // consume '{'
-                           // Look for pattern: identifier ':' '(' which indicates a trait method
-        if let Token::Identifier(_) = &self.current_token {
-            self.next_token();
-            self.current_token == Token::Symbol(':') && {
-                self.next_token();
-                self.current_token == Token::Symbol('(')
+
+        // Look for pattern: identifier ':' '(' 'self' which indicates a trait method
+        if let Token::Identifier(name) = &self.current_token {
+            // Skip fields that end with _fn - those are function pointer fields, not trait methods
+            if name.ends_with("_fn") {
+                return false;
             }
-        } else {
-            false
+
+            self.next_token(); // consume identifier
+            if self.current_token == Token::Symbol(':') {
+                self.next_token(); // consume ':'
+                if self.current_token == Token::Symbol('(') {
+                    self.next_token(); // consume '('
+                                       // Check if first parameter is 'self' - that's the trait indicator
+                    if let Token::Identifier(param_name) = &self.current_token {
+                        return param_name == "self";
+                    }
+                }
+            }
         }
+        false
     }
 
     /// Detect what type of declaration follows after generics
@@ -184,7 +204,9 @@ impl<'a> Parser<'a> {
                     if is_function {
                         declarations.push(Declaration::Function(self.parse_function()?));
                     } else {
-                        let var_name = self.current_identifier().unwrap();
+                        let var_name = self
+                            .current_identifier()
+                            .expect("current_token must be identifier in this branch");
                         self.next_token();
                         declarations.push(self.parse_top_level_mutable_var(var_name)?);
                     }
@@ -430,7 +452,9 @@ impl<'a> Parser<'a> {
                     }
                 } else if self.peek_token == Token::Operator(":=".to_string()) {
                     // Top-level constant declaration: name := value
-                    let name = self.current_identifier().unwrap();
+                    let name = self
+                        .current_identifier()
+                        .expect("current_token must be identifier in this branch");
                     self.next_token(); // consume identifier
                     self.next_token(); // consume ':='
                     let value = self.parse_expression()?;
@@ -447,7 +471,9 @@ impl<'a> Parser<'a> {
                     // 1. Function declaration: name = (params) returnType { ... }
                     // 2. Variable declaration: name = value
                     // Look ahead to distinguish
-                    let name = self.current_identifier().unwrap();
+                    let name = self
+                        .current_identifier()
+                        .expect("current_token must be identifier in this branch");
                     let is_function = self.with_lookahead(|p| {
                         p.next_token(); // move to =
                         p.next_token(); // move past =
@@ -767,8 +793,9 @@ impl<'a> Parser<'a> {
 
     pub fn parse_statement(&mut self) -> Result<Statement> {
         // Check for common keywords from other languages and provide helpful error messages
-        if let Some(err) = check_statement_keyword_guard(&self.current_token, &self.current_span) {
-            return err.map(|_| unreachable!());
+        if let Some(Err(e)) = check_statement_keyword_guard(&self.current_token, &self.current_span)
+        {
+            return Err(e);
         }
 
         match &self.current_token {
@@ -776,7 +803,12 @@ impl<'a> Parser<'a> {
             Token::Identifier(id) if id == "return" => {
                 let span = Some(self.current_span.clone());
                 self.next_token();
-                let expr = self.parse_expression()?;
+                // Check if there's an expression after return
+                // If next token is }, ;, or newline, return unit
+                let expr = match &self.current_token {
+                    Token::Symbol('}') | Token::Symbol(';') | Token::Eof => Expression::Unit,
+                    _ => self.parse_expression()?,
+                };
                 self.skip_optional_semicolon();
                 Ok(Statement::Return { expr, span })
             }
@@ -897,6 +929,23 @@ impl<'a> Parser<'a> {
                         }
                     }
                     _ => self.parse_expression_statement(),
+                }
+            }
+            Token::Underscore => {
+                // Discard pattern: _ = expression
+                if self.peek_token == Token::Operator("=".to_string()) {
+                    let span = Some(self.current_span.clone());
+                    self.next_token(); // consume '_'
+                    self.next_token(); // consume '='
+                    let expr = self.parse_expression()?;
+                    self.skip_optional_semicolon();
+                    Ok(Statement::Expression { expr, span })
+                } else {
+                    Err(CompileError::SyntaxError(
+                        "Underscore '_' can only be used as discard pattern: _ = expression"
+                            .to_string(),
+                        Some(self.current_span.clone()),
+                    ))
                 }
             }
             Token::Symbol('?') | Token::Symbol('(') => self.parse_expression_statement(),

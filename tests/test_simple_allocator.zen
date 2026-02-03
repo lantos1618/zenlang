@@ -1,0 +1,11 @@
+// Simple test for Allocator struct
+{ io } = @std
+{ Heap } = @std.memory.heap
+{ Allocator } = @std.memory.allocator
+
+main = () i32 {
+    io.println("Creating allocator...")
+    alloc = Heap.sync()
+    io.println("Done!")
+    return 0
+}

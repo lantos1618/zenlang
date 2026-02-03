@@ -14,12 +14,33 @@ use std::collections::HashMap;
 pub struct BehaviorCodegen<'ctx> {
     vtables: HashMap<(String, String), PointerValue<'ctx>>,
     pub method_impls: HashMap<(String, String), FunctionValue<'ctx>>,
+    /// Track return types of trait methods for proper void handling
+    pub method_return_types: HashMap<(String, String), AstType>,
 }
 
 impl<'ctx> BehaviorCodegen<'ctx> {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Register the return type of a trait method
+    pub fn register_method_return_type(
+        &mut self,
+        type_name: &str,
+        method_name: &str,
+        return_type: AstType,
+    ) {
+        self.method_return_types.insert(
+            (type_name.to_string(), method_name.to_string()),
+            return_type,
+        );
+    }
+
+    /// Look up the return type of a trait method
+    pub fn get_method_return_type(&self, type_name: &str, method_name: &str) -> Option<&AstType> {
+        self.method_return_types
+            .get(&(type_name.to_string(), method_name.to_string()))
     }
 
     pub fn generate_vtable(
@@ -283,6 +304,24 @@ impl<'ctx> LLVMCompiler<'ctx> {
             self.current_function = Some(function);
 
             self.symbols.enter_scope();
+
+            // Add module imports to variables (so trait impl methods can access them)
+            for (name, marker) in self.module_imports.clone() {
+                let alloca = self.builder.build_alloca(self.context.i64_type(), &name)?;
+                self.builder
+                    .build_store(alloca, self.context.i64_type().const_int(marker, false))?;
+                self.variables.insert(
+                    name.clone(),
+                    super::VariableInfo {
+                        pointer: alloca,
+                        ast_type: AstType::StdModule,
+                        is_mutable: false,
+                        is_initialized: true,
+                        definition_span: self.get_current_span(),
+                    },
+                );
+            }
+
             for (i, (param_name, param_type)) in method.args.iter().enumerate() {
                 if i < function.count_params() as usize {
                     let param_value = function.get_nth_param(i as u32).ok_or_else(|| {
@@ -339,6 +378,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
             }
             if let Some(ref mut bc) = self.behavior_codegen {
                 bc.register_method(type_name, &method.name, function);
+                // Register return type for proper void handling
+                bc.register_method_return_type(type_name, &method.name, method.return_type.clone());
             }
         }
 
@@ -373,13 +414,43 @@ impl<'ctx> LLVMCompiler<'ctx> {
         &mut self,
         object: &Expression,
         method_name: &str,
-        _type_args: &[AstType], // Reserved for generic method instantiation
+        type_args: &[AstType],
         args: &[Expression],
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // For now, delegate to the existing method
-        // Type args are available but not yet used - they will be needed for
-        // proper generic instantiation
+        // Handle @std reference
+        if matches!(object, Expression::StdReference) {
+            let method_with_generics = Self::format_method_with_type_args(method_name, type_args);
+            return self.compile_std_method_call(&method_with_generics, args);
+        }
+
+        // Handle module imports
+        if let Expression::Identifier(name) = object {
+            if let Some(var_info) = self.variables.get(name) {
+                if matches!(var_info.ast_type, AstType::StdModule) {
+                    let method_with_generics =
+                        Self::format_method_with_type_args(method_name, type_args);
+                    let qualified = format!("{}.{}", name, method_with_generics);
+                    return super::functions::calls::compile_function_call(self, &qualified, args);
+                }
+            }
+        }
+
+        // Delegate to the existing method for other cases
         self.compile_method_call(object, method_name, args)
+    }
+
+    /// Format method name with type arguments (e.g., "load" + [I32] -> "load<i32>")
+    fn format_method_with_type_args(method_name: &str, type_args: &[AstType]) -> String {
+        if type_args.is_empty() {
+            method_name.to_string()
+        } else {
+            let type_args_str = type_args
+                .iter()
+                .map(|t| format!("{}", t))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{}<{}>", method_name, type_args_str)
+        }
     }
 
     pub fn compile_method_call(
@@ -453,11 +524,20 @@ impl<'ctx> LLVMCompiler<'ctx> {
         method_name: &str,
         args: &[Expression],
     ) -> Result<Option<BasicValueEnum<'ctx>>, CompileError> {
-        let Some(ref bc) = self.behavior_codegen else {
-            return Ok(None);
-        };
-        let Some(function) = bc.resolve_method(type_name, method_name) else {
-            return Ok(None);
+        // First check if method exists - need to check before borrowing bc mutably
+        let (function, is_void_method) = {
+            let Some(ref bc) = self.behavior_codegen else {
+                return Ok(None);
+            };
+            let Some(function) = bc.resolve_method(type_name, method_name) else {
+                return Ok(None);
+            };
+            // Check if method returns void using registered return type
+            let is_void = bc
+                .get_method_return_type(type_name, method_name)
+                .map(|rt| matches!(rt, AstType::Void))
+                .unwrap_or(false);
+            (function, is_void)
         };
 
         let self_value = match object {
@@ -489,15 +569,27 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let call = self
             .builder
             .build_call(function, &args_meta, "method_call")?;
-        call.try_as_basic_value()
-            .left()
-            .ok_or_else(|| {
-                CompileError::TypeError(
-                    "Method call returned void where value expected".to_string(),
+
+        // Handle return value based on registered return type
+        if is_void_method {
+            // Void-returning method (like deallocate) - return a unit/dummy value
+            // The caller should check context to know if result matters
+            // This allows void methods to work as statements via trait dispatch
+            let dummy = self.context.i32_type().const_int(0, false);
+            Ok(Some(dummy.into()))
+        } else {
+            // Non-void method - return the actual value
+            match call.try_as_basic_value().left() {
+                Some(value) => Ok(Some(value)),
+                None => Err(CompileError::InternalError(
+                    format!(
+                        "Trait method {}.{} should return a value but LLVM call returned void",
+                        type_name, method_name
+                    ),
                     self.get_current_span(),
-                )
-            })
-            .map(Some)
+                )),
+            }
+        }
     }
 
     fn try_qualified_method_call(

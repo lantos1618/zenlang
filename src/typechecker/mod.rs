@@ -1,18 +1,22 @@
 pub mod behaviors;
 pub mod declaration_checking;
+pub mod expression_inference;
 pub mod function_checking;
 pub mod inference;
 pub mod intrinsics;
 pub mod method_types;
+pub mod pattern_binding;
 pub mod scope;
 pub mod self_resolution;
 pub mod statement_checking;
+pub mod stdlib_loading;
 pub mod type_resolution;
 pub mod types;
 pub mod validation;
 
-use crate::ast::{AstType, Declaration, Expression, Function, Program, Statement};
-use crate::error::{CompileError, Result, Span};
+use crate::ast::primitives;
+use crate::ast::{AstType, Declaration, Function, Program, Statement};
+use crate::error::{Result, Span};
 use crate::type_context::TypeContext;
 use crate::well_known::WellKnownTypes;
 use behaviors::BehaviorResolver;
@@ -44,6 +48,8 @@ pub struct TypeChecker {
     stdlib_methods: HashMap<String, MethodSignature>,
     // Extracted stdlib function signatures: "module::function" -> signature
     stdlib_functions: HashMap<String, FunctionSignature>,
+    // Type aliases: "CompletionFn" -> (u64, i64) void
+    type_aliases: HashMap<String, AstType>,
 }
 
 #[derive(Clone, Debug)]
@@ -85,6 +91,11 @@ impl TypeChecker {
     /// Get the inferred function signatures
     pub fn get_function_signatures(&self) -> &HashMap<String, FunctionSignature> {
         &self.functions
+    }
+
+    /// Resolve a type alias (e.g., "CompletionFn" -> function type)
+    pub fn resolve_type_alias(&self, name: &str) -> Option<AstType> {
+        self.type_aliases.get(name).cloned()
     }
 
     /// Parse type arguments from a generic type string like "HashMap<i32, i32>"
@@ -145,6 +156,7 @@ impl TypeChecker {
             stdlib_modules: HashMap::new(),
             stdlib_methods: HashMap::new(),
             stdlib_functions: HashMap::new(),
+            type_aliases: HashMap::new(),
         }
     }
 
@@ -166,7 +178,10 @@ impl TypeChecker {
             let struct_names: Vec<String> = self.structs.keys().cloned().collect();
             for struct_name in struct_names {
                 let resolved_fields: Vec<(String, AstType)> = {
-                    let struct_info = self.structs.get(&struct_name).unwrap();
+                    let struct_info = self
+                        .structs
+                        .get(&struct_name)
+                        .expect("struct name should exist in structs map");
                     struct_info
                         .fields
                         .iter()
@@ -249,10 +264,8 @@ impl TypeChecker {
                 );
 
                 // Register constructors (methods that return the type itself)
-                // Common patterns: new, create, default, with_capacity, etc.
-                let is_constructor = method.name == "new"
-                    || method.name == "create"
-                    || method.name == "default"
+                // Use centralized constructor method definitions
+                let is_constructor = primitives::is_constructor_method(&method.name)
                     || method.name.starts_with("with_")
                     || method.name.starts_with("from_");
 
@@ -273,9 +286,30 @@ impl TypeChecker {
             }
         }
 
-        // Register behavior implementations
-        for (type_name, behavior_name) in self.behavior_resolver.implementations().keys() {
+        // Register behavior implementations and their methods
+        for ((type_name, behavior_name), impl_info) in self.behavior_resolver.implementations() {
             ctx.register_behavior_impl(type_name, behavior_name);
+
+            // Also register the actual method signatures from the trait implementation
+            for (method_name, method_info) in &impl_info.methods {
+                let params: Vec<(String, AstType)> = method_info
+                    .param_types
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| (format!("arg{}", i), t.clone()))
+                    .collect();
+                ctx.register_method_with_params(
+                    type_name,
+                    method_name,
+                    params,
+                    method_info.return_type.clone(),
+                );
+            }
+        }
+
+        // Register type aliases (for function type aliases like CompletionFn)
+        for (name, aliased_type) in &self.type_aliases {
+            ctx.type_aliases.insert(name.clone(), aliased_type.clone());
         }
 
         ctx
@@ -311,442 +345,7 @@ impl TypeChecker {
         self.current_function_return_type.as_ref()
     }
 
-    pub fn infer_expression_type(&mut self, expr: &Expression) -> Result<AstType> {
-        match expr {
-            Expression::Integer32(_) => Ok(AstType::I32),
-            Expression::Integer64(_) => Ok(AstType::I64),
-            Expression::Float32(_) => Ok(AstType::F32),
-            Expression::Float64(_) => Ok(AstType::F64),
-            Expression::Boolean(_) => Ok(AstType::Bool),
-            Expression::Unit => Ok(AstType::Void),
-            Expression::String(_) => Ok(AstType::StaticString), // String literals are static strings
-            Expression::Identifier(name) => inference::infer_identifier_type(self, name),
-            Expression::BinaryOp { left, op, right } => {
-                inference::infer_binary_op_type(self, left, op, right)
-            }
-            Expression::FunctionCall {
-                name,
-                type_args,
-                args,
-            } => inference::infer_function_call_type(self, name, type_args, args),
-            Expression::MemberAccess { object, member } => {
-                // Check if accessing @std namespace
-                if let Expression::Identifier(name) = &**object {
-                    if name == "@std" {
-                        // Resolve @std.module access
-                        return Ok(AstType::Generic {
-                            name: format!("StdModule::{}", member),
-                            type_args: vec![],
-                        });
-                    }
-                }
-                let object_type = self.infer_expression_type(object)?;
-                inference::infer_member_type(
-                    &object_type,
-                    member,
-                    &self.structs,
-                    &self.enums,
-                    self.get_current_span(),
-                )
-            }
-            Expression::Comptime(inner) => self.infer_expression_type(inner),
-            Expression::Range { .. } => Ok(AstType::Range {
-                start_type: Box::new(AstType::I32),
-                end_type: Box::new(AstType::I32),
-                inclusive: false,
-            }),
-            Expression::StructLiteral { name, .. } => {
-                // For struct literals, return the struct type
-                // Check if it's a known struct
-                if let Some(struct_def) = self.structs.get(name) {
-                    Ok(AstType::Struct {
-                        name: name.clone(),
-                        fields: struct_def.fields.clone(),
-                    })
-                } else {
-                    // Check if it's a stdlib struct
-                    if let Some(struct_info) = self.get_stdlib_struct(name) {
-                        Ok(AstType::Struct {
-                            name: name.clone(),
-                            fields: struct_info.fields.clone(),
-                        })
-                    } else {
-                        // It might be a generic struct that will be monomorphized
-                        // For now, return a struct type with empty fields
-                        Ok(AstType::Struct {
-                            name: name.clone(),
-                            fields: vec![],
-                        })
-                    }
-                }
-            }
-            Expression::StdReference => {
-                // Return a type representing @std
-                Ok(AstType::Generic {
-                    name: "Std".to_string(),
-                    type_args: vec![],
-                })
-            }
-            Expression::BuiltinReference => {
-                // Return a type representing @builtin (raw compiler intrinsics)
-                Ok(AstType::Generic {
-                    name: "Builtin".to_string(),
-                    type_args: vec![],
-                })
-            }
-            Expression::ThisReference => {
-                // Return a type representing @this
-                Ok(AstType::Generic {
-                    name: "This".to_string(),
-                    type_args: vec![],
-                })
-            }
-            Expression::StringInterpolation { .. } => {
-                // String interpolation returns dynamic String (requires allocator)
-                Ok(crate::ast::resolve_string_struct_type())
-            }
-            Expression::Closure {
-                params,
-                return_type,
-                body,
-            } => inference::infer_closure_type(self, params, return_type, body),
-            Expression::ArrayIndex { array, .. } => {
-                // Array indexing returns the element type
-                let array_type = self.infer_expression_type(array)?;
-                if let Some(elem_type) = array_type.ptr_inner() {
-                    return Ok(elem_type.clone());
-                }
-                match array_type {
-                    AstType::Slice(elem_type) => Ok(*elem_type),
-                    AstType::FixedArray { element_type, .. } => Ok(*element_type),
-                    _ => Err(CompileError::TypeError(
-                        format!("Cannot index type {:?}", array_type),
-                        None,
-                    )),
-                }
-            }
-            Expression::AddressOf(inner) => {
-                let inner_type = self.infer_expression_type(inner)?;
-                Ok(AstType::ptr(inner_type))
-            }
-            Expression::Dereference(inner) => {
-                let inner_type = self.infer_expression_type(inner)?;
-                if let Some(elem_type) = inner_type.ptr_inner() {
-                    return Ok(elem_type.clone());
-                }
-                Err(CompileError::TypeError(
-                    format!("Cannot dereference non-pointer type {:?}", inner_type),
-                    None,
-                ))
-            }
-            Expression::PointerOffset { pointer, .. } => {
-                // Pointer offset returns the same pointer type
-                self.infer_expression_type(pointer)
-            }
-            Expression::StructField { struct_, field } => {
-                let struct_type = self.infer_expression_type(struct_)?;
-                inference::infer_struct_field_type(
-                    &struct_type,
-                    field,
-                    &self.structs,
-                    &self.enums,
-                    self.get_current_span(),
-                )
-            }
-            Expression::Integer8(_) => Ok(AstType::I8),
-            Expression::Integer16(_) => Ok(AstType::I16),
-            Expression::Unsigned8(_) => Ok(AstType::U8),
-            Expression::Unsigned16(_) => Ok(AstType::U16),
-            Expression::Unsigned32(_) => Ok(AstType::U32),
-            Expression::Unsigned64(_) => Ok(AstType::U64),
-            Expression::ArrayLiteral(elements) => {
-                // Infer type from first element - array literals produce slices
-                if elements.is_empty() {
-                    Ok(AstType::Slice(Box::new(AstType::Void)))
-                } else {
-                    let elem_type = self.infer_expression_type(&elements[0])?;
-                    Ok(AstType::Slice(Box::new(elem_type)))
-                }
-            }
-            Expression::TypeCast { target_type, .. } => Ok(target_type.clone()),
-            Expression::QuestionMatch { scrutinee, arms } => {
-                // QuestionMatch expression type is determined by the arms
-                // All arms should have the same type
-
-                // Infer the type of the scrutinee to properly type pattern bindings
-                let scrutinee_type = self.infer_expression_type(scrutinee)?;
-
-                if arms.is_empty() {
-                    Ok(AstType::Void)
-                } else {
-                    let mut result_type = AstType::Void;
-
-                    // Process each arm with its own pattern bindings
-                    for (i, arm) in arms.iter().enumerate() {
-                        // Enter a new scope for the pattern bindings
-                        self.enter_scope();
-
-                        // Extract pattern bindings and add them to the scope
-                        // Pass the scrutinee type for proper typing
-                        self.add_pattern_bindings_to_scope_with_type(
-                            &arm.pattern,
-                            &scrutinee_type,
-                        )?;
-
-                        // Special handling for blocks with early returns
-                        // If the arm body is a block, we need to check if it actually
-                        // produces a value or just has side effects before returning
-                        let arm_type = if let Expression::Block(stmts) = &arm.body {
-                            // Check if the block has any non-return statements before the return
-                            let mut block_type = AstType::Void;
-                            let has_early_return = false;
-
-                            for (j, stmt) in stmts.iter().enumerate() {
-                                match stmt {
-                                    Statement::Return { .. } => {
-                                        // Don't use return statement to determine block type
-                                        break;
-                                    }
-                                    Statement::Expression { expr, .. } => {
-                                        // If this is the last statement and there's no early return after it
-                                        if j == stmts.len() - 1 && !has_early_return {
-                                            block_type = self.infer_expression_type(expr)?;
-                                        } else {
-                                            // Still type-check intermediate expressions
-                                            let _ = self.infer_expression_type(expr)?;
-                                        }
-                                    }
-                                    _ => {
-                                        self.check_statement(stmt)?;
-                                    }
-                                }
-                            }
-                            block_type
-                        } else {
-                            self.infer_expression_type(&arm.body)?
-                        };
-
-                        // The first non-void arm determines the type, or use first arm if all void
-                        if i == 0
-                            || (matches!(result_type, AstType::Void)
-                                && !matches!(arm_type, AstType::Void))
-                        {
-                            result_type = arm_type;
-                        }
-
-                        // Exit the scope to remove the bindings
-                        self.exit_scope();
-                    }
-
-                    Ok(result_type)
-                }
-            }
-            Expression::PatternMatch { arms, .. } => {
-                // Pattern match expression type is determined by the first arm
-                // All arms should have the same type
-                if arms.is_empty() {
-                    Ok(AstType::Void)
-                } else {
-                    let mut result_type = AstType::Void;
-
-                    // Process each arm with its own pattern bindings
-                    for (i, arm) in arms.iter().enumerate() {
-                        // Enter a new scope for the pattern bindings
-                        self.enter_scope();
-
-                        // Extract pattern bindings and add them to the scope
-                        self.add_pattern_bindings_to_scope(&arm.pattern)?;
-
-                        // Infer the type with bindings in scope
-                        let arm_type = self.infer_expression_type(&arm.body)?;
-
-                        // The first arm determines the type
-                        if i == 0 {
-                            result_type = arm_type;
-                        }
-
-                        // Exit the scope to remove the bindings
-                        self.exit_scope();
-                    }
-
-                    Ok(result_type)
-                }
-            }
-            Expression::Block(statements) => {
-                // Enter a new scope for the block
-                self.enter_scope();
-
-                let mut block_type = AstType::Void;
-
-                // Process all statements in the block
-                for (i, stmt) in statements.iter().enumerate() {
-                    match stmt {
-                        Statement::Expression { expr, .. } => {
-                            // The last expression determines the block's type
-                            if i == statements.len() - 1 {
-                                block_type = self.infer_expression_type(expr)?;
-                            } else {
-                                // Still type-check intermediate expressions
-                                self.infer_expression_type(expr)?;
-                            }
-                        }
-                        _ => {
-                            // Process other statements (declarations, assignments, etc.)
-                            self.check_statement(stmt)?;
-                        }
-                    }
-                }
-
-                // Exit the block's scope
-                self.exit_scope();
-
-                Ok(block_type)
-            }
-            Expression::Return(expr) => self.infer_expression_type(expr),
-            Expression::EnumVariant {
-                enum_name,
-                variant,
-                payload,
-            } => inference::infer_enum_variant_type(self, enum_name, variant, payload),
-            Expression::StringLength(_) => Ok(AstType::I64),
-            Expression::MethodCall {
-                object,
-                method,
-                type_args,
-                args: _,
-            } => inference::infer_method_call_type(self, object, method, type_args),
-            Expression::Loop { body: _ } => {
-                // Loop expressions return void for now
-                Ok(AstType::Void)
-            }
-            Expression::Raise(expr) => inference::infer_raise_type(self, expr),
-            Expression::Break { .. } | Expression::Continue { .. } => {
-                // Break and continue don't return a value, they transfer control
-                // For type checking purposes, they can be considered to return void
-                Ok(AstType::Void)
-            }
-            Expression::EnumLiteral { variant, payload } => {
-                inference::infer_enum_literal_type(self, variant, payload)
-            }
-            Expression::Conditional { scrutinee, arms } => {
-                // Infer the type of the scrutinee to properly type pattern bindings
-                let scrutinee_type = self.infer_expression_type(scrutinee)?;
-
-                if arms.is_empty() {
-                    Ok(AstType::Void)
-                } else {
-                    let mut result_type = AstType::Void;
-
-                    // Process each arm with its own pattern bindings
-                    for (i, arm) in arms.iter().enumerate() {
-                        self.enter_scope();
-
-                        // Extract pattern bindings and add them to the scope
-                        self.add_pattern_bindings_to_scope_with_type(
-                            &arm.pattern,
-                            &scrutinee_type,
-                        )?;
-
-                        let arm_type = self.infer_expression_type(&arm.body)?;
-
-                        // The first arm determines the type
-                        if i == 0 {
-                            result_type = arm_type;
-                        }
-
-                        self.exit_scope();
-                    }
-
-                    Ok(result_type)
-                }
-            }
-            // Zen spec pointer operations
-            Expression::PointerDereference(expr) => {
-                // ptr.val -> T (if ptr is Ptr<T>, MutPtr<T>, or RawPtr<T>)
-                let ptr_type = self.infer_expression_type(expr)?;
-                if let Some(inner) = ptr_type.ptr_inner() {
-                    Ok(inner.clone())
-                } else {
-                    Err(CompileError::TypeError(
-                        format!("Cannot dereference non-pointer type: {:?}", ptr_type),
-                        None,
-                    ))
-                }
-            }
-            Expression::PointerAddress(expr) => {
-                // expr.addr -> RawPtr<T> (if expr is of type T)
-                let expr_type = self.infer_expression_type(expr)?;
-                Ok(AstType::raw_ptr(expr_type))
-            }
-            Expression::CreateReference(expr) => {
-                // expr.ref() -> Ptr<T> (if expr is of type T)
-                let expr_type = self.infer_expression_type(expr)?;
-                Ok(AstType::ptr(expr_type))
-            }
-            Expression::CreateMutableReference(expr) => {
-                // expr.mut_ref() -> MutPtr<T> (if expr is of type T)
-                let expr_type = self.infer_expression_type(expr)?;
-                Ok(AstType::mut_ptr(expr_type))
-            }
-            Expression::VecConstructor {
-                element_type,
-                size: _,
-                initial_values: _,
-            } => {
-                // Vec<T>() -> Generic { name: "Vec", type_args: [T] }
-                Ok(AstType::Generic {
-                    name: "Vec".to_string(),
-                    type_args: vec![element_type.clone()],
-                })
-            }
-            Expression::DynVecConstructor {
-                element_types,
-                allocator: _,
-                initial_capacity: _,
-            } => {
-                // DynVec<T>() -> Generic { name: "DynVec", type_args: [T, ...] }
-                Ok(AstType::Generic {
-                    name: "DynVec".to_string(),
-                    type_args: element_types.clone(),
-                })
-            }
-            Expression::ArrayConstructor { element_type } => {
-                // Array<T>() -> Generic { name: "Array", type_args: [T] }
-                // This matches the expected type format for generic types
-                Ok(AstType::Generic {
-                    name: "Array".to_string(),
-                    type_args: vec![element_type.clone()],
-                })
-            }
-            Expression::Some(inner) => {
-                let inner_type = self.infer_expression_type(inner)?;
-                Ok(AstType::Generic {
-                    name: self
-                        .well_known
-                        .get_variant_parent_name(self.well_known.some_name())
-                        .unwrap()
-                        .to_string(),
-                    type_args: vec![inner_type],
-                })
-            }
-            Expression::None => Ok(AstType::Generic {
-                name: self
-                    .well_known
-                    .get_variant_parent_name(self.well_known.none_name())
-                    .unwrap()
-                    .to_string(),
-                type_args: vec![AstType::Void],
-            }),
-            Expression::CollectionLoop { .. } => {
-                // collection.loop() returns unit/void
-                Ok(AstType::Void)
-            }
-            Expression::Defer(_) => {
-                // @this.defer() returns unit/void
-                Ok(AstType::Void)
-            }
-        }
-    }
+    // infer_expression_type moved to expression_inference.rs
 
     fn types_compatible(&self, expected: &AstType, actual: &AstType) -> bool {
         validation::types_compatible(expected, actual)
@@ -763,108 +362,7 @@ impl TypeChecker {
             .resolve_method(type_name, method_name)
     }
 
-    fn register_stdlib_module(&mut self, _alias: &str, _module_path: &str) -> Result<()> {
-        // Stdlib modules are now loaded via with_stdlib_modules() from ModuleSystem
-        // Types are extracted automatically when modules are loaded
-        Ok(())
-    }
-
-    /// Initialize TypeChecker with already-loaded stdlib modules from ModuleSystem
-    /// Extracts type information from the loaded modules
-    pub fn with_stdlib_modules(&mut self, modules: &HashMap<String, Program>) {
-        for (path, program) in modules {
-            if path.starts_with("@std") || path.starts_with("std.") {
-                self.extract_types_from_program(program, path);
-                self.stdlib_modules.insert(path.clone(), program.clone());
-            }
-        }
-    }
-
-    /// Extract type information from a stdlib program
-    fn extract_types_from_program(&mut self, program: &Program, module_path: &str) {
-        for decl in &program.declarations {
-            match decl {
-                Declaration::Struct(def) => {
-                    let fields: Vec<(String, AstType)> = def
-                        .fields
-                        .iter()
-                        .map(|f| (f.name.clone(), f.type_.clone()))
-                        .collect();
-                    self.structs.insert(def.name.clone(), StructInfo { fields });
-                }
-                Declaration::Function(func) => {
-                    if let Some((receiver, method)) = func.name.split_once('.') {
-                        // Method: Type.method
-                        let key = format!("{}::{}", receiver, method);
-                        let sig = MethodSignature {
-                            receiver_type: receiver.to_string(),
-                            method_name: method.to_string(),
-                            params: func.args.clone(),
-                            return_type: func.return_type.clone(),
-                            is_static: func
-                                .args
-                                .first()
-                                .map(|(name, _)| name != "self")
-                                .unwrap_or(true),
-                        };
-                        self.stdlib_methods.insert(key, sig);
-                    } else {
-                        // Standalone function
-                        let key = format!("{}::{}", module_path, func.name);
-                        let sig = FunctionSignature {
-                            params: func.args.clone(),
-                            return_type: func.return_type.clone(),
-                            is_external: false,
-                        };
-                        self.stdlib_functions.insert(key, sig);
-                    }
-                }
-                Declaration::Enum(def) => {
-                    let variants: Vec<(String, Option<AstType>)> = def
-                        .variants
-                        .iter()
-                        .map(|v| (v.name.clone(), v.payload.clone()))
-                        .collect();
-                    self.enums.insert(def.name.clone(), EnumInfo { variants });
-                }
-                Declaration::TraitImplementation(trait_impl) => {
-                    for method in &trait_impl.methods {
-                        let key = format!("{}::{}", trait_impl.type_name, method.name);
-                        let sig = MethodSignature {
-                            receiver_type: trait_impl.type_name.clone(),
-                            method_name: method.name.clone(),
-                            params: method.args.clone(),
-                            return_type: method.return_type.clone(),
-                            is_static: method
-                                .args
-                                .first()
-                                .map(|(n, _)| n != "self")
-                                .unwrap_or(true),
-                        };
-                        self.stdlib_methods.insert(key, sig);
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-
-    /// Look up stdlib method return type (replaces stdlib_types().get_method_return_type)
-    pub fn get_stdlib_method_type(&self, receiver: &str, method: &str) -> Option<&AstType> {
-        let key = format!("{}::{}", receiver, method);
-        self.stdlib_methods.get(&key).map(|sig| &sig.return_type)
-    }
-
-    /// Look up stdlib function return type (replaces stdlib_types().get_function_return_type)
-    pub fn get_stdlib_function_type(&self, module: &str, func_name: &str) -> Option<&AstType> {
-        let key = format!("{}::{}", module, func_name);
-        self.stdlib_functions.get(&key).map(|sig| &sig.return_type)
-    }
-
-    /// Get stdlib struct definition (replaces stdlib_types().get_struct_definition)
-    pub fn get_stdlib_struct(&self, name: &str) -> Option<&StructInfo> {
-        self.structs.get(name)
-    }
+    // Stdlib loading methods moved to stdlib_loading.rs
 
     fn enter_scope(&mut self) {
         scope::enter_scope(self)
@@ -946,144 +444,7 @@ impl TypeChecker {
         scope::get_variable_info(self, name)
     }
 
-    fn add_pattern_bindings_to_scope(&mut self, pattern: &crate::ast::Pattern) -> Result<()> {
-        // Default to I32 when no type context is available (legacy behavior)
-        self.add_pattern_bindings_to_scope_with_type(pattern, &AstType::I32)
-    }
-
-    /// Helper to resolve the payload type for an enum variant pattern match
-    fn resolve_enum_payload_type(&self, variant: &str, scrutinee_type: &AstType) -> AstType {
-        match scrutinee_type {
-            AstType::Generic {
-                name: enum_name,
-                type_args,
-            } => {
-                if self.well_known.is_result(enum_name) && type_args.len() >= 2 {
-                    if self.well_known.is_ok(variant) {
-                        type_args[0].clone()
-                    } else if self.well_known.is_err(variant) {
-                        type_args[1].clone()
-                    } else {
-                        AstType::I32
-                    }
-                } else if self.well_known.is_option(enum_name) && !type_args.is_empty() {
-                    if self.well_known.is_some(variant) {
-                        type_args[0].clone()
-                    } else {
-                        AstType::Void
-                    }
-                } else {
-                    scrutinee_type.clone()
-                }
-            }
-            AstType::Enum {
-                name: enum_name,
-                variants,
-            } => {
-                if self.well_known.is_option(enum_name) || self.well_known.is_result(enum_name) {
-                    if let Some(enum_variant) = variants.iter().find(|v| v.name == variant) {
-                        if let Some(payload_ty) = &enum_variant.payload {
-                            return payload_ty.clone();
-                        }
-                        return AstType::Void;
-                    }
-                }
-                scrutinee_type.clone()
-            }
-            _ => scrutinee_type.clone(),
-        }
-    }
-
-    /// Helper to unwrap primitive types from Generic wrapper
-    fn unwrap_primitive_generic(&self, scrutinee_type: &AstType) -> AstType {
-        if let AstType::Generic {
-            name: type_name,
-            type_args,
-        } = scrutinee_type
-        {
-            if type_args.is_empty() {
-                return match type_name.as_str() {
-                    "i32" | "I32" => AstType::I32,
-                    "i64" | "I64" => AstType::I64,
-                    "f32" | "F32" => AstType::F32,
-                    "f64" | "F64" => AstType::F64,
-                    "bool" | "Bool" => AstType::Bool,
-                    "string" => AstType::StaticString,
-                    "String" => crate::ast::resolve_string_struct_type(),
-                    _ => scrutinee_type.clone(),
-                };
-            }
-        }
-        scrutinee_type.clone()
-    }
-
-    fn add_pattern_bindings_to_scope_with_type(
-        &mut self,
-        pattern: &crate::ast::Pattern,
-        scrutinee_type: &AstType,
-    ) -> Result<()> {
-        use crate::ast::Pattern;
-
-        match pattern {
-            Pattern::Identifier(name) => {
-                let binding_type = self.unwrap_primitive_generic(scrutinee_type);
-                self.declare_variable(name, binding_type, false)?;
-            }
-            Pattern::EnumLiteral { variant, payload } => {
-                if let Some(payload_pattern) = payload {
-                    let payload_type = self.resolve_enum_payload_type(variant, scrutinee_type);
-                    self.add_pattern_bindings_to_scope_with_type(payload_pattern, &payload_type)?;
-                }
-            }
-            Pattern::EnumVariant {
-                variant, payload, ..
-            } => {
-                if let Some(payload_pattern) = payload {
-                    let payload_type = self.resolve_enum_payload_type(variant, scrutinee_type);
-                    self.add_pattern_bindings_to_scope_with_type(payload_pattern, &payload_type)?;
-                }
-            }
-            Pattern::Binding { name, pattern } => {
-                // Binding pattern: name @ pattern
-                // Add the name as a variable with the scrutinee type
-                self.declare_variable(name, scrutinee_type.clone(), false)?;
-                // And recursively process the pattern
-                self.add_pattern_bindings_to_scope_with_type(pattern, scrutinee_type)?;
-            }
-            Pattern::Or(patterns) => {
-                // For or patterns, we need to ensure all alternatives bind the same names
-                // For now, just process the first one
-                if let Some(first) = patterns.first() {
-                    self.add_pattern_bindings_to_scope_with_type(first, scrutinee_type)?;
-                }
-            }
-            Pattern::Struct { fields, .. } => {
-                // For struct patterns, add bindings for all fields
-                // Uses scrutinee_type for all bindings; field-specific types need struct lookup
-                for field in fields {
-                    self.add_pattern_bindings_to_scope_with_type(&field.1, scrutinee_type)?;
-                }
-            }
-            Pattern::Type { binding, .. } => {
-                // Type pattern with optional binding
-                if let Some(name) = binding {
-                    self.declare_variable(name, scrutinee_type.clone(), false)?;
-                }
-            }
-            // Tuple patterns - recursively bind patterns in the tuple
-            Pattern::Tuple(patterns) => {
-                for pattern in patterns {
-                    self.add_pattern_bindings_to_scope_with_type(pattern, scrutinee_type)?;
-                }
-            }
-            // Other patterns don't create bindings
-            Pattern::Wildcard
-            | Pattern::Literal(_)
-            | Pattern::Range { .. }
-            | Pattern::Guard { .. } => {}
-        }
-        Ok(())
-    }
+    // Pattern binding methods moved to pattern_binding.rs
 
     fn variable_exists(&self, name: &str) -> bool {
         scope::variable_exists(self, name)

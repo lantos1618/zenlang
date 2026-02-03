@@ -40,8 +40,8 @@ main = () i32 {
         }
         | false {
             io.println("Found 'sin' function at address")
-            addr = compiler.ptr_to_int(sin_ptr)
-            io.print_int(addr)
+            // Note: Integer printing not yet implemented in stdlib
+            // addr = compiler.ptr_to_int(sin_ptr)
     }
 
     // Look up 'cos' function

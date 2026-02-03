@@ -52,61 +52,10 @@ impl Default for BehaviorResolver {
 
 impl BehaviorResolver {
     pub fn new() -> Self {
-        let mut behaviors = HashMap::new();
-
-        // Pre-register the Allocator trait from stdlib/memory/allocator.zen
-        // This is needed because imports don't load trait definitions into the typechecker
-        behaviors.insert(
-            "Allocator".to_string(),
-            BehaviorInfo {
-                name: "Allocator".to_string(),
-                type_params: vec![],
-                methods: vec![
-                    BehaviorMethodInfo {
-                        name: "allocate".to_string(),
-                        param_types: vec![
-                            AstType::Generic {
-                                name: "Self".to_string(),
-                                type_args: vec![],
-                            },
-                            AstType::Usize,
-                        ],
-                        return_type: AstType::raw_ptr(AstType::U8),
-                        has_self: true,
-                    },
-                    BehaviorMethodInfo {
-                        name: "deallocate".to_string(),
-                        param_types: vec![
-                            AstType::Generic {
-                                name: "Self".to_string(),
-                                type_args: vec![],
-                            },
-                            AstType::raw_ptr(AstType::U8),
-                            AstType::Usize,
-                        ],
-                        return_type: AstType::Void,
-                        has_self: true,
-                    },
-                    BehaviorMethodInfo {
-                        name: "reallocate".to_string(),
-                        param_types: vec![
-                            AstType::Generic {
-                                name: "Self".to_string(),
-                                type_args: vec![],
-                            },
-                            AstType::raw_ptr(AstType::U8),
-                            AstType::Usize,
-                            AstType::Usize,
-                        ],
-                        return_type: AstType::raw_ptr(AstType::U8),
-                        has_self: true,
-                    },
-                ],
-            },
-        );
-
+        // No longer pre-registering Allocator trait here.
+        // Traits are now properly loaded from stdlib via stdlib_loading.rs
         Self {
-            behaviors,
+            behaviors: HashMap::new(),
             implementations: HashMap::new(),
             inherent_methods: HashMap::new(),
         }

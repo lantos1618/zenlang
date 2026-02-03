@@ -296,7 +296,7 @@ pub fn compile_ptr_to_int<'ctx>(
     let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
     Ok(compiler
         .builder
-        .build_ptr_to_int(ptr, compiler.context.i64_type(), "p2i")?
+        .build_ptr_to_int(ptr, compiler.ptr_sized_int_type(), "p2i")?
         .into())
 }
 

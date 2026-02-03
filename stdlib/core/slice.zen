@@ -1,0 +1,234 @@
+// Zen Standard Library: Slice Type
+// A bounds-checked view over contiguous memory (pointer + length)
+// Provides safe read/write operations with automatic bounds checking
+
+{ compiler } = @std
+{ Allocator } = @std.memory.allocator
+
+// ============================================================================
+// Slice<T> - Safe view over contiguous memory with bounds checking
+// ============================================================================
+// Slice is a non-owning view: it does NOT deallocate on destruction
+// Use Buffer<T> if you need owned memory that auto-frees
+
+Slice<T>: {
+    ptr: RawPtr<u8>,    // Base pointer
+    len: usize          // Number of T elements (not bytes!)
+}
+
+// Create a slice from a raw pointer and length
+Slice<T>.from_raw = (ptr: RawPtr<u8>, len: usize) Slice<T> {
+    return Slice<T> { ptr: ptr, len: len }
+}
+
+// Create an empty slice
+Slice<T>.empty = () Slice<T> {
+    return Slice<T> { ptr: compiler.null_ptr(), len: 0 }
+}
+
+// Allocate a new slice using an allocator
+Slice<T>.alloc = (allocator: Allocator, count: usize) Slice<T> {
+    alloc_size = count * compiler.sizeof<T>()
+    alloc_ptr = allocator.allocate(alloc_size)
+    return Slice<T> { ptr: alloc_ptr, len: count }
+}
+
+// Allocate a zeroed slice using an allocator
+Slice<T>.alloc_zeroed = (allocator: Allocator, count: usize) Slice<T> {
+    zeroed_size = count * compiler.sizeof<T>()
+    zeroed_ptr = allocator.allocate(zeroed_size)
+    compiler.memset(zeroed_ptr, 0, zeroed_size)
+    return Slice<T> { ptr: zeroed_ptr, len: count }
+}
+
+// Free the slice using an allocator (caller must ensure allocator matches!)
+Slice<T>.free = (self: Slice<T>, allocator: Allocator) void {
+    free_size = self.len * compiler.sizeof<T>()
+    allocator.deallocate(self.ptr, free_size)
+}
+
+// Get length in elements
+Slice<T>.length = (self: Slice<T>) usize {
+    return self.len
+}
+
+// Get size in bytes
+Slice<T>.byte_size = (self: Slice<T>) usize {
+    return self.len * compiler.sizeof<T>()
+}
+
+// Check if slice is empty
+Slice<T>.is_empty = (self: Slice<T>) bool {
+    return self.len == 0
+}
+
+// Check if slice is valid (non-null pointer)
+Slice<T>.is_valid = (self: Slice<T>) bool {
+    addr = compiler.ptr_to_int(self.ptr)
+    return addr != 0
+}
+
+// Get raw pointer (for syscalls or interop)
+Slice<T>.as_ptr = (self: Slice<T>) RawPtr<u8> {
+    return self.ptr
+}
+
+// Get raw pointer as integer address (for syscalls)
+Slice<T>.as_addr = (self: Slice<T>) i64 {
+    return compiler.ptr_to_int(self.ptr)
+}
+
+// Read element at index with bounds check
+// Returns the value or panics if out of bounds
+Slice<T>.get = (self: Slice<T>, index: usize) T {
+    index >= self.len ? {
+        compiler.panic("Slice.get: index out of bounds")
+    }
+    offset = cast(index * compiler.sizeof<T>(), i64)
+    elem_ptr = compiler.gep(self.ptr, offset)
+    return compiler.load<T>(elem_ptr)
+}
+
+// Write element at index with bounds check
+// Panics if out of bounds
+Slice<T>.set = (self: Slice<T>, index: usize, value: T) void {
+    index >= self.len ? {
+        compiler.panic("Slice.set: index out of bounds")
+    }
+    offset = cast(index * compiler.sizeof<T>(), i64)
+    elem_ptr = compiler.gep(self.ptr, offset)
+    compiler.store<T>(elem_ptr, value)
+}
+
+// Get pointer to element at index (unsafe, no bounds check for performance)
+Slice<T>.ptr_at = (self: Slice<T>, index: usize) RawPtr<u8> {
+    offset = cast(index * compiler.sizeof<T>(), i64)
+    return compiler.gep(self.ptr, offset)
+}
+
+// Read first element (for convenience)
+Slice<T>.first = (self: Slice<T>) T {
+    self.len == 0 ? { compiler.panic("Slice.first: empty slice") }
+    return compiler.load<T>(self.ptr)
+}
+
+// Read last element (for convenience)
+Slice<T>.last = (self: Slice<T>) T {
+    self.len == 0 ? { compiler.panic("Slice.last: empty slice") }
+    offset = cast((self.len - 1) * compiler.sizeof<T>(), i64)
+    elem_ptr = compiler.gep(self.ptr, offset)
+    return compiler.load<T>(elem_ptr)
+}
+
+// Fill entire slice with a value
+Slice<T>.fill = (self: Slice<T>, value: T) void {
+    i ::= cast(0, usize)
+    loop(() {
+        i >= self.len ? { break }
+        self.set(i, value)
+        i = i + 1
+    })
+}
+
+// Fill entire slice with zeros (fast memset)
+Slice<T>.zero = (self: Slice<T>) void {
+    zero_size = self.len * compiler.sizeof<T>()
+    compiler.memset(self.ptr, 0, zero_size)
+}
+
+// Copy from another slice (truncates if source is longer)
+Slice<T>.copy_from = (self: Slice<T>, src: Slice<T>) usize {
+    copy_count ::= self.len
+    src.len < copy_count ? { copy_count = src.len }
+    copy_size = copy_count * compiler.sizeof<T>()
+    compiler.memcpy(self.ptr, src.ptr, copy_size)
+    return copy_count
+}
+
+// Copy from raw pointer with explicit count
+Slice<T>.copy_from_raw = (self: Slice<T>, src: RawPtr<u8>, raw_count: usize) void {
+    raw_count > self.len ? {
+        compiler.panic("Slice.copy_from_raw: count exceeds slice length")
+    }
+    raw_size = raw_count * compiler.sizeof<T>()
+    compiler.memcpy(self.ptr, src, raw_size)
+}
+
+// Get a sub-slice (view into portion of this slice)
+// Note: Returns a slice pointing into same memory - no copy!
+Slice<T>.subslice = (self: Slice<T>, start: usize, len: usize) Slice<T> {
+    start + len > self.len ? {
+        compiler.panic("Slice.subslice: range out of bounds")
+    }
+    offset = cast(start * compiler.sizeof<T>(), i64)
+    new_ptr = compiler.gep(self.ptr, offset)
+    return Slice<T> { ptr: new_ptr, len: len }
+}
+
+// ============================================================================
+// Factory functions - easier to call than generic static methods
+// ============================================================================
+
+// Create a byte slice (Slice<u8>) - the most common case
+byte_slice = (allocator: Allocator, count: usize) Slice<u8> {
+    byte_size = count * compiler.sizeof<u8>()
+    byte_ptr = allocator.allocate(byte_size)
+    return Slice<u8> { ptr: byte_ptr, len: count }
+}
+
+// Create a zeroed byte slice (Slice<u8>)
+byte_slice_zeroed = (allocator: Allocator, count: usize) Slice<u8> {
+    zeroed_byte_size = count * compiler.sizeof<u8>()
+    zeroed_byte_ptr = allocator.allocate(zeroed_byte_size)
+    compiler.memset(zeroed_byte_ptr, 0, zeroed_byte_size)
+    return Slice<u8> { ptr: zeroed_byte_ptr, len: count }
+}
+
+// Create a slice of i64
+i64_slice = (allocator: Allocator, count: usize) Slice<i64> {
+    i64_size = count * compiler.sizeof<i64>()
+    i64_ptr = allocator.allocate(i64_size)
+    return Slice<i64> { ptr: i64_ptr, len: count }
+}
+
+// Create a zeroed slice of i64
+i64_slice_zeroed = (allocator: Allocator, count: usize) Slice<i64> {
+    zeroed_i64_size = count * compiler.sizeof<i64>()
+    zeroed_i64_ptr = allocator.allocate(zeroed_i64_size)
+    compiler.memset(zeroed_i64_ptr, 0, zeroed_i64_size)
+    return Slice<i64> { ptr: zeroed_i64_ptr, len: count }
+}
+
+// ============================================================================
+// ByteSlice helpers - Common operations for Slice<u8>
+// Note: ByteBuffer is in a separate module @std.core.buffer for cross-module use
+// ============================================================================
+
+// Write a StaticString into a byte slice at offset, returns bytes written
+// This is useful for building output buffers
+write_string_at = (slice: Slice<u8>, offset: usize, s: StaticString, slen: usize) usize {
+    offset + slen > slice.len ? {
+        compiler.panic("write_string_at: would exceed slice bounds")
+    }
+    dest = compiler.gep(slice.ptr, cast(offset, i64))
+    compiler.memcpy(dest, s, slen)
+    return slen
+}
+
+// Write a single byte at offset
+write_byte_at = (slice: Slice<u8>, offset: usize, b: u8) void {
+    offset >= slice.len ? {
+        compiler.panic("write_byte_at: offset out of bounds")
+    }
+    dest = compiler.gep(slice.ptr, cast(offset, i64))
+    compiler.store<u8>(dest, b)
+}
+
+// Read a byte at offset
+read_byte_at = (slice: Slice<u8>, offset: usize) u8 {
+    offset >= slice.len ? {
+        compiler.panic("read_byte_at: offset out of bounds")
+    }
+    src = compiler.gep(slice.ptr, cast(offset, i64))
+    return compiler.load<u8>(src)
+}

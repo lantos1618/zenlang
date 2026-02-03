@@ -1,7 +1,7 @@
 // Zen Standard Library: Testing
 // Testing utilities and test runners
 
-{ io, memory } = @std
+{ io, memory, compiler } = @std
 
 // ============================================================================
 // Test Result Enum
@@ -89,7 +89,10 @@ run_tests = (suite: TestSuite) void {
 
     suite.failed == 0 ?
         | true { io.println("✓ All tests passed!") }
-        | false { io.println("✗ ${suite.failed} test(s) failed") }
+        | false {
+            io.println("✗ ${suite.failed} test(s) failed")
+            compiler.syscall1(60, 1)  // SYS_EXIT = 60, exit code = 1
+        }
 }
 
 // ============================================================================
@@ -98,7 +101,7 @@ run_tests = (suite: TestSuite) void {
 
 fail = (message: String) void {
     io.eprintln("[FAIL] ${message}")
-    // TODO: proper panic/abort mechanism
+    @builtin.panic("Test assertion failed")
 }
 
 // ============================================================================

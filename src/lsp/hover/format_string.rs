@@ -32,9 +32,9 @@ pub fn get_format_string_field_hover(
 
     // Find format strings: "${...}" but not "\${...}" (escaped)
     // Limit search to prevent infinite loops
+    use crate::lsp::search_limits::MAX_ITERATIONS;
     let mut search_pos = 0;
     let mut iterations = 0;
-    const MAX_ITERATIONS: usize = 100; // Safety limit
 
     while iterations < MAX_ITERATIONS {
         iterations += 1;

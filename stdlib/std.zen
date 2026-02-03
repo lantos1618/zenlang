@@ -9,14 +9,16 @@
 { Option } = @std.core.option
 { Result } = @std.core.result
 { Ptr } = @std.core.ptr
+{ Slice, byte_slice, byte_slice_zeroed, i64_slice, i64_slice_zeroed } = @std.core.slice
+{ ByteBuffer, buffer_new, buffer_zeroed, buffer_free, buffer_ptr, buffer_addr, buffer_get, buffer_set, buffer_get_i64, buffer_set_i64, buffer_get_u32, buffer_set_u32, buffer_copy, buffer_write_str, buffer_zero } = @std.core.buffer
 { Range, range, range_step } = @std.core.iterator
 
 // ============================================================================
 // Memory Management
 // ============================================================================
 
-{ Allocator } = @std.memory.allocator
-{ GPA } = @std.memory.gpa
+{ Allocator, ExecutionMode, CompletionFn } = @std.memory.allocator
+{ Heap, HeapSync } = @std.memory.heap
 
 // ============================================================================
 // Collections & Primitives

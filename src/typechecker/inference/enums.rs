@@ -20,12 +20,18 @@ pub fn infer_enum_literal_type(
             AstType::Void
         };
         Ok(AstType::Generic {
-            name: wk.get_variant_parent_name(variant).unwrap().to_string(),
+            name: wk
+                .get_variant_parent_name(variant)
+                .expect("Some variant should have Option parent")
+                .to_string(),
             type_args: vec![inner_type],
         })
     } else if wk.is_none(variant) {
         Ok(AstType::Generic {
-            name: wk.get_variant_parent_name(variant).unwrap().to_string(),
+            name: wk
+                .get_variant_parent_name(variant)
+                .expect("None variant should have Option parent")
+                .to_string(),
             type_args: vec![AstType::Generic {
                 name: "T".to_string(),
                 type_args: vec![],
@@ -38,7 +44,10 @@ pub fn infer_enum_literal_type(
             AstType::Void
         };
         Ok(AstType::Generic {
-            name: wk.get_variant_parent_name(variant).unwrap().to_string(),
+            name: wk
+                .get_variant_parent_name(variant)
+                .expect("Ok variant should have Result parent")
+                .to_string(),
             type_args: vec![ok_type, crate::ast::resolve_string_struct_type()],
         })
     } else if wk.is_err(variant) {
@@ -48,7 +57,10 @@ pub fn infer_enum_literal_type(
             AstType::Void
         };
         Ok(AstType::Generic {
-            name: wk.get_variant_parent_name(variant).unwrap().to_string(),
+            name: wk
+                .get_variant_parent_name(variant)
+                .expect("Err variant should have Result parent")
+                .to_string(),
             type_args: vec![
                 AstType::Generic {
                     name: "T".to_string(),

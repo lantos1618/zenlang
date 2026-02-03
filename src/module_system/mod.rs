@@ -25,7 +25,16 @@ impl Default for ModuleSystem {
 
 impl ModuleSystem {
     pub fn new() -> Self {
-        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let cwd = std::env::current_dir().unwrap_or_else(|e| {
+            // current_dir() can fail if the directory was deleted or permissions changed
+            // Fallback to "." but warn the user as this may cause module resolution issues
+            eprintln!(
+                "Warning: Could not determine current directory ({}), using '.' as fallback",
+                e
+            );
+            PathBuf::from(".")
+        });
+
         let mut search_paths = vec![cwd.clone(), cwd.join("lib"), cwd.join("modules")];
 
         // Add standard library path - check multiple locations
@@ -54,6 +63,21 @@ impl ModuleSystem {
             search_paths.push(zen_path.join("stdlib"));
             search_paths.push(zen_path.join("std"));
             search_paths.push(zen_path.join("lib"));
+        }
+
+        // Also check relative to the executable (important for LSP which may run from different cwd)
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                // Check exe_dir/../../stdlib (for target/debug/zen -> zenlang/stdlib)
+                if let Some(exe_parent) = exe_dir.parent() {
+                    if let Some(project_root) = exe_parent.parent() {
+                        let exe_stdlib = project_root.join("stdlib");
+                        if exe_stdlib.exists() && !search_paths.contains(&exe_stdlib) {
+                            search_paths.push(exe_stdlib);
+                        }
+                    }
+                }
+            }
         }
 
         ModuleSystem {

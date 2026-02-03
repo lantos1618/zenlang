@@ -1,4 +1,9 @@
 // References handler
+//
+// Provides enhanced reference finding with:
+// - Scope-aware search (local, module, workspace)
+// - Reference categorization (read, write, declaration)
+// - Performance-optimized workspace search
 
 use super::scope::determine_symbol_scope;
 use super::utils::{
@@ -9,6 +14,36 @@ use crate::lsp::types::SymbolScope;
 use lsp_server::{Request, Response};
 use lsp_types::*;
 use serde_json::Value;
+
+/// Reference type classification for better IDE integration
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ReferenceKind {
+    /// Variable/function declaration
+    Declaration,
+    /// Read access (using the value)
+    Read,
+    /// Write access (assignment)
+    Write,
+    /// Function call
+    Call,
+}
+
+/// Enhanced reference with additional metadata
+#[derive(Debug)]
+pub struct EnhancedReference {
+    pub range: Range,
+    pub kind: ReferenceKind,
+    pub context_line: String,
+}
+
+impl EnhancedReference {
+    pub fn to_location(&self, uri: Url) -> Location {
+        Location {
+            uri,
+            range: self.range,
+        }
+    }
+}
 
 /// Find all references to a symbol within a function
 fn find_local_references(
@@ -55,6 +90,17 @@ fn find_local_references(
 
 /// Find all references to a symbol in a document
 fn find_references_in_document(content: &str, symbol_name: &str) -> Vec<Range> {
+    find_enhanced_references_in_document(content, symbol_name)
+        .into_iter()
+        .map(|r| r.range)
+        .collect()
+}
+
+/// Find all references with enhanced metadata (kind, context)
+pub fn find_enhanced_references_in_document(
+    content: &str,
+    symbol_name: &str,
+) -> Vec<EnhancedReference> {
     let mut references = Vec::new();
     let lines: Vec<&str> = content.lines().collect();
 
@@ -68,21 +114,85 @@ fn find_references_in_document(content: &str, symbol_name: &str) -> Vec<Range> {
                 || is_word_boundary_char(line, actual_col + symbol_name.len());
 
             if before_ok && after_ok && !is_in_string_or_comment(line, actual_col) {
-                references.push(Range {
-                    start: Position {
-                        line: line_num as u32,
-                        character: actual_col as u32,
+                let kind = classify_reference(line, actual_col, symbol_name);
+                references.push(EnhancedReference {
+                    range: Range {
+                        start: Position {
+                            line: line_num as u32,
+                            character: actual_col as u32,
+                        },
+                        end: Position {
+                            line: line_num as u32,
+                            character: (actual_col + symbol_name.len()) as u32,
+                        },
                     },
-                    end: Position {
-                        line: line_num as u32,
-                        character: (actual_col + symbol_name.len()) as u32,
-                    },
+                    kind,
+                    context_line: line.trim().to_string(),
                 });
             }
             start_col = actual_col + 1;
         }
     }
     references
+}
+
+/// Classify a reference as declaration, read, write, or call
+fn classify_reference(line: &str, col: usize, symbol_name: &str) -> ReferenceKind {
+    let trimmed = line.trim();
+    let after_symbol = &line[col + symbol_name.len()..];
+    let before_symbol = &line[..col];
+
+    // Check for declaration: `name = (` or `name:` or `name = {`
+    // Zen syntax: `func_name = (params) type { }` or `struct_name: { }`
+    if let Some(rest) = trimmed.strip_prefix(symbol_name) {
+        let rest = rest.trim_start();
+        if rest.starts_with("= (") || rest.starts_with(": {") || rest.starts_with('=') {
+            // Check if it's truly at the start (declaration position)
+            if before_symbol.trim().is_empty() {
+                return ReferenceKind::Declaration;
+            }
+        }
+    }
+
+    // Check for function call: `name(` or `name (` or `.name(`
+    let after_trimmed = after_symbol.trim_start();
+    if after_trimmed.starts_with('(') {
+        return ReferenceKind::Call;
+    }
+
+    // Check for write: `name =` (but not `name ==`)
+    if after_trimmed.starts_with('=') && !after_trimmed.starts_with("==") {
+        return ReferenceKind::Write;
+    }
+
+    // Check for write in compound assignment: `name +=`, `name -=`, etc.
+    for op in ["+=", "-=", "*=", "/=", "%=", "&=", "|=", "^="] {
+        if after_trimmed.starts_with(op) {
+            return ReferenceKind::Write;
+        }
+    }
+
+    // Default to read
+    ReferenceKind::Read
+}
+
+/// Count references by kind
+pub fn count_references_by_kind(refs: &[EnhancedReference]) -> (usize, usize, usize, usize) {
+    let mut declarations = 0;
+    let mut reads = 0;
+    let mut writes = 0;
+    let mut calls = 0;
+
+    for r in refs {
+        match r.kind {
+            ReferenceKind::Declaration => declarations += 1,
+            ReferenceKind::Read => reads += 1,
+            ReferenceKind::Write => writes += 1,
+            ReferenceKind::Call => calls += 1,
+        }
+    }
+
+    (declarations, reads, writes, calls)
 }
 
 /// Handle textDocument/references requests

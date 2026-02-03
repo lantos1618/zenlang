@@ -75,9 +75,12 @@ pub fn run_compiler_analysis_with_context(
     let mut diagnostics = Vec::new();
 
     // Load imported modules using the module system
-    let merged_program = load_imports_for_program(program);
+    let (merged_program, module_system) = load_imports_for_program(program);
 
     let mut type_checker = TypeChecker::new();
+    // Critical: Pass loaded stdlib modules to TypeChecker so it can extract type info
+    // This matches what run_pipeline does in the CLI compiler path
+    type_checker.with_stdlib_modules(module_system.get_modules());
 
     match type_checker.check_program(&merged_program) {
         Ok(type_context) => {
@@ -135,7 +138,8 @@ pub fn analyze_document_with_context(
 }
 
 /// Load imported modules and merge them with the main program
-fn load_imports_for_program(program: &Program) -> Program {
+/// Returns both the merged program and the module system for type extraction
+fn load_imports_for_program(program: &Program) -> (Program, ModuleSystem) {
     let mut module_system = ModuleSystem::new();
 
     // Load all imported modules
@@ -148,7 +152,9 @@ fn load_imports_for_program(program: &Program) -> Program {
     }
 
     // Merge all loaded modules with the main program
-    module_system.merge_programs(program.clone())
+    let merged = module_system.merge_programs(program.clone());
+
+    (merged, module_system)
 }
 
 /// Check for allocator usage in statements

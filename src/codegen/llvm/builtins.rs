@@ -10,10 +10,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let _ = self.ensure_struct_type("Array");
         let _ = self.ensure_struct_type("String");
 
-        let ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
-        let enum_struct_type = self
-            .context
-            .struct_type(&[self.context.i64_type().into(), ptr_type.into()], false);
+        let enum_struct_type = self.well_known_enum_type();
 
         let wk = well_known();
         let mut variant_indices = HashMap::new();
@@ -40,9 +37,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         self.symbols
             .insert(wk.option_name(), symbols::Symbol::EnumType(option_info));
 
-        let result_struct_type = self
-            .context
-            .struct_type(&[self.context.i64_type().into(), ptr_type.into()], false);
+        let result_struct_type = self.well_known_enum_type();
 
         let mut result_variant_indices = HashMap::new();
         result_variant_indices.insert(wk.ok_name().to_string(), 0);

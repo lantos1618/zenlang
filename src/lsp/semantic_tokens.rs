@@ -6,6 +6,7 @@ use lsp_types::*;
 use serde_json::Value;
 
 use super::document_store::DocumentStore;
+use crate::ast::primitives;
 use crate::lexer::{Lexer, Token};
 
 // Token type indices (must match server capabilities legend)
@@ -319,49 +320,36 @@ fn classify_identifier(name: &str, after_fn: bool, after_dot: bool) -> (u32, u32
     (TYPE_VARIABLE, 0)
 }
 
+/// Check if an identifier should be highlighted as a keyword for IDE purposes.
+/// Uses the centralized definition from ast::primitives.
 fn is_keyword(name: &str) -> bool {
-    matches!(
-        name,
-        "fn" | "let"
-            | "mut"
-            | "const"
-            | "if"
-            | "else"
-            | "match"
-            | "while"
-            | "for"
-            | "loop"
-            | "break"
-            | "continue"
-            | "return"
-            | "raise"
-            | "import"
-            | "export"
-            | "struct"
-            | "enum"
-            | "type"
-            | "defer"
-            | "true"
-            | "false"
-            | "null"
-    )
+    primitives::is_keyword_like(name)
 }
 
 fn classify_type(name: &str) -> Option<(u32, u32)> {
+    // Use shared primitive definitions
+    if primitives::is_primitive_name(name) {
+        return Some((TYPE_TYPE, MOD_DEFAULT_LIBRARY));
+    }
+
+    // Collection types
+    if primitives::is_collection_type(name) {
+        return Some((TYPE_CLASS, MOD_DEFAULT_LIBRARY));
+    }
+
+    // Pointer types
+    if primitives::is_pointer_type(name) {
+        return Some((TYPE_TYPE, MOD_DEFAULT_LIBRARY));
+    }
+
+    // Other well-known types
     Some(match name {
-        // Primitives
-        "i8" | "i16" | "i32" | "i64" | "i128" | "u8" | "u16" | "u32" | "u64" | "u128" | "f32"
-        | "f64" | "bool" | "void" | "usize" => (TYPE_TYPE, MOD_DEFAULT_LIBRARY),
         // String types
-        "String" | "StaticString" => (TYPE_TYPE, MOD_DEFAULT_LIBRARY),
-        // Collections
-        "Vec" | "DynVec" | "Array" | "HashMap" | "HashSet" => (TYPE_CLASS, MOD_DEFAULT_LIBRARY),
-        // Sum types
+        "String" => (TYPE_TYPE, MOD_DEFAULT_LIBRARY),
+        // Sum types (use well_known in future)
         "Option" | "Result" => (TYPE_ENUM, MOD_DEFAULT_LIBRARY),
-        // Enum members
+        // Enum members (use well_known in future)
         "Some" | "None" | "Ok" | "Err" => (TYPE_ENUM_MEMBER, 0),
-        // Pointer types
-        "Ptr" | "MutPtr" | "RawPtr" => (TYPE_TYPE, MOD_DEFAULT_LIBRARY),
         // Interfaces
         "Allocator" => (TYPE_INTERFACE, MOD_DEFAULT_LIBRARY),
         _ => return None,

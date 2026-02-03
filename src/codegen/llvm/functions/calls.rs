@@ -142,6 +142,39 @@ fn get_function_type_from_ast<'a, 'ctx>(
                 ))
             }
         }
+        // Handle type alias references (e.g., CompletionFn -> FunctionPointer)
+        AstType::Generic { name, type_args } if type_args.is_empty() => {
+            // Clone to avoid borrow conflict
+            let aliased_type = compiler.type_ctx.type_aliases.get(name).cloned();
+            if let Some(aliased) = aliased_type {
+                match aliased {
+                    AstType::Function {
+                        args: param_types,
+                        return_type,
+                    }
+                    | AstType::FunctionPointer {
+                        param_types,
+                        return_type,
+                    } => {
+                        let fn_type =
+                            build_fn_type_from_params(compiler, &param_types, &return_type)?;
+                        // Return None for lifetime safety - caller should look up return type separately if needed
+                        Ok((fn_type, None))
+                    }
+                    _ => Err(CompileError::TypeMismatch {
+                        expected: "function pointer".to_string(),
+                        found: format!("{:?} (resolved from type alias {})", aliased, name),
+                        span: compiler.current_span.clone(),
+                    }),
+                }
+            } else {
+                Err(CompileError::TypeMismatch {
+                    expected: "function pointer".to_string(),
+                    found: format!("{:?}", var_type),
+                    span: compiler.current_span.clone(),
+                })
+            }
+        }
         _ => Err(CompileError::TypeMismatch {
             expected: "function pointer".to_string(),
             found: format!("{:?}", var_type),

@@ -245,15 +245,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                     || self.well_known.is_result(enum_name) =>
                 {
                     // For Option and Result generics, load as enum struct
-                    let enum_struct_type = self.context.struct_type(
-                        &[
-                            self.context.i64_type().into(), // discriminant
-                            self.context
-                                .ptr_type(inkwell::AddressSpace::default())
-                                .into(), // payload pointer
-                        ],
-                        false,
-                    );
+                    let enum_struct_type = self.well_known_enum_type();
                     // Use empty string to let LLVM auto-generate unique names
                     let loaded: BasicValueEnum =
                         match self.builder.build_load(enum_struct_type, ptr, "") {

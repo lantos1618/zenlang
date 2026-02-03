@@ -245,15 +245,15 @@ AsyncAllocator.async_with = (base: Allocator, executor: i64) AsyncAllocator {
 }
 
 // Allocator interface delegation
-AsyncAllocator.allocate = (self: AsyncAllocator, size: usize) i64 {
+AsyncAllocator.allocate = (self: AsyncAllocator, size: usize) RawPtr<u8> {
     return self.base.allocate(size)
 }
 
-AsyncAllocator.deallocate = (self: AsyncAllocator, ptr: i64, size: usize) void {
+AsyncAllocator.deallocate = (self: AsyncAllocator, ptr: RawPtr<u8>, size: usize) void {
     self.base.deallocate(ptr, size)
 }
 
-AsyncAllocator.reallocate = (self: AsyncAllocator, ptr: i64, old_size: usize, new_size: usize) i64 {
+AsyncAllocator.reallocate = (self: AsyncAllocator, ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8> {
     return self.base.reallocate(ptr, old_size, new_size)
 }
 

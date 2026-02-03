@@ -198,8 +198,16 @@ pub fn collect_declaration_types(
                     fields: fields.clone(),
                 };
                 checker.structs.insert(type_alias.name.clone(), info);
+            } else if matches!(
+                &type_alias.target_type,
+                AstType::Function { .. } | AstType::FunctionPointer { .. }
+            ) {
+                // Store function type aliases for callable resolution
+                // This includes both Function and FunctionPointer types
+                checker
+                    .type_aliases
+                    .insert(type_alias.name.clone(), type_alias.target_type.clone());
             }
-            // Could also handle other type alias cases here
         }
         _ => {}
     }

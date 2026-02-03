@@ -382,17 +382,13 @@ impl Monomorphizer {
 
 /// Extract base name from a potentially generic name like "Vec<i32>" -> "Vec"
 fn extract_base_name(name: &str) -> String {
-    if let Some(pos) = name.find('<') {
-        name[..pos].to_string()
-    } else {
-        name.to_string()
-    }
+    crate::ast::strip_generic_params(name).to_string()
 }
 
 /// Parse embedded type arguments from a string like "Vec<i32>" -> Some(("Vec", [I32]))
 fn parse_embedded_type_args(name: &str) -> Option<(String, Vec<AstType>)> {
     let pos = name.find('<')?;
-    let base_name = name[..pos].to_string();
+    let base_name = crate::ast::strip_generic_params(name).to_string();
     let type_args_str = &name[pos + 1..name.len() - 1]; // Remove < and >
 
     let type_args = crate::parser::parse_type_args_from_string(type_args_str).ok()?;

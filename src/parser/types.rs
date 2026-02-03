@@ -136,9 +136,24 @@ impl<'a> Parser<'a> {
                 // Check for unit type () vs function type (params) ReturnType
                 self.next_token();
 
-                // If immediately followed by ')', this is the unit type ()
+                // If immediately followed by ')', check if there's a return type
                 if self.current_token == Token::Symbol(')') {
                     self.next_token(); // consume ')'
+
+                    // Check if there's a return type following: () ReturnType
+                    // This is a function type with no parameters
+                    if matches!(
+                        self.current_token,
+                        Token::Identifier(_) | Token::Symbol('(') | Token::Symbol('[')
+                    ) {
+                        let return_type = self.parse_type()?;
+                        return Ok(AstType::FunctionPointer {
+                            param_types: vec![],
+                            return_type: Box::new(return_type),
+                        });
+                    }
+
+                    // Otherwise it's just the unit type ()
                     return Ok(AstType::Void);
                 }
 

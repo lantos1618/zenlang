@@ -176,11 +176,6 @@ pub enum Expression {
     Block(Vec<super::statements::Statement>),
     // Return expression - for early returns in pattern match arms
     Return(Box<Expression>),
-    // Type cast expression: expr as Type
-    TypeCast {
-        expr: Box<Expression>,
-        target_type: AstType,
-    },
     // Error propagation: expr.raise()
     Raise(Box<Expression>),
     // Defer expression: @this.defer(expr)

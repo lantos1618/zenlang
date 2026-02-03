@@ -4,7 +4,7 @@ use super::casts::infer_cast_type;
 use super::helpers::extract_type_name;
 use crate::ast::{AstType, Expression};
 use crate::error::{CompileError, Result};
-use crate::stdlib_types::StdlibTypeRegistry;
+use crate::stdlib_types::{self, StdlibTypeRegistry};
 use crate::typechecker::intrinsics;
 use crate::typechecker::method_types;
 use crate::typechecker::TypeChecker;
@@ -36,7 +36,21 @@ pub fn infer_function_call_type(
                         }
                     }
                 }
-                return result;
+
+                // Handle generic intrinsics: if return type is Generic<T> and type_args provided, substitute
+                let return_type = result?;
+                if !type_args.is_empty() {
+                    if let AstType::Generic { name, .. } = &return_type {
+                        // Single-letter generic names like "T" should be substituted
+                        if name.len() == 1 && name.chars().all(|c| c.is_ascii_uppercase()) {
+                            // Substitute with the first type argument
+                            if !type_args.is_empty() {
+                                return Ok(type_args[0].clone());
+                            }
+                        }
+                    }
+                }
+                return Ok(return_type);
             }
 
             if let Some(return_type) = checker.get_stdlib_function_type(module, func) {
@@ -77,14 +91,60 @@ pub fn infer_function_call_type(
         return Ok(sig.return_type.clone());
     }
 
+    // Debug: Check if it's a dotted name and if so, look up the full name
+    if name.contains('.') {
+        eprintln!(
+            "DEBUG: Looking for function '{}', found: {}",
+            name,
+            checker.get_function_signatures().contains_key(name)
+        );
+    }
+
     match checker.get_variable_type(name) {
         Ok(AstType::FunctionPointer { return_type, .. }) => Ok(*return_type),
-        Ok(_) => Err(CompileError::TypeError(
-            format!("'{}' is not a function", name),
+        // Also handle Function type (used by type aliases like CompletionFn)
+        Ok(AstType::Function { return_type, .. }) => Ok(*return_type),
+        // Handle type alias references (e.g., CompletionFn resolves to a function type)
+        Ok(AstType::Generic {
+            name: alias_name,
+            type_args,
+        }) if type_args.is_empty() => {
+            // Check if this is a type alias that resolves to a function type
+            if let Some(aliased_type) = checker.resolve_type_alias(&alias_name) {
+                match aliased_type {
+                    AstType::Function { return_type, .. } => return Ok(*return_type),
+                    AstType::FunctionPointer { return_type, .. } => return Ok(*return_type),
+                    _ => {}
+                }
+            }
+            Err(CompileError::TypeError(
+                format!("'{}' is not a function", name),
+                checker.get_current_span(),
+            ))
+        }
+        // Handle Struct type that might be a type alias name
+        Ok(AstType::Struct {
+            name: struct_name, ..
+        }) => {
+            // Check if this struct name is actually a type alias to a function type
+            if let Some(aliased_type) = checker.resolve_type_alias(&struct_name) {
+                match aliased_type {
+                    AstType::Function { return_type, .. } => return Ok(*return_type),
+                    AstType::FunctionPointer { return_type, .. } => return Ok(*return_type),
+                    _ => {}
+                }
+            }
+            Err(CompileError::TypeError(
+                format!("'{}' is not a function", name),
+                checker.get_current_span(),
+            ))
+        }
+        Ok(_other) => Err(CompileError::not_a_function(
+            name,
             checker.get_current_span(),
         )),
-        Err(_) => Err(CompileError::TypeError(
-            format!("Unknown function: {}", name),
+        Err(_) => Err(CompileError::unknown_function(
+            name,
             checker.get_current_span(),
         )),
     }
@@ -102,6 +162,20 @@ pub fn infer_method_call_type(
         if let Some(return_type) = crate::intrinsics::get_intrinsic_return_type(method) {
             // For compiler/builtin modules, use the intrinsic's return type directly
             if name == "compiler" || name == "builtin" || name == "@builtin" {
+                // Handle generic intrinsics: if return type is Generic<T> and type_args provided, substitute
+                if !type_args.is_empty() {
+                    if let AstType::Generic {
+                        name: type_name, ..
+                    } = &return_type
+                    {
+                        // Single-letter generic names like "T" should be substituted
+                        if type_name.len() == 1 && type_name.chars().all(|c| c.is_ascii_uppercase())
+                        {
+                            // Substitute with the first type argument
+                            return Ok(type_args[0].clone());
+                        }
+                    }
+                }
                 return Ok(return_type);
             }
         }
@@ -183,29 +257,45 @@ pub fn infer_method_call_type(
         return Ok(AstType::Void);
     }
 
+    // ========================================================================
+    // ARCHITECTURE VIOLATION: Layer 3 stdlib types with hardcoded method inference
+    // ========================================================================
+    //
+    // The code below provides special typechecker support for Layer 3 stdlib types:
+    // HashMap, HashSet, Vec, and DynVec. This violates the three-layer architecture
+    // described in docs/design/SEPARATION_OF_CONCERNS.md.
+    //
+    // These types should be pure stdlib implementations with no compiler awareness.
+    // Instead, they currently get hardcoded method type inference because:
+    // 1. The trait system is not yet implemented (Phase 5)
+    // 2. Generic method return types can't be expressed without traits
+    // 3. Methods like Vec<T>.get() -> T require trait-based type resolution
+    //
+    // TO FIX IN PHASE 5 (Trait System):
+    // 1. Define traits: Collection<T>, Map<K,V>, Set<T>, etc.
+    // 2. Implement trait methods in stdlib with proper type signatures
+    // 3. Replace these hardcoded checks with trait method resolution
+    // 4. Remove all string-based type identity checks for Layer 3 types
+    //
+    // See also: tech_debt_audit.md - "String-based type identity checks"
+    // ========================================================================
+
     if let AstType::Generic { name, type_args } = &object_type {
-        if name == "HashMap" {
+        // Use centralized helpers from stdlib_types module to avoid duplicating string literals
+        if stdlib_types::is_hashmap(name) {
             if let Some(return_type) = method_types::infer_hashmap_method_type(method, type_args) {
                 return Ok(return_type);
             }
-        } else if name == "HashSet" {
+        } else if stdlib_types::is_hashset(name) {
             if let Some(return_type) = method_types::infer_hashset_method_type(method) {
                 return Ok(return_type);
             }
         } else if checker.well_known.is_result(name) {
+            // Result is Layer 2 - requires compiler support for pattern matching and .raise()
             if let Some(return_type) = method_types::infer_result_method_type(method, type_args) {
                 return Ok(return_type);
             }
-        } else if matches!(name.as_str(), "Vec" | "DynVec") && !type_args.is_empty() {
-            if let Some(return_type) = method_types::infer_vec_method_type(method, &type_args[0]) {
-                return Ok(return_type);
-            }
-        }
-    }
-
-    // Vec methods - Vec<T> is now Generic { name: "Vec", type_args: [T] }
-    if let AstType::Generic { name, type_args } = &object_type {
-        if name == "Vec" && !type_args.is_empty() {
+        } else if stdlib_types::is_vec_type(name) && !type_args.is_empty() {
             if let Some(return_type) = method_types::infer_vec_method_type(method, &type_args[0]) {
                 return Ok(return_type);
             }
@@ -223,6 +313,26 @@ pub fn infer_method_call_type(
     if let Some(type_name) = extract_type_name(effective_type) {
         if let Some(method_info) = checker.resolve_trait_method(type_name, method) {
             return Ok(method_info.return_type);
+        }
+    }
+
+    // Check if this is a function pointer field being called (manual vtable pattern)
+    // e.g., self.allocate_fn(ctx, size) where allocate_fn is a field of type (RawPtr<u8>, usize) RawPtr<u8>
+    if let AstType::Generic { name, .. } = effective_type {
+        if let Some(struct_info) = checker.structs.get(name) {
+            for (field_name, field_type) in &struct_info.fields {
+                if field_name == method {
+                    match field_type {
+                        AstType::FunctionPointer { return_type, .. } => {
+                            return Ok(*return_type.clone());
+                        }
+                        AstType::Function { return_type, .. } => {
+                            return Ok(*return_type.clone());
+                        }
+                        _ => {}
+                    }
+                }
+            }
         }
     }
 

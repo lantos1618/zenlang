@@ -1,0 +1,123 @@
+// ============================================================================
+// Test: Unified Allocator API - TRUE POLYMORPHISM
+// ============================================================================
+//
+// THE KEY INSIGHT:
+// ----------------
+// Allocator is a STRUCT with function pointers (a manual vtable).
+// This enables ONE function to work with ANY allocator!
+//
+// Before (the problem):
+//   process_sync(alloc: HeapSync, ...) { ... }   // Need two versions!
+//   process_async(alloc: ArenaAsync, ...) { ... }
+//
+// After (the solution):
+//   process(alloc: Allocator, ...) { ... }  // ONE function works with ALL!
+//
+// This eliminates "function coloring" - no more red/blue async/sync split!
+//
+// ============================================================================
+
+{ io } = @std
+{ Heap } = @std.memory.heap
+{ Arena } = @std.memory.arena
+{ Allocator, ExecutionMode, CompletionFn } = @std.memory.allocator
+
+// ============================================================================
+// Callback for I/O completion
+// ============================================================================
+
+on_complete = (user_data: u64, result: i64) void {
+    io.println("    Callback: operation completed with result ${result}")
+}
+
+// ============================================================================
+// THE KEY FUNCTION: Works with ANY allocator!
+// ============================================================================
+//
+// This single function works with:
+//   - Heap.sync() -> blocking I/O
+//   - Arena.async() -> async I/O (io_uring)
+//   - Any future allocator that follows the same pattern!
+//
+// The behavior is determined by which allocator is passed in.
+// NO async/await keywords! NO function coloring!
+
+process_data = (alloc: Allocator, size: usize) i32 {
+    io.println("  Allocating ${size} bytes...")
+
+    // Memory allocation - works through function pointer!
+    buf = alloc.allocate(size)
+    buf_val = compiler.ptr_to_int(buf)
+    buf_val == 0 ? {
+        io.println("  ERROR: Allocation failed!")
+        return -1
+    }
+    io.println("  Allocated buffer successfully")
+
+    // Check execution mode - determined by the allocator
+    mode = alloc.mode()
+    mode ?
+        | Sync { io.println("  Mode: Sync (blocking I/O)") }
+        | Async { io.println("  Mode: Async (non-blocking I/O)") }
+
+    // Store and read back a value
+    compiler.store<i64>(buf, 42)
+    value = compiler.load<i64>(buf)
+    io.println("  Stored and read back: ${value}")
+
+    // Cleanup - works through function pointer!
+    alloc.deallocate(buf, size)
+    io.println("  Deallocated buffer")
+
+    return 0
+}
+
+// ============================================================================
+// Main: Demonstrate same function with different allocators
+// ============================================================================
+
+main = () i32 {
+    io.println("==============================================")
+    io.println("   UNIFIED ALLOCATOR - TRUE POLYMORPHISM")
+    io.println("==============================================")
+    io.println("")
+
+    // -------------------------------------------------------------------------
+    // Test 1: Using Heap.sync() (blocking I/O)
+    // -------------------------------------------------------------------------
+    io.println("Test 1: Heap.sync() - Blocking I/O")
+    io.println("-----------------------------------")
+    sync_alloc = Heap.sync()
+    result1 = process_data(sync_alloc, 256)
+    result1 != 0 ? { return 1 }
+    io.println("")
+
+    // -------------------------------------------------------------------------
+    // Test 2: Using Arena.async() (async I/O)
+    // -------------------------------------------------------------------------
+    io.println("Test 2: Arena.async() - Async I/O")
+    io.println("----------------------------------")
+    async_alloc = Arena.async()
+    result2 = process_data(async_alloc, 256)
+    result2 != 0 ? { return 1 }
+    io.println("")
+
+    // -------------------------------------------------------------------------
+    // Success!
+    // -------------------------------------------------------------------------
+    io.println("==============================================")
+    io.println("   SUCCESS!")
+    io.println("==============================================")
+    io.println("")
+    io.println("The SAME process_data() function worked with:")
+    io.println("  - Heap.sync()  (blocking I/O)")
+    io.println("  - Arena.async() (async I/O)")
+    io.println("")
+    io.println("KEY INSIGHT:")
+    io.println("  Allocator is a struct with function pointers.")
+    io.println("  This enables true polymorphism without traits-as-types!")
+    io.println("  NO async/await! NO function coloring!")
+
+    return 0
+}

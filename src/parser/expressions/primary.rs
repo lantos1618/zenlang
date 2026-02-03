@@ -1,3 +1,4 @@
+use crate::ast::primitives;
 use crate::ast::{AstType, Expression, Statement};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
@@ -43,14 +44,13 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
             parser.next_token();
 
             // Check for boolean and unit literals first (these don't chain)
-            if name == "true" {
-                return Ok(Expression::Boolean(true));
-            } else if name == "false" {
-                return Ok(Expression::Boolean(false));
+            // Use centralized literal checks
+            if primitives::is_boolean_literal(&name) {
+                return Ok(Expression::Boolean(name == "true"));
             } else if name == "void" {
                 // void is a unit value - like () in other languages
                 return Ok(Expression::Unit);
-            } else if name == "null" {
+            } else if primitives::is_null_literal(&name) {
                 // null is an alias for None (Option::None)
                 return Ok(Expression::None);
             }
@@ -174,7 +174,8 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
             {
                 if name == "Array" {
                     (name.clone(), false)
-                } else if matches!(name.as_str(), "HashMap" | "HashSet" | "DynVec" | "Vec")
+                // Use centralized collection type check
+                } else if primitives::is_collection_type(&name)
                     || super::collections::looks_like_generic_type_args(parser)
                 {
                     let type_args_str = super::literals::parse_generic_type_args_to_string(parser)?;
@@ -577,12 +578,10 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
             // If we see (identifier followed by an operator OR a '.', it's definitely an expression.
             // - Binary operator: (a + b)
             // - Member access: (foo.bar ...)
-            // - Type cast: (a as Type)
             let is_definitely_expression = if let Token::Identifier(name) = &parser.current_token {
                 // Check what comes after the identifier using peek
-                // It's an expression if followed by a binary operator, member access (.), or 'as' (type cast)
+                // It's an expression if followed by a binary operator or member access (.)
                 parser.peek_token == Token::Symbol('.')
-                    || matches!(&parser.peek_token, Token::Identifier(id) if id == "as")
                     || matches!(
                         &parser.peek_token,
                         Token::Operator(op) if matches!(op.as_str(),
@@ -769,22 +768,8 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
                             // Lowercase identifiers that aren't primitive types are likely variables (values)
                             Token::Identifier(id) => {
                                 let first_char = id.chars().next().unwrap_or('a');
-                                let is_primitive = matches!(
-                                    id.as_str(),
-                                    "i8" | "i16"
-                                        | "i32"
-                                        | "i64"
-                                        | "u8"
-                                        | "u16"
-                                        | "u32"
-                                        | "u64"
-                                        | "usize"
-                                        | "f32"
-                                        | "f64"
-                                        | "bool"
-                                        | "void"
-                                );
-                                first_char.is_lowercase() && !is_primitive
+                                // Use centralized primitive definitions
+                                first_char.is_lowercase() && !primitives::is_primitive_name(id)
                             }
 
                             // Array literal suggests value context

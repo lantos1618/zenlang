@@ -1,0 +1,33 @@
+// Test ArenaAsync allocator
+{ Arena, ArenaAsync } = @std.memory.arena
+{ ExecutionMode } = @std.memory.allocator
+{ io } = @std
+
+main = () i32 {
+    io.println("Testing ArenaAsync allocator...")
+
+    // Create async arena allocator via factory
+    alloc = Arena.async()
+
+    // Test memory allocation
+    ptr = alloc.allocate(128)
+    ptr_val = compiler.ptr_to_int(ptr)
+    ptr_val == 0 ? {
+        io.println("ERROR: Allocation failed!")
+        return 1
+    }
+    io.println("Allocated 128 bytes")
+
+    // Verify mode is Async
+    mode = alloc.mode()
+    mode ?
+        | Async { io.println("Mode: Async (correct!)") }
+        | Sync { io.println("ERROR: Mode should be Async!") }
+
+    // Test poll (non-blocking)
+    poll_result = alloc.poll()
+    io.println("Poll returned: ${poll_result}")
+
+    io.println("ArenaAsync test passed!")
+    return 0
+}

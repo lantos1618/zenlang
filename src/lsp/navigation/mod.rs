@@ -5,6 +5,7 @@ pub mod highlight;
 pub mod imports;
 pub mod references;
 pub mod scope;
+pub mod struct_fields;
 pub mod type_definition;
 pub mod ufc;
 pub mod utils;

@@ -1,172 +1,42 @@
-// Zen Standard Library: Async Allocator Behavior
-// No FFI - uses compiler.syscall* intrinsics
-//
-// AsyncAllocator extends Allocator with async execution context.
-// When code receives an AsyncAllocator, I/O operations are non-blocking.
-// This is the foundation of Zen's "allocator-driven concurrency" model.
-//
-// Key insight: The allocator doesn't just manage memory - it determines
-// whether operations block or yield to a scheduler.
+// Zen Standard Library: Async Helpers
+// ============================================================================
+// Shared utilities for async allocators (ArenaAsync, future HeapAsync, etc.)
+// ============================================================================
 
 { compiler } = @std
-{ Allocator } = @std.memory.allocator
+{ Allocator, ExecutionMode, CompletionFn } = @std.memory.allocator
 
 // ============================================================================
-// Execution Mode
+// Async Operation Tracking
 // ============================================================================
-// Indicates how code should execute
-
-ExecutionMode:
-    Sync,       // Block on I/O, no scheduler
-    Async       // Yield on I/O, use scheduler
-
-// ============================================================================
-// Completion Callback Type
-// ============================================================================
-// Used for async operation completion notification
-
-CompletionFn: (user_data: u64, result: i64) void
-
-// ============================================================================
-// Async Operation
-// ============================================================================
-// Represents a pending async operation
 
 AsyncOp: {
-    id: u64,          // Unique operation ID
-    user_data: u64,   // User-provided context
+    id: u64,
+    user_data: u64,
     callback: CompletionFn,
-    status: i32       // 0=pending, 1=complete, negative=error
+    status: i32  // 0=pending, 1=complete, negative=error
 }
 
-// ============================================================================
-// AsyncAllocator Behavior
-// ============================================================================
-// Extends Allocator with async execution capabilities.
-//
-// An AsyncAllocator provides:
-// 1. Memory allocation (from Allocator)
-// 2. Execution mode detection
-// 3. Operation scheduling
-// 4. Completion handling
+OP_PENDING: i32 = 0
+OP_COMPLETE: i32 = 1
 
-AsyncAllocator: {
-    // Inherit from Allocator
-    allocate: (self, size: usize) i64,
-    deallocate: (self, ptr: i64, size: usize) void,
-    reallocate: (self, ptr: i64, old_size: usize, new_size: usize) i64,
-
-    // Async capabilities
-    mode: (self) ExecutionMode,
-
-    // Schedule an async read operation
-    // Returns operation ID (or negative error)
-    schedule_read: (self, fd: i32, buf: i64, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64,
-
-    // Schedule an async write operation
-    schedule_write: (self, fd: i32, buf: i64, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64,
-
-    // Schedule an async accept operation
-    schedule_accept: (self, listen_fd: i32, addr: i64, addrlen: i64, callback: CompletionFn, user_data: u64) i64,
-
-    // Schedule an async connect operation
-    schedule_connect: (self, fd: i32, addr: i64, addrlen: i32, callback: CompletionFn, user_data: u64) i64,
-
-    // Poll for completions (non-blocking)
-    // Returns number of completions processed
-    poll: (self) i32,
-
-    // Wait for at least one completion (blocking)
-    wait: (self) i32,
-
-    // Cancel a pending operation
-    cancel: (self, op_id: u64) bool
-}
-
-// ============================================================================
-// Helper: Check Allocator Mode
-// ============================================================================
-// Code can use this to branch on allocator type
-
-is_async = (alloc: Allocator) bool {
-    // Check if allocator implements AsyncAllocator
-    // For now, use a simple runtime check based on allocator behavior
-    // TODO: Proper behavior type checking
-    return false  // Default: assume sync
-}
-
-// Typed version for AsyncAllocator
-AsyncAllocator.is_async = (self: AsyncAllocator) bool {
-    return true
-}
-
-// ============================================================================
-// Sync Adapter
-// ============================================================================
-// Wraps a sync Allocator to implement AsyncAllocator interface.
-// All async operations are actually synchronous (blocking).
-// This allows code to work with both sync and async allocators uniformly.
-
-SyncAdapter: {
-    inner: Allocator
-}
-
-SyncAdapter.new = (alloc: Allocator) SyncAdapter {
-    return SyncAdapter { inner: alloc }
-}
-
-SyncAdapter.implements(AsyncAllocator, {
-    allocate = (self: SyncAdapter, size: usize) i64 {
-        return self.inner.allocate(size)
-    },
-
-    deallocate = (self: SyncAdapter, ptr: i64, size: usize) void {
-        self.inner.deallocate(ptr, size)
-    },
-
-    reallocate = (self: SyncAdapter, ptr: i64, old_size: usize, new_size: usize) i64 {
-        return self.inner.reallocate(ptr, old_size, new_size)
-    },
-
-    mode = (self: SyncAdapter) ExecutionMode {
-        return ExecutionMode.Sync
-    },
-
-    // Sync operations - do the I/O immediately, call callback, return
-    schedule_read = (self: SyncAdapter, fd: i32, buf: i64, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
-        // Perform blocking read
-        result = compiler.syscall4(0, fd, buf, len, offset)  // SYS_PREAD64 = 17
-        callback(user_data, result)
-        return 0  // Operation "completed" immediately
-    },
-
-    schedule_write = (self: SyncAdapter, fd: i32, buf: i64, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
-        result = compiler.syscall4(1, fd, buf, len, offset)  // SYS_PWRITE64 = 18
-        callback(user_data, result)
-        return 0
-    },
-
-    schedule_accept = (self: SyncAdapter, listen_fd: i32, addr: i64, addrlen: i64, callback: CompletionFn, user_data: u64) i64 {
-        result = compiler.syscall3(43, listen_fd, addr, addrlen)  // SYS_ACCEPT
-        callback(user_data, result)
-        return 0
-    },
-
-    schedule_connect = (self: SyncAdapter, fd: i32, addr: i64, addrlen: i32, callback: CompletionFn, user_data: u64) i64 {
-        result = compiler.syscall3(42, fd, addr, addrlen)  // SYS_CONNECT
-        callback(user_data, result)
-        return 0
-    },
-
-    poll = (self: SyncAdapter) i32 {
-        return 0  // Nothing to poll in sync mode
-    },
-
-    wait = (self: SyncAdapter) i32 {
-        return 0  // Nothing to wait for in sync mode
-    },
-
-    cancel = (self: SyncAdapter, op_id: u64) bool {
-        return false  // Can't cancel completed operations
+async_op_new = (id: u64, user_data: u64, callback: CompletionFn) AsyncOp {
+    return AsyncOp {
+        id: id,
+        user_data: user_data,
+        callback: callback,
+        status: OP_PENDING
     }
-})
+}
+
+async_op_is_pending = (op: AsyncOp) bool {
+    return op.status == OP_PENDING
+}
+
+async_op_is_complete = (op: AsyncOp) bool {
+    return op.status == OP_COMPLETE
+}
+
+async_op_is_error = (op: AsyncOp) bool {
+    return op.status < 0
+}

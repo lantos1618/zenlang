@@ -141,9 +141,9 @@ fn infer_type_from_ast_expr(expr: &crate::ast::Expression) -> Option<String> {
             enum_name, variant, ..
         } => {
             // Some(...) -> Option, Ok(...)/Err(...) -> Result
-            if wk.is_option(enum_name) || variant == "Some" || variant == "None" {
+            if wk.is_option(enum_name) || wk.is_option_variant(variant) {
                 Some(wk.option_name().to_string())
-            } else if wk.is_result(enum_name) || variant == "Ok" || variant == "Err" {
+            } else if wk.is_result(enum_name) || wk.is_result_variant(variant) {
                 Some(wk.result_name().to_string())
             } else {
                 Some(enum_name.clone())
@@ -152,9 +152,9 @@ fn infer_type_from_ast_expr(expr: &crate::ast::Expression) -> Option<String> {
 
         // Enum literal (shorthand like .Some(x))
         Expression::EnumLiteral { variant, .. } => {
-            if variant == "Some" || variant == "None" {
+            if wk.is_option_variant(variant) {
                 Some(wk.option_name().to_string())
-            } else if variant == "Ok" || variant == "Err" {
+            } else if wk.is_result_variant(variant) {
                 Some(wk.result_name().to_string())
             } else {
                 None // Can't determine enum type from shorthand alone
@@ -185,8 +185,8 @@ fn is_type_constructor(name: &str) -> bool {
         return true;
     }
 
-    // Check enum variant names
-    if name == "Some" || name == "None" || name == "Ok" || name == "Err" {
+    // Check enum variant names using centralized WellKnownTypes
+    if wk.is_option_variant(name) || wk.is_result_variant(name) {
         return true;
     }
 

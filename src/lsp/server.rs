@@ -12,6 +12,7 @@ use std::thread;
 use inkwell::context::Context;
 
 // AST types used in type_inference.rs
+use crate::ast::primitives;
 use crate::compiler::Compiler;
 use crate::error::{CompileError, Span};
 
@@ -28,7 +29,7 @@ use super::inlay_hints::handle_inlay_hints;
 use super::navigation::{
     handle_definition, handle_document_highlight, handle_references, handle_type_definition,
 };
-use super::rename::handle_rename;
+use super::rename::{handle_prepare_rename, handle_rename};
 use super::semantic_tokens::handle_semantic_tokens;
 use super::signature_help::handle_signature_help;
 use super::symbols::{handle_document_symbols, handle_workspace_symbol};
@@ -212,16 +213,216 @@ fn span_to_lsp_range(span: Option<Span>) -> Range {
 // Convert CompileError to LSP Diagnostic (standalone function for reuse)
 fn compile_error_to_diagnostic(error: CompileError) -> Diagnostic {
     let (span, severity, code) = extract_error_info(&error);
+    let (message, hint) = enhance_error_message(&error);
+
     Diagnostic {
         range: span_to_lsp_range(span),
         severity: Some(severity),
         code: Some(lsp_types::NumberOrString::String(code.to_string())),
-        code_description: None,
+        code_description: get_error_documentation(code),
         source: Some("zen-compiler".to_string()),
-        message: format!("{}", error),
+        message: if let Some(h) = hint {
+            format!("{}\n\nHint: {}", message, h)
+        } else {
+            message
+        },
         related_information: None,
-        tags: None,
+        tags: get_diagnostic_tags(&error),
         data: None,
+    }
+}
+
+/// Enhance error messages with helpful context and suggestions
+fn enhance_error_message(error: &CompileError) -> (String, Option<String>) {
+    use CompileError::*;
+    match error {
+        TypeMismatch {
+            expected, found, ..
+        } => {
+            let base_msg = format!("Type mismatch: expected `{}`, found `{}`", expected, found);
+            let hint = generate_type_mismatch_hint(expected, found);
+            (base_msg, hint)
+        }
+        UndeclaredVariable(name, _) => {
+            let base_msg = format!("Undeclared variable `{}`", name);
+            let hint = Some(format!(
+                "Make sure `{}` is defined before use, or check for typos in the variable name",
+                name
+            ));
+            (base_msg, hint)
+        }
+        UndeclaredFunction(name, _) => {
+            let base_msg = format!("Undeclared function `{}`", name);
+            let hint = Some(format!(
+                "Make sure `{}` is defined or imported. Use Ctrl+. for quick-fix suggestions",
+                name
+            ));
+            (base_msg, hint)
+        }
+        MissingTypeAnnotation(msg, _) => {
+            let hint = Some(
+                "Zen requires explicit type annotations for function parameters and struct fields"
+                    .to_string(),
+            );
+            (msg.clone(), hint)
+        }
+        MissingReturnStatement(msg, _) => {
+            let hint = Some(
+                "Add a return statement or ensure the last expression in the function matches the return type"
+                    .to_string(),
+            );
+            (msg.clone(), hint)
+        }
+        ImportError(msg, _) => {
+            let hint = if msg.contains("not found") {
+                Some(
+                    "Check the module path. Use @std for stdlib, @this for local modules"
+                        .to_string(),
+                )
+            } else {
+                None
+            };
+            (msg.clone(), hint)
+        }
+        ParseError(msg, _) | SyntaxError(msg, _) => {
+            let hint = if msg.contains("expected") {
+                Some("Check for missing brackets, parentheses, or punctuation".to_string())
+            } else {
+                None
+            };
+            (msg.clone(), hint)
+        }
+        InvalidPattern(msg, _) => {
+            let hint =
+                Some("Pattern matching uses: `expr ? | pattern1 { } | pattern2 { }`".to_string());
+            (msg.clone(), hint)
+        }
+        DuplicateDeclaration { name, .. } => {
+            let base_msg = format!("Duplicate declaration of `{}`", name);
+            let hint = Some(format!(
+                "`{}` is already defined in this scope. Rename one of the declarations",
+                name
+            ));
+            (base_msg, hint)
+        }
+        _ => (format!("{}", error), None),
+    }
+}
+
+/// Check if a type string represents a specific well-known type.
+/// Handles both generic forms (e.g., "Option<i32>") and plain names (e.g., "Option").
+/// Avoids false positives like "InvalidOption" matching "Option".
+fn is_type_named(type_str: &str, type_name: &str) -> bool {
+    // Check for exact match or generic form (e.g., "Option" or "Option<...")
+    type_str == type_name
+        || type_str.starts_with(&format!("{}<", type_name))
+        || type_str.starts_with(&format!("{}(", type_name)) // Function type
+}
+
+/// Generate specific hints for type mismatch errors
+fn generate_type_mismatch_hint(expected: &str, actual: &str) -> Option<String> {
+    // String conversion hints - StaticString is an alias, check exact match or generic
+    let expected_is_static = is_type_named(expected, "StaticString");
+    let actual_is_static = is_type_named(actual, "StaticString");
+    let expected_is_string = is_type_named(expected, "String");
+    let actual_is_string = is_type_named(actual, "String");
+
+    if expected_is_static && actual_is_string {
+        return Some("Use `.as_static()` to convert String to StaticString".to_string());
+    }
+    if expected_is_string && actual_is_static {
+        return Some("Use `String.from(value)` to convert StaticString to String".to_string());
+    }
+
+    // Optional handling - use precise type matching
+    let expected_is_option = is_type_named(expected, "Option");
+    let actual_is_option = is_type_named(actual, "Option");
+
+    if expected_is_option && !actual_is_option {
+        return Some(format!(
+            "Wrap the value with `Some({})` to create an Option",
+            actual
+        ));
+    }
+    if !expected_is_option && actual_is_option {
+        return Some(
+            "Unwrap the Option with `.unwrap()` or handle with pattern matching".to_string(),
+        );
+    }
+
+    // Result handling - use precise type matching
+    let expected_is_result = is_type_named(expected, "Result");
+    let actual_is_result = is_type_named(actual, "Result");
+
+    if expected_is_result && !actual_is_result {
+        return Some(format!(
+            "Wrap the value with `Ok({})` to create a Result",
+            actual
+        ));
+    }
+    if !expected_is_result && actual_is_result {
+        return Some(
+            "Handle the Result with `.raise()` to propagate errors or `.unwrap()` to panic"
+                .to_string(),
+        );
+    }
+
+    // Allocator hints - use precise type matching
+    if is_type_named(expected, "Allocator") {
+        return Some("Pass `get_default_allocator()` or a specific allocator instance".to_string());
+    }
+
+    // Numeric type hints
+    if is_numeric_type(expected) && is_numeric_type(actual) {
+        return Some(format!(
+            "Cast with `@as({}, value)` for explicit conversion",
+            expected
+        ));
+    }
+
+    // Pointer hints
+    if expected.contains('*') && !actual.contains('*') {
+        return Some("Use `&value` to get a pointer to the value".to_string());
+    }
+    if !expected.contains('*') && actual.contains('*') {
+        return Some("Dereference with `value.*` to get the underlying value".to_string());
+    }
+
+    None
+}
+
+fn is_numeric_type(type_name: &str) -> bool {
+    // Use centralized primitive definitions
+    primitives::is_numeric_type_name(type_name)
+}
+
+/// Get documentation URL for error codes
+fn get_error_documentation(code: &str) -> Option<CodeDescription> {
+    // Could point to actual documentation once available
+    let url = match code {
+        "type-mismatch" => "https://zenlang.dev/docs/errors#type-mismatch",
+        "undeclared-variable" => "https://zenlang.dev/docs/errors#undeclared-variable",
+        "missing-type" => "https://zenlang.dev/docs/errors#missing-type-annotation",
+        _ => return None,
+    };
+
+    // For now, return None since docs don't exist yet
+    // Once docs exist, uncomment:
+    // Some(CodeDescription { href: Url::parse(url).ok()? })
+    let _ = url;
+    None
+}
+
+/// Get diagnostic tags (deprecated, unnecessary)
+fn get_diagnostic_tags(error: &CompileError) -> Option<Vec<DiagnosticTag>> {
+    use CompileError::*;
+    match error {
+        // Mark unused warnings with the UNNECESSARY tag
+        MissingTypeAnnotation(msg, _) if msg.contains("unused") => {
+            Some(vec![DiagnosticTag::UNNECESSARY])
+        }
+        // Could add DEPRECATED tag for deprecated API usage
+        _ => None,
     }
 }
 
@@ -421,11 +622,30 @@ impl ZenLanguageServer {
                 .collect();
 
             // Run TypeChecker to get TypeContext for semantic features
+            // Must load modules and pass them to TypeChecker for type alias resolution
             let type_context = {
+                use crate::ast::Declaration;
+                use crate::module_system::ModuleSystem;
                 use crate::typechecker::TypeChecker;
+
+                // Load modules exactly like analyzer.rs does
+                let mut module_system = ModuleSystem::new();
+                for decl in &job.program.declarations {
+                    if let Declaration::ModuleImport { module_path, .. } = decl {
+                        let _ = module_system.load_module(module_path);
+                    }
+                }
+
+                // Merge programs to include all imports
+                let merged_program = module_system.merge_programs(job.program.clone());
+
+                // Create TypeChecker with module information
                 let mut type_checker = TypeChecker::new();
+                type_checker.with_stdlib_modules(module_system.get_modules());
+
+                // Type-check the MERGED program, not the original
                 type_checker
-                    .check_program(&job.program)
+                    .check_program(&merged_program)
                     .ok()
                     .map(std::sync::Arc::new)
             };
@@ -473,8 +693,9 @@ impl ZenLanguageServer {
             }
 
             // Handle LSP messages (with timeout to check background results)
+            use crate::lsp::search_limits::LSP_POLL_TIMEOUT_MS;
             use std::time::Duration;
-            let timeout = Duration::from_millis(100);
+            let timeout = Duration::from_millis(LSP_POLL_TIMEOUT_MS);
 
             match self.connection.receiver.recv_timeout(timeout) {
                 Ok(msg) => match msg {
@@ -518,6 +739,7 @@ impl ZenLanguageServer {
             "textDocument/documentSymbol" => self.handle_document_symbols(req),
             "textDocument/formatting" => self.handle_formatting(req),
             "textDocument/rename" => self.handle_rename(req),
+            "textDocument/prepareRename" => self.handle_prepare_rename(req),
             "textDocument/codeAction" => self.handle_code_action(req),
             "textDocument/semanticTokens/full" => self.handle_semantic_tokens(req),
             "textDocument/signatureHelp" => self.handle_signature_help(req),
@@ -692,6 +914,10 @@ impl ZenLanguageServer {
 
     fn handle_rename(&self, req: Request) -> Response {
         handle_rename(req, &self.store)
+    }
+
+    fn handle_prepare_rename(&self, req: Request) -> Response {
+        handle_prepare_rename(req, &self.store)
     }
 
     fn handle_signature_help(&self, req: Request) -> Response {

@@ -2,7 +2,7 @@ use super::super::LLVMCompiler;
 use crate::ast::{AstType, Expression};
 use crate::error::CompileError;
 use crate::stdlib_types::StdlibTypeRegistry;
-use inkwell::{types::BasicTypeEnum, values::BasicValueEnum, AddressSpace};
+use inkwell::{types::BasicTypeEnum, values::BasicValueEnum};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 // ============================================================================
@@ -45,16 +45,11 @@ pub fn ast_type_to_basic_type<'ctx>(
 }
 
 /// Get the LLVM struct type for Result/Option (tag + payload pointer)
+/// Uses centralized well_known_enum_type() for consistent layout
 pub fn generic_enum_struct_type<'ctx>(
     compiler: &LLVMCompiler<'ctx>,
 ) -> inkwell::types::StructType<'ctx> {
-    compiler.context.struct_type(
-        &[
-            compiler.context.i64_type().into(), // discriminant/tag
-            compiler.context.ptr_type(AddressSpace::default()).into(), // payload pointer
-        ],
-        false,
-    )
+    compiler.well_known_enum_type()
 }
 
 /// Parse comma-separated type arguments from a string.
@@ -293,19 +288,15 @@ pub fn compile_raise_expression<'ctx>(
         let temp_alloca = compiler.builder.build_alloca(struct_type, "result_temp")?;
         compiler.builder.build_store(temp_alloca, struct_val)?;
 
-        // Extract the tag (discriminant) from the first field
-        let tag_ptr = compiler
-            .builder
-            .build_struct_gep(struct_type, temp_alloca, 0, "tag_ptr")?;
-        let tag_value = compiler
-            .builder
-            .build_load(compiler.context.i64_type(), tag_ptr, "tag")?;
+        // Load tag using centralized helper
+        let tag_value = compiler.load_enum_tag(struct_type, temp_alloca, "result")?;
 
-        // Check if tag == 0 (Ok variant)
+        // Check if tag == 0 (Ok variant) using the same type
+        let ok_tag = compiler.enum_tag_const(struct_type, 0);
         let is_ok = compiler.builder.build_int_compare(
             inkwell::IntPredicate::EQ,
-            tag_value.into_int_value(),
-            compiler.context.i64_type().const_int(0, false),
+            tag_value,
+            ok_tag,
             "is_ok",
         )?;
 
@@ -491,17 +482,20 @@ pub fn compile_raise_expression<'ctx>(
                     .builder
                     .build_alloca(struct_type, "return_result")?;
 
-                // Set tag to 1 (Err)
+                // Set tag to 1 (Err) using the actual discriminant type
                 let return_tag_ptr = compiler.builder.build_struct_gep(
                     struct_type,
                     return_result_alloca,
                     0,
                     "return_tag_ptr",
                 )?;
-                compiler.builder.build_store(
-                    return_tag_ptr,
-                    compiler.context.i64_type().const_int(1, false),
-                )?;
+                let return_discriminant_type = struct_type
+                    .get_field_type_at_index(0)
+                    .expect("Result should have discriminant field")
+                    .into_int_type();
+                compiler
+                    .builder
+                    .build_store(return_tag_ptr, return_discriminant_type.const_int(1, false))?;
 
                 // Store the error value
                 let return_payload_ptr = compiler.builder.build_struct_gep(
@@ -562,32 +556,27 @@ pub fn compile_raise_expression<'ctx>(
         // Result is stored as a pointer to a struct
         let result_ptr = result_value.into_pointer_value();
 
-        // For opaque pointers in LLVM 15+, we need to determine the struct type differently
-        // For now, we'll assume it's a Result struct type and try to work with it
-        // In a complete implementation, this would be tracked by the type system
-
-        // Create a basic Result struct type for demonstration
-        let struct_type = compiler.context.struct_type(
-            &[
-                compiler.context.i64_type().into(), // tag
-                compiler.context.i64_type().into(), // payload
-            ],
-            false,
-        );
+        // Use the centralized well-known enum type for Result
+        let struct_type = compiler.well_known_enum_type();
 
         // Extract the tag from the first field
         let tag_ptr = compiler
             .builder
             .build_struct_gep(struct_type, result_ptr, 0, "tag_ptr")?;
+        // Get the actual discriminant type from the struct's first field
+        let discriminant_type = struct_type
+            .get_field_type_at_index(0)
+            .expect("Enum struct should have discriminant field")
+            .into_int_type();
         let tag_value = compiler
             .builder
-            .build_load(compiler.context.i64_type(), tag_ptr, "tag")?;
+            .build_load(discriminant_type, tag_ptr, "tag")?;
 
-        // Check if tag == 0 (Ok variant)
+        // Check if tag == 0 (Ok variant) using the same type
         let is_ok = compiler.builder.build_int_compare(
             inkwell::IntPredicate::EQ,
             tag_value.into_int_value(),
-            compiler.context.i64_type().const_int(0, false),
+            discriminant_type.const_int(0, false),
             "is_ok",
         )?;
 
@@ -706,16 +695,7 @@ pub fn compile_raise_expression<'ctx>(
                 result_type.into_struct_type()
             } else {
                 // Create a struct type that matches Result representation
-                compiler.context.struct_type(
-                    &[
-                        compiler.context.i64_type().into(), // discriminant
-                        compiler
-                            .context
-                            .ptr_type(inkwell::AddressSpace::default())
-                            .into(), // payload pointer
-                    ],
-                    false,
-                )
+                compiler.well_known_enum_type()
             };
 
             // If the value is already a struct, use it directly; otherwise store it first
@@ -742,16 +722,20 @@ pub fn compile_raise_expression<'ctx>(
                 compiler
                     .builder
                     .build_struct_gep(struct_type, temp_alloca, 0, "tag_ptr")?;
-            let tag_value =
-                compiler
-                    .builder
-                    .build_load(compiler.context.i64_type(), tag_ptr, "tag")?;
+            // Get the actual discriminant type from the struct's first field
+            let discriminant_type = struct_type
+                .get_field_type_at_index(0)
+                .expect("Enum struct should have discriminant field")
+                .into_int_type();
+            let tag_value = compiler
+                .builder
+                .build_load(discriminant_type, tag_ptr, "tag")?;
 
-            // Check if tag == 0 (Ok variant)
+            // Check if tag == 0 (Ok variant) using the same type
             let is_ok = compiler.builder.build_int_compare(
                 inkwell::IntPredicate::EQ,
                 tag_value.into_int_value(),
-                compiler.context.i64_type().const_int(0, false),
+                discriminant_type.const_int(0, false),
                 "is_ok",
             )?;
 
@@ -872,17 +856,20 @@ pub fn compile_raise_expression<'ctx>(
                         .builder
                         .build_alloca(struct_type, "return_result")?;
 
-                    // Set tag to 1 (Err)
+                    // Set tag to 1 (Err) using the actual discriminant type
                     let return_tag_ptr = compiler.builder.build_struct_gep(
                         struct_type,
                         return_result_alloca,
                         0,
                         "return_tag_ptr",
                     )?;
-                    compiler.builder.build_store(
-                        return_tag_ptr,
-                        compiler.context.i64_type().const_int(1, false),
-                    )?;
+                    let err_discriminant_type = struct_type
+                        .get_field_type_at_index(0)
+                        .expect("Result should have discriminant field")
+                        .into_int_type();
+                    compiler
+                        .builder
+                        .build_store(return_tag_ptr, err_discriminant_type.const_int(1, false))?;
 
                     // Store the error value
                     let return_payload_ptr = compiler.builder.build_struct_gep(

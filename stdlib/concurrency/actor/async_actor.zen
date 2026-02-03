@@ -67,13 +67,15 @@ AsyncMailbox.new = (capacity: usize, allocator: Allocator) Result<AsyncMailbox<M
 
 // Send message (non-blocking, returns error if full)
 AsyncMailbox.try_send = (self: MutPtr<AsyncMailbox<M>>, msg: M) Result<(), i32> {
-    // Check if full
-    count = self.val.count.load()
-    count >= self.val.capacity as i32 ? {
+    // Reserve slot atomically
+    old_count = self.val.count.fetch_add(1)
+    old_count >= self.val.capacity as i32 ? {
+        // Undo reservation
+        self.val.count.fetch_sub(1)
         return Result.Err(-11)  // EAGAIN
     }
 
-    // Get write position
+    // Slot reserved - safe to write
     tail = self.val.tail.fetch_add(1)
     idx = tail % self.val.capacity as i64
     msg_size = compiler.sizeof<M>()
@@ -81,9 +83,6 @@ AsyncMailbox.try_send = (self: MutPtr<AsyncMailbox<M>>, msg: M) Result<(), i32> 
     // Write message
     dest = compiler.int_to_ptr(self.val.buffer + idx * msg_size as i64)
     compiler.memcpy(dest, &msg.ref() as RawPtr<u8>, msg_size)
-
-    // Increment count
-    old_count = self.val.count.fetch_add(1)
 
     // Signal if mailbox was empty
     old_count == 0 ? {
@@ -97,11 +96,15 @@ AsyncMailbox.try_send = (self: MutPtr<AsyncMailbox<M>>, msg: M) Result<(), i32> 
 
 // Receive message (non-blocking)
 AsyncMailbox.try_recv = (self: MutPtr<AsyncMailbox<M>>) Option<M> {
-    // Check if empty
-    count = self.val.count.load()
-    count == 0 ? { return Option.None }
+    // Reserve slot atomically
+    old_count = self.val.count.fetch_sub(1)
+    old_count <= 0 ? {
+        // Undo reservation
+        self.val.count.fetch_add(1)
+        return Option.None
+    }
 
-    // Get read position
+    // Slot reserved - safe to read
     head = self.val.head.fetch_add(1)
     idx = head % self.val.capacity as i64
     msg_size = compiler.sizeof<M>()
@@ -110,9 +113,6 @@ AsyncMailbox.try_recv = (self: MutPtr<AsyncMailbox<M>>) Option<M> {
     src = compiler.int_to_ptr(self.val.buffer + idx * msg_size as i64)
     msg: M = compiler.zeroed<M>()
     compiler.memcpy(&msg.mut_ref() as RawPtr<u8>, src, msg_size)
-
-    // Decrement count
-    self.val.count.fetch_sub(1)
 
     return Option.Some(msg)
 }

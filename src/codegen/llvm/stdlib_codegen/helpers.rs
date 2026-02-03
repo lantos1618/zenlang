@@ -10,27 +10,13 @@ pub fn create_result_ok<'ctx>(
     compiler: &mut LLVMCompiler<'ctx>,
     value: BasicValueEnum<'ctx>,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-    // Create Result struct {discriminant: 0, payload: value}
-    let result_type = compiler.context.struct_type(
-        &[
-            compiler.context.i64_type().into(),
-            compiler
-                .context
-                .ptr_type(inkwell::AddressSpace::default())
-                .into(),
-        ],
-        false,
-    );
+    let result_type = compiler.well_known_enum_type();
+    let ok_tag = compiler.enum_tag_const(result_type, 0); // Ok = 0
 
     let mut result = result_type.get_undef();
     result = compiler
         .builder
-        .build_insert_value(
-            result,
-            compiler.context.i64_type().const_int(0, false),
-            0,
-            "set_ok",
-        )?
+        .build_insert_value(result, ok_tag, 0, "set_ok")?
         .into_struct_value();
     result = compiler
         .builder
@@ -44,27 +30,13 @@ pub fn create_result_ok<'ctx>(
 pub fn create_result_ok_void<'ctx>(
     compiler: &mut LLVMCompiler<'ctx>,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-    // Create Result struct {discriminant: 0, payload: null}
-    let result_type = compiler.context.struct_type(
-        &[
-            compiler.context.i64_type().into(),
-            compiler
-                .context
-                .ptr_type(inkwell::AddressSpace::default())
-                .into(),
-        ],
-        false,
-    );
+    let result_type = compiler.well_known_enum_type();
+    let ok_tag = compiler.enum_tag_const(result_type, 0); // Ok = 0
 
     let mut result = result_type.get_undef();
     result = compiler
         .builder
-        .build_insert_value(
-            result,
-            compiler.context.i64_type().const_int(0, false),
-            0,
-            "set_ok",
-        )?
+        .build_insert_value(result, ok_tag, 0, "set_ok")?
         .into_struct_value();
     let null_ptr = compiler
         .context
@@ -83,27 +55,13 @@ pub fn create_result_err<'ctx>(
     compiler: &mut LLVMCompiler<'ctx>,
     error: BasicValueEnum<'ctx>,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-    // Create Result struct {discriminant: 1, payload: error}
-    let result_type = compiler.context.struct_type(
-        &[
-            compiler.context.i64_type().into(),
-            compiler
-                .context
-                .ptr_type(inkwell::AddressSpace::default())
-                .into(),
-        ],
-        false,
-    );
+    let result_type = compiler.well_known_enum_type();
+    let err_tag = compiler.enum_tag_const(result_type, 1); // Err = 1
 
     let mut result = result_type.get_undef();
     result = compiler
         .builder
-        .build_insert_value(
-            result,
-            compiler.context.i64_type().const_int(1, false),
-            0,
-            "set_err",
-        )?
+        .build_insert_value(result, err_tag, 0, "set_err")?
         .into_struct_value();
     result = compiler
         .builder

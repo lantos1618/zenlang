@@ -1,0 +1,59 @@
+// Zen Standard Library: Async Helpers
+//
+// Shared utilities for async operations across allocators.
+// These helpers work with any Allocator that supports async I/O.
+
+{ compiler } = @std
+{ CompletionFn } = @std.memory.allocator
+
+// ============================================================================
+// Completion Promise - Tracks async operation state
+// ============================================================================
+
+// Promise state for tracking async operation completion
+PromiseState:
+    Pending,
+    Completed,
+    Failed
+
+// Simple promise for single async operation
+Promise: {
+    state: i32,      // 0 = Pending, 1 = Completed, 2 = Failed
+    result: i64,     // Operation result
+    user_data: u64   // User-provided context
+}
+
+// Create a new pending promise
+Promise.new = () Promise {
+    return Promise {
+        state: 0,
+        result: 0,
+        user_data: 0
+    }
+}
+
+Promise.new_with_data = (data: u64) Promise {
+    return Promise {
+        state: 0,
+        result: 0,
+        user_data: data
+    }
+}
+
+// Check if promise is complete
+Promise.is_pending = (self: Promise) bool {
+    return self.state == 0
+}
+
+Promise.is_completed = (self: Promise) bool {
+    return self.state == 1
+}
+
+Promise.is_failed = (self: Promise) bool {
+    return self.state == 2
+}
+
+// Get result (only valid after completion)
+Promise.get_result = (self: Promise) i64 {
+    return self.result
+}

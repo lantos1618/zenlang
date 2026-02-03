@@ -3,6 +3,29 @@
 use crate::well_known::well_known;
 use std::fmt;
 
+// ============================================================================
+// TYPE NAME UTILITIES
+// Centralized helpers to avoid string parsing duplication across codebase
+// ============================================================================
+
+/// Strip generic type parameters from a type string.
+/// Examples: "HashMap<K, V>" -> "HashMap", "Vec<T>" -> "Vec", "i32" -> "i32"
+///
+/// This is used in 17+ places across the codebase to get base type names.
+#[inline]
+pub fn strip_generic_params(type_str: &str) -> &str {
+    type_str.split('<').next().unwrap_or(type_str)
+}
+
+/// Check if a string looks like a type name (starts with uppercase).
+/// Used for heuristic type detection in LSP and parsing.
+///
+/// This is used in 15+ places across the codebase.
+#[inline]
+pub fn looks_like_type_name(name: &str) -> bool {
+    name.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+}
+
 /// Resolve String type from stdlib - returns the struct type definition
 /// String is defined in stdlib/string.zen as:
 /// struct String {

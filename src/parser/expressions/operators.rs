@@ -36,18 +36,6 @@ fn parse_binary_expression_impl(
                 // so the outer call (with lower precedence) can handle the '?'
                 break;
             }
-        // Check for 'as' identifier for type casting
-        } else if let Token::Identifier(id) = &parser.current_token {
-            if id == "as" {
-                parser.next_token(); // consume 'as'
-                let target_type = parser.parse_type()?;
-                left = Expression::TypeCast {
-                    expr: Box::new(left),
-                    target_type,
-                };
-            } else {
-                break;
-            }
         } else if let Token::Operator(op) = &parser.current_token {
             let op_clone = op.clone();
             let next_prec = get_precedence(&op_clone);

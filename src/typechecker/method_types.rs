@@ -1,5 +1,10 @@
 //! Method call type inference
 //! Handles type checking for method calls on various types
+//!
+//! ARCHITECTURE VIOLATION WARNING:
+//! This module contains hardcoded type inference for Layer 3 stdlib types
+//! (HashMap, HashSet, Vec, DynVec) which should NOT require compiler support.
+//! See calls.rs for detailed explanation and Phase 5 fix plan.
 
 use crate::ast::AstType;
 use crate::well_known::well_known;
@@ -59,6 +64,13 @@ pub fn infer_string_method_type(method: &str, is_string_struct: bool) -> Option<
     }
 }
 
+/// ARCHITECTURE VIOLATION: Hardcoded type inference for HashMap (Layer 3 type)
+///
+/// HashMap is a Layer 3 stdlib type that should NOT need compiler support.
+/// This function exists because the trait system (Phase 5) is not yet implemented.
+/// Once traits are available, this should be replaced with trait method resolution.
+///
+/// Methods hardcoded here: size, len, is_empty, clear, contains, remove, get, insert
 pub fn infer_hashmap_method_type(method: &str, type_args: &[AstType]) -> Option<AstType> {
     let wk = well_known();
     match method {
@@ -93,6 +105,13 @@ pub fn infer_hashmap_method_type(method: &str, type_args: &[AstType]) -> Option<
     }
 }
 
+/// ARCHITECTURE VIOLATION: Hardcoded type inference for HashSet (Layer 3 type)
+///
+/// HashSet is a Layer 3 stdlib type that should NOT need compiler support.
+/// This function exists because the trait system (Phase 5) is not yet implemented.
+/// Once traits are available, this should be replaced with trait method resolution.
+///
+/// Methods hardcoded here: size, len, is_empty, clear, contains, insert, remove
 pub fn infer_hashset_method_type(method: &str) -> Option<AstType> {
     match method {
         "size" | "len" => Some(AstType::Usize),
@@ -105,7 +124,13 @@ pub fn infer_hashset_method_type(method: &str) -> Option<AstType> {
     }
 }
 
-/// Infer return type for Vec<T, N> methods
+/// ARCHITECTURE VIOLATION: Hardcoded type inference for Vec/DynVec (Layer 3 types)
+///
+/// Vec and DynVec are Layer 3 stdlib types that should NOT need compiler support.
+/// This function exists because the trait system (Phase 5) is not yet implemented.
+/// Once traits are available, this should be replaced with trait method resolution.
+///
+/// Methods hardcoded here: get, pop, len, capacity, push, set, clear
 pub fn infer_vec_method_type(method: &str, element_type: &AstType) -> Option<AstType> {
     let wk = well_known();
     match method {

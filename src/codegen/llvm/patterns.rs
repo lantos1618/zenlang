@@ -29,22 +29,18 @@ impl<'ctx> LLVMCompiler<'ctx> {
         None
     }
 
-    /// Compare int value with expected tag
+    /// Compare int value with expected tag using the actual discriminant type
     pub(super) fn compare_with_tag(
         &self,
         int_val: IntValue<'ctx>,
         expected_tag: u64,
     ) -> Result<IntValue<'ctx>, CompileError> {
-        let tag_const = self.context.i64_type().const_int(expected_tag, false);
-        let int_extended = if int_val.get_type().get_bit_width() < 64 {
-            self.builder
-                .build_int_z_extend(int_val, self.context.i64_type(), "ext")?
-        } else {
-            int_val
-        };
+        // Create constant with the SAME type as the loaded discriminant
+        // This avoids unnecessary type extensions and keeps IR clean
+        let tag_const = int_val.get_type().const_int(expected_tag, false);
         Ok(self.builder.build_int_compare(
             inkwell::IntPredicate::EQ,
-            int_extended,
+            int_val,
             tag_const,
             "enum_match",
         )?)
@@ -187,13 +183,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
             ));
         };
 
-        let tag_ptr = self
-            .builder
-            .build_struct_gep(struct_type, scrutinee_ptr, 0, "tag_ptr")?;
-        let tag_val = self
-            .builder
-            .build_load(self.context.i64_type(), tag_ptr, "tag_val")?;
-        let matches = self.compare_with_tag(tag_val.into_int_value(), tag)?;
+        // Load enum tag using centralized helper
+        let tag_val = self.load_enum_tag(struct_type, scrutinee_ptr, "scrutinee")?;
+        let matches = self.compare_with_tag(tag_val, tag)?;
 
         let bindings = if payload.is_some() {
             let payload_ptr =
@@ -282,6 +274,66 @@ impl<'ctx> LLVMCompiler<'ctx> {
         }
     }
 
+    /// Convert a pointer value to an integer type by using ptrtoint and truncation.
+    /// This is used for extracting payload values from enum fields.
+    fn ptr_to_int_type(
+        &self,
+        ptr: PointerValue<'ctx>,
+        target_type: inkwell::types::IntType<'ctx>,
+    ) -> Option<BasicValueEnum<'ctx>> {
+        let int_val = self
+            .builder
+            .build_ptr_to_int(ptr, self.ptr_sized_int_type(), "ptr_to_int")
+            .ok()?;
+        // Only truncate if target is smaller than ptr-sized int
+        if target_type.get_bit_width() < self.ptr_sized_int_type().get_bit_width() {
+            self.builder
+                .build_int_truncate(int_val, target_type, "trunc")
+                .ok()
+                .map(|v| v.into())
+        } else if target_type.get_bit_width() == self.ptr_sized_int_type().get_bit_width() {
+            Some(int_val.into())
+        } else {
+            // Extend if target is larger (shouldn't happen for typical uses)
+            self.builder
+                .build_int_z_extend(int_val, target_type, "zext")
+                .ok()
+                .map(|v| v.into())
+        }
+    }
+
+    /// Convert a pointer value to a float type via ptrtoint then bitcast.
+    fn ptr_to_float_type(
+        &self,
+        ptr: PointerValue<'ctx>,
+        target_type: inkwell::types::FloatType<'ctx>,
+    ) -> Option<BasicValueEnum<'ctx>> {
+        // Determine the integer type matching the float's bit width
+        let int_type = if target_type == self.context.f32_type() {
+            self.context.i32_type()
+        } else {
+            self.context.i64_type()
+        };
+
+        let int_val = self
+            .builder
+            .build_ptr_to_int(ptr, self.ptr_sized_int_type(), "ptr_to_int")
+            .ok()?;
+
+        // Truncate to match float size if needed
+        let sized_int = if int_type.get_bit_width() < self.ptr_sized_int_type().get_bit_width() {
+            self.builder
+                .build_int_truncate(int_val, int_type, "trunc")
+                .ok()?
+        } else {
+            int_val
+        };
+
+        self.builder
+            .build_bit_cast(sized_int, target_type, "int_to_float")
+            .ok()
+    }
+
     /// Store a binding as a variable
     fn store_binding(&mut self, var_name: &str, value: BasicValueEnum<'ctx>, ast_type: AstType) {
         if let Ok(alloca) = self.builder.build_alloca(value.get_type(), var_name) {
@@ -359,110 +411,27 @@ impl<'ctx> LLVMCompiler<'ctx> {
             // Convert back using ptrtoint for integer types
             // ================================================================
             let payload_val: Option<BasicValueEnum<'ctx>> = match &payload_ast_type {
-                Some(ast_type) if ast_type.is_ptr_type() => {
-                    // Pointer types: the payload IS the pointer, use directly
-                    Some(payload_ptr.into())
-                }
+                // Pointer types: the payload IS the pointer, use directly
+                Some(ast_type) if ast_type.is_ptr_type() => Some(payload_ptr.into()),
+
+                // Integer types: use centralized ptr_to_int_type helper
                 Some(AstType::I8 | AstType::U8) => {
-                    // Convert ptr to i64, then truncate to i8
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
-                        payload_ptr,
-                        self.context.i64_type(),
-                        "ptr_to_i64",
-                    ) {
-                        self.builder
-                            .build_int_truncate(i64_val, self.context.i8_type(), "trunc_i8")
-                            .ok()
-                            .map(|v| v.into())
-                    } else {
-                        None
-                    }
+                    self.ptr_to_int_type(payload_ptr, self.context.i8_type())
                 }
                 Some(AstType::I16 | AstType::U16) => {
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
-                        payload_ptr,
-                        self.context.i64_type(),
-                        "ptr_to_i64",
-                    ) {
-                        self.builder
-                            .build_int_truncate(i64_val, self.context.i16_type(), "trunc_i16")
-                            .ok()
-                            .map(|v| v.into())
-                    } else {
-                        None
-                    }
+                    self.ptr_to_int_type(payload_ptr, self.context.i16_type())
                 }
                 Some(AstType::I32 | AstType::U32) => {
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
-                        payload_ptr,
-                        self.context.i64_type(),
-                        "ptr_to_i64",
-                    ) {
-                        self.builder
-                            .build_int_truncate(i64_val, self.context.i32_type(), "trunc_i32")
-                            .ok()
-                            .map(|v| v.into())
-                    } else {
-                        None
-                    }
+                    self.ptr_to_int_type(payload_ptr, self.context.i32_type())
                 }
-                Some(AstType::Bool) => {
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
-                        payload_ptr,
-                        self.context.i64_type(),
-                        "ptr_to_i64",
-                    ) {
-                        self.builder
-                            .build_int_truncate(i64_val, self.context.bool_type(), "trunc_bool")
-                            .ok()
-                            .map(|v| v.into())
-                    } else {
-                        None
-                    }
-                }
-                Some(AstType::F32) => {
-                    // Convert ptr to i64, truncate to i32, then bitcast to f32
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
-                        payload_ptr,
-                        self.context.i64_type(),
-                        "ptr_to_i64",
-                    ) {
-                        if let Ok(i32_val) = self.builder.build_int_truncate(
-                            i64_val,
-                            self.context.i32_type(),
-                            "trunc_i32",
-                        ) {
-                            self.builder
-                                .build_bit_cast(i32_val, self.context.f32_type(), "i32_to_f32")
-                                .ok()
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                }
-                Some(AstType::F64) => {
-                    // Convert ptr to i64, then bitcast to f64
-                    if let Ok(i64_val) = self.builder.build_ptr_to_int(
-                        payload_ptr,
-                        self.context.i64_type(),
-                        "ptr_to_i64",
-                    ) {
-                        self.builder
-                            .build_bit_cast(i64_val, self.context.f64_type(), "i64_to_f64")
-                            .ok()
-                    } else {
-                        None
-                    }
-                }
-                _ => {
-                    // Default: convert to i64 (covers I64, U64, Usize, and unknown types)
-                    self.builder
-                        .build_ptr_to_int(payload_ptr, self.context.i64_type(), "ptr_to_i64")
-                        .ok()
-                        .map(|v| v.into())
-                }
+                Some(AstType::Bool) => self.ptr_to_int_type(payload_ptr, self.context.bool_type()),
+
+                // Float types: use centralized ptr_to_float_type helper
+                Some(AstType::F32) => self.ptr_to_float_type(payload_ptr, self.context.f32_type()),
+                Some(AstType::F64) => self.ptr_to_float_type(payload_ptr, self.context.f64_type()),
+
+                // Default: convert to ptr-sized int (covers I64, U64, Usize, and unknown types)
+                _ => self.ptr_to_int_type(payload_ptr, self.ptr_sized_int_type()),
             };
 
             if let Some(val) = payload_val {

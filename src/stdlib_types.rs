@@ -97,28 +97,8 @@ impl StdlibTypeRegistry {
     }
 
     fn find_stdlib_root() -> PathBuf {
-        // Check environment variable first
-        if let Ok(path) = std::env::var("ZEN_STDLIB_PATH") {
-            let p = PathBuf::from(path);
-            if p.exists() && p.is_dir() {
-                return p;
-            }
-        }
-
-        // Try relative paths
-        let candidates = [
-            PathBuf::from("./stdlib"),
-            PathBuf::from("../stdlib"),
-            PathBuf::from("../../stdlib"),
-        ];
-
-        for candidate in candidates {
-            if candidate.exists() && candidate.is_dir() {
-                return candidate;
-            }
-        }
-
-        PathBuf::from("./stdlib")
+        // Use centralized stdlib discovery from stdlib_discovery module
+        crate::stdlib_discovery::find_stdlib_root_or_default()
     }
 
     fn parse_file(&mut self, path: &Path, relative_path: &str) -> Result<()> {
@@ -316,4 +296,104 @@ impl StdlibTypeRegistry {
                 .keys()
                 .any(|k| k.starts_with(&format!("{}::", type_name)))
     }
+
+    /// Get all known struct names from stdlib
+    pub fn get_all_struct_names(&self) -> Vec<&str> {
+        self.structs.keys().map(|s| s.as_str()).collect()
+    }
+
+    /// Get all function names from a specific module
+    pub fn get_module_function_names(&self, module: &str) -> Vec<&str> {
+        let prefix = format!("{}::", module);
+        self.functions
+            .keys()
+            .filter(|k| k.starts_with(&prefix))
+            .map(|k| &k[prefix.len()..])
+            .collect()
+    }
+
+    /// Check if a function exists in a module
+    pub fn has_function(&self, module: &str, func_name: &str) -> bool {
+        let key = format!("{}::{}", module, func_name);
+        self.functions.contains_key(&key)
+    }
+
+    /// Check if a type is a collection type (has methods like new, push, etc.)
+    pub fn is_collection_type(&self, type_name: &str) -> bool {
+        // Check if it has collection-like methods
+        let new_key = format!("{}::new", type_name);
+        let push_key = format!("{}::push", type_name);
+        let get_key = format!("{}::get", type_name);
+
+        self.methods.contains_key(&new_key)
+            && (self.methods.contains_key(&push_key) || self.methods.contains_key(&get_key))
+    }
+
+    /// Check if a name is a math function from stdlib
+    pub fn is_math_function(&self, func_name: &str) -> bool {
+        self.has_function("math", func_name)
+    }
+}
+
+// ========================================================================
+// ARCHITECTURE VIOLATION: Layer 3 stdlib types with compiler support
+// ========================================================================
+//
+// The functions below identify Layer 3 stdlib types that currently receive
+// special treatment in the typechecker. This is an architecture violation
+// as described in docs/design/SEPARATION_OF_CONCERNS.md:
+//
+// - Layer 1: Compiler primitives (i32, bool, etc.) - MUST have compiler support
+// - Layer 2: Core abstractions (Option, Result, Ptr) - require limited compiler support
+// - Layer 3: Stdlib types (Vec, HashMap, String, etc.) - should NOT need compiler support
+//
+// Currently, Vec/DynVec, HashMap, and HashSet get special method type inference
+// in src/typechecker/inference/calls.rs and src/typechecker/method_types.rs.
+// This should be eliminated in Phase 5 (trait system) by:
+// 1. Defining traits like Collection<T>, Map<K,V>, etc.
+// 2. Implementing trait methods with proper signatures in stdlib
+// 3. Using trait resolution instead of hardcoded type checks
+//
+// Until then, these helpers centralize the string comparisons to make them
+// less fragile and easier to track.
+//
+// Related tech debt: See tech_debt_audit.md sections on:
+// - "String-based type identity checks"
+// - "Trait system needed for stdlib types"
+// ========================================================================
+
+/// Check if a type is HashMap (Layer 3 type with temporary compiler support)
+///
+/// NOTE: This is an architecture violation. HashMap should not need special
+/// compiler treatment - it should be a pure stdlib type once traits are implemented.
+#[inline]
+pub fn is_hashmap(type_name: &str) -> bool {
+    type_name == "HashMap"
+}
+
+/// Check if a type is HashSet (Layer 3 type with temporary compiler support)
+///
+/// NOTE: This is an architecture violation. HashSet should not need special
+/// compiler treatment - it should be a pure stdlib type once traits are implemented.
+#[inline]
+pub fn is_hashset(type_name: &str) -> bool {
+    type_name == "HashSet"
+}
+
+/// Check if a type is Vec or DynVec (Layer 3 types with temporary compiler support)
+///
+/// NOTE: This is an architecture violation. Vec/DynVec should not need special
+/// compiler treatment - they should be pure stdlib types once traits are implemented.
+#[inline]
+pub fn is_vec_type(type_name: &str) -> bool {
+    matches!(type_name, "Vec" | "DynVec")
+}
+
+/// Check if a type is any Layer 3 collection type with special compiler treatment
+///
+/// This includes HashMap, HashSet, Vec, and DynVec - all architecture violations
+/// that should be removed in Phase 5 when the trait system is complete.
+#[inline]
+pub fn is_special_collection(type_name: &str) -> bool {
+    is_hashmap(type_name) || is_hashset(type_name) || is_vec_type(type_name)
 }

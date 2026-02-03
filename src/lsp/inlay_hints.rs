@@ -3,7 +3,8 @@ use lsp_types::*;
 use serde_json::Value;
 use std::sync::{Arc, Mutex};
 
-use crate::ast::{AstType, Declaration, Expression, Statement};
+use crate::ast::primitives;
+use crate::ast::{looks_like_type_name, AstType, Declaration, Expression, Statement};
 use crate::stdlib_types::stdlib_types;
 
 use super::document_store::DocumentStore;
@@ -93,7 +94,7 @@ fn collect_hints_from_content(
 
                 // If it looks like a struct definition (PascalCase: { ... } or PascalCase:)
                 if !before.is_empty()
-                    && before.chars().next().unwrap().is_uppercase()
+                    && looks_like_type_name(before)
                     && !before.contains('=')
                     && !before.contains(' ')
                 {
@@ -310,7 +311,8 @@ fn infer_type(rhs: &str) -> Option<String> {
         return Some("StaticString".to_string());
     }
 
-    if rhs == "true" || rhs == "false" {
+    // Use centralized boolean literal check
+    if primitives::is_boolean_literal(rhs) {
         return Some("bool".to_string());
     }
 
@@ -362,7 +364,8 @@ fn infer_type_from_expr(expr: &Expression) -> Option<String> {
             if let Some(dot_pos) = name.rfind('.') {
                 let receiver = &name[..dot_pos];
                 let method = &name[dot_pos + 1..];
-                if matches!(method, "new" | "init" | "create" | "default" | "from") {
+                // Use centralized constructor method definitions
+                if primitives::is_constructor_method(method) {
                     return Some(receiver.to_string());
                 }
                 // Check stdlib for method return type
@@ -380,9 +383,9 @@ fn infer_type_from_expr(expr: &Expression) -> Option<String> {
         Expression::EnumVariant {
             enum_name, variant, ..
         } => {
-            if wk.is_option(enum_name) || variant == "Some" || variant == "None" {
+            if wk.is_option(enum_name) || wk.is_option_variant(variant) {
                 Some(wk.option_name().to_string())
-            } else if wk.is_result(enum_name) || variant == "Ok" || variant == "Err" {
+            } else if wk.is_result(enum_name) || wk.is_result_variant(variant) {
                 Some(wk.result_name().to_string())
             } else {
                 Some(enum_name.clone())
@@ -391,9 +394,9 @@ fn infer_type_from_expr(expr: &Expression) -> Option<String> {
 
         // Enum literal (shorthand like .Some(x))
         Expression::EnumLiteral { variant, .. } => {
-            if variant == "Some" || variant == "None" {
+            if wk.is_option_variant(variant) {
                 Some(wk.option_name().to_string())
-            } else if variant == "Ok" || variant == "Err" {
+            } else if wk.is_result_variant(variant) {
                 Some(wk.result_name().to_string())
             } else {
                 None
@@ -481,7 +484,11 @@ fn find_var_pos(content: &str, var_name: &str) -> Option<Position> {
                 // Check for PascalCase type definition (might have generics like Name<T>)
                 let base_name = get_base_type_name(before);
                 if !base_name.is_empty()
-                    && base_name.chars().next().unwrap().is_uppercase()
+                    && base_name
+                        .chars()
+                        .next()
+                        .map(|c| c.is_uppercase())
+                        .unwrap_or(false)
                     && !before.contains('=')
                     && (after.starts_with('{') || after.contains('{'))
                 {
@@ -643,7 +650,7 @@ fn find_variable_type_in_content(content: &str, var_name: &str) -> Option<String
         let pattern2 = format!("{} ::= ", var_name);
 
         if trimmed.starts_with(&pattern) || trimmed.starts_with(&pattern2) {
-            let eq_pos = trimmed.find('=').unwrap();
+            let eq_pos = trimmed.find('=')?; // Early return if no '=' found (shouldn't happen given the if condition)
             let rhs = trimmed[eq_pos + 1..].trim().trim_start_matches('=').trim();
 
             if let Some(dot_pos) = rhs.find('.') {

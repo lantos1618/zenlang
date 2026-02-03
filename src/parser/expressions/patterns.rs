@@ -1,3 +1,4 @@
+use crate::ast::primitives;
 use crate::ast::{Expression, MatchArm, Pattern};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
@@ -21,10 +22,85 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
 
     // Check for block-style pattern match: expr ? { pattern => expr, ... }
     // OR bool pattern short form: expr ? { block }
+    // OR ternary conditional: expr ? { true_block } : { false_block }
     if parser.current_token == Token::Symbol('{') {
+        // Look ahead to disambiguate between ternary and pattern match
+        // Save parser state to restore if needed
+        let saved_state = parser.save_state();
+
         parser.next_token(); // consume '{'
 
-        // Peek ahead to see if this is pattern match (pattern => expr) or bool short form
+        // Try to parse the block content to see if we hit ':' at block end
+        // This indicates a ternary conditional
+        let mut brace_depth = 0;
+        let mut found_colon_after_block = false;
+
+        // Scan ahead to see if this looks like: ? { ... } :
+        loop {
+            match &parser.current_token {
+                Token::Symbol('{') => brace_depth += 1,
+                Token::Symbol('}') => {
+                    if brace_depth > 0 {
+                        brace_depth -= 1;
+                    } else {
+                        // End of the block - check if next token is ':'
+                        parser.next_token(); // consume '}'
+                        if parser.current_token == Token::Symbol(':') {
+                            found_colon_after_block = true;
+                        }
+                        break;
+                    }
+                }
+                Token::Eof => break,
+                _ => {}
+            }
+            parser.next_token();
+        }
+
+        // Restore parser state
+        parser.restore_state(saved_state);
+        parser.next_token(); // consume '{' again
+
+        if found_colon_after_block {
+            // This is a ternary conditional: ? { true_block } : { false_block }
+            let true_block = super::blocks::continue_parsing_block(parser)?;
+
+            if parser.current_token != Token::Symbol(':') {
+                return Err(CompileError::SyntaxError(
+                    "Expected ':' after true block in ternary conditional".to_string(),
+                    Some(parser.current_span.clone()),
+                ));
+            }
+            parser.next_token(); // consume ':'
+
+            if parser.current_token != Token::Symbol('{') {
+                return Err(CompileError::SyntaxError(
+                    "Expected '{' for false block in ternary conditional".to_string(),
+                    Some(parser.current_span.clone()),
+                ));
+            }
+            parser.next_token(); // consume '{'
+
+            let false_block = super::blocks::continue_parsing_block(parser)?;
+
+            // Convert to pattern match with true/false patterns
+            let arms = vec![
+                MatchArm {
+                    pattern: Pattern::Literal(Expression::Boolean(true)),
+                    guard: None,
+                    body: true_block,
+                },
+                MatchArm {
+                    pattern: Pattern::Literal(Expression::Boolean(false)),
+                    guard: None,
+                    body: false_block,
+                },
+            ];
+
+            return Ok(Expression::QuestionMatch { scrutinee, arms });
+        }
+
+        // Not a ternary - check if it's a pattern match or bool short form
         // First check if it could be a pattern (starts with identifier, number, _, -, etc.)
         let is_pattern_match = match &parser.current_token {
             Token::Integer(_)
@@ -33,7 +109,8 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
             | Token::Underscore
             | Token::Symbol('.') => true,
             Token::Operator(op) if op == "-" => true, // negative number pattern
-            Token::Identifier(name) if name == "true" || name == "false" => true,
+            // Use centralized boolean literal check
+            Token::Identifier(name) if primitives::is_boolean_literal(name) => true,
             _ => false,
         };
 

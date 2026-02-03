@@ -104,6 +104,16 @@ pub fn is_primitive_name(name: &str) -> bool {
     PRIMITIVE_TYPE_MAP.iter().any(|(n, _)| *n == name)
 }
 
+/// Numeric primitive type names (integers and floats)
+pub const NUMERIC_TYPE_NAMES: &[&str] = &[
+    "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "usize", "f32", "f64",
+];
+
+/// Check if a string represents a numeric primitive type name
+pub fn is_numeric_type_name(name: &str) -> bool {
+    NUMERIC_TYPE_NAMES.contains(&name)
+}
+
 /// Get the bit size of a numeric type
 pub fn bit_size(ty: &AstType) -> Option<u32> {
     match ty {
@@ -159,6 +169,164 @@ impl AstType {
     pub fn primitive_name(&self) -> Option<&'static str> {
         primitive_to_str(self)
     }
+}
+
+// ============================================================================
+// ZEN LANGUAGE CONSTRUCTS (for LSP highlighting and validation)
+// ============================================================================
+
+/// Identifiers that introduce syntax constructs in Zen.
+/// These are not keyword tokens (only `pub` is a keyword token),
+/// but they have special meaning in parser context and should be
+/// highlighted as keywords in IDEs.
+pub const SYNTAX_INTRODUCERS: &[&str] = &["fn", "struct", "enum", "const", "var", "mut"];
+
+/// Control flow identifiers
+pub const CONTROL_FLOW: &[&str] = &["loop", "break", "continue", "return"];
+
+/// Literal identifiers (parsed as identifiers but represent values)
+pub const LITERAL_IDENTIFIERS: &[&str] = &["true", "false", "null"];
+
+/// Compile-time and resource management
+pub const COMPTIME_IDENTIFIERS: &[&str] = &["comptime", "defer"];
+
+/// Self references (have special meaning in methods)
+pub const SELF_IDENTIFIERS: &[&str] = &["self", "Self"];
+
+/// Check if an identifier is a syntax introducer (fn, struct, enum, etc.)
+pub fn is_syntax_introducer(name: &str) -> bool {
+    SYNTAX_INTRODUCERS.contains(&name)
+}
+
+/// Check if an identifier is a control flow construct
+pub fn is_control_flow(name: &str) -> bool {
+    CONTROL_FLOW.contains(&name)
+}
+
+/// Check if an identifier is a literal (true, false, null)
+pub fn is_literal_identifier(name: &str) -> bool {
+    LITERAL_IDENTIFIERS.contains(&name)
+}
+
+/// Check if an identifier should be highlighted as keyword-like in IDE
+/// (for semantic highlighting purposes)
+pub fn is_keyword_like(name: &str) -> bool {
+    name == "pub"  // The only actual keyword token
+        || is_syntax_introducer(name)
+        || is_control_flow(name)
+        || is_literal_identifier(name)
+        || COMPTIME_IDENTIFIERS.contains(&name)
+}
+
+/// Check if an identifier cannot be used as a user-defined name
+/// (primitives, literals, self references)
+pub fn is_reserved_identifier(name: &str) -> bool {
+    is_primitive_name(name) || is_literal_identifier(name) || SELF_IDENTIFIERS.contains(&name)
+}
+
+// ============================================================================
+// STDLIB TYPES AND METHODS
+// ============================================================================
+
+/// Collection type names from stdlib
+pub const COLLECTION_TYPES: &[&str] = &[
+    "Vec",
+    "DynVec",
+    "Array",
+    "HashMap",
+    "HashSet",
+    "String",
+    "Queue",
+    "Stack",
+    "LinkedList",
+];
+
+/// Pointer type names
+pub const POINTER_TYPES: &[&str] = &["Ptr", "MutPtr", "RawPtr"];
+
+/// Constructor method names (methods that typically create new instances)
+pub const CONSTRUCTOR_METHODS: &[&str] = &[
+    "new",
+    "init",
+    "create",
+    "default",
+    "from",
+    "with_capacity",
+    "with_step",
+];
+
+/// Check if a type name is a collection type
+pub fn is_collection_type(name: &str) -> bool {
+    COLLECTION_TYPES.contains(&name)
+}
+
+/// Check if a type name is a pointer type
+pub fn is_pointer_type(name: &str) -> bool {
+    POINTER_TYPES.contains(&name)
+}
+
+/// Check if a method name is a constructor
+pub fn is_constructor_method(name: &str) -> bool {
+    CONSTRUCTOR_METHODS.contains(&name)
+}
+
+/// Check if an identifier is a boolean literal
+pub fn is_boolean_literal(name: &str) -> bool {
+    name == "true" || name == "false"
+}
+
+/// Check if an identifier is a null/void literal
+pub fn is_null_literal(name: &str) -> bool {
+    name == "null"
+}
+
+// ============================================================================
+// STDLIB MODULES (defined in stdlib/*.zen, referenced by compiler)
+// ============================================================================
+//
+// NOTE: These are FALLBACK lists used when stdlib parsing isn't available.
+// The preferred way to check stdlib contents is via stdlib_types::stdlib_types()
+// which actually parses the .zen files. These constants exist for:
+// 1. Bootstrap/early compilation before stdlib is loaded
+// 2. Static analysis where dynamic lookup isn't possible
+// 3. LSP features that need quick checks without full parsing
+
+/// Core stdlib modules (fallback - prefer stdlib_types() queries)
+pub const STDLIB_MODULES: &[&str] = &["io", "math", "core", "memory", "build", "testing"];
+
+/// Math functions from stdlib/math.zen (fallback - prefer stdlib_types().is_math_function())
+/// Actual functions: abs, abs64, factorial, is_even, is_odd, max, min, clamp, fmin, fmax
+pub const MATH_FUNCTIONS: &[&str] = &[
+    "abs",
+    "abs64",
+    "factorial",
+    "is_even",
+    "is_odd",
+    "max",
+    "min",
+    "clamp",
+    "fmin",
+    "fmax",
+];
+
+/// Memory/allocator-related identifiers (fallback - these are defined in stdlib/memory/*.zen)
+pub const ALLOCATOR_IDENTIFIERS: &[&str] =
+    &["Allocator", "get_default_allocator", "GPA", "AsyncPool"];
+
+/// Check if an identifier is a stdlib module
+pub fn is_stdlib_module(name: &str) -> bool {
+    STDLIB_MODULES.contains(&name)
+}
+
+/// Check if an identifier is a math function (fallback check)
+/// Prefer: stdlib_types::stdlib_types().is_math_function(name)
+pub fn is_math_function(name: &str) -> bool {
+    MATH_FUNCTIONS.contains(&name)
+}
+
+/// Check if an identifier is allocator-related (fallback check)
+pub fn is_allocator_identifier(name: &str) -> bool {
+    ALLOCATOR_IDENTIFIERS.contains(&name)
 }
 
 #[cfg(test)]

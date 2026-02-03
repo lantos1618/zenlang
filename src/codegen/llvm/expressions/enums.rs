@@ -173,19 +173,21 @@ pub fn compile_enum_variant<'ctx>(
 
     // Use the enum info from symbol table - we should always have it at this point
     let enum_info = enum_info.expect("Enum info should be found by this point");
-    let tag_val = compiler.context.i64_type().const_int(tag, false);
 
     // Use the enum's LLVM type from the symbol table
     let enum_struct_type = enum_info.llvm_type;
 
+    // Create alloca and store tag using centralized helper
     let alloca = compiler.builder.build_alloca(
         enum_struct_type,
         &format!("{}_{}_enum_tmp", enum_name, variant),
     )?;
-    let tag_ptr = compiler
-        .builder
-        .build_struct_gep(enum_struct_type, alloca, 0, "tag_ptr")?;
-    compiler.builder.build_store(tag_ptr, tag_val)?;
+    compiler.store_enum_tag(
+        enum_struct_type,
+        alloca,
+        tag,
+        &format!("{}_{}", enum_name, variant),
+    )?;
 
     // Handle payload if present
     if let Some(expr) = payload {

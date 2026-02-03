@@ -31,17 +31,6 @@ pub fn handle_code_lens(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Resp
         None => return null_response(&req),
     };
 
-    // Debug: log to file
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("/tmp/zen-lsp-codelens.log")
-    {
-        use std::io::Write;
-        let _ = writeln!(f, "=== CodeLens request PID={} ===", std::process::id());
-        let _ = writeln!(f, "URI: {}", params.text_document.uri);
-    }
-
     let mut lenses = Vec::new();
     // Track which functions we've already processed to prevent duplicates from AST
     let mut processed_functions: HashSet<String> = HashSet::new();
@@ -79,15 +68,18 @@ pub fn handle_code_lens(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Resp
 
                     // main and build get both Run and Build buttons
                     if func_name == "main" || func_name == "build" {
+                        // Note: serde_json::to_value for strings/u32 cannot fail in practice,
+                        // but we use unwrap_or_default for defensive programming
                         lenses.push(CodeLens {
                             range,
                             command: Some(Command {
                                 title: "▶ Run".to_string(),
                                 command: "zen.run".to_string(),
                                 arguments: Some(vec![
-                                    serde_json::to_value(&params.text_document.uri).unwrap(),
-                                    serde_json::to_value(func_name).unwrap(),
-                                    serde_json::to_value(line).unwrap(),
+                                    serde_json::to_value(&params.text_document.uri)
+                                        .unwrap_or_default(),
+                                    serde_json::to_value(func_name).unwrap_or_default(),
+                                    serde_json::to_value(line).unwrap_or_default(),
                                 ]),
                             }),
                             data: None,
@@ -99,9 +91,10 @@ pub fn handle_code_lens(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Resp
                                 title: "🔨 Build".to_string(),
                                 command: "zen.build".to_string(),
                                 arguments: Some(vec![
-                                    serde_json::to_value(&params.text_document.uri).unwrap(),
-                                    serde_json::to_value(func_name).unwrap(),
-                                    serde_json::to_value(line).unwrap(),
+                                    serde_json::to_value(&params.text_document.uri)
+                                        .unwrap_or_default(),
+                                    serde_json::to_value(func_name).unwrap_or_default(),
+                                    serde_json::to_value(line).unwrap_or_default(),
                                 ]),
                             }),
                             data: None,
@@ -114,8 +107,9 @@ pub fn handle_code_lens(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Resp
                                 title: "▶ Run Test".to_string(),
                                 command: "zen.runTest".to_string(),
                                 arguments: Some(vec![
-                                    serde_json::to_value(&params.text_document.uri).unwrap(),
-                                    serde_json::to_value(func_name).unwrap(),
+                                    serde_json::to_value(&params.text_document.uri)
+                                        .unwrap_or_default(),
+                                    serde_json::to_value(func_name).unwrap_or_default(),
                                 ]),
                             }),
                             data: None,
@@ -147,22 +141,6 @@ pub fn handle_code_lens(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Resp
             }
         })
         .collect();
-
-    // Debug: log final lenses
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("/tmp/zen-lsp-codelens.log")
-    {
-        use std::io::Write;
-        let _ = writeln!(f, "Returning {} lenses:", lenses.len());
-        for lens in &lenses {
-            if let Some(cmd) = &lens.command {
-                let _ = writeln!(f, "  - Line {}: {}", lens.range.start.line, cmd.title);
-            }
-        }
-        let _ = writeln!(f);
-    }
 
     success_response(&req, lenses)
 }

@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
+use crate::ast::primitives;
 use crate::ast::{self, AstType};
 use crate::comptime;
 use crate::error::{CompileError, Span};
+use crate::stdlib_types::stdlib_types;
 use crate::type_context::TypeContext;
 use crate::well_known::WellKnownTypes;
 use inkwell::{
@@ -200,15 +202,28 @@ impl<'ctx> LLVMCompiler<'ctx> {
         {
             101
         } else {
+            // Query stdlib_types for dynamic lookup from parsed .zen files
+            // Fall back to primitives for bootstrap/static analysis
+            let stdlib = stdlib_types();
+
+            // Collection types (from stdlib or fallback)
+            if stdlib.is_collection_type(module_name) || primitives::is_collection_type(module_name)
+            {
+                return 102;
+            }
+            // Allocator-related (from stdlib/memory/*.zen or fallback)
+            if primitives::is_allocator_identifier(module_name) {
+                return 103;
+            }
+            // Math functions (from stdlib/math.zen or fallback)
+            if stdlib.is_math_function(module_name) || primitives::is_math_function(module_name) {
+                return 104;
+            }
+            // Stdlib module priorities
             match module_name {
-                "HashMap" | "HashSet" | "DynVec" | "Array" | "Vec" => 102,
-                "Allocator" | "get_default_allocator" => 103,
-                "min" | "max" | "abs" | "sqrt" | "pow" | "sin" | "cos" | "tan" => 104,
                 "io" => 1,
                 "math" => 2,
                 "core" => 3,
-                "GPA" => 4,
-                "AsyncPool" => 5,
                 "build" => 7,
                 _ => 0,
             }
@@ -312,6 +327,124 @@ impl<'ctx> LLVMCompiler<'ctx> {
             .ok_or_else(|| {
                 CompileError::UndeclaredVariable(name.to_string(), self.current_span.clone())
             })
+    }
+
+    /// Get the target-specific pointer-sized integer type (usize).
+    /// Currently hardcoded to i64 for 64-bit platforms (Linux x86_64).
+    /// TODO: Use TargetData for proper cross-platform support when needed.
+    pub fn ptr_sized_int_type(&self) -> inkwell::types::IntType<'ctx> {
+        // For 64-bit Linux (our primary target), pointers are 64 bits
+        self.context.i64_type()
+    }
+
+    /// Get the discriminant type for enums based on variant count.
+    /// Uses the smallest integer type that can represent all variants.
+    /// This is centralized to ensure consistent enum layouts across the codebase.
+    pub fn enum_discriminant_type(&self, variant_count: usize) -> inkwell::types::IntType<'ctx> {
+        if variant_count <= 256 {
+            self.context.i8_type()
+        } else if variant_count <= 65536 {
+            self.context.i16_type()
+        } else if variant_count <= 4_294_967_296 {
+            self.context.i32_type()
+        } else {
+            self.context.i64_type()
+        }
+    }
+
+    /// Get the standard struct type for well-known enums (Option, Result).
+    /// These always have 2 variants, so they use i8 discriminant + ptr payload.
+    /// This is centralized to ensure all Option/Result types have matching layouts.
+    pub fn well_known_enum_type(&self) -> inkwell::types::StructType<'ctx> {
+        let discriminant = self.enum_discriminant_type(2); // Option/Result have 2 variants
+        let ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
+        self.context
+            .struct_type(&[discriminant.into(), ptr_type.into()], false)
+    }
+
+    // ============================================================================
+    // ENUM HELPER FUNCTIONS
+    // Centralized helpers to reduce code duplication in enum handling
+    // ============================================================================
+
+    /// Extract the discriminant (tag) type from an enum struct type.
+    /// The discriminant is always the first field of the enum struct.
+    #[inline]
+    pub fn get_enum_discriminant_type(
+        &self,
+        enum_struct_type: inkwell::types::StructType<'ctx>,
+    ) -> inkwell::types::IntType<'ctx> {
+        enum_struct_type
+            .get_field_type_at_index(0)
+            .expect("Enum struct should have discriminant field at index 0")
+            .into_int_type()
+    }
+
+    /// Create a constant tag value for an enum discriminant.
+    /// Uses the correct integer type for the given enum struct.
+    #[inline]
+    pub fn enum_tag_const(
+        &self,
+        enum_struct_type: inkwell::types::StructType<'ctx>,
+        tag: u64,
+    ) -> inkwell::values::IntValue<'ctx> {
+        self.get_enum_discriminant_type(enum_struct_type)
+            .const_int(tag, false)
+    }
+
+    /// Load the discriminant (tag) value from an enum pointer.
+    /// Returns the loaded tag as an IntValue with the correct discriminant type.
+    pub fn load_enum_tag(
+        &self,
+        enum_struct_type: inkwell::types::StructType<'ctx>,
+        enum_ptr: inkwell::values::PointerValue<'ctx>,
+        name: &str,
+    ) -> Result<inkwell::values::IntValue<'ctx>, CompileError> {
+        let tag_ptr = self.builder.build_struct_gep(
+            enum_struct_type,
+            enum_ptr,
+            0,
+            &format!("{}_tag_ptr", name),
+        )?;
+        let discriminant_type = self.get_enum_discriminant_type(enum_struct_type);
+        let tag_val =
+            self.builder
+                .build_load(discriminant_type, tag_ptr, &format!("{}_tag", name))?;
+        Ok(tag_val.into_int_value())
+    }
+
+    /// Store a tag value into an enum's discriminant field.
+    pub fn store_enum_tag(
+        &self,
+        enum_struct_type: inkwell::types::StructType<'ctx>,
+        enum_ptr: inkwell::values::PointerValue<'ctx>,
+        tag: u64,
+        name: &str,
+    ) -> Result<(), CompileError> {
+        let tag_ptr = self.builder.build_struct_gep(
+            enum_struct_type,
+            enum_ptr,
+            0,
+            &format!("{}_tag_ptr", name),
+        )?;
+        let tag_val = self.enum_tag_const(enum_struct_type, tag);
+        self.builder.build_store(tag_ptr, tag_val)?;
+        Ok(())
+    }
+
+    /// Get a pointer to the payload field of an enum.
+    pub fn get_enum_payload_ptr(
+        &self,
+        enum_struct_type: inkwell::types::StructType<'ctx>,
+        enum_ptr: inkwell::values::PointerValue<'ctx>,
+        name: &str,
+    ) -> Result<inkwell::values::PointerValue<'ctx>, CompileError> {
+        Ok(self.builder.build_struct_gep(
+            enum_struct_type,
+            enum_ptr,
+            1,
+            &format!("{}_payload_ptr", name),
+        )?)
     }
 
     // ============================================================================
@@ -554,12 +687,8 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 }
                 ast::Declaration::Behavior(_) => {} // Behaviors are interface definitions, no codegen needed
                 ast::Declaration::Trait(_) => {} // Trait definitions are interface definitions, no direct codegen needed
-                ast::Declaration::TraitImplementation(trait_impl) => {
-                    self.compile_trait_implementation(trait_impl)?;
-                }
-                ast::Declaration::ImplBlock(impl_block) => {
-                    self.compile_impl_block(impl_block)?;
-                }
+                ast::Declaration::TraitImplementation(_) => {} // Compiled after function declarations
+                ast::Declaration::ImplBlock(_) => {} // Compiled after function declarations
                 ast::Declaration::TraitRequirement(_) => {
                     // Trait requirements are checked at compile time, no codegen needed
                 }
@@ -628,6 +757,20 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 if func.type_params.is_empty() {
                     self.declare_function(func)?;
                 }
+            }
+        }
+
+        // Compile trait implementations and impl blocks AFTER function declarations
+        // This ensures stdlib functions (io.println, etc.) are available in trait impl bodies
+        for declaration in &program.declarations {
+            match declaration {
+                ast::Declaration::TraitImplementation(trait_impl) => {
+                    self.compile_trait_implementation(trait_impl)?;
+                }
+                ast::Declaration::ImplBlock(impl_block) => {
+                    self.compile_impl_block(impl_block)?;
+                }
+                _ => {}
             }
         }
 
