@@ -13,82 +13,82 @@ ByteBuffer: {
     size: usize
 }
 
-// Create a byte buffer
-buffer_new = (allocator: Allocator, buf_size: usize) ByteBuffer {
+// Create a byte buffer (static method)
+ByteBuffer.new = (allocator: Allocator, buf_size: usize) ByteBuffer {
     buf_ptr = allocator.allocate(buf_size)
     return ByteBuffer { ptr: buf_ptr, size: buf_size }
 }
 
-// Create a zeroed byte buffer
-buffer_zeroed = (allocator: Allocator, buf_size: usize) ByteBuffer {
+// Create a zeroed byte buffer (static method)
+ByteBuffer.zeroed = (allocator: Allocator, buf_size: usize) ByteBuffer {
     buf_ptr = allocator.allocate(buf_size)
     compiler.memset(buf_ptr, 0, buf_size)
     return ByteBuffer { ptr: buf_ptr, size: buf_size }
 }
 
 // Free a byte buffer
-buffer_free = (buf: ByteBuffer, allocator: Allocator) void {
-    allocator.deallocate(buf.ptr, buf.size)
+ByteBuffer.free = (self: ByteBuffer, allocator: Allocator) void {
+    allocator.deallocate(self.ptr, self.size)
 }
 
 // Get raw pointer
-buffer_ptr = (buf: ByteBuffer) RawPtr<u8> {
-    return buf.ptr
+ByteBuffer.ptr = (self: ByteBuffer) RawPtr<u8> {
+    return self.ptr
 }
 
 // Get address as i64 (for syscalls)
-buffer_addr = (buf: ByteBuffer) i64 {
-    return compiler.ptr_to_int(buf.ptr)
+ByteBuffer.addr = (self: ByteBuffer) i64 {
+    return compiler.ptr_to_int(self.ptr)
 }
 
 // Read byte at offset
-buffer_get = (buf: ByteBuffer, offset: usize) u8 {
-    buf_src = compiler.gep(buf.ptr, cast(offset, i64))
+ByteBuffer.get = (self: ByteBuffer, offset: usize) u8 {
+    buf_src = compiler.gep(self.ptr, cast(offset, i64))
     return compiler.load<u8>(buf_src)
 }
 
 // Write byte at offset
-buffer_set = (buf: ByteBuffer, offset: usize, value: u8) void {
-    buf_dest = compiler.gep(buf.ptr, cast(offset, i64))
+ByteBuffer.set = (self: ByteBuffer, offset: usize, value: u8) void {
+    buf_dest = compiler.gep(self.ptr, cast(offset, i64))
     compiler.store<u8>(buf_dest, value)
 }
 
 // Read i64 at offset
-buffer_get_i64 = (buf: ByteBuffer, offset: usize) i64 {
-    buf_src = compiler.gep(buf.ptr, cast(offset, i64))
+ByteBuffer.get_i64 = (self: ByteBuffer, offset: usize) i64 {
+    buf_src = compiler.gep(self.ptr, cast(offset, i64))
     return compiler.load<i64>(buf_src)
 }
 
 // Write i64 at offset
-buffer_set_i64 = (buf: ByteBuffer, offset: usize, value: i64) void {
-    buf_dest = compiler.gep(buf.ptr, cast(offset, i64))
+ByteBuffer.set_i64 = (self: ByteBuffer, offset: usize, value: i64) void {
+    buf_dest = compiler.gep(self.ptr, cast(offset, i64))
     compiler.store<i64>(buf_dest, value)
 }
 
 // Read u32 at offset
-buffer_get_u32 = (buf: ByteBuffer, offset: usize) u32 {
-    buf_src = compiler.gep(buf.ptr, cast(offset, i64))
+ByteBuffer.get_u32 = (self: ByteBuffer, offset: usize) u32 {
+    buf_src = compiler.gep(self.ptr, cast(offset, i64))
     return compiler.load<u32>(buf_src)
 }
 
 // Write u32 at offset
-buffer_set_u32 = (buf: ByteBuffer, offset: usize, value: u32) void {
-    buf_dest = compiler.gep(buf.ptr, cast(offset, i64))
+ByteBuffer.set_u32 = (self: ByteBuffer, offset: usize, value: u32) void {
+    buf_dest = compiler.gep(self.ptr, cast(offset, i64))
     compiler.store<u32>(buf_dest, value)
 }
 
 // Copy memory from source
-buffer_copy = (buf: ByteBuffer, src: RawPtr<u8>, count: usize) void {
-    compiler.memcpy(buf.ptr, src, count)
+ByteBuffer.copy = (self: ByteBuffer, src: RawPtr<u8>, count: usize) void {
+    compiler.memcpy(self.ptr, src, count)
 }
 
 // Write string at offset
-buffer_write_str = (buf: ByteBuffer, offset: usize, s: StaticString, slen: usize) void {
-    buf_dest = compiler.gep(buf.ptr, cast(offset, i64))
+ByteBuffer.write_str = (self: ByteBuffer, offset: usize, s: StaticString, slen: usize) void {
+    buf_dest = compiler.gep(self.ptr, cast(offset, i64))
     compiler.memcpy(buf_dest, s, slen)
 }
 
 // Zero the buffer
-buffer_zero = (buf: ByteBuffer) void {
-    compiler.memset(buf.ptr, 0, buf.size)
+ByteBuffer.zero = (self: ByteBuffer) void {
+    compiler.memset(self.ptr, 0, self.size)
 }

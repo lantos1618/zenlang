@@ -380,8 +380,12 @@ pub fn compile_function_call<'ctx>(
             let payload = args.first().map(|a| Box::new(a.clone()));
             return compiler.compile_enum_variant(module, func, &payload);
         }
-        // Try stdlib module function: io.println -> println
-        // Stdlib functions are compiled with their simple name, not qualified
+        // Try the fully qualified name first (e.g., "ByteBuffer.free")
+        // This handles type methods like Type.method
+        if let Some(result) = try_compile_direct_call(compiler, name, args)? {
+            return Ok(result);
+        }
+        // Fallback: try simple name for stdlib module functions (e.g., io.println -> println)
         if let Some(result) = try_compile_direct_call(compiler, func, args)? {
             return Ok(result);
         }

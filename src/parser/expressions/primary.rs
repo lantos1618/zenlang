@@ -177,8 +177,7 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
                 // Check if this looks like generic type args (e.g., Vec<i32>)
                 // We use a heuristic that doesn't require stdlib lookups to avoid
                 // deadlock during stdlib parsing - checks if followed by <TypeName>
-                } else if super::collections::looks_like_generic_type_args(parser)
-                {
+                } else if super::collections::looks_like_generic_type_args(parser) {
                     let type_args_str = super::literals::parse_generic_type_args_to_string(parser)?;
                     (format!("{}<{}>", name, type_args_str), true)
                 } else {
