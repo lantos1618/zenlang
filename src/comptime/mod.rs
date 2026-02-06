@@ -520,6 +520,17 @@ impl ComptimeInterpreter {
                 Ok(result)
             }
 
+            Statement::Loop { kind, body, .. } => self.execute_loop(kind, body),
+
+            Statement::Break { .. } => {
+                Err(CompileError::ComptimeError("__break__".to_string(), None))
+            }
+
+            Statement::Continue { .. } => Err(CompileError::ComptimeError(
+                "__continue__".to_string(),
+                None,
+            )),
+
             _ => Err(CompileError::ComptimeError(
                 format!("Statement type not supported in comptime: {:?}", stmt),
                 None,
@@ -600,6 +611,96 @@ impl ComptimeInterpreter {
             Expression::Comptime(inner) => {
                 // Nested comptime expression
                 self.evaluate_expression(inner, span.clone())
+            }
+
+            // Block expression: { stmt; stmt; expr }
+            Expression::Block(statements) => {
+                let child_env = Environment::with_parent(self.env.clone());
+                let saved_env = std::mem::replace(&mut self.env, child_env);
+                let mut result = ComptimeValue::Void;
+                for stmt in statements {
+                    match self.execute_statement(stmt) {
+                        Ok(Some(val)) => {
+                            result = val;
+                        }
+                        Ok(None) => {}
+                        Err(e) => {
+                            // Propagate break/continue signals through blocks
+                            self.env = saved_env;
+                            return Err(e);
+                        }
+                    }
+                }
+                self.env = saved_env;
+                Ok(result)
+            }
+
+            // Pattern matching: scrutinee ? | pattern { body } | pattern2 { body2 }
+            Expression::QuestionMatch { scrutinee, arms } => {
+                let scrutinee_val = self.evaluate_expression(scrutinee, span.clone())?;
+                self.evaluate_question_match(scrutinee_val, arms, span.clone())
+            }
+
+            // Array indexing: arr[i]
+            Expression::ArrayIndex { array, index } => {
+                let arr_val = self.evaluate_expression(array, span.clone())?;
+                let idx_val = self.evaluate_expression(index, span.clone())?;
+                match (&arr_val, &idx_val) {
+                    (ComptimeValue::Array(items), ComptimeValue::I32(i)) => {
+                        let idx = *i as usize;
+                        if idx < items.len() {
+                            Ok(items[idx].clone())
+                        } else {
+                            Err(CompileError::ComptimeError(
+                                format!("Index {} out of bounds (len: {})", idx, items.len()),
+                                span,
+                            ))
+                        }
+                    }
+                    (ComptimeValue::Array(items), ComptimeValue::I64(i)) => {
+                        let idx = *i as usize;
+                        if idx < items.len() {
+                            Ok(items[idx].clone())
+                        } else {
+                            Err(CompileError::ComptimeError(
+                                format!("Index {} out of bounds (len: {})", idx, items.len()),
+                                span,
+                            ))
+                        }
+                    }
+                    _ => Err(CompileError::ComptimeError(
+                        format!(
+                            "Cannot index {:?} with {:?}",
+                            arr_val.get_type(),
+                            idx_val.get_type()
+                        ),
+                        span,
+                    )),
+                }
+            }
+
+            // String interpolation: "Hello ${name}!"
+            Expression::StringInterpolation { parts } => {
+                let mut result = String::new();
+                for part in parts {
+                    match part {
+                        ast::StringPart::Literal(s) => result.push_str(s),
+                        ast::StringPart::Interpolation(e) => {
+                            let val = self.evaluate_expression(e, span.clone())?;
+                            match val {
+                                ComptimeValue::String(s) => result.push_str(&s),
+                                ComptimeValue::I32(n) => result.push_str(&n.to_string()),
+                                ComptimeValue::I64(n) => result.push_str(&n.to_string()),
+                                ComptimeValue::F32(n) => result.push_str(&n.to_string()),
+                                ComptimeValue::F64(n) => result.push_str(&n.to_string()),
+                                ComptimeValue::Bool(b) => result.push_str(&b.to_string()),
+                                ComptimeValue::Null => result.push_str("null"),
+                                other => result.push_str(&format!("{:?}", other)),
+                            }
+                        }
+                    }
+                }
+                Ok(ComptimeValue::String(result))
             }
 
             Expression::Range {
@@ -706,6 +807,7 @@ impl ComptimeInterpreter {
             },
 
             (ComptimeValue::String(l), ComptimeValue::String(r)) => match op {
+                BinaryOperator::Add => Ok(ComptimeValue::String(format!("{}{}", l, r))),
                 BinaryOperator::Equals => Ok(ComptimeValue::Bool(l == r)),
                 BinaryOperator::NotEquals => Ok(ComptimeValue::Bool(l != r)),
                 _ => Err(CompileError::ComptimeError(
@@ -836,6 +938,283 @@ impl ComptimeInterpreter {
                         span,
                     ))
                 }
+            }
+        }
+    }
+
+    /// Execute a loop statement (loop condition { body })
+    fn execute_loop(
+        &mut self,
+        kind: &ast::LoopKind,
+        body: &[Statement],
+    ) -> Result<Option<ComptimeValue>> {
+        const MAX_ITERATIONS: usize = 100_000;
+        let mut iterations = 0;
+
+        loop {
+            iterations += 1;
+            if iterations > MAX_ITERATIONS {
+                return Err(CompileError::ComptimeError(
+                    format!(
+                        "Compile-time loop exceeded {} iterations (infinite loop?)",
+                        MAX_ITERATIONS
+                    ),
+                    None,
+                ));
+            }
+
+            // Check loop condition
+            if let ast::LoopKind::Condition(cond) = kind {
+                let cond_val = self.evaluate_expression(cond, None)?;
+                match cond_val {
+                    ComptimeValue::Bool(false) => return Ok(None),
+                    ComptimeValue::Bool(true) => {}
+                    _ => {
+                        return Err(CompileError::ComptimeError(
+                            "Loop condition must evaluate to a boolean".to_string(),
+                            None,
+                        ))
+                    }
+                }
+            }
+
+            // Execute body
+            let mut should_break = false;
+            for stmt in body {
+                match self.execute_statement(stmt) {
+                    Ok(Some(val)) => {
+                        // Only Return statements should exit the loop
+                        if matches!(stmt, Statement::Return { .. }) {
+                            return Ok(Some(val));
+                        }
+                        // Otherwise, expression result is discarded in loop body
+                    }
+                    Ok(None) => {}
+                    Err(e) => {
+                        // Check for break/continue signals
+                        if let CompileError::ComptimeError(msg, _) = &e {
+                            if msg == "__break__" {
+                                should_break = true;
+                                break;
+                            }
+                            if msg == "__continue__" {
+                                break;
+                            }
+                        }
+                        return Err(e);
+                    }
+                }
+            }
+
+            if should_break {
+                return Ok(None);
+            }
+        }
+    }
+
+    /// Evaluate pattern matching (QuestionMatch): scrutinee ? | pattern { body }
+    fn evaluate_question_match(
+        &mut self,
+        scrutinee: ComptimeValue,
+        arms: &[ast::MatchArm],
+        span: Option<crate::error::Span>,
+    ) -> Result<ComptimeValue> {
+        for arm in arms {
+            if let Some(value) = self.match_pattern(&scrutinee, &arm.pattern)? {
+                // Bind pattern variables
+                let child_env = Environment::with_parent(self.env.clone());
+                for (name, val) in &value {
+                    child_env.define(name.clone(), val.clone());
+                }
+
+                // Check guard if present
+                if let Some(guard) = &arm.guard {
+                    let saved_env = std::mem::replace(&mut self.env, child_env);
+                    let guard_val = self.evaluate_expression(guard, span.clone())?;
+                    let env_after = std::mem::replace(&mut self.env, saved_env);
+                    match guard_val {
+                        ComptimeValue::Bool(true) => {
+                            // Guard passed, evaluate body
+                            let saved_env = std::mem::replace(&mut self.env, env_after);
+                            let result = self.evaluate_expression(&arm.body, span.clone())?;
+                            self.env = saved_env;
+                            return Ok(result);
+                        }
+                        ComptimeValue::Bool(false) => continue,
+                        _ => {
+                            return Err(CompileError::ComptimeError(
+                                "Guard condition must be boolean".to_string(),
+                                span,
+                            ))
+                        }
+                    }
+                }
+
+                // No guard, evaluate body
+                let saved_env = std::mem::replace(&mut self.env, child_env);
+                let result = self.evaluate_expression(&arm.body, span.clone())?;
+                self.env = saved_env;
+                return Ok(result);
+            }
+        }
+
+        // No arm matched
+        Err(CompileError::ComptimeError(
+            "Non-exhaustive pattern match: no arm matched".to_string(),
+            span,
+        ))
+    }
+
+    /// Try to match a comptime value against a pattern.
+    /// Returns Some(bindings) if matched, None if not.
+    fn match_pattern(
+        &mut self,
+        value: &ComptimeValue,
+        pattern: &Pattern,
+    ) -> Result<Option<Vec<(String, ComptimeValue)>>> {
+        match pattern {
+            Pattern::Wildcard => Ok(Some(vec![])),
+
+            Pattern::Identifier(name) => {
+                // Binding pattern: always matches, binds the value
+                Ok(Some(vec![(name.clone(), value.clone())]))
+            }
+
+            Pattern::Literal(expr) => {
+                // Evaluate the pattern literal and compare
+                let pat_val = self.evaluate_expression(expr, None)?;
+                if value == &pat_val {
+                    Ok(Some(vec![]))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            Pattern::Type { type_name, binding } => {
+                // Match on type name (used for string-based variant matching)
+                let matches = matches!(
+                    (type_name.as_str(), value),
+                    ("true", ComptimeValue::Bool(true))
+                        | ("false", ComptimeValue::Bool(false))
+                        | ("i32", ComptimeValue::I32(_))
+                        | ("i64", ComptimeValue::I64(_))
+                        | ("f32", ComptimeValue::F32(_))
+                        | ("f64", ComptimeValue::F64(_))
+                        | ("String", ComptimeValue::String(_))
+                        | ("bool", ComptimeValue::Bool(_))
+                );
+
+                if matches {
+                    let mut bindings = vec![];
+                    if let Some(bind_name) = binding {
+                        bindings.push((bind_name.clone(), value.clone()));
+                    }
+                    Ok(Some(bindings))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            Pattern::EnumLiteral { variant, payload } => {
+                // Match enum-style: .Some(val), .None
+                // Also used for string-match dispatch like | "Function" { ... }
+                match value {
+                    ComptimeValue::String(s) if s == variant => {
+                        // String matches variant name
+                        Ok(Some(vec![]))
+                    }
+                    _ => {
+                        // Try struct-based enum matching
+                        if let ComptimeValue::Struct { name, fields } = value {
+                            if name == variant
+                                || fields
+                                    .get("variant")
+                                    .map(|v| {
+                                        if let ComptimeValue::String(s) = v {
+                                            s == variant
+                                        } else {
+                                            false
+                                        }
+                                    })
+                                    .unwrap_or(false)
+                            {
+                                let mut bindings = vec![];
+                                if let Some(payload_pat) = payload {
+                                    if let Some(inner) = fields.get("payload") {
+                                        if let Some(b) = self.match_pattern(inner, payload_pat)? {
+                                            bindings.extend(b);
+                                        } else {
+                                            return Ok(None);
+                                        }
+                                    }
+                                }
+                                return Ok(Some(bindings));
+                            }
+                        }
+                        Ok(None)
+                    }
+                }
+            }
+
+            Pattern::Or(patterns) => {
+                for pat in patterns {
+                    if let Some(bindings) = self.match_pattern(value, pat)? {
+                        return Ok(Some(bindings));
+                    }
+                }
+                Ok(None)
+            }
+
+            Pattern::Range {
+                start,
+                end,
+                inclusive,
+            } => {
+                let start_val = self.evaluate_expression(start, None)?;
+                let end_val = self.evaluate_expression(end, None)?;
+                match (value, &start_val, &end_val) {
+                    (ComptimeValue::I32(v), ComptimeValue::I32(s), ComptimeValue::I32(e)) => {
+                        let in_range = if *inclusive {
+                            v >= s && v <= e
+                        } else {
+                            v >= s && v < e
+                        };
+                        Ok(if in_range {
+                            Some(vec![])
+                        } else {
+                            None
+                        })
+                    }
+                    _ => Ok(None),
+                }
+            }
+
+            Pattern::Guard { pattern, condition } => {
+                if let Some(bindings) = self.match_pattern(value, pattern)? {
+                    // Temporarily bind pattern variables for guard evaluation
+                    let child_env = Environment::with_parent(self.env.clone());
+                    for (name, val) in &bindings {
+                        child_env.define(name.clone(), val.clone());
+                    }
+                    let saved_env = std::mem::replace(&mut self.env, child_env);
+                    let guard_result = self.evaluate_expression(condition, None)?;
+                    self.env = saved_env;
+
+                    match guard_result {
+                        ComptimeValue::Bool(true) => Ok(Some(bindings)),
+                        _ => Ok(None),
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            _ => {
+                // Unsupported pattern type
+                Err(CompileError::ComptimeError(
+                    format!("Pattern type not yet supported in comptime: {:?}", pattern),
+                    None,
+                ))
             }
         }
     }
@@ -1048,18 +1427,221 @@ impl ComptimeInterpreter {
         &mut self,
         node: &ASTNodeValue,
         method: &str,
-        _args: &[Expression],
+        args: &[Expression],
         span: Option<crate::error::Span>,
     ) -> Result<ComptimeValue> {
         match method {
+            // Core introspection
             "type_info" => meta::type_info(node),
             "fields" => Ok(ComptimeValue::Array(meta::fields(node)?)),
             "variant_name" => Ok(ComptimeValue::String(meta::variant_name(node))),
             "children" => Ok(ComptimeValue::Array(meta::children(node)?)),
+
+            // Navigation helpers: Program-level
+            "functions" => {
+                if let ASTNodeValue::Program(prog) = node {
+                    Ok(ComptimeValue::Array(
+                        prog.declarations
+                            .iter()
+                            .filter(|d| matches!(d, Declaration::Function(_)))
+                            .map(|d| {
+                                ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
+                                    d.clone(),
+                                )))
+                            })
+                            .collect(),
+                    ))
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "functions() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            "structs" => {
+                if let ASTNodeValue::Program(prog) = node {
+                    Ok(ComptimeValue::Array(
+                        prog.declarations
+                            .iter()
+                            .filter(|d| matches!(d, Declaration::Struct(_)))
+                            .map(|d| {
+                                ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
+                                    d.clone(),
+                                )))
+                            })
+                            .collect(),
+                    ))
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "structs() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            "enums" => {
+                if let ASTNodeValue::Program(prog) = node {
+                    Ok(ComptimeValue::Array(
+                        prog.declarations
+                            .iter()
+                            .filter(|d| matches!(d, Declaration::Enum(_)))
+                            .map(|d| {
+                                ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
+                                    d.clone(),
+                                )))
+                            })
+                            .collect(),
+                    ))
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "enums() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            "find_function" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "find_function() expects 1 argument (name)".to_string(),
+                        span,
+                    ));
+                }
+                let name_val = self.evaluate_expression(&args[0], span.clone())?;
+                let target_name = match name_val {
+                    ComptimeValue::String(s) => s,
+                    _ => {
+                        return Err(CompileError::ComptimeError(
+                            "find_function() expects a string argument".to_string(),
+                            span,
+                        ))
+                    }
+                };
+
+                if let ASTNodeValue::Program(prog) = node {
+                    for d in &prog.declarations {
+                        if let Declaration::Function(f) = d {
+                            if f.name == target_name {
+                                return Ok(ComptimeValue::ASTNode(Rc::new(
+                                    ASTNodeValue::Declaration(d.clone()),
+                                )));
+                            }
+                        }
+                    }
+                    Ok(ComptimeValue::Null)
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "find_function() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            "find_struct" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "find_struct() expects 1 argument (name)".to_string(),
+                        span,
+                    ));
+                }
+                let name_val = self.evaluate_expression(&args[0], span.clone())?;
+                let target_name = match name_val {
+                    ComptimeValue::String(s) => s,
+                    _ => {
+                        return Err(CompileError::ComptimeError(
+                            "find_struct() expects a string argument".to_string(),
+                            span,
+                        ))
+                    }
+                };
+
+                if let ASTNodeValue::Program(prog) = node {
+                    for d in &prog.declarations {
+                        if let Declaration::Struct(s) = d {
+                            if s.name == target_name {
+                                return Ok(ComptimeValue::ASTNode(Rc::new(
+                                    ASTNodeValue::Declaration(d.clone()),
+                                )));
+                            }
+                        }
+                    }
+                    Ok(ComptimeValue::Null)
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "find_struct() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            // General find_by_variant: node.find_by_variant("BinaryOp")
+            "find_by_variant" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "find_by_variant() expects 1 argument (variant name)".to_string(),
+                        span,
+                    ));
+                }
+                let name_val = self.evaluate_expression(&args[0], span.clone())?;
+                let target = match name_val {
+                    ComptimeValue::String(s) => s,
+                    _ => {
+                        return Err(CompileError::ComptimeError(
+                            "find_by_variant() expects a string argument".to_string(),
+                            span,
+                        ))
+                    }
+                };
+
+                let children = meta::children(node)?;
+                let mut results = Vec::new();
+                Self::collect_by_variant(&children, &target, &mut results);
+                Ok(ComptimeValue::Array(results))
+            }
+
+            // is_* type checks
+            "is_expression" => Ok(ComptimeValue::Bool(matches!(
+                node,
+                ASTNodeValue::Expression(_)
+            ))),
+            "is_statement" => Ok(ComptimeValue::Bool(matches!(
+                node,
+                ASTNodeValue::Statement(_)
+            ))),
+            "is_declaration" => Ok(ComptimeValue::Bool(matches!(
+                node,
+                ASTNodeValue::Declaration(_)
+            ))),
+            "is_type" => Ok(ComptimeValue::Bool(matches!(node, ASTNodeValue::Type(_)))),
+            "is_pattern" => Ok(ComptimeValue::Bool(matches!(
+                node,
+                ASTNodeValue::Pattern(_)
+            ))),
+
             _ => Err(CompileError::ComptimeError(
                 format!("ASTNode has no method '{}'", method),
                 span,
             )),
+        }
+    }
+
+    /// Recursively collect all AST nodes matching a variant name
+    fn collect_by_variant(
+        values: &[ComptimeValue],
+        target: &str,
+        results: &mut Vec<ComptimeValue>,
+    ) {
+        for val in values {
+            if let ComptimeValue::ASTNode(node) = val {
+                if meta::variant_name(node) == target {
+                    results.push(val.clone());
+                }
+                // Recurse into children
+                if let Ok(children) = meta::children(node) {
+                    Self::collect_by_variant(&children, target, results);
+                }
+            }
         }
     }
 
@@ -1068,11 +1650,90 @@ impl ComptimeInterpreter {
         &mut self,
         items: &[ComptimeValue],
         method: &str,
-        _args: &[Expression],
+        args: &[Expression],
         span: Option<crate::error::Span>,
     ) -> Result<ComptimeValue> {
         match method {
             "len" => Ok(ComptimeValue::I64(items.len() as i64)),
+
+            "first" => {
+                if items.is_empty() {
+                    Ok(ComptimeValue::Null)
+                } else {
+                    Ok(items[0].clone())
+                }
+            }
+
+            "last" => {
+                if items.is_empty() {
+                    Ok(ComptimeValue::Null)
+                } else {
+                    Ok(items[items.len() - 1].clone())
+                }
+            }
+
+            "is_empty" => Ok(ComptimeValue::Bool(items.is_empty())),
+
+            "filter_by_variant" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "filter_by_variant() expects 1 argument".to_string(),
+                        span,
+                    ));
+                }
+                let name_val = self.evaluate_expression(&args[0], span.clone())?;
+                let target = match name_val {
+                    ComptimeValue::String(s) => s,
+                    _ => {
+                        return Err(CompileError::ComptimeError(
+                            "filter_by_variant() expects a string argument".to_string(),
+                            span,
+                        ))
+                    }
+                };
+                Ok(ComptimeValue::Array(
+                    items
+                        .iter()
+                        .filter(|item| {
+                            if let ComptimeValue::ASTNode(node) = item {
+                                meta::variant_name(node) == target
+                            } else {
+                                false
+                            }
+                        })
+                        .cloned()
+                        .collect(),
+                ))
+            }
+
+            "at" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "at() expects 1 argument (index)".to_string(),
+                        span,
+                    ));
+                }
+                let idx_val = self.evaluate_expression(&args[0], span.clone())?;
+                let idx = match idx_val {
+                    ComptimeValue::I32(i) => i as usize,
+                    ComptimeValue::I64(i) => i as usize,
+                    _ => {
+                        return Err(CompileError::ComptimeError(
+                            "at() expects an integer index".to_string(),
+                            span,
+                        ))
+                    }
+                };
+                if idx < items.len() {
+                    Ok(items[idx].clone())
+                } else {
+                    Err(CompileError::ComptimeError(
+                        format!("Index {} out of bounds (len: {})", idx, items.len()),
+                        span,
+                    ))
+                }
+            }
+
             _ => Err(CompileError::ComptimeError(
                 format!("Array has no method '{}'", method),
                 span,
@@ -1471,5 +2132,514 @@ mod integration_tests {
         } else {
             panic!("Expected array of declarations");
         }
+    }
+
+    // === New tests for QuestionMatch, Loop, ArrayIndex, StringConcat ===
+
+    #[test]
+    fn test_question_match_literal_patterns() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // x = 42; x ? | 42 { "matched" } | _ { "no match" }
+        let scrutinee = Expression::Integer32(42);
+        let arms = vec![
+            ast::MatchArm {
+                pattern: Pattern::Literal(Expression::Integer32(42)),
+                guard: None,
+                body: Expression::String("matched".to_string()),
+            },
+            ast::MatchArm {
+                pattern: Pattern::Wildcard,
+                guard: None,
+                body: Expression::String("no match".to_string()),
+            },
+        ];
+
+        let expr = Expression::QuestionMatch {
+            scrutinee: Box::new(scrutinee),
+            arms,
+        };
+
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        assert_eq!(result, ComptimeValue::String("matched".to_string()));
+    }
+
+    #[test]
+    fn test_question_match_wildcard_fallthrough() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // 99 ? | 42 { "forty-two" } | _ { "other" }
+        let arms = vec![
+            ast::MatchArm {
+                pattern: Pattern::Literal(Expression::Integer32(42)),
+                guard: None,
+                body: Expression::String("forty-two".to_string()),
+            },
+            ast::MatchArm {
+                pattern: Pattern::Wildcard,
+                guard: None,
+                body: Expression::String("other".to_string()),
+            },
+        ];
+
+        let expr = Expression::QuestionMatch {
+            scrutinee: Box::new(Expression::Integer32(99)),
+            arms,
+        };
+
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        assert_eq!(result, ComptimeValue::String("other".to_string()));
+    }
+
+    #[test]
+    fn test_question_match_string_patterns() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // "Function" ? | "Function" { "is func" } | "Struct" { "is struct" } | _ { "unknown" }
+        let arms = vec![
+            ast::MatchArm {
+                pattern: Pattern::Literal(Expression::String("Function".to_string())),
+                guard: None,
+                body: Expression::String("is func".to_string()),
+            },
+            ast::MatchArm {
+                pattern: Pattern::Literal(Expression::String("Struct".to_string())),
+                guard: None,
+                body: Expression::String("is struct".to_string()),
+            },
+            ast::MatchArm {
+                pattern: Pattern::Wildcard,
+                guard: None,
+                body: Expression::String("unknown".to_string()),
+            },
+        ];
+
+        let expr = Expression::QuestionMatch {
+            scrutinee: Box::new(Expression::String("Function".to_string())),
+            arms,
+        };
+
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        assert_eq!(result, ComptimeValue::String("is func".to_string()));
+    }
+
+    #[test]
+    fn test_question_match_boolean_patterns() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // true ? | true { "yes" } | false { "no" }
+        let arms = vec![
+            ast::MatchArm {
+                pattern: Pattern::Literal(Expression::Boolean(true)),
+                guard: None,
+                body: Expression::String("yes".to_string()),
+            },
+            ast::MatchArm {
+                pattern: Pattern::Literal(Expression::Boolean(false)),
+                guard: None,
+                body: Expression::String("no".to_string()),
+            },
+        ];
+
+        let expr = Expression::QuestionMatch {
+            scrutinee: Box::new(Expression::Boolean(true)),
+            arms,
+        };
+
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        assert_eq!(result, ComptimeValue::String("yes".to_string()));
+    }
+
+    #[test]
+    fn test_question_match_with_binding() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // 42 ? | n { n }  -- binding pattern captures value
+        let arms = vec![ast::MatchArm {
+            pattern: Pattern::Identifier("n".to_string()),
+            guard: None,
+            body: Expression::Identifier("n".to_string()),
+        }];
+
+        let expr = Expression::QuestionMatch {
+            scrutinee: Box::new(Expression::Integer32(42)),
+            arms,
+        };
+
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        assert_eq!(result, ComptimeValue::I32(42));
+    }
+
+    #[test]
+    fn test_loop_with_condition() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // i ::= 0; loop i < 5 { i = i + 1 }; i should be 5
+        interp.env.define("i".to_string(), ComptimeValue::I32(0));
+
+        let loop_stmt = Statement::Loop {
+            kind: ast::LoopKind::Condition(Expression::BinaryOp {
+                left: Box::new(Expression::Identifier("i".to_string())),
+                op: ast::BinaryOperator::LessThan,
+                right: Box::new(Expression::Integer32(5)),
+            }),
+            label: None,
+            body: vec![Statement::VariableAssignment {
+                name: "i".to_string(),
+                value: Expression::BinaryOp {
+                    left: Box::new(Expression::Identifier("i".to_string())),
+                    op: ast::BinaryOperator::Add,
+                    right: Box::new(Expression::Integer32(1)),
+                },
+                span: None,
+            }],
+            span: None,
+        };
+
+        interp.execute_statement(&loop_stmt).unwrap();
+        assert_eq!(interp.env.get("i").unwrap(), ComptimeValue::I32(5));
+    }
+
+    #[test]
+    fn test_loop_with_break() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // i ::= 0; loop { i = i + 1; i == 3 ? | true { break } }
+        interp.env.define("i".to_string(), ComptimeValue::I32(0));
+
+        let loop_stmt = Statement::Loop {
+            kind: ast::LoopKind::Infinite,
+            label: None,
+            body: vec![
+                Statement::VariableAssignment {
+                    name: "i".to_string(),
+                    value: Expression::BinaryOp {
+                        left: Box::new(Expression::Identifier("i".to_string())),
+                        op: ast::BinaryOperator::Add,
+                        right: Box::new(Expression::Integer32(1)),
+                    },
+                    span: None,
+                },
+                // if i == 3, break
+                Statement::Expression {
+                    expr: Expression::QuestionMatch {
+                        scrutinee: Box::new(Expression::BinaryOp {
+                            left: Box::new(Expression::Identifier("i".to_string())),
+                            op: ast::BinaryOperator::Equals,
+                            right: Box::new(Expression::Integer32(3)),
+                        }),
+                        arms: vec![
+                            ast::MatchArm {
+                                pattern: Pattern::Literal(Expression::Boolean(true)),
+                                guard: None,
+                                // Block that contains a break - but we need to use the statement form
+                                // For now, use a direct break since QuestionMatch body is an expression
+                                body: Expression::Block(vec![Statement::Break {
+                                    label: None,
+                                    span: None,
+                                }]),
+                            },
+                            ast::MatchArm {
+                                pattern: Pattern::Wildcard,
+                                guard: None,
+                                body: Expression::Integer32(0),
+                            },
+                        ],
+                    },
+                    span: None,
+                },
+            ],
+            span: None,
+        };
+
+        interp.execute_statement(&loop_stmt).unwrap();
+        assert_eq!(interp.env.get("i").unwrap(), ComptimeValue::I32(3));
+    }
+
+    #[test]
+    fn test_array_index_expression() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // arr = [10, 20, 30]; arr[1] should be 20
+        interp.env.define(
+            "arr".to_string(),
+            ComptimeValue::Array(vec![
+                ComptimeValue::I32(10),
+                ComptimeValue::I32(20),
+                ComptimeValue::I32(30),
+            ]),
+        );
+
+        let expr = Expression::ArrayIndex {
+            array: Box::new(Expression::Identifier("arr".to_string())),
+            index: Box::new(Expression::Integer32(1)),
+        };
+
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        assert_eq!(result, ComptimeValue::I32(20));
+    }
+
+    #[test]
+    fn test_array_index_out_of_bounds() {
+        let mut interp = ComptimeInterpreter::new();
+
+        interp.env.define(
+            "arr".to_string(),
+            ComptimeValue::Array(vec![ComptimeValue::I32(1)]),
+        );
+
+        let expr = Expression::ArrayIndex {
+            array: Box::new(Expression::Identifier("arr".to_string())),
+            index: Box::new(Expression::Integer32(5)),
+        };
+
+        let result = interp.evaluate_expression(&expr, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_string_concatenation() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // "hello " + "world" should be "hello world"
+        let expr = Expression::BinaryOp {
+            left: Box::new(Expression::String("hello ".to_string())),
+            op: ast::BinaryOperator::Add,
+            right: Box::new(Expression::String("world".to_string())),
+        };
+
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        assert_eq!(result, ComptimeValue::String("hello world".to_string()));
+    }
+
+    #[test]
+    fn test_string_interpolation() {
+        let mut interp = ComptimeInterpreter::new();
+
+        interp
+            .env
+            .define("name".to_string(), ComptimeValue::String("Zen".to_string()));
+        interp.env.define("ver".to_string(), ComptimeValue::I32(7));
+
+        // "${name} v${ver}"
+        let expr = Expression::StringInterpolation {
+            parts: vec![
+                ast::StringPart::Interpolation(Expression::Identifier("name".to_string())),
+                ast::StringPart::Literal(" v".to_string()),
+                ast::StringPart::Interpolation(Expression::Identifier("ver".to_string())),
+            ],
+        };
+
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        assert_eq!(result, ComptimeValue::String("Zen v7".to_string()));
+    }
+
+    #[test]
+    fn test_string_building_with_loop() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // Build "0,1,2,3,4," via loop
+        // result ::= ""; i ::= 0; loop i < 5 { result = result + i_str + ","; i = i + 1 }
+        interp
+            .env
+            .define("result".to_string(), ComptimeValue::String("".to_string()));
+        interp.env.define("i".to_string(), ComptimeValue::I32(0));
+
+        // We'll use string interpolation + concat in a loop
+        let loop_stmt = Statement::Loop {
+            kind: ast::LoopKind::Condition(Expression::BinaryOp {
+                left: Box::new(Expression::Identifier("i".to_string())),
+                op: ast::BinaryOperator::LessThan,
+                right: Box::new(Expression::Integer32(5)),
+            }),
+            label: None,
+            body: vec![
+                // result = result + "${i},"
+                Statement::VariableAssignment {
+                    name: "result".to_string(),
+                    value: Expression::BinaryOp {
+                        left: Box::new(Expression::Identifier("result".to_string())),
+                        op: ast::BinaryOperator::Add,
+                        right: Box::new(Expression::StringInterpolation {
+                            parts: vec![
+                                ast::StringPart::Interpolation(Expression::Identifier(
+                                    "i".to_string(),
+                                )),
+                                ast::StringPart::Literal(",".to_string()),
+                            ],
+                        }),
+                    },
+                    span: None,
+                },
+                // i = i + 1
+                Statement::VariableAssignment {
+                    name: "i".to_string(),
+                    value: Expression::BinaryOp {
+                        left: Box::new(Expression::Identifier("i".to_string())),
+                        op: ast::BinaryOperator::Add,
+                        right: Box::new(Expression::Integer32(1)),
+                    },
+                    span: None,
+                },
+            ],
+            span: None,
+        };
+
+        interp.execute_statement(&loop_stmt).unwrap();
+        assert_eq!(
+            interp.env.get("result").unwrap(),
+            ComptimeValue::String("0,1,2,3,4,".to_string())
+        );
+    }
+
+    #[test]
+    fn test_meta_ast_walk_with_pattern_match() {
+        // Full integration: parse code, walk AST, pattern match on variant names
+        let mut interp = ComptimeInterpreter::new();
+
+        // Import meta
+        let import_stmt = Statement::DestructuringImport {
+            names: vec!["meta".to_string()],
+            source: Expression::StdReference,
+            span: None,
+        };
+        interp.execute_statement(&import_stmt).unwrap();
+
+        // Parse source
+        let meta_val = interp.env.get("meta").unwrap();
+        let ast_node = interp
+            .evaluate_method_call(
+                meta_val,
+                "parse",
+                &[Expression::String(
+                    "add = (a: i32, b: i32) i32 { return a + b }".to_string(),
+                )],
+                None,
+            )
+            .unwrap();
+
+        // Get the first function via helper
+        interp.env.define("program".to_string(), ast_node);
+        let prog = interp.env.get("program").unwrap();
+        let func = interp
+            .evaluate_method_call(
+                prog,
+                "find_function",
+                &[Expression::String("add".to_string())],
+                None,
+            )
+            .unwrap();
+
+        // Get variant name and pattern match on it
+        let vname = interp
+            .evaluate_method_call(func.clone(), "variant_name", &[], None)
+            .unwrap();
+
+        // Pattern match: vname ? | "Function" { "found function!" } | _ { "other" }
+        let match_expr = Expression::QuestionMatch {
+            scrutinee: Box::new(Expression::Identifier("vname".to_string())),
+            arms: vec![
+                ast::MatchArm {
+                    pattern: Pattern::Literal(Expression::String("Function".to_string())),
+                    guard: None,
+                    body: Expression::String("found function!".to_string()),
+                },
+                ast::MatchArm {
+                    pattern: Pattern::Wildcard,
+                    guard: None,
+                    body: Expression::String("other".to_string()),
+                },
+            ],
+        };
+
+        interp.env.define("vname".to_string(), vname);
+        let result = interp.evaluate_expression(&match_expr, None).unwrap();
+        assert_eq!(result, ComptimeValue::String("found function!".to_string()));
+    }
+
+    #[test]
+    fn test_block_expression() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // { x = 10; x + 5 } should evaluate to 15
+        let block = Expression::Block(vec![
+            Statement::VariableDeclaration {
+                name: "x".to_string(),
+                type_: None,
+                initializer: Some(Expression::Integer32(10)),
+                is_mutable: false,
+                declaration_type: ast::VariableDeclarationType::InferredImmutable,
+                span: None,
+            },
+            Statement::Expression {
+                expr: Expression::BinaryOp {
+                    left: Box::new(Expression::Identifier("x".to_string())),
+                    op: ast::BinaryOperator::Add,
+                    right: Box::new(Expression::Integer32(5)),
+                },
+                span: None,
+            },
+        ]);
+
+        let result = interp.evaluate_expression(&block, None).unwrap();
+        assert_eq!(result, ComptimeValue::I32(15));
+    }
+
+    #[test]
+    fn test_helper_functions_find() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // Parse a program with multiple declarations
+        let import_stmt = Statement::DestructuringImport {
+            names: vec!["meta".to_string()],
+            source: Expression::StdReference,
+            span: None,
+        };
+        interp.execute_statement(&import_stmt).unwrap();
+
+        let meta_val = interp.env.get("meta").unwrap();
+        let ast_node = interp
+            .evaluate_method_call(
+                meta_val,
+                "parse",
+                &[Expression::String(
+                    "add = (a: i32, b: i32) i32 { return a + b }\nsub = (a: i32, b: i32) i32 { return a - b }"
+                        .to_string(),
+                )],
+                None,
+            )
+            .unwrap();
+
+        // Test functions() - should return 2 functions
+        let funcs = interp
+            .evaluate_method_call(ast_node.clone(), "functions", &[], None)
+            .unwrap();
+        if let ComptimeValue::Array(items) = &funcs {
+            assert_eq!(items.len(), 2);
+        } else {
+            panic!("Expected array from functions()");
+        }
+
+        // Test find_function("sub") - should find it
+        let sub_fn = interp
+            .evaluate_method_call(
+                ast_node.clone(),
+                "find_function",
+                &[Expression::String("sub".to_string())],
+                None,
+            )
+            .unwrap();
+        assert!(!matches!(sub_fn, ComptimeValue::Null));
+
+        // Test find_function("nonexistent") - should return Null
+        let none_fn = interp
+            .evaluate_method_call(
+                ast_node,
+                "find_function",
+                &[Expression::String("nonexistent".to_string())],
+                None,
+            )
+            .unwrap();
+        assert!(matches!(none_fn, ComptimeValue::Null));
     }
 }
