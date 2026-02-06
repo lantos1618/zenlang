@@ -1,0 +1,64 @@
+// Error Handling in Zen
+// Zen uses Result<T, E> and Option<T> with pattern matching
+// No exceptions, no null - explicit error handling everywhere
+
+{ io } = @std
+
+// A function that can fail
+divide = (a: f64, b: f64) Result<f64, StringLiteral> {
+    b == 0.0 ?
+        | true { return .Err("division by zero") }
+        | false { return .Ok(a / b) }
+}
+
+// A function that might not have a value
+find_first_positive = (values: [i32; 5]) Option<i32> {
+    i ::= 0
+    loop i < 5 {
+        values[i] > 0 ?
+            | true { return .Some(values[i]) }
+        i = i + 1
+    }
+    return .None
+}
+
+// Using .raise() for early error propagation
+// If divide returns Err, calculate_ratio returns that Err immediately
+calculate_ratio = (a: f64, b: f64, c: f64) Result<f64, StringLiteral> {
+    first = divide(a, b).raise()
+    second = divide(first, c).raise()
+    return .Ok(second)
+}
+
+main = () i32 {
+    // Pattern matching on Result
+    result = divide(10.0, 3.0)
+    result ?
+        | .Ok(val) { io.println("10 / 3 = ${val}") }
+        | .Err(msg) { io.println("Error: ${msg}") }
+
+    // Error case
+    bad_result = divide(5.0, 0.0)
+    bad_result ?
+        | .Ok(val) { io.println("Should not reach: ${val}") }
+        | .Err(msg) { io.println("Caught: ${msg}") }
+
+    // Pattern matching on Option
+    numbers = [3, -1, 7, -5, 2]
+    find_first_positive(numbers) ?
+        | .Some(n) { io.println("First positive: ${n}") }
+        | .None { io.println("No positive numbers found") }
+
+    empty_numbers = [-3, -1, -7, -5, -2]
+    find_first_positive(empty_numbers) ?
+        | .Some(n) { io.println("First positive: ${n}") }
+        | .None { io.println("No positive numbers found") }
+
+    // Error propagation with .raise()
+    ratio_result = calculate_ratio(100.0, 5.0, 2.0)
+    ratio_result ?
+        | .Ok(val) { io.println("Ratio: ${val}") }
+        | .Err(msg) { io.println("Ratio error: ${msg}") }
+
+    return 0
+}

@@ -335,11 +335,55 @@ fn execute_zen_code(compiler: &mut Compiler, source: &str) -> Result<Option<Stri
         return Ok(None);
     }
 
-    // Compile the program using LLVM backend
-    let llvm_ir = compiler.compile_llvm(&program)?;
+    // If DEBUG_LLVM is set, print the IR instead of executing
+    if std::env::var("DEBUG_LLVM").is_ok() {
+        let llvm_ir = compiler.compile_llvm(&program)?;
+        return Ok(Some(llvm_ir));
+    }
 
-    // Return just the LLVM IR
-    Ok(Some(llvm_ir))
+    // Compile and execute via JIT
+    let module = compiler.get_module(&program)?;
+
+    let execution_engine = module
+        .create_jit_execution_engine(OptimizationLevel::None)
+        .map_err(|e| {
+            CompileError::InternalError(format!("Failed to create execution engine: {}", e), None)
+        })?;
+
+    // Map __c_lib_mkdir if needed
+    if let Some(mkdir_fn) = module.get_function("__c_lib_mkdir") {
+        let mkdir_ptr = libc::mkdir as *const ();
+        execution_engine.add_global_mapping(&mkdir_fn, mkdir_ptr as usize);
+    }
+
+    // Look for main function and execute it
+    match execution_engine.get_function_value("main") {
+        Ok(main_fn) => {
+            let main_type = main_fn.get_type();
+            let return_type = main_type.get_return_type();
+
+            if let Some(ret_type) = return_type {
+                if ret_type.is_int_type() {
+                    let result = unsafe { execution_engine.run_function(main_fn, &[]) };
+                    let exit_code = result.as_int(true) as i32;
+                    drop(execution_engine);
+                    if exit_code != 0 {
+                        return Ok(Some(format!("Exit code: {}", exit_code)));
+                    }
+                    return Ok(None);
+                }
+            }
+
+            // void or other return type - just run it
+            unsafe { execution_engine.run_function(main_fn, &[]) };
+            drop(execution_engine);
+            Ok(None)
+        }
+        Err(_) => {
+            drop(execution_engine);
+            Ok(Some("(no main function found)".to_string()))
+        }
+    }
 }
 
 fn print_repl_help() {

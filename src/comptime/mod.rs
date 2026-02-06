@@ -1,11 +1,25 @@
 // Compile-time execution framework for Zen
 // This module provides an interpreter that executes Zen code during compilation
 
-use crate::ast::{self, AstType, Declaration, Expression, Statement};
+use crate::ast::{self, AstType, Declaration, Expression, Pattern, Statement};
 use crate::error::{CompileError, Result};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+
+pub mod meta;
+
+// AST node wrapper for compile-time introspection.
+// This enables Zen programs to walk and inspect the AST via meta.type_info().
+#[derive(Debug, Clone)]
+pub enum ASTNodeValue {
+    Expression(Expression),
+    Statement(Statement),
+    Declaration(Declaration),
+    Type(AstType),
+    Pattern(Pattern),
+    Program(ast::Program),
+}
 
 // Value types that can exist at compile time
 #[derive(Debug, Clone)]
@@ -43,6 +57,9 @@ pub enum ComptimeValue {
         closure: Environment,
     },
 
+    // AST node (for meta-programming / AST walking from Zen code)
+    ASTNode(Rc<ASTNodeValue>),
+
     // Special values
     Void,
     Null,
@@ -69,6 +86,16 @@ impl ComptimeValue {
                     None,
                 ))
             }
+            ComptimeValue::ASTNode(node) => match node.as_ref() {
+                ASTNodeValue::Expression(e) => Ok(e.clone()),
+                other => Err(CompileError::ComptimeError(
+                    format!(
+                        "Cannot convert {:?} AST node to runtime expression",
+                        std::mem::discriminant(other)
+                    ),
+                    None,
+                )),
+            },
             _ => Err(CompileError::ComptimeError(
                 format!("Cannot convert {:?} to expression", self),
                 None,
@@ -116,6 +143,23 @@ impl ComptimeValue {
                 AstType::Generic {
                     name: "Function".to_string(),
                     type_args: vec![],
+                }
+            }
+            ComptimeValue::ASTNode(node) => {
+                let variant = match node.as_ref() {
+                    ASTNodeValue::Expression(_) => "Expression",
+                    ASTNodeValue::Statement(_) => "Statement",
+                    ASTNodeValue::Declaration(_) => "Declaration",
+                    ASTNodeValue::Type(_) => "Type",
+                    ASTNodeValue::Pattern(_) => "Pattern",
+                    ASTNodeValue::Program(_) => "Program",
+                };
+                AstType::Generic {
+                    name: "ASTNode".to_string(),
+                    type_args: vec![AstType::Struct {
+                        name: variant.to_string(),
+                        fields: vec![],
+                    }],
                 }
             }
         }
