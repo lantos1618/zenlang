@@ -84,6 +84,46 @@ fn extract_call_result<'ctx>(
     })
 }
 
+/// Safely convert a BasicValueEnum to PointerValue with descriptive error
+fn as_ptr<'ctx>(
+    val: BasicValueEnum<'ctx>,
+    context: &str,
+    compiler: &LLVMCompiler<'ctx>,
+) -> Result<PointerValue<'ctx>, CompileError> {
+    if val.is_pointer_value() {
+        Ok(val.into_pointer_value())
+    } else {
+        Err(CompileError::TypeError(
+            format!(
+                "Expected pointer value for {}, got {:?}",
+                context,
+                val.get_type()
+            ),
+            compiler.get_current_span(),
+        ))
+    }
+}
+
+/// Safely convert a BasicValueEnum to IntValue with descriptive error
+fn as_int<'ctx>(
+    val: BasicValueEnum<'ctx>,
+    context: &str,
+    compiler: &LLVMCompiler<'ctx>,
+) -> Result<IntValue<'ctx>, CompileError> {
+    if val.is_int_value() {
+        Ok(val.into_int_value())
+    } else {
+        Err(CompileError::TypeError(
+            format!(
+                "Expected integer value for {}, got {:?}",
+                context,
+                val.get_type()
+            ),
+            compiler.get_current_span(),
+        ))
+    }
+}
+
 /// Get or declare a libc function
 fn get_or_declare_fn<'ctx>(
     compiler: &mut LLVMCompiler<'ctx>,
@@ -249,7 +289,11 @@ pub fn compile_raw_ptr_offset<'ctx>(
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 2, "raw_ptr_offset", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "raw_ptr_offset arg 0",
+        compiler,
+    )?;
     let offset_val = compiler.compile_expression(&args[1])?;
     let offset = to_i64(compiler, offset_val, true)?;
     let result = unsafe {
@@ -280,7 +324,11 @@ pub fn compile_is_null<'ctx>(
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, "is_null", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "is_null arg 0",
+        compiler,
+    )?;
     let null = ptr_type(compiler).const_null();
     Ok(compiler
         .builder
@@ -293,7 +341,11 @@ pub fn compile_ptr_to_int<'ctx>(
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, "ptr_to_int", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "ptr_to_int arg 0",
+        compiler,
+    )?;
     Ok(compiler
         .builder
         .build_ptr_to_int(ptr, compiler.ptr_sized_int_type(), "p2i")?
@@ -305,7 +357,11 @@ pub fn compile_int_to_ptr<'ctx>(
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, "int_to_ptr", compiler.get_current_span())?;
-    let addr = compiler.compile_expression(&args[0])?.into_int_value();
+    let addr = as_int(
+        compiler.compile_expression(&args[0])?,
+        "int_to_ptr arg 0",
+        compiler,
+    )?;
     Ok(compiler
         .builder
         .build_int_to_ptr(addr, ptr_type(compiler), "i2p")?
@@ -395,7 +451,11 @@ pub fn compile_discriminant<'ctx>(
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, "discriminant", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "discriminant arg 0",
+        compiler,
+    )?;
     Ok(compiler
         .builder
         .build_load(compiler.context.i32_type(), ptr, "disc")?)
@@ -406,7 +466,11 @@ pub fn compile_set_discriminant<'ctx>(
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 2, "set_discriminant", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "set_discriminant arg 0",
+        compiler,
+    )?;
     let disc = compiler.compile_expression(&args[1])?;
     compiler.builder.build_store(ptr, disc)?;
     Ok(compiler.context.i32_type().const_zero().into())
@@ -417,7 +481,11 @@ pub fn compile_get_payload<'ctx>(
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, "get_payload", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "get_payload arg 0",
+        compiler,
+    )?;
     // Payload after 4-byte discriminant
     let offset = compiler.context.i32_type().const_int(4, false);
     let payload = unsafe {
@@ -448,7 +516,11 @@ pub fn compile_gep<'ctx>(
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 2, "gep", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "gep arg 0",
+        compiler,
+    )?;
     let offset_val = compiler.compile_expression(&args[1])?;
     let offset = to_i64(compiler, offset_val, true)?;
     let result = unsafe {
@@ -464,8 +536,16 @@ pub fn compile_gep_struct<'ctx>(
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 2, "gep_struct", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
-    let idx = compiler.compile_expression(&args[1])?.into_int_value();
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "gep_struct arg 0",
+        compiler,
+    )?;
+    let idx = as_int(
+        compiler.compile_expression(&args[1])?,
+        "gep_struct arg 1",
+        compiler,
+    )?;
     // Approximate: field_index * 8 bytes
     let idx_i32 = to_int_width(compiler, idx, compiler.context.i32_type(), false)?;
     let offset = compiler.builder.build_int_mul(
@@ -488,7 +568,11 @@ pub fn compile_load<'ctx>(
     type_arg: Option<&AstType>,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, "load", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "load arg 0",
+        compiler,
+    )?;
     let load_type = match type_arg {
         Some(ty) => compiler.to_llvm_type(ty)?,
         None => Type::Basic(compiler.context.i32_type().into()),
@@ -511,7 +595,11 @@ pub fn compile_store<'ctx>(
     _type_arg: Option<&AstType>,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 2, "store", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?.into_pointer_value();
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "store arg 0",
+        compiler,
+    )?;
     let val = compiler.compile_expression(&args[1])?;
     compiler.builder.build_store(ptr, val)?;
     Ok(compiler.context.i32_type().const_zero().into())
@@ -559,7 +647,11 @@ pub fn compile_memset<'ctx>(
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 3, "memset", compiler.get_current_span())?;
     let dest = compiler.compile_expression(&args[0])?;
-    let val_expr = compiler.compile_expression(&args[1])?.into_int_value();
+    let val_expr = as_int(
+        compiler.compile_expression(&args[1])?,
+        "memset arg 1",
+        compiler,
+    )?;
     let val = to_int_width(compiler, val_expr, compiler.context.i8_type(), false)?;
     let size_val = compiler.compile_expression(&args[2])?;
     let size = to_i64(compiler, size_val, false)?;
@@ -665,7 +757,11 @@ fn compile_bswap<'ctx>(
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     let span = compiler.get_current_span();
     require_args(args, 1, &format!("bswap{}", bits), span.clone())?;
-    let val = compiler.compile_expression(&args[0])?.into_int_value();
+    let val = as_int(
+        compiler.compile_expression(&args[0])?,
+        &format!("bswap{} arg 0", bits),
+        compiler,
+    )?;
     let target_type = match bits {
         16 => compiler.context.i16_type(),
         32 => compiler.context.i32_type(),
@@ -709,7 +805,11 @@ fn compile_bit_count<'ctx>(
     has_zero_poison: bool,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 1, intrinsic_name, compiler.get_current_span())?;
-    let val = compiler.compile_expression(&args[0])?.into_int_value();
+    let val = as_int(
+        compiler.compile_expression(&args[0])?,
+        intrinsic_name,
+        compiler,
+    )?;
     let val_i64 = to_int_width(compiler, val, compiler.context.i64_type(), false)?;
     let extra = if has_zero_poison {
         vec![compiler.context.bool_type().const_zero().into()]
@@ -922,12 +1022,12 @@ pub fn compile_inline_c<'ctx>(
 }
 
 pub fn compile_call_external<'ctx>(
-    _compiler: &mut LLVMCompiler<'ctx>,
+    compiler: &mut LLVMCompiler<'ctx>,
     _args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     Err(CompileError::InternalError(
         "call_external not implemented - use inline_c to define C functions, then call them directly".to_string(),
-        None,
+        compiler.get_current_span(),
     ))
 }
 

@@ -66,8 +66,10 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
 
                 // Skip past the generic type: Vec<T> or Vec<T, U, ...>
                 parser.next_token(); // consume '<'
-                let mut depth = 1;
-                while depth > 0 && parser.current_token != Token::Eof {
+                let mut depth: i32 = 1;
+                let mut iterations = 0;
+                while depth > 0 && parser.current_token != Token::Eof && iterations < 1000 {
+                    iterations += 1;
                     if parser.current_token == Token::Operator("<".to_string()) {
                         depth += 1;
                     } else if parser.current_token == Token::Operator(">".to_string()) {
@@ -592,7 +594,8 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
                     // Also check for closing paren immediately - single identifier in parens is an expression
                     || matches!(&parser.peek_token, Token::Symbol(')'))
                     // And check if the name itself suggests it's a value (lowercase first char)
-                    || name.chars().next().map(|c| c.is_lowercase()).unwrap_or(false)
+                    // Token::Identifier is guaranteed non-empty by the lexer
+                    || name.chars().next().is_some_and(|c| c.is_lowercase())
             } else {
                 // Non-identifier tokens like numbers, strings, etc. are definitely expressions
                 !matches!(&parser.current_token, Token::Symbol(')'))
@@ -767,9 +770,9 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
 
                             // Lowercase identifiers that aren't primitive types are likely variables (values)
                             Token::Identifier(id) => {
-                                let first_char = id.chars().next().unwrap_or('a');
-                                // Use centralized primitive definitions
-                                first_char.is_lowercase() && !primitives::is_primitive_name(id)
+                                // Token::Identifier is guaranteed non-empty by the lexer
+                                id.chars().next().is_some_and(|c| c.is_lowercase())
+                                    && !primitives::is_primitive_name(id)
                             }
 
                             // Array literal suggests value context

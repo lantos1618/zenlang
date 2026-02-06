@@ -47,7 +47,7 @@ pub fn infer_binary_op_type(
             } else {
                 Err(CompileError::TypeError(
                     format!(
-                        "Cannot apply {:?} to types {:?} and {:?}",
+                        "Cannot apply {} to {} and {}: arithmetic operators require numeric types (i8, i16, i32, i64, u8, u16, u32, u64, f32, f64)",
                         op, left_type, right_type
                     ),
                     checker.get_current_span(),
@@ -65,7 +65,10 @@ pub fn infer_binary_op_type(
                 Ok(AstType::Bool)
             } else {
                 Err(CompileError::TypeError(
-                    format!("Cannot compare types {:?} and {:?}", left_type, right_type),
+                    format!(
+                        "Cannot compare {} with {}: comparison requires compatible types (same type, both numeric, or both pointers)",
+                        left_type, right_type
+                    ),
                     checker.get_current_span(),
                 ))
             }
@@ -77,7 +80,7 @@ pub fn infer_binary_op_type(
             } else {
                 Err(CompileError::TypeError(
                     format!(
-                        "Logical operators require boolean operands, got {:?} and {:?}",
+                        "Logical operators (and, or) require boolean operands, got {} and {}",
                         left_type, right_type
                     ),
                     checker.get_current_span(),
@@ -92,7 +95,7 @@ pub fn infer_binary_op_type(
             } else {
                 Err(CompileError::TypeError(
                     format!(
-                        "String concatenation requires string operands, got {:?} and {:?}",
+                        "String concatenation (++) requires string operands, got {} and {}. Tip: use cast() to convert numbers to strings",
                         left_type, right_type
                     ),
                     checker.get_current_span(),
@@ -110,7 +113,7 @@ pub fn infer_binary_op_type(
             } else {
                 Err(CompileError::TypeError(
                     format!(
-                        "Bitwise operators require integer operands, got {:?} and {:?}",
+                        "Bitwise operators (&, |, ^, <<, >>) require integer operands, got {} and {}",
                         left_type, right_type
                     ),
                     checker.get_current_span(),
@@ -184,7 +187,10 @@ pub fn promote_numeric_types(
         }
     } else {
         Err(CompileError::TypeError(
-            format!("Cannot promote types {:?} and {:?}", left, right),
+            format!(
+                "Cannot promote types {} and {}: type promotion requires both operands to be numeric",
+                left, right
+            ),
             span,
         ))
     }

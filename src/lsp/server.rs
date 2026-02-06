@@ -37,7 +37,9 @@ use super::types::{AnalysisJob, AnalysisResult};
 use super::utils::tokenize_with_lines;
 use crate::lexer::Token;
 
-/// Convert LSP position (line, character) to byte offset in content
+/// Convert LSP position (line, character) to byte offset in content.
+/// LSP positions use UTF-16 code units for the character offset,
+/// so we count UTF-16 lengths to handle multi-byte characters correctly.
 fn position_to_byte_offset(content: &str, target_line: usize, target_char: usize) -> usize {
     let mut current_line = 0;
     let mut current_char = 0;
@@ -47,10 +49,14 @@ fn position_to_byte_offset(content: &str, target_line: usize, target_char: usize
             return byte_idx;
         }
         if ch == '\n' {
+            if current_line == target_line {
+                // Target character is past end of line; return end of this line
+                return byte_idx;
+            }
             current_line += 1;
             current_char = 0;
         } else {
-            current_char += 1;
+            current_char += ch.len_utf16();
         }
     }
 
@@ -171,10 +177,10 @@ fn extract_error_info(error: &CompileError) -> (Option<Span>, DiagnosticSeverity
         ),
         // Errors without spans
         FileNotFound(_, _) => (None, DiagnosticSeverity::ERROR, "file-not-found"),
-        ComptimeError(_) => (None, DiagnosticSeverity::ERROR, "comptime-error"),
-        BuildError(_) => (None, DiagnosticSeverity::ERROR, "build-error"),
-        FileError(_) => (None, DiagnosticSeverity::ERROR, "file-error"),
-        CyclicDependency(_) => (None, DiagnosticSeverity::ERROR, "cyclic-dependency"),
+        ComptimeError(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "comptime-error"),
+        BuildError(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "build-error"),
+        FileError(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "file-error"),
+        CyclicDependency(_, span) => (span.clone(), DiagnosticSeverity::ERROR, "cyclic-dependency"),
     }
 }
 
@@ -584,9 +590,20 @@ impl ZenLanguageServer {
             s.set_analysis_sender(analysis_tx);
         }
 
-        // Spawn background analysis worker
+        // Spawn background analysis worker with panic protection
         let _analysis_thread = thread::spawn(move || {
-            Self::background_analysis_worker(analysis_rx, result_tx);
+            if let Err(e) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                Self::background_analysis_worker(analysis_rx, result_tx);
+            })) {
+                let msg = if let Some(s) = e.downcast_ref::<&str>() {
+                    s.to_string()
+                } else if let Some(s) = e.downcast_ref::<String>() {
+                    s.clone()
+                } else {
+                    "unknown panic".to_string()
+                };
+                log::error!("[LSP] Background analysis worker panicked: {}", msg);
+            }
         });
 
         // Zen LSP initialized with enhanced capabilities
@@ -764,7 +781,13 @@ impl ZenLanguageServer {
     fn handle_notification(&self, notif: ServerNotification) -> Result<(), Box<dyn Error>> {
         match notif.method.as_str() {
             "textDocument/didOpen" => {
-                let params: DidOpenTextDocumentParams = serde_json::from_value(notif.params)?;
+                let params: DidOpenTextDocumentParams = match serde_json::from_value(notif.params) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        log::error!("[LSP] Failed to parse didOpen params: {}", e);
+                        return Ok(());
+                    }
+                };
                 let diagnostics = match self.store.lock() {
                     Ok(mut s) => s.open(
                         params.text_document.uri.clone(),
@@ -779,7 +802,14 @@ impl ZenLanguageServer {
                 self.request_semantic_tokens_refresh()?;
             }
             "textDocument/didChange" => {
-                let params: DidChangeTextDocumentParams = serde_json::from_value(notif.params)?;
+                let params: DidChangeTextDocumentParams = match serde_json::from_value(notif.params)
+                {
+                    Ok(p) => p,
+                    Err(e) => {
+                        log::error!("[LSP] Failed to parse didChange params: {}", e);
+                        return Ok(());
+                    }
+                };
 
                 // Handle all content changes (LSP spec allows array)
                 // IMPORTANT: Changes must be applied sequentially, each to the updated document state

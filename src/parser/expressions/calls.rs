@@ -25,21 +25,20 @@ pub fn parse_call_expression_with_type_args(
 /// Legacy version - type_args may be embedded in function_name as a string
 pub fn parse_call_expression(parser: &mut Parser, function_name: String) -> Result<Expression> {
     // Extract type args from name if embedded (e.g., "foo<i32>" -> "foo", [I32])
-    let (base_name, type_args) = extract_type_args_from_name(&function_name);
+    let (base_name, type_args) = extract_type_args_from_name(&function_name)?;
     parse_call_expression_with_type_args(parser, base_name, type_args)
 }
 
 /// Extract type args embedded in a name string like "HashMap<i32, String>"
 /// Returns (base_name, type_args)
-fn extract_type_args_from_name(name: &str) -> (String, Vec<AstType>) {
+fn extract_type_args_from_name(name: &str) -> Result<(String, Vec<AstType>)> {
     if let Some(angle_pos) = name.find('<') {
         let base_name = crate::ast::strip_generic_params(name).to_string();
         let type_args_str = &name[angle_pos + 1..name.len() - 1];
-        let type_args =
-            crate::parser::parse_type_args_from_string(type_args_str).unwrap_or_default();
-        (base_name, type_args)
+        let type_args = crate::parser::parse_type_args_from_string(type_args_str)?;
+        Ok((base_name, type_args))
     } else {
-        (name.to_string(), vec![])
+        Ok((name.to_string(), vec![]))
     }
 }
 
@@ -67,10 +66,10 @@ pub fn parse_call_expression_with_object(
     parser.next_token(); // consume ')'
 
     // Extract type args if embedded in method name (e.g., "new<i32>")
-    let (base_method, type_args) = extract_type_args_from_name(&method_name);
+    let (base_method, type_args) = extract_type_args_from_name(&method_name)?;
 
     let expr = if is_builtin_syntax {
-        build_builtin_call(&object, &base_method, arguments, type_args)
+        build_builtin_call(&object, &base_method, arguments, type_args)?
     } else {
         Expression::MethodCall {
             object: Box::new(object),
@@ -195,36 +194,42 @@ fn build_builtin_call(
     method_name: &str,
     args: Vec<Expression>,
     type_args: Vec<AstType>,
-) -> Expression {
+) -> Result<Expression> {
     match object {
         Expression::MemberAccess {
             object: base,
             member,
         } => match base.as_ref() {
-            Expression::StdReference => Expression::FunctionCall {
+            Expression::StdReference => Ok(Expression::FunctionCall {
                 name: format!("{}.{}", member, method_name),
                 type_args,
                 args,
-            },
-            Expression::BuiltinReference => Expression::FunctionCall {
+            }),
+            Expression::BuiltinReference => Ok(Expression::FunctionCall {
                 name: format!("builtin.{}.{}", member, method_name),
                 type_args,
                 args,
-            },
-            other => panic!(
-                "Parser bug: build_builtin_call received unexpected base expression: {:?}",
-                other
-            ),
+            }),
+            other => Err(crate::error::CompileError::InternalError(
+                format!(
+                    "Parser bug: build_builtin_call received unexpected base expression: {:?}",
+                    other
+                ),
+                None,
+            )),
         },
-        Expression::BuiltinReference => Expression::FunctionCall {
+        Expression::BuiltinReference => Ok(Expression::FunctionCall {
             name: format!("builtin.{}", method_name),
             type_args,
             args,
-        },
-        other => panic!(
-            "Parser bug: build_builtin_call received unexpected object expression: {:?}",
-            other
-        ),
+        }),
+        other => Err(crate::error::CompileError::InternalError(
+            format!(
+                "Parser bug: build_builtin_call received unexpected object expression: {:?}",
+                other
+            ),
+            None,
+        )),
     }
 }
 

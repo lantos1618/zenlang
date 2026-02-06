@@ -21,8 +21,14 @@ pub fn infer_member_type(
                         return Ok(field_type.clone());
                     }
                 }
+                let available_fields: Vec<String> = struct_info.fields.iter().map(|(n, _)| n.clone()).collect();
+                let suggestion = if available_fields.is_empty() {
+                    String::new()
+                } else {
+                    format!(". Available fields: {}", available_fields.join(", "))
+                };
                 Err(CompileError::TypeError(
-                    format!("Struct '{}' has no field '{}'", name, member),
+                    format!("Struct '{}' has no field '{}'{}", name, member, suggestion),
                     span,
                 ))
             } else {
@@ -39,7 +45,7 @@ pub fn infer_member_type(
                 infer_member_type(inner, member, structs, enums, span)
             } else {
                 Err(CompileError::TypeError(
-                    format!("Type '{}' is not a struct", t),
+                    format!("Cannot access member '{}' on type {}: pointer does not point to a struct", member, t),
                     span,
                 ))
             }
@@ -53,8 +59,14 @@ pub fn infer_member_type(
                         return Ok(field_type.clone());
                     }
                 }
+                let available_fields: Vec<String> = struct_info.fields.iter().map(|(n, _)| n.clone()).collect();
+                let suggestion = if available_fields.is_empty() {
+                    String::new()
+                } else {
+                    format!(". Available fields: {}", available_fields.join(", "))
+                };
                 Err(CompileError::TypeError(
-                    format!("Struct '{}' has no field '{}'", name, member),
+                    format!("Struct '{}' has no field '{}'{}", name, member, suggestion),
                     span,
                 ))
             } else {
@@ -85,8 +97,14 @@ pub fn infer_member_type(
                         });
                     }
                 }
+                let available_variants: Vec<String> = enum_info.variants.iter().map(|(n, _)| n.clone()).collect();
+                let suggestion = if available_variants.is_empty() {
+                    String::new()
+                } else {
+                    format!(". Available variants: {}", available_variants.join(", "))
+                };
                 Err(CompileError::TypeError(
-                    format!("Enum '{}' has no variant '{}'", name, member),
+                    format!("Enum '{}' has no variant '{}'{}", name, member, suggestion),
                     span,
                 ))
             } else {
@@ -117,7 +135,7 @@ pub fn infer_member_type(
         }
         _ => Err(CompileError::TypeError(
             format!(
-                "Cannot access member '{}' on type {:?}",
+                "Cannot access member '{}' on type {}: member access requires a struct, enum, or pointer type",
                 member, object_type
             ),
             span,
@@ -158,13 +176,13 @@ pub fn infer_struct_field_type(
                         span,
                     ),
                     _ => Err(CompileError::TypeError(
-                        format!("Cannot access field '{}' on non-struct pointer type", field),
+                        format!("Cannot access field '{}' on pointer to {}: field access requires a pointer to a struct", field, inner),
                         span,
                     )),
                 }
             } else {
                 Err(CompileError::TypeError(
-                    format!("Cannot access field '{}' on type {:?}", field, struct_type),
+                    format!("Cannot access field '{}' on type {}: invalid pointer type", field, struct_type),
                     span,
                 ))
             }
@@ -173,7 +191,7 @@ pub fn infer_struct_field_type(
             infer_member_type(struct_type, field, structs, enums, span)
         }
         _ => Err(CompileError::TypeError(
-            format!("Cannot access field '{}' on type {:?}", field, struct_type),
+            format!("Cannot access field '{}' on type {}: field access requires a struct or pointer to a struct", field, struct_type),
             span,
         )),
     }

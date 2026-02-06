@@ -2,6 +2,7 @@
 
 use super::patterns::Pattern;
 use super::types::AstType;
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BinaryOperator {
@@ -26,6 +27,32 @@ pub enum BinaryOperator {
     BitwiseXor,
     ShiftLeft,
     ShiftRight,
+}
+
+impl fmt::Display for BinaryOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BinaryOperator::Add => write!(f, "+"),
+            BinaryOperator::Subtract => write!(f, "-"),
+            BinaryOperator::Multiply => write!(f, "*"),
+            BinaryOperator::Divide => write!(f, "/"),
+            BinaryOperator::Modulo => write!(f, "%"),
+            BinaryOperator::Equals => write!(f, "=="),
+            BinaryOperator::NotEquals => write!(f, "!="),
+            BinaryOperator::LessThan => write!(f, "<"),
+            BinaryOperator::GreaterThan => write!(f, ">"),
+            BinaryOperator::LessThanEquals => write!(f, "<="),
+            BinaryOperator::GreaterThanEquals => write!(f, ">="),
+            BinaryOperator::And => write!(f, "and"),
+            BinaryOperator::Or => write!(f, "or"),
+            BinaryOperator::StringConcat => write!(f, "++"),
+            BinaryOperator::BitwiseAnd => write!(f, "&"),
+            BinaryOperator::BitwiseOr => write!(f, "|"),
+            BinaryOperator::BitwiseXor => write!(f, "^"),
+            BinaryOperator::ShiftLeft => write!(f, "<<"),
+            BinaryOperator::ShiftRight => write!(f, ">>"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

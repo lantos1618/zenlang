@@ -205,12 +205,22 @@ pub fn compile_error_to_diagnostic_with_content(
         CompileError::FileNotFound(_, _) => {
             (None, DiagnosticSeverity::ERROR, Some("file-not-found"))
         }
-        CompileError::ComptimeError(_) => (None, DiagnosticSeverity::ERROR, Some("comptime-error")),
-        CompileError::BuildError(_) => (None, DiagnosticSeverity::ERROR, Some("build-error")),
-        CompileError::FileError(_) => (None, DiagnosticSeverity::ERROR, Some("file-error")),
-        CompileError::CyclicDependency(_) => {
-            (None, DiagnosticSeverity::ERROR, Some("cyclic-dependency"))
+        CompileError::ComptimeError(_, span) => (
+            span.clone(),
+            DiagnosticSeverity::ERROR,
+            Some("comptime-error"),
+        ),
+        CompileError::BuildError(_, span) => {
+            (span.clone(), DiagnosticSeverity::ERROR, Some("build-error"))
         }
+        CompileError::FileError(_, span) => {
+            (span.clone(), DiagnosticSeverity::ERROR, Some("file-error"))
+        }
+        CompileError::CyclicDependency(_, span) => (
+            span.clone(),
+            DiagnosticSeverity::ERROR,
+            Some("cyclic-dependency"),
+        ),
     };
 
     // Convert span to LSP range, or try to infer from error message and content

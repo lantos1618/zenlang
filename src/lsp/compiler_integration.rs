@@ -6,7 +6,7 @@
 
 use crate::ast::primitives;
 use crate::ast::{AstType, Declaration, Program};
-use crate::error::Result;
+use crate::error::{CompileError, Result};
 use crate::lexer::Lexer;
 use crate::lsp::type_inference::get_base_type_name;
 use crate::lsp::utils::format_type;
@@ -270,7 +270,11 @@ impl CompilerIntegration {
                     }
                 }
 
-                Ok(AstType::Void)
+                // No heuristic matched — return error instead of silent Void
+                Err(CompileError::TypeError(
+                    format!("Could not infer type for expression: {}", s),
+                    None,
+                ))
             }
         }
     }

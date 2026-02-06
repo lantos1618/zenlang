@@ -32,7 +32,7 @@ pub enum CompileError {
     #[allow(dead_code)]
     ParseError(String, Option<Span>),
     #[allow(dead_code)]
-    ComptimeError(String),
+    ComptimeError(String, Option<Span>),
     // Enhanced error types for better LSP diagnostics
     #[allow(dead_code)]
     UnexpectedToken {
@@ -61,11 +61,11 @@ pub enum CompileError {
         duplicate_location: Option<Span>,
     },
     #[allow(dead_code)]
-    BuildError(String),
+    BuildError(String, Option<Span>),
     #[allow(dead_code)]
-    FileError(String),
+    FileError(String, Option<Span>),
     #[allow(dead_code)]
-    CyclicDependency(String),
+    CyclicDependency(String, Option<Span>),
 }
 
 impl From<BuilderError> for CompileError {
@@ -169,6 +169,10 @@ impl CompileError {
             CompileError::DuplicateDeclaration {
                 duplicate_location, ..
             } => duplicate_location.as_ref(),
+            CompileError::ComptimeError(_, span) => span.as_ref(),
+            CompileError::BuildError(_, span) => span.as_ref(),
+            CompileError::FileError(_, span) => span.as_ref(),
+            CompileError::CyclicDependency(_, span) => span.as_ref(),
             _ => None,
         }
     }
@@ -191,7 +195,7 @@ impl CompileError {
             CompileError::TypeError(msg, _) => msg.clone(),
             CompileError::FileNotFound(file, _) => format!("File not found: {}", file),
             CompileError::ParseError(msg, _) => format!("Parse error: {}", msg),
-            CompileError::ComptimeError(msg) => format!("Comptime error: {}", msg),
+            CompileError::ComptimeError(msg, _) => format!("Comptime error: {}", msg),
             CompileError::UnexpectedToken {
                 expected, found, ..
             } => {
@@ -213,9 +217,9 @@ impl CompileError {
             CompileError::DuplicateDeclaration { name, .. } => {
                 format!("Duplicate declaration: {}", name)
             }
-            CompileError::BuildError(msg) => format!("Build error: {}", msg),
-            CompileError::FileError(msg) => format!("File error: {}", msg),
-            CompileError::CyclicDependency(msg) => format!("Cyclic dependency: {}", msg),
+            CompileError::BuildError(msg, _) => format!("Build error: {}", msg),
+            CompileError::FileError(msg, _) => format!("File error: {}", msg),
+            CompileError::CyclicDependency(msg, _) => format!("Cyclic dependency: {}", msg),
         }
     }
 }
@@ -316,7 +320,14 @@ impl fmt::Display for CompileError {
                     .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
                     .unwrap_or_default()
             ),
-            CompileError::ComptimeError(msg) => write!(f, "Compile-time error: {}", msg),
+            CompileError::ComptimeError(msg, span) => write!(
+                f,
+                "Compile-time error: {}{}",
+                msg,
+                span.as_ref()
+                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
+                    .unwrap_or_default()
+            ),
             CompileError::UnexpectedToken {
                 expected,
                 found,
@@ -406,11 +417,30 @@ impl fmt::Display for CompileError {
                 }
                 Ok(())
             }
-            CompileError::BuildError(msg) => write!(f, "Build error: {}", msg),
-            CompileError::FileError(msg) => write!(f, "File error: {}", msg),
-            CompileError::CyclicDependency(module) => {
-                write!(f, "Cyclic dependency detected: {}", module)
-            }
+            CompileError::BuildError(msg, span) => write!(
+                f,
+                "Build error: {}{}",
+                msg,
+                span.as_ref()
+                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
+                    .unwrap_or_default()
+            ),
+            CompileError::FileError(msg, span) => write!(
+                f,
+                "File error: {}{}",
+                msg,
+                span.as_ref()
+                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
+                    .unwrap_or_default()
+            ),
+            CompileError::CyclicDependency(module, span) => write!(
+                f,
+                "Cyclic dependency detected: {}{}",
+                module,
+                span.as_ref()
+                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
+                    .unwrap_or_default()
+            ),
         }
     }
 }
@@ -439,11 +469,11 @@ impl CompileError {
             CompileError::DuplicateDeclaration {
                 duplicate_location, ..
             } => duplicate_location.as_ref(),
-            CompileError::FileNotFound(_, _)
-            | CompileError::ComptimeError(_)
-            | CompileError::BuildError(_)
-            | CompileError::FileError(_)
-            | CompileError::CyclicDependency(_) => None,
+            CompileError::ComptimeError(_, span)
+            | CompileError::BuildError(_, span)
+            | CompileError::FileError(_, span)
+            | CompileError::CyclicDependency(_, span) => span.as_ref(),
+            CompileError::FileNotFound(_, _) => None,
         }
     }
 
@@ -485,8 +515,9 @@ impl CompileError {
                     let prev_line = source_lines[line_idx - 1];
                     // Find the error location marker to insert context before it
                     if let Some(marker_pos) = result.find("📍 Error Location:") {
+                        let marker_str = "📍 Error Location:";
                         result.insert_str(
-                            marker_pos + 18, // Length of "📍 Error Location:" in bytes
+                            marker_pos + marker_str.len(),
                             &format!("\n   {} | {}", span.line - 1, prev_line),
                         );
                     }
@@ -656,7 +687,7 @@ impl CompileError {
                 result.push_str("\n  2. Use implicit return (no semicolon on last expression)");
                 result.push_str("\n  3. Change return type to void if no value needed");
             }
-            CompileError::ComptimeError(msg) => {
+            CompileError::ComptimeError(msg, _) => {
                 result.push_str("\n\n💡 Comptime Requirements:");
                 result.push_str("\n  • Code must be deterministic");
                 result.push_str("\n  • No side effects allowed");

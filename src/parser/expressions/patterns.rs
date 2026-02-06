@@ -36,7 +36,14 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
         let mut found_colon_after_block = false;
 
         // Scan ahead to see if this looks like: ? { ... } :
+        // Limit iterations to prevent infinite loops on malformed input
+        let mut scan_iterations = 0;
+        const MAX_SCAN_ITERATIONS: usize = 10_000;
         loop {
+            if scan_iterations >= MAX_SCAN_ITERATIONS {
+                break;
+            }
+            scan_iterations += 1;
             match &parser.current_token {
                 Token::Symbol('{') => brace_depth += 1,
                 Token::Symbol('}') => {

@@ -22,7 +22,12 @@ pub fn infer_enum_literal_type(
         Ok(AstType::Generic {
             name: wk
                 .get_variant_parent_name(variant)
-                .expect("Some variant should have Option parent")
+                .ok_or_else(|| {
+                    crate::error::CompileError::InternalError(
+                        "Some variant missing Option parent type".to_string(),
+                        checker.get_current_span(),
+                    )
+                })?
                 .to_string(),
             type_args: vec![inner_type],
         })
@@ -30,7 +35,12 @@ pub fn infer_enum_literal_type(
         Ok(AstType::Generic {
             name: wk
                 .get_variant_parent_name(variant)
-                .expect("None variant should have Option parent")
+                .ok_or_else(|| {
+                    crate::error::CompileError::InternalError(
+                        "None variant missing Option parent type".to_string(),
+                        checker.get_current_span(),
+                    )
+                })?
                 .to_string(),
             type_args: vec![AstType::Generic {
                 name: "T".to_string(),
@@ -46,7 +56,12 @@ pub fn infer_enum_literal_type(
         Ok(AstType::Generic {
             name: wk
                 .get_variant_parent_name(variant)
-                .expect("Ok variant should have Result parent")
+                .ok_or_else(|| {
+                    crate::error::CompileError::InternalError(
+                        "Ok variant missing Result parent type".to_string(),
+                        checker.get_current_span(),
+                    )
+                })?
                 .to_string(),
             type_args: vec![ok_type, crate::ast::resolve_string_struct_type()],
         })
@@ -59,7 +74,12 @@ pub fn infer_enum_literal_type(
         Ok(AstType::Generic {
             name: wk
                 .get_variant_parent_name(variant)
-                .expect("Err variant should have Result parent")
+                .ok_or_else(|| {
+                    crate::error::CompileError::InternalError(
+                        "Err variant missing Result parent type".to_string(),
+                        checker.get_current_span(),
+                    )
+                })?
                 .to_string(),
             type_args: vec![
                 AstType::Generic {
@@ -70,6 +90,20 @@ pub fn infer_enum_literal_type(
             ],
         })
     } else {
+        // Unknown enum variant — check user-defined enums before returning Void
+        // This handles shorthand syntax like .MyVariant for user-defined enums
+        for (name, info) in &checker.enums {
+            for (var_name, _) in &info.variants {
+                if var_name == variant {
+                    return Ok(AstType::Generic {
+                        name: name.clone(),
+                        type_args: vec![],
+                    });
+                }
+            }
+        }
+        // No matching enum found — return Void as last resort for forward references
+        // that will be resolved later in the pipeline
         Ok(AstType::Void)
     }
 }

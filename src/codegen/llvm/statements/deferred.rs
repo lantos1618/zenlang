@@ -21,7 +21,7 @@ pub fn compile_defer<'ctx>(
         }
         _ => Err(CompileError::InternalError(
             "Expected Defer or ThisDefer statement".to_string(),
-            None,
+            compiler.get_current_span(),
         )),
     }
 }

@@ -384,7 +384,7 @@ pub fn compile_function_body<'ctx>(
             if current_block.get_terminator().is_none() {
                 return Err(CompileError::TypeError(
                     format!("Function '{}' must return a value", function.name),
-                    None,
+                    compiler.get_current_span(),
                 ));
             }
         }

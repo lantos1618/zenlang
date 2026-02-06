@@ -11,12 +11,17 @@ pub struct ParserState {
     pub peek_span: Span,
 }
 
+/// Maximum recursion depth for expression/statement parsing to prevent stack overflow
+const MAX_PARSE_DEPTH: usize = 256;
+
 pub struct Parser<'a> {
     pub(crate) lexer: Lexer<'a>,
     pub(crate) current_token: Token,
     pub(crate) peek_token: Token,
     pub(crate) current_span: Span,
     pub(crate) peek_span: Span,
+    /// Current recursion depth for expression parsing
+    pub(crate) parse_depth: usize,
 }
 
 impl<'a> Parser<'a> {
@@ -29,6 +34,7 @@ impl<'a> Parser<'a> {
             peek_token: peek_token_with_span.token,
             current_span: current_token_with_span.span,
             peek_span: peek_token_with_span.span,
+            parse_depth: 0,
         }
     }
 
@@ -252,6 +258,27 @@ impl<'a> Parser<'a> {
         result
     }
 
+    /// Check and increment parse depth, returning error if too deep
+    pub fn enter_recursion(&mut self) -> crate::error::Result<()> {
+        self.parse_depth += 1;
+        if self.parse_depth > MAX_PARSE_DEPTH {
+            Err(crate::error::CompileError::SyntaxError(
+                format!(
+                    "Expression nesting too deep (exceeded {} levels)",
+                    MAX_PARSE_DEPTH
+                ),
+                Some(self.current_span.clone()),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Decrement parse depth
+    pub fn exit_recursion(&mut self) {
+        self.parse_depth = self.parse_depth.saturating_sub(1);
+    }
+
     /// Skip past generic parameters <T, U, V> and return depth reached
     /// Returns 0 if not at '<', returns -1 if generics are malformed
     pub fn skip_generic_params(&mut self) -> i32 {
@@ -259,8 +286,14 @@ impl<'a> Parser<'a> {
             return 0;
         }
         self.next_token(); // consume '<'
-        let mut depth = 1;
+        let mut depth: i32 = 1;
+        let mut iterations = 0;
+        const MAX_GENERIC_TOKENS: usize = 1000;
         while depth > 0 && self.current_token != Token::Eof {
+            iterations += 1;
+            if iterations > MAX_GENERIC_TOKENS {
+                return -1; // malformed - too many tokens in generic params
+            }
             if self.current_token == Token::Operator("<".to_string()) {
                 depth += 1;
             } else if self.current_token == Token::Operator(">".to_string()) {
@@ -272,7 +305,7 @@ impl<'a> Parser<'a> {
                     // Consumed both `>` tokens, advance past `>>`
                     self.next_token();
                     return 1;
-                } else if depth == -1 {
+                } else if depth < 0 {
                     // One `>` was extra, leave it as current token
                     self.current_token = Token::Operator(">".to_string());
                     return 1;

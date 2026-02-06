@@ -6,12 +6,17 @@ use crate::error::Result;
 use crate::typechecker::TypeChecker;
 
 /// Infer the type of a closure/lambda expression
+///
+/// Untyped closure params default to i32 — this is intentional for the `.loop()` callback
+/// pattern where the counter parameter is conventionally i32. A proper type inference system
+/// for closures (inferring param types from the call-site expected type) is a future improvement.
 pub fn infer_closure_type(
     checker: &mut TypeChecker,
     params: &[(String, Option<AstType>)],
     return_type: &Option<AstType>,
     body: &Expression,
 ) -> Result<AstType> {
+    // Untyped params default to i32 (loop counter convention). See doc comment above.
     let param_types: Vec<AstType> = params
         .iter()
         .map(|(_, opt_type)| opt_type.clone().unwrap_or(AstType::I32))
@@ -26,6 +31,7 @@ pub fn infer_closure_type(
 
     checker.enter_scope();
     for (param_name, opt_type) in params {
+        // Untyped params default to i32 (loop counter convention). See doc comment above.
         let param_type = opt_type.clone().unwrap_or(AstType::I32);
         let _ = checker.declare_variable(param_name, param_type, false);
     }
@@ -66,11 +72,8 @@ pub fn infer_closure_type(
             ret_type
         }
         _ => {
-            if let Ok(rt) = checker.infer_expression_type(body) {
-                Box::new(rt)
-            } else {
-                Box::new(AstType::I32)
-            }
+            // Propagate type inference errors instead of silently defaulting to i32
+            Box::new(checker.infer_expression_type(body)?)
         }
     };
 

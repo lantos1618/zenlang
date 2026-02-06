@@ -310,6 +310,8 @@ fn compile_file(args: &[String]) -> std::io::Result<()> {
         .map_err(|e| io::Error::other(format!("Failed to link: {}", e)))?;
 
     if !status.success() {
+        // Clean up object file even on linking failure to avoid leaking .o files
+        std::fs::remove_file(&obj_path).ok();
         return Err(io::Error::other("Linking failed"));
     }
 

@@ -91,15 +91,6 @@ pub fn infer_function_call_type(
         return Ok(sig.return_type.clone());
     }
 
-    // Debug: Check if it's a dotted name and if so, look up the full name
-    if name.contains('.') {
-        eprintln!(
-            "DEBUG: Looking for function '{}', found: {}",
-            name,
-            checker.get_function_signatures().contains_key(name)
-        );
-    }
-
     match checker.get_variable_type(name) {
         Ok(AstType::FunctionPointer { return_type, .. }) => Ok(*return_type),
         // Also handle Function type (used by type aliases like CompletionFn)
@@ -150,191 +141,276 @@ pub fn infer_function_call_type(
     }
 }
 
-/// Infer the return type of a method call
+/// Infer the return type of a method call.
+///
+/// Resolution is split into two phases:
+///   Phase 1 - Static calls: object is a type/module name (e.g., `String.len`, `compiler.alloc`)
+///   Phase 2 - Instance calls: object is a value, resolve method on its inferred type
+///
+/// Each phase uses a well-defined pipeline of resolution strategies (see helpers below).
+/// If no strategy matches, a TypeError is returned — never a silent Void.
 pub fn infer_method_call_type(
     checker: &mut TypeChecker,
     object: &Expression,
     method: &str,
     type_args: &[AstType],
 ) -> Result<AstType> {
+    // === Phase 1: Static/module calls (object is a type name or module) ===
     if let Expression::Identifier(name) = object {
-        // Check for compiler intrinsics first (compiler.* or @builtin.*)
-        if let Some(return_type) = crate::intrinsics::get_intrinsic_return_type(method) {
-            // For compiler/builtin modules, use the intrinsic's return type directly
-            if name == "compiler" || name == "builtin" || name == "@builtin" {
-                // Handle generic intrinsics: if return type is Generic<T> and type_args provided, substitute
-                if !type_args.is_empty() {
-                    if let AstType::Generic {
-                        name: type_name, ..
-                    } = &return_type
-                    {
-                        // Single-letter generic names like "T" should be substituted
-                        if type_name.len() == 1 && type_name.chars().all(|c| c.is_ascii_uppercase())
-                        {
-                            // Substitute with the first type argument
-                            return Ok(type_args[0].clone());
-                        }
-                    }
-                }
-                return Ok(return_type);
-            }
-        }
-
-        // Check for methods (Type.method style like String.len)
-        if let Some(return_type) = checker.get_stdlib_method_type(name, method) {
-            return Ok(return_type.clone());
-        }
-
-        // Check for module functions (module.function style like gpa.default_gpa)
-        if let Some(return_type) = checker.get_stdlib_function_type(name, method) {
-            return Ok(return_type.clone());
-        }
-
-        // Check for user-defined attached methods (like MyStruct.new)
-        let full_method_name = format!("{}.{}", name, method);
-        if let Some(func_sig) = checker.get_function_signatures().get(&full_method_name) {
-            return Ok(func_sig.return_type.clone());
-        }
-
-        // Handle constructors with type args (e.g., HashMap.new<i32, String>())
-        if method == "new" && !type_args.is_empty() {
-            return Ok(AstType::Generic {
-                name: name.to_string(),
-                type_args: type_args.to_vec(),
-            });
-        }
-
-        // Handle constructors - check if type has a .new() method in stdlib
-        if method == "new" {
-            // First check if stdlib defines a return type for Type.new()
-            if let Some(return_type) = checker.get_stdlib_method_type(name, "new") {
-                return Ok(return_type.clone());
-            }
-            // If type is known but no explicit return type, return generic with empty type args
-            // Type args will be inferred from usage context
-            if checker.structs.contains_key(name) || checker.get_stdlib_struct(name).is_some() {
-                return Ok(AstType::Generic {
-                    name: name.to_string(),
-                    type_args: vec![],
-                });
-            }
+        if let Some(result) = try_resolve_static_call(checker, name, method, type_args) {
+            return result;
         }
     }
 
+    // === Phase 2: Infer object type, then resolve method on it ===
     let object_type = checker.infer_expression_type(object)?;
+    let effective_type = object_type
+        .ptr_inner()
+        .cloned()
+        .unwrap_or_else(|| object_type.clone());
 
-    let dereferenced_type = object_type.ptr_inner().cloned();
+    if let Some(return_type) =
+        try_resolve_instance_method(checker, &object_type, &effective_type, method)
+    {
+        return Ok(return_type);
+    }
 
-    let effective_type = dereferenced_type.as_ref().unwrap_or(&object_type);
+    // === Phase 3: StdModule fallback ===
+    // Module functions (io.println, math.sqrt, etc.) should resolve in Phase 1 via
+    // get_stdlib_function_type() with alias resolution (e.g., "io" → "@std.io").
+    // If we reach here, the module was accessed indirectly (e.g., via a variable alias
+    // like `let m = io; m.println("hello")`), so we can't resolve the module path.
+    // Return Void as a graceful fallback — this is the ONE intentional Void return.
+    if effective_type == AstType::StdModule {
+        return Ok(AstType::Void);
+    }
 
+    // === Phase 4: No resolution strategy matched — error, never silent Void ===
+    let type_desc = extract_type_name(&effective_type)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| format!("{:?}", effective_type));
+    Err(CompileError::TypeError(
+        format!("Method '{}' not found on type '{}'", method, type_desc),
+        checker.get_current_span(),
+    ))
+}
+
+/// Phase 1 helper: resolve calls where the object is a type name or module identifier.
+///
+/// Covers: compiler intrinsics, stdlib methods/functions, user-defined UFC static calls,
+/// and constructors (Type.new()).
+///
+/// Returns `Some(Ok(...))` on match, `Some(Err(...))` on type error, `None` to continue
+/// to Phase 2 (instance method resolution).
+fn try_resolve_static_call(
+    checker: &TypeChecker,
+    name: &str,
+    method: &str,
+    type_args: &[AstType],
+) -> Option<Result<AstType>> {
+    // 1. Compiler intrinsics (compiler.*, @builtin.*)
+    if name == "compiler" || name == "builtin" || name == "@builtin" {
+        if let Some(return_type) = crate::intrinsics::get_intrinsic_return_type(method) {
+            // Substitute generic type params (e.g., compiler.alloc<MyStruct>())
+            if !type_args.is_empty() {
+                if let AstType::Generic {
+                    name: type_name, ..
+                } = &return_type
+                {
+                    if type_name.len() == 1 && type_name.chars().all(|c| c.is_ascii_uppercase()) {
+                        return Some(Ok(type_args[0].clone()));
+                    }
+                }
+            }
+            return Some(Ok(return_type));
+        }
+    }
+
+    // 2. Stdlib methods (Type::method in stdlib_methods registry)
+    if let Some(return_type) = checker.get_stdlib_method_type(name, method) {
+        return Some(Ok(return_type.clone()));
+    }
+
+    // 3. Stdlib functions (module::function in stdlib_functions registry)
+    if let Some(return_type) = checker.get_stdlib_function_type(name, method) {
+        return Some(Ok(return_type.clone()));
+    }
+
+    // 4. User-defined UFC methods (Type.method in function signatures)
+    //    Uses find_ufc_method to handle generic names (e.g., "SafePtr<T>.is_valid")
+    if let Some(func_sig) = checker.find_ufc_method(name, method) {
+        return Some(Ok(func_sig.return_type.clone()));
+    }
+
+    // 5. Constructors with explicit type args (e.g., HashMap.new<i32, String>())
+    if method == "new" && !type_args.is_empty() {
+        return Some(Ok(AstType::Generic {
+            name: name.to_string(),
+            type_args: type_args.to_vec(),
+        }));
+    }
+
+    // 6. Constructor fallback: known types with .new()
+    if method == "new" {
+        if let Some(return_type) = checker.get_stdlib_method_type(name, "new") {
+            return Some(Ok(return_type.clone()));
+        }
+        if checker.structs.contains_key(name) || checker.get_stdlib_struct(name).is_some() {
+            return Some(Ok(AstType::Generic {
+                name: name.to_string(),
+                type_args: vec![],
+            }));
+        }
+    }
+
+    None // Not a static call — fall through to instance method resolution
+}
+
+/// Phase 2 helper: resolve a method call on an instance value.
+///
+/// Tries resolution strategies in a defined order:
+///   1. Free function with first-param match (UFCS)
+///   2. Stdlib methods (by extracted type name)
+///   3. User-defined UFC methods (Type.method in function signatures)
+///   4. String methods (hardcoded)
+///   5. Special "loop" method
+///   6. Generic collection methods (HashMap, Vec, etc. — architecture violation, Phase 5 fix)
+///   7. Pointer methods
+///   8. Trait/behavior methods
+///   9. Function pointer fields (vtable pattern)
+///
+/// Returns `Some(return_type)` on match, `None` if no strategy matched.
+fn try_resolve_instance_method(
+    checker: &TypeChecker,
+    object_type: &AstType,
+    effective_type: &AstType,
+    method: &str,
+) -> Option<AstType> {
+    // Strategy 1: Free function with first-param type match (UFCS)
+    //   e.g., `draw(canvas, x, y)` callable as `canvas.draw(x, y)`
     if let Some(func_type) = checker.get_function_signatures().get(method) {
         if !func_type.params.is_empty() {
             let (_, first_param_type) = &func_type.params[0];
-            if first_param_type == effective_type || first_param_type == &object_type {
-                return Ok(func_type.return_type.clone());
+            if first_param_type == effective_type || first_param_type == object_type {
+                return Some(func_type.return_type.clone());
             }
         }
     }
 
+    // Strategy 2 & 3: Type-name based lookups (stdlib + user-defined UFC)
+    //   Extracts the type name from Struct, Generic, or Enum, then looks up:
+    //   - stdlib_methods["TypeName::method"]
+    //   - functions["TypeName.method"]
     if let Some(type_name) = extract_type_name(effective_type) {
+        // 2. Stdlib methods
         if let Some(return_type) = checker.get_stdlib_method_type(type_name, method) {
-            return Ok(return_type.clone());
+            return Some(return_type.clone());
+        }
+        // 3. User-defined UFC methods (handles generic names like "SafePtr<T>.is_valid")
+        if let Some(func_sig) = checker.find_ufc_method(type_name, method) {
+            return Some(func_sig.return_type.clone());
         }
     }
 
-    let is_string_struct = matches!(effective_type, AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name));
+    // Strategy 4: String methods (hardcoded in method_types)
+    let is_string_struct = matches!(
+        effective_type,
+        AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name)
+    );
     if is_string_struct
         || *effective_type == AstType::StaticString
         || *effective_type == AstType::StaticLiteral
     {
         if let Some(return_type) = method_types::infer_string_method_type(method, is_string_struct)
         {
-            return Ok(return_type);
+            return Some(return_type);
         }
     }
 
+    // Strategy 5: Special "loop" method (always returns Void)
     if method == "loop" {
-        return Ok(AstType::Void);
+        return Some(AstType::Void);
     }
 
-    // ========================================================================
-    // ARCHITECTURE VIOLATION: Layer 3 stdlib types with hardcoded method inference
-    // ========================================================================
-    //
-    // The code below provides special typechecker support for Layer 3 stdlib types:
-    // HashMap, HashSet, Vec, and DynVec. This violates the three-layer architecture
-    // described in docs/design/SEPARATION_OF_CONCERNS.md.
-    //
-    // These types should be pure stdlib implementations with no compiler awareness.
-    // Instead, they currently get hardcoded method type inference because:
-    // 1. The trait system is not yet implemented (Phase 5)
-    // 2. Generic method return types can't be expressed without traits
-    // 3. Methods like Vec<T>.get() -> T require trait-based type resolution
-    //
-    // TO FIX IN PHASE 5 (Trait System):
-    // 1. Define traits: Collection<T>, Map<K,V>, Set<T>, etc.
-    // 2. Implement trait methods in stdlib with proper type signatures
-    // 3. Replace these hardcoded checks with trait method resolution
-    // 4. Remove all string-based type identity checks for Layer 3 types
-    //
-    // See also: tech_debt_audit.md - "String-based type identity checks"
-    // ========================================================================
-
-    if let AstType::Generic { name, type_args } = &object_type {
-        // Use centralized helpers from stdlib_types module to avoid duplicating string literals
+    // Strategy 6: Generic collection methods (architecture violation — Phase 5 trait fix)
+    //   HashMap, HashSet, Vec, DynVec, Result have hardcoded method inference because
+    //   the trait system is not yet implemented. See docs/design/SEPARATION_OF_CONCERNS.md.
+    if let AstType::Generic {
+        name,
+        type_args: obj_type_args,
+    } = object_type
+    {
         if stdlib_types::is_hashmap(name) {
-            if let Some(return_type) = method_types::infer_hashmap_method_type(method, type_args) {
-                return Ok(return_type);
+            if let Some(return_type) =
+                method_types::infer_hashmap_method_type(method, obj_type_args)
+            {
+                return Some(return_type);
             }
         } else if stdlib_types::is_hashset(name) {
             if let Some(return_type) = method_types::infer_hashset_method_type(method) {
-                return Ok(return_type);
+                return Some(return_type);
             }
         } else if checker.well_known.is_result(name) {
-            // Result is Layer 2 - requires compiler support for pattern matching and .raise()
-            if let Some(return_type) = method_types::infer_result_method_type(method, type_args) {
-                return Ok(return_type);
+            if let Some(return_type) = method_types::infer_result_method_type(method, obj_type_args)
+            {
+                return Some(return_type);
             }
-        } else if stdlib_types::is_vec_type(name) && !type_args.is_empty() {
-            if let Some(return_type) = method_types::infer_vec_method_type(method, &type_args[0]) {
-                return Ok(return_type);
+        } else if stdlib_types::is_vec_type(name) && !obj_type_args.is_empty() {
+            if let Some(return_type) =
+                method_types::infer_vec_method_type(method, &obj_type_args[0])
+            {
+                return Some(return_type);
             }
         }
     }
 
-    // Pointer methods - check for Ptr<T>, MutPtr<T>, RawPtr<T> methods
+    // Strategy 7: Pointer methods (Ptr<T>, MutPtr<T>, RawPtr<T>)
     if let Some(inner) = object_type.ptr_inner() {
         if let Some(return_type) = method_types::infer_pointer_method_type(method, inner) {
-            return Ok(return_type);
+            return Some(return_type);
         }
     }
 
-    // Try trait/behavior method resolution
+    // Strategy 8: Trait/behavior methods
     if let Some(type_name) = extract_type_name(effective_type) {
         if let Some(method_info) = checker.resolve_trait_method(type_name, method) {
-            return Ok(method_info.return_type);
+            return Some(method_info.return_type);
         }
     }
 
-    // Check if this is a function pointer field being called (manual vtable pattern)
-    // e.g., self.allocate_fn(ctx, size) where allocate_fn is a field of type (RawPtr<u8>, usize) RawPtr<u8>
-    if let AstType::Generic { name, .. } = effective_type {
-        if let Some(struct_info) = checker.structs.get(name) {
-            for (field_name, field_type) in &struct_info.fields {
-                if field_name == method {
-                    match field_type {
-                        AstType::FunctionPointer { return_type, .. } => {
-                            return Ok(*return_type.clone());
-                        }
-                        AstType::Function { return_type, .. } => {
-                            return Ok(*return_type.clone());
-                        }
-                        _ => {}
-                    }
+    // Strategy 9: Function pointer fields (vtable pattern)
+    //   e.g., self.allocate_fn(ctx, size) where allocate_fn is a field of type (RawPtr<u8>, usize) RawPtr<u8>
+    //   Uses extract_type_name to handle BOTH Struct and Generic type variants.
+    if let Some(return_type) = try_resolve_fn_ptr_field(checker, effective_type, method) {
+        return Some(return_type);
+    }
+
+    None // No strategy matched
+}
+
+/// Strategy 9 helper: check if `method` is a function pointer field on the struct.
+///
+/// Handles both `AstType::Struct { name }` and `AstType::Generic { name }` — the old code
+/// only checked Generic, silently missing Struct types.
+fn try_resolve_fn_ptr_field(
+    checker: &TypeChecker,
+    effective_type: &AstType,
+    method: &str,
+) -> Option<AstType> {
+    let type_name = extract_type_name(effective_type)?;
+    let struct_info = checker.structs.get(type_name)?;
+    for (field_name, field_type) in &struct_info.fields {
+        if field_name == method {
+            match field_type {
+                AstType::FunctionPointer { return_type, .. } => {
+                    return Some(*return_type.clone());
                 }
+                AstType::Function { return_type, .. } => {
+                    return Some(*return_type.clone());
+                }
+                _ => {}
             }
         }
     }
-
-    Ok(AstType::Void)
+    None
 }

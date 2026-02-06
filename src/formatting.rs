@@ -184,9 +184,10 @@ pub fn is_valid_identifier(s: &str) -> bool {
         return false;
     }
     let mut chars = s.chars();
-    let first = chars
-        .next()
-        .expect("is_valid_identifier: string checked as non-empty");
+    let first = match chars.next() {
+        Some(c) => c,
+        None => return false, // redundant with is_empty check above, but safe
+    };
     if !first.is_alphabetic() && first != '_' {
         return false;
     }

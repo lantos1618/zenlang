@@ -93,6 +93,30 @@ impl TypeChecker {
         &self.functions
     }
 
+    /// Look up a UFC method in function signatures by type name and method name.
+    ///
+    /// Handles generic type names: if `"TypeName.method"` isn't found directly,
+    /// also matches `"TypeName<...>.method"` keys (since the parser stores generic
+    /// params in function names, e.g., `"SafePtr<T>.is_valid"`).
+    pub fn find_ufc_method(&self, type_name: &str, method: &str) -> Option<&FunctionSignature> {
+        // Fast path: exact match (e.g., "EnemyArray.get_state")
+        let exact_key = format!("{}.{}", type_name, method);
+        if let Some(sig) = self.functions.get(&exact_key) {
+            return Some(sig);
+        }
+        // Slow path: generic match (e.g., "SafePtr<T>.is_valid" when type_name is "SafePtr")
+        let suffix = format!(".{}", method);
+        for (key, sig) in &self.functions {
+            if key.ends_with(&suffix) && key.starts_with(type_name) {
+                let between = &key[type_name.len()..key.len() - suffix.len()];
+                if between.starts_with('<') && between.ends_with('>') {
+                    return Some(sig);
+                }
+            }
+        }
+        None
+    }
+
     /// Resolve a type alias (e.g., "CompletionFn" -> function type)
     pub fn resolve_type_alias(&self, name: &str) -> Option<AstType> {
         self.type_aliases.get(name).cloned()
@@ -171,17 +195,18 @@ impl TypeChecker {
         // We do multiple passes until no more changes occur (to handle nested dependencies)
         let mut changed = true;
         let mut iterations = 0;
-        while changed && iterations < 10 {
+        const MAX_RESOLUTION_ITERATIONS: usize = 100;
+        while changed && iterations < MAX_RESOLUTION_ITERATIONS {
             changed = false;
             iterations += 1;
 
             let struct_names: Vec<String> = self.structs.keys().cloned().collect();
             for struct_name in struct_names {
                 let resolved_fields: Vec<(String, AstType)> = {
-                    let struct_info = self
-                        .structs
-                        .get(&struct_name)
-                        .expect("struct name should exist in structs map");
+                    let struct_info = match self.structs.get(&struct_name) {
+                        Some(info) => info,
+                        None => continue, // struct was removed during iteration
+                    };
                     struct_info
                         .fields
                         .iter()
@@ -198,6 +223,9 @@ impl TypeChecker {
                     struct_info.fields = resolved_fields;
                 }
             }
+        }
+        if iterations >= MAX_RESOLUTION_ITERATIONS && changed {
+            eprintln!("Warning: struct field type resolution did not converge after {} iterations (possible circular dependency)", MAX_RESOLUTION_ITERATIONS);
         }
 
         // Third pass: infer return types for functions with Void return type

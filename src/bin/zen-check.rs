@@ -20,10 +20,13 @@ fn main() {
     for file_path in &args[1..] {
         // Handle glob patterns
         let paths = if file_path.contains('*') {
-            glob::glob(file_path)
-                .expect("Failed to read glob pattern")
-                .filter_map(Result::ok)
-                .collect::<Vec<_>>()
+            match glob::glob(file_path) {
+                Ok(paths) => paths.filter_map(Result::ok).collect::<Vec<_>>(),
+                Err(e) => {
+                    eprintln!("Error: Invalid glob pattern '{}': {}", file_path, e);
+                    process::exit(1);
+                }
+            }
         } else {
             vec![std::path::PathBuf::from(file_path)]
         };

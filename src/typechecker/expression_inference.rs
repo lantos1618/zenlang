@@ -121,7 +121,7 @@ impl TypeChecker {
                     AstType::Slice(elem_type) => Ok(*elem_type),
                     AstType::FixedArray { element_type, .. } => Ok(*element_type),
                     _ => Err(CompileError::TypeError(
-                        format!("Cannot index type {:?}", array_type),
+                        format!("Cannot index type {}: indexing requires an array, slice, or pointer type", array_type),
                         None,
                     )),
                 }
@@ -136,7 +136,7 @@ impl TypeChecker {
                     return Ok(elem_type.clone());
                 }
                 Err(CompileError::TypeError(
-                    format!("Cannot dereference non-pointer type {:?}", inner_type),
+                    format!("Cannot dereference non-pointer type {}: dereference (*) requires a pointer type (Ptr<T>, MutPtr<T>, or RawPtr<T>)", inner_type),
                     None,
                 ))
             }
@@ -162,11 +162,11 @@ impl TypeChecker {
             Expression::Unsigned64(_) => Ok(AstType::U64),
             Expression::ArrayLiteral(elements) => {
                 // Infer type from first element - array literals produce slices
-                if elements.is_empty() {
-                    Ok(AstType::Slice(Box::new(AstType::Void)))
-                } else {
-                    let elem_type = self.infer_expression_type(&elements[0])?;
+                if let Some(first_elem) = elements.first() {
+                    let elem_type = self.infer_expression_type(first_elem)?;
                     Ok(AstType::Slice(Box::new(elem_type)))
+                } else {
+                    Ok(AstType::Slice(Box::new(AstType::Void)))
                 }
             }
             Expression::QuestionMatch { scrutinee, arms } => {
@@ -368,7 +368,7 @@ impl TypeChecker {
                     Ok(inner.clone())
                 } else {
                     Err(CompileError::TypeError(
-                        format!("Cannot dereference non-pointer type: {:?}", ptr_type),
+                        format!("Cannot dereference non-pointer type {}: .val requires a pointer type (Ptr<T>, MutPtr<T>, or RawPtr<T>)", ptr_type),
                         None,
                     ))
                 }
@@ -424,7 +424,12 @@ impl TypeChecker {
                     name: self
                         .well_known
                         .get_variant_parent_name(self.well_known.some_name())
-                        .expect("Some variant should have Option parent")
+                        .ok_or_else(|| {
+                            CompileError::InternalError(
+                                "Some variant missing Option parent type".to_string(),
+                                self.get_current_span(),
+                            )
+                        })?
                         .to_string(),
                     type_args: vec![inner_type],
                 })
@@ -433,7 +438,12 @@ impl TypeChecker {
                 name: self
                     .well_known
                     .get_variant_parent_name(self.well_known.none_name())
-                    .expect("None variant should have Option parent")
+                    .ok_or_else(|| {
+                        CompileError::InternalError(
+                            "None variant missing Option parent type".to_string(),
+                            self.get_current_span(),
+                        )
+                    })?
                     .to_string(),
                 type_args: vec![AstType::Void],
             }),

@@ -16,7 +16,7 @@ pub fn infer_cast_type(args: &[Expression], span: Option<crate::error::Span>) ->
                     } else {
                         Err(CompileError::TypeError(
                             format!(
-                                "cast() target type '{}' is not a valid numeric type",
+                                "cast() target type '{}' is not a valid numeric type. Supported types: i8, i16, i32, i64, u8, u16, u32, u64, f32, f64",
                                 type_name
                             ),
                             span.clone(),
@@ -35,7 +35,10 @@ pub fn infer_cast_type(args: &[Expression], span: Option<crate::error::Span>) ->
     }
 
     Err(CompileError::TypeError(
-        "cast() expects 2 arguments: cast(value, type)".to_string(),
+        format!(
+            "cast() expects 2 arguments: cast(value, type), but got {} argument(s). Example: cast(42, i64)",
+            args.len()
+        ),
         span,
     ))
 }

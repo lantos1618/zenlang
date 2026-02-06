@@ -19,10 +19,10 @@ pub fn create_extract_variable_action(
     if range.start.line == range.end.line {
         // Single line selection
         if let Some(line) = lines.get(range.start.line as usize) {
-            let start_char = range.start.character as usize;
-            let end_char = (range.end.character as usize).min(line.len());
-            if start_char < line.len() && start_char < end_char {
-                selected_text = line[start_char..end_char].to_string();
+            let start_byte = utf16_offset_to_byte_offset(line, range.start.character as usize);
+            let end_byte = utf16_offset_to_byte_offset(line, range.end.character as usize);
+            if start_byte < line.len() && start_byte < end_byte && end_byte <= line.len() {
+                selected_text = line[start_byte..end_byte].to_string();
             }
         }
     } else {
@@ -30,9 +30,16 @@ pub fn create_extract_variable_action(
         for line_idx in range.start.line..=range.end.line {
             if let Some(line) = lines.get(line_idx as usize) {
                 if line_idx == range.start.line {
-                    selected_text.push_str(&line[range.start.character as usize..]);
+                    let start_byte =
+                        utf16_offset_to_byte_offset(line, range.start.character as usize);
+                    if start_byte <= line.len() {
+                        selected_text.push_str(&line[start_byte..]);
+                    }
                 } else if line_idx == range.end.line {
-                    selected_text.push_str(&line[..range.end.character as usize]);
+                    let end_byte = utf16_offset_to_byte_offset(line, range.end.character as usize);
+                    if end_byte <= line.len() {
+                        selected_text.push_str(&line[..end_byte]);
+                    }
                 } else {
                     selected_text.push_str(line);
                 }
@@ -165,10 +172,10 @@ pub fn create_extract_function_action(
     if range.start.line == range.end.line {
         // Single line selection - only extract if it's a substantial expression
         if let Some(line) = lines.get(range.start.line as usize) {
-            let start_char = range.start.character as usize;
-            let end_char = (range.end.character as usize).min(line.len());
-            if start_char < line.len() && start_char < end_char {
-                selected_text = line[start_char..end_char].to_string();
+            let start_byte = utf16_offset_to_byte_offset(line, range.start.character as usize);
+            let end_byte = utf16_offset_to_byte_offset(line, range.end.character as usize);
+            if start_byte < line.len() && start_byte < end_byte && end_byte <= line.len() {
+                selected_text = line[start_byte..end_byte].to_string();
             }
         }
         // For single-line, only suggest if it's a complex expression (contains operators or calls)
@@ -184,9 +191,16 @@ pub fn create_extract_function_action(
         for line_idx in range.start.line..=range.end.line {
             if let Some(line) = lines.get(line_idx as usize) {
                 if line_idx == range.start.line {
-                    selected_text.push_str(&line[range.start.character as usize..]);
+                    let start_byte =
+                        utf16_offset_to_byte_offset(line, range.start.character as usize);
+                    if start_byte <= line.len() {
+                        selected_text.push_str(&line[start_byte..]);
+                    }
                 } else if line_idx == range.end.line {
-                    selected_text.push_str(&line[..range.end.character as usize]);
+                    let end_byte = utf16_offset_to_byte_offset(line, range.end.character as usize);
+                    if end_byte <= line.len() {
+                        selected_text.push_str(&line[..end_byte]);
+                    }
                 } else {
                     selected_text.push_str(line);
                 }
@@ -285,6 +299,19 @@ pub fn create_extract_function_action(
         disabled: None,
         data: None,
     })
+}
+
+/// Convert a UTF-16 character offset to a byte offset in a UTF-8 string.
+/// LSP positions use UTF-16 offsets, but Rust strings are UTF-8.
+fn utf16_offset_to_byte_offset(line: &str, utf16_offset: usize) -> usize {
+    let mut utf16_count = 0;
+    for (byte_idx, ch) in line.char_indices() {
+        if utf16_count >= utf16_offset {
+            return byte_idx;
+        }
+        utf16_count += ch.len_utf16();
+    }
+    line.len()
 }
 
 fn find_function_start(content: &str, from_line: u32) -> u32 {

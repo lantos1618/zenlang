@@ -34,7 +34,7 @@ pub fn compile_literal<'ctx>(
         Expression::String(s) => compiler.compile_string_literal(s),
         _ => Err(CompileError::InternalError(
             format!("Expected literal, got {:?}", expr),
-            None,
+            compiler.get_current_span(),
         )),
     }
 }
@@ -47,7 +47,7 @@ pub fn compile_identifier<'ctx>(
         Expression::Identifier(name) => compiler.compile_identifier(name),
         _ => Err(CompileError::InternalError(
             format!("Expected Identifier, got {:?}", expr),
-            None,
+            compiler.get_current_span(),
         )),
     }
 }

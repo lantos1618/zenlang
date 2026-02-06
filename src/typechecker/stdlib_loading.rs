@@ -127,9 +127,23 @@ impl TypeChecker {
     }
 
     /// Look up stdlib function return type (replaces stdlib_types().get_function_return_type)
+    ///
+    /// Handles module alias resolution: user writes `io.println()` where `io` is a short alias,
+    /// but the function is stored under the full module path `@std.io::println`.
     pub fn get_stdlib_function_type(&self, module: &str, func_name: &str) -> Option<&AstType> {
+        // Fast path: exact key match (e.g., module is already a full path)
         let key = format!("{}::{}", module, func_name);
-        self.stdlib_functions.get(&key).map(|sig| &sig.return_type)
+        if let Some(sig) = self.stdlib_functions.get(&key) {
+            return Some(&sig.return_type);
+        }
+
+        // Alias resolution: "io" → "@std.io", "math" → "@std.math", etc.
+        let std_key = format!("@std.{}::{}", module, func_name);
+        if let Some(sig) = self.stdlib_functions.get(&std_key) {
+            return Some(&sig.return_type);
+        }
+
+        None
     }
 
     /// Get stdlib struct definition (replaces stdlib_types().get_struct_definition)

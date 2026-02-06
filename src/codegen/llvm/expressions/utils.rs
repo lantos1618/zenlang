@@ -76,7 +76,11 @@ pub fn compile_comptime_expression<'ctx>(
     expr: &Expression,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     // Evaluate the expression at compile time using the persistent evaluator
-    match compiler.comptime_evaluator.evaluate_expression(expr) {
+    let span = compiler.get_current_span();
+    match compiler
+        .comptime_evaluator
+        .evaluate_expression(expr, span.clone())
+    {
         Ok(value) => {
             // Convert the comptime value to a constant expression and compile it
             let const_expr = value.to_expression()?;
@@ -84,7 +88,7 @@ pub fn compile_comptime_expression<'ctx>(
         }
         Err(e) => Err(CompileError::InternalError(
             format!("Comptime evaluation error: {}", e),
-            compiler.get_current_span(),
+            span,
         )),
     }
 }
@@ -491,7 +495,12 @@ pub fn compile_raise_expression<'ctx>(
                 )?;
                 let return_discriminant_type = struct_type
                     .get_field_type_at_index(0)
-                    .expect("Result should have discriminant field")
+                    .ok_or_else(|| {
+                        CompileError::InternalError(
+                            "Result type missing discriminant field".to_string(),
+                            compiler.get_current_span(),
+                        )
+                    })?
                     .into_int_type();
                 compiler
                     .builder
@@ -566,7 +575,12 @@ pub fn compile_raise_expression<'ctx>(
         // Get the actual discriminant type from the struct's first field
         let discriminant_type = struct_type
             .get_field_type_at_index(0)
-            .expect("Enum struct should have discriminant field")
+            .ok_or_else(|| {
+                CompileError::InternalError(
+                    "Enum struct type missing discriminant field".to_string(),
+                    compiler.get_current_span(),
+                )
+            })?
             .into_int_type();
         let tag_value = compiler
             .builder
@@ -725,7 +739,12 @@ pub fn compile_raise_expression<'ctx>(
             // Get the actual discriminant type from the struct's first field
             let discriminant_type = struct_type
                 .get_field_type_at_index(0)
-                .expect("Enum struct should have discriminant field")
+                .ok_or_else(|| {
+                    CompileError::InternalError(
+                        "Enum struct type missing discriminant field".to_string(),
+                        compiler.get_current_span(),
+                    )
+                })?
                 .into_int_type();
             let tag_value = compiler
                 .builder
@@ -865,7 +884,12 @@ pub fn compile_raise_expression<'ctx>(
                     )?;
                     let err_discriminant_type = struct_type
                         .get_field_type_at_index(0)
-                        .expect("Result should have discriminant field")
+                        .ok_or_else(|| {
+                            CompileError::InternalError(
+                                "Result type missing discriminant field".to_string(),
+                                compiler.get_current_span(),
+                            )
+                        })?
                         .into_int_type();
                     compiler
                         .builder

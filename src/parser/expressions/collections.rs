@@ -15,10 +15,9 @@ pub fn looks_like_generic_type_args(parser: &Parser) -> bool {
             match &parser.peek_token {
                 Token::Identifier(name) => {
                     // Check for type-like names
-                    let first_char = name.chars().next().unwrap_or('_');
-
+                    // Token::Identifier is guaranteed non-empty by the lexer
                     // Types typically start with uppercase or are primitive types
-                    return first_char.is_uppercase()
+                    return name.chars().next().is_some_and(|c| c.is_uppercase())
                         || name == "i8"
                         || name == "i16"
                         || name == "i32"

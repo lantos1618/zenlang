@@ -98,12 +98,13 @@ pub fn create_string_conversion_action(
     let line_idx = diagnostic.range.start.line as usize;
     let line = lines.get(line_idx)?;
 
-    let start_char = diagnostic.range.start.character as usize;
-    let end_char = (diagnostic.range.end.character as usize).min(line.len());
+    // Convert UTF-16 character offsets to byte offsets safely
+    let start_byte = utf16_offset_to_byte_offset(line, diagnostic.range.start.character as usize);
+    let end_byte = utf16_offset_to_byte_offset(line, diagnostic.range.end.character as usize);
 
     // Extract the text at the diagnostic range
-    let selected = if start_char < line.len() && start_char < end_char {
-        &line[start_char..end_char]
+    let selected = if start_byte < line.len() && start_byte < end_byte && end_byte <= line.len() {
+        &line[start_byte..end_byte]
     } else {
         return None;
     };
@@ -216,12 +217,13 @@ pub fn create_unused_variable_fix(
     let line_idx = diagnostic.range.start.line as usize;
     let line = lines.get(line_idx)?;
 
-    let start_char = diagnostic.range.start.character as usize;
-    let end_char = (diagnostic.range.end.character as usize).min(line.len());
+    // Convert UTF-16 character offsets to byte offsets safely
+    let start_byte = utf16_offset_to_byte_offset(line, diagnostic.range.start.character as usize);
+    let end_byte = utf16_offset_to_byte_offset(line, diagnostic.range.end.character as usize);
 
     // Extract variable name
-    let var_name = if start_char < line.len() && start_char < end_char {
-        &line[start_char..end_char]
+    let var_name = if start_byte < line.len() && start_byte < end_byte && end_byte <= line.len() {
+        &line[start_byte..end_byte]
     } else {
         // Try to extract from diagnostic message
         let extracted = extract_symbol_from_diagnostic(&diagnostic.message);
@@ -232,6 +234,20 @@ pub fn create_unused_variable_fix(
     };
 
     create_underscore_prefix_action(diagnostic, uri, var_name)
+}
+
+/// Convert a UTF-16 character offset to a byte offset in a UTF-8 string.
+/// LSP positions use UTF-16 offsets, but Rust strings are UTF-8.
+fn utf16_offset_to_byte_offset(line: &str, utf16_offset: usize) -> usize {
+    let mut utf16_count = 0;
+    for (byte_idx, ch) in line.char_indices() {
+        if utf16_count >= utf16_offset {
+            return byte_idx;
+        }
+        utf16_count += ch.len_utf16();
+    }
+    // If we've consumed all characters, return byte length (clamp to end)
+    line.len()
 }
 
 fn create_underscore_prefix_action(

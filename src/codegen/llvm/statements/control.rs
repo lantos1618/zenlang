@@ -117,7 +117,7 @@ pub fn compile_loop<'ctx>(
                     } else {
                         return Err(CompileError::TypeError(
                             "Loop condition must be an integer".to_string(),
-                            None,
+                            compiler.get_current_span(),
                         ));
                     }
 
@@ -144,7 +144,7 @@ pub fn compile_loop<'ctx>(
         }
         _ => Err(CompileError::InternalError(
             "Expected Loop statement".to_string(),
-            None,
+            compiler.get_current_span(),
         )),
     }
 }
@@ -159,7 +159,7 @@ pub fn compile_break<'ctx>(compiler: &mut LLVMCompiler<'ctx>) -> Result<(), Comp
     } else {
         Err(CompileError::TypeError(
             "break statement outside of loop".to_string(),
-            None,
+            compiler.get_current_span(),
         ))
     }
 }
@@ -174,7 +174,7 @@ pub fn compile_continue<'ctx>(compiler: &mut LLVMCompiler<'ctx>) -> Result<(), C
     } else {
         Err(CompileError::TypeError(
             "continue statement outside of loop".to_string(),
-            None,
+            compiler.get_current_span(),
         ))
     }
 }

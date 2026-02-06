@@ -51,6 +51,9 @@ fn find_local_references(
     symbol_name: &str,
     function_name: &str,
 ) -> Option<Vec<Range>> {
+    if symbol_name.is_empty() {
+        return None;
+    }
     let func_range = find_function_range(content, function_name)?;
     let mut references = Vec::new();
     let lines: Vec<&str> = content.lines().collect();
@@ -139,7 +142,12 @@ pub fn find_enhanced_references_in_document(
 /// Classify a reference as declaration, read, write, or call
 fn classify_reference(line: &str, col: usize, symbol_name: &str) -> ReferenceKind {
     let trimmed = line.trim();
-    let after_symbol = &line[col + symbol_name.len()..];
+    // Guard against out-of-bounds slicing (can happen with multi-byte characters)
+    let end_pos = col + symbol_name.len();
+    if col > line.len() || end_pos > line.len() {
+        return ReferenceKind::Read;
+    }
+    let after_symbol = &line[end_pos..];
     let before_symbol = &line[..col];
 
     // Check for declaration: `name = (` or `name:` or `name = {`

@@ -29,7 +29,7 @@ pub fn compile_variable_declaration<'ctx>(
         _ => {
             return Err(CompileError::InternalError(
                 "Expected VariableDeclaration statement".to_string(),
-                None,
+                compiler.get_current_span(),
             ));
         }
     };
@@ -73,7 +73,7 @@ pub fn compile_variable_declaration<'ctx>(
                         "Type error: Variable '{}' already declared in this scope",
                         name
                     ),
-                    None,
+                    compiler.get_current_span(),
                 ));
             }
         }
@@ -258,7 +258,7 @@ pub fn compile_variable_declaration<'ctx>(
             } else {
                 return Err(CompileError::TypeError(
                     "Cannot infer type without initializer".to_string(),
-                    None,
+                    compiler.get_current_span(),
                 ));
             }
         }
@@ -282,7 +282,7 @@ pub fn compile_variable_declaration<'ctx>(
                     "Cannot infer type for variable '{}' - expression has void type",
                     name
                 ),
-                None,
+                compiler.get_current_span(),
             ))
         }
     };
@@ -552,7 +552,7 @@ pub fn compile_assignment<'ctx>(
                 } else {
                     Err(CompileError::TypeError(
                         "Pointer assignment requires a pointer value".to_string(),
-                        None,
+                        compiler.get_current_span(),
                     ))
                 }
             } else if let Expression::MemberAccess { object, member } = pointer {
@@ -598,7 +598,7 @@ pub fn compile_assignment<'ctx>(
                 } else {
                     Err(CompileError::TypeError(
                         "Pointer assignment requires a pointer value".to_string(),
-                        None,
+                        compiler.get_current_span(),
                     ))
                 }
             } else {
@@ -610,14 +610,14 @@ pub fn compile_assignment<'ctx>(
                 } else {
                     Err(CompileError::TypeError(
                         "Pointer assignment requires a pointer value".to_string(),
-                        None,
+                        compiler.get_current_span(),
                     ))
                 }
             }
         }
         _ => Err(CompileError::InternalError(
             "Expected assignment statement".to_string(),
-            None,
+            compiler.get_current_span(),
         )),
     }
 }

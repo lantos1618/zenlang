@@ -293,7 +293,7 @@ impl<'ctx> Compiler<'ctx> {
         match expr {
             Expression::Comptime(inner) => {
                 // Evaluate the comptime expression
-                let value = interpreter.evaluate_expression(&inner)?;
+                let value = interpreter.evaluate_expression(&inner, None)?;
                 // Convert the computed value back to an expression
                 value.to_expression()
             }
@@ -395,7 +395,8 @@ impl<'ctx> Compiler<'ctx> {
             Ok(p) => p,
             Err(err) => {
                 errors.push(err);
-                return errors; // Can't continue without imports
+                // Continue with unprocessed program to collect more diagnostics
+                program.clone()
             }
         };
 
@@ -404,7 +405,8 @@ impl<'ctx> Compiler<'ctx> {
             Ok(p) => p,
             Err(err) => {
                 errors.push(err);
-                return errors; // Can't continue without comptime
+                // Continue with pre-comptime program to collect more diagnostics
+                program.clone()
             }
         };
 
@@ -413,7 +415,7 @@ impl<'ctx> Compiler<'ctx> {
             Ok(p) => p,
             Err(err) => {
                 errors.push(err);
-                return errors; // Can't continue without Self resolution
+                return errors; // Self resolution failure makes later passes unreliable
             }
         };
 
@@ -424,7 +426,8 @@ impl<'ctx> Compiler<'ctx> {
             Ok(ctx) => ctx,
             Err(err) => {
                 errors.push(err);
-                return errors; // Can't continue without type checking
+                // Return collected errors since monomorphization and codegen need a valid type context
+                return errors;
             }
         };
 

@@ -18,7 +18,7 @@ pub fn compile_function_call<'ctx>(
         }
         _ => Err(CompileError::InternalError(
             format!("Expected FunctionCall, got {:?}", expr),
-            None,
+            compiler.get_current_span(),
         )),
     }
 }
@@ -36,7 +36,7 @@ pub fn compile_method_call<'ctx>(
         } => compiler.compile_method_call_with_type_args(object, method, type_args, args),
         _ => Err(CompileError::InternalError(
             format!("Expected MethodCall, got {:?}", expr),
-            None,
+            compiler.get_current_span(),
         )),
     }
 }
@@ -145,7 +145,7 @@ pub fn compile_closure<'ctx>(
         }
         _ => Err(CompileError::InternalError(
             format!("Expected Closure, got {:?}", expr),
-            None,
+            compiler.get_current_span(),
         )),
     }
 }

@@ -160,9 +160,18 @@ fn infer_type_from_ast_expr(expr: &Expression) -> Option<String> {
 
         Expression::FunctionCall { name, .. } => {
             // Look up function return type from stdlib
-            stdlib_types()
-                .get_function_return_type("", name)
-                .map(format_type)
+            // Handle dotted names (e.g., "Module.func") by splitting into receiver/method
+            if let Some(dot_pos) = name.rfind('.') {
+                let module = &name[..dot_pos];
+                let func = &name[dot_pos + 1..];
+                stdlib_types()
+                    .get_function_return_type(module, func)
+                    .map(format_type)
+            } else {
+                stdlib_types()
+                    .get_function_return_type("", name)
+                    .map(format_type)
+            }
         }
 
         Expression::MethodCall { object, method, .. } => {

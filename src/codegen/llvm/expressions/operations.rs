@@ -13,7 +13,7 @@ pub fn compile_binary_operation<'ctx>(
         }
         _ => Err(CompileError::InternalError(
             format!("Expected BinaryOp, got {:?}", expr),
-            None,
+            compiler.get_current_span(),
         )),
     }
 }

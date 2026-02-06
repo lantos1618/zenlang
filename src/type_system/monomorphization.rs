@@ -18,6 +18,11 @@ use crate::error::CompileError;
 use crate::type_context::TypeContext;
 use std::collections::HashSet;
 
+/// Maximum recursion depth for AST traversal during monomorphization
+const MAX_COLLECT_DEPTH: usize = 256;
+/// Maximum number of generic instantiations to prevent unbounded growth
+const MAX_INSTANTIATIONS: usize = 10_000;
+
 /// Monomorphizer transforms generic code into concrete instantiations
 pub struct Monomorphizer {
     /// Type information from the typechecker
@@ -67,7 +72,7 @@ impl Monomorphizer {
                 match instantiator.instantiate_function(generic_func, type_args.clone()) {
                     Ok(instantiated_func) => {
                         // Collect any nested instantiations from the instantiated function
-                        self.collect_from_function(&instantiated_func);
+                        self.collect_from_function(&instantiated_func, 0);
                         new_declarations.push(Declaration::Function(instantiated_func));
                     }
                     Err(e) => {
@@ -121,30 +126,33 @@ impl Monomorphizer {
     /// Collect all generic instantiations needed from the program
     fn collect_instantiations(&mut self, program: &Program) {
         for decl in &program.declarations {
-            self.collect_from_declaration(decl);
+            self.collect_from_declaration(decl, 0);
         }
         for stmt in &program.statements {
-            self.collect_from_statement(stmt);
+            self.collect_from_statement(stmt, 0);
         }
     }
 
     /// Collect instantiations from a declaration
-    fn collect_from_declaration(&mut self, decl: &Declaration) {
+    fn collect_from_declaration(&mut self, decl: &Declaration, depth: usize) {
+        if depth > MAX_COLLECT_DEPTH {
+            return;
+        }
         match decl {
-            Declaration::Function(func) => self.collect_from_function(func),
+            Declaration::Function(func) => self.collect_from_function(func, depth),
             Declaration::Struct(struct_def) => {
                 for method in &struct_def.methods {
-                    self.collect_from_function(method);
+                    self.collect_from_function(method, depth);
                 }
             }
             Declaration::Enum(enum_def) => {
                 for method in &enum_def.methods {
-                    self.collect_from_function(method);
+                    self.collect_from_function(method, depth);
                 }
             }
             Declaration::ImplBlock(impl_block) => {
                 for method in &impl_block.methods {
-                    self.collect_from_function(method);
+                    self.collect_from_function(method, depth);
                 }
             }
             _ => {}
@@ -152,36 +160,39 @@ impl Monomorphizer {
     }
 
     /// Collect instantiations from a function
-    fn collect_from_function(&mut self, func: &crate::ast::Function) {
+    fn collect_from_function(&mut self, func: &crate::ast::Function, depth: usize) {
         for stmt in &func.body {
-            self.collect_from_statement(stmt);
+            self.collect_from_statement(stmt, depth);
         }
     }
 
     /// Collect instantiations from a statement
-    fn collect_from_statement(&mut self, stmt: &Statement) {
+    fn collect_from_statement(&mut self, stmt: &Statement, depth: usize) {
+        if depth > MAX_COLLECT_DEPTH {
+            return;
+        }
         match stmt {
-            Statement::Expression { expr, .. } => self.collect_from_expression(expr),
-            Statement::Return { expr, .. } => self.collect_from_expression(expr),
+            Statement::Expression { expr, .. } => self.collect_from_expression(expr, depth + 1),
+            Statement::Return { expr, .. } => self.collect_from_expression(expr, depth + 1),
             Statement::VariableDeclaration {
                 initializer, type_, ..
             } => {
                 if let Some(init) = initializer {
-                    self.collect_from_expression(init);
+                    self.collect_from_expression(init, depth + 1);
                 }
                 if let Some(ty) = type_ {
-                    self.collect_from_type(ty);
+                    self.collect_from_type(ty, depth + 1);
                 }
             }
             Statement::VariableAssignment { value, .. } => {
-                self.collect_from_expression(value);
+                self.collect_from_expression(value, depth + 1);
             }
             Statement::Loop { kind, body, .. } => {
                 if let crate::ast::LoopKind::Condition(expr) = kind {
-                    self.collect_from_expression(expr);
+                    self.collect_from_expression(expr, depth + 1);
                 }
                 for stmt in body {
-                    self.collect_from_statement(stmt);
+                    self.collect_from_statement(stmt, depth + 1);
                 }
             }
             Statement::Break { .. } | Statement::Continue { .. } => {}
@@ -190,7 +201,10 @@ impl Monomorphizer {
     }
 
     /// Collect instantiations from an expression
-    fn collect_from_expression(&mut self, expr: &Expression) {
+    fn collect_from_expression(&mut self, expr: &Expression, depth: usize) {
+        if depth > MAX_COLLECT_DEPTH {
+            return;
+        }
         match expr {
             Expression::FunctionCall {
                 name,
@@ -211,7 +225,7 @@ impl Monomorphizer {
                 }
                 // Recurse into arguments
                 for arg in args {
-                    self.collect_from_expression(arg);
+                    self.collect_from_expression(arg, depth + 1);
                 }
             }
             Expression::MethodCall {
@@ -220,74 +234,72 @@ impl Monomorphizer {
                 args,
                 ..
             } => {
-                self.collect_from_expression(object);
+                self.collect_from_expression(object, depth + 1);
                 if !type_args.is_empty() {
-                    // Method-level type args - would need to track method name too
                     for ty in type_args {
-                        self.collect_from_type(ty);
+                        self.collect_from_type(ty, depth + 1);
                     }
                 }
                 for arg in args {
-                    self.collect_from_expression(arg);
+                    self.collect_from_expression(arg, depth + 1);
                 }
             }
             Expression::StructLiteral { name, fields } => {
-                // Check for generic struct instantiation
                 if name.contains('<') {
                     if let Some((base, args)) = parse_embedded_type_args(name) {
                         self.queue_instantiation(base, args);
                     }
                 }
                 for (_, field_expr) in fields {
-                    self.collect_from_expression(field_expr);
+                    self.collect_from_expression(field_expr, depth + 1);
                 }
             }
             Expression::BinaryOp { left, right, .. } => {
-                self.collect_from_expression(left);
-                self.collect_from_expression(right);
+                self.collect_from_expression(left, depth + 1);
+                self.collect_from_expression(right, depth + 1);
             }
             Expression::QuestionMatch { scrutinee, arms } => {
-                self.collect_from_expression(scrutinee);
+                self.collect_from_expression(scrutinee, depth + 1);
                 for arm in arms {
                     if let Some(guard) = &arm.guard {
-                        self.collect_from_expression(guard);
+                        self.collect_from_expression(guard, depth + 1);
                     }
-                    self.collect_from_expression(&arm.body);
+                    self.collect_from_expression(&arm.body, depth + 1);
                 }
             }
             Expression::Conditional { scrutinee, arms } => {
-                self.collect_from_expression(scrutinee);
+                self.collect_from_expression(scrutinee, depth + 1);
                 for arm in arms {
-                    self.collect_from_expression(&arm.body);
+                    self.collect_from_expression(&arm.body, depth + 1);
                 }
             }
             Expression::MemberAccess { object, .. }
             | Expression::StructField {
                 struct_: object, ..
             } => {
-                self.collect_from_expression(object);
+                self.collect_from_expression(object, depth + 1);
             }
             Expression::ArrayLiteral(items) => {
                 for item in items {
-                    self.collect_from_expression(item);
+                    self.collect_from_expression(item, depth + 1);
                 }
             }
             Expression::ArrayIndex { array, index } => {
-                self.collect_from_expression(array);
-                self.collect_from_expression(index);
+                self.collect_from_expression(array, depth + 1);
+                self.collect_from_expression(index, depth + 1);
             }
             Expression::Dereference(inner) | Expression::AddressOf(inner) => {
-                self.collect_from_expression(inner);
+                self.collect_from_expression(inner, depth + 1);
             }
             Expression::VecConstructor {
                 element_type,
                 initial_values,
                 ..
             } => {
-                self.collect_from_type(element_type);
+                self.collect_from_type(element_type, depth + 1);
                 if let Some(values) = initial_values {
                     for val in values {
-                        self.collect_from_expression(val);
+                        self.collect_from_expression(val, depth + 1);
                     }
                 }
             }
@@ -297,19 +309,19 @@ impl Monomorphizer {
                 initial_capacity,
             } => {
                 for ty in element_types {
-                    self.collect_from_type(ty);
+                    self.collect_from_type(ty, depth + 1);
                 }
-                self.collect_from_expression(allocator);
+                self.collect_from_expression(allocator, depth + 1);
                 if let Some(cap) = initial_capacity {
-                    self.collect_from_expression(cap);
+                    self.collect_from_expression(cap, depth + 1);
                 }
             }
             Expression::Closure { body, .. } => {
-                self.collect_from_expression(body);
+                self.collect_from_expression(body, depth + 1);
             }
             Expression::Block(statements) => {
                 for stmt in statements {
-                    self.collect_from_statement(stmt);
+                    self.collect_from_statement(stmt, depth + 1);
                 }
             }
             // Literals and identifiers don't contain generic instantiations
@@ -318,18 +330,19 @@ impl Monomorphizer {
     }
 
     /// Collect instantiations from a type annotation
-    fn collect_from_type(&mut self, ast_type: &AstType) {
+    fn collect_from_type(&mut self, ast_type: &AstType, depth: usize) {
+        if depth > MAX_COLLECT_DEPTH {
+            return;
+        }
         match ast_type {
             AstType::Generic { name, type_args } if !type_args.is_empty() => {
-                // This is a concrete instantiation like Vec<i32>
                 self.queue_instantiation(name.clone(), type_args.clone());
-                // Recurse into nested type args
                 for arg in type_args {
-                    self.collect_from_type(arg);
+                    self.collect_from_type(arg, depth + 1);
                 }
             }
             AstType::Slice(inner) | AstType::Ref(inner) => {
-                self.collect_from_type(inner);
+                self.collect_from_type(inner, depth + 1);
             }
             AstType::Function { args, return_type }
             | AstType::FunctionPointer {
@@ -337,13 +350,13 @@ impl Monomorphizer {
                 return_type,
             } => {
                 for arg in args {
-                    self.collect_from_type(arg);
+                    self.collect_from_type(arg, depth + 1);
                 }
-                self.collect_from_type(return_type);
+                self.collect_from_type(return_type, depth + 1);
             }
             t if t.is_ptr_type() => {
                 if let Some(inner) = t.ptr_inner() {
-                    self.collect_from_type(inner);
+                    self.collect_from_type(inner, depth + 1);
                 }
             }
             _ => {}
@@ -353,6 +366,11 @@ impl Monomorphizer {
     /// Queue a generic instantiation for processing
     fn queue_instantiation(&mut self, base_name: String, type_args: Vec<AstType>) {
         if type_args.is_empty() {
+            return;
+        }
+
+        // Prevent unbounded growth of instantiations
+        if self.processed.len() + self.pending.len() >= MAX_INSTANTIATIONS {
             return;
         }
 
@@ -391,7 +409,16 @@ fn parse_embedded_type_args(name: &str) -> Option<(String, Vec<AstType>)> {
     let base_name = crate::ast::strip_generic_params(name).to_string();
     let type_args_str = &name[pos + 1..name.len() - 1]; // Remove < and >
 
-    let type_args = crate::parser::parse_type_args_from_string(type_args_str).ok()?;
+    let type_args = match crate::parser::parse_type_args_from_string(type_args_str) {
+        Ok(args) => args,
+        Err(e) => {
+            eprintln!(
+                "Warning: Failed to parse type arguments in '{}': {}",
+                name, e
+            );
+            return None;
+        }
+    };
 
     if type_args.is_empty() {
         None

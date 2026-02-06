@@ -112,6 +112,26 @@ impl ModuleSystem {
                 .trim_start_matches("@std")
                 .trim_start_matches("std.");
 
+            // Validate: module path components should only contain alphanumeric and underscore
+            if !path_str.is_empty()
+                && !path_str
+                    .chars()
+                    .all(|c| c.is_alphanumeric() || c == '.' || c == '_')
+            {
+                return Err(CompileError::FileNotFound(
+                    format!("Invalid module path: {}", module_path),
+                    Some("Module paths may only contain alphanumeric characters, dots, and underscores".to_string()),
+                ));
+            }
+
+            // Reject path traversal patterns
+            if path_str.contains("..") {
+                return Err(CompileError::FileNotFound(
+                    format!("Invalid module path: {}", module_path),
+                    Some("Module paths must not contain '..'".to_string()),
+                ));
+            }
+
             let path_parts: Vec<&str> = if path_str.is_empty() {
                 // Empty path means @std itself - skip for now
                 vec![]

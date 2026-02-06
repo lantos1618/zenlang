@@ -352,13 +352,26 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     /// Parse comma-separated types from a string, handling nested generics
-    pub fn parse_comma_separated_types(&self, type_str: &str) -> Vec<AstType> {
-        crate::parser::parse_type_args_from_string(type_str).unwrap_or_default()
+    pub fn parse_comma_separated_types(
+        &self,
+        type_str: &str,
+    ) -> Result<Vec<AstType>, CompileError> {
+        crate::parser::parse_type_args_from_string(type_str).map_err(|e| {
+            CompileError::InternalError(
+                format!("Failed to parse type arguments '{}': {:?}", type_str, e),
+                self.get_current_span(),
+            )
+        })
     }
 
     /// Parse a single type string into an AstType
-    pub fn parse_type_string(&self, type_str: &str) -> AstType {
-        crate::parser::parse_type_from_string(type_str).unwrap_or(AstType::I32)
+    pub fn parse_type_string(&self, type_str: &str) -> Result<AstType, CompileError> {
+        crate::parser::parse_type_from_string(type_str).map_err(|e| {
+            CompileError::InternalError(
+                format!("Failed to parse type '{}': {:?}", type_str, e),
+                self.get_current_span(),
+            )
+        })
     }
 
     pub fn register_struct_type(

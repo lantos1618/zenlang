@@ -66,12 +66,13 @@ impl ComptimeValue {
                 // Type values become type annotations
                 Err(CompileError::ComptimeError(
                     "Cannot convert type value to runtime expression".to_string(),
+                    None,
                 ))
             }
-            _ => Err(CompileError::ComptimeError(format!(
-                "Cannot convert {:?} to expression",
-                self
-            ))),
+            _ => Err(CompileError::ComptimeError(
+                format!("Cannot convert {:?} to expression", self),
+                None,
+            )),
         }
     }
 
@@ -161,17 +162,22 @@ impl Environment {
             .or_else(|| self.parent.as_ref()?.get(name))
     }
 
-    pub fn set(&self, name: &str, value: ComptimeValue) -> Result<()> {
+    pub fn set(
+        &self,
+        name: &str,
+        value: ComptimeValue,
+        span: Option<crate::error::Span>,
+    ) -> Result<()> {
         if self.variables.borrow().contains_key(name) {
             self.variables.borrow_mut().insert(name.to_string(), value);
             Ok(())
         } else if let Some(parent) = &self.parent {
-            parent.set(name, value)
+            parent.set(name, value, span.clone())
         } else {
-            Err(CompileError::ComptimeError(format!(
-                "Undefined variable: {}",
-                name
-            )))
+            Err(CompileError::ComptimeError(
+                format!("Undefined variable: {}", name),
+                span,
+            ))
         }
     }
 }
@@ -364,28 +370,31 @@ impl ComptimeInterpreter {
     pub fn execute_statement(&mut self, stmt: &Statement) -> Result<Option<ComptimeValue>> {
         match stmt {
             Statement::VariableDeclaration {
-                name, initializer, ..
+                name,
+                initializer,
+                span,
+                ..
             } => {
                 if let Some(init) = initializer {
-                    let value = self.evaluate_expression(init)?;
+                    let value = self.evaluate_expression(init, span.clone())?;
                     self.env.define(name.clone(), value);
                 }
                 Ok(None)
             }
 
-            Statement::VariableAssignment { name, value, .. } => {
-                let val = self.evaluate_expression(value)?;
-                self.env.set(name, val)?;
+            Statement::VariableAssignment { name, value, span } => {
+                let val = self.evaluate_expression(value, span.clone())?;
+                self.env.set(name, val, span.clone())?;
                 Ok(None)
             }
 
-            Statement::Expression { expr, .. } => {
-                let value = self.evaluate_expression(expr)?;
+            Statement::Expression { expr, span } => {
+                let value = self.evaluate_expression(expr, span.clone())?;
                 Ok(Some(value))
             }
 
-            Statement::Return { expr, .. } => {
-                let value = self.evaluate_expression(expr)?;
+            Statement::Return { expr, span } => {
+                let value = self.evaluate_expression(expr, span.clone())?;
                 Ok(Some(value))
             }
 
@@ -397,15 +406,19 @@ impl ComptimeInterpreter {
                 Ok(None)
             }
 
-            _ => Err(CompileError::ComptimeError(format!(
-                "Statement type not supported in comptime: {:?}",
-                stmt
-            ))),
+            _ => Err(CompileError::ComptimeError(
+                format!("Statement type not supported in comptime: {:?}", stmt),
+                None,
+            )),
         }
     }
 
     /// Evaluate an expression to a compile-time value
-    pub fn evaluate_expression(&mut self, expr: &Expression) -> Result<ComptimeValue> {
+    pub fn evaluate_expression(
+        &mut self,
+        expr: &Expression,
+        span: Option<crate::error::Span>,
+    ) -> Result<ComptimeValue> {
         match expr {
             Expression::Integer32(v) => Ok(ComptimeValue::I32(*v)),
             Expression::Integer64(v) => Ok(ComptimeValue::I64(*v)),
@@ -423,34 +436,39 @@ impl ComptimeInterpreter {
                 }
 
                 self.env.get(name).ok_or_else(|| {
-                    CompileError::ComptimeError(format!("Undefined identifier: {}", name))
+                    CompileError::ComptimeError(
+                        format!("Undefined identifier: {}", name),
+                        span.clone(),
+                    )
                 })
             }
 
             Expression::BinaryOp { left, op, right } => {
-                let left_val = self.evaluate_expression(left)?;
-                let right_val = self.evaluate_expression(right)?;
-                self.evaluate_binary_op(left_val, op, right_val)
+                let left_val = self.evaluate_expression(left, span.clone())?;
+                let right_val = self.evaluate_expression(right, span.clone())?;
+                self.evaluate_binary_op(left_val, op, right_val, span.clone())
             }
 
-            Expression::FunctionCall { name, args, .. } => self.evaluate_function_call(name, args),
+            Expression::FunctionCall { name, args, .. } => {
+                self.evaluate_function_call(name, args, span.clone())
+            }
 
             Expression::ArrayLiteral(elements) => {
                 let values: Result<Vec<_>> = elements
                     .iter()
-                    .map(|e| self.evaluate_expression(e))
+                    .map(|e| self.evaluate_expression(e, span.clone()))
                     .collect();
                 Ok(ComptimeValue::Array(values?))
             }
 
             Expression::MemberAccess { object, member } => {
-                let obj_val = self.evaluate_expression(object)?;
-                self.evaluate_member_access(obj_val, member)
+                let obj_val = self.evaluate_expression(object, span.clone())?;
+                self.evaluate_member_access(obj_val, member, span.clone())
             }
 
             Expression::Comptime(inner) => {
                 // Nested comptime expression
-                self.evaluate_expression(inner)
+                self.evaluate_expression(inner, span.clone())
             }
 
             Expression::Range {
@@ -458,18 +476,36 @@ impl ComptimeInterpreter {
                 end,
                 inclusive,
             } => {
-                let start_val = self.evaluate_expression(start)?;
-                let end_val = self.evaluate_expression(end)?;
+                let start_val = self.evaluate_expression(start, span.clone())?;
+                let end_val = self.evaluate_expression(end, span.clone())?;
 
                 match (start_val, end_val) {
                     (ComptimeValue::I32(start_i), ComptimeValue::I32(end_i)) => {
-                        let mut values = Vec::new();
                         let end_val = if *inclusive {
-                            end_i + 1
+                            end_i.checked_add(1).ok_or_else(|| {
+                                CompileError::ComptimeError(
+                                    "Inclusive range end overflows i32".to_string(),
+                                    span.clone(),
+                                )
+                            })?
                         } else {
                             end_i
                         };
 
+                        // Prevent memory exhaustion from huge ranges
+                        const MAX_COMPTIME_RANGE: i32 = 100_000;
+                        let range_size = end_val.saturating_sub(start_i);
+                        if range_size > MAX_COMPTIME_RANGE {
+                            return Err(CompileError::ComptimeError(
+                                format!(
+                                    "Compile-time range too large: {} elements (max {})",
+                                    range_size, MAX_COMPTIME_RANGE
+                                ),
+                                span.clone(),
+                            ));
+                        }
+
+                        let mut values = Vec::with_capacity(range_size.max(0) as usize);
                         for i in start_i..end_val {
                             values.push(ComptimeValue::I32(i));
                         }
@@ -478,14 +514,15 @@ impl ComptimeInterpreter {
                     }
                     _ => Err(CompileError::ComptimeError(
                         "Range expressions only support integer bounds".to_string(),
+                        span.clone(),
                     )),
                 }
             }
 
-            _ => Err(CompileError::ComptimeError(format!(
-                "Expression type not supported in comptime: {:?}",
-                expr
-            ))),
+            _ => Err(CompileError::ComptimeError(
+                format!("Expression type not supported in comptime: {:?}", expr),
+                span.clone(),
+            )),
         }
     }
 
@@ -495,6 +532,7 @@ impl ComptimeInterpreter {
         left: ComptimeValue,
         op: &ast::BinaryOperator,
         right: ComptimeValue,
+        span: Option<crate::error::Span>,
     ) -> Result<ComptimeValue> {
         use ast::BinaryOperator;
 
@@ -505,7 +543,10 @@ impl ComptimeInterpreter {
                 BinaryOperator::Multiply => Ok(ComptimeValue::I32(l * r)),
                 BinaryOperator::Divide => {
                     if r == 0 {
-                        Err(CompileError::ComptimeError("Division by zero".to_string()))
+                        Err(CompileError::ComptimeError(
+                            "Division by zero".to_string(),
+                            span,
+                        ))
                     } else {
                         Ok(ComptimeValue::I32(l / r))
                     }
@@ -516,10 +557,10 @@ impl ComptimeInterpreter {
                 BinaryOperator::LessThanEquals => Ok(ComptimeValue::Bool(l <= r)),
                 BinaryOperator::GreaterThan => Ok(ComptimeValue::Bool(l > r)),
                 BinaryOperator::GreaterThanEquals => Ok(ComptimeValue::Bool(l >= r)),
-                _ => Err(CompileError::ComptimeError(format!(
-                    "Unsupported operation {:?} for I32",
-                    op
-                ))),
+                _ => Err(CompileError::ComptimeError(
+                    format!("Unsupported operation {:?} for I32", op),
+                    span,
+                )),
             },
 
             (ComptimeValue::Bool(l), ComptimeValue::Bool(r)) => match op {
@@ -527,39 +568,46 @@ impl ComptimeInterpreter {
                 BinaryOperator::Or => Ok(ComptimeValue::Bool(l || r)),
                 BinaryOperator::Equals => Ok(ComptimeValue::Bool(l == r)),
                 BinaryOperator::NotEquals => Ok(ComptimeValue::Bool(l != r)),
-                _ => Err(CompileError::ComptimeError(format!(
-                    "Unsupported operation {:?} for Bool",
-                    op
-                ))),
+                _ => Err(CompileError::ComptimeError(
+                    format!("Unsupported operation {:?} for Bool", op),
+                    span,
+                )),
             },
 
             (ComptimeValue::String(l), ComptimeValue::String(r)) => match op {
                 BinaryOperator::Equals => Ok(ComptimeValue::Bool(l == r)),
                 BinaryOperator::NotEquals => Ok(ComptimeValue::Bool(l != r)),
-                _ => Err(CompileError::ComptimeError(format!(
-                    "Unsupported operation {:?} for String",
-                    op
-                ))),
+                _ => Err(CompileError::ComptimeError(
+                    format!("Unsupported operation {:?} for String", op),
+                    span,
+                )),
             },
 
             _ => Err(CompileError::ComptimeError(
                 "Type mismatch in binary operation".to_string(),
+                span,
             )),
         }
     }
 
     /// Evaluate function calls
-    fn evaluate_function_call(&mut self, name: &str, args: &[Expression]) -> Result<ComptimeValue> {
+    fn evaluate_function_call(
+        &mut self,
+        name: &str,
+        args: &[Expression],
+        span: Option<crate::error::Span>,
+    ) -> Result<ComptimeValue> {
         // Check for built-in compile-time functions
         match name {
             "sizeof" => {
                 if args.len() != 1 {
                     return Err(CompileError::ComptimeError(
                         "sizeof expects exactly one argument".to_string(),
+                        span,
                     ));
                 }
                 // Evaluate expression to determine its type
-                let val = self.evaluate_expression(&args[0])?;
+                let val = self.evaluate_expression(&args[0], span.clone())?;
                 let arg_type = val.get_type();
                 // Return size in bytes for the type
                 let size = match &arg_type {
@@ -580,9 +628,10 @@ impl ComptimeInterpreter {
                 if args.len() != 1 {
                     return Err(CompileError::ComptimeError(
                         "typeof expects exactly one argument".to_string(),
+                        span,
                     ));
                 }
-                let val = self.evaluate_expression(&args[0])?;
+                let val = self.evaluate_expression(&args[0], span.clone())?;
                 Ok(ComptimeValue::Type(val.get_type()))
             }
 
@@ -590,16 +639,19 @@ impl ComptimeInterpreter {
                 if args.len() != 1 {
                     return Err(CompileError::ComptimeError(
                         "comptime_assert expects exactly one argument".to_string(),
+                        span.clone(),
                     ));
                 }
-                let val = self.evaluate_expression(&args[0])?;
+                let val = self.evaluate_expression(&args[0], span.clone())?;
                 match val {
                     ComptimeValue::Bool(true) => Ok(ComptimeValue::Void),
                     ComptimeValue::Bool(false) => Err(CompileError::ComptimeError(
                         "Compile-time assertion failed".to_string(),
+                        span.clone(),
                     )),
                     _ => Err(CompileError::ComptimeError(
                         "comptime_assert expects a boolean".to_string(),
+                        span,
                     )),
                 }
             }
@@ -618,16 +670,19 @@ impl ComptimeInterpreter {
 
                     // Bind arguments
                     if args.len() != params.len() {
-                        return Err(CompileError::ComptimeError(format!(
-                            "Function {} expects {} arguments, got {}",
-                            name,
-                            params.len(),
-                            args.len()
-                        )));
+                        return Err(CompileError::ComptimeError(
+                            format!(
+                                "Function {} expects {} arguments, got {}",
+                                name,
+                                params.len(),
+                                args.len()
+                            ),
+                            span.clone(),
+                        ));
                     }
 
                     for (param, arg) in params.iter().zip(args) {
-                        let val = self.evaluate_expression(arg)?;
+                        let val = self.evaluate_expression(arg, span.clone())?;
                         func_env.define(param.clone(), val);
                     }
 
@@ -645,10 +700,10 @@ impl ComptimeInterpreter {
                     self.env = saved_env;
                     Ok(result)
                 } else {
-                    Err(CompileError::ComptimeError(format!(
-                        "Unknown function: {}",
-                        name
-                    )))
+                    Err(CompileError::ComptimeError(
+                        format!("Unknown function: {}", name),
+                        span,
+                    ))
                 }
             }
         }
@@ -659,15 +714,19 @@ impl ComptimeInterpreter {
         &mut self,
         object: ComptimeValue,
         member: &str,
+        span: Option<crate::error::Span>,
     ) -> Result<ComptimeValue> {
         match object {
             ComptimeValue::Struct { fields, .. } => fields.get(member).cloned().ok_or_else(|| {
-                CompileError::ComptimeError(format!("Struct has no field: {}", member))
+                CompileError::ComptimeError(
+                    format!("Struct has no field: {}", member),
+                    span.clone(),
+                )
             }),
-            _ => Err(CompileError::ComptimeError(format!(
-                "Cannot access member {} on non-struct value",
-                member
-            ))),
+            _ => Err(CompileError::ComptimeError(
+                format!("Cannot access member {} on non-struct value", member),
+                span,
+            )),
         }
     }
 

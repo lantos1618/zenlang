@@ -32,10 +32,17 @@ impl<'a> Parser<'a> {
                 expr: Expression::Boolean(true),
                 span: Some(self.current_span.clone()),
             },
-            1 => statements
-                .into_iter()
-                .next()
-                .expect("statements.len() is 1, so next() must return Some"),
+            1 => {
+                // SAFETY: We just checked len() == 1, so into_iter().next() always returns Some
+                // Using unwrap_or to avoid panic if invariant is somehow violated
+                statements
+                    .into_iter()
+                    .next()
+                    .unwrap_or(Statement::Expression {
+                        expr: Expression::Boolean(true),
+                        span: Some(self.current_span.clone()),
+                    })
+            }
             _ => Statement::Block {
                 statements,
                 span: Some(self.current_span.clone()),
@@ -204,9 +211,13 @@ impl<'a> Parser<'a> {
                     if is_function {
                         declarations.push(Declaration::Function(self.parse_function()?));
                     } else {
-                        let var_name = self
-                            .current_identifier()
-                            .expect("current_token must be identifier in this branch");
+                        let var_name = match self.current_identifier() {
+                            Some(name) => name,
+                            None => {
+                                return Err(self
+                                    .syntax_error("Expected identifier for variable declaration"))
+                            }
+                        };
                         self.next_token();
                         declarations.push(self.parse_top_level_mutable_var(var_name)?);
                     }
@@ -452,9 +463,14 @@ impl<'a> Parser<'a> {
                     }
                 } else if self.peek_token == Token::Operator(":=".to_string()) {
                     // Top-level constant declaration: name := value
-                    let name = self
-                        .current_identifier()
-                        .expect("current_token must be identifier in this branch");
+                    let name = match self.current_identifier() {
+                        Some(name) => name,
+                        None => {
+                            return Err(
+                                self.syntax_error("Expected identifier for constant declaration")
+                            )
+                        }
+                    };
                     self.next_token(); // consume identifier
                     self.next_token(); // consume ':='
                     let value = self.parse_expression()?;
@@ -471,9 +487,12 @@ impl<'a> Parser<'a> {
                     // 1. Function declaration: name = (params) returnType { ... }
                     // 2. Variable declaration: name = value
                     // Look ahead to distinguish
-                    let name = self
-                        .current_identifier()
-                        .expect("current_token must be identifier in this branch");
+                    let name = match self.current_identifier() {
+                        Some(name) => name,
+                        None => {
+                            return Err(self.syntax_error("Expected identifier for declaration"))
+                        }
+                    };
                     let is_function = self.with_lookahead(|p| {
                         p.next_token(); // move to =
                         p.next_token(); // move past =

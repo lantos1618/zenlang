@@ -372,10 +372,16 @@ impl<'ctx> LLVMCompiler<'ctx> {
         &self,
         enum_struct_type: inkwell::types::StructType<'ctx>,
     ) -> inkwell::types::IntType<'ctx> {
-        enum_struct_type
-            .get_field_type_at_index(0)
-            .expect("Enum struct should have discriminant field at index 0")
-            .into_int_type()
+        match enum_struct_type.get_field_type_at_index(0) {
+            Some(field_type) => field_type.into_int_type(),
+            None => {
+                // Fallback: use i32 if struct has no fields (shouldn't happen for valid enums)
+                eprintln!(
+                    "Warning: Enum struct type has no discriminant field, using i32 fallback"
+                );
+                self.context.i32_type()
+            }
+        }
     }
 
     /// Create a constant tag value for an enum discriminant.
@@ -707,7 +713,9 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ast::Declaration::Constant { name, value, .. } => {
                     // Evaluate the constant value and store it in the comptime environment
                     // This allows it to be used in subsequent code
-                    if let Ok(comptime_value) = self.comptime_evaluator.evaluate_expression(value) {
+                    if let Ok(comptime_value) =
+                        self.comptime_evaluator.evaluate_expression(value, None)
+                    {
                         self.comptime_evaluator
                             .set_variable(name.clone(), comptime_value);
                     }
@@ -741,11 +749,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 self.builder.position_at_end(saved);
             }
 
-            // Remove the temporary block if we created one
+            // Mark the temporary function as internal linkage so LLVM can eliminate it
+            // instead of using unsafe delete which risks UB if the function is still referenced
             if main_fn.get_name().to_str() == Ok("__temp_toplevel") {
-                unsafe {
-                    main_fn.delete();
-                }
+                main_fn.set_linkage(inkwell::module::Linkage::Private);
             }
         }
 

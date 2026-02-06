@@ -172,7 +172,12 @@ pub fn compile_enum_variant<'ctx>(
         };
 
     // Use the enum info from symbol table - we should always have it at this point
-    let enum_info = enum_info.expect("Enum info should be found by this point");
+    let enum_info = enum_info.ok_or_else(|| {
+        CompileError::InternalError(
+            format!("Enum info not found for type '{}'", enum_name),
+            compiler.get_current_span(),
+        )
+    })?;
 
     // Use the enum's LLVM type from the symbol table
     let enum_struct_type = enum_info.llvm_type;
@@ -338,7 +343,7 @@ pub fn compile_enum_literal<'ctx>(
     } else {
         Err(CompileError::InternalError(
             "Expected EnumLiteral".to_string(),
-            None,
+            compiler.get_current_span(),
         ))
     }
 }

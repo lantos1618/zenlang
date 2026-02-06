@@ -14,7 +14,10 @@ use crate::error::Result;
 
 impl<'a> Parser<'a> {
     pub fn parse_expression(&mut self) -> Result<Expression> {
-        operators::parse_binary_expression(self, 0)
+        self.enter_recursion()?;
+        let result = operators::parse_binary_expression(self, 0);
+        self.exit_recursion();
+        result
     }
 
     /// Parse expression in pattern context - doesn't allow `|` as bitwise OR

@@ -656,9 +656,20 @@ impl<'a> Lexer<'a> {
 
     fn read_operator(&mut self) -> String {
         let _start = self.position;
-        let first_char = self
-            .current_char
-            .expect("read_operator called with no current char");
+        // Safety check: read_operator should only be called when current_char is Some
+        // This indicates a bug in the lexer state machine if it fails
+        let first_char = match self.current_char {
+            Some(c) => c,
+            None => {
+                // Lexer state machine error: return empty string to produce an
+                // unknown token error rather than crashing the process
+                eprintln!(
+                    "Lexer warning: read_operator called with current_char=None at position {} (line {}, column {})",
+                    self.position, self.line, self.column
+                );
+                return String::new();
+            }
+        };
         self.read_char();
 
         // Handle three-character operators first

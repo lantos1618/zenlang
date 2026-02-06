@@ -65,7 +65,7 @@ pub fn compile_loop<'ctx>(
     } else {
         Err(CompileError::InternalError(
             "Expected Loop expression".to_string(),
-            None,
+            compiler.get_current_span(),
         ))
     }
 }
@@ -108,7 +108,7 @@ pub fn compile_break<'ctx>(
     } else {
         Err(CompileError::InternalError(
             "Expected Break expression".to_string(),
-            None,
+            compiler.get_current_span(),
         ))
     }
 }
@@ -142,7 +142,7 @@ pub fn compile_continue<'ctx>(
     } else {
         Err(CompileError::InternalError(
             "Expected Continue expression".to_string(),
-            None,
+            compiler.get_current_span(),
         ))
     }
 }
@@ -190,7 +190,7 @@ pub fn compile_return<'ctx>(
     } else {
         Err(CompileError::InternalError(
             "Expected Return expression".to_string(),
-            None,
+            compiler.get_current_span(),
         ))
     }
 }
@@ -285,7 +285,7 @@ pub fn compile_range_expression<'ctx>(
     } else {
         Err(CompileError::InternalError(
             "Expected Range expression".to_string(),
-            None,
+            compiler.get_current_span(),
         ))
     }
 }
