@@ -65,6 +65,41 @@ pub enum ComptimeValue {
     Null,
 }
 
+// Manual PartialEq: compare structurally, Functions/ASTNodes compare by discriminant only
+impl PartialEq for ComptimeValue {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (ComptimeValue::I8(a), ComptimeValue::I8(b)) => a == b,
+            (ComptimeValue::I16(a), ComptimeValue::I16(b)) => a == b,
+            (ComptimeValue::I32(a), ComptimeValue::I32(b)) => a == b,
+            (ComptimeValue::I64(a), ComptimeValue::I64(b)) => a == b,
+            (ComptimeValue::U8(a), ComptimeValue::U8(b)) => a == b,
+            (ComptimeValue::U16(a), ComptimeValue::U16(b)) => a == b,
+            (ComptimeValue::U32(a), ComptimeValue::U32(b)) => a == b,
+            (ComptimeValue::U64(a), ComptimeValue::U64(b)) => a == b,
+            (ComptimeValue::F32(a), ComptimeValue::F32(b)) => a.to_bits() == b.to_bits(),
+            (ComptimeValue::F64(a), ComptimeValue::F64(b)) => a.to_bits() == b.to_bits(),
+            (ComptimeValue::Bool(a), ComptimeValue::Bool(b)) => a == b,
+            (ComptimeValue::String(a), ComptimeValue::String(b)) => a == b,
+            (ComptimeValue::Array(a), ComptimeValue::Array(b)) => a == b,
+            (
+                ComptimeValue::Struct {
+                    name: n1,
+                    fields: f1,
+                },
+                ComptimeValue::Struct {
+                    name: n2,
+                    fields: f2,
+                },
+            ) => n1 == n2 && f1 == f2,
+            (ComptimeValue::Type(a), ComptimeValue::Type(b)) => a == b,
+            (ComptimeValue::Void, ComptimeValue::Void) => true,
+            (ComptimeValue::Null, ComptimeValue::Null) => true,
+            _ => false,
+        }
+    }
+}
+
 impl ComptimeValue {
     /// Convert a compile-time value to an AST expression
     pub fn to_expression(&self) -> Result<Expression> {
@@ -374,6 +409,15 @@ impl ComptimeInterpreter {
                         },
                     );
 
+                    // @std.meta (compile-time AST introspection)
+                    fields.insert(
+                        "meta".to_string(),
+                        ComptimeValue::Struct {
+                            name: "meta".to_string(),
+                            fields: HashMap::new(), // intrinsics dispatched by name
+                        },
+                    );
+
                     // @std.build
                     fields.insert(
                         "build".to_string(),
@@ -450,6 +494,32 @@ impl ComptimeInterpreter {
                 Ok(None)
             }
 
+            Statement::DestructuringImport { names, source, .. } => {
+                // Handle { meta } = @std style imports in comptime
+                let source_val = self.evaluate_expression(source, None)?;
+                if let ComptimeValue::Struct { fields, .. } = source_val {
+                    for name in names {
+                        if let Some(val) = fields.get(name) {
+                            self.env.define(name.clone(), val.clone());
+                        } else {
+                            return Err(CompileError::ComptimeError(
+                                format!("Module has no member '{}'", name),
+                                None,
+                            ));
+                        }
+                    }
+                }
+                Ok(None)
+            }
+
+            Statement::Block { statements, .. } => {
+                let mut result = None;
+                for s in statements {
+                    result = self.execute_statement(s)?;
+                }
+                Ok(result)
+            }
+
             _ => Err(CompileError::ComptimeError(
                 format!("Statement type not supported in comptime: {:?}", stmt),
                 None,
@@ -508,6 +578,23 @@ impl ComptimeInterpreter {
             Expression::MemberAccess { object, member } => {
                 let obj_val = self.evaluate_expression(object, span.clone())?;
                 self.evaluate_member_access(obj_val, member, span.clone())
+            }
+
+            Expression::MethodCall {
+                object,
+                method,
+                args,
+                ..
+            } => {
+                let obj_val = self.evaluate_expression(object, span.clone())?;
+                self.evaluate_method_call(obj_val, method, args, span.clone())
+            }
+
+            Expression::StdReference => {
+                // Return the @std module
+                self.modules.get("@std").cloned().ok_or_else(|| {
+                    CompileError::ComptimeError("@std module not available".to_string(), span)
+                })
             }
 
             Expression::Comptime(inner) => {
@@ -760,15 +847,269 @@ impl ComptimeInterpreter {
         member: &str,
         span: Option<crate::error::Span>,
     ) -> Result<ComptimeValue> {
-        match object {
+        match &object {
             ComptimeValue::Struct { fields, .. } => fields.get(member).cloned().ok_or_else(|| {
                 CompileError::ComptimeError(
                     format!("Struct has no field: {}", member),
                     span.clone(),
                 )
             }),
+            ComptimeValue::ASTNode(node) => {
+                // Field access on AST nodes: node.name, node.left, etc.
+                let flds = meta::fields(node)?;
+                for f in &flds {
+                    if let ComptimeValue::Struct { fields: ff, .. } = f {
+                        if let Some(ComptimeValue::String(name)) = ff.get("name") {
+                            if name == member {
+                                return ff.get("value").cloned().ok_or_else(|| {
+                                    CompileError::ComptimeError(
+                                        format!("AST field '{}' has no value", member),
+                                        span.clone(),
+                                    )
+                                });
+                            }
+                        }
+                    }
+                }
+                Err(CompileError::ComptimeError(
+                    format!(
+                        "AST node '{}' has no field '{}'",
+                        meta::variant_name(node),
+                        member
+                    ),
+                    span,
+                ))
+            }
             _ => Err(CompileError::ComptimeError(
                 format!("Cannot access member {} on non-struct value", member),
+                span,
+            )),
+        }
+    }
+
+    /// Evaluate method calls (UFC-style: object.method(args))
+    fn evaluate_method_call(
+        &mut self,
+        object: ComptimeValue,
+        method: &str,
+        args: &[Expression],
+        span: Option<crate::error::Span>,
+    ) -> Result<ComptimeValue> {
+        // Check if the object is the meta module
+        if let ComptimeValue::Struct { name, .. } = &object {
+            if name == "meta" {
+                return self.evaluate_meta_intrinsic(method, args, span);
+            }
+        }
+
+        // Check for ASTNode method calls
+        if let ComptimeValue::ASTNode(ref node) = object {
+            return self.evaluate_ast_node_method(node, method, args, span);
+        }
+
+        // Array methods
+        if let ComptimeValue::Array(ref items) = object {
+            return self.evaluate_array_method(items, method, args, span);
+        }
+
+        // String methods
+        if let ComptimeValue::String(ref s) = object {
+            return self.evaluate_string_method(s, method, args, span);
+        }
+
+        Err(CompileError::ComptimeError(
+            format!("Cannot call method '{}' on {:?}", method, object.get_type()),
+            span,
+        ))
+    }
+
+    /// Evaluate meta module intrinsic function calls
+    fn evaluate_meta_intrinsic(
+        &mut self,
+        method: &str,
+        args: &[Expression],
+        span: Option<crate::error::Span>,
+    ) -> Result<ComptimeValue> {
+        match method {
+            "type_info" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "meta.type_info() expects exactly 1 argument".to_string(),
+                        span,
+                    ));
+                }
+                let val = self.evaluate_expression(&args[0], span.clone())?;
+                match val {
+                    ComptimeValue::ASTNode(ref node) => meta::type_info(node),
+                    _ => Err(CompileError::ComptimeError(
+                        "meta.type_info() expects an ASTNode argument".to_string(),
+                        span,
+                    )),
+                }
+            }
+
+            "fields" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "meta.fields() expects exactly 1 argument".to_string(),
+                        span,
+                    ));
+                }
+                let val = self.evaluate_expression(&args[0], span.clone())?;
+                match val {
+                    ComptimeValue::ASTNode(ref node) => {
+                        Ok(ComptimeValue::Array(meta::fields(node)?))
+                    }
+                    _ => Err(CompileError::ComptimeError(
+                        "meta.fields() expects an ASTNode argument".to_string(),
+                        span,
+                    )),
+                }
+            }
+
+            "variant_name" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "meta.variant_name() expects exactly 1 argument".to_string(),
+                        span,
+                    ));
+                }
+                let val = self.evaluate_expression(&args[0], span.clone())?;
+                match val {
+                    ComptimeValue::ASTNode(ref node) => {
+                        Ok(ComptimeValue::String(meta::variant_name(node)))
+                    }
+                    _ => Err(CompileError::ComptimeError(
+                        "meta.variant_name() expects an ASTNode argument".to_string(),
+                        span,
+                    )),
+                }
+            }
+
+            "children" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "meta.children() expects exactly 1 argument".to_string(),
+                        span,
+                    ));
+                }
+                let val = self.evaluate_expression(&args[0], span.clone())?;
+                match val {
+                    ComptimeValue::ASTNode(ref node) => {
+                        Ok(ComptimeValue::Array(meta::children(node)?))
+                    }
+                    _ => Err(CompileError::ComptimeError(
+                        "meta.children() expects an ASTNode argument".to_string(),
+                        span,
+                    )),
+                }
+            }
+
+            "parse" => {
+                // meta.parse("2 + 3") -> ASTNode(Expression)
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "meta.parse() expects exactly 1 argument".to_string(),
+                        span,
+                    ));
+                }
+                let val = self.evaluate_expression(&args[0], span.clone())?;
+                match val {
+                    ComptimeValue::String(source) => {
+                        // Parse the string as a Zen expression
+                        let lexer = crate::lexer::Lexer::new(&source);
+                        let mut parser = crate::parser::Parser::new(lexer);
+                        let program = parser.parse_program().map_err(|e| {
+                            CompileError::ComptimeError(
+                                format!("meta.parse() failed: {}", e),
+                                span.clone(),
+                            )
+                        })?;
+                        Ok(ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Program(
+                            program,
+                        ))))
+                    }
+                    _ => Err(CompileError::ComptimeError(
+                        "meta.parse() expects a string argument".to_string(),
+                        span,
+                    )),
+                }
+            }
+
+            _ => Err(CompileError::ComptimeError(
+                format!("Unknown meta intrinsic: meta.{}()", method),
+                span,
+            )),
+        }
+    }
+
+    /// Evaluate methods on ASTNode values
+    fn evaluate_ast_node_method(
+        &mut self,
+        node: &ASTNodeValue,
+        method: &str,
+        _args: &[Expression],
+        span: Option<crate::error::Span>,
+    ) -> Result<ComptimeValue> {
+        match method {
+            "type_info" => meta::type_info(node),
+            "fields" => Ok(ComptimeValue::Array(meta::fields(node)?)),
+            "variant_name" => Ok(ComptimeValue::String(meta::variant_name(node))),
+            "children" => Ok(ComptimeValue::Array(meta::children(node)?)),
+            _ => Err(CompileError::ComptimeError(
+                format!("ASTNode has no method '{}'", method),
+                span,
+            )),
+        }
+    }
+
+    /// Evaluate array methods
+    fn evaluate_array_method(
+        &mut self,
+        items: &[ComptimeValue],
+        method: &str,
+        _args: &[Expression],
+        span: Option<crate::error::Span>,
+    ) -> Result<ComptimeValue> {
+        match method {
+            "len" => Ok(ComptimeValue::I64(items.len() as i64)),
+            _ => Err(CompileError::ComptimeError(
+                format!("Array has no method '{}'", method),
+                span,
+            )),
+        }
+    }
+
+    /// Evaluate string methods
+    fn evaluate_string_method(
+        &mut self,
+        s: &str,
+        method: &str,
+        args: &[Expression],
+        span: Option<crate::error::Span>,
+    ) -> Result<ComptimeValue> {
+        match method {
+            "len" => Ok(ComptimeValue::I64(s.len() as i64)),
+            "append" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "String.append() expects 1 argument".to_string(),
+                        span,
+                    ));
+                }
+                let val = self.evaluate_expression(&args[0], span.clone())?;
+                match val {
+                    ComptimeValue::String(other) => {
+                        Ok(ComptimeValue::String(format!("{}{}", s, other)))
+                    }
+                    _ => Err(CompileError::ComptimeError(
+                        "String.append() expects a string argument".to_string(),
+                        span,
+                    )),
+                }
+            }
+            _ => Err(CompileError::ComptimeError(
+                format!("String has no method '{}'", method),
                 span,
             )),
         }
@@ -784,5 +1125,351 @@ impl ComptimeInterpreter {
     #[allow(dead_code)]
     pub fn generate_code(&mut self, value: ComptimeValue) -> Result<Expression> {
         value.to_expression()
+    }
+}
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+
+    fn parse_and_get_program(source: &str) -> ast::Program {
+        let lexer = crate::lexer::Lexer::new(source);
+        let mut parser = crate::parser::Parser::new(lexer);
+        parser.parse_program().unwrap()
+    }
+
+    #[test]
+    fn test_meta_parse_and_variant_name() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // meta.parse("x = 42") returns a Program ASTNode
+        let source_expr = Expression::String("x = 42".to_string());
+        let meta_val = interp
+            .evaluate_member_access(interp.modules.get("@std").unwrap().clone(), "meta", None)
+            .unwrap();
+
+        // Call meta.parse()
+        let result = interp
+            .evaluate_method_call(meta_val.clone(), "parse", &[source_expr], None)
+            .unwrap();
+
+        // Should be an ASTNode
+        assert!(matches!(result, ComptimeValue::ASTNode(_)));
+
+        // Test variant_name directly on the node
+        if let ComptimeValue::ASTNode(ref node) = result {
+            assert_eq!(meta::variant_name(node), "Program");
+        }
+    }
+
+    #[test]
+    fn test_meta_type_info_on_parsed_code() {
+        let program = parse_and_get_program("add = (a: i32, b: i32) i32 { return a + b }");
+        let node = ASTNodeValue::Program(program);
+        let info = meta::type_info(&node).unwrap();
+
+        if let ComptimeValue::Struct { fields, .. } = &info {
+            assert_eq!(
+                fields.get("kind").unwrap().clone(),
+                ComptimeValue::String("Program".to_string())
+            );
+            assert_eq!(
+                fields.get("variant").unwrap().clone(),
+                ComptimeValue::String("Program".to_string())
+            );
+        } else {
+            panic!("Expected TypeInfo struct");
+        }
+    }
+
+    #[test]
+    fn test_meta_walk_function_declaration() {
+        let program = parse_and_get_program("add = (a: i32, b: i32) i32 { return a + b }");
+
+        // Get the first declaration
+        assert!(!program.declarations.is_empty());
+        let func_node = ASTNodeValue::Declaration(program.declarations[0].clone());
+
+        // variant_name should be "Function"
+        assert_eq!(meta::variant_name(&func_node), "Function");
+
+        // fields should include name, args, return_type, body
+        let flds = meta::fields(&func_node).unwrap();
+        let field_names: Vec<String> = flds
+            .iter()
+            .filter_map(|f| {
+                if let ComptimeValue::Struct { fields, .. } = f {
+                    if let Some(ComptimeValue::String(n)) = fields.get("name") {
+                        return Some(n.clone());
+                    }
+                }
+                None
+            })
+            .collect();
+
+        assert!(field_names.contains(&"name".to_string()));
+        assert!(field_names.contains(&"args".to_string()));
+        assert!(field_names.contains(&"return_type".to_string()));
+        assert!(field_names.contains(&"body".to_string()));
+    }
+
+    #[test]
+    fn test_meta_walk_binary_expression() {
+        let program = parse_and_get_program("main = () i32 { return 2 + 3 }");
+
+        // Navigate: Program -> first decl (Function) -> body -> first stmt (Return) -> expr (BinaryOp)
+        let func_decl = &program.declarations[0];
+        if let Declaration::Function(f) = func_decl {
+            assert_eq!(f.name, "main");
+            let return_stmt = &f.body[0];
+            if let Statement::Return { expr, .. } = return_stmt {
+                let expr_node = ASTNodeValue::Expression(expr.clone());
+                assert_eq!(meta::variant_name(&expr_node), "BinaryOp");
+
+                let flds = meta::fields(&expr_node).unwrap();
+                // Should have left, op, right
+                assert_eq!(flds.len(), 3);
+
+                // Check the operator is "+"
+                if let ComptimeValue::Struct { fields, .. } = &flds[1] {
+                    if let Some(ComptimeValue::String(op)) = fields.get("value") {
+                        assert_eq!(op, "+");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_meta_parse_intrinsic_via_interpreter() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // Simulate: { meta } = @std
+        let std_val = interp.modules.get("@std").unwrap().clone();
+        if let ComptimeValue::Struct { fields, .. } = std_val {
+            if let Some(meta_val) = fields.get("meta") {
+                interp.env.define("meta".to_string(), meta_val.clone());
+            }
+        }
+
+        // Now call meta.parse("x = 42")
+        let meta_obj = interp.env.get("meta").unwrap();
+        let result = interp
+            .evaluate_method_call(
+                meta_obj,
+                "parse",
+                &[Expression::String("x = 42".to_string())],
+                None,
+            )
+            .unwrap();
+
+        assert!(matches!(result, ComptimeValue::ASTNode(_)));
+
+        // Store the parsed AST and call variant_name on it
+        interp.env.define("ast".to_string(), result);
+        let ast_val = interp.env.get("ast").unwrap();
+        let vname_result = interp
+            .evaluate_method_call(ast_val, "variant_name", &[], None)
+            .unwrap();
+
+        assert_eq!(vname_result, ComptimeValue::String("Program".to_string()));
+    }
+
+    #[test]
+    fn test_meta_field_access_on_ast_node() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // Parse a function and get its AST
+        let program = parse_and_get_program("greet = (name: StringLiteral) void {}");
+        let func_node = ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
+            program.declarations[0].clone(),
+        )));
+
+        interp.env.define("func".to_string(), func_node);
+
+        // Access func.name via member access
+        let func_val = interp.env.get("func").unwrap();
+        let name = interp
+            .evaluate_member_access(func_val, "name", None)
+            .unwrap();
+
+        assert_eq!(name, ComptimeValue::String("greet".to_string()));
+    }
+
+    #[test]
+    fn test_meta_field_access_on_binary_op() {
+        let expr = Expression::BinaryOp {
+            left: Box::new(Expression::Integer32(10)),
+            op: ast::BinaryOperator::Multiply,
+            right: Box::new(Expression::Integer32(5)),
+        };
+        let node = ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Expression(expr)));
+
+        let mut interp = ComptimeInterpreter::new();
+        interp.env.define("expr".to_string(), node);
+
+        // Access expr.op
+        let expr_val = interp.env.get("expr").unwrap();
+        let op = interp
+            .evaluate_member_access(expr_val.clone(), "op", None)
+            .unwrap();
+        assert_eq!(op, ComptimeValue::String("*".to_string()));
+
+        // Access expr.left (should be another ASTNode)
+        let left = interp
+            .evaluate_member_access(expr_val, "left", None)
+            .unwrap();
+        assert!(matches!(left, ComptimeValue::ASTNode(_)));
+
+        // Access value from the left node
+        let left_val = interp.evaluate_member_access(left, "value", None).unwrap();
+        assert_eq!(left_val, ComptimeValue::I32(10));
+    }
+
+    #[test]
+    fn test_destructuring_import_std_meta() {
+        let mut interp = ComptimeInterpreter::new();
+
+        // Execute: { meta } = @std
+        let import_stmt = Statement::DestructuringImport {
+            names: vec!["meta".to_string()],
+            source: Expression::StdReference,
+            span: None,
+        };
+
+        interp.execute_statement(&import_stmt).unwrap();
+
+        // meta should now be in scope
+        let meta_val = interp.env.get("meta");
+        assert!(meta_val.is_some());
+        if let Some(ComptimeValue::Struct { name, .. }) = meta_val {
+            assert_eq!(name, "meta");
+        }
+    }
+
+    #[test]
+    fn test_array_len_method() {
+        let mut interp = ComptimeInterpreter::new();
+        let arr = ComptimeValue::Array(vec![
+            ComptimeValue::I32(1),
+            ComptimeValue::I32(2),
+            ComptimeValue::I32(3),
+        ]);
+        interp.env.define("arr".to_string(), arr);
+
+        let arr_val = interp.env.get("arr").unwrap();
+        let len = interp
+            .evaluate_method_call(arr_val, "len", &[], None)
+            .unwrap();
+        assert_eq!(len, ComptimeValue::I64(3));
+    }
+
+    #[test]
+    fn test_string_append_method() {
+        let mut interp = ComptimeInterpreter::new();
+        let s = ComptimeValue::String("hello ".to_string());
+
+        let result = interp
+            .evaluate_method_call(
+                s,
+                "append",
+                &[Expression::String("world".to_string())],
+                None,
+            )
+            .unwrap();
+        assert_eq!(result, ComptimeValue::String("hello world".to_string()));
+    }
+
+    #[test]
+    fn test_full_meta_pipeline_parse_walk_introspect() {
+        // This test simulates the full meta pipeline:
+        // 1. Parse source code into AST
+        // 2. Walk the AST using meta intrinsics
+        // 3. Extract information from each node
+
+        let mut interp = ComptimeInterpreter::new();
+
+        // Import meta
+        let import_stmt = Statement::DestructuringImport {
+            names: vec!["meta".to_string()],
+            source: Expression::StdReference,
+            span: None,
+        };
+        interp.execute_statement(&import_stmt).unwrap();
+
+        // Parse source code
+        let meta_val = interp.env.get("meta").unwrap();
+        let ast_node = interp
+            .evaluate_method_call(
+                meta_val.clone(),
+                "parse",
+                &[Expression::String(
+                    "add = (a: i32, b: i32) i32 { return a + b }".to_string(),
+                )],
+                None,
+            )
+            .unwrap();
+
+        // Get type_info
+        interp.env.define("program".to_string(), ast_node.clone());
+        let type_info = interp
+            .evaluate_method_call(
+                meta_val.clone(),
+                "type_info",
+                &[Expression::Identifier("program".to_string())],
+                None,
+            )
+            .unwrap();
+
+        // type_info should be a TypeInfo struct
+        if let ComptimeValue::Struct { name, fields } = &type_info {
+            assert_eq!(name, "TypeInfo");
+            assert_eq!(
+                fields.get("kind").unwrap().clone(),
+                ComptimeValue::String("Program".to_string())
+            );
+        } else {
+            panic!("Expected TypeInfo struct");
+        }
+
+        // Get fields of the program
+        let program_fields = interp
+            .evaluate_method_call(
+                meta_val.clone(),
+                "fields",
+                &[Expression::Identifier("program".to_string())],
+                None,
+            )
+            .unwrap();
+
+        if let ComptimeValue::Array(flds) = &program_fields {
+            assert_eq!(flds.len(), 2); // declarations + statements
+        } else {
+            panic!("Expected array of fields");
+        }
+
+        // Navigate into declarations via field access on the ASTNode
+        let decls = interp
+            .evaluate_member_access(ast_node, "declarations", None)
+            .unwrap();
+
+        if let ComptimeValue::Array(items) = &decls {
+            assert_eq!(items.len(), 1); // One function declaration
+
+            // Get the function name
+            let func = &items[0];
+            let func_name = interp
+                .evaluate_member_access(func.clone(), "name", None)
+                .unwrap();
+            assert_eq!(func_name, ComptimeValue::String("add".to_string()));
+
+            // Get variant name of the function declaration
+            let func_variant = interp
+                .evaluate_method_call(func.clone(), "variant_name", &[], None)
+                .unwrap();
+            assert_eq!(func_variant, ComptimeValue::String("Function".to_string()));
+        } else {
+            panic!("Expected array of declarations");
+        }
     }
 }
