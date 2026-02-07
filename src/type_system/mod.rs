@@ -5,10 +5,14 @@ use std::collections::HashMap;
 pub mod environment;
 pub mod instantiation;
 pub mod monomorphization;
+pub mod type_aliases;
+pub mod type_store;
 
 pub use environment::TypeEnvironment;
 pub use instantiation::TypeInstantiator;
 pub use monomorphization::Monomorphizer;
+pub use type_aliases::TypeAliasRegistry;
+pub use type_store::{new_type_store, TypeStore, TypeStoreRef};
 
 // ============================================================================
 // Shared utility functions for type instantiation/monomorphization

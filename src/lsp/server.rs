@@ -386,12 +386,21 @@ fn generate_type_mismatch_hint(expected: &str, actual: &str) -> Option<String> {
         ));
     }
 
-    // Pointer hints
-    if expected.contains('*') && !actual.contains('*') {
-        return Some("Use `&value` to get a pointer to the value".to_string());
+    // Pointer hints - check for Ptr<T>, MutPtr<T>, RawPtr<T> using proper type matching
+    let expected_is_ptr = is_type_named(expected, "Ptr")
+        || is_type_named(expected, "MutPtr")
+        || is_type_named(expected, "RawPtr");
+    let actual_is_ptr = is_type_named(actual, "Ptr")
+        || is_type_named(actual, "MutPtr")
+        || is_type_named(actual, "RawPtr");
+
+    if expected_is_ptr && !actual_is_ptr {
+        return Some("Use `@ptr(value)` to get a pointer to the value".to_string());
     }
-    if !expected.contains('*') && actual.contains('*') {
-        return Some("Dereference with `value.*` to get the underlying value".to_string());
+    if !expected_is_ptr && actual_is_ptr {
+        return Some(
+            "Dereference with `@ptr_value(value)` to get the underlying value".to_string(),
+        );
     }
 
     None
