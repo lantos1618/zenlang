@@ -31,7 +31,7 @@ pub fn infer_identifier_type(checker: &mut TypeChecker, name: &str) -> Result<As
 
     // Check if name is a struct type - used for static method calls like MyStruct.new()
     // Return a Struct type with empty fields (fields will be filled in during codegen)
-    if checker.structs.contains_key(name) {
+    if checker.type_store.borrow().has_struct(name) {
         return Ok(AstType::Struct {
             name: name.to_string(),
             fields: vec![],

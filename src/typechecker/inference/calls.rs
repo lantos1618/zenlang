@@ -61,7 +61,7 @@ pub fn infer_function_call_type(
             if func == "new" && !type_args.is_empty() {
                 // If we have explicit type args, return a generic type with those args
                 // Check if it's a known struct type
-                if checker.structs.contains_key(module)
+                if checker.type_store.borrow().has_struct(module)
                     || checker.get_stdlib_struct(module).is_some()
                 {
                     return Ok(AstType::Generic {
@@ -79,7 +79,8 @@ pub fn infer_function_call_type(
 
     // Handle generic types with explicit type_args from AST
     if !type_args.is_empty()
-        && (checker.structs.contains_key(name) || checker.get_stdlib_struct(name).is_some())
+        && (checker.type_store.borrow().has_struct(name)
+            || checker.get_stdlib_struct(name).is_some())
     {
         return Ok(AstType::Generic {
             name: name.to_string(),
@@ -255,7 +256,8 @@ fn try_resolve_static_call(
         if let Some(return_type) = checker.get_stdlib_method_type(name, "new") {
             return Some(Ok(return_type.clone()));
         }
-        if checker.structs.contains_key(name) || checker.get_stdlib_struct(name).is_some() {
+        if checker.type_store.borrow().has_struct(name) || checker.get_stdlib_struct(name).is_some()
+        {
             return Some(Ok(AstType::Generic {
                 name: name.to_string(),
                 type_args: vec![],
@@ -398,8 +400,11 @@ fn try_resolve_fn_ptr_field(
     method: &str,
 ) -> Option<AstType> {
     let type_name = extract_type_name(effective_type)?;
-    let struct_info = checker.structs.get(type_name)?;
-    for (field_name, field_type) in &struct_info.fields {
+    let type_store = checker.type_store.borrow();
+    let struct_info = type_store.get_struct(type_name)?;
+    let fields: Vec<(String, AstType)> = struct_info.fields.clone();
+    drop(type_store);
+    for (field_name, field_type) in &fields {
         if field_name == method {
             match field_type {
                 AstType::FunctionPointer { return_type, .. } => {

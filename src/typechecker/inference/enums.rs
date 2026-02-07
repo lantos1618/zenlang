@@ -92,7 +92,8 @@ pub fn infer_enum_literal_type(
     } else {
         // Unknown enum variant — check user-defined enums before returning Void
         // This handles shorthand syntax like .MyVariant for user-defined enums
-        for (name, info) in &checker.enums {
+        let type_store = checker.type_store.borrow();
+        for (name, info) in type_store.get_all_enums() {
             for (var_name, _) in &info.variants {
                 if var_name == variant {
                     return Ok(AstType::Generic {
@@ -121,15 +122,18 @@ pub fn infer_enum_variant_type(
     // Resolve the enum type name
     let enum_type_name = if enum_name.is_empty() {
         let mut found_enum = None;
-        for (name, info) in &checker.enums {
-            for (var_name, _) in &info.variants {
-                if var_name == variant {
-                    found_enum = Some(name.clone());
+        {
+            let type_store = checker.type_store.borrow();
+            for (name, info) in type_store.get_all_enums() {
+                for (var_name, _) in &info.variants {
+                    if var_name == variant {
+                        found_enum = Some(name.clone());
+                        break;
+                    }
+                }
+                if found_enum.is_some() {
                     break;
                 }
-            }
-            if found_enum.is_some() {
-                break;
             }
         }
         found_enum.unwrap_or_else(|| {
@@ -198,7 +202,7 @@ pub fn infer_enum_variant_type(
 
     // For user-defined enums, return as Enum type
     // Note: Generic user-defined enums would need type_params in EnumInfo to work properly
-    if let Some(enum_info) = checker.enums.get(&enum_type_name) {
+    if let Some(enum_info) = checker.type_store.borrow().get_enum(&enum_type_name) {
         let variants = enum_info
             .variants
             .iter()

@@ -16,10 +16,8 @@ pub fn infer_member_type(
     match object_type {
         AstType::Struct { name, .. } => {
             if let Some(struct_info) = structs.get(name) {
-                for (field_name, field_type) in &struct_info.fields {
-                    if field_name == member {
-                        return Ok(field_type.clone());
-                    }
+                if let Some(field_type) = struct_info.get_field_type(member) {
+                    return Ok(field_type.clone());
                 }
                 let available_fields: Vec<String> = struct_info.fields.iter().map(|(n, _)| n.clone()).collect();
                 let suggestion = if available_fields.is_empty() {
@@ -54,10 +52,8 @@ pub fn infer_member_type(
         AstType::Generic { name, .. } => {
             // Try to look up the struct info by name
             if let Some(struct_info) = structs.get(name) {
-                for (field_name, field_type) in &struct_info.fields {
-                    if field_name == member {
-                        return Ok(field_type.clone());
-                    }
+                if let Some(field_type) = struct_info.get_field_type(member) {
+                    return Ok(field_type.clone());
                 }
                 let available_fields: Vec<String> = struct_info.fields.iter().map(|(n, _)| n.clone()).collect();
                 let suggestion = if available_fields.is_empty() {
@@ -78,7 +74,6 @@ pub fn infer_member_type(
         }
         // Handle enum type constructors
         AstType::EnumType { name } => {
-            // Check if the member is a valid variant of this enum
             if let Some(enum_info) = enums.get(name) {
                 for (variant_name, _variant_type) in &enum_info.variants {
                     if variant_name == member {
@@ -115,23 +110,23 @@ pub fn infer_member_type(
             }
         }
         AstType::StdModule => {
-            // Handle stdlib module member access (e.g., math.pi, GPA.init)
-            // Known members are hardcoded; a proper registry could be added later
-            match member {
-                "pi" => Ok(AstType::F64),
-                "init" => {
-                    // For allocator modules, init() returns an allocator type
-                    // We'll use a generic type for now
-                    Ok(AstType::Generic {
-                        name: "Allocator".to_string(),
-                        type_args: vec![],
-                    })
-                }
-                _ => Err(CompileError::TypeError(
-                    format!("Unknown stdlib module member: {}", member),
-                    span,
-                )),
+            use crate::stdlib_types::stdlib_types;
+            let registry = stdlib_types();
+
+            if let Some(return_type) = registry.get_method_return_type(member, "init") {
+                return Ok(return_type.clone());
             }
+
+            if let Some(struct_type) = registry.get_struct_type(member) {
+                return Ok(struct_type);
+            }
+
+            // Fallback: stdlib module member returns a generic marker type
+            // that will be resolved at later compilation stages
+            Ok(AstType::Generic {
+                name: format!("StdModule::{}", member),
+                type_args: vec![],
+            })
         }
         _ => Err(CompileError::TypeError(
             format!(
