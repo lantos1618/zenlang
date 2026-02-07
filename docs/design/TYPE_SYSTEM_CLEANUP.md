@@ -1,5 +1,7 @@
 # Type System Cleanup Plan
 
+**Status:** Partially complete (Feb 2026)
+
 ## Issue 1: String Parsing Instead of AST
 
 ### Problem
@@ -27,13 +29,21 @@ match parse_type_from_string(name) {
 
 ### Files to Fix
 - ✅ `src/typechecker/inference/identifiers.rs` - FIXED
-- ✅ `src/typechecker/inference/enums.rs` - FIXED  
+- ✅ `src/typechecker/inference/enums.rs` - FIXED
+- ✅ `src/lsp/completion/context.rs` - FIXED (uses `name_utils::strip_generics()`)
+- ✅ `src/lsp/completion/methods.rs` - FIXED (uses `name_utils::strip_generics()`)
+- ✅ `src/lsp/type_inference.rs` - FIXED (uses `name_utils::strip_generics()`)
+- ✅ `src/lsp/navigation/struct_fields.rs` - FIXED (uses `name_utils::strip_generics()`)
+- ✅ `src/lsp/hover/patterns.rs` - FIXED (uses `name_utils::strip_generics()`)
+- ✅ `src/lsp/pattern_checking.rs` - FIXED (uses `name_utils::strip_generics()`)
 - ⚠️ `src/codegen/llvm/behaviors.rs` - Needs review
 - ⚠️ `src/codegen/llvm/expressions/inference.rs` - Needs review
-- ⚠️ `src/lsp/type_inference.rs` - Needs review (LSP may need string parsing for hover)
 
 ### Root Cause
 When identifiers come in as strings (e.g., from LSP or error messages), we parse them manually instead of using the parser once and working with AST.
+
+### Progress (Feb 2026)
+Created `src/name_utils.rs` with `strip_generics()`, `method_key()`, `scoped_var_key()`, `stdlib_func_key()` — all LSP string-parsing sites now use these canonical helpers.
 
 ---
 
@@ -100,40 +110,42 @@ src/
 
 4. **WellKnown is fine** - It's a registry, not duplication
 
-### Proposed Consolidation
+### Current Architecture (Feb 2026)
+
+TypeStore exists and is partially integrated:
 
 ```
 src/
-├── typechecker/          # Single source of truth for types
-│   ├── mod.rs           # Main TypeChecker
-│   ├── types.rs         # Type storage (structs, enums, functions)
-│   ├── inference/       # Type inference
+├── type_system/
+│   ├── type_store.rs     # ✅ CREATED — Unified storage (425 LOC)
+│   ├── type_aliases.rs   # ✅ CREATED — Alias resolution with cycle detection (296 LOC)
+│   ├── monomorphization.rs
+│   ├── instantiation.rs
+│   └── environment.rs    # (To be consolidated into TypeStore)
+│
+├── typechecker/
+│   ├── mod.rs            # Uses Rc<RefCell<TypeStore>> for type storage
 │   └── ...
 │
-├── type_context.rs       # Thin wrapper around TypeChecker for codegen
-│   └── (delegates to TypeChecker's type storage)
-│
-├── type_system/          # Generic type operations only
-│   ├── monomorphization.rs  # Uses TypeChecker's types
-│   └── instantiation.rs      # Uses TypeChecker's types
+├── type_context.rs       # Bridge to codegen (still separate)
 │
 └── well_known.rs         # Registry (keep as-is)
 ```
 
-### Migration Steps
+### Remaining Migration Steps
 
-1. **Make TypeContext reference TypeChecker**
-   - TypeContext becomes a view into TypeChecker's data
-   - Or merge them entirely
+1. **Make TypeContext delegate to TypeStore**
+   - TypeContext should be a thin view, not a copy
+   - Currently still duplicates some data
 
 2. **Remove StdlibTypes duplication**
    - TypeChecker already extracts stdlib types
-   - LSP can use TypeChecker directly
+   - LSP still uses `stdlib_types()` in 16 places — needs incremental migration
 
-3. **TypeEnvironment uses TypeChecker**
+3. **Consolidate TypeEnvironment into TypeStore**
    - Don't duplicate generic type storage
-   - Query TypeChecker for generic types
+   - Query TypeStore for generic types
 
 4. **Single source of truth**
-   - All type queries go through TypeChecker
+   - All type queries go through TypeStore
    - Other modules reference, don't duplicate
