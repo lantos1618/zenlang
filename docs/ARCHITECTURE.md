@@ -1,6 +1,6 @@
 # Zen Compiler Architecture
 
-**Last Updated:** February 2026 (type system refactoring, comptime restructure, LSP type inference consolidation)
+**Last Updated:** February 2026 (SEMA integration, type_inference/compiler_integration deleted, Response helpers unified)
 
 ---
 
@@ -63,7 +63,7 @@ Source (.zen)
 ## Module Structure
 
 ```
-src/                             183 files, ~55,350 LOC total
+src/                             ~54,000 LOC total
 ├── lib.rs               (18 LOC)    Module exports
 ├── compiler.rs          (433 LOC)   Pipeline orchestration
 ├── lexer.rs             (780 LOC)   Tokenization
@@ -186,18 +186,17 @@ src/                             183 files, ~55,350 LOC total
 │           ├── helpers.rs            Codegen helpers
 │           └── mod.rs                Module exports
 │
-├── lsp/                 (16,338 LOC) Language Server
+├── lsp/                 (14,937 LOC) Language Server
 │   ├── server.rs        (1,080 LOC)  Main server loop, request routing
 │   ├── mod.rs                        Constants, search limits
 │   ├── types.rs                      Document, SymbolInfo types
 │   ├── analyzer.rs                   Background analysis coordination
 │   ├── utils.rs                      Shared utilities
-│   ├── helpers.rs                    Helper functions
-│   ├── compiler_integration.rs       TypeChecker bridge
+│   ├── helpers.rs                    Response helpers, param parsing
+│   ├── type_query.rs    (218 LOC)    TypeContext facade for LSP consumers
 │   ├── stdlib_resolver.rs            Stdlib symbol resolution
 │   ├── symbol_extraction.rs          Symbol extraction
 │   ├── semantic_completion.rs        TypeContext-based completion
-│   ├── type_inference.rs  (866 LOC)  Unified LSP type inference
 │   ├── pattern_checking.rs           Pattern completeness
 │   ├── signature_help.rs             Function signatures
 │   ├── inlay_hints.rs                Inline type hints
@@ -234,8 +233,8 @@ src/                             183 files, ~55,350 LOC total
 │   │   ├── inference.rs             Type inference hover
 │   │   ├── response.rs              Response formatting
 │   │   └── imports.rs               Import hover
-│   ├── navigation/      (2,288 LOC)  Navigation features
-│   │   ├── definition.rs (818 LOC)  Go-to-definition
+│   ├── navigation/                   Navigation features
+│   │   ├── definition.rs (576 LOC)  Go-to-definition (decomposed resolvers)
 │   │   ├── struct_fields.rs         Struct field navigation
 │   │   ├── references.rs            Find references
 │   │   ├── ufc.rs                   UFC navigation
@@ -283,18 +282,17 @@ src/                             183 files, ~55,350 LOC total
 
 | Metric | Value |
 |--------|-------|
-| Total Rust files | 183 |
-| Total LOC | ~55,350 |
+| Total LOC | ~54,000 |
 | Test count (lib) | 143 |
 
 ### Module Sizes
 
 | Module | LOC | Notes |
 |--------|-----|-------|
-| lsp/ | 16,399 | Full LSP implementation |
+| lsp/ | 14,937 | Full LSP via TypeQuery → SEMA |
 | codegen/ | 12,381 | LLVM backend |
 | parser/ | 6,798 | Syntax analysis |
-| typechecker/ | 5,603 | Type checking & inference |
+| typechecker/ | 5,612 | Type checking & inference |
 | comptime/ | 4,020 | Compile-time evaluation + meta API |
 | type_system/ | 1,671 | TypeStore, aliases, monomorphization |
 | ast/ | 1,641 | AST definitions |
@@ -320,7 +318,17 @@ pub struct TypeStore {
 }
 ```
 
-The TypeChecker holds `Rc<RefCell<TypeStore>>` and populates it during analysis. TypeContext then provides a read-only view for codegen.
+The TypeChecker holds `Rc<RefCell<TypeStore>>` and populates it during analysis. TypeContext then provides a read-only view for codegen and LSP.
+
+### TypeQuery (LSP → SEMA Bridge)
+
+`src/lsp/type_query.rs` is a thin facade over TypeContext for LSP consumers. All LSP modules use TypeQuery instead of hand-rolled type inference:
+
+```
+LSP Request → Parser → AST → TypeChecker → TypeContext → TypeQuery → LSP Response
+```
+
+Key methods: `find_variable_type()`, `resolve_chain()`, `has_struct()`, `function_return_type_ast()`, `infer_literal_type()`.
 
 ### name_utils (Canonical Key Construction)
 
