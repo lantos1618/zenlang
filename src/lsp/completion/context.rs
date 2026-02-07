@@ -10,6 +10,7 @@ use crate::lsp::helpers::char_pos_to_byte_pos;
 use crate::lsp::type_inference::infer_receiver_type_with_context;
 use crate::lsp::types::ZenCompletionContext;
 use crate::lsp::utils::format_type;
+use crate::name_utils;
 
 /// Detect the completion context at the given position
 pub fn get_completion_context(
@@ -525,8 +526,7 @@ fn infer_matched_expression_type(
                     if key.ends_with(&format!("::{}", base)) || key == base {
                         let mut current_type = format_type(var_type);
                         for field_name in &parts[1..] {
-                            let struct_name =
-                                current_type.split('<').next().unwrap_or(&current_type);
+                            let struct_name = name_utils::strip_generics(&current_type);
                             if let Some(fields) = type_ctx.structs.get(struct_name) {
                                 if let Some((_, field_type)) =
                                     fields.iter().find(|(n, _)| n == *field_name)

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use crate::lsp::types::*;
 use crate::lsp::utils::{find_pattern_match_question, is_pattern_arm_line};
+use crate::name_utils;
 
 /// Get hover information for pattern match variables
 pub fn get_pattern_match_hover(
@@ -218,7 +219,7 @@ pub fn get_enum_variant_hover(
             symbol_name,
             symbol_name,
             payload_info,
-            enum_name.split('<').next().unwrap_or(&enum_name)
+            name_utils::strip_generics(&enum_name)
         ))
     } else {
         None

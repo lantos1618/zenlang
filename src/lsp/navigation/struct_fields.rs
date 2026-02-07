@@ -6,6 +6,7 @@ use lsp_types::*;
 
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::types::Document;
+use crate::name_utils;
 
 /// Find struct field definition for navigation.
 /// Handles `receiver.field` patterns and navigates to the field in the struct definition.
@@ -105,7 +106,7 @@ fn infer_receiver_type(
             if key.ends_with(&format!("::{}", receiver)) || key == receiver {
                 let type_str = crate::lsp::utils::format_type(var_type);
                 // Extract struct name from type (handle generics like Vec<T>)
-                let struct_name = type_str.split('<').next().unwrap_or(&type_str).trim();
+                let struct_name = name_utils::strip_generics(&type_str).trim();
                 if !struct_name.is_empty() {
                     return Some(struct_name.to_string());
                 }
@@ -122,7 +123,7 @@ fn infer_receiver_type(
     if let Some(symbol) = doc.symbols.get(receiver) {
         if let Some(type_info) = &symbol.type_info {
             let type_str = crate::lsp::utils::format_type(type_info);
-            let struct_name = type_str.split('<').next().unwrap_or(&type_str).trim();
+            let struct_name = name_utils::strip_generics(&type_str).trim();
             return Some(struct_name.to_string());
         }
     }
@@ -151,7 +152,7 @@ fn infer_receiver_type(
                     if colon_pos < eq_pos {
                         let type_str = line[colon_pos + 1..eq_pos].trim();
                         if !type_str.is_empty() {
-                            let struct_name = type_str.split('<').next().unwrap_or(type_str).trim();
+                            let struct_name = name_utils::strip_generics(type_str).trim();
                             return Some(struct_name.to_string());
                         }
                     }
@@ -186,11 +187,7 @@ fn infer_chained_receiver_type(receiver: &str, doc: &Document) -> Option<String>
 
     // Resolve each subsequent field
     for field_name in &parts[1..] {
-        let struct_name = current_type
-            .split('<')
-            .next()
-            .unwrap_or(&current_type)
-            .trim();
+        let struct_name = name_utils::strip_generics(&current_type).trim();
         if let Some(fields) = type_ctx.structs.get(struct_name) {
             let field_type = fields.iter().find(|(name, _)| name == *field_name);
             if let Some((_, field_ast_type)) = field_type {
@@ -204,11 +201,7 @@ fn infer_chained_receiver_type(receiver: &str, doc: &Document) -> Option<String>
     }
 
     // Return the final type (struct name without generics)
-    let struct_name = current_type
-        .split('<')
-        .next()
-        .unwrap_or(&current_type)
-        .trim();
+    let struct_name = name_utils::strip_generics(&current_type).trim();
     Some(struct_name.to_string())
 }
 

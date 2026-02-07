@@ -4,6 +4,7 @@
 use super::document_store::DocumentStore;
 use super::types::Document;
 use super::utils::format_type;
+use crate::name_utils;
 use crate::stdlib_types::stdlib_types;
 use crate::well_known::well_known;
 use lsp_types::*;
@@ -360,7 +361,7 @@ pub fn infer_base_expression_type(
             if let Some(symbol) = doc.symbols.get(type_name) {
                 if let Some(type_info) = &symbol.type_info {
                     let type_str = format_type(type_info);
-                    return Some(type_str.split('<').next().unwrap_or(&type_str).to_string());
+                    return Some(name_utils::strip_generics(&type_str).to_string());
                 }
             }
         }

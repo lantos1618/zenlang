@@ -6,6 +6,7 @@ use lsp_types::*;
 
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::utils::format_type;
+use crate::name_utils;
 
 /// Get struct field completions for dot access (e.g., `person.` -> name, age)
 pub fn get_struct_field_completions(
@@ -15,11 +16,7 @@ pub fn get_struct_field_completions(
     let mut items = Vec::new();
 
     // Extract struct name from type string
-    let struct_name = receiver_type
-        .split('<')
-        .next()
-        .unwrap_or(receiver_type)
-        .trim();
+    let struct_name = name_utils::strip_generics(receiver_type).trim();
 
     // Find struct definition in documents
     use crate::lsp::hover::find_struct_definition_in_documents;

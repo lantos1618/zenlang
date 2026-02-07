@@ -3,6 +3,7 @@
 use super::type_inference::get_base_type_name;
 use super::types::{Document, SymbolInfo};
 use crate::ast::{Expression, Pattern as AstPattern, PatternArm};
+use crate::name_utils;
 use crate::well_known::well_known;
 use lsp_types::*;
 
@@ -227,7 +228,7 @@ pub fn find_missing_variants(
     } else {
         // Try to look up custom enum from symbol tables
         // Extract just the enum name (before any :: - get_base_type_name already removes generics)
-        let enum_name = base_type.split("::").next().unwrap_or(&base_type).trim();
+        let enum_name = name_utils::base_name(&base_type).trim();
 
         // Search in all available symbol sources
         let mut found_variants: Option<Vec<String>> = None;
