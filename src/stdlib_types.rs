@@ -1,6 +1,7 @@
 use crate::ast::{AstType, Declaration, StructDefinition};
 use crate::error::{CompileError, Result};
 use crate::lexer::Lexer;
+use crate::name_utils;
 use crate::parser::Parser;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -169,7 +170,7 @@ impl StdlibTypeRegistry {
                 is_static,
             };
 
-            let key = format!("{}::{}", receiver, method);
+            let key = name_utils::method_key(receiver, method);
             self.methods.insert(key, sig);
         } else {
             let sig = FunctionSignature {
@@ -179,7 +180,7 @@ impl StdlibTypeRegistry {
                 return_type: func.return_type.clone(),
             };
 
-            let key = format!("{}::{}", module_name, &func.name);
+            let key = name_utils::stdlib_func_key(module_name, &func.name);
             self.functions.insert(key, sig);
         }
     }
@@ -237,7 +238,7 @@ impl StdlibTypeRegistry {
     }
 
     pub fn get_method_signature(&self, receiver: &str, method: &str) -> Option<&MethodSignature> {
-        let key = format!("{}::{}", receiver, method);
+        let key = name_utils::method_key(receiver, method);
         self.methods.get(&key)
     }
 
@@ -251,7 +252,7 @@ impl StdlibTypeRegistry {
         module: &str,
         func_name: &str,
     ) -> Option<&FunctionSignature> {
-        let key = format!("{}::{}", module, func_name);
+        let key = name_utils::stdlib_func_key(module, func_name);
         self.functions.get(&key)
     }
 
@@ -291,7 +292,7 @@ impl StdlibTypeRegistry {
             || self
                 .methods
                 .keys()
-                .any(|k| k.starts_with(&format!("{}::", type_name)))
+                .any(|k| k.starts_with(&format!("{}.", type_name)))
     }
 
     /// Get all known struct names from stdlib
@@ -311,16 +312,15 @@ impl StdlibTypeRegistry {
 
     /// Check if a function exists in a module
     pub fn has_function(&self, module: &str, func_name: &str) -> bool {
-        let key = format!("{}::{}", module, func_name);
+        let key = name_utils::stdlib_func_key(module, func_name);
         self.functions.contains_key(&key)
     }
 
     /// Check if a type is a collection type (has methods like new, push, etc.)
     pub fn is_collection_type(&self, type_name: &str) -> bool {
-        // Check if it has collection-like methods
-        let new_key = format!("{}::new", type_name);
-        let push_key = format!("{}::push", type_name);
-        let get_key = format!("{}::get", type_name);
+        let new_key = name_utils::method_key(type_name, "new");
+        let push_key = name_utils::method_key(type_name, "push");
+        let get_key = name_utils::method_key(type_name, "get");
 
         self.methods.contains_key(&new_key)
             && (self.methods.contains_key(&push_key) || self.methods.contains_key(&get_key))
@@ -334,9 +334,8 @@ impl StdlibTypeRegistry {
     /// Check if a type is an allocator-related type from stdlib/memory
     /// Looks for types with allocator-like methods (allocate, deallocate)
     pub fn is_allocator_type(&self, type_name: &str) -> bool {
-        // Check if it has allocator-like methods
-        let alloc_key = format!("{}::allocate", type_name);
-        let dealloc_key = format!("{}::deallocate", type_name);
+        let alloc_key = name_utils::method_key(type_name, "allocate");
+        let dealloc_key = name_utils::method_key(type_name, "deallocate");
         self.methods.contains_key(&alloc_key) || self.methods.contains_key(&dealloc_key)
     }
 

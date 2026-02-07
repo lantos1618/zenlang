@@ -10,6 +10,7 @@ use crate::error::{CompileError, Result};
 use crate::lexer::Lexer;
 use crate::lsp::type_inference::get_base_type_name;
 use crate::lsp::utils::format_type;
+use crate::name_utils;
 use crate::parser::Parser;
 use crate::typechecker::TypeChecker;
 use std::collections::HashMap;
@@ -152,7 +153,7 @@ impl CompilerIntegration {
             return Some(return_type.clone());
         }
 
-        let method_key = format!("{}::{}", receiver_type, method_name);
+        let method_key = name_utils::method_key(receiver_type, method_name);
         if let Some(sig) = self.stdlib_functions.get(&method_key) {
             return Some(sig.return_type.clone());
         }

@@ -20,6 +20,7 @@
 //! - Reduced memory usage
 
 use crate::ast::{AstType, Declaration, EnumDefinition, Function, StructDefinition};
+use crate::name_utils;
 use crate::typechecker::{EnumInfo, FunctionSignature, MethodSignature, StructInfo};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -152,6 +153,11 @@ impl TypeStore {
         self.type_aliases.contains_key(name)
     }
 
+    /// Get all type aliases
+    pub fn get_all_aliases(&self) -> &HashMap<String, AstType> {
+        &self.type_aliases
+    }
+
     pub fn resolve_type(&self, ty: &AstType) -> AstType {
         // If it's a generic type with no args, check if it's an alias
         if let AstType::Generic { name, type_args } = ty {
@@ -174,12 +180,12 @@ impl TypeStore {
         method_name: &str,
         signature: MethodSignature,
     ) {
-        let key = format!("{}::{}", type_name, method_name);
+        let key = name_utils::method_key(type_name, method_name);
         self.methods.insert(key, signature);
     }
 
     pub fn get_method(&self, type_name: &str, method_name: &str) -> Option<&MethodSignature> {
-        let key = format!("{}::{}", type_name, method_name);
+        let key = name_utils::method_key(type_name, method_name);
         self.methods.get(&key)
     }
 
@@ -203,12 +209,12 @@ impl TypeStore {
     // ============================================================================
 
     pub fn register_variable(&mut self, function_name: &str, var_name: &str, ty: AstType) {
-        let key = format!("{}::{}", function_name, var_name);
+        let key = name_utils::scoped_var_key(function_name, var_name);
         self.variables.insert(key, ty);
     }
 
     pub fn get_variable(&self, function_name: &str, var_name: &str) -> Option<&AstType> {
-        let key = format!("{}::{}", function_name, var_name);
+        let key = name_utils::scoped_var_key(function_name, var_name);
         self.variables.get(&key)
     }
 
@@ -254,12 +260,12 @@ impl TypeStore {
         func_name: &str,
         signature: FunctionSignature,
     ) {
-        let key = format!("{}::{}", module, func_name);
+        let key = name_utils::stdlib_func_key(module, func_name);
         self.stdlib_functions.insert(key, signature);
     }
 
     pub fn get_stdlib_function(&self, module: &str, func_name: &str) -> Option<&FunctionSignature> {
-        let key = format!("{}::{}", module, func_name);
+        let key = name_utils::stdlib_func_key(module, func_name);
         self.stdlib_functions.get(&key)
     }
 
@@ -290,7 +296,7 @@ impl TypeStore {
                             .map(|f| (f.name.clone(), f.type_.clone()))
                             .collect();
 
-                        self.register_struct(&struct_def.name, StructInfo { fields });
+                        self.register_struct(&struct_def.name, StructInfo::new(fields));
                     }
                     Declaration::Enum(enum_def) => {
                         let variants: Vec<(String, Option<AstType>)> = enum_def
@@ -377,9 +383,7 @@ mod tests {
     #[test]
     fn test_struct_registration() {
         let mut store = TypeStore::new();
-        let info = StructInfo {
-            fields: vec![("x".to_string(), AstType::I32)],
-        };
+        let info = StructInfo::new(vec![("x".to_string(), AstType::I32)]);
 
         store.register_struct("Point", info.clone());
 

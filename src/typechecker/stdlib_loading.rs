@@ -32,14 +32,15 @@ impl TypeChecker {
                         .iter()
                         .map(|f| (f.name.clone(), f.type_.clone()))
                         .collect();
-                    self.structs.insert(def.name.clone(), StructInfo { fields });
+                    self.type_store
+                        .borrow_mut()
+                        .register_struct(&def.name, StructInfo::new(fields));
                 }
                 Declaration::Function(func) => {
                     if let Some((receiver, method)) = func.name.split_once('.') {
                         // Method: Type.method
                         // Extract base type name (strip generic params: "Vec<T>" -> "Vec")
                         let base_receiver = strip_generic_params(receiver);
-                        let key = format!("{}::{}", base_receiver, method);
                         let sig = MethodSignature {
                             receiver_type: base_receiver.to_string(),
                             method_name: method.to_string(),
@@ -51,16 +52,21 @@ impl TypeChecker {
                                 .map(|(name, _)| name != "self")
                                 .unwrap_or(true),
                         };
-                        self.stdlib_methods.insert(key, sig);
+                        self.type_store
+                            .borrow_mut()
+                            .register_method(base_receiver, method, sig);
                     } else {
                         // Standalone function
-                        let key = format!("{}::{}", module_path, func.name);
                         let sig = FunctionSignature {
                             params: func.args.clone(),
                             return_type: func.return_type.clone(),
                             is_external: false,
                         };
-                        self.stdlib_functions.insert(key, sig);
+                        self.type_store.borrow_mut().register_stdlib_function(
+                            module_path,
+                            &func.name,
+                            sig,
+                        );
                     }
                 }
                 Declaration::Enum(def) => {
@@ -69,7 +75,9 @@ impl TypeChecker {
                         .iter()
                         .map(|v| (v.name.clone(), v.payload.clone()))
                         .collect();
-                    self.enums.insert(def.name.clone(), EnumInfo { variants });
+                    self.type_store
+                        .borrow_mut()
+                        .register_enum(&def.name, EnumInfo { variants });
                 }
                 Declaration::Trait(trait_def) => {
                     // Register the trait in behavior resolver so it can be used in trait implementations
@@ -82,7 +90,6 @@ impl TypeChecker {
                 }
                 Declaration::TraitImplementation(trait_impl) => {
                     for method in &trait_impl.methods {
-                        let key = format!("{}::{}", trait_impl.type_name, method.name);
                         let sig = MethodSignature {
                             receiver_type: trait_impl.type_name.clone(),
                             method_name: method.name.clone(),
@@ -94,25 +101,27 @@ impl TypeChecker {
                                 .map(|(n, _)| n != "self")
                                 .unwrap_or(true),
                         };
-                        self.stdlib_methods.insert(key, sig);
+                        self.type_store.borrow_mut().register_method(
+                            &trait_impl.type_name,
+                            &method.name,
+                            sig,
+                        );
                     }
                 }
                 Declaration::TypeAlias(type_alias) => {
                     // Handle struct type aliases
                     if let AstType::Struct { name: _, fields } = &type_alias.target_type {
-                        self.structs.insert(
-                            type_alias.name.clone(),
-                            StructInfo {
-                                fields: fields.clone(),
-                            },
-                        );
+                        self.type_store
+                            .borrow_mut()
+                            .register_struct(&type_alias.name, StructInfo::new(fields.clone()));
                     } else if matches!(
                         &type_alias.target_type,
                         AstType::Function { .. } | AstType::FunctionPointer { .. }
                     ) {
                         // Handle function type aliases (e.g., CompletionFn)
-                        self.type_aliases
-                            .insert(type_alias.name.clone(), type_alias.target_type.clone());
+                        self.type_store
+                            .borrow_mut()
+                            .register_type_alias(&type_alias.name, type_alias.target_type.clone());
                     }
                 }
                 _ => {}
@@ -121,33 +130,42 @@ impl TypeChecker {
     }
 
     /// Look up stdlib method return type (replaces stdlib_types().get_method_return_type)
-    pub fn get_stdlib_method_type(&self, receiver: &str, method: &str) -> Option<&AstType> {
-        let key = format!("{}::{}", receiver, method);
-        self.stdlib_methods.get(&key).map(|sig| &sig.return_type)
+    pub fn get_stdlib_method_type(&self, receiver: &str, method: &str) -> Option<AstType> {
+        self.type_store
+            .borrow()
+            .get_method(receiver, method)
+            .map(|sig| sig.return_type.clone())
     }
 
     /// Look up stdlib function return type (replaces stdlib_types().get_function_return_type)
     ///
     /// Handles module alias resolution: user writes `io.println()` where `io` is a short alias,
     /// but the function is stored under the full module path `@std.io::println`.
-    pub fn get_stdlib_function_type(&self, module: &str, func_name: &str) -> Option<&AstType> {
+    pub fn get_stdlib_function_type(&self, module: &str, func_name: &str) -> Option<AstType> {
         // Fast path: exact key match (e.g., module is already a full path)
-        let key = format!("{}::{}", module, func_name);
-        if let Some(sig) = self.stdlib_functions.get(&key) {
-            return Some(&sig.return_type);
+        if let Some(sig) = self
+            .type_store
+            .borrow()
+            .get_stdlib_function(module, func_name)
+        {
+            return Some(sig.return_type.clone());
         }
 
         // Alias resolution: "io" → "@std.io", "math" → "@std.math", etc.
-        let std_key = format!("@std.{}::{}", module, func_name);
-        if let Some(sig) = self.stdlib_functions.get(&std_key) {
-            return Some(&sig.return_type);
+        let std_module = format!("@std.{}", module);
+        if let Some(sig) = self
+            .type_store
+            .borrow()
+            .get_stdlib_function(&std_module, func_name)
+        {
+            return Some(sig.return_type.clone());
         }
 
         None
     }
 
     /// Get stdlib struct definition (replaces stdlib_types().get_struct_definition)
-    pub fn get_stdlib_struct(&self, name: &str) -> Option<&StructInfo> {
-        self.structs.get(name)
+    pub fn get_stdlib_struct(&self, name: &str) -> Option<StructInfo> {
+        self.type_store.borrow().get_struct(name).cloned()
     }
 }
