@@ -131,7 +131,7 @@ vec.mut_ref().free()
 
 For contributors:
 - [docs/design/STDLIB_DESIGN.md](docs/design/STDLIB_DESIGN.md) - Standard library design
-- [docs/ROADMAP_2026-01.md](docs/ROADMAP_2026-01.md) - Current roadmap
+- [docs/ROADMAP.md](docs/ROADMAP.md) - Current roadmap
 
 ---
 

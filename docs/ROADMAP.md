@@ -1,6 +1,6 @@
 # Zen Language Roadmap
 
-**Status**: Late Alpha | **Updated**: January 2026
+**Status**: Late Alpha | **Updated**: February 2026
 
 ---
 
@@ -10,11 +10,24 @@
 - Type system: structs, enums, generics, Option<T>, Result<T,E>
 - UFC (Uniform Function Call)
 - Zig-style allocators (GPA, Arena, Pool)
-- Collections: Vec, String, HashMap, Stack, Queue, Set
+- Collections: Vec, String, HashMap, Stack, Queue, Set, LinkedList
 - Safe pointers: Ptr<T>, MutPtr<T>, RawPtr<T>
 - Syscall-based I/O (Linux x86-64)
-- Full LSP support
+- Full LSP support (16K LOC — completion, hover, navigation, refactoring)
 - 25+ compiler intrinsics
+- Compile-time evaluation with AST introspection (comptime/meta)
+- 143 passing tests
+
+---
+
+## Recent Improvements (Feb 2026)
+
+- **TypeStore** — Single source of truth for all type information
+- **name_utils** — Canonical key construction, unified method key format (`"Type.method"`)
+- **StructInfo indexing** — O(1) field lookups via lazy HashMap
+- **Comptime restructure** — Proper control flow enum, `with_scope()`, meta API extracted to 4 files
+- **Fragile code audit** — 132/135 issues fixed across parser, typechecker, codegen, comptime
+- **LSP cleanup** — strip_generics via name_utils, removed hardcoded StdModule members
 
 ---
 
@@ -39,9 +52,11 @@ Currently only specialized methods work (sum, product, min, max).
 - [ ] macOS syscalls
 - [ ] Windows syscalls
 
-### 4. Architecture Cleanup
-- Remove duplicate type inference from codegen (~1000 LOC)
-- Split large modules (codegen/ 11K LOC, lsp/ 12K LOC)
+### 4. Remaining Type System Cleanup
+- Replace remaining string-based type checks (~10 locations)
+- Create TypeAliasRegistry for StaticString/String normalization
+- Implement generic type substitution in stdlib method resolution
+- Remove hardcoded method type inference once stdlib resolution verified
 
 ---
 

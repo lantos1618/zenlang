@@ -53,7 +53,7 @@ docs/                 # Documentation
 ### 1. Find Something to Work On
 
 - Check `docs/reviews/` for current priorities
-- Look at `docs/ROADMAP_2026-01.md` for planned features
+- Look at `docs/ROADMAP.md` for planned features
 - Search for `TODO` comments in the codebase
 - Check open issues
 

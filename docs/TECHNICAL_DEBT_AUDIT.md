@@ -1,7 +1,8 @@
 # Zen Compiler Technical Debt Audit
 
 **Date:** 2026-02-03 (Deep Research Update)
-**Codebase Size:** ~19,570 lines in `/src`
+**Updated:** 2026-02-07 (Type system refactoring session — key format unification, StructInfo indexing, name_utils, strip_generics)
+**Codebase Size:** ~55,400 lines in `/src` (183 files)
 **Status:** Active development
 
 ---
@@ -366,26 +367,35 @@ All enums use i64 discriminant regardless of variant count:
 
 ## 7. Method Resolution Status
 
-### 7.1 Key Format Fix ✅ IMPLEMENTED
+### 7.1 Key Format Unification ✅ COMPLETE
 
-**File:** `src/typechecker/stdlib_loading.rs:40-46`
-```rust
-let base_receiver = if let Some(angle_pos) = receiver.find('<') {
-    &receiver[..angle_pos]  // "Vec<T>" → "Vec"
-} else {
-    receiver
-};
-let key = format!("{}::{}", base_receiver, method);  // "Vec::len"
-```
+All method keys now use `"Type.method"` format via `name_utils::method_key()`:
+- `src/type_system/type_store.rs` — uses `name_utils::method_key()`
+- `src/stdlib_types.rs` — uses `name_utils::method_key()` and `stdlib_func_key()`
+- `src/lsp/compiler_integration.rs` — uses `name_utils::method_key()`
+- `src/typechecker/mod.rs` — uses `name_utils::method_key()` and `scoped_var_key()`
 
-**Status:** Keys now match between storage and lookup.
+**Status:** Keys unified across entire codebase. No more mixed `.`/`::` formats for method keys.
 
-### 7.2 Verification Status
+### 7.2 StructInfo Field Index ✅ NEW
+
+`StructInfo` now has O(1) field lookups via lazy `HashMap` index:
+- `get_field_type()`, `has_field()`, `field_names()`, `rebuild_index()`
+- Constructed via `StructInfo::new(fields)` — never struct literal syntax
+- Index auto-built on first access for structs with >4 fields
+
+### 7.3 LSP String Parsing Cleanup ✅ NEW
+
+All `.split('<').next().unwrap_or()` chains in LSP replaced with `name_utils::strip_generics()`:
+- `completion/context.rs`, `completion/methods.rs`, `type_inference.rs`
+- `navigation/struct_fields.rs`, `hover/patterns.rs`, `pattern_checking.rs`
+
+### 7.4 Verification Status
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Key format fix implemented | ✅ YES | Code is correct |
-| Keys match between storage/lookup | ✅ YES | Format matches |
+| Key format unified | ✅ YES | All use `name_utils` functions |
+| Keys match between storage/lookup | ✅ YES | `"Type.method"` everywhere |
 | Stdlib modules loaded | ✅ YES | `with_stdlib_modules()` called |
 | stdlib_methods populated | ⚠️ ASSUMED | Code path exists, no verification |
 | Vec.len() actually works | ❌ NO TEST | No test exists |
@@ -440,6 +450,10 @@ When stdlib stores `Vec<T>.get() -> Option<T>`:
 ### Phase 2: Type System Migration
 
 - [x] Replace `.contains("Option")` with precise type matching in `lsp/server.rs` ✅ DONE (added `is_type_named()` helper)
+- [x] Unify method key format to `"Type.method"` via `name_utils::method_key()` ✅ DONE (Feb 2026)
+- [x] Replace LSP `split('<').next()` chains with `name_utils::strip_generics()` ✅ DONE (Feb 2026 — 6 files)
+- [x] Add O(1) struct field lookups via `StructInfo::get_field_type()` ✅ DONE (Feb 2026)
+- [x] Fix RefCell double-borrow panics in typechecker ✅ DONE (Feb 2026 — 4 sites)
 - [ ] Replace string variant checks with `wk.is_some()`, `wk.is_none()`, etc.
 - [ ] Create `TypeAliasRegistry` for StaticString/String normalization
 - [ ] Remove hardcoded type checks from `lsp/code_action/mod.rs`
@@ -481,7 +495,7 @@ When stdlib stores `Vec<T>.get() -> Option<T>`:
 | Phase | Status | Priority |
 |-------|--------|----------|
 | 1 | 🟢 Complete | CRITICAL - 4/4 items complete |
-| 2 | 🟡 In Progress | HIGH - 1/4 items complete |
+| 2 | 🟡 In Progress | HIGH - 5/8 items complete |
 | 3 | 🟡 Ready | HIGH - verify fixes work |
 | 4 | ⏳ Blocked | MEDIUM - needs Phase 3 |
 | 5 | 🟢 Complete | LOW - 6/6 items complete |
@@ -512,12 +526,15 @@ When stdlib stores `Vec<T>.get() -> Option<T>`:
 | Category | Count | Overall Risk |
 |----------|-------|--------------|
 | Bare unwrap() | 2 (tests only) | ✅ LOW |
-| String-based type checks | ~15 locations | 🟡 MEDIUM (improved from 20+) |
+| String-based type checks | ~10 locations | 🟡 MEDIUM (improved from 20+; LSP strip_generics fixed) |
 | Architecture violations | 2 remaining | ✅ LOW (improved from 8) |
 | Cross-platform blockers | 1 (files_to_parse) | 🟡 MEDIUM (improved from 3) |
 | Hardcoded lists | ~40 values | 🟡 MEDIUM (improved from 60+) |
+| Key format inconsistency | 0 | ✅ RESOLVED (unified to `name_utils`) |
+| RefCell double-borrows | 0 | ✅ RESOLVED (4 sites fixed) |
 
 ---
 
 *Document updated 2026-02-03 with comprehensive deep research findings*
 *Updated 2026-02-03: Phase 1, 5, 6 items completed - enum discriminant sizing, type checks, constants centralized*
+*Updated 2026-02-07: Phase 2 items completed - key format unification via name_utils, StructInfo field index, LSP strip_generics, RefCell safety fixes*
