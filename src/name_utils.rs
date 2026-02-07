@@ -59,6 +59,17 @@ pub fn stdlib_func_key(module: &str, func_name: &str) -> String {
     format!("{}::{}", module, func_name)
 }
 
+/// Parse a generic type string into (base_name, type_args).
+/// e.g. `"Vec<i32>"` -> `("Vec", ["i32"])`, `"i32"` -> `("i32", [])`.
+pub fn parse_generic_type(type_str: &str) -> (String, Vec<String>) {
+    let (name, type_args) = crate::parser::parse_generic_type_string(type_str);
+    let args = type_args
+        .iter()
+        .map(crate::lsp::utils::format_type)
+        .collect();
+    (name, args)
+}
+
 /// Check if a name follows Zen's test naming convention.
 /// Matches: `test_foo`, `foo_test`, `foo_test_bar`
 pub fn is_test_name(name: &str) -> bool {

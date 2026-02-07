@@ -1,9 +1,8 @@
 // Semantic Tokens Module for Zen LSP
 // Handles textDocument/semanticTokens/full requests
 
-use lsp_server::{ErrorCode, Request, Response, ResponseError};
+use lsp_server::{ErrorCode, Request, Response};
 use lsp_types::*;
-use serde_json::Value;
 
 use super::document_store::DocumentStore;
 use crate::ast::primitives;
@@ -59,39 +58,19 @@ pub fn handle_semantic_tokens(
         data: tokens,
     };
 
-    Response {
-        id: req.id,
-        result: Some(serde_json::to_value(result).unwrap_or(Value::Null)),
-        error: None,
-    }
+    crate::lsp::helpers::success_response_id(req.id, result)
 }
 
 fn error_response(id: lsp_server::RequestId, msg: &str) -> Response {
-    Response {
-        id,
-        result: Some(Value::Null),
-        error: Some(ResponseError {
-            code: ErrorCode::InvalidParams as i32,
-            message: msg.to_string(),
-            data: None,
-        }),
-    }
+    crate::lsp::helpers::error_response_id(id, ErrorCode::InvalidParams, msg)
 }
 
 fn empty_response(id: lsp_server::RequestId) -> Response {
-    Response {
-        id,
-        result: Some(serde_json::to_value(SemanticTokens::default()).unwrap_or(Value::Null)),
-        error: None,
-    }
+    crate::lsp::helpers::success_response_id(id, SemanticTokens::default())
 }
 
 fn null_response(id: lsp_server::RequestId) -> Response {
-    Response {
-        id,
-        result: Some(Value::Null),
-        error: None,
-    }
+    crate::lsp::helpers::null_response_id(id)
 }
 
 // ============================================================================

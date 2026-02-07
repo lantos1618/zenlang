@@ -38,29 +38,11 @@ pub fn get_struct_field_completions(
     items
 }
 
-/// Get UFC method completions for a receiver type
+/// Get UFC method completions for a receiver type.
+/// TODO: Reimplement using TypeContext/TypeQuery once stdlib is indexed through SEMA.
 pub fn get_ufc_method_completions(
-    receiver_type: &str,
-    store: &DocumentStore,
+    _receiver_type: &str,
+    _store: &DocumentStore,
 ) -> Vec<CompletionItem> {
-    let mut items = Vec::new();
-
-    for sig in store.compiler.get_methods_for_type(receiver_type) {
-        items.push(CompletionItem {
-            label: sig.name.clone(),
-            kind: Some(CompletionItemKind::METHOD),
-            detail: Some(format!(
-                "({}) -> {}",
-                sig.params
-                    .iter()
-                    .map(|(n, t)| format!("{}: {}", n, format_type(t)))
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                format_type(&sig.return_type)
-            )),
-            ..Default::default()
-        });
-    }
-
-    items
+    Vec::new()
 }

@@ -39,6 +39,8 @@ pub struct TypeChecker {
     // Collected variable types for TypeContext: "function_name::var_name" -> type
     // Variables are collected during checking because scopes get popped
     collected_variables: HashMap<String, AstType>,
+    // Collected variable mutability: same key format as collected_variables
+    collected_variable_mutability: HashMap<String, bool>,
 
     behavior_resolver: BehaviorResolver,
     module_imports: HashMap<String, String>,
@@ -220,6 +222,7 @@ impl TypeChecker {
             scopes: vec![HashMap::new()],
             type_store,
             collected_variables: HashMap::new(),
+            collected_variable_mutability: HashMap::new(),
             behavior_resolver: BehaviorResolver::new(),
             module_imports: HashMap::new(),
             current_impl_type: None,
@@ -503,9 +506,12 @@ impl TypeChecker {
             ctx.type_aliases.insert(name.clone(), aliased_type.clone());
         }
 
-        // Register collected variables (scope::var_name -> type)
+        // Register collected variables (scope::var_name -> type + mutability)
         for (key, var_type) in &self.collected_variables {
             ctx.variables.insert(key.clone(), var_type.clone());
+            if let Some(&is_mutable) = self.collected_variable_mutability.get(key) {
+                ctx.variable_mutability.insert(key.clone(), is_mutable);
+            }
         }
 
         // Register module imports (alias -> module_path)
@@ -574,7 +580,18 @@ impl TypeChecker {
         scope::exit_scope(self)
     }
 
+    fn collect_variable(&mut self, name: &str, type_: &AstType, is_mutable: bool) {
+        let scope = self
+            .current_function_name
+            .as_deref()
+            .unwrap_or("__module__");
+        let key = format!("{}::{}", scope, name);
+        self.collected_variables.insert(key.clone(), type_.clone());
+        self.collected_variable_mutability.insert(key, is_mutable);
+    }
+
     fn declare_variable(&mut self, name: &str, type_: AstType, is_mutable: bool) -> Result<()> {
+        self.collect_variable(name, &type_, is_mutable);
         scope::declare_variable(self, name, type_, is_mutable, None)
     }
 
@@ -585,11 +602,7 @@ impl TypeChecker {
         is_mutable: bool,
         is_initialized: bool,
     ) -> Result<()> {
-        // Collect variable for TypeContext (used by LSP hover, inlay hints, etc.)
-        if let Some(func_name) = &self.current_function_name {
-            let key = format!("{}::{}", func_name, name);
-            self.collected_variables.insert(key, type_.clone());
-        }
+        self.collect_variable(name, &type_, is_mutable);
         scope::declare_variable_with_init(self, name, type_, is_mutable, is_initialized, None)
     }
 
@@ -601,11 +614,7 @@ impl TypeChecker {
         is_initialized: bool,
         span: Option<Span>,
     ) -> Result<()> {
-        // Collect variable for TypeContext (used by LSP hover, inlay hints, etc.)
-        if let Some(func_name) = &self.current_function_name {
-            let key = format!("{}::{}", func_name, name);
-            self.collected_variables.insert(key, type_.clone());
-        }
+        self.collect_variable(name, &type_, is_mutable);
         scope::declare_variable_with_init(self, name, type_, is_mutable, is_initialized, span)
     }
 

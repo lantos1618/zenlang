@@ -196,6 +196,35 @@ pub fn find_function_range(content: &str, func_name: &str) -> Option<Range> {
     None
 }
 
+pub fn find_stdlib_location(
+    stdlib_path: &str,
+    method_name: &str,
+    receiver_type: Option<&str>,
+    store: &crate::lsp::document_store::DocumentStore,
+) -> Option<Location> {
+    for (uri, doc) in &store.documents {
+        if uri.path().contains(stdlib_path) {
+            if let Some(symbol) = doc.symbols.get(method_name) {
+                return Some(Location {
+                    uri: uri.clone(),
+                    range: symbol.range,
+                });
+            }
+
+            if let Some(recv_type) = receiver_type {
+                let qualified_name = format!("{}.{}", recv_type, method_name);
+                if let Some(symbol) = doc.symbols.get(&qualified_name) {
+                    return Some(Location {
+                        uri: uri.clone(),
+                        range: symbol.range,
+                    });
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Find symbol definition in content using text search
 pub fn find_symbol_definition_in_content(content: &str, symbol_name: &str) -> Option<Range> {
     let lines: Vec<&str> = content.lines().collect();

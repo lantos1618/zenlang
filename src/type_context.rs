@@ -46,6 +46,9 @@ pub struct TypeContext {
     /// Populated during typechecking to avoid re-inference in codegen
     pub variables: HashMap<String, AstType>,
 
+    /// Variable mutability: same key format as variables
+    pub variable_mutability: HashMap<String, bool>,
+
     /// Type aliases: "CompletionFn" -> function type
     /// Used to resolve type alias names to their underlying types
     pub type_aliases: HashMap<String, AstType>,
@@ -131,10 +134,26 @@ impl TypeContext {
         self.constructors.insert(key, return_type);
     }
 
-    /// Register a variable's type within a scope
     pub fn register_variable(&mut self, scope: &str, var_name: &str, var_type: AstType) {
         let key = format!("{}::{}", scope, var_name);
         self.variables.insert(key, var_type);
+    }
+
+    pub fn register_variable_with_mutability(
+        &mut self,
+        scope: &str,
+        var_name: &str,
+        var_type: AstType,
+        is_mutable: bool,
+    ) {
+        let key = format!("{}::{}", scope, var_name);
+        self.variables.insert(key.clone(), var_type);
+        self.variable_mutability.insert(key, is_mutable);
+    }
+
+    pub fn is_variable_mutable(&self, scope: &str, var_name: &str) -> Option<bool> {
+        let key = format!("{}::{}", scope, var_name);
+        self.variable_mutability.get(&key).copied()
     }
 
     // ========================================================================

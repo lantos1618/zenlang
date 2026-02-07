@@ -5,32 +5,47 @@ use lsp_server::{ErrorCode, Request, Response, ResponseError};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-/// Creates a null response for the given request.
-/// Use when a request cannot be fulfilled but isn't an error.
 #[inline]
 pub fn null_response(req: &Request) -> Response {
+    null_response_id(req.id.clone())
+}
+
+#[inline]
+pub fn null_response_id(id: lsp_server::RequestId) -> Response {
     Response {
-        id: req.id.clone(),
+        id,
         result: Some(Value::Null),
         error: None,
     }
 }
 
-/// Creates a success response with the given result.
 #[inline]
 pub fn success_response<T: serde::Serialize>(req: &Request, result: T) -> Response {
+    success_response_id(req.id.clone(), result)
+}
+
+#[inline]
+pub fn success_response_id<T: serde::Serialize>(id: lsp_server::RequestId, result: T) -> Response {
     Response {
-        id: req.id.clone(),
+        id,
         result: Some(serde_json::to_value(result).unwrap_or(Value::Null)),
         error: None,
     }
 }
 
-/// Creates an error response with the given error.
 #[inline]
 pub fn error_response(req: &Request, code: ErrorCode, message: impl Into<String>) -> Response {
+    error_response_id(req.id.clone(), code, message)
+}
+
+#[inline]
+pub fn error_response_id(
+    id: lsp_server::RequestId,
+    code: ErrorCode,
+    message: impl Into<String>,
+) -> Response {
     Response {
-        id: req.id.clone(),
+        id,
         result: None,
         error: Some(ResponseError {
             code: code as i32,

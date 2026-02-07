@@ -12,8 +12,6 @@ use std::path::{Path, PathBuf};
 #[derive(Clone)]
 pub struct StdlibResolver {
     pub stdlib_root: PathBuf,
-    /// Cache of module paths to file paths (currently unused due to immutability)
-    #[allow(dead_code)]
     module_cache: HashMap<String, PathBuf>,
 }
 

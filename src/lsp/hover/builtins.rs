@@ -21,7 +21,7 @@ pub fn get_builtin_hover_text(symbol_name: &str) -> Option<String> {
 
     // 2. Check well-known types (Option, Result, Ptr)
     if let Some(wkt) = well_known().get_type(symbol_name) {
-        return Some(format_well_known_hover(symbol_name, wkt));
+        return Some(format_well_known_hover(wkt));
     }
 
     // 3. Check stdlib parsed types (Vec, HashMap, String, etc.)
@@ -144,7 +144,7 @@ fn get_intrinsic_description(name: &str) -> &'static str {
 }
 
 /// Format hover for well-known types (Option, Result, Ptr)
-fn format_well_known_hover(_name: &str, wkt: WellKnownType) -> String {
+fn format_well_known_hover(wkt: WellKnownType) -> String {
     match wkt {
         WellKnownType::Option => "```zen\nOption<T>:\n    Some: T,\n    None\n```\n\n\
              **Optional value type**\n\n\

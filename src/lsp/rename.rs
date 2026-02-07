@@ -137,15 +137,11 @@ pub fn handle_prepare_rename(req: Request, store: &Arc<Mutex<DocumentStore>>) ->
             // Check if symbol can be renamed
             if let Some(error) = check_rename_target(&symbol_name) {
                 // Return error - cannot rename this symbol
-                return Response {
-                    id: req.id,
-                    result: None,
-                    error: Some(lsp_server::ResponseError {
-                        code: lsp_server::ErrorCode::InvalidRequest as i32,
-                        message: error,
-                        data: None,
-                    }),
-                };
+                return crate::lsp::helpers::error_response_id(
+                    req.id,
+                    lsp_server::ErrorCode::InvalidRequest,
+                    error,
+                );
             }
 
             // Find the range of the symbol
@@ -219,15 +215,11 @@ pub fn handle_rename(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Respons
 
     // Validate the new name before proceeding
     if let Some(error) = validate_new_name(&params.new_name) {
-        return Response {
-            id: req.id,
-            result: None,
-            error: Some(lsp_server::ResponseError {
-                code: lsp_server::ErrorCode::InvalidParams as i32,
-                message: error,
-                data: None,
-            }),
-        };
+        return crate::lsp::helpers::error_response_id(
+            req.id,
+            lsp_server::ErrorCode::InvalidParams,
+            error,
+        );
     }
 
     let store = match try_lock(store.as_ref(), &req) {

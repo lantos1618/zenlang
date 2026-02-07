@@ -30,7 +30,6 @@ pub mod analyzer;
 pub mod call_hierarchy;
 pub mod code_action;
 pub mod code_lens;
-pub mod compiler_integration;
 pub mod completion;
 pub mod document_store;
 pub mod formatting;
@@ -48,7 +47,8 @@ pub mod signature_help;
 pub mod stdlib_resolver;
 pub mod symbol_extraction;
 pub mod symbols;
-pub mod type_inference;
+
+pub mod type_query;
 pub mod types;
 pub mod utils;
 

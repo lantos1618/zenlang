@@ -5,9 +5,8 @@
 use lsp_types::*;
 use std::collections::HashSet;
 
-use crate::lsp::document_store::DocumentStore;
 use crate::lsp::helpers::char_pos_to_byte_pos;
-use crate::lsp::type_inference::infer_receiver_type_with_context;
+use crate::lsp::type_query::TypeQuery;
 use crate::lsp::types::ZenCompletionContext;
 use crate::lsp::utils::format_type;
 use crate::name_utils;
@@ -16,7 +15,7 @@ use crate::name_utils;
 pub fn get_completion_context(
     content: &str,
     position: Position,
-    store: &DocumentStore,
+    doc: Option<&crate::lsp::types::Document>,
 ) -> Option<ZenCompletionContext> {
     let lines: Vec<&str> = content.lines().collect();
     if position.line as usize >= lines.len() {
@@ -84,14 +83,39 @@ pub fn get_completion_context(
         let receiver: String = chars[start..(char_pos - 1)].iter().collect();
         let receiver = receiver.trim();
 
-        let receiver_type =
-            infer_receiver_type_with_context(receiver, Some(content), Some(position), store)
-                .unwrap_or_else(|| "unknown".to_string());
+        let receiver_type = doc
+            .and_then(|d| {
+                let tq = TypeQuery::new(d);
+                let func_name = find_enclosing_function_name(content, position);
+                if let Some(ref fname) = func_name {
+                    if let Some(t) = tq.resolve_receiver_in_function(receiver, fname) {
+                        return Some(t);
+                    }
+                }
+                tq.find_variable_type(receiver)
+            })
+            .unwrap_or_else(|| "unknown".to_string());
 
         return Some(ZenCompletionContext::UfcMethod { receiver_type });
     }
 
     Some(ZenCompletionContext::General)
+}
+
+fn find_enclosing_function_name(content: &str, position: Position) -> Option<String> {
+    let lines: Vec<&str> = content.lines().collect();
+    for line_idx in (0..=position.line as usize).rev() {
+        if let Some(line) = lines.get(line_idx) {
+            let trimmed = line.trim();
+            if trimmed.contains("= (") && trimmed.contains(')') {
+                let name = trimmed.split('=').next()?.trim();
+                if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                    return Some(name.to_string());
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Detect if cursor is in a pattern match context: `expr ? | ▊`
@@ -359,13 +383,11 @@ pub fn get_struct_literal_completions(
 pub fn get_pattern_match_completions(
     matched_expr: &str,
     doc: &crate::lsp::types::Document,
-    content: &str,
-    store: &crate::lsp::document_store::DocumentStore,
 ) -> Vec<CompletionItem> {
     let mut completions = Vec::new();
 
     // First, try to infer the type of the matched expression
-    let matched_type = infer_matched_expression_type(matched_expr, doc, content, store);
+    let matched_type = infer_matched_expression_type(matched_expr, doc);
 
     if let Some(type_name) = matched_type {
         // Check if it's a boolean
@@ -422,7 +444,7 @@ pub fn get_pattern_match_completions(
 
         // Also check well-known types like Option and Result
         let wk = crate::well_known::well_known();
-        if wk.is_option(&type_name) || type_name.starts_with("Option") {
+        if wk.is_option(&type_name) {
             if completions.is_empty() {
                 completions.push(CompletionItem {
                     label: format!("{}()", wk.some_name()),
@@ -443,9 +465,7 @@ pub fn get_pattern_match_completions(
                     ..Default::default()
                 });
             }
-        } else if (wk.is_result(&type_name) || type_name.starts_with("Result"))
-            && completions.is_empty()
-        {
+        } else if wk.is_result(&type_name) && completions.is_empty() {
             completions.push(CompletionItem {
                 label: format!("{}()", wk.ok_name()),
                 kind: Some(CompletionItemKind::ENUM_MEMBER),
@@ -493,12 +513,7 @@ pub fn get_pattern_match_completions(
 }
 
 /// Infer the type of a matched expression for pattern matching
-fn infer_matched_expression_type(
-    expr: &str,
-    doc: &crate::lsp::types::Document,
-    _content: &str,
-    _store: &crate::lsp::document_store::DocumentStore,
-) -> Option<String> {
+fn infer_matched_expression_type(expr: &str, doc: &crate::lsp::types::Document) -> Option<String> {
     // Try TypeContext first
     if let Some(type_ctx) = doc.type_context.as_ref() {
         // Check if expr is a variable

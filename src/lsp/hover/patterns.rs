@@ -3,11 +3,65 @@
 use lsp_types::Position;
 use std::collections::HashMap;
 
+use crate::ast::AstType;
+use crate::lsp::type_query::TypeQuery;
 use crate::lsp::types::*;
-use crate::lsp::utils::{find_pattern_match_question, is_pattern_arm_line};
+use crate::lsp::utils::{find_pattern_match_question, format_type, is_pattern_arm_line};
 use crate::name_utils;
+use crate::well_known::well_known;
 
-/// Get hover information for pattern match variables
+/// Extract the first two generic type arguments from a Result<T, E> or Option<T> AstType.
+/// Returns (ok_or_inner, err) where err is None for Option.
+fn extract_generic_pair(ast_type: &AstType) -> (Option<String>, Option<String>) {
+    let wk = well_known();
+    match ast_type {
+        AstType::Generic { name, type_args } if wk.is_result(name) && type_args.len() == 2 => (
+            Some(format_type(&type_args[0])),
+            Some(format_type(&type_args[1])),
+        ),
+        AstType::Generic { name, type_args } if wk.is_option(name) && type_args.len() == 1 => {
+            (Some(format_type(&type_args[0])), None)
+        }
+        _ => (None, None),
+    }
+}
+
+/// Look up a function's return type across all documents via TypeQuery/AST,
+/// and extract the generic type pair (for Result/Option).
+fn infer_function_return_types_via_sema(
+    func_name: &str,
+    all_docs: &HashMap<lsp_types::Url, Document>,
+) -> (Option<String>, Option<String>) {
+    // Search SEMA (TypeContext) in every document
+    for doc in all_docs.values() {
+        let tq = TypeQuery::new(doc);
+        if let Some(ret_ast) = tq.function_return_type_ast(func_name) {
+            let pair = extract_generic_pair(&ret_ast);
+            if pair.0.is_some() {
+                return pair;
+            }
+        }
+    }
+
+    // Fallback: search AST directly (for documents where SEMA failed)
+    for doc in all_docs.values() {
+        if let Some(ast) = &doc.ast {
+            for decl in ast {
+                if let crate::ast::Declaration::Function(func) = decl {
+                    if func.name == func_name {
+                        let pair = extract_generic_pair(&func.return_type);
+                        if pair.0.is_some() {
+                            return pair;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    (None, None)
+}
+
 pub fn get_pattern_match_hover(
     content: &str,
     position: Position,
@@ -16,8 +70,6 @@ pub fn get_pattern_match_hover(
     _stdlib_symbols: &HashMap<String, SymbolInfo>,
     all_docs: &HashMap<lsp_types::Url, crate::lsp::types::Document>,
 ) -> Option<String> {
-    use crate::lsp::type_inference::infer_function_return_types;
-
     let lines: Vec<&str> = content.lines().collect();
     if position.line as usize >= lines.len() {
         return None;
@@ -69,9 +121,9 @@ pub fn get_pattern_match_hover(
                         if let Some(paren_pos) = rhs.find('(') {
                             let func_name = rhs[..paren_pos].trim();
 
-                            // Try to find the function definition and extract its return type
+                            // Use SEMA to find the function's return type generics
                             let (concrete_ok_type, concrete_err_type) =
-                                infer_function_return_types(func_name, all_docs);
+                                infer_function_return_types_via_sema(func_name, all_docs);
 
                             // Now determine what pattern variable we're hovering over
                             // Example: | Ok(val) or | Err(msg)

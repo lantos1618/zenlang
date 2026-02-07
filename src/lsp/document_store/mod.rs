@@ -8,7 +8,6 @@ mod symbol_search;
 mod utilities;
 mod variable_extraction;
 
-use super::compiler_integration::CompilerIntegration;
 use super::indexing::{find_stdlib_path, index_stdlib_directory, index_workspace_files_recursive};
 use super::stdlib_resolver::StdlibResolver;
 use super::types::{AnalysisJob, Document, SymbolInfo};
@@ -23,7 +22,6 @@ pub struct DocumentStore {
     pub workspace_symbols: HashMap<String, SymbolInfo>, // Indexed workspace symbols
     pub workspace_root: Option<Url>,
     pub analysis_sender: Option<Sender<AnalysisJob>>,
-    pub compiler: CompilerIntegration,
     pub stdlib_resolver: StdlibResolver,
 }
 
@@ -37,7 +35,6 @@ impl DocumentStore {
     pub fn new() -> Self {
         let workspace_root_path = None::<&std::path::Path>;
         let stdlib_resolver = StdlibResolver::new(workspace_root_path);
-        let compiler = CompilerIntegration::new();
 
         let mut store = Self {
             documents: HashMap::new(),
@@ -45,7 +42,6 @@ impl DocumentStore {
             workspace_symbols: HashMap::new(),
             workspace_root: None,
             analysis_sender: None,
-            compiler,
             stdlib_resolver,
         };
 

@@ -1,7 +1,7 @@
 // Symbols Module for Zen LSP
 // Handles document symbols and workspace symbol search
 
-use lsp_server::{ErrorCode, Request, Response, ResponseError};
+use lsp_server::{Request, Response};
 use lsp_types::*;
 use serde_json::Value;
 
@@ -74,19 +74,11 @@ pub fn handle_document_symbols(
             .collect();
 
         log::debug!("[LSP SYMBOLS] Returning {} symbols", symbols.len());
-        return Response {
-            id: req.id,
-            result: Some(serde_json::to_value(symbols).unwrap_or(Value::Null)),
-            error: None,
-        };
+        return crate::lsp::helpers::success_response_id(req.id, symbols);
     }
 
     log::debug!("[LSP SYMBOLS] Document not found in store");
-    Response {
-        id: req.id,
-        result: Some(Value::Null),
-        error: None,
-    }
+    crate::lsp::helpers::null_response_id(req.id)
 }
 
 /// Handle workspace/symbol requests
@@ -97,29 +89,18 @@ pub fn handle_workspace_symbol(
     let params: WorkspaceSymbolParams = match serde_json::from_value(req.params) {
         Ok(p) => p,
         Err(_) => {
-            return Response {
-                id: req.id,
-                result: Some(Value::Null),
-                error: Some(ResponseError {
-                    code: ErrorCode::InvalidParams as i32,
-                    message: "Invalid parameters".to_string(),
-                    data: None,
-                }),
-            }
+            return crate::lsp::helpers::error_response_id(
+                req.id,
+                lsp_server::ErrorCode::InvalidParams,
+                "Invalid parameters",
+            )
         }
     };
 
     let store = match store.lock() {
         Ok(s) => s,
         Err(_) => {
-            return Response {
-                id: req.id,
-                result: Some(
-                    serde_json::to_value(Vec::<WorkspaceSymbol>::new())
-                        .unwrap_or(serde_json::Value::Null),
-                ),
-                error: None,
-            };
+            return crate::lsp::helpers::success_response_id(req.id, Vec::<WorkspaceSymbol>::new());
         }
     };
     // Optimized: lowercase query once instead of for every symbol
@@ -190,9 +171,5 @@ pub fn handle_workspace_symbol(
     // Limit results to avoid overwhelming the client
     symbols.truncate(100);
 
-    Response {
-        id: req.id,
-        result: Some(serde_json::to_value(symbols).unwrap_or(Value::Null)),
-        error: None,
-    }
+    crate::lsp::helpers::success_response_id(req.id, symbols)
 }

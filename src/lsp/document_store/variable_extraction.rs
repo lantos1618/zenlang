@@ -1,10 +1,9 @@
 // Variable symbol extraction from statements
-use super::super::analyzer;
 use super::super::types::SymbolInfo;
 use super::super::utils::format_type;
 use super::utilities::{make_range, make_symbol};
 use super::DocumentStore;
-use crate::ast::{AstType, Expression, Program, Statement};
+use crate::ast::{AstType, Expression, Statement};
 use lsp_types::*;
 use std::collections::HashMap;
 
@@ -78,7 +77,6 @@ impl DocumentStore {
         None
     }
 
-    /// Infer type from explicit type annotation or initializer
     fn infer_variable_type(
         &self,
         type_: &Option<AstType>,
@@ -88,19 +86,9 @@ impl DocumentStore {
             return type_.clone();
         }
         if let Some(init) = initializer {
-            for doc in self.documents.values().take(5) {
-                if let Some(ast) = &doc.ast {
-                    let program = Program {
-                        declarations: ast.clone(),
-                        statements: vec![],
-                    };
-                    let mut compiler_integration =
-                        super::super::compiler_integration::CompilerIntegration::new();
-                    if let Ok(ast_type) = compiler_integration.infer_expression_type(&program, init)
-                    {
-                        return Some(ast_type);
-                    }
-                }
+            use crate::lsp::type_query::TypeQuery;
+            if let Some(type_str) = TypeQuery::infer_literal_type(init) {
+                return crate::parser::parse_type_from_string(&type_str).ok();
             }
         }
         None
@@ -125,6 +113,7 @@ impl DocumentStore {
     }
 
     pub(super) fn infer_type_from_expression(&self, expr: &Expression) -> Option<String> {
-        analyzer::infer_type_from_expression(expr, &self.documents, &self.compiler)
+        use crate::lsp::type_query::TypeQuery;
+        TypeQuery::infer_literal_type(expr)
     }
 }

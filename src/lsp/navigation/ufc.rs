@@ -1,8 +1,9 @@
 // UFC (Uniform Function Call) method resolution helpers
 
 use crate::lsp::document_store::DocumentStore;
-use crate::lsp::type_inference::{infer_receiver_type_from_store, parse_generic_type};
+use crate::lsp::type_query::TypeQuery;
 use crate::lsp::types::UfcMethodInfo;
+use crate::name_utils;
 use crate::stdlib_types::stdlib_types;
 use crate::well_known::well_known;
 use lsp_types::*;
@@ -72,41 +73,19 @@ pub fn find_ufc_method_at_position(content: &str, position: Position) -> Option<
     None
 }
 
-/// Find a method in a stdlib file
-fn find_stdlib_location(
-    stdlib_path: &str,
-    method_name: &str,
-    receiver_type: Option<&str>,
-    store: &DocumentStore,
-) -> Option<Location> {
-    for (uri, doc) in &store.documents {
-        if uri.path().contains(stdlib_path) {
-            // Try exact method name first
-            if let Some(symbol) = doc.symbols.get(method_name) {
-                return Some(Location {
-                    uri: uri.clone(),
-                    range: symbol.range,
-                });
-            }
-
-            // Try Type.method format (e.g., "String.push")
-            if let Some(recv_type) = receiver_type {
-                let qualified_name = format!("{}.{}", recv_type, method_name);
-                if let Some(symbol) = doc.symbols.get(&qualified_name) {
-                    return Some(Location {
-                        uri: uri.clone(),
-                        range: symbol.range,
-                    });
-                }
-            }
-        }
-    }
-    None
-}
+use super::utils::find_stdlib_location;
 
 /// Resolve a UFC method call to its definition location
-pub fn resolve_ufc_method(method_info: &UfcMethodInfo, store: &DocumentStore) -> Option<Location> {
-    let receiver_type = infer_receiver_type_from_store(&method_info.receiver, store);
+pub fn resolve_ufc_method(
+    method_info: &UfcMethodInfo,
+    store: &DocumentStore,
+    doc: &super::super::types::Document,
+) -> Option<Location> {
+    let receiver_type = {
+        let tq = TypeQuery::new(doc);
+        tq.find_variable_type(&method_info.receiver)
+            .map(|t| name_utils::strip_generics(&t).to_string())
+    };
 
     // First, try to find the method in stdlib_symbols
     if let Some(symbol) = store.stdlib_symbols.get(&method_info.method_name) {
@@ -120,7 +99,7 @@ pub fn resolve_ufc_method(method_info: &UfcMethodInfo, store: &DocumentStore) ->
 
     // Extract base type and generic parameters
     let (base_type, _generic_params) = if let Some(ref typ) = receiver_type {
-        parse_generic_type(typ)
+        name_utils::parse_generic_type(typ)
     } else {
         (String::new(), Vec::new())
     };

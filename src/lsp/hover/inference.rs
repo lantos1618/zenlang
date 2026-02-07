@@ -1,19 +1,14 @@
 use lsp_types::Url;
 use std::collections::HashMap;
 
-use crate::ast::Program;
 use crate::ast::{Declaration, Expression, Statement};
-use crate::lsp::compiler_integration::CompilerIntegration;
+use crate::lsp::type_query::TypeQuery;
 use crate::lsp::types::*;
 use crate::lsp::utils::format_type;
-use crate::stdlib_types::stdlib_types;
 
-/// Extract type from a definition line (fallback for when AST is not available)
 pub fn extract_type_from_line(line: &str) -> Option<String> {
-    // Look for type annotations: name: Type or name: Type =
     if let Some(colon_pos) = line.find(':') {
         let after_colon = &line[colon_pos + 1..];
-        // Extract type (stop at =, {, or end)
         let type_end = after_colon
             .find('=')
             .or_else(|| after_colon.find('{'))
@@ -27,7 +22,6 @@ pub fn extract_type_from_line(line: &str) -> Option<String> {
     None
 }
 
-/// Find variable declaration in AST and return type info
 fn find_variable_in_ast(
     ast: &[Declaration],
     var_name: &str,
@@ -72,7 +66,6 @@ fn find_variable_in_statements(
     None
 }
 
-/// Infer variable type from assignment (AST-first approach)
 pub fn infer_variable_type(
     _content: &str,
     var_name: &str,
@@ -81,12 +74,18 @@ pub fn infer_variable_type(
     workspace_symbols: &HashMap<String, SymbolInfo>,
     documents: Option<&HashMap<Url, Document>>,
 ) -> Option<String> {
-    // Try AST-based lookup first
     if let Some(docs) = documents {
         for doc in docs.values() {
+            let tq = TypeQuery::new(doc);
+            if let Some(type_str) = tq.find_variable_type(var_name) {
+                return Some(format!(
+                    "```zen\n{}: {}\n```\n\n**Type:** `{}`",
+                    var_name, type_str, type_str
+                ));
+            }
+
             if let Some(ast) = &doc.ast {
                 if let Some((type_opt, init_opt)) = find_variable_in_ast(ast, var_name) {
-                    // If we have explicit type annotation
                     if let Some(type_) = type_opt {
                         let type_str = format_type(&type_);
                         return Some(format!(
@@ -95,25 +94,10 @@ pub fn infer_variable_type(
                         ));
                     }
 
-                    // Try to infer from initializer using compiler integration
                     if let Some(init) = init_opt {
-                        let program = Program {
-                            declarations: ast.clone(),
-                            statements: vec![],
-                        };
-                        let mut compiler = CompilerIntegration::new();
-                        if let Ok(inferred_type) = compiler.infer_expression_type(&program, &init) {
-                            let type_str = format_type(&inferred_type);
+                        if let Some(type_str) = TypeQuery::infer_literal_type(&init) {
                             return Some(format!(
-                                "```zen\n{}: {}\n```\n\n**Type:** `{}`\n\n**Inferred from:** initializer expression",
-                                var_name, type_str, type_str
-                            ));
-                        }
-
-                        // Fallback: try direct expression type inference
-                        if let Some(type_str) = infer_type_from_ast_expr(&init) {
-                            return Some(format!(
-                                "```zen\n{}: {}\n```\n\n**Type:** `{}`\n\n**Inferred from:** expression analysis",
+                                "```zen\n{}: {}\n```\n\n**Type:** `{}`",
                                 var_name, type_str, type_str
                             ));
                         }
@@ -123,7 +107,6 @@ pub fn infer_variable_type(
         }
     }
 
-    // Fallback: look up in symbol tables
     if let Some(sym) = local_symbols
         .get(var_name)
         .or_else(|| stdlib_symbols.get(var_name))
@@ -139,54 +122,4 @@ pub fn infer_variable_type(
     }
 
     None
-}
-
-/// Infer type from AST expression
-fn infer_type_from_ast_expr(expr: &Expression) -> Option<String> {
-    use crate::well_known::well_known;
-    let wk = well_known();
-
-    match expr {
-        Expression::Integer8(_) => Some("i8".to_string()),
-        Expression::Integer16(_) => Some("i16".to_string()),
-        Expression::Integer32(_) => Some("i32".to_string()),
-        Expression::Integer64(_) => Some("i64".to_string()),
-        Expression::Float32(_) => Some("f32".to_string()),
-        Expression::Float64(_) => Some("f64".to_string()),
-        Expression::String(_) => Some("StaticString".to_string()),
-        Expression::Boolean(_) => Some("bool".to_string()),
-
-        Expression::StructLiteral { name, .. } => Some(name.clone()),
-
-        Expression::FunctionCall { name, .. } => {
-            // Look up function return type from stdlib
-            // Handle dotted names (e.g., "Module.func") by splitting into receiver/method
-            if let Some(dot_pos) = name.rfind('.') {
-                let module = &name[..dot_pos];
-                let func = &name[dot_pos + 1..];
-                stdlib_types()
-                    .get_function_return_type(module, func)
-                    .map(format_type)
-            } else {
-                stdlib_types()
-                    .get_function_return_type("", name)
-                    .map(format_type)
-            }
-        }
-
-        Expression::MethodCall { object, method, .. } => {
-            // Try to infer receiver type first
-            if let Some(recv_type) = infer_type_from_ast_expr(object) {
-                if let Some(ret) = stdlib_types().get_method_return_type(&recv_type, method) {
-                    return Some(format_type(ret));
-                }
-            }
-            None
-        }
-
-        // Handle Option wrapping
-        Expression::Identifier(name) if name == "None" => Some(wk.option_name().to_string()),
-
-        _ => None,
-    }
 }

@@ -1,6 +1,6 @@
 # Zen Compiler Architecture
 
-**Last Updated:** February 2026 (type system refactoring, comptime restructure)
+**Last Updated:** February 2026 (type system refactoring, comptime restructure, LSP type inference consolidation)
 
 ---
 
@@ -63,7 +63,7 @@ Source (.zen)
 ## Module Structure
 
 ```
-src/                             183 files, ~55,400 LOC total
+src/                             183 files, ~55,350 LOC total
 ├── lib.rs               (18 LOC)    Module exports
 ├── compiler.rs          (433 LOC)   Pipeline orchestration
 ├── lexer.rs             (780 LOC)   Tokenization
@@ -186,7 +186,7 @@ src/                             183 files, ~55,400 LOC total
 │           ├── helpers.rs            Codegen helpers
 │           └── mod.rs                Module exports
 │
-├── lsp/                 (16,399 LOC) Language Server
+├── lsp/                 (16,338 LOC) Language Server
 │   ├── server.rs        (1,080 LOC)  Main server loop, request routing
 │   ├── mod.rs                        Constants, search limits
 │   ├── types.rs                      Document, SymbolInfo types
@@ -197,7 +197,7 @@ src/                             183 files, ~55,400 LOC total
 │   ├── stdlib_resolver.rs            Stdlib symbol resolution
 │   ├── symbol_extraction.rs          Symbol extraction
 │   ├── semantic_completion.rs        TypeContext-based completion
-│   ├── type_inference.rs             LSP type inference
+│   ├── type_inference.rs  (866 LOC)  Unified LSP type inference
 │   ├── pattern_checking.rs           Pattern completeness
 │   ├── signature_help.rs             Function signatures
 │   ├── inlay_hints.rs                Inline type hints
@@ -224,7 +224,7 @@ src/                             183 files, ~55,400 LOC total
 │   │   ├── methods.rs               Method completions
 │   │   ├── auto_import.rs           Auto-import support
 │   │   └── modules.rs              Module completions
-│   ├── hover/           (2,246 LOC)  Hover information
+│   ├── hover/           (2,201 LOC)  Hover information
 │   │   ├── mod.rs       (832 LOC)   Main dispatcher
 │   │   ├── expressions.rs           Expression hover
 │   │   ├── patterns.rs              Pattern hover
@@ -284,7 +284,7 @@ src/                             183 files, ~55,400 LOC total
 | Metric | Value |
 |--------|-------|
 | Total Rust files | 183 |
-| Total LOC | ~55,400 |
+| Total LOC | ~55,350 |
 | Test count (lib) | 143 |
 
 ### Module Sizes

@@ -2,7 +2,6 @@
 
 use lsp_server::{RequestId, Response};
 use lsp_types::*;
-use serde_json::Value;
 
 use crate::lsp::types::SymbolInfo;
 use crate::lsp::utils::format_type;
@@ -68,11 +67,7 @@ pub fn create_hover_response(
         value: hover_content.join("\n\n"),
     });
 
-    Response {
-        id,
-        result: Some(serde_json::to_value(Hover { contents, range }).unwrap_or(Value::Null)),
-        error: None,
-    }
+    crate::lsp::helpers::success_response_id(id, Hover { contents, range })
 }
 
 /// Extract parameter documentation from a function signature

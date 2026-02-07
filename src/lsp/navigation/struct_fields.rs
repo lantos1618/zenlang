@@ -78,7 +78,7 @@ pub fn find_struct_field_definition(
     let receiver = receiver.trim();
 
     // Infer the type of the receiver
-    let receiver_type = infer_receiver_type(receiver, content, doc, store)?;
+    let receiver_type = infer_receiver_type(receiver, doc)?;
 
     log::debug!(
         "[LSP] Struct field navigation: receiver='{}', type='{}', field='{}'",
@@ -90,119 +90,41 @@ pub fn find_struct_field_definition(
     find_field_in_struct(&receiver_type, &field_name, doc, store)
 }
 
-/// Infer the type of a receiver expression
-fn infer_receiver_type(
-    receiver: &str,
-    content: &str,
-    doc: &Document,
-    store: &std::sync::MutexGuard<'_, DocumentStore>,
-) -> Option<String> {
-    // Try TypeContext first - most accurate source
-    if let Some(type_ctx) = doc.type_context.as_ref() {
-        // Check variables with various key formats
-        // Format: "function_name::var_name" or just "var_name"
-        for (key, var_type) in &type_ctx.variables {
-            // Match "func::receiver" or just "receiver"
-            if key.ends_with(&format!("::{}", receiver)) || key == receiver {
-                let type_str = crate::lsp::utils::format_type(var_type);
-                // Extract struct name from type (handle generics like Vec<T>)
-                let struct_name = name_utils::strip_generics(&type_str).trim();
-                if !struct_name.is_empty() {
-                    return Some(struct_name.to_string());
-                }
-            }
-        }
+fn infer_receiver_type(receiver: &str, doc: &Document) -> Option<String> {
+    let tq = crate::lsp::type_query::TypeQuery::new(doc);
 
-        // Also check if receiver is a struct type itself (for Type.field access)
-        if type_ctx.structs.contains_key(receiver) {
-            return Some(receiver.to_string());
+    if receiver.contains('.') {
+        let parts: Vec<&str> = receiver.split('.').collect();
+        let base = parts[0];
+        if let Some(base_type) = tq.find_variable_type(base) {
+            let base_struct = name_utils::strip_generics(&base_type);
+            if let Some(resolved) = tq.resolve_chain(base_struct, &parts[1..]) {
+                let struct_name = name_utils::strip_generics(&resolved);
+                return Some(struct_name.to_string());
+            }
         }
     }
 
-    // Try local symbols
-    if let Some(symbol) = doc.symbols.get(receiver) {
-        if let Some(type_info) = &symbol.type_info {
-            let type_str = crate::lsp::utils::format_type(type_info);
-            let struct_name = name_utils::strip_generics(&type_str).trim();
+    if let Some(var_type) = tq.find_variable_type(receiver) {
+        let struct_name = name_utils::strip_generics(&var_type);
+        if !struct_name.is_empty() {
             return Some(struct_name.to_string());
         }
     }
 
-    // Try chained field access: for "a.b.c", we need to resolve step by step
-    if receiver.contains('.') {
-        return infer_chained_receiver_type(receiver, doc);
+    if tq.has_struct(receiver) {
+        return Some(receiver.to_string());
     }
 
-    // Fallback: search for variable declaration in content
-    for line in content.lines() {
-        if line.contains(&format!("{} =", receiver)) || line.contains(&format!("{}=", receiver)) {
-            // Check for struct literal: receiver = TypeName { ... }
-            if let Some(eq_pos) = line.find('=') {
-                let rhs = line[eq_pos + 1..].trim();
-                if let Some(brace_pos) = rhs.find('{') {
-                    let type_name = rhs[..brace_pos].trim();
-                    if type_name.chars().next().is_some_and(|c| c.is_uppercase()) {
-                        return Some(type_name.to_string());
-                    }
-                }
-            }
-            // Check for type annotation: receiver: TypeName = ...
-            if let Some(colon_pos) = line.find(':') {
-                if let Some(eq_pos) = line.find('=') {
-                    if colon_pos < eq_pos {
-                        let type_str = line[colon_pos + 1..eq_pos].trim();
-                        if !type_str.is_empty() {
-                            let struct_name = name_utils::strip_generics(type_str).trim();
-                            return Some(struct_name.to_string());
-                        }
-                    }
-                }
-            }
+    if let Some(symbol) = doc.symbols.get(receiver) {
+        if let Some(type_info) = &symbol.type_info {
+            let type_str = crate::lsp::utils::format_type(type_info);
+            let struct_name = name_utils::strip_generics(&type_str);
+            return Some(struct_name.to_string());
         }
     }
 
-    crate::lsp::type_inference::infer_receiver_type_from_store(receiver, store)
-}
-
-/// Infer type for chained field access like "point.position" -> get type of position field
-fn infer_chained_receiver_type(receiver: &str, doc: &Document) -> Option<String> {
-    let parts: Vec<&str> = receiver.split('.').collect();
-    if parts.len() < 2 {
-        return None;
-    }
-
-    let type_ctx = doc.type_context.as_ref()?;
-
-    // Start with the first part's type
-    let mut current_type: Option<String> = None;
-
-    for (key, var_type) in &type_ctx.variables {
-        if key.ends_with(&format!("::{}", parts[0])) || key == parts[0] {
-            current_type = Some(crate::lsp::utils::format_type(var_type));
-            break;
-        }
-    }
-
-    let mut current_type = current_type?;
-
-    // Resolve each subsequent field
-    for field_name in &parts[1..] {
-        let struct_name = name_utils::strip_generics(&current_type).trim();
-        if let Some(fields) = type_ctx.structs.get(struct_name) {
-            let field_type = fields.iter().find(|(name, _)| name == *field_name);
-            if let Some((_, field_ast_type)) = field_type {
-                current_type = crate::lsp::utils::format_type(field_ast_type);
-            } else {
-                return None; // Field not found
-            }
-        } else {
-            return None; // Struct not found
-        }
-    }
-
-    // Return the final type (struct name without generics)
-    let struct_name = name_utils::strip_generics(&current_type).trim();
-    Some(struct_name.to_string())
+    None
 }
 
 /// Find a field definition within a struct

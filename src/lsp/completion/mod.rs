@@ -51,7 +51,7 @@ pub fn handle_completion(
     {
         let position = params.text_document_position.position;
 
-        if let Some(context) = get_completion_context(&doc.content, position, store) {
+        if let Some(context) = get_completion_context(&doc.content, position, Some(doc)) {
             match context {
                 ZenCompletionContext::UfcMethod { receiver_type } => {
                     // Try semantic completion first
@@ -92,8 +92,7 @@ pub fn handle_completion(
                     return success_response(&req, CompletionResponse::Array(completions));
                 }
                 ZenCompletionContext::PatternMatch { matched_type } => {
-                    let completions =
-                        get_pattern_match_completions(&matched_type, doc, &doc.content, store);
+                    let completions = get_pattern_match_completions(&matched_type, doc);
                     return success_response(&req, CompletionResponse::Array(completions));
                 }
                 ZenCompletionContext::General => {
@@ -380,21 +379,10 @@ const PRIMITIVE_TYPES: &[&str] = &[
 // Re-export infer_variable_type from hover module (where it's now defined)
 pub use crate::lsp::hover::infer_variable_type;
 
-/// Find stdlib location (used by hover and other modules)
 pub fn find_stdlib_location(
     stdlib_path: &str,
     method_name: &str,
     store: &DocumentStore,
 ) -> Option<Location> {
-    for (uri, doc) in &store.documents {
-        if uri.path().contains(stdlib_path) {
-            if let Some(symbol) = doc.symbols.get(method_name) {
-                return Some(Location {
-                    uri: uri.clone(),
-                    range: symbol.range,
-                });
-            }
-        }
-    }
-    None
+    crate::lsp::navigation::utils::find_stdlib_location(stdlib_path, method_name, None, store)
 }

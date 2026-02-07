@@ -1,9 +1,7 @@
 //! Document analysis - type checking, allocator validation, pattern checking
 //! Extracted from document_store.rs
 
-use super::compiler_integration::CompilerIntegration;
 use super::pattern_checking::{check_pattern_exhaustiveness, find_missing_variants};
-use super::type_inference::get_base_type_name;
 use super::types::SymbolInfo;
 use super::utils::{
     compile_error_to_diagnostic, compile_error_to_diagnostic_with_content, format_type,
@@ -11,6 +9,7 @@ use super::utils::{
 use crate::ast::{Declaration, Expression, Program, Statement};
 use crate::lexer::Lexer;
 use crate::module_system::ModuleSystem;
+use crate::name_utils;
 use crate::parser::Parser;
 use crate::stdlib_types::stdlib_types;
 use crate::type_context::TypeContext;
@@ -82,18 +81,11 @@ pub fn run_compiler_analysis_with_context(
     // This matches what run_pipeline does in the CLI compiler path
     type_checker.with_stdlib_modules(module_system.get_modules());
 
-    match type_checker.check_program(&merged_program) {
-        Ok(type_context) => {
-            // Success - return the TypeContext for semantic LSP features
-            (diagnostics, Some(Arc::new(type_context)))
-        }
-        Err(err) => {
-            diagnostics.push(compile_error_to_diagnostic_with_content(err, Some(content)));
-            // Even on error, try to extract partial type context if available
-            // For now return None, but we could implement partial extraction
-            (diagnostics, None)
-        }
+    let (type_context, first_error) = type_checker.check_program_tolerant(&merged_program);
+    if let Some(err) = first_error {
+        diagnostics.push(compile_error_to_diagnostic_with_content(err, Some(content)));
     }
+    (diagnostics, Some(Arc::new(type_context)))
 }
 
 /// Analyze document with full semantic analysis, returning TypeContext.
@@ -188,10 +180,10 @@ fn check_allocator_in_expression(
     match expr {
         Expression::FunctionCall { name, args, .. } => {
             // Check if this type requires an allocator based on its struct definition
-            let base_name = get_base_type_name(name);
+            let base_name = name_utils::strip_generics(name);
 
             // Use stdlib registry to check if the type has an allocator field
-            let requires_alloc = stdlib_types().requires_allocator(&base_name);
+            let requires_alloc = stdlib_types().requires_allocator(base_name);
 
             if requires_alloc && (args.is_empty() || !has_allocator_arg(args)) {
                 if let Some(position) = find_text_position(name, content) {
@@ -306,30 +298,37 @@ fn check_pattern_exhaustiveness_wrapper(
     );
 }
 
-/// Infer expression type as a string for pattern checking
 pub fn infer_expression_type_string(
     expr: &Expression,
     documents: &HashMap<Url, super::types::Document>,
 ) -> Option<String> {
+    use crate::lsp::type_query::TypeQuery;
+
     for doc in documents
         .values()
         .take(crate::lsp::search_limits::QUICK_TYPE_SEARCH)
     {
-        if let Some(ast) = &doc.ast {
-            let program = Program {
-                declarations: ast.clone(),
-                statements: vec![],
-            };
+        let tq = TypeQuery::new(doc);
 
-            let mut compiler_integration = CompilerIntegration::new();
-
-            if let Ok(ast_type) = compiler_integration.infer_expression_type(&program, expr) {
-                return Some(format_type(&ast_type));
+        match expr {
+            Expression::Identifier(name) => {
+                if let Some(type_str) = tq.find_variable_type(name) {
+                    return Some(type_str);
+                }
             }
+            Expression::FunctionCall { name, .. } => {
+                if let Some(ret) = tq.function_return_type(name) {
+                    return Some(ret);
+                }
+            }
+            _ => {}
         }
     }
 
-    // Fallback to AST-based lookup for variables
+    if let Some(type_str) = crate::lsp::type_query::TypeQuery::infer_literal_type(expr) {
+        return Some(type_str);
+    }
+
     match expr {
         Expression::Identifier(name) => {
             for doc in documents
@@ -345,7 +344,6 @@ pub fn infer_expression_type_string(
             None
         }
         Expression::FunctionCall { name, .. } => {
-            // Look up function return type from AST or stdlib
             for doc in documents
                 .values()
                 .take(crate::lsp::search_limits::QUICK_TYPE_SEARCH)
@@ -360,7 +358,6 @@ pub fn infer_expression_type_string(
                     }
                 }
             }
-            // Check stdlib
             if let Some(ret) = stdlib_types().get_function_return_type("", name) {
                 return Some(format_type(ret));
             }
@@ -395,7 +392,7 @@ fn find_variable_type_in_statements(var_name: &str, stmts: &[Statement]) -> Opti
                         return Some(format_type(type_ann));
                     }
                     if let Some(init) = initializer {
-                        return infer_type_from_expression_simple(init);
+                        return crate::lsp::type_query::TypeQuery::infer_literal_type(init);
                     }
                 }
             }
@@ -413,77 +410,6 @@ fn find_variable_type_in_statements(var_name: &str, stmts: &[Statement]) -> Opti
 fn find_variable_in_expression(var_name: &str, expr: &Expression) -> Option<String> {
     match expr {
         Expression::Block(stmts) => find_variable_type_in_statements(var_name, stmts),
-        _ => None,
-    }
-}
-
-/// Simple type inference from expression (no TypeChecker context)
-pub fn infer_type_from_expression_simple(expr: &Expression) -> Option<String> {
-    match expr {
-        Expression::FunctionCall { name, .. } => {
-            if name.contains("::") {
-                let parts: Vec<&str> = name.split("::").collect();
-                if parts.len() == 2 {
-                    return Some(parts[0].to_string());
-                }
-            }
-            None
-        }
-        Expression::Integer32(_) => Some("i32".to_string()),
-        Expression::Integer64(_) => Some("i64".to_string()),
-        Expression::Float32(_) => Some("f32".to_string()),
-        Expression::Float64(_) => Some("f64".to_string()),
-        Expression::Boolean(_) => Some("bool".to_string()),
-        Expression::String(_) => Some("StaticString".to_string()),
-        _ => None,
-    }
-}
-
-/// Infer type from expression with full document context
-pub fn infer_type_from_expression(
-    expr: &Expression,
-    documents: &HashMap<Url, super::types::Document>,
-    compiler: &CompilerIntegration,
-) -> Option<String> {
-    // Use smaller limit for this fast-path lookup
-    for doc in documents
-        .values()
-        .take(crate::lsp::search_limits::QUICK_TYPE_SEARCH / 2)
-    {
-        if let Some(ast) = &doc.ast {
-            let program = Program {
-                declarations: ast.clone(),
-                statements: vec![],
-            };
-
-            let mut compiler_integration = CompilerIntegration::new();
-            if let Ok(ast_type) = compiler_integration.infer_expression_type(&program, expr) {
-                return Some(format_type(&ast_type));
-            }
-        }
-    }
-
-    // Fallback
-    match expr {
-        Expression::FunctionCall { name, .. } => {
-            if let Some(sig) = compiler.get_function_signature(name) {
-                return Some(format_type(&sig.return_type));
-            }
-
-            if name.contains("::") {
-                let parts: Vec<&str> = name.split("::").collect();
-                if parts.len() == 2 {
-                    return Some(parts[0].to_string());
-                }
-            }
-            None
-        }
-        Expression::Integer32(_) => Some("i32".to_string()),
-        Expression::Integer64(_) => Some("i64".to_string()),
-        Expression::Float32(_) => Some("f32".to_string()),
-        Expression::Float64(_) => Some("f64".to_string()),
-        Expression::Boolean(_) => Some("bool".to_string()),
-        Expression::String(_) => Some("StaticString".to_string()),
         _ => None,
     }
 }

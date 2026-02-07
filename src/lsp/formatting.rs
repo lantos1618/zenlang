@@ -1,6 +1,6 @@
 use lsp_server::{Request, Response};
 use lsp_types::*;
-use serde_json::Value;
+
 use std::sync::{Arc, Mutex};
 
 use crate::formatting::{
@@ -42,11 +42,7 @@ pub fn handle_formatting(req: Request, store: Arc<Mutex<DocumentStore>>) -> Resp
         new_text: formatted,
     };
 
-    Response {
-        id: req.id,
-        result: Some(serde_json::to_value(vec![edit]).unwrap_or(Value::Null)),
-        error: None,
-    }
+    crate::lsp::helpers::success_response_id(req.id, vec![edit])
 }
 
 fn format_document(content: &str) -> String {

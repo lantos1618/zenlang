@@ -1,16 +1,14 @@
 use lsp_server::{Request, Response};
 use lsp_types::*;
-use serde_json::Value;
 use std::sync::{Arc, Mutex};
 
 use crate::ast::primitives;
-use crate::ast::{looks_like_type_name, AstType, Declaration, Expression, Statement};
-use crate::stdlib_types::stdlib_types;
+use crate::ast::{looks_like_type_name, Declaration, Statement};
 
 use super::document_store::DocumentStore;
-use super::type_inference::get_base_type_name;
 use super::types::Document;
 use super::utils::format_type;
+use crate::name_utils;
 use crate::type_context::TypeContext;
 
 pub fn handle_inlay_hints(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Response {
@@ -46,7 +44,6 @@ pub fn handle_inlay_hints(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Re
                         &func.body,
                         &doc.content,
                         doc,
-                        &store,
                         &mut hints,
                         &mut seen,
                     );
@@ -55,19 +52,11 @@ pub fn handle_inlay_hints(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Re
         }
     }
 
-    Response {
-        id: req.id,
-        result: serde_json::to_value(hints).ok(),
-        error: None,
-    }
+    crate::lsp::helpers::success_response_id(req.id, hints)
 }
 
 fn empty_response(id: lsp_server::RequestId) -> Response {
-    Response {
-        id,
-        result: Some(serde_json::to_value(Vec::<InlayHint>::new()).unwrap_or(Value::Null)),
-        error: None,
-    }
+    crate::lsp::helpers::success_response_id(id, Vec::<InlayHint>::new())
 }
 
 /// Collect inlay hints using authoritative type data from the TypeContext.
@@ -456,31 +445,28 @@ fn parse_var_decl(line: &str) -> Option<(String, u32, bool, bool, bool, String)>
 
 fn infer_type(rhs: &str) -> Option<String> {
     use crate::lexer::Lexer;
+    use crate::lsp::type_query::TypeQuery;
     use crate::parser::Parser;
     use crate::well_known::well_known;
 
     let rhs = rhs.trim();
 
-    // Try parsing the expression using the real parser
     let lexer = Lexer::new(rhs);
     let mut parser = Parser::new(lexer);
     if let Ok(expr) = parser.parse_expression() {
-        if let Some(type_name) = infer_type_from_expr(&expr) {
+        if let Some(type_name) = TypeQuery::infer_literal_type(&expr) {
             return Some(type_name);
         }
     }
 
-    // Fallback for simple literals that might not parse in isolation
     if rhs.starts_with('"') || rhs.starts_with('\'') {
         return Some("StaticString".to_string());
     }
 
-    // Use centralized boolean literal check
     if primitives::is_boolean_literal(rhs) {
         return Some("bool".to_string());
     }
 
-    // Check for None variant
     let wk = well_known();
     if rhs == wk.none_name() {
         return Some(wk.option_name().to_string());
@@ -489,106 +475,10 @@ fn infer_type(rhs: &str) -> Option<String> {
     None
 }
 
-/// Infer type from a parsed AST Expression
-fn infer_type_from_expr(expr: &Expression) -> Option<String> {
-    use crate::well_known::well_known;
-
-    let wk = well_known();
-
-    match expr {
-        // Integer literals
-        Expression::Integer8(_)
-        | Expression::Integer16(_)
-        | Expression::Integer32(_)
-        | Expression::Integer64(_) => Some("i32".to_string()),
-
-        // Unsigned integer literals
-        Expression::Unsigned8(_)
-        | Expression::Unsigned16(_)
-        | Expression::Unsigned32(_)
-        | Expression::Unsigned64(_) => Some("u64".to_string()),
-
-        // Float literals
-        Expression::Float32(_) | Expression::Float64(_) => Some("f64".to_string()),
-
-        // Boolean
-        Expression::Boolean(_) => Some("bool".to_string()),
-
-        // String literal
-        Expression::String(_) => Some("StaticString".to_string()),
-
-        // Function call - check if it's a type constructor
-        Expression::FunctionCall { name, .. } => {
-            let base_name = get_base_type_name(name);
-            // Check if stdlib has this as a struct (Vec, HashMap, etc.)
-            if stdlib_types().get_struct_definition(&base_name).is_some() {
-                return Some(base_name);
-            }
-            // Check for constructor methods
-            if let Some(dot_pos) = name.rfind('.') {
-                let receiver = &name[..dot_pos];
-                let method = &name[dot_pos + 1..];
-                // Use centralized constructor method definitions
-                if primitives::is_constructor_method(method) {
-                    return Some(receiver.to_string());
-                }
-                // Check stdlib for method return type
-                if let Some(ret) = stdlib_types().get_method_return_type(receiver, method) {
-                    return Some(format_type(ret));
-                }
-            }
-            None
-        }
-
-        // Struct literal - the name IS the type
-        Expression::StructLiteral { name, .. } => Some(name.clone()),
-
-        // Enum variant construction
-        Expression::EnumVariant {
-            enum_name, variant, ..
-        } => {
-            if wk.is_option(enum_name) || wk.is_option_variant(variant) {
-                Some(wk.option_name().to_string())
-            } else if wk.is_result(enum_name) || wk.is_result_variant(variant) {
-                Some(wk.result_name().to_string())
-            } else {
-                Some(enum_name.clone())
-            }
-        }
-
-        // Enum literal (shorthand like .Some(x))
-        Expression::EnumLiteral { variant, .. } => {
-            if wk.is_option_variant(variant) {
-                Some(wk.option_name().to_string())
-            } else if wk.is_result_variant(variant) {
-                Some(wk.result_name().to_string())
-            } else {
-                None
-            }
-        }
-
-        // Array literal
-        Expression::ArrayLiteral(_) => Some("Array".to_string()),
-
-        // Method call - try to get return type from stdlib
-        Expression::MethodCall { object, method, .. } => {
-            if let Some(recv_type) = infer_type_from_expr(object) {
-                if let Some(ret) = stdlib_types().get_method_return_type(&recv_type, method) {
-                    return Some(format_type(ret));
-                }
-            }
-            None
-        }
-
-        _ => None,
-    }
-}
-
 fn collect_hints_from_statements(
     statements: &[Statement],
     content: &str,
     doc: &Document,
-    store: &DocumentStore,
     hints: &mut Vec<InlayHint>,
     seen: &mut std::collections::HashSet<(u32, u32)>,
 ) {
@@ -602,7 +492,11 @@ fn collect_hints_from_statements(
             } => {
                 if type_.is_none() {
                     if let Some(init) = initializer {
-                        if let Some(inferred) = infer_expr_type(init, doc, store) {
+                        let tq = crate::lsp::type_query::TypeQuery::new(doc);
+                        let inferred = tq.find_variable_type(name).or_else(|| {
+                            crate::lsp::type_query::TypeQuery::infer_literal_type(init)
+                        });
+                        if let Some(inferred) = inferred {
                             if let Some(pos) = find_var_pos(content, name) {
                                 let key = (pos.line, pos.character);
                                 if !seen.contains(&key) {
@@ -624,7 +518,7 @@ fn collect_hints_from_statements(
                 }
             }
             Statement::Loop { body, .. } => {
-                collect_hints_from_statements(body, content, doc, store, hints, seen);
+                collect_hints_from_statements(body, content, doc, hints, seen);
             }
             _ => {}
         }
@@ -646,7 +540,7 @@ fn find_var_pos(content: &str, var_name: &str) -> Option<Position> {
                 let after = trimmed[colon_pos + 1..].trim();
 
                 // Check for PascalCase type definition (might have generics like Name<T>)
-                let base_name = get_base_type_name(before);
+                let base_name = name_utils::strip_generics(before);
                 if !base_name.is_empty()
                     && base_name
                         .chars()
@@ -703,136 +597,6 @@ fn find_var_pos(content: &str, var_name: &str) -> Option<Position> {
                     line: line_num as u32,
                     character: (pos + var_name.len()) as u32,
                 });
-            }
-        }
-    }
-    None
-}
-
-fn infer_expr_type(expr: &Expression, doc: &Document, store: &DocumentStore) -> Option<String> {
-    match expr {
-        Expression::Integer32(_) => Some("i32".to_string()),
-        Expression::Integer64(_) => Some("i64".to_string()),
-        Expression::Float32(_) => Some("f32".to_string()),
-        Expression::Float64(_) => Some("f64".to_string()),
-        Expression::String(_) => Some("StaticString".to_string()),
-        Expression::Boolean(_) => Some("bool".to_string()),
-
-        Expression::BinaryOp { left, right, .. } => {
-            let l = infer_expr_type(left, doc, store)?;
-            let r = infer_expr_type(right, doc, store)?;
-            Some(
-                if l == "f64" || r == "f64" {
-                    "f64"
-                } else if l == "i64" || r == "i64" {
-                    "i64"
-                } else {
-                    "i32"
-                }
-                .to_string(),
-            )
-        }
-
-        Expression::FunctionCall { name, .. } => {
-            if let Some(dot_pos) = name.rfind('.') {
-                let receiver = &name[..dot_pos];
-                let method = &name[dot_pos + 1..];
-
-                if let Some(ret) = stdlib_types().get_function_return_type(receiver, method) {
-                    return Some(format_type(ret));
-                }
-                if let Some(ret) = stdlib_types().get_method_return_type(receiver, method) {
-                    return Some(format_type(ret));
-                }
-            }
-
-            for symbols in [
-                &doc.symbols,
-                &store.stdlib_symbols,
-                &store.workspace_symbols,
-            ] {
-                if let Some(sym) = symbols.get(name) {
-                    if let Some(AstType::Function { return_type, .. }) = sym.type_info.as_ref() {
-                        return Some(format_type(return_type));
-                    }
-                    if let Some(ref detail) = sym.detail {
-                        if let Some(ret) = extract_return_type(detail) {
-                            return Some(ret);
-                        }
-                    }
-                }
-            }
-            None
-        }
-
-        Expression::StructLiteral { name, .. } => Some(name.clone()),
-
-        Expression::MethodCall { object, method, .. } => {
-            let recv_type = infer_expr_type(object, doc, store)?;
-            if let Some(ret) = stdlib_types().get_method_return_type(&recv_type, method) {
-                return Some(format_type(ret));
-            }
-            None
-        }
-
-        Expression::Identifier(name) => {
-            if let Some(sym) = doc.symbols.get(name) {
-                if let Some(ref ti) = sym.type_info {
-                    return Some(format_type(ti));
-                }
-                if let Some(ref detail) = sym.detail {
-                    if let Some(colon_pos) = detail.find(':') {
-                        let type_part = detail[colon_pos + 1..].trim();
-                        if !type_part.is_empty() {
-                            return Some(type_part.to_string());
-                        }
-                    }
-                }
-            }
-            find_variable_type_in_content(&doc.content, name)
-        }
-
-        _ => None,
-    }
-}
-
-fn extract_return_type(sig: &str) -> Option<String> {
-    let close = sig.rfind(')')?;
-    let ret = sig[close + 1..].trim();
-    if ret.is_empty() || ret == "{" {
-        None
-    } else {
-        Some(ret.split_whitespace().next()?.to_string())
-    }
-}
-
-fn find_variable_type_in_content(content: &str, var_name: &str) -> Option<String> {
-    for line in content.lines() {
-        let trimmed = line.trim();
-
-        let pattern = format!("{} = ", var_name);
-        let pattern2 = format!("{} ::= ", var_name);
-
-        if trimmed.starts_with(&pattern) || trimmed.starts_with(&pattern2) {
-            let eq_pos = trimmed.find('=')?; // Early return if no '=' found (shouldn't happen given the if condition)
-            let rhs = trimmed[eq_pos + 1..].trim().trim_start_matches('=').trim();
-
-            if let Some(dot_pos) = rhs.find('.') {
-                let type_name = &rhs[..dot_pos];
-                if type_name
-                    .chars()
-                    .next()
-                    .map(|c| c.is_uppercase())
-                    .unwrap_or(false)
-                {
-                    let method = rhs[dot_pos + 1..].split('(').next().unwrap_or("");
-                    if matches!(
-                        method,
-                        "new" | "init" | "create" | "default" | "from" | "with_capacity"
-                    ) {
-                        return Some(type_name.to_string());
-                    }
-                }
             }
         }
     }

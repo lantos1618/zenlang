@@ -1,6 +1,5 @@
 //! Pattern exhaustiveness checking - extracted from document_store.rs
 
-use super::type_inference::get_base_type_name;
 use super::types::{Document, SymbolInfo};
 use crate::ast::{Expression, Pattern as AstPattern, PatternArm};
 use crate::name_utils;
@@ -220,7 +219,7 @@ pub fn find_missing_variants(
     let wk = well_known();
 
     // First check if it's a built-in enum type
-    let base_type = get_base_type_name(scrutinee_type);
+    let base_type = name_utils::strip_generics(scrutinee_type).to_string();
     let known_enum_variants: Vec<String> = if wk.is_option(&base_type) {
         vec![wk.some_name().to_string(), wk.none_name().to_string()]
     } else if wk.is_result(&base_type) {
