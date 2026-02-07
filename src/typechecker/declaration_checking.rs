@@ -20,7 +20,13 @@ pub fn collect_declaration_types(
                 return_type: func.return_type.clone(),
                 is_external: false,
             };
-            checker.functions.insert(func.name.clone(), signature);
+            checker
+                .functions
+                .insert(func.name.clone(), signature.clone());
+            checker
+                .type_store
+                .borrow_mut()
+                .register_function(&func.name, signature);
         }
         Declaration::ExternalFunction(ext_func) => {
             // External functions have args as Vec<AstType>, convert to params format
@@ -35,7 +41,13 @@ pub fn collect_declaration_types(
                 return_type: ext_func.return_type.clone(),
                 is_external: true,
             };
-            checker.functions.insert(ext_func.name.clone(), signature);
+            checker
+                .functions
+                .insert(ext_func.name.clone(), signature.clone());
+            checker
+                .type_store
+                .borrow_mut()
+                .register_function(&ext_func.name, signature);
         }
         Declaration::Struct(struct_def) => {
             // Convert StructField to (String, AstType)
@@ -49,7 +61,13 @@ pub fn collect_declaration_types(
             let info = StructInfo {
                 fields: fields.clone(),
             };
-            checker.structs.insert(struct_def.name.clone(), info);
+            checker
+                .structs
+                .insert(struct_def.name.clone(), info.clone());
+            checker
+                .type_store
+                .borrow_mut()
+                .register_struct(&struct_def.name, info);
         }
         Declaration::Enum(enum_def) => {
             // Convert EnumVariant to (String, Option<AstType>)
@@ -60,7 +78,11 @@ pub fn collect_declaration_types(
                 .collect();
             use crate::typechecker::EnumInfo;
             let info = EnumInfo { variants };
-            checker.enums.insert(enum_def.name.clone(), info);
+            checker.enums.insert(enum_def.name.clone(), info.clone());
+            checker
+                .type_store
+                .borrow_mut()
+                .register_enum(&enum_def.name, info);
         }
         Declaration::Behavior(behavior_def) => {
             checker.behavior_resolver.register_behavior(behavior_def)?;
@@ -144,9 +166,10 @@ pub fn collect_declaration_types(
 
                 // Register this as a struct type
                 let info = StructInfo {
-                    fields: struct_fields,
+                    fields: struct_fields.clone(),
                 };
-                checker.structs.insert(name.clone(), info);
+                checker.structs.insert(name.clone(), info.clone());
+                checker.type_store.borrow_mut().register_struct(name, info);
 
                 // Also store as a constant of struct type
                 let struct_type = AstType::Struct {
@@ -207,6 +230,10 @@ pub fn collect_declaration_types(
                 checker
                     .type_aliases
                     .insert(type_alias.name.clone(), type_alias.target_type.clone());
+                checker
+                    .type_store
+                    .borrow_mut()
+                    .register_type_alias(&type_alias.name, type_alias.target_type.clone());
             }
         }
         _ => {}

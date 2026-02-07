@@ -18,6 +18,7 @@ use crate::ast::primitives;
 use crate::ast::{AstType, Declaration, Function, Program, Statement};
 use crate::error::{Result, Span};
 use crate::type_context::TypeContext;
+use crate::type_system::{new_type_store, TypeStoreRef};
 use crate::well_known::WellKnownTypes;
 use behaviors::BehaviorResolver;
 use std::collections::HashMap;
@@ -32,9 +33,18 @@ pub struct VariableInfo {
 #[allow(dead_code)]
 pub struct TypeChecker {
     scopes: Vec<HashMap<String, VariableInfo>>,
+    // Unified type storage - single source of truth
+    type_store: TypeStoreRef,
+    // Legacy fields for backward compatibility (delegate to type_store)
+    // TODO: Remove these after full migration
     functions: HashMap<String, FunctionSignature>,
     structs: HashMap<String, StructInfo>,
     enums: HashMap<String, EnumInfo>,
+    type_aliases: HashMap<String, AstType>,
+    stdlib_methods: HashMap<String, MethodSignature>,
+    stdlib_functions: HashMap<String, FunctionSignature>,
+    collected_variables: HashMap<String, AstType>,
+
     behavior_resolver: BehaviorResolver,
     module_imports: HashMap<String, String>,
     current_impl_type: Option<String>,
@@ -44,15 +54,6 @@ pub struct TypeChecker {
     pub well_known: WellKnownTypes,
     // Cache of loaded stdlib modules for type lookup
     stdlib_modules: HashMap<String, Program>,
-    // Extracted stdlib method signatures: "Type::method" -> signature
-    stdlib_methods: HashMap<String, MethodSignature>,
-    // Extracted stdlib function signatures: "module::function" -> signature
-    stdlib_functions: HashMap<String, FunctionSignature>,
-    // Type aliases: "CompletionFn" -> (u64, i64) void
-    type_aliases: HashMap<String, AstType>,
-    // Collected variable types for TypeContext: "function_name::var_name" -> type
-    // Variables are collected during checking because scopes get popped
-    collected_variables: HashMap<String, AstType>,
     // Current function name for scoping variables
     current_function_name: Option<String>,
 }
@@ -93,9 +94,27 @@ impl TypeChecker {
         type_resolution::resolve_generic_to_struct(self, ast_type)
     }
 
+    /// Get the type store reference
+    pub fn type_store(&self) -> TypeStoreRef {
+        self.type_store.clone()
+    }
+
     /// Get the inferred function signatures
     pub fn get_function_signatures(&self) -> &HashMap<String, FunctionSignature> {
         &self.functions
+    }
+
+    /// Get a function signature from the type store
+    pub fn get_function(&self, name: &str) -> Option<FunctionSignature> {
+        self.type_store.borrow().get_function(name).cloned()
+    }
+
+    /// Register a function in both legacy storage and type store
+    pub fn register_function(&mut self, name: &str, signature: FunctionSignature) {
+        self.functions.insert(name.to_string(), signature.clone());
+        self.type_store
+            .borrow_mut()
+            .register_function(name, signature);
     }
 
     /// Look up a UFC method in function signatures by type name and method name.
@@ -123,8 +142,14 @@ impl TypeChecker {
     }
 
     /// Resolve a type alias (e.g., "CompletionFn" -> function type)
+    /// Checks both legacy storage and type store
     pub fn resolve_type_alias(&self, name: &str) -> Option<AstType> {
-        self.type_aliases.get(name).cloned()
+        // Check legacy storage first
+        if let Some(alias) = self.type_aliases.get(name) {
+            return Some(alias.clone());
+        }
+        // Fall back to type store
+        self.type_store.borrow().get_type_alias(name).cloned()
     }
 
     /// Parse type arguments from a generic type string like "HashMap<i32, i32>"
@@ -171,11 +196,23 @@ impl TypeChecker {
             },
         );
 
+        let type_store = new_type_store();
+
+        // Register builtin functions in type_store
+        for (name, sig) in &functions {
+            type_store.borrow_mut().register_function(name, sig.clone());
+        }
+
         Self {
             scopes: vec![HashMap::new()],
+            type_store,
             functions,
             structs: HashMap::new(),
             enums,
+            type_aliases: HashMap::new(),
+            stdlib_methods: HashMap::new(),
+            stdlib_functions: HashMap::new(),
+            collected_variables: HashMap::new(),
             behavior_resolver: BehaviorResolver::new(),
             module_imports: HashMap::new(),
             current_impl_type: None,
@@ -183,10 +220,6 @@ impl TypeChecker {
             current_function_return_type: None,
             well_known: WellKnownTypes::new(),
             stdlib_modules: HashMap::new(),
-            stdlib_methods: HashMap::new(),
-            stdlib_functions: HashMap::new(),
-            type_aliases: HashMap::new(),
-            collected_variables: HashMap::new(),
             current_function_name: None,
         }
     }

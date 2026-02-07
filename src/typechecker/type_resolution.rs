@@ -28,7 +28,10 @@ fn resolve_generic_to_struct_impl(
     match ast_type {
         AstType::Generic { name, type_args } if type_args.is_empty() => {
             // Check if this Generic is actually a known struct
-            if checker.structs.contains_key(name) {
+            // Check both legacy storage and type store
+            let is_known_struct =
+                checker.structs.contains_key(name) || checker.type_store.borrow().has_struct(name);
+            if is_known_struct {
                 // Prevent infinite recursion on circular references
                 if visited.contains(name) {
                     // Return a Struct type without resolving fields to break the cycle
@@ -41,9 +44,20 @@ fn resolve_generic_to_struct_impl(
                 visited.insert(name.clone());
 
                 // Convert to Struct type with recursively resolved fields
-                if let Some(struct_info) = checker.structs.get(name) {
-                    let resolved_fields: Vec<(String, AstType)> = struct_info
-                        .fields
+                // Try legacy storage first, then fall back to type store
+                let struct_fields: Option<Vec<(String, AstType)>> = checker
+                    .structs
+                    .get(name)
+                    .map(|s| s.fields.clone())
+                    .or_else(|| {
+                        checker
+                            .type_store
+                            .borrow()
+                            .get_struct(name)
+                            .map(|s| s.fields.clone())
+                    });
+                if let Some(fields) = struct_fields {
+                    let resolved_fields: Vec<(String, AstType)> = fields
                         .iter()
                         .map(|(field_name, field_type)| {
                             (
