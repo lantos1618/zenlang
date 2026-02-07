@@ -1,6 +1,12 @@
 //! Declaration nodes in the AST
 
+use std::collections::HashMap;
+
 use super::expressions::Expression;
+use super::fields::{
+    function_arg_field, methods_field, protocol_methods_field, type_params_fields, AstFields,
+    FieldValue,
+};
 use super::statements::Statement;
 use super::types::{AstType, EnumVariant, TypeParameter};
 use crate::error::Span;
@@ -164,6 +170,161 @@ impl Declaration {
             Declaration::ModuleImport { .. } => "ModuleImport",
             Declaration::Export { .. } => "Export",
             Declaration::TypeAlias(_) => "TypeAlias",
+        }
+    }
+}
+
+impl AstFields for Declaration {
+    fn ast_fields(&self) -> Vec<(&'static str, FieldValue)> {
+        match self {
+            Declaration::Function(f) => vec![
+                ("name", FieldValue::String(f.name.clone())),
+                ("type_params", type_params_fields(&f.type_params)),
+                (
+                    "args",
+                    FieldValue::Array(
+                        f.args
+                            .iter()
+                            .map(|(name, ty)| function_arg_field(name, ty))
+                            .collect(),
+                    ),
+                ),
+                ("return_type", FieldValue::ty(&f.return_type)),
+                ("body", FieldValue::stmt_array(&f.body)),
+                ("is_varargs", FieldValue::Bool(f.is_varargs)),
+                ("is_public", FieldValue::Bool(f.is_public)),
+            ],
+            Declaration::ExternalFunction(ef) => vec![
+                ("name", FieldValue::String(ef.name.clone())),
+                ("args", FieldValue::type_array(&ef.args)),
+                ("return_type", FieldValue::ty(&ef.return_type)),
+                ("is_varargs", FieldValue::Bool(ef.is_varargs)),
+            ],
+            Declaration::Struct(s) => vec![
+                ("name", FieldValue::String(s.name.clone())),
+                ("type_params", type_params_fields(&s.type_params)),
+                (
+                    "fields",
+                    FieldValue::Array(
+                        s.fields
+                            .iter()
+                            .map(|f| {
+                                let mut fields = HashMap::new();
+                                fields
+                                    .insert("name".to_string(), FieldValue::String(f.name.clone()));
+                                fields.insert("field_type".to_string(), FieldValue::ty(&f.type_));
+                                fields.insert(
+                                    "is_mutable".to_string(),
+                                    FieldValue::Bool(f.is_mutable),
+                                );
+                                fields.insert(
+                                    "default_value".to_string(),
+                                    match &f.default_value {
+                                        Some(e) => FieldValue::expr(e),
+                                        None => FieldValue::Null,
+                                    },
+                                );
+                                FieldValue::Struct {
+                                    name: "StructField".to_string(),
+                                    fields,
+                                }
+                            })
+                            .collect(),
+                    ),
+                ),
+                ("methods", methods_field(&s.methods)),
+            ],
+            Declaration::Enum(e) => vec![
+                ("name", FieldValue::String(e.name.clone())),
+                ("type_params", type_params_fields(&e.type_params)),
+                (
+                    "variants",
+                    FieldValue::Array(
+                        e.variants
+                            .iter()
+                            .map(|v| {
+                                let mut fields = HashMap::new();
+                                fields
+                                    .insert("name".to_string(), FieldValue::String(v.name.clone()));
+                                fields.insert(
+                                    "payload".to_string(),
+                                    match &v.payload {
+                                        Some(t) => FieldValue::ty(t),
+                                        None => FieldValue::Null,
+                                    },
+                                );
+                                FieldValue::Struct {
+                                    name: "EnumVariant".to_string(),
+                                    fields,
+                                }
+                            })
+                            .collect(),
+                    ),
+                ),
+                ("methods", methods_field(&e.methods)),
+                (
+                    "required_traits",
+                    FieldValue::string_array(&e.required_traits),
+                ),
+            ],
+            Declaration::Behavior(b) => vec![
+                ("name", FieldValue::String(b.name.clone())),
+                ("type_params", type_params_fields(&b.type_params)),
+                (
+                    "methods",
+                    protocol_methods_field("BehaviorMethod", &b.methods),
+                ),
+            ],
+            Declaration::Trait(t) => vec![
+                ("name", FieldValue::String(t.name.clone())),
+                ("type_params", type_params_fields(&t.type_params)),
+                ("methods", protocol_methods_field("TraitMethod", &t.methods)),
+            ],
+            Declaration::TraitImplementation(ti) => vec![
+                ("type_name", FieldValue::String(ti.type_name.clone())),
+                ("trait_name", FieldValue::String(ti.trait_name.clone())),
+                ("type_params", type_params_fields(&ti.type_params)),
+                ("methods", methods_field(&ti.methods)),
+            ],
+            Declaration::TraitRequirement(tr) => vec![
+                ("type_name", FieldValue::String(tr.type_name.clone())),
+                ("trait_name", FieldValue::String(tr.trait_name.clone())),
+            ],
+            Declaration::ImplBlock(imp) => vec![
+                ("type_name", FieldValue::String(imp.type_name.clone())),
+                ("type_params", type_params_fields(&imp.type_params)),
+                ("methods", methods_field(&imp.methods)),
+            ],
+            Declaration::ComptimeBlock(stmts) => {
+                vec![("statements", FieldValue::stmt_array(stmts))]
+            }
+            Declaration::Constant {
+                name, value, type_, ..
+            } => vec![
+                ("name", FieldValue::String(name.clone())),
+                ("value", FieldValue::expr(value)),
+                (
+                    "const_type",
+                    match type_ {
+                        Some(t) => FieldValue::ty(t),
+                        None => FieldValue::Null,
+                    },
+                ),
+            ],
+            Declaration::ModuleImport {
+                alias, module_path, ..
+            } => vec![
+                ("alias", FieldValue::String(alias.clone())),
+                ("module_path", FieldValue::String(module_path.clone())),
+            ],
+            Declaration::Export { symbols } => {
+                vec![("symbols", FieldValue::string_array(symbols))]
+            }
+            Declaration::TypeAlias(ta) => vec![
+                ("name", FieldValue::String(ta.name.clone())),
+                ("type_params", type_params_fields(&ta.type_params)),
+                ("target_type", FieldValue::ty(&ta.target_type)),
+            ],
         }
     }
 }

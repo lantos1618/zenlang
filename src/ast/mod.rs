@@ -6,6 +6,7 @@
 pub mod builtins;
 mod declarations;
 mod expressions;
+pub mod fields;
 mod patterns;
 pub mod primitives;
 mod statements;
@@ -14,6 +15,7 @@ mod types;
 // Re-export everything for backward compatibility
 pub use declarations::*;
 pub use expressions::*;
+pub use fields::{AstFields, FieldValue};
 pub use patterns::*;
 pub use primitives::{
     bit_size, byte_size, int_from_bit_size, is_primitive_name, primitive_from_str,

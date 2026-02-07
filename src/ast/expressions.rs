@@ -1,7 +1,9 @@
 //! Expression nodes in the AST
 
+use super::fields::{match_arms_fields, AstFields, FieldValue};
 use super::patterns::Pattern;
 use super::types::AstType;
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -324,6 +326,337 @@ impl Expression {
             Expression::VecConstructor { .. } => "VecConstructor",
             Expression::DynVecConstructor { .. } => "DynVecConstructor",
             Expression::ArrayConstructor { .. } => "ArrayConstructor",
+        }
+    }
+}
+
+impl AstFields for Expression {
+    fn ast_fields(&self) -> Vec<(&'static str, FieldValue)> {
+        match self {
+            Expression::Integer8(v) => vec![("value", FieldValue::I8(*v))],
+            Expression::Integer16(v) => vec![("value", FieldValue::I16(*v))],
+            Expression::Integer32(v) => vec![("value", FieldValue::I32(*v))],
+            Expression::Integer64(v) => vec![("value", FieldValue::I64(*v))],
+            Expression::Unsigned8(v) => vec![("value", FieldValue::U8(*v))],
+            Expression::Unsigned16(v) => vec![("value", FieldValue::U16(*v))],
+            Expression::Unsigned32(v) => vec![("value", FieldValue::U32(*v))],
+            Expression::Unsigned64(v) => vec![("value", FieldValue::U64(*v))],
+            Expression::Float32(v) => vec![("value", FieldValue::F32(*v))],
+            Expression::Float64(v) => vec![("value", FieldValue::F64(*v))],
+            Expression::Boolean(v) => vec![("value", FieldValue::Bool(*v))],
+            Expression::String(v) => vec![("value", FieldValue::String(v.clone()))],
+            Expression::Identifier(name) => {
+                vec![("name", FieldValue::String(name.clone()))]
+            }
+            Expression::Unit
+            | Expression::None
+            | Expression::StdReference
+            | Expression::BuiltinReference
+            | Expression::ThisReference => vec![],
+
+            Expression::BinaryOp { left, op, right } => vec![
+                ("left", FieldValue::boxed_expr(left)),
+                ("op", FieldValue::String(op.to_string())),
+                ("right", FieldValue::boxed_expr(right)),
+            ],
+
+            Expression::FunctionCall {
+                name,
+                type_args,
+                args,
+            } => vec![
+                ("name", FieldValue::String(name.clone())),
+                ("type_args", FieldValue::type_array(type_args)),
+                ("args", FieldValue::expr_array(args)),
+            ],
+
+            Expression::MethodCall {
+                object,
+                method,
+                type_args,
+                args,
+            } => vec![
+                ("object", FieldValue::boxed_expr(object)),
+                ("method", FieldValue::String(method.clone())),
+                ("type_args", FieldValue::type_array(type_args)),
+                ("args", FieldValue::expr_array(args)),
+            ],
+
+            Expression::QuestionMatch { scrutinee, arms } => {
+                match_arms_fields("MatchArm", scrutinee, arms)
+            }
+            Expression::Conditional { scrutinee, arms } => {
+                match_arms_fields("ConditionalArm", scrutinee, arms)
+            }
+            Expression::PatternMatch { scrutinee, arms } => {
+                match_arms_fields("PatternArm", scrutinee, arms)
+            }
+
+            Expression::AddressOf(inner) => {
+                vec![("expr", FieldValue::boxed_expr(inner))]
+            }
+            Expression::Dereference(inner) => {
+                vec![("expr", FieldValue::boxed_expr(inner))]
+            }
+            Expression::PointerOffset { pointer, offset } => vec![
+                ("pointer", FieldValue::boxed_expr(pointer)),
+                ("offset", FieldValue::boxed_expr(offset)),
+            ],
+            Expression::PointerDereference(inner) => {
+                vec![("expr", FieldValue::boxed_expr(inner))]
+            }
+            Expression::PointerAddress(inner) => {
+                vec![("expr", FieldValue::boxed_expr(inner))]
+            }
+            Expression::CreateReference(inner) => {
+                vec![("expr", FieldValue::boxed_expr(inner))]
+            }
+            Expression::CreateMutableReference(inner) => {
+                vec![("expr", FieldValue::boxed_expr(inner))]
+            }
+
+            Expression::StructLiteral { name, fields: fs } => vec![
+                ("name", FieldValue::String(name.clone())),
+                (
+                    "fields",
+                    FieldValue::Array(
+                        fs.iter()
+                            .map(|(n, e)| {
+                                let mut fields = HashMap::new();
+                                fields.insert("name".to_string(), FieldValue::String(n.clone()));
+                                fields.insert("value".to_string(), FieldValue::expr(e));
+                                FieldValue::Struct {
+                                    name: "StructFieldInit".to_string(),
+                                    fields,
+                                }
+                            })
+                            .collect(),
+                    ),
+                ),
+            ],
+
+            Expression::StructField { struct_, field } => vec![
+                ("struct_expr", FieldValue::boxed_expr(struct_)),
+                ("field", FieldValue::String(field.clone())),
+            ],
+
+            Expression::ArrayLiteral(elems) => {
+                vec![("elements", FieldValue::expr_array(elems))]
+            }
+
+            Expression::ArrayIndex { array, index } => vec![
+                ("array", FieldValue::boxed_expr(array)),
+                ("index", FieldValue::boxed_expr(index)),
+            ],
+
+            Expression::ArrayConstructor { element_type } => {
+                vec![("element_type", FieldValue::ty(element_type))]
+            }
+
+            Expression::VecConstructor {
+                element_type,
+                size,
+                initial_values,
+            } => vec![
+                ("element_type", FieldValue::ty(element_type)),
+                ("size", FieldValue::I64(*size as i64)),
+                (
+                    "initial_values",
+                    match initial_values {
+                        Some(vals) => FieldValue::expr_array(vals),
+                        None => FieldValue::Array(vec![]),
+                    },
+                ),
+            ],
+
+            Expression::DynVecConstructor {
+                element_types,
+                allocator,
+                initial_capacity,
+            } => vec![
+                ("element_types", FieldValue::type_array(element_types)),
+                ("allocator", FieldValue::boxed_expr(allocator)),
+                (
+                    "initial_capacity",
+                    match initial_capacity {
+                        Some(cap) => FieldValue::boxed_expr(cap),
+                        None => FieldValue::Null,
+                    },
+                ),
+            ],
+
+            Expression::EnumVariant {
+                enum_name,
+                variant,
+                payload,
+            } => vec![
+                ("enum_name", FieldValue::String(enum_name.clone())),
+                ("variant", FieldValue::String(variant.clone())),
+                ("payload", FieldValue::opt_expr(payload)),
+            ],
+
+            Expression::EnumLiteral { variant, payload } => vec![
+                ("variant", FieldValue::String(variant.clone())),
+                ("payload", FieldValue::opt_expr(payload)),
+            ],
+
+            Expression::MemberAccess { object, member } => vec![
+                ("object", FieldValue::boxed_expr(object)),
+                ("member", FieldValue::String(member.clone())),
+            ],
+
+            Expression::StringLength(inner) => {
+                vec![("expr", FieldValue::boxed_expr(inner))]
+            }
+
+            Expression::Some(expr) => {
+                vec![("inner", FieldValue::boxed_expr(expr))]
+            }
+
+            Expression::StringInterpolation { parts } => vec![(
+                "parts",
+                FieldValue::Array(
+                    parts
+                        .iter()
+                        .map(|part| match part {
+                            StringPart::Literal(s) => {
+                                let mut fields = HashMap::new();
+                                fields.insert(
+                                    "kind".to_string(),
+                                    FieldValue::String("Literal".to_string()),
+                                );
+                                fields.insert("value".to_string(), FieldValue::String(s.clone()));
+                                FieldValue::Struct {
+                                    name: "StringPart".to_string(),
+                                    fields,
+                                }
+                            }
+                            StringPart::Interpolation(e) => {
+                                let mut fields = HashMap::new();
+                                fields.insert(
+                                    "kind".to_string(),
+                                    FieldValue::String("Interpolation".to_string()),
+                                );
+                                fields.insert("expr".to_string(), FieldValue::expr(e));
+                                FieldValue::Struct {
+                                    name: "StringPart".to_string(),
+                                    fields,
+                                }
+                            }
+                        })
+                        .collect(),
+                ),
+            )],
+
+            Expression::Comptime(inner) => {
+                vec![("expr", FieldValue::boxed_expr(inner))]
+            }
+
+            Expression::Range {
+                start,
+                end,
+                inclusive,
+            } => vec![
+                ("start", FieldValue::boxed_expr(start)),
+                ("end", FieldValue::boxed_expr(end)),
+                ("inclusive", FieldValue::Bool(*inclusive)),
+            ],
+
+            Expression::Loop { body } => {
+                vec![("body", FieldValue::boxed_expr(body))]
+            }
+
+            Expression::CollectionLoop {
+                collection,
+                param,
+                index_param,
+                body,
+            } => vec![
+                ("collection", FieldValue::boxed_expr(collection)),
+                ("param_name", FieldValue::String(param.0.clone())),
+                (
+                    "param_type",
+                    match &param.1 {
+                        Some(t) => FieldValue::ty(t),
+                        None => FieldValue::Null,
+                    },
+                ),
+                (
+                    "index_name",
+                    match index_param {
+                        Some((name, _)) => FieldValue::String(name.clone()),
+                        None => FieldValue::String(String::new()),
+                    },
+                ),
+                (
+                    "index_type",
+                    match index_param {
+                        Some((_, Some(t))) => FieldValue::ty(t),
+                        _ => FieldValue::Null,
+                    },
+                ),
+                ("body", FieldValue::boxed_expr(body)),
+            ],
+
+            Expression::Closure {
+                params,
+                return_type,
+                body,
+            } => vec![
+                (
+                    "params",
+                    FieldValue::Array(
+                        params
+                            .iter()
+                            .map(|(name, ty)| {
+                                let mut fields = HashMap::new();
+                                fields.insert("name".to_string(), FieldValue::String(name.clone()));
+                                fields.insert(
+                                    "param_type".to_string(),
+                                    match ty {
+                                        Some(t) => FieldValue::ty(t),
+                                        None => FieldValue::Null,
+                                    },
+                                );
+                                FieldValue::Struct {
+                                    name: "ClosureParam".to_string(),
+                                    fields,
+                                }
+                            })
+                            .collect(),
+                    ),
+                ),
+                (
+                    "return_type",
+                    match return_type {
+                        Some(t) => FieldValue::ty(t),
+                        None => FieldValue::Null,
+                    },
+                ),
+                ("body", FieldValue::boxed_expr(body)),
+            ],
+
+            Expression::Block(stmts) => {
+                vec![("statements", FieldValue::stmt_array(stmts))]
+            }
+
+            Expression::Return(expr) => {
+                vec![("expr", FieldValue::boxed_expr(expr))]
+            }
+            Expression::Raise(expr) => {
+                vec![("expr", FieldValue::boxed_expr(expr))]
+            }
+            Expression::Defer(expr) => {
+                vec![("expr", FieldValue::boxed_expr(expr))]
+            }
+
+            Expression::Break { label, value } => vec![
+                ("label", FieldValue::opt_label(label)),
+                ("value", FieldValue::opt_expr(value)),
+            ],
+            Expression::Continue { label } => {
+                vec![("label", FieldValue::opt_label(label))]
+            }
         }
     }
 }

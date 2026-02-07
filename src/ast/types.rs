@@ -1,7 +1,11 @@
 //! Type representations in the AST
 
-use crate::well_known::well_known;
+use std::collections::HashMap;
 use std::fmt;
+
+use crate::well_known::well_known;
+
+use super::fields::{AstFields, FieldValue};
 
 // ============================================================================
 // TYPE NAME UTILITIES
@@ -302,6 +306,111 @@ impl fmt::Display for AstType {
             }
             AstType::EnumType { name } => write!(f, "{}", name),
             AstType::StdModule => write!(f, "std"),
+        }
+    }
+}
+
+impl AstFields for AstType {
+    fn ast_fields(&self) -> Vec<(&'static str, FieldValue)> {
+        match self {
+            AstType::I8
+            | AstType::I16
+            | AstType::I32
+            | AstType::I64
+            | AstType::U8
+            | AstType::U16
+            | AstType::U32
+            | AstType::U64
+            | AstType::Usize
+            | AstType::F32
+            | AstType::F64
+            | AstType::Bool
+            | AstType::StaticLiteral
+            | AstType::StaticString
+            | AstType::Void
+            | AstType::StdModule => vec![],
+
+            AstType::Slice(inner) => {
+                vec![("element_type", FieldValue::boxed_ty(inner))]
+            }
+            AstType::FixedArray { element_type, size } => vec![
+                ("element_type", FieldValue::boxed_ty(element_type)),
+                ("size", FieldValue::I64(*size as i64)),
+            ],
+            AstType::Function { args, return_type } => vec![
+                ("args", FieldValue::type_array(args)),
+                ("return_type", FieldValue::boxed_ty(return_type)),
+            ],
+            AstType::FunctionPointer {
+                param_types,
+                return_type,
+            } => vec![
+                ("param_types", FieldValue::type_array(param_types)),
+                ("return_type", FieldValue::boxed_ty(return_type)),
+            ],
+            AstType::Struct { name, fields: fs } => vec![
+                ("name", FieldValue::String(name.clone())),
+                (
+                    "fields",
+                    FieldValue::Array(
+                        fs.iter()
+                            .map(|(n, t)| FieldValue::Struct {
+                                name: "StructTypeField".to_string(),
+                                fields: HashMap::from([
+                                    ("name".to_string(), FieldValue::String(n.clone())),
+                                    ("field_type".to_string(), FieldValue::ty(t)),
+                                ]),
+                            })
+                            .collect(),
+                    ),
+                ),
+            ],
+            AstType::Enum { name, variants } => vec![
+                ("name", FieldValue::String(name.clone())),
+                (
+                    "variants",
+                    FieldValue::Array(
+                        variants
+                            .iter()
+                            .map(|v| {
+                                let mut fields = HashMap::new();
+                                fields
+                                    .insert("name".to_string(), FieldValue::String(v.name.clone()));
+                                fields.insert(
+                                    "payload".to_string(),
+                                    match &v.payload {
+                                        Some(t) => FieldValue::ty(t),
+                                        None => FieldValue::Null,
+                                    },
+                                );
+                                FieldValue::Struct {
+                                    name: "EnumVariant".to_string(),
+                                    fields,
+                                }
+                            })
+                            .collect(),
+                    ),
+                ),
+            ],
+            AstType::Ref(inner) => {
+                vec![("inner", FieldValue::boxed_ty(inner))]
+            }
+            AstType::Range {
+                start_type,
+                end_type,
+                inclusive,
+            } => vec![
+                ("start_type", FieldValue::boxed_ty(start_type)),
+                ("end_type", FieldValue::boxed_ty(end_type)),
+                ("inclusive", FieldValue::Bool(*inclusive)),
+            ],
+            AstType::Generic { name, type_args } => vec![
+                ("name", FieldValue::String(name.clone())),
+                ("type_args", FieldValue::type_array(type_args)),
+            ],
+            AstType::EnumType { name } => {
+                vec![("name", FieldValue::String(name.clone()))]
+            }
         }
     }
 }

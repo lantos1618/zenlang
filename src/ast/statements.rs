@@ -1,9 +1,12 @@
 //! Statement nodes in the AST
 
+use std::collections::HashMap;
+use std::fmt;
+
 use super::expressions::Expression;
+use super::fields::{AstFields, FieldValue};
 use super::types::AstType;
 use crate::error::Span;
-use std::fmt;
 
 /// A statement with optional source location information
 #[derive(Debug, Clone, PartialEq)]
@@ -136,4 +139,106 @@ pub enum LoopKind {
     Infinite,
     // loop condition { } - while-like loop
     Condition(Expression),
+}
+
+// ============================================================================
+// AstFields implementation
+// ============================================================================
+
+impl AstFields for Statement {
+    fn ast_fields(&self) -> Vec<(&'static str, FieldValue)> {
+        match self {
+            Statement::Expression { expr, .. } => {
+                vec![("expr", FieldValue::expr(expr))]
+            }
+            Statement::Return { expr, .. } => {
+                vec![("expr", FieldValue::expr(expr))]
+            }
+            Statement::VariableDeclaration {
+                name,
+                type_,
+                initializer,
+                is_mutable,
+                declaration_type,
+                ..
+            } => vec![
+                ("name", FieldValue::String(name.clone())),
+                (
+                    "var_type",
+                    match type_ {
+                        Some(t) => FieldValue::ty(t),
+                        None => FieldValue::Null,
+                    },
+                ),
+                (
+                    "initializer",
+                    match initializer {
+                        Some(e) => FieldValue::expr(e),
+                        None => FieldValue::Null,
+                    },
+                ),
+                ("is_mutable", FieldValue::Bool(*is_mutable)),
+                (
+                    "declaration_type",
+                    FieldValue::String(declaration_type.to_string()),
+                ),
+            ],
+            Statement::VariableAssignment { name, value, .. } => vec![
+                ("name", FieldValue::String(name.clone())),
+                ("value", FieldValue::expr(value)),
+            ],
+            Statement::PointerAssignment { pointer, value, .. } => vec![
+                ("pointer", FieldValue::expr(pointer)),
+                ("value", FieldValue::expr(value)),
+            ],
+            Statement::Loop {
+                kind, label, body, ..
+            } => vec![
+                (
+                    "kind",
+                    match kind {
+                        LoopKind::Infinite => FieldValue::String("Infinite".to_string()),
+                        LoopKind::Condition(cond) => FieldValue::Struct {
+                            name: "LoopKind".to_string(),
+                            fields: HashMap::from([
+                                (
+                                    "kind".to_string(),
+                                    FieldValue::String("Condition".to_string()),
+                                ),
+                                ("condition".to_string(), FieldValue::expr(cond)),
+                            ]),
+                        },
+                    },
+                ),
+                ("label", FieldValue::opt_label(label)),
+                ("body", FieldValue::stmt_array(body)),
+            ],
+            Statement::Break { label, .. } => {
+                vec![("label", FieldValue::opt_label(label))]
+            }
+            Statement::Continue { label, .. } => {
+                vec![("label", FieldValue::opt_label(label))]
+            }
+            Statement::ComptimeBlock { statements, .. } => {
+                vec![("statements", FieldValue::stmt_array(statements))]
+            }
+            Statement::ModuleImport { alias, module_path } => vec![
+                ("alias", FieldValue::String(alias.clone())),
+                ("module_path", FieldValue::String(module_path.clone())),
+            ],
+            Statement::Defer { statement, .. } => {
+                vec![("statement", FieldValue::Stmt(statement.clone()))]
+            }
+            Statement::ThisDefer { expr, .. } => {
+                vec![("expr", FieldValue::expr(expr))]
+            }
+            Statement::DestructuringImport { names, source, .. } => vec![
+                ("names", FieldValue::string_array(names)),
+                ("source", FieldValue::expr(source)),
+            ],
+            Statement::Block { statements, .. } => {
+                vec![("statements", FieldValue::stmt_array(statements))]
+            }
+        }
+    }
 }
