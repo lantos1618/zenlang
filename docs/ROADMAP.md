@@ -49,10 +49,44 @@ vec.iter().map(fn).filter(fn).collect()
 Currently only specialized methods work (sum, product, min, max).
 
 ### 3. Cross-Platform Support
-- [ ] macOS syscalls
-- [ ] Windows syscalls
 
-### 4. Remaining Type System Cleanup
+**Current state:** Syscalls are 100% manual — the compiler generates inline x86-64
+assembly (`syscall` instruction with rax/rdi/rsi/rdx/r10/r8/r9 register convention).
+LLVM provides zero platform abstraction for this. Every stdlib file using I/O,
+networking, threading, or memory-mapping depends on Linux x86-64 syscall numbers
+hardcoded in `stdlib/sys/syscall.zen`.
+
+**What needs to change per platform:**
+
+| Platform | Syscall Numbers | Registers | Instruction | Effort |
+|----------|----------------|-----------|-------------|--------|
+| Linux ARM64 | Different | x0-x7 | `svc #0` | Medium |
+| macOS x86-64 | Different (exit=1 not 60) | Same | `syscall` | Medium |
+| macOS ARM64 | Different | x0-x7 | `svc #0x80` | Medium-high |
+| Windows | N/A — uses NTAPI | Completely different | No `syscall` | Very high |
+
+**Phased approach:**
+
+- [ ] **Phase 1: Target detection** — Query LLVM target triple, route to platform-specific codegen in `build_syscall()`
+- [ ] **Phase 2: Linux ARM64** — Easiest win. Same syscall concept, different ABI. Create `syscall_aarch64.zen` with ARM64 numbers, modify `build_syscall()` for `svc #0` + x0-x7 registers
+- [ ] **Phase 3: macOS** — Create `syscall_macos.zen`. Note: Apple discourages raw syscalls (numbers change between versions), long-term should FFI to libSystem
+- [ ] **Phase 4: Windows** — Architectural change. No raw syscalls — needs NTAPI via FFI (`ntdll.dll`/`kernel32.dll`). Essentially a separate I/O backend
+- [ ] **Phase 5: Stdlib abstraction layer** — Platform-independent I/O/threading/memory API in stdlib that dispatches to OS-specific implementations
+
+**Files affected:** `src/codegen/llvm/stdlib_codegen/compiler.rs` (build_syscall), `src/intrinsics.rs`, `stdlib/sys/syscall.zen`, and every stdlib file using `compiler.syscall*()` (~15 files across io/, sys/, concurrency/, memory/)
+
+### 4. LSP Consolidation
+
+The LSP is 16,399 LOC across 55 files — reasonable for a full-featured LSP with
+compiler integration (rust-analyzer is 150K, gopls 50K), but has ~1,500 LOC of
+consolidation opportunities:
+
+- [ ] **Consolidate type inference** — 8 separate files duplicate Expression-matching logic (~500 LOC savings)
+- [ ] **Merge hover submodules** — 9 files → 4 files (~250 LOC savings)
+- [ ] **Merge document_store submodules** — 9 files → 4 files (~250 LOC savings)
+- [ ] **Error handling macros** — Replace 50+ verbose lock/parse patterns (~150 LOC savings)
+
+### 5. Remaining Type System Cleanup
 - Replace remaining string-based type checks (~10 locations)
 - Create TypeAliasRegistry for StaticString/String normalization
 - Implement generic type substitution in stdlib method resolution
