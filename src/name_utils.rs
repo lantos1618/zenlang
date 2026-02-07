@@ -37,6 +37,28 @@ pub fn strip_generics(name: &str) -> &str {
     }
 }
 
+/// Construct a method key: `"TypeName.method"`.
+/// This is the canonical format used across TypeContext, TypeStore, and codegen.
+/// Always use this instead of ad-hoc `format!("{}.{}", ...)` calls.
+#[inline]
+pub fn method_key(type_name: &str, method_name: &str) -> String {
+    format!("{}.{}", type_name, method_name)
+}
+
+/// Construct a scoped variable key: `"scope::var_name"`.
+/// Used for per-function variable tracking in TypeStore and TypeContext.
+#[inline]
+pub fn scoped_var_key(scope: &str, var_name: &str) -> String {
+    format!("{}::{}", scope, var_name)
+}
+
+/// Construct a stdlib function key: `"module::func_name"`.
+/// Used for stdlib function signature lookup in TypeStore.
+#[inline]
+pub fn stdlib_func_key(module: &str, func_name: &str) -> String {
+    format!("{}::{}", module, func_name)
+}
+
 /// Check if a name follows Zen's test naming convention.
 /// Matches: `test_foo`, `foo_test`, `foo_test_bar`
 pub fn is_test_name(name: &str) -> bool {
@@ -81,6 +103,33 @@ mod tests {
     fn test_leaf_name() {
         assert_eq!(leaf_name("std::io::File"), "File");
         assert_eq!(leaf_name("File"), "File");
+    }
+
+    #[test]
+    fn test_method_key() {
+        assert_eq!(method_key("Vec", "len"), "Vec.len");
+        assert_eq!(method_key("HashMap", "new"), "HashMap.new");
+    }
+
+    #[test]
+    fn test_scoped_var_key() {
+        assert_eq!(scoped_var_key("main", "x"), "main::x");
+        assert_eq!(
+            scoped_var_key("MyStruct.method", "self"),
+            "MyStruct.method::self"
+        );
+    }
+
+    #[test]
+    fn test_stdlib_func_key() {
+        assert_eq!(stdlib_func_key("math", "sqrt"), "math::sqrt");
+        assert_eq!(stdlib_func_key("io", "print"), "io::print");
+    }
+
+    #[test]
+    fn test_method_key_roundtrip() {
+        let key = method_key("Vec", "push");
+        assert_eq!(split_method_path(&key), Some(("Vec", "push")));
     }
 
     #[test]
