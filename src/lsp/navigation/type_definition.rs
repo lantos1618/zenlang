@@ -63,12 +63,7 @@ pub fn handle_type_definition(
                 if let Some(detail) = &symbol_info.detail {
                     if let Some(type_name) = extract_type_name(detail) {
                         // Now find the definition of this type
-                        if let Some(type_symbol) = doc
-                            .symbols
-                            .get(&type_name)
-                            .or_else(|| store.stdlib_symbols.get(&type_name))
-                            .or_else(|| store.workspace_symbols.get(&type_name))
-                        {
+                        if let Some(type_symbol) = store.resolve_symbol(doc, &type_name) {
                             let uri = type_symbol
                                 .definition_uri
                                 .as_ref()
@@ -93,12 +88,7 @@ pub fn handle_type_definition(
             }
 
             // If the symbol itself is a type, just use handle_definition logic
-            if let Some(symbol_info) = doc
-                .symbols
-                .get(&symbol_name)
-                .or_else(|| store.stdlib_symbols.get(&symbol_name))
-                .or_else(|| store.workspace_symbols.get(&symbol_name))
-            {
+            if let Some(symbol_info) = store.resolve_symbol(doc, &symbol_name) {
                 let uri = symbol_info
                     .definition_uri
                     .as_ref()

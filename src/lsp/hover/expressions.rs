@@ -159,11 +159,7 @@ pub fn resolve_expression_type(
 ) -> Option<AstType> {
     match expr {
         Expression::Identifier(var_name) => {
-            if let Some(var_info) = local_symbols
-                .get(var_name)
-                .or_else(|| store.workspace_symbols.get(var_name))
-                .or_else(|| store.stdlib_symbols.get(var_name))
-            {
+            if let Some(var_info) = store.resolve_symbol_local_first(local_symbols, var_name) {
                 return var_info.type_info.clone();
             }
         }

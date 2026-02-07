@@ -216,12 +216,7 @@ pub fn handle_outgoing_calls(
 
         for (func_name, ranges) in calls {
             // Try to find the definition of the called function
-            if let Some(symbol_info) = doc
-                .symbols
-                .get(&func_name)
-                .or_else(|| store.stdlib_symbols.get(&func_name))
-                .or_else(|| store.workspace_symbols.get(&func_name))
-            {
+            if let Some(symbol_info) = store.resolve_symbol(doc, &func_name) {
                 let target_uri = symbol_info
                     .definition_uri
                     .as_ref()

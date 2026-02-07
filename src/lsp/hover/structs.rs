@@ -100,11 +100,7 @@ pub fn handle_variable_hover(
     local_symbols: &HashMap<String, SymbolInfo>,
     store: &DocumentStore,
 ) -> Option<String> {
-    if let Some(var_info) = local_symbols
-        .get(var_name)
-        .or_else(|| store.workspace_symbols.get(var_name))
-        .or_else(|| store.stdlib_symbols.get(var_name))
-    {
+    if let Some(var_info) = store.resolve_symbol_local_first(local_symbols, var_name) {
         if let Some(AstType::Struct { name, .. }) = &var_info.type_info {
             if let Some(struct_def) = find_struct_definition_in_documents(name, &store.documents) {
                 return Some(format!(

@@ -204,25 +204,14 @@ fn handle_field_hover(
     store: &DocumentStore,
 ) -> Option<String> {
     // Find the struct type of the variable
-    if let Some(var_info) = local_symbols
-        .get(var_name)
-        .or_else(|| store.workspace_symbols.get(var_name))
-        .or_else(|| store.stdlib_symbols.get(var_name))
-    {
+    if let Some(var_info) = store.resolve_symbol_local_first(local_symbols, var_name) {
         // Get the struct type
         let struct_name = if let Some(AstType::Struct { name, .. }) = &var_info.type_info {
             Some(name.clone())
         } else if !content.is_empty() {
             // Try to infer from variable assignment
-            super::inference::infer_variable_type(
-                content,
-                var_name,
-                local_symbols,
-                &store.stdlib_symbols,
-                &store.workspace_symbols,
-                Some(&store.documents),
-            )
-            .and_then(|inferred_type| extract_struct_name_from_type(&inferred_type))
+            super::inference::infer_variable_type(var_name, local_symbols, store)
+                .and_then(|inferred_type| extract_struct_name_from_type(&inferred_type))
         } else {
             None
         };

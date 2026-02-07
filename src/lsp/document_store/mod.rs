@@ -49,6 +49,28 @@ impl DocumentStore {
         store
     }
 
+    /// Resolve a symbol by name: document → stdlib → workspace.
+    /// Use for type/definition lookups where stdlib is authoritative.
+    pub fn resolve_symbol<'a>(&'a self, doc: &'a Document, name: &str) -> Option<&'a SymbolInfo> {
+        doc.symbols
+            .get(name)
+            .or_else(|| self.stdlib_symbols.get(name))
+            .or_else(|| self.workspace_symbols.get(name))
+    }
+
+    /// Resolve a symbol by name: local → workspace → stdlib.
+    /// Use for hover/inference where local definitions shadow stdlib.
+    pub fn resolve_symbol_local_first<'a>(
+        &'a self,
+        local_symbols: &'a HashMap<String, SymbolInfo>,
+        name: &str,
+    ) -> Option<&'a SymbolInfo> {
+        local_symbols
+            .get(name)
+            .or_else(|| self.workspace_symbols.get(name))
+            .or_else(|| self.stdlib_symbols.get(name))
+    }
+
     pub fn index_stdlib_deferred(&mut self) {
         self.index_stdlib();
     }

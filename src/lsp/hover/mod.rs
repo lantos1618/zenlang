@@ -596,14 +596,9 @@ mod handler {
         store: &DocumentStore,
         request_id: lsp_server::RequestId,
     ) -> Option<Response> {
-        if let Some(inferred_type) = inference::infer_variable_type(
-            &doc.content,
-            symbol_name,
-            &doc.symbols,
-            &store.stdlib_symbols,
-            &store.workspace_symbols,
-            Some(&store.documents),
-        ) {
+        if let Some(inferred_type) =
+            inference::infer_variable_type(symbol_name, &doc.symbols, store)
+        {
             let enhanced_type = if let Some(struct_name) =
                 structs::extract_struct_name_from_type(&inferred_type)
             {
