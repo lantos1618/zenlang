@@ -1,4 +1,4 @@
-use crate::ast::{AstType, Pattern};
+use crate::ast::{primitive_from_str, AstType, Pattern};
 use crate::error::Result;
 use crate::typechecker::TypeChecker;
 
@@ -60,12 +60,13 @@ impl TypeChecker {
         } = scrutinee_type
         {
             if type_args.is_empty() {
+                // Try the canonical lowercase name first, then try lowercasing the input
+                if let Some(prim) = primitive_from_str(type_name)
+                    .or_else(|| primitive_from_str(&type_name.to_lowercase()))
+                {
+                    return prim;
+                }
                 return match type_name.as_str() {
-                    "i32" | "I32" => AstType::I32,
-                    "i64" | "I64" => AstType::I64,
-                    "f32" | "F32" => AstType::F32,
-                    "f64" | "F64" => AstType::F64,
-                    "bool" | "Bool" => AstType::Bool,
                     "string" => AstType::StaticString,
                     "String" => crate::ast::resolve_string_struct_type(),
                     _ => scrutinee_type.clone(),

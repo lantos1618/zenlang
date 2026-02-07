@@ -63,37 +63,34 @@ impl StdlibTypeRegistry {
             return Ok(registry);
         }
 
-        let files_to_parse = [
-            // Core types
-            "core/option.zen",
-            "core/result.zen",
-            "core/iterator.zen",
-            // Compiler intrinsics wrappers (user-facing `compiler.*`)
-            "compiler.zen",
-            // Collections
-            "collections/vec.zen",
-            "collections/hashmap.zen",
-            "collections/set.zen",
-            "collections/string.zen",
-            "collections/queue.zen",
-            "collections/stack.zen",
-            // Memory
-            "memory/gpa.zen",
-            "memory/allocator.zen",
-            // Other
-            "io/io.zen",
-            "math.zen",
-            "std.zen",
-        ];
-
-        for file in &files_to_parse {
-            let path = stdlib_root.join(file);
-            if path.exists() {
-                let _ = registry.parse_file(&path, file);
-            }
-        }
+        // Scan all .zen files in the stdlib directory tree instead of hardcoding a list.
+        // This ensures new stdlib modules are automatically picked up.
+        Self::scan_zen_files(&stdlib_root, &stdlib_root, &mut registry);
 
         Ok(registry)
+    }
+
+    /// Recursively find and parse all .zen files under a directory.
+    fn scan_zen_files(root: &Path, dir: &Path, registry: &mut Self) {
+        let entries = match std::fs::read_dir(dir) {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                Self::scan_zen_files(root, &path, registry);
+            } else if path.extension().is_some_and(|ext| ext == "zen") {
+                // Compute relative path for module identification
+                let rel = path
+                    .strip_prefix(root)
+                    .unwrap_or(&path)
+                    .to_string_lossy()
+                    .to_string();
+                let _ = registry.parse_file(&path, &rel);
+            }
+        }
     }
 
     fn find_stdlib_root() -> PathBuf {

@@ -20,51 +20,35 @@ pub enum CompileError {
         found: String,
         span: Option<Span>,
     },
-    #[allow(dead_code)]
     InvalidLoopCondition(String, Option<Span>),
-    #[allow(dead_code)]
     MissingReturnStatement(String, Option<Span>),
     InternalError(String, Option<Span>),
     UnsupportedFeature(String, Option<Span>),
-    #[allow(dead_code)]
     TypeError(String, Option<Span>),
     FileNotFound(String, Option<String>),
-    #[allow(dead_code)]
     ParseError(String, Option<Span>),
-    #[allow(dead_code)]
     ComptimeError(String, Option<Span>),
-    // Enhanced error types for better LSP diagnostics
-    #[allow(dead_code)]
     UnexpectedToken {
         expected: Vec<String>,
         found: String,
         span: Option<Span>,
     },
-    #[allow(dead_code)]
     InvalidPattern(String, Option<Span>),
-    #[allow(dead_code)]
     ImportError(String, Option<Span>),
-    #[allow(dead_code)]
     FFIError(String, Option<Span>),
-    #[allow(dead_code)]
     InvalidSyntax {
         message: String,
         suggestion: String,
         span: Option<Span>,
     },
-    #[allow(dead_code)]
     MissingTypeAnnotation(String, Option<Span>),
-    #[allow(dead_code)]
     DuplicateDeclaration {
         name: String,
         first_location: Option<Span>,
         duplicate_location: Option<Span>,
     },
-    #[allow(dead_code)]
     BuildError(String, Option<Span>),
-    #[allow(dead_code)]
     FileError(String, Option<Span>),
-    #[allow(dead_code)]
     CyclicDependency(String, Option<Span>),
 }
 

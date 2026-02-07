@@ -614,24 +614,14 @@ pub fn compile_sizeof<'ctx>(
     type_arg: Option<&AstType>,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     let size: u64 = match type_arg {
-        Some(ty) => match ty {
-            AstType::I8 | AstType::U8 | AstType::Bool => 1,
-            AstType::I16 | AstType::U16 => 2,
-            AstType::I32 | AstType::U32 | AstType::F32 => 4,
-            AstType::I64 | AstType::U64 | AstType::F64 | AstType::Usize => 8,
-            AstType::Void => 0,
+        Some(ty) => ty.byte_size().map(|s| s as u64).unwrap_or(match ty {
             t if t.is_ptr_type() => 8,
             AstType::Struct { fields, .. } => fields
                 .iter()
-                .map(|(_, ft)| match ft {
-                    AstType::I8 | AstType::U8 => 1,
-                    AstType::I16 | AstType::U16 => 2,
-                    AstType::I32 | AstType::U32 | AstType::F32 => 4,
-                    _ => 8,
-                })
+                .map(|(_, ft)| ft.byte_size().unwrap_or(8) as u64)
                 .sum(),
             _ => 8,
-        },
+        }),
         None => 8,
     };
     Ok(compiler.context.i64_type().const_int(size, false).into())

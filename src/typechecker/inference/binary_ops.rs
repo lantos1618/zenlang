@@ -1,7 +1,7 @@
 //! Binary operation type inference
 
 use super::helpers::is_string_type;
-use crate::ast::{AstType, BinaryOperator, Expression};
+use crate::ast::{int_from_bit_size, AstType, BinaryOperator, Expression};
 use crate::error::{CompileError, Result};
 use crate::typechecker::TypeChecker;
 
@@ -159,31 +159,13 @@ pub fn promote_numeric_types(
         // If either is unsigned and the other is signed, need special handling
         if left.is_unsigned_integer() != right.is_unsigned_integer() {
             // For now, promote to signed of the appropriate size
-            match max_size {
-                8 => Ok(AstType::I8),
-                16 => Ok(AstType::I16),
-                32 => Ok(AstType::I32),
-                64 => Ok(AstType::I64),
-                _ => Ok(AstType::I32),
-            }
+            Ok(int_from_bit_size(max_size, true).unwrap_or(AstType::I32))
         } else if left.is_unsigned_integer() {
             // Both unsigned
-            match max_size {
-                8 => Ok(AstType::U8),
-                16 => Ok(AstType::U16),
-                32 => Ok(AstType::U32),
-                64 => Ok(AstType::U64),
-                _ => Ok(AstType::U32),
-            }
+            Ok(int_from_bit_size(max_size, false).unwrap_or(AstType::U32))
         } else {
             // Both signed
-            match max_size {
-                8 => Ok(AstType::I8),
-                16 => Ok(AstType::I16),
-                32 => Ok(AstType::I32),
-                64 => Ok(AstType::I64),
-                _ => Ok(AstType::I32),
-            }
+            Ok(int_from_bit_size(max_size, true).unwrap_or(AstType::I32))
         }
     } else {
         Err(CompileError::TypeError(

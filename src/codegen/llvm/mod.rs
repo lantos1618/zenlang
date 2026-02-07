@@ -698,13 +698,11 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 }
                 ast::Declaration::ComptimeBlock(statements) => {
                     // Evaluate comptime blocks and generate constants
-                    for stmt in statements {
-                        if let Err(e) = self.comptime_evaluator.execute_statement(stmt) {
-                            return Err(CompileError::InternalError(
-                                format!("Comptime evaluation error: {}", e),
-                                None,
-                            ));
-                        }
+                    if let Err(e) = self.comptime_evaluator.execute_comptime_block(statements) {
+                        return Err(CompileError::InternalError(
+                            format!("Comptime evaluation error: {}", e),
+                            None,
+                        ));
                     }
                 }
                 ast::Declaration::TypeAlias(_) => {

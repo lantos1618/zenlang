@@ -12,49 +12,33 @@ use inkwell::context::Context;
 use inkwell::module::Module;
 
 /// The main compiler structure.
-#[allow(dead_code)]
 pub struct Compiler<'ctx> {
     context: &'ctx Context,
 }
 
 impl<'ctx> Compiler<'ctx> {
-    #[allow(dead_code)]
     pub fn new(context: &'ctx Context) -> Self {
         Self { context }
     }
 
-    /// Core compilation pipeline - shared by compile_llvm and get_module
-    #[allow(dead_code)]
+    /// Pipeline: imports → comptime → self-resolution → typecheck → monomorphize → codegen
     fn run_pipeline(&self, program: &Program) -> Result<LLVMCompiler<'ctx>> {
-        // Process module imports (this loads stdlib modules)
         let mut module_system = ModuleSystem::new();
         let processed_program = self.process_imports_with_system(program, &mut module_system)?;
-
-        // Execute comptime blocks and expressions
         let processed_program = self.execute_comptime(processed_program)?;
-
-        // Resolve Self types in trait implementations
         let processed_program = self.resolve_self_types(processed_program)?;
 
-        // Type check the program and get TypeContext
-        // Pass loaded stdlib modules to TypeChecker so it can extract type info
         let mut typechecker = TypeChecker::new();
         typechecker.with_stdlib_modules(module_system.get_modules());
         let type_ctx = typechecker.check_program(&processed_program)?;
 
-        // Monomorphize the program to resolve all generic types
-        // Monomorphizer uses TypeContext for type lookups
         let mut monomorphizer = Monomorphizer::new(type_ctx);
         let monomorphized_program = monomorphizer.monomorphize_program(&processed_program)?;
-
-        // Get TypeContext back from monomorphizer (possibly updated with new instantiations)
         let type_ctx = monomorphizer.into_type_context();
 
-        // Pass TypeContext to codegen so it can look up types instead of re-inferring
         let mut llvm_compiler = LLVMCompiler::new(self.context, type_ctx);
         llvm_compiler.compile_program(&monomorphized_program)?;
 
-        // Debug: Print LLVM IR before verification for debugging
         if std::env::var("DEBUG_LLVM").is_ok() {
             eprintln!("LLVM IR:\n{}", llvm_compiler.module.print_to_string());
         }
@@ -68,27 +52,15 @@ impl<'ctx> Compiler<'ctx> {
 
         Ok(llvm_compiler)
     }
-
-    /// Compiles a program using the LLVM backend.
-    /// Returns the LLVM IR as a string.
-    #[allow(dead_code)]
     pub fn compile_llvm(&self, program: &Program) -> Result<String> {
         let llvm_compiler = self.run_pipeline(program)?;
         Ok(llvm_compiler.module.print_to_string().to_string())
     }
 
     /// Gets the LLVM module after compilation for execution engine creation.
-    #[allow(dead_code)]
     pub fn get_module(&self, program: &Program) -> Result<Module<'ctx>> {
         let llvm_compiler = self.run_pipeline(program)?;
         Ok(llvm_compiler.module)
-    }
-
-    /// Process module imports and merge imported modules
-    #[allow(dead_code)]
-    fn process_imports(&self, program: &Program) -> Result<Program> {
-        let mut module_system = ModuleSystem::new();
-        self.process_imports_with_system(program, &mut module_system)
     }
 
     /// Process module imports with a provided ModuleSystem (allows reuse)
@@ -131,7 +103,6 @@ impl<'ctx> Compiler<'ctx> {
     }
 
     /// Execute comptime blocks and expressions in the program
-    #[allow(dead_code)]
     fn execute_comptime(&self, program: Program) -> Result<Program> {
         let mut interpreter = ComptimeInterpreter::new();
         let mut new_declarations = Vec::new();
@@ -359,7 +330,6 @@ impl<'ctx> Compiler<'ctx> {
     }
 
     /// Resolve Self types in trait implementations
-    #[allow(dead_code)]
     fn resolve_self_types(&self, program: Program) -> Result<Program> {
         use crate::typechecker::self_resolution::transform_trait_impl_self_types;
 
@@ -384,7 +354,6 @@ impl<'ctx> Compiler<'ctx> {
 
     /// Analyze a program and collect all errors without stopping at the first one.
     /// This is useful for LSP to show all diagnostics at once.
-    #[allow(dead_code)]
     pub fn analyze_for_diagnostics(&self, program: &Program) -> Vec<CompileError> {
         let mut errors = Vec::new();
 

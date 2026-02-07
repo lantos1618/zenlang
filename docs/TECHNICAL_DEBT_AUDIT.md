@@ -435,7 +435,7 @@ When stdlib stores `Vec<T>.get() -> Option<T>`:
 - [x] Fix `ptr_sized_int_type()` to use LLVM TargetData ✅ DONE (uses DataLayout.get_pointer_byte_size)
 - [x] Fix Vec/DynVec to use `ptr_sized_int_type()` for length/capacity ✅ DONE
 - [x] Fix Range type to use actual start_type/end_type ✅ DONE
-- [ ] Expand `files_to_parse` to include all stdlib files
+- [x] Expand `files_to_parse` to include all stdlib files ✅ DONE (replaced with recursive directory scanning)
 
 ### Phase 2: Type System Migration
 
@@ -465,14 +465,14 @@ When stdlib stores `Vec<T>.get() -> Option<T>`:
 - [x] Centralize MAX_ITERATIONS constant ✅ DONE (in lsp/mod.rs::search_limits)
 - [x] Document `timeout_millis` constant ✅ DONE (LSP_POLL_TIMEOUT_MS in lsp/mod.rs)
 - [ ] Fix Windows path compatibility
-- [ ] Create `parse_qualified_name()` helper
-- [ ] Centralize test function pattern detection
+- [x] Create `parse_qualified_name()` helper ✅ DONE (src/name_utils.rs — split_module_path, split_method_path, base_name, leaf_name, strip_generics)
+- [x] Centralize test function pattern detection ✅ DONE (name_utils::is_test_name, is_test_file — wired into code_lens.rs + document_store)
 
 ### Phase 6: Optimization
 
 - [x] Size enum discriminants based on variant count ✅ DONE (centralized `enum_discriminant_type()` + `well_known_enum_type()`)
 - [ ] Compute struct alignment from DataLayout
-- [ ] Make `stdlib_types.rs` scan directories instead of hardcoded list
+- [x] Make `stdlib_types.rs` scan directories instead of hardcoded list ✅ DONE (scan_zen_files recursive scanner)
 
 ---
 
@@ -480,12 +480,12 @@ When stdlib stores `Vec<T>.get() -> Option<T>`:
 
 | Phase | Status | Priority |
 |-------|--------|----------|
-| 1 | 🟢 Mostly Done | CRITICAL - 3/4 items complete |
+| 1 | 🟢 Complete | CRITICAL - 4/4 items complete |
 | 2 | 🟡 In Progress | HIGH - 1/4 items complete |
 | 3 | 🟡 Ready | HIGH - verify fixes work |
 | 4 | ⏳ Blocked | MEDIUM - needs Phase 3 |
-| 5 | 🟢 Mostly Done | LOW - 4/6 items complete |
-| 6 | 🟢 In Progress | LOW - 1/3 items complete |
+| 5 | 🟢 Complete | LOW - 6/6 items complete |
+| 6 | 🟢 Mostly Done | LOW - 2/3 items complete |
 
 ---
 

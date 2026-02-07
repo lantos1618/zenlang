@@ -150,7 +150,7 @@ pub fn handle_code_lens(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Resp
 // ============================================================================
 
 fn is_test_function(name: &str) -> bool {
-    name.starts_with("test_") || name.ends_with("_test") || name.contains("_test_")
+    crate::name_utils::is_test_name(name)
 }
 
 fn find_function_line(content: &str, func_name: &str) -> Option<usize> {

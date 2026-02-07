@@ -131,7 +131,7 @@ impl DocumentStore {
                 if entry_path.is_file() && entry_path.extension().is_some_and(|e| e == "zen") {
                     // Skip test files
                     if let Some(file_name) = entry_path.file_name().and_then(|n| n.to_str()) {
-                        if file_name.starts_with("test_") || file_name.contains("_test.zen") {
+                        if crate::name_utils::is_test_file(file_name) {
                             continue;
                         }
                     }

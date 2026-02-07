@@ -3,6 +3,9 @@
 //! This module provides a single source of truth for primitive types,
 //! eliminating duplication across the codebase.
 
+use std::fmt;
+use std::str::FromStr;
+
 use super::AstType;
 
 /// All numeric primitive types (integers and floats)
@@ -125,6 +128,54 @@ pub fn bit_size(ty: &AstType) -> Option<u32> {
     }
 }
 
+/// Get the byte size of a primitive type (for sizeof operations).
+///
+/// Returns the size in bytes for primitive types. For non-primitive types,
+/// returns None -- callers should handle structs, pointers, etc. themselves.
+pub fn byte_size(ty: &AstType) -> Option<usize> {
+    match ty {
+        AstType::Bool => Some(1),
+        AstType::Void => Some(0),
+        other => bit_size(other).map(|bits| bits as usize / 8),
+    }
+}
+
+/// Get an integer AstType from a bit size and signedness.
+///
+/// Useful for numeric promotion where you know the target width and sign.
+/// Returns None for unrecognized bit sizes.
+pub fn int_from_bit_size(bits: usize, signed: bool) -> Option<AstType> {
+    match (signed, bits) {
+        (true, 8) => Some(AstType::I8),
+        (true, 16) => Some(AstType::I16),
+        (true, 32) => Some(AstType::I32),
+        (true, 64) => Some(AstType::I64),
+        (false, 8) => Some(AstType::U8),
+        (false, 16) => Some(AstType::U16),
+        (false, 32) => Some(AstType::U32),
+        (false, 64) => Some(AstType::U64),
+        _ => None,
+    }
+}
+
+/// Error type for parsing an AstType from a string.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParseAstTypeError(pub String);
+
+impl fmt::Display for ParseAstTypeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "unknown type: {}", self.0)
+    }
+}
+
+impl FromStr for AstType {
+    type Err = ParseAstTypeError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        primitive_from_str(s).ok_or_else(|| ParseAstTypeError(s.to_string()))
+    }
+}
+
 /// Promote two numeric types to their common type for arithmetic
 pub fn promote_numeric(left: &AstType, right: &AstType) -> Option<AstType> {
     let left_size = bit_size(left)?;
@@ -168,6 +219,12 @@ impl AstType {
     /// Get the primitive type name as a string
     pub fn primitive_name(&self) -> Option<&'static str> {
         primitive_to_str(self)
+    }
+
+    /// Get the byte size of this primitive type (1, 2, 4, or 8).
+    /// Returns None for non-primitive types.
+    pub fn byte_size(&self) -> Option<usize> {
+        byte_size(self)
     }
 }
 
@@ -314,5 +371,38 @@ mod tests {
             promote_numeric(&AstType::U8, &AstType::U16),
             Some(AstType::U16)
         );
+    }
+
+    #[test]
+    fn test_byte_size() {
+        assert_eq!(byte_size(&AstType::Bool), Some(1));
+        assert_eq!(byte_size(&AstType::I8), Some(1));
+        assert_eq!(byte_size(&AstType::U8), Some(1));
+        assert_eq!(byte_size(&AstType::I16), Some(2));
+        assert_eq!(byte_size(&AstType::I32), Some(4));
+        assert_eq!(byte_size(&AstType::F32), Some(4));
+        assert_eq!(byte_size(&AstType::I64), Some(8));
+        assert_eq!(byte_size(&AstType::F64), Some(8));
+        assert_eq!(byte_size(&AstType::Usize), Some(8));
+        assert_eq!(byte_size(&AstType::Void), Some(0));
+    }
+
+    #[test]
+    fn test_int_from_bit_size() {
+        assert_eq!(int_from_bit_size(8, true), Some(AstType::I8));
+        assert_eq!(int_from_bit_size(16, true), Some(AstType::I16));
+        assert_eq!(int_from_bit_size(32, true), Some(AstType::I32));
+        assert_eq!(int_from_bit_size(64, true), Some(AstType::I64));
+        assert_eq!(int_from_bit_size(8, false), Some(AstType::U8));
+        assert_eq!(int_from_bit_size(32, false), Some(AstType::U32));
+        assert_eq!(int_from_bit_size(128, true), None);
+    }
+
+    #[test]
+    fn test_from_str_trait() {
+        assert_eq!("i32".parse::<AstType>(), Ok(AstType::I32));
+        assert_eq!("f64".parse::<AstType>(), Ok(AstType::F64));
+        assert_eq!("bool".parse::<AstType>(), Ok(AstType::Bool));
+        assert!("unknown".parse::<AstType>().is_err());
     }
 }

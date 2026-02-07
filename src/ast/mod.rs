@@ -3,6 +3,7 @@
 //! The `ast` module defines the data structures that represent the code in a structured way.
 //! The parser will produce these structures, and the compiler will consume them.
 
+pub mod builtins;
 mod declarations;
 mod expressions;
 mod patterns;
@@ -15,9 +16,9 @@ pub use declarations::*;
 pub use expressions::*;
 pub use patterns::*;
 pub use primitives::{
-    bit_size, is_primitive_name, primitive_from_str, primitive_to_str, promote_numeric,
-    ALL_PRIMITIVES, FLOAT_TYPES, INTEGER_TYPES, NUMERIC_TYPES, PRIMITIVE_TYPE_MAP,
-    SIGNED_INT_TYPES, UNSIGNED_INT_TYPES,
+    bit_size, byte_size, int_from_bit_size, is_primitive_name, primitive_from_str,
+    primitive_to_str, promote_numeric, ALL_PRIMITIVES, FLOAT_TYPES, INTEGER_TYPES, NUMERIC_TYPES,
+    PRIMITIVE_TYPE_MAP, SIGNED_INT_TYPES, UNSIGNED_INT_TYPES,
 };
 pub use statements::*;
 pub use types::*;
