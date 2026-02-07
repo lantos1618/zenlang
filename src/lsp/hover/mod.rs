@@ -450,7 +450,7 @@ mod handler {
             // Add type information - if it's a struct type, show the struct definition with fields
             if let Some(type_info) = &symbol_info.type_info {
                 if let AstType::Struct { name, .. } = type_info {
-                    if let Some(struct_def) = structs::find_struct_definition(name, doc, store) {
+                    if let Some(struct_def) = store.find_struct_definition(name) {
                         hover_content.push(format!(
                             "```zen\n{}\n```",
                             structs::format_struct_definition(&struct_def)
@@ -462,7 +462,7 @@ mod handler {
                     hover_content.push(format!("**Type:** `{}`", format_type(type_info)));
                 }
             } else if symbol_info.kind == SymbolKind::STRUCT {
-                if let Some(struct_def) = structs::find_struct_definition(symbol_name, doc, store) {
+                if let Some(struct_def) = store.find_struct_definition(symbol_name) {
                     hover_content.clear();
                     hover_content.push(format!(
                         "```zen\n{}\n```",
@@ -599,21 +599,19 @@ mod handler {
         if let Some(inferred_type) =
             inference::infer_variable_type(symbol_name, &doc.symbols, store)
         {
-            let enhanced_type = if let Some(struct_name) =
-                structs::extract_struct_name_from_type(&inferred_type)
-            {
-                if let Some(struct_def) = structs::find_struct_definition(&struct_name, doc, store)
-                {
-                    format!(
-                        "```zen\n{}\n```",
-                        structs::format_struct_definition(&struct_def)
-                    )
+            let enhanced_type =
+                if let Some(struct_name) = structs::extract_struct_name_from_type(&inferred_type) {
+                    if let Some(struct_def) = store.find_struct_definition(&struct_name) {
+                        format!(
+                            "```zen\n{}\n```",
+                            structs::format_struct_definition(&struct_def)
+                        )
+                    } else {
+                        inferred_type
+                    }
                 } else {
                     inferred_type
-                }
-            } else {
-                inferred_type
-            };
+                };
 
             return Some(create_hover_response_from_string(request_id, enhanced_type));
         }

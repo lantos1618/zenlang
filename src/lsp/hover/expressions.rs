@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 
-use super::structs::find_struct_definition_in_documents;
 use crate::ast::{AstType, Expression};
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::types::*;
@@ -51,9 +50,7 @@ pub fn analyze_expression_hover(
                 if let Some(AstType::Struct { name, .. }) =
                     resolve_expression_type(object, local_symbols, store)
                 {
-                    if let Some(struct_def) =
-                        find_struct_definition_in_documents(&name, &store.documents)
-                    {
+                    if let Some(struct_def) = store.find_struct_definition(&name) {
                         for field in &struct_def.fields {
                             if &field.name == member {
                                 return Some(format!(
@@ -167,9 +164,7 @@ pub fn resolve_expression_type(
             if let Some(AstType::Struct { name, .. }) =
                 resolve_expression_type(object, local_symbols, store)
             {
-                if let Some(struct_def) =
-                    find_struct_definition_in_documents(&name, &store.documents)
-                {
+                if let Some(struct_def) = store.find_struct_definition(&name) {
                     for field in &struct_def.fields {
                         if field.name == *member {
                             return Some(field.type_.clone());

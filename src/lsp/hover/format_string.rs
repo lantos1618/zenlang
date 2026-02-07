@@ -4,7 +4,7 @@ use lsp_types::Position;
 use std::collections::HashMap;
 
 use super::expressions::analyze_expression_hover;
-use super::structs::{extract_struct_name_from_type, find_struct_definition_in_documents};
+use super::structs::extract_struct_name_from_type;
 use crate::ast::AstType;
 use crate::lexer::Lexer;
 use crate::lsp::document_store::DocumentStore;
@@ -218,9 +218,7 @@ fn handle_field_hover(
 
         if let Some(struct_name) = struct_name {
             // Find the struct definition
-            if let Some(struct_def) =
-                find_struct_definition_in_documents(&struct_name, &store.documents)
-            {
+            if let Some(struct_def) = store.find_struct_definition(&struct_name) {
                 // Find the field type
                 for field in &struct_def.fields {
                     if field.name == field_name {

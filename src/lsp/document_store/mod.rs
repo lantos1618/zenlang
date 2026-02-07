@@ -71,6 +71,25 @@ impl DocumentStore {
             .or_else(|| self.stdlib_symbols.get(name))
     }
 
+    /// Find a struct definition by name across all open documents.
+    pub fn find_struct_definition(
+        &self,
+        struct_name: &str,
+    ) -> Option<crate::ast::StructDefinition> {
+        for doc in self.documents.values() {
+            if let Some(ast) = &doc.ast {
+                for decl in ast {
+                    if let crate::ast::Declaration::Struct(struct_def) = decl {
+                        if struct_def.name == struct_name {
+                            return Some(struct_def.clone());
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
     pub fn index_stdlib_deferred(&mut self) {
         self.index_stdlib();
     }

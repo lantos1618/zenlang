@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::ast::{AstType, Declaration};
+use crate::ast::AstType;
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::types::*;
 use crate::lsp::utils::format_type;
@@ -19,58 +19,6 @@ pub fn format_struct_definition(struct_def: &crate::ast::StructDefinition) -> St
     }
     result.push('}');
     result
-}
-
-/// Find struct definition by name in documents
-pub fn find_struct_definition(
-    struct_name: &str,
-    doc: &Document,
-    store: &DocumentStore,
-) -> Option<crate::ast::StructDefinition> {
-    // First check current document AST
-    if let Some(ast) = &doc.ast {
-        for decl in ast {
-            if let Declaration::Struct(struct_def) = decl {
-                if struct_def.name == struct_name {
-                    return Some(struct_def.clone());
-                }
-            }
-        }
-    }
-
-    // Check other documents in the store
-    for other_doc in store.documents.values() {
-        if let Some(ast) = &other_doc.ast {
-            for decl in ast {
-                if let Declaration::Struct(struct_def) = decl {
-                    if struct_def.name == struct_name {
-                        return Some(struct_def.clone());
-                    }
-                }
-            }
-        }
-    }
-
-    None
-}
-
-/// Find struct definition in documents map
-pub fn find_struct_definition_in_documents(
-    struct_name: &str,
-    documents: &HashMap<lsp_types::Url, Document>,
-) -> Option<crate::ast::StructDefinition> {
-    for doc in documents.values() {
-        if let Some(ast) = &doc.ast {
-            for decl in ast {
-                if let Declaration::Struct(struct_def) = decl {
-                    if struct_def.name == struct_name {
-                        return Some(struct_def.clone());
-                    }
-                }
-            }
-        }
-    }
-    None
 }
 
 /// Extract struct name from type string
@@ -102,7 +50,7 @@ pub fn handle_variable_hover(
 ) -> Option<String> {
     if let Some(var_info) = store.resolve_symbol_local_first(local_symbols, var_name) {
         if let Some(AstType::Struct { name, .. }) = &var_info.type_info {
-            if let Some(struct_def) = find_struct_definition_in_documents(name, &store.documents) {
+            if let Some(struct_def) = store.find_struct_definition(name) {
                 return Some(format!(
                     "```zen\n{}\n```",
                     format_struct_definition(&struct_def)

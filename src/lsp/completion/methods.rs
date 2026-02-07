@@ -18,9 +18,7 @@ pub fn get_struct_field_completions(
     // Extract struct name from type string
     let struct_name = name_utils::strip_generics(receiver_type).trim();
 
-    // Find struct definition in documents
-    use crate::lsp::hover::find_struct_definition_in_documents;
-    if let Some(struct_def) = find_struct_definition_in_documents(struct_name, &store.documents) {
+    if let Some(struct_def) = store.find_struct_definition(struct_name) {
         for field in &struct_def.fields {
             items.push(CompletionItem {
                 label: field.name.clone(),
