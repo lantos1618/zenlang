@@ -5,7 +5,7 @@ use super::struct_fields::find_struct_field_definition;
 use super::ufc::{find_ufc_method_at_position, resolve_ufc_method};
 use super::utils::{find_symbol_at_position, find_symbol_definition_in_content};
 use crate::lsp::document_store::DocumentStore;
-use crate::lsp::helpers::{null_response, try_parse_params};
+use crate::lsp::helpers::{null_response, with_document, HasDocumentUri};
 use lsp_server::{Request, Response};
 use lsp_types::*;
 
@@ -33,52 +33,25 @@ fn origin_location() -> Range {
     }
 }
 
-/// Handle textDocument/definition requests
 pub fn handle_definition(
     req: Request,
     store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
 ) -> Response {
-    log::debug!("[LSP DEFINITION] Starting definition request");
-    let params: GotoDefinitionParams = match try_parse_params(&req) {
-        Ok(p) => p,
-        Err(resp) => {
-            log::debug!("[LSP DEFINITION] Failed to parse params");
-            return resp;
+    with_document::<GotoDefinitionParams, _>(&req, store, |doc, params, store_guard| {
+        let doc_uri = params.document_uri();
+        let position = params.text_document_position_params.position;
+
+        let location = resolve_ufc_method_definition(&doc.content, position, doc, store_guard)
+            .or_else(|| find_struct_field_definition(&doc.content, position, doc, store_guard))
+            .or_else(|| {
+                resolve_symbol_definition(&doc.content, position, doc, doc_uri, store_guard)
+            });
+
+        match location {
+            Some(loc) => definition_response(&req, loc),
+            None => null_response(&req),
         }
-    };
-
-    log::debug!("[LSP DEFINITION] Waiting for store lock...");
-    let lock_start = std::time::Instant::now();
-    let store = match store.lock() {
-        Ok(s) => {
-            log::debug!(
-                "[LSP DEFINITION] Got store lock in {:?}",
-                lock_start.elapsed()
-            );
-            s
-        }
-        Err(e) => {
-            log::debug!("[LSP DEFINITION] Failed to get store lock: {:?}", e);
-            return null_response(&req);
-        }
-    };
-
-    let doc_uri = &params.text_document_position_params.text_document.uri;
-    let doc = match store.documents.get(doc_uri) {
-        Some(d) => d,
-        None => return null_response(&req),
-    };
-
-    let position = params.text_document_position_params.position;
-
-    let location = resolve_ufc_method_definition(&doc.content, position, doc, &store)
-        .or_else(|| find_struct_field_definition(&doc.content, position, doc, &store))
-        .or_else(|| resolve_symbol_definition(&doc.content, position, doc, doc_uri, &store));
-
-    match location {
-        Some(loc) => definition_response(&req, loc),
-        None => null_response(&req),
-    }
+    })
 }
 
 fn resolve_ufc_method_definition(

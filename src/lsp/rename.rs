@@ -12,7 +12,7 @@ use crate::ast::{Declaration, Statement};
 use crate::lexer::{Lexer, Token};
 
 use super::document_store::DocumentStore;
-use super::helpers::{null_response, success_response, try_lock, try_parse_params};
+use super::helpers::{null_response, success_response, try_lock, try_parse_params, with_document};
 use super::navigation::find_symbol_at_position;
 use super::navigation::utils::{find_function_range, find_function_range_from_doc};
 use super::types::{Document, SymbolScope};
@@ -117,34 +117,19 @@ pub fn validate_new_name(new_name: &str) -> Option<String> {
 // PREPARE RENAME HANDLER
 // ============================================================================
 
-/// Handle textDocument/prepareRename requests
-/// Returns the range of the symbol to be renamed, or null if rename is not valid
 pub fn handle_prepare_rename(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Response {
-    let params: TextDocumentPositionParams = match try_parse_params(&req) {
-        Ok(p) => p,
-        Err(resp) => return resp,
-    };
-
-    let store = match try_lock(store.as_ref(), &req) {
-        Ok(s) => s,
-        Err(_) => return null_response(&req),
-    };
-
-    if let Some(doc) = store.documents.get(&params.text_document.uri) {
+    with_document::<TextDocumentPositionParams, _>(&req, store, |doc, params, _store| {
         let position = params.position;
 
         if let Some(symbol_name) = find_symbol_at_position(&doc.content, position) {
-            // Check if symbol can be renamed
             if let Some(error) = check_rename_target(&symbol_name) {
-                // Return error - cannot rename this symbol
                 return crate::lsp::helpers::error_response_id(
-                    req.id,
+                    req.id.clone(),
                     lsp_server::ErrorCode::InvalidRequest,
                     error,
                 );
             }
 
-            // Find the range of the symbol
             let lines: Vec<&str> = doc.content.lines().collect();
             if let Some(line) = lines.get(position.line as usize) {
                 if let Some(start) =
@@ -161,23 +146,22 @@ pub fn handle_prepare_rename(req: Request, store: &Arc<Mutex<DocumentStore>>) ->
                         },
                     };
 
-                    // Return PrepareRenameResponse with range and placeholder
                     let response = PrepareRenameResponse::RangeWithPlaceholder {
                         range,
                         placeholder: symbol_name,
                     };
 
                     return Response {
-                        id: req.id,
+                        id: req.id.clone(),
                         result: Some(serde_json::to_value(response).unwrap_or(Value::Null)),
                         error: None,
                     };
                 }
             }
         }
-    }
 
-    null_response(&req)
+        null_response(&req)
+    })
 }
 
 /// Find the start position of a symbol in a line

@@ -1,12 +1,10 @@
-// Type definition handler
-
 use super::utils::find_symbol_at_position;
 use crate::lsp::document_store::DocumentStore;
+use crate::lsp::helpers::{null_response, with_document, HasDocumentUri};
 use lsp_server::{Request, Response};
 use lsp_types::*;
 use serde_json::Value;
 
-/// Extract type name from a detail string like "name: Type" or "val: Result<f64, E>"
 fn extract_type_name(detail: &str) -> Option<String> {
     if let Some(colon_pos) = detail.find(':') {
         let type_part = detail[colon_pos + 1..].trim();
@@ -22,52 +20,22 @@ fn extract_type_name(detail: &str) -> Option<String> {
     None
 }
 
-/// Handle textDocument/typeDefinition requests
 pub fn handle_type_definition(
     req: Request,
     store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
 ) -> Response {
-    let params: GotoDefinitionParams = match serde_json::from_value(req.params) {
-        Ok(p) => p,
-        Err(_) => {
-            return Response {
-                id: req.id,
-                result: Some(Value::Null),
-                error: None,
-            };
-        }
-    };
-
-    let store = match store.lock() {
-        Ok(s) => s,
-        Err(_) => {
-            return Response {
-                id: req.id,
-                result: Some(Value::Null),
-                error: None,
-            };
-        }
-    };
-
-    if let Some(doc) = store
-        .documents
-        .get(&params.text_document_position_params.text_document.uri)
-    {
+    with_document::<GotoDefinitionParams, _>(&req, store, |doc, params, store_guard| {
         let position = params.text_document_position_params.position;
 
         if let Some(symbol_name) = find_symbol_at_position(&doc.content, position) {
-            // For type definition, we want to find the definition of the type, not the variable
-            // First, check if it's a variable and get its type
             if let Some(symbol_info) = doc.symbols.get(&symbol_name) {
-                // If it's a variable/parameter, extract the type name from its detail
                 if let Some(detail) = &symbol_info.detail {
                     if let Some(type_name) = extract_type_name(detail) {
-                        // Now find the definition of this type
-                        if let Some(type_symbol) = store.resolve_symbol(doc, &type_name) {
+                        if let Some(type_symbol) = store_guard.resolve_symbol(doc, &type_name) {
                             let uri = type_symbol
                                 .definition_uri
                                 .as_ref()
-                                .unwrap_or(&params.text_document_position_params.text_document.uri);
+                                .unwrap_or(params.document_uri());
 
                             let location = Location {
                                 uri: uri.clone(),
@@ -75,7 +43,7 @@ pub fn handle_type_definition(
                             };
 
                             return Response {
-                                id: req.id,
+                                id: req.id.clone(),
                                 result: Some(
                                     serde_json::to_value(GotoDefinitionResponse::Scalar(location))
                                         .unwrap_or(Value::Null),
@@ -87,12 +55,11 @@ pub fn handle_type_definition(
                 }
             }
 
-            // If the symbol itself is a type, just use handle_definition logic
-            if let Some(symbol_info) = store.resolve_symbol(doc, &symbol_name) {
+            if let Some(symbol_info) = store_guard.resolve_symbol(doc, &symbol_name) {
                 let uri = symbol_info
                     .definition_uri
                     .as_ref()
-                    .unwrap_or(&params.text_document_position_params.text_document.uri);
+                    .unwrap_or(params.document_uri());
 
                 let location = Location {
                     uri: uri.clone(),
@@ -100,7 +67,7 @@ pub fn handle_type_definition(
                 };
 
                 return Response {
-                    id: req.id,
+                    id: req.id.clone(),
                     result: Some(
                         serde_json::to_value(GotoDefinitionResponse::Scalar(location))
                             .unwrap_or(Value::Null),
@@ -109,11 +76,7 @@ pub fn handle_type_definition(
                 };
             }
         }
-    }
 
-    Response {
-        id: req.id,
-        result: Some(Value::Null),
-        error: None,
-    }
+        null_response(&req)
+    })
 }

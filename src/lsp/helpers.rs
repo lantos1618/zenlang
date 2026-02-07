@@ -4,6 +4,122 @@
 use lsp_server::{ErrorCode, Request, Response, ResponseError};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
+use std::sync::{Arc, Mutex};
+
+use super::document_store::DocumentStore;
+use super::types::Document;
+
+pub trait HasDocumentUri {
+    fn document_uri(&self) -> &lsp_types::Url;
+}
+
+// text_document_position_params.text_document.uri
+impl HasDocumentUri for lsp_types::HoverParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document_position_params.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::SignatureHelpParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document_position_params.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::GotoDefinitionParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document_position_params.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::DocumentHighlightParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document_position_params.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::CallHierarchyPrepareParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document_position_params.text_document.uri
+    }
+}
+
+// text_document_position.text_document.uri
+impl HasDocumentUri for lsp_types::ReferenceParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document_position.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::RenameParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document_position.text_document.uri
+    }
+}
+
+// text_document.uri
+impl HasDocumentUri for lsp_types::InlayHintParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::CodeLensParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::DocumentFormattingParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::SemanticTokensParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::CodeActionParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::DocumentSymbolParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document.uri
+    }
+}
+
+impl HasDocumentUri for lsp_types::TextDocumentPositionParams {
+    fn document_uri(&self) -> &lsp_types::Url {
+        &self.text_document.uri
+    }
+}
+
+pub fn with_document<P, F>(req: &Request, store: &Arc<Mutex<DocumentStore>>, f: F) -> Response
+where
+    P: DeserializeOwned + HasDocumentUri,
+    F: FnOnce(&Document, &P, &std::sync::MutexGuard<'_, DocumentStore>) -> Response,
+{
+    let params: P = match try_parse_params(req) {
+        Ok(p) => p,
+        Err(resp) => return resp,
+    };
+
+    let store_guard = match try_lock(store.as_ref(), req) {
+        Ok(s) => s,
+        Err(resp) => return resp,
+    };
+
+    match store_guard.documents.get(params.document_uri()) {
+        Some(doc) => f(doc, &params, &store_guard),
+        None => null_response(req),
+    }
+}
 
 #[inline]
 pub fn null_response(req: &Request) -> Response {
