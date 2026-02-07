@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{Declaration, Expression, Statement};
+use crate::ast::Declaration;
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::type_query::TypeQuery;
 use crate::lsp::types::*;
@@ -22,48 +22,11 @@ pub fn extract_type_from_line(line: &str) -> Option<String> {
     None
 }
 
-fn find_variable_in_ast(
-    ast: &[Declaration],
-    var_name: &str,
-) -> Option<(Option<crate::ast::AstType>, Option<Expression>)> {
-    for decl in ast {
-        if let Declaration::Function(func) = decl {
-            if let Some(result) = find_variable_in_statements(&func.body, var_name) {
-                return Some(result);
-            }
-        }
-    }
-    None
-}
-
-fn find_variable_in_statements(
-    stmts: &[Statement],
-    var_name: &str,
-) -> Option<(Option<crate::ast::AstType>, Option<Expression>)> {
-    for stmt in stmts {
-        match stmt {
-            Statement::VariableDeclaration {
-                name,
-                type_,
-                initializer,
-                ..
-            } if name == var_name => {
-                return Some((type_.clone(), initializer.clone()));
-            }
-            Statement::Loop { body, .. } => {
-                if let Some(result) = find_variable_in_statements(body, var_name) {
-                    return Some(result);
-                }
-            }
-            Statement::Block { statements, .. } => {
-                if let Some(result) = find_variable_in_statements(statements, var_name) {
-                    return Some(result);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
+fn format_variable_hover(var_name: &str, type_str: &str) -> String {
+    format!(
+        "```zen\n{}: {}\n```\n\n**Type:** `{}`",
+        var_name, type_str, type_str
+    )
 }
 
 pub fn infer_variable_type(
@@ -73,42 +36,32 @@ pub fn infer_variable_type(
 ) -> Option<String> {
     for doc in store.documents.values() {
         let tq = TypeQuery::new(doc);
-        if let Some(type_str) = tq.find_variable_type(var_name) {
-            return Some(format!(
-                "```zen\n{}: {}\n```\n\n**Type:** `{}`",
-                var_name, type_str, type_str
-            ));
-        }
 
         if let Some(ast) = &doc.ast {
-            if let Some((type_opt, init_opt)) = find_variable_in_ast(ast, var_name) {
-                if let Some(type_) = type_opt {
-                    let type_str = format_type(&type_);
-                    return Some(format!(
-                        "```zen\n{}: {}\n```\n\n**Type:** `{}`",
-                        var_name, type_str, type_str
-                    ));
-                }
-
-                if let Some(init) = init_opt {
-                    if let Some(type_str) = TypeQuery::infer_literal_type(&init) {
-                        return Some(format!(
-                            "```zen\n{}: {}\n```\n\n**Type:** `{}`",
-                            var_name, type_str, type_str
-                        ));
+            let stmts: Vec<_> = ast
+                .iter()
+                .filter_map(|decl| {
+                    if let Declaration::Function(func) = decl {
+                        Some(func.body.as_slice())
+                    } else {
+                        None
                     }
-                }
+                })
+                .flatten()
+                .cloned()
+                .collect();
+
+            if let Some(ty) = tq.infer_variable_type_from_statements(var_name, &stmts) {
+                return Some(format_variable_hover(var_name, &format_type(&ty)));
             }
+        } else if let Some(ty) = tq.find_variable_type_ast(var_name) {
+            return Some(format_variable_hover(var_name, &format_type(&ty)));
         }
     }
 
     if let Some(sym) = store.resolve_symbol_local_first(local_symbols, var_name) {
         if let Some(type_info) = &sym.type_info {
-            let type_str = format_type(type_info);
-            return Some(format!(
-                "```zen\n{}: {}\n```\n\n**Type:** `{}`",
-                var_name, type_str, type_str
-            ));
+            return Some(format_variable_hover(var_name, &format_type(type_info)));
         }
     }
 

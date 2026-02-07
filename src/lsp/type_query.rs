@@ -1,4 +1,4 @@
-use crate::ast::{AstType, Expression};
+use crate::ast::{AstType, Expression, Statement};
 use crate::lsp::utils::format_type;
 use crate::stdlib_types::stdlib_types;
 use crate::type_context::TypeContext;
@@ -47,11 +47,17 @@ impl<'a> TypeQuery<'a> {
 
     /// Find variable type searching all scopes (when function name unknown)
     pub fn find_variable_type(&self, var_name: &str) -> Option<String> {
+        self.find_variable_type_ast(var_name)
+            .map(|t| format_type(&t))
+    }
+
+    /// Find variable type as AstType searching all scopes (when function name unknown)
+    pub fn find_variable_type_ast(&self, var_name: &str) -> Option<AstType> {
         let ctx = self.type_ctx?;
         let suffix = format!("::{}", var_name);
         for (key, var_type) in &ctx.variables {
             if key.ends_with(&suffix) {
-                return Some(format_type(var_type));
+                return Some(var_type.clone());
             }
         }
         None
@@ -214,5 +220,85 @@ impl<'a> TypeQuery<'a> {
             current = self.struct_field_type(&current, field)?;
         }
         Some(current)
+    }
+
+    // ========================================================================
+    // Unified variable type inference
+    // ========================================================================
+
+    /// Unified variable type inference: TypeContext → AST explicit type → literal inference.
+    pub fn infer_variable_type_unified(
+        &self,
+        name: &str,
+        type_annotation: Option<&AstType>,
+        initializer: Option<&Expression>,
+    ) -> Option<AstType> {
+        // 1. Try TypeContext first (canonical path from typechecker)
+        if let Some(ty) = self.find_variable_type_ast(name) {
+            return Some(ty);
+        }
+
+        // 2. Use explicit type annotation if present
+        if let Some(ty) = type_annotation {
+            return Some(ty.clone());
+        }
+
+        // 3. Try literal type inference from initializer
+        if let Some(init) = initializer {
+            if let Some(type_str) = Self::infer_literal_type(init) {
+                return crate::parser::parse_type_from_string(&type_str).ok();
+            }
+        }
+
+        None
+    }
+
+    /// Walk statements to find a variable declaration, then infer its type.
+    pub fn infer_variable_type_from_statements(
+        &self,
+        name: &str,
+        statements: &[Statement],
+    ) -> Option<AstType> {
+        // 1. Try TypeContext first
+        if let Some(ty) = self.find_variable_type_ast(name) {
+            return Some(ty);
+        }
+
+        // 2. Walk AST for variable declaration
+        if let Some((type_opt, init_opt)) = Self::find_variable_in_statements(statements, name) {
+            return self.infer_variable_type_unified(name, type_opt.as_ref(), init_opt.as_ref());
+        }
+
+        None
+    }
+
+    fn find_variable_in_statements(
+        stmts: &[Statement],
+        var_name: &str,
+    ) -> Option<(Option<AstType>, Option<Expression>)> {
+        for stmt in stmts {
+            match stmt {
+                Statement::VariableDeclaration {
+                    name,
+                    type_,
+                    initializer,
+                    ..
+                } if name == var_name => {
+                    return Some((type_.clone(), initializer.clone()));
+                }
+                Statement::Loop { body, .. } => {
+                    if let Some(result) = Self::find_variable_in_statements(body, var_name) {
+                        return Some(result);
+                    }
+                }
+                Statement::Block { statements, .. } => {
+                    if let Some(result) = Self::find_variable_in_statements(statements, var_name) {
+                        return Some(result);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
     }
 }

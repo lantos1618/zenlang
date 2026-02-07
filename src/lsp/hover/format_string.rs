@@ -5,7 +5,6 @@ use std::collections::HashMap;
 
 use super::expressions::analyze_expression_hover;
 use super::structs::extract_struct_name_from_type;
-use crate::ast::AstType;
 use crate::lexer::Lexer;
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::helpers::char_pos_to_byte_pos;
@@ -203,13 +202,10 @@ fn handle_field_hover(
     local_symbols: &HashMap<String, SymbolInfo>,
     store: &DocumentStore,
 ) -> Option<String> {
-    // Find the struct type of the variable
     if let Some(var_info) = store.resolve_symbol_local_first(local_symbols, var_name) {
-        // Get the struct type
-        let struct_name = if let Some(AstType::Struct { name, .. }) = &var_info.type_info {
-            Some(name.clone())
+        let struct_name = if let Some(type_info) = &var_info.type_info {
+            type_info.base_name().map(|s| s.to_string())
         } else if !content.is_empty() {
-            // Try to infer from variable assignment
             super::inference::infer_variable_type(var_name, local_symbols, store)
                 .and_then(|inferred_type| extract_struct_name_from_type(&inferred_type))
         } else {

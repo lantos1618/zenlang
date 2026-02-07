@@ -49,12 +49,16 @@ pub fn handle_variable_hover(
     store: &DocumentStore,
 ) -> Option<String> {
     if let Some(var_info) = store.resolve_symbol_local_first(local_symbols, var_name) {
-        if let Some(AstType::Struct { name, .. }) = &var_info.type_info {
-            if let Some(struct_def) = store.find_struct_definition(name) {
-                return Some(format!(
-                    "```zen\n{}\n```",
-                    format_struct_definition(&struct_def)
-                ));
+        if let Some(type_info) = &var_info.type_info {
+            if matches!(type_info, AstType::Struct { .. }) {
+                if let Some(name) = type_info.base_name() {
+                    if let Some(struct_def) = store.find_struct_definition(name) {
+                        return Some(format!(
+                            "```zen\n{}\n```",
+                            format_struct_definition(&struct_def)
+                        ));
+                    }
+                }
             }
         }
     }

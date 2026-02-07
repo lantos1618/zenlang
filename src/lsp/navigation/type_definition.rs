@@ -6,6 +6,9 @@ use lsp_types::*;
 use serde_json::Value;
 
 fn extract_type_name(detail: &str) -> Option<String> {
+    // TODO: Refactor to use SymbolInfo.type_info + AstType::base_name() instead of string parsing
+    // This function parses strings like "var: Type" to extract "Type"
+    // Ideally, we should have AstType available and use base_name() directly
     if let Some(colon_pos) = detail.find(':') {
         let type_part = detail[colon_pos + 1..].trim();
         let type_name = if let Some(generic_start) = type_part.find('<') {

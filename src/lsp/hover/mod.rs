@@ -446,14 +446,17 @@ mod handler {
                 hover_content.push(doc.clone());
             }
 
-            // Add type information - if it's a struct type, show the struct definition with fields
             if let Some(type_info) = &symbol_info.type_info {
-                if let AstType::Struct { name, .. } = type_info {
-                    if let Some(struct_def) = store.find_struct_definition(name) {
-                        hover_content.push(format!(
-                            "```zen\n{}\n```",
-                            structs::format_struct_definition(&struct_def)
-                        ));
+                if matches!(type_info, AstType::Struct { .. }) {
+                    if let Some(type_name) = type_info.base_name() {
+                        if let Some(struct_def) = store.find_struct_definition(type_name) {
+                            hover_content.push(format!(
+                                "```zen\n{}\n```",
+                                structs::format_struct_definition(&struct_def)
+                            ));
+                        } else {
+                            hover_content.push(format!("**Type:** `{}`", format_type(type_info)));
+                        }
                     } else {
                         hover_content.push(format!("**Type:** `{}`", format_type(type_info)));
                     }

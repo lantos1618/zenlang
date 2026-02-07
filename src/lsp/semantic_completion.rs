@@ -56,15 +56,10 @@ pub fn get_semantic_dot_completions(
 
 /// Get the base type name from an AstType
 fn get_type_name(ty: &AstType) -> String {
-    match ty {
-        AstType::Struct { name, .. } => name.clone(),
-        AstType::Generic { name, .. } => name.clone(),
-        // Use centralized primitive name lookup
-        _ => ty
-            .primitive_name()
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| format!("{}", ty)),
-    }
+    // Use centralized base_name() method, fallback to Display
+    ty.base_name()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| format!("{}", ty))
 }
 
 /// Add methods from TypeContext (registered during type checking)

@@ -82,16 +82,9 @@ impl DocumentStore {
         type_: &Option<AstType>,
         initializer: &Option<Expression>,
     ) -> Option<AstType> {
-        if type_.is_some() {
-            return type_.clone();
-        }
-        if let Some(init) = initializer {
-            use crate::lsp::type_query::TypeQuery;
-            if let Some(type_str) = TypeQuery::infer_literal_type(init) {
-                return crate::parser::parse_type_from_string(&type_str).ok();
-            }
-        }
-        None
+        use crate::lsp::type_query::TypeQuery;
+        let tq = TypeQuery::from_ctx(None);
+        tq.infer_variable_type_unified("", type_.as_ref(), initializer.as_ref())
     }
 
     /// Format variable detail string for display

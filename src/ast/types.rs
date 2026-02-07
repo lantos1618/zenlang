@@ -226,6 +226,42 @@ impl AstType {
             _ => None,
         }
     }
+
+    /// Returns the base type name for named types (structs, enums, generics),
+    /// falling back to primitive names for built-in types.
+    /// Returns None for complex types like slices, arrays, functions, etc.
+    pub fn base_name(&self) -> Option<&str> {
+        match self {
+            AstType::Struct { name, .. } => Some(name.as_str()),
+            AstType::Generic { name, .. } => Some(name.as_str()),
+            AstType::Enum { name, .. } => Some(name.as_str()),
+            AstType::EnumType { name } => Some(name.as_str()),
+            // Primitive types
+            AstType::I8 => Some("i8"),
+            AstType::I16 => Some("i16"),
+            AstType::I32 => Some("i32"),
+            AstType::I64 => Some("i64"),
+            AstType::U8 => Some("u8"),
+            AstType::U16 => Some("u16"),
+            AstType::U32 => Some("u32"),
+            AstType::U64 => Some("u64"),
+            AstType::Usize => Some("usize"),
+            AstType::F32 => Some("f32"),
+            AstType::F64 => Some("f64"),
+            AstType::Bool => Some("bool"),
+            AstType::Void => Some("void"),
+            AstType::StaticLiteral => Some("StringLiteral"),
+            AstType::StaticString => Some("StringLiteral"),
+            // Complex types return None
+            AstType::Slice(_) => None,
+            AstType::FixedArray { .. } => None,
+            AstType::Function { .. } => None,
+            AstType::FunctionPointer { .. } => None,
+            AstType::Ref(_) => None,
+            AstType::Range { .. } => None,
+            AstType::StdModule => Some("std"),
+        }
+    }
 }
 
 // Display implementation for generating clean type names

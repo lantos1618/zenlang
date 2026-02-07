@@ -45,21 +45,19 @@ pub fn analyze_expression_hover(
             };
 
             if is_hovering_on_field {
-                // We're hovering on the member - find the type of the object
-                // Recursively resolve the object type
-                if let Some(AstType::Struct { name, .. }) =
-                    resolve_expression_type(object, local_symbols, store)
-                {
-                    if let Some(struct_def) = store.find_struct_definition(&name) {
-                        for field in &struct_def.fields {
-                            if &field.name == member {
-                                return Some(format!(
-                                    "```zen\n{}: {}\n```\n\n**Field of:** `{}`\n\n**Type:** `{}`",
-                                    member,
-                                    format_type(&field.type_),
-                                    name,
-                                    format_type(&field.type_)
-                                ));
+                if let Some(obj_type) = resolve_expression_type(object, local_symbols, store) {
+                    if let Some(type_name) = obj_type.base_name() {
+                        if let Some(struct_def) = store.find_struct_definition(type_name) {
+                            for field in &struct_def.fields {
+                                if &field.name == member {
+                                    return Some(format!(
+                                        "```zen\n{}: {}\n```\n\n**Field of:** `{}`\n\n**Type:** `{}`",
+                                        member,
+                                        format_type(&field.type_),
+                                        type_name,
+                                        format_type(&field.type_)
+                                    ));
+                                }
                             }
                         }
                     }
@@ -161,13 +159,13 @@ pub fn resolve_expression_type(
             }
         }
         Expression::MemberAccess { object, member } => {
-            if let Some(AstType::Struct { name, .. }) =
-                resolve_expression_type(object, local_symbols, store)
-            {
-                if let Some(struct_def) = store.find_struct_definition(&name) {
-                    for field in &struct_def.fields {
-                        if field.name == *member {
-                            return Some(field.type_.clone());
+            if let Some(obj_type) = resolve_expression_type(object, local_symbols, store) {
+                if let Some(type_name) = obj_type.base_name() {
+                    if let Some(struct_def) = store.find_struct_definition(type_name) {
+                        for field in &struct_def.fields {
+                            if field.name == *member {
+                                return Some(field.type_.clone());
+                            }
                         }
                     }
                 }
