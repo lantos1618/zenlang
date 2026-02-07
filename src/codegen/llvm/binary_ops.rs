@@ -69,11 +69,17 @@ impl<'ctx> LLVMCompiler<'ctx> {
         }
     }
 
-    /// Normalize two integers to the same bit width (prefer wider type)
-    fn normalize_int_widths(
+    /// Internal helper for normalizing two integers to the same bit width
+    ///
+    /// # Arguments
+    /// * `left` - Left operand
+    /// * `right` - Right operand
+    /// * `zero_extend_booleans` - If true, zero-extend 1-bit values; otherwise always sign-extend
+    fn normalize_int_widths_impl(
         &mut self,
         left: IntValue<'ctx>,
         right: IntValue<'ctx>,
+        zero_extend_booleans: bool,
     ) -> Result<(IntValue<'ctx>, IntValue<'ctx>), CompileError> {
         if left.get_type() == right.get_type() {
             return Ok((left, right));
@@ -83,33 +89,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
         let right_width = right.get_type().get_bit_width();
 
         if left_width > right_width {
-            let right_ext = self
-                .builder
-                .build_int_s_extend(right, left.get_type(), "ext_right")?;
-            Ok((left, right_ext))
-        } else {
-            let left_ext = self
-                .builder
-                .build_int_s_extend(left, right.get_type(), "ext_left")?;
-            Ok((left_ext, right))
-        }
-    }
-
-    /// Normalize integers with special handling for booleans (zero-extend instead of sign-extend)
-    fn normalize_int_widths_for_logical(
-        &mut self,
-        left: IntValue<'ctx>,
-        right: IntValue<'ctx>,
-    ) -> Result<(IntValue<'ctx>, IntValue<'ctx>), CompileError> {
-        if left.get_type() == right.get_type() {
-            return Ok((left, right));
-        }
-
-        let left_width = left.get_type().get_bit_width();
-        let right_width = right.get_type().get_bit_width();
-
-        if left_width > right_width {
-            let right_ext = if right_width == 1 {
+            let right_ext = if zero_extend_booleans && right_width == 1 {
                 self.builder
                     .build_int_z_extend(right, left.get_type(), "zext_right")?
             } else {
@@ -118,7 +98,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             };
             Ok((left, right_ext))
         } else {
-            let left_ext = if left_width == 1 {
+            let left_ext = if zero_extend_booleans && left_width == 1 {
                 self.builder
                     .build_int_z_extend(left, right.get_type(), "zext_left")?
             } else {
@@ -127,6 +107,24 @@ impl<'ctx> LLVMCompiler<'ctx> {
             };
             Ok((left_ext, right))
         }
+    }
+
+    /// Normalize two integers to the same bit width (prefer wider type)
+    fn normalize_int_widths(
+        &mut self,
+        left: IntValue<'ctx>,
+        right: IntValue<'ctx>,
+    ) -> Result<(IntValue<'ctx>, IntValue<'ctx>), CompileError> {
+        self.normalize_int_widths_impl(left, right, false)
+    }
+
+    /// Normalize integers with special handling for booleans (zero-extend instead of sign-extend)
+    fn normalize_int_widths_for_logical(
+        &mut self,
+        left: IntValue<'ctx>,
+        right: IntValue<'ctx>,
+    ) -> Result<(IntValue<'ctx>, IntValue<'ctx>), CompileError> {
+        self.normalize_int_widths_impl(left, right, true)
     }
 
     /// Generic arithmetic operation on normalized numeric operands
