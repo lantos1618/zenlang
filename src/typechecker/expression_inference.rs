@@ -35,11 +35,12 @@ impl TypeChecker {
                     }
                 }
                 let object_type = self.infer_expression_type(object)?;
+                let type_store = self.type_store.borrow();
                 inference::infer_member_type(
                     &object_type,
                     member,
-                    &self.structs,
-                    &self.enums,
+                    type_store.get_all_structs(),
+                    type_store.get_all_enums(),
                     self.get_current_span(),
                 )
             }
@@ -59,7 +60,7 @@ impl TypeChecker {
                         name: base_name,
                         type_args,
                     })
-                } else if let Some(struct_def) = self.structs.get(name) {
+                } else if let Some(struct_def) = self.type_store.borrow().get_struct(name) {
                     Ok(AstType::Struct {
                         name: name.clone(),
                         fields: struct_def.fields.clone(),
@@ -146,11 +147,12 @@ impl TypeChecker {
             }
             Expression::StructField { struct_, field } => {
                 let struct_type = self.infer_expression_type(struct_)?;
+                let type_store = self.type_store.borrow();
                 inference::infer_struct_field_type(
                     &struct_type,
                     field,
-                    &self.structs,
-                    &self.enums,
+                    type_store.get_all_structs(),
+                    type_store.get_all_enums(),
                     self.get_current_span(),
                 )
             }

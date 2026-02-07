@@ -1,7 +1,7 @@
 //! Scope management for type checker
 //! Handles variable scoping, declaration, and lookup
 
-use super::{EnumInfo, TypeChecker, VariableInfo};
+use super::{TypeChecker, VariableInfo};
 use crate::ast::AstType;
 use crate::error::{CompileError, Result, Span};
 use std::collections::HashMap;
@@ -103,11 +103,7 @@ pub fn mark_variable_initialized(checker: &mut TypeChecker, name: &str) -> Resul
 
 /// Get the type of a variable
 /// This version includes special handling for generics and enums
-pub fn get_variable_type(
-    checker: &TypeChecker,
-    name: &str,
-    enums: &std::collections::HashMap<String, EnumInfo>,
-) -> Result<AstType> {
+pub fn get_variable_type(checker: &TypeChecker, name: &str) -> Result<AstType> {
     for scope in checker.scopes.iter().rev() {
         if let Some(var_info) = scope.get(name) {
             // Handle generic placeholders - convert to appropriate defaults
@@ -127,8 +123,7 @@ pub fn get_variable_type(
         }
     }
 
-    // Check if it's an enum type
-    if enums.contains_key(name) {
+    if checker.type_store.borrow().has_enum(name) {
         // Return a special type to indicate this is an enum type constructor
         return Ok(AstType::EnumType {
             name: name.to_string(),

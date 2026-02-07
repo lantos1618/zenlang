@@ -21,9 +21,6 @@ pub fn collect_declaration_types(
                 is_external: false,
             };
             checker
-                .functions
-                .insert(func.name.clone(), signature.clone());
-            checker
                 .type_store
                 .borrow_mut()
                 .register_function(&func.name, signature);
@@ -42,9 +39,6 @@ pub fn collect_declaration_types(
                 is_external: true,
             };
             checker
-                .functions
-                .insert(ext_func.name.clone(), signature.clone());
-            checker
                 .type_store
                 .borrow_mut()
                 .register_function(&ext_func.name, signature);
@@ -58,12 +52,7 @@ pub fn collect_declaration_types(
                 .iter()
                 .map(|f| (f.name.clone(), f.type_.clone()))
                 .collect();
-            let info = StructInfo {
-                fields: fields.clone(),
-            };
-            checker
-                .structs
-                .insert(struct_def.name.clone(), info.clone());
+            let info = StructInfo::new(fields.clone());
             checker
                 .type_store
                 .borrow_mut()
@@ -78,7 +67,6 @@ pub fn collect_declaration_types(
                 .collect();
             use crate::typechecker::EnumInfo;
             let info = EnumInfo { variants };
-            checker.enums.insert(enum_def.name.clone(), info.clone());
             checker
                 .type_store
                 .borrow_mut()
@@ -165,10 +153,7 @@ pub fn collect_declaration_types(
                 }
 
                 // Register this as a struct type
-                let info = StructInfo {
-                    fields: struct_fields.clone(),
-                };
-                checker.structs.insert(name.clone(), info.clone());
+                let info = StructInfo::new(struct_fields.clone());
                 checker.type_store.borrow_mut().register_struct(name, info);
 
                 // Also store as a constant of struct type
@@ -217,19 +202,17 @@ pub fn collect_declaration_types(
         Declaration::TypeAlias(type_alias) => {
             // Check if the target type is a struct literal
             if let AstType::Struct { name: _, fields } = &type_alias.target_type {
-                let info = StructInfo {
-                    fields: fields.clone(),
-                };
-                checker.structs.insert(type_alias.name.clone(), info);
+                let info = StructInfo::new(fields.clone());
+                checker
+                    .type_store
+                    .borrow_mut()
+                    .register_struct(&type_alias.name, info);
             } else if matches!(
                 &type_alias.target_type,
                 AstType::Function { .. } | AstType::FunctionPointer { .. }
             ) {
                 // Store function type aliases for callable resolution
                 // This includes both Function and FunctionPointer types
-                checker
-                    .type_aliases
-                    .insert(type_alias.name.clone(), type_alias.target_type.clone());
                 checker
                     .type_store
                     .borrow_mut()

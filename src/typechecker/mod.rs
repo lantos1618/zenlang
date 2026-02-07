@@ -17,6 +17,7 @@ pub mod validation;
 use crate::ast::primitives;
 use crate::ast::{AstType, Declaration, Function, Program, Statement};
 use crate::error::{Result, Span};
+use crate::name_utils;
 use crate::type_context::TypeContext;
 use crate::type_system::{new_type_store, TypeStoreRef};
 use crate::well_known::WellKnownTypes;
@@ -33,16 +34,10 @@ pub struct VariableInfo {
 #[allow(dead_code)]
 pub struct TypeChecker {
     scopes: Vec<HashMap<String, VariableInfo>>,
-    // Unified type storage - single source of truth
+    // Unified type storage - single source of truth for all type information
     type_store: TypeStoreRef,
-    // Legacy fields for backward compatibility (delegate to type_store)
-    // TODO: Remove these after full migration
-    functions: HashMap<String, FunctionSignature>,
-    structs: HashMap<String, StructInfo>,
-    enums: HashMap<String, EnumInfo>,
-    type_aliases: HashMap<String, AstType>,
-    stdlib_methods: HashMap<String, MethodSignature>,
-    stdlib_functions: HashMap<String, FunctionSignature>,
+    // Collected variable types for TypeContext: "function_name::var_name" -> type
+    // Variables are collected during checking because scopes get popped
     collected_variables: HashMap<String, AstType>,
 
     behavior_resolver: BehaviorResolver,
@@ -78,6 +73,59 @@ pub struct MethodSignature {
 #[derive(Clone, Debug)]
 pub struct StructInfo {
     pub fields: Vec<(String, AstType)>,
+    field_index: Option<HashMap<String, usize>>,
+}
+
+impl StructInfo {
+    pub fn new(fields: Vec<(String, AstType)>) -> Self {
+        let field_index = if fields.len() > 4 {
+            Some(
+                fields
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (name, _))| (name.clone(), i))
+                    .collect(),
+            )
+        } else {
+            None
+        };
+        Self {
+            fields,
+            field_index,
+        }
+    }
+
+    pub fn get_field_type(&self, name: &str) -> Option<&AstType> {
+        if let Some(index) = &self.field_index {
+            index.get(name).map(|&i| &self.fields[i].1)
+        } else {
+            self.fields.iter().find(|(n, _)| n == name).map(|(_, t)| t)
+        }
+    }
+
+    pub fn has_field(&self, name: &str) -> bool {
+        if let Some(index) = &self.field_index {
+            index.contains_key(name)
+        } else {
+            self.fields.iter().any(|(n, _)| n == name)
+        }
+    }
+
+    pub fn field_names(&self) -> Vec<&str> {
+        self.fields.iter().map(|(n, _)| n.as_str()).collect()
+    }
+
+    fn rebuild_index(&mut self) {
+        if self.fields.len() > 4 {
+            self.field_index = Some(
+                self.fields
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (name, _))| (name.clone(), i))
+                    .collect(),
+            );
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -99,9 +147,9 @@ impl TypeChecker {
         self.type_store.clone()
     }
 
-    /// Get the inferred function signatures
-    pub fn get_function_signatures(&self) -> &HashMap<String, FunctionSignature> {
-        &self.functions
+    /// Get all function signatures from the type store
+    pub fn get_function_signatures(&self) -> HashMap<String, FunctionSignature> {
+        self.type_store.borrow().get_all_functions().clone()
     }
 
     /// Get a function signature from the type store
@@ -109,46 +157,21 @@ impl TypeChecker {
         self.type_store.borrow().get_function(name).cloned()
     }
 
-    /// Register a function in both legacy storage and type store
+    /// Register a function in the type store
     pub fn register_function(&mut self, name: &str, signature: FunctionSignature) {
-        self.functions.insert(name.to_string(), signature.clone());
         self.type_store
             .borrow_mut()
             .register_function(name, signature);
     }
 
     /// Look up a UFC method in function signatures by type name and method name.
-    ///
-    /// Handles generic type names: if `"TypeName.method"` isn't found directly,
-    /// also matches `"TypeName<...>.method"` keys (since the parser stores generic
-    /// params in function names, e.g., `"SafePtr<T>.is_valid"`).
-    pub fn find_ufc_method(&self, type_name: &str, method: &str) -> Option<&FunctionSignature> {
-        // Fast path: exact match (e.g., "EnemyArray.get_state")
-        let exact_key = format!("{}.{}", type_name, method);
-        if let Some(sig) = self.functions.get(&exact_key) {
-            return Some(sig);
-        }
-        // Slow path: generic match (e.g., "SafePtr<T>.is_valid" when type_name is "SafePtr")
-        let suffix = format!(".{}", method);
-        for (key, sig) in &self.functions {
-            if key.ends_with(&suffix) && key.starts_with(type_name) {
-                let between = &key[type_name.len()..key.len() - suffix.len()];
-                if between.starts_with('<') && between.ends_with('>') {
-                    return Some(sig);
-                }
-            }
-        }
-        None
+    pub fn find_ufc_method(&self, type_name: &str, method: &str) -> Option<FunctionSignature> {
+        let exact_key = name_utils::method_key(type_name, method);
+        self.type_store.borrow().get_function(&exact_key).cloned()
     }
 
     /// Resolve a type alias (e.g., "CompletionFn" -> function type)
-    /// Checks both legacy storage and type store
     pub fn resolve_type_alias(&self, name: &str) -> Option<AstType> {
-        // Check legacy storage first
-        if let Some(alias) = self.type_aliases.get(name) {
-            return Some(alias.clone());
-        }
-        // Fall back to type store
         self.type_store.borrow().get_type_alias(name).cloned()
     }
 
@@ -159,14 +182,11 @@ impl TypeChecker {
     }
 
     pub fn new() -> Self {
-        let enums = HashMap::new();
-        // Option and Result are loaded from stdlib/core/ when imported
+        let type_store = new_type_store();
 
-        let mut functions = HashMap::new();
-
-        // Register builtin math functions
-        functions.insert(
-            "min".to_string(),
+        // Register builtin math functions directly in type_store
+        type_store.borrow_mut().register_function(
+            "min",
             FunctionSignature {
                 params: vec![
                     ("a".to_string(), AstType::I32),
@@ -176,8 +196,8 @@ impl TypeChecker {
                 is_external: false,
             },
         );
-        functions.insert(
-            "max".to_string(),
+        type_store.borrow_mut().register_function(
+            "max",
             FunctionSignature {
                 params: vec![
                     ("a".to_string(), AstType::I32),
@@ -187,8 +207,8 @@ impl TypeChecker {
                 is_external: false,
             },
         );
-        functions.insert(
-            "abs".to_string(),
+        type_store.borrow_mut().register_function(
+            "abs",
             FunctionSignature {
                 params: vec![("x".to_string(), AstType::I32)],
                 return_type: AstType::I32,
@@ -196,22 +216,9 @@ impl TypeChecker {
             },
         );
 
-        let type_store = new_type_store();
-
-        // Register builtin functions in type_store
-        for (name, sig) in &functions {
-            type_store.borrow_mut().register_function(name, sig.clone());
-        }
-
         Self {
             scopes: vec![HashMap::new()],
             type_store,
-            functions,
-            structs: HashMap::new(),
-            enums,
-            type_aliases: HashMap::new(),
-            stdlib_methods: HashMap::new(),
-            stdlib_functions: HashMap::new(),
             collected_variables: HashMap::new(),
             behavior_resolver: BehaviorResolver::new(),
             module_imports: HashMap::new(),
@@ -240,27 +247,39 @@ impl TypeChecker {
             changed = false;
             iterations += 1;
 
-            let struct_names: Vec<String> = self.structs.keys().cloned().collect();
+            let struct_names: Vec<String> = self
+                .type_store
+                .borrow()
+                .get_all_structs()
+                .keys()
+                .cloned()
+                .collect();
             for struct_name in struct_names {
-                let resolved_fields: Vec<(String, AstType)> = {
-                    let struct_info = match self.structs.get(&struct_name) {
-                        Some(info) => info,
-                        None => continue, // struct was removed during iteration
-                    };
-                    struct_info
-                        .fields
-                        .iter()
-                        .map(|(name, field_type)| {
-                            let resolved = self.resolve_generic_to_struct(field_type);
-                            if &resolved != field_type {
-                                changed = true;
-                            }
-                            (name.clone(), resolved)
-                        })
-                        .collect()
+                let resolved_fields: Option<Vec<(String, AstType)>> = {
+                    let type_store = self.type_store.borrow();
+                    let struct_info = type_store.get_struct(&struct_name);
+                    struct_info.map(|info| {
+                        info.fields
+                            .iter()
+                            .map(|(name, field_type)| {
+                                let resolved = self.resolve_generic_to_struct(field_type);
+                                if &resolved != field_type {
+                                    changed = true;
+                                }
+                                (name.clone(), resolved)
+                            })
+                            .collect()
+                    })
                 };
-                if let Some(struct_info) = self.structs.get_mut(&struct_name) {
-                    struct_info.fields = resolved_fields;
+                if let Some(fields) = resolved_fields {
+                    let existing = self.type_store.borrow().get_struct(&struct_name).cloned();
+                    if let Some(mut info) = existing {
+                        info.fields = fields;
+                        info.rebuild_index();
+                        self.type_store
+                            .borrow_mut()
+                            .register_struct(&struct_name, info);
+                    }
                 }
             }
         }
@@ -273,8 +292,13 @@ impl TypeChecker {
             if let Declaration::Function(func) = declaration {
                 if func.return_type == AstType::Void && !func.body.is_empty() {
                     if let Ok(inferred_type) = self.infer_function_return_type(func) {
-                        if let Some(sig) = self.functions.get_mut(&func.name) {
+                        let existing_sig =
+                            self.type_store.borrow().get_function(&func.name).cloned();
+                        if let Some(mut sig) = existing_sig {
                             sig.return_type = inferred_type;
+                            self.type_store
+                                .borrow_mut()
+                                .register_function(&func.name, sig);
                         }
                     }
                 }
@@ -290,19 +314,7 @@ impl TypeChecker {
         Ok(self.build_type_context())
     }
 
-    /// Check a program, returning partial TypeContext even on error.
-    /// Returns (TypeContext, Option<CompileError>).
-    /// The TypeContext will contain everything collected before the error occurred.
-    pub fn check_program_tolerant(
-        &mut self,
-        program: &Program,
-    ) -> (TypeContext, Option<crate::error::CompileError>) {
-        let (ctx, errors) = self.check_program_collect_errors(program);
-        (ctx, errors.into_iter().next())
-    }
-
-    /// Like check_program_tolerant but collects ALL errors instead of just the first.
-    /// Continues past declaration errors, body errors — everything possible.
+    /// Check a program and collect ALL errors (for LSP diagnostics)
     pub fn check_program_collect_errors(
         &mut self,
         program: &Program,
@@ -325,27 +337,39 @@ impl TypeChecker {
             changed = false;
             iterations += 1;
 
-            let struct_names: Vec<String> = self.structs.keys().cloned().collect();
+            let struct_names: Vec<String> = self
+                .type_store
+                .borrow()
+                .get_all_structs()
+                .keys()
+                .cloned()
+                .collect();
             for struct_name in struct_names {
-                let resolved_fields: Vec<(String, AstType)> = {
-                    let struct_info = match self.structs.get(&struct_name) {
-                        Some(info) => info,
-                        None => continue,
-                    };
-                    struct_info
-                        .fields
-                        .iter()
-                        .map(|(name, field_type)| {
-                            let resolved = self.resolve_generic_to_struct(field_type);
-                            if &resolved != field_type {
-                                changed = true;
-                            }
-                            (name.clone(), resolved)
-                        })
-                        .collect()
+                let resolved_fields: Option<Vec<(String, AstType)>> = {
+                    let type_store = self.type_store.borrow();
+                    let struct_info = type_store.get_struct(&struct_name);
+                    struct_info.map(|info| {
+                        info.fields
+                            .iter()
+                            .map(|(name, field_type)| {
+                                let resolved = self.resolve_generic_to_struct(field_type);
+                                if &resolved != field_type {
+                                    changed = true;
+                                }
+                                (name.clone(), resolved)
+                            })
+                            .collect()
+                    })
                 };
-                if let Some(struct_info) = self.structs.get_mut(&struct_name) {
-                    struct_info.fields = resolved_fields;
+                if let Some(fields) = resolved_fields {
+                    let existing = self.type_store.borrow().get_struct(&struct_name).cloned();
+                    if let Some(mut info) = existing {
+                        info.fields = fields;
+                        info.rebuild_index();
+                        self.type_store
+                            .borrow_mut()
+                            .register_struct(&struct_name, info);
+                    }
                 }
             }
         }
@@ -355,8 +379,13 @@ impl TypeChecker {
             if let Declaration::Function(func) = declaration {
                 if func.return_type == AstType::Void && !func.body.is_empty() {
                     if let Ok(inferred_type) = self.infer_function_return_type(func) {
-                        if let Some(sig) = self.functions.get_mut(&func.name) {
+                        let existing_sig =
+                            self.type_store.borrow().get_function(&func.name).cloned();
+                        if let Some(mut sig) = existing_sig {
                             sig.return_type = inferred_type;
+                            self.type_store
+                                .borrow_mut()
+                                .register_function(&func.name, sig);
                         }
                     }
                 }
@@ -373,12 +402,23 @@ impl TypeChecker {
         (self.build_type_context(), errors)
     }
 
+    pub fn check_program_tolerant(
+        &mut self,
+        program: &Program,
+    ) -> (TypeContext, Option<crate::error::CompileError>) {
+        let (ctx, errors) = self.check_program_collect_errors(program);
+        let first_error = errors.into_iter().next();
+        (ctx, first_error)
+    }
+
     /// Build TypeContext from typechecker's collected information
     pub fn build_type_context(&self) -> TypeContext {
         let mut ctx = TypeContext::new();
 
+        let type_store = self.type_store.borrow();
+
         // Register functions
-        for (name, sig) in &self.functions {
+        for (name, sig) in type_store.get_all_functions() {
             ctx.register_function(
                 name.clone(),
                 sig.params.clone(),
@@ -388,12 +428,12 @@ impl TypeChecker {
         }
 
         // Register structs
-        for (name, info) in &self.structs {
+        for (name, info) in type_store.get_all_structs() {
             ctx.register_struct(name.clone(), info.fields.clone());
         }
 
         // Register enums
-        for (name, info) in &self.enums {
+        for (name, info) in type_store.get_all_enums() {
             ctx.register_enum(name.clone(), info.variants.clone());
         }
 
@@ -459,7 +499,7 @@ impl TypeChecker {
         }
 
         // Register type aliases (for function type aliases like CompletionFn)
-        for (name, aliased_type) in &self.type_aliases {
+        for (name, aliased_type) in type_store.get_all_aliases() {
             ctx.type_aliases.insert(name.clone(), aliased_type.clone());
         }
 
@@ -609,7 +649,7 @@ impl TypeChecker {
     }
 
     fn get_variable_type(&self, name: &str) -> Result<AstType> {
-        scope::get_variable_type(self, name, &self.enums)
+        scope::get_variable_type(self, name)
     }
 
     fn get_variable_info(&self, name: &str) -> Result<VariableInfo> {

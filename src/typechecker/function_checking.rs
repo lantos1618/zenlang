@@ -24,11 +24,16 @@ pub fn check_function(checker: &mut TypeChecker, function: &Function) -> Result<
                 AstType::Generic { name, .. } if name == "Self" || name.starts_with("Self_") => {
                     // Replace Self with the concrete implementing type
                     if let Some(impl_type) = &checker.current_impl_type {
-                        // Look up the actual struct fields from the registry
-                        if let Some(struct_info) = checker.structs.get(impl_type) {
+                        // Look up the actual struct fields from the type store
+                        let struct_fields = checker
+                            .type_store
+                            .borrow()
+                            .get_struct(impl_type)
+                            .map(|s| s.fields.clone());
+                        if let Some(fields) = struct_fields {
                             AstType::Struct {
                                 name: impl_type.clone(),
-                                fields: struct_info.fields.clone(),
+                                fields,
                             }
                         } else {
                             // Fallback if struct not found
