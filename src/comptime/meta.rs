@@ -55,10 +55,128 @@ fn opt_expr(e: &Option<Box<Expression>>) -> ComptimeValue {
     }
 }
 
-fn opt_string(s: &Option<String>) -> ComptimeValue {
-    match s {
-        Some(s) => ComptimeValue::String(s.clone()),
+fn opt_pattern(p: &Option<Box<Pattern>>) -> ComptimeValue {
+    match p {
+        Some(pat) => ast_pattern(*pat.clone()),
         None => ComptimeValue::Null,
+    }
+}
+
+fn opt_type(t: &Option<AstType>) -> ComptimeValue {
+    match t {
+        Some(ty) => ast_type(ty.clone()),
+        None => ComptimeValue::Null,
+    }
+}
+
+// decl_type_to_string is replaced by VariableDeclarationType's Display impl
+
+fn function_arg(name: &str, ty: &AstType) -> ComptimeValue {
+    ComptimeValue::Struct {
+        name: "FunctionArg".to_string(),
+        fields: HashMap::from([
+            ("name".to_string(), ComptimeValue::String(name.to_string())),
+            ("arg_type".to_string(), ast_type(ty.clone())),
+        ]),
+    }
+}
+
+fn function_to_fields(f: &ast::Function) -> Vec<ComptimeValue> {
+    vec![
+        field_info("name", ComptimeValue::String(f.name.clone())),
+        field_info(
+            "type_params",
+            ComptimeValue::Array(
+                f.type_params
+                    .iter()
+                    .map(|tp| ComptimeValue::Struct {
+                        name: "TypeParameter".to_string(),
+                        fields: HashMap::from([
+                            ("name".to_string(), ComptimeValue::String(tp.name.clone())),
+                            (
+                                "constraints".to_string(),
+                                ComptimeValue::Array(
+                                    tp.constraints
+                                        .iter()
+                                        .map(|c| ComptimeValue::Struct {
+                                            name: "TraitConstraint".to_string(),
+                                            fields: HashMap::from([(
+                                                "trait_name".to_string(),
+                                                ComptimeValue::String(c.trait_name.clone()),
+                                            )]),
+                                        })
+                                        .collect(),
+                                ),
+                            ),
+                        ]),
+                    })
+                    .collect(),
+            ),
+        ),
+        field_info(
+            "args",
+            ComptimeValue::Array(
+                f.args
+                    .iter()
+                    .map(|(name, ty)| function_arg(name, ty))
+                    .collect(),
+            ),
+        ),
+        field_info("return_type", ast_type(f.return_type.clone())),
+        field_info(
+            "body",
+            ComptimeValue::Array(f.body.iter().map(|s| ast_stmt(s.clone())).collect()),
+        ),
+        field_info("is_varargs", ComptimeValue::Bool(f.is_varargs)),
+        field_info("is_public", ComptimeValue::Bool(f.is_public)),
+    ]
+}
+
+fn type_params_to_array(tps: &[ast::TypeParameter]) -> ComptimeValue {
+    ComptimeValue::Array(
+        tps.iter()
+            .map(|tp| ComptimeValue::Struct {
+                name: "TypeParameter".to_string(),
+                fields: HashMap::from([
+                    ("name".to_string(), ComptimeValue::String(tp.name.clone())),
+                    (
+                        "constraints".to_string(),
+                        ComptimeValue::Array(
+                            tp.constraints
+                                .iter()
+                                .map(|c| ComptimeValue::Struct {
+                                    name: "TraitConstraint".to_string(),
+                                    fields: HashMap::from([(
+                                        "trait_name".to_string(),
+                                        ComptimeValue::String(c.trait_name.clone()),
+                                    )]),
+                                })
+                                .collect(),
+                        ),
+                    ),
+                ]),
+            })
+            .collect(),
+    )
+}
+
+fn methods_to_array(methods: &[ast::Function]) -> ComptimeValue {
+    ComptimeValue::Array(
+        methods
+            .iter()
+            .map(|m| ast_node(ASTNodeValue::Declaration(Declaration::Function(m.clone()))))
+            .collect(),
+    )
+}
+
+fn parameter_to_value(p: &ast::Parameter) -> ComptimeValue {
+    ComptimeValue::Struct {
+        name: "Parameter".to_string(),
+        fields: HashMap::from([
+            ("name".to_string(), ComptimeValue::String(p.name.clone())),
+            ("param_type".to_string(), ast_type(p.type_.clone())),
+            ("is_mutable".to_string(), ComptimeValue::Bool(p.is_mutable)),
+        ]),
     }
 }
 
@@ -78,155 +196,28 @@ pub fn variant_name(node: &ASTNodeValue) -> String {
     }
 }
 
+// Variant name functions delegate to the methods on the AST enums themselves.
+// The canonical implementation lives in src/ast/*.rs — these are thin wrappers
+// kept for the meta::variant_name(ASTNodeValue) public API.
+
 fn expression_variant_name(expr: &Expression) -> String {
-    match expr {
-        Expression::Integer8(_) => "Integer8",
-        Expression::Integer16(_) => "Integer16",
-        Expression::Integer32(_) => "Integer32",
-        Expression::Integer64(_) => "Integer64",
-        Expression::Unsigned8(_) => "Unsigned8",
-        Expression::Unsigned16(_) => "Unsigned16",
-        Expression::Unsigned32(_) => "Unsigned32",
-        Expression::Unsigned64(_) => "Unsigned64",
-        Expression::Float32(_) => "Float32",
-        Expression::Float64(_) => "Float64",
-        Expression::Boolean(_) => "Boolean",
-        Expression::String(_) => "String",
-        Expression::Identifier(_) => "Identifier",
-        Expression::Unit => "Unit",
-        Expression::BinaryOp { .. } => "BinaryOp",
-        Expression::FunctionCall { .. } => "FunctionCall",
-        Expression::QuestionMatch { .. } => "QuestionMatch",
-        Expression::Conditional { .. } => "Conditional",
-        Expression::AddressOf(_) => "AddressOf",
-        Expression::Dereference(_) => "Dereference",
-        Expression::PointerOffset { .. } => "PointerOffset",
-        Expression::StructLiteral { .. } => "StructLiteral",
-        Expression::StructField { .. } => "StructField",
-        Expression::ArrayLiteral(_) => "ArrayLiteral",
-        Expression::ArrayIndex { .. } => "ArrayIndex",
-        Expression::EnumVariant { .. } => "EnumVariant",
-        Expression::EnumLiteral { .. } => "EnumLiteral",
-        Expression::MemberAccess { .. } => "MemberAccess",
-        Expression::PointerDereference(_) => "PointerDereference",
-        Expression::PointerAddress(_) => "PointerAddress",
-        Expression::CreateReference(_) => "CreateReference",
-        Expression::CreateMutableReference(_) => "CreateMutableReference",
-        Expression::StringLength(_) => "StringLength",
-        Expression::Some(_) => "Some",
-        Expression::None => "None",
-        Expression::StringInterpolation { .. } => "StringInterpolation",
-        Expression::Comptime(_) => "Comptime",
-        Expression::Range { .. } => "Range",
-        Expression::PatternMatch { .. } => "PatternMatch",
-        Expression::StdReference => "StdReference",
-        Expression::BuiltinReference => "BuiltinReference",
-        Expression::ThisReference => "ThisReference",
-        Expression::MethodCall { .. } => "MethodCall",
-        Expression::Loop { .. } => "Loop",
-        Expression::CollectionLoop { .. } => "CollectionLoop",
-        Expression::Closure { .. } => "Closure",
-        Expression::Block(_) => "Block",
-        Expression::Return(_) => "Return",
-        Expression::Raise(_) => "Raise",
-        Expression::Defer(_) => "Defer",
-        Expression::Break { .. } => "Break",
-        Expression::Continue { .. } => "Continue",
-        Expression::VecConstructor { .. } => "VecConstructor",
-        Expression::DynVecConstructor { .. } => "DynVecConstructor",
-        Expression::ArrayConstructor { .. } => "ArrayConstructor",
-    }
-    .to_string()
+    expr.variant_name().to_string()
 }
 
 fn statement_variant_name(stmt: &Statement) -> String {
-    match stmt {
-        Statement::Expression { .. } => "Expression",
-        Statement::Return { .. } => "Return",
-        Statement::VariableDeclaration { .. } => "VariableDeclaration",
-        Statement::VariableAssignment { .. } => "VariableAssignment",
-        Statement::PointerAssignment { .. } => "PointerAssignment",
-        Statement::Loop { .. } => "Loop",
-        Statement::Break { .. } => "Break",
-        Statement::Continue { .. } => "Continue",
-        Statement::ComptimeBlock { .. } => "ComptimeBlock",
-        Statement::ModuleImport { .. } => "ModuleImport",
-        Statement::Defer { .. } => "Defer",
-        Statement::ThisDefer { .. } => "ThisDefer",
-        Statement::DestructuringImport { .. } => "DestructuringImport",
-        Statement::Block { .. } => "Block",
-    }
-    .to_string()
+    stmt.variant_name().to_string()
 }
 
 fn declaration_variant_name(decl: &Declaration) -> String {
-    match decl {
-        Declaration::Function(_) => "Function",
-        Declaration::ExternalFunction(_) => "ExternalFunction",
-        Declaration::Struct(_) => "Struct",
-        Declaration::Enum(_) => "Enum",
-        Declaration::Behavior(_) => "Behavior",
-        Declaration::Trait(_) => "Trait",
-        Declaration::TraitImplementation(_) => "TraitImplementation",
-        Declaration::TraitRequirement(_) => "TraitRequirement",
-        Declaration::ImplBlock(_) => "ImplBlock",
-        Declaration::ComptimeBlock(_) => "ComptimeBlock",
-        Declaration::Constant { .. } => "Constant",
-        Declaration::ModuleImport { .. } => "ModuleImport",
-        Declaration::Export { .. } => "Export",
-        Declaration::TypeAlias(_) => "TypeAlias",
-    }
-    .to_string()
+    decl.variant_name().to_string()
 }
 
 fn type_variant_name(ty: &AstType) -> String {
-    match ty {
-        AstType::I8 => "I8",
-        AstType::I16 => "I16",
-        AstType::I32 => "I32",
-        AstType::I64 => "I64",
-        AstType::U8 => "U8",
-        AstType::U16 => "U16",
-        AstType::U32 => "U32",
-        AstType::U64 => "U64",
-        AstType::Usize => "Usize",
-        AstType::F32 => "F32",
-        AstType::F64 => "F64",
-        AstType::Bool => "Bool",
-        AstType::StaticLiteral => "StaticLiteral",
-        AstType::StaticString => "StaticString",
-        AstType::Void => "Void",
-        AstType::Slice(_) => "Slice",
-        AstType::FixedArray { .. } => "FixedArray",
-        AstType::Function { .. } => "Function",
-        AstType::FunctionPointer { .. } => "FunctionPointer",
-        AstType::Struct { .. } => "Struct",
-        AstType::Enum { .. } => "Enum",
-        AstType::Ref(_) => "Ref",
-        AstType::Range { .. } => "Range",
-        AstType::Generic { .. } => "Generic",
-        AstType::EnumType { .. } => "EnumType",
-        AstType::StdModule => "StdModule",
-    }
-    .to_string()
+    ty.variant_name().to_string()
 }
 
 fn pattern_variant_name(pat: &Pattern) -> String {
-    match pat {
-        Pattern::Literal(_) => "Literal",
-        Pattern::Identifier(_) => "Identifier",
-        Pattern::Struct { .. } => "Struct",
-        Pattern::EnumVariant { .. } => "EnumVariant",
-        Pattern::Wildcard => "Wildcard",
-        Pattern::EnumLiteral { .. } => "EnumLiteral",
-        Pattern::Or(_) => "Or",
-        Pattern::Tuple(_) => "Tuple",
-        Pattern::Range { .. } => "Range",
-        Pattern::Binding { .. } => "Binding",
-        Pattern::Type { .. } => "Type",
-        Pattern::Guard { .. } => "Guard",
-    }
-    .to_string()
+    pat.variant_name().to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -357,6 +348,82 @@ fn expression_fields(expr: &Expression) -> Result<Vec<ComptimeValue>> {
             ),
         ],
 
+        // Conditional expression
+        Expression::Conditional { scrutinee, arms } => vec![
+            field_info("scrutinee", ast_expr(*scrutinee.clone())),
+            field_info(
+                "arms",
+                ComptimeValue::Array(
+                    arms.iter()
+                        .map(|arm| ComptimeValue::Struct {
+                            name: "ConditionalArm".to_string(),
+                            fields: HashMap::from([
+                                ("pattern".to_string(), ast_pattern(arm.pattern.clone())),
+                                (
+                                    "guard".to_string(),
+                                    match &arm.guard {
+                                        Some(g) => ast_expr(g.clone()),
+                                        None => ComptimeValue::Null,
+                                    },
+                                ),
+                                ("body".to_string(), ast_expr(arm.body.clone())),
+                            ]),
+                        })
+                        .collect(),
+                ),
+            ),
+        ],
+
+        // Pattern match expression
+        Expression::PatternMatch { scrutinee, arms } => vec![
+            field_info("scrutinee", ast_expr(*scrutinee.clone())),
+            field_info(
+                "arms",
+                ComptimeValue::Array(
+                    arms.iter()
+                        .map(|arm| ComptimeValue::Struct {
+                            name: "PatternArm".to_string(),
+                            fields: HashMap::from([
+                                ("pattern".to_string(), ast_pattern(arm.pattern.clone())),
+                                (
+                                    "guard".to_string(),
+                                    match &arm.guard {
+                                        Some(g) => ast_expr(g.clone()),
+                                        None => ComptimeValue::Null,
+                                    },
+                                ),
+                                ("body".to_string(), ast_expr(arm.body.clone())),
+                            ]),
+                        })
+                        .collect(),
+                ),
+            ),
+        ],
+
+        // Memory operations
+        Expression::AddressOf(inner) => {
+            vec![field_info("expr", ast_expr(*inner.clone()))]
+        }
+        Expression::Dereference(inner) => {
+            vec![field_info("expr", ast_expr(*inner.clone()))]
+        }
+        Expression::PointerOffset { pointer, offset } => vec![
+            field_info("pointer", ast_expr(*pointer.clone())),
+            field_info("offset", ast_expr(*offset.clone())),
+        ],
+        Expression::PointerDereference(inner) => {
+            vec![field_info("expr", ast_expr(*inner.clone()))]
+        }
+        Expression::PointerAddress(inner) => {
+            vec![field_info("expr", ast_expr(*inner.clone()))]
+        }
+        Expression::CreateReference(inner) => {
+            vec![field_info("expr", ast_expr(*inner.clone()))]
+        }
+        Expression::CreateMutableReference(inner) => {
+            vec![field_info("expr", ast_expr(*inner.clone()))]
+        }
+
         // Struct literal
         Expression::StructLiteral { name, fields: fs } => vec![
             field_info("name", ComptimeValue::String(name.clone())),
@@ -365,7 +432,7 @@ fn expression_fields(expr: &Expression) -> Result<Vec<ComptimeValue>> {
                 ComptimeValue::Array(
                     fs.iter()
                         .map(|(n, e)| ComptimeValue::Struct {
-                            name: "FieldInit".to_string(),
+                            name: "StructFieldInit".to_string(),
                             fields: HashMap::from([
                                 ("name".to_string(), ComptimeValue::String(n.clone())),
                                 ("value".to_string(), ast_expr(e.clone())),
@@ -374,6 +441,12 @@ fn expression_fields(expr: &Expression) -> Result<Vec<ComptimeValue>> {
                         .collect(),
                 ),
             ),
+        ],
+
+        // Struct field access
+        Expression::StructField { struct_, field } => vec![
+            field_info("struct_expr", ast_expr(*struct_.clone())),
+            field_info("field", ComptimeValue::String(field.clone())),
         ],
 
         // Array literal
@@ -386,6 +459,50 @@ fn expression_fields(expr: &Expression) -> Result<Vec<ComptimeValue>> {
         Expression::ArrayIndex { array, index } => vec![
             field_info("array", ast_expr(*array.clone())),
             field_info("index", ast_expr(*index.clone())),
+        ],
+
+        // Array constructor
+        Expression::ArrayConstructor { element_type } => {
+            vec![field_info("element_type", ast_type(element_type.clone()))]
+        }
+
+        // Vec constructor
+        Expression::VecConstructor {
+            element_type,
+            size,
+            initial_values,
+        } => vec![
+            field_info("element_type", ast_type(element_type.clone())),
+            field_info("size", ComptimeValue::I64(*size as i64)),
+            field_info(
+                "initial_values",
+                match initial_values {
+                    Some(vals) => {
+                        ComptimeValue::Array(vals.iter().map(|e| ast_expr(e.clone())).collect())
+                    }
+                    None => ComptimeValue::Array(vec![]),
+                },
+            ),
+        ],
+
+        // DynVec constructor
+        Expression::DynVecConstructor {
+            element_types,
+            allocator,
+            initial_capacity,
+        } => vec![
+            field_info(
+                "element_types",
+                ComptimeValue::Array(element_types.iter().map(|t| ast_type(t.clone())).collect()),
+            ),
+            field_info("allocator", ast_expr(*allocator.clone())),
+            field_info(
+                "initial_capacity",
+                match initial_capacity {
+                    Some(cap) => ast_expr(*cap.clone()),
+                    None => ComptimeValue::Null,
+                },
+            ),
         ],
 
         // Enum variant
@@ -410,106 +527,14 @@ fn expression_fields(expr: &Expression) -> Result<Vec<ComptimeValue>> {
             field_info("member", ComptimeValue::String(member.clone())),
         ],
 
-        // Block
-        Expression::Block(stmts) => vec![field_info(
-            "statements",
-            ComptimeValue::Array(stmts.iter().map(|s| ast_stmt(s.clone())).collect()),
-        )],
-
-        // Return
-        Expression::Return(expr) => {
-            vec![field_info("expr", ast_expr(*expr.clone()))]
-        }
-
-        // Raise
-        Expression::Raise(expr) => {
-            vec![field_info("expr", ast_expr(*expr.clone()))]
+        // String length
+        Expression::StringLength(inner) => {
+            vec![field_info("expr", ast_expr(*inner.clone()))]
         }
 
         // Some
         Expression::Some(expr) => {
-            vec![field_info("value", ast_expr(*expr.clone()))]
-        }
-
-        // Loop
-        Expression::Loop { body } => {
-            vec![field_info("body", ast_expr(*body.clone()))]
-        }
-
-        // Collection loop
-        Expression::CollectionLoop {
-            collection,
-            param,
-            index_param,
-            body,
-        } => vec![
-            field_info("collection", ast_expr(*collection.clone())),
-            field_info("param_name", ComptimeValue::String(param.0.clone())),
-            field_info(
-                "index_param_name",
-                match index_param {
-                    Some((name, _)) => ComptimeValue::String(name.clone()),
-                    None => ComptimeValue::Null,
-                },
-            ),
-            field_info("body", ast_expr(*body.clone())),
-        ],
-
-        // Closure
-        Expression::Closure {
-            params,
-            return_type,
-            body,
-        } => vec![
-            field_info(
-                "params",
-                ComptimeValue::Array(
-                    params
-                        .iter()
-                        .map(|(name, ty)| ComptimeValue::Struct {
-                            name: "Param".to_string(),
-                            fields: HashMap::from([
-                                ("name".to_string(), ComptimeValue::String(name.clone())),
-                                (
-                                    "type".to_string(),
-                                    match ty {
-                                        Some(t) => ast_type(t.clone()),
-                                        None => ComptimeValue::Null,
-                                    },
-                                ),
-                            ]),
-                        })
-                        .collect(),
-                ),
-            ),
-            field_info(
-                "return_type",
-                match return_type {
-                    Some(t) => ast_type(t.clone()),
-                    None => ComptimeValue::Null,
-                },
-            ),
-            field_info("body", ast_expr(*body.clone())),
-        ],
-
-        // Range
-        Expression::Range {
-            start,
-            end,
-            inclusive,
-        } => vec![
-            field_info("start", ast_expr(*start.clone())),
-            field_info("end", ast_expr(*end.clone())),
-            field_info("inclusive", ComptimeValue::Bool(*inclusive)),
-        ],
-
-        // Break / Continue
-        Expression::Break { label, value } => vec![
-            field_info("label", opt_string(label)),
-            field_info("value", opt_expr(value)),
-        ],
-        Expression::Continue { label } => {
-            vec![field_info("label", opt_string(label))]
+            vec![field_info("inner", ast_expr(*expr.clone()))]
         }
 
         // String interpolation
@@ -536,7 +561,7 @@ fn expression_fields(expr: &Expression) -> Result<Vec<ComptimeValue>> {
                                     "kind".to_string(),
                                     ComptimeValue::String("Interpolation".to_string()),
                                 ),
-                                ("value".to_string(), ast_expr(e.clone())),
+                                ("expr".to_string(), ast_expr(e.clone())),
                             ]),
                         },
                     })
@@ -544,8 +569,138 @@ fn expression_fields(expr: &Expression) -> Result<Vec<ComptimeValue>> {
             ),
         )],
 
-        // Fallback for variants not yet detailed
-        _ => vec![],
+        // Comptime
+        Expression::Comptime(inner) => {
+            vec![field_info("expr", ast_expr(*inner.clone()))]
+        }
+
+        // Range
+        Expression::Range {
+            start,
+            end,
+            inclusive,
+        } => vec![
+            field_info("start", ast_expr(*start.clone())),
+            field_info("end", ast_expr(*end.clone())),
+            field_info("inclusive", ComptimeValue::Bool(*inclusive)),
+        ],
+
+        // Loop
+        Expression::Loop { body } => {
+            vec![field_info("body", ast_expr(*body.clone()))]
+        }
+
+        // Collection loop
+        Expression::CollectionLoop {
+            collection,
+            param,
+            index_param,
+            body,
+        } => vec![
+            field_info("collection", ast_expr(*collection.clone())),
+            field_info("param_name", ComptimeValue::String(param.0.clone())),
+            field_info(
+                "param_type",
+                match &param.1 {
+                    Some(t) => ast_type(t.clone()),
+                    None => ComptimeValue::Null,
+                },
+            ),
+            field_info(
+                "index_name",
+                match index_param {
+                    Some((name, _)) => ComptimeValue::String(name.clone()),
+                    None => ComptimeValue::String(String::new()),
+                },
+            ),
+            field_info(
+                "index_type",
+                match index_param {
+                    Some((_, Some(t))) => ast_type(t.clone()),
+                    _ => ComptimeValue::Null,
+                },
+            ),
+            field_info("body", ast_expr(*body.clone())),
+        ],
+
+        // Closure
+        Expression::Closure {
+            params,
+            return_type,
+            body,
+        } => vec![
+            field_info(
+                "params",
+                ComptimeValue::Array(
+                    params
+                        .iter()
+                        .map(|(name, ty)| ComptimeValue::Struct {
+                            name: "ClosureParam".to_string(),
+                            fields: HashMap::from([
+                                ("name".to_string(), ComptimeValue::String(name.clone())),
+                                (
+                                    "param_type".to_string(),
+                                    match ty {
+                                        Some(t) => ast_type(t.clone()),
+                                        None => ComptimeValue::Null,
+                                    },
+                                ),
+                            ]),
+                        })
+                        .collect(),
+                ),
+            ),
+            field_info(
+                "return_type",
+                match return_type {
+                    Some(t) => ast_type(t.clone()),
+                    None => ComptimeValue::Null,
+                },
+            ),
+            field_info("body", ast_expr(*body.clone())),
+        ],
+
+        // Block
+        Expression::Block(stmts) => vec![field_info(
+            "statements",
+            ComptimeValue::Array(stmts.iter().map(|s| ast_stmt(s.clone())).collect()),
+        )],
+
+        // Return
+        Expression::Return(expr) => {
+            vec![field_info("expr", ast_expr(*expr.clone()))]
+        }
+
+        // Raise
+        Expression::Raise(expr) => {
+            vec![field_info("expr", ast_expr(*expr.clone()))]
+        }
+
+        // Defer
+        Expression::Defer(expr) => {
+            vec![field_info("expr", ast_expr(*expr.clone()))]
+        }
+
+        // Break / Continue
+        Expression::Break { label, value } => vec![
+            field_info(
+                "label",
+                match label {
+                    Some(l) => ComptimeValue::String(l.clone()),
+                    None => ComptimeValue::String(String::new()),
+                },
+            ),
+            field_info("value", opt_expr(value)),
+        ],
+        Expression::Continue { label } => {
+            vec![field_info(
+                "label",
+                match label {
+                    Some(l) => ComptimeValue::String(l.clone()),
+                    None => ComptimeValue::String(String::new()),
+                },
+            )]
+        }
     })
 }
 
@@ -562,16 +717,11 @@ fn statement_fields(stmt: &Statement) -> Result<Vec<ComptimeValue>> {
             type_,
             initializer,
             is_mutable,
+            declaration_type,
             ..
         } => vec![
             field_info("name", ComptimeValue::String(name.clone())),
-            field_info(
-                "type",
-                match type_ {
-                    Some(t) => ast_type(t.clone()),
-                    None => ComptimeValue::Null,
-                },
-            ),
+            field_info("var_type", opt_type(type_)),
             field_info(
                 "initializer",
                 match initializer {
@@ -580,6 +730,10 @@ fn statement_fields(stmt: &Statement) -> Result<Vec<ComptimeValue>> {
                 },
             ),
             field_info("is_mutable", ComptimeValue::Bool(*is_mutable)),
+            field_info(
+                "declaration_type",
+                ComptimeValue::String(declaration_type.to_string()),
+            ),
         ],
         Statement::VariableAssignment { name, value, .. } => vec![
             field_info("name", ComptimeValue::String(name.clone())),
@@ -608,17 +762,49 @@ fn statement_fields(stmt: &Statement) -> Result<Vec<ComptimeValue>> {
                     },
                 },
             ),
-            field_info("label", opt_string(label)),
+            field_info(
+                "label",
+                match label {
+                    Some(l) => ComptimeValue::String(l.clone()),
+                    None => ComptimeValue::String(String::new()),
+                },
+            ),
             field_info(
                 "body",
                 ComptimeValue::Array(body.iter().map(|s| ast_stmt(s.clone())).collect()),
             ),
         ],
         Statement::Break { label, .. } => {
-            vec![field_info("label", opt_string(label))]
+            vec![field_info(
+                "label",
+                match label {
+                    Some(l) => ComptimeValue::String(l.clone()),
+                    None => ComptimeValue::String(String::new()),
+                },
+            )]
         }
         Statement::Continue { label, .. } => {
-            vec![field_info("label", opt_string(label))]
+            vec![field_info(
+                "label",
+                match label {
+                    Some(l) => ComptimeValue::String(l.clone()),
+                    None => ComptimeValue::String(String::new()),
+                },
+            )]
+        }
+        Statement::ComptimeBlock { statements, .. } => vec![field_info(
+            "statements",
+            ComptimeValue::Array(statements.iter().map(|s| ast_stmt(s.clone())).collect()),
+        )],
+        Statement::ModuleImport { alias, module_path } => vec![
+            field_info("alias", ComptimeValue::String(alias.clone())),
+            field_info("module_path", ComptimeValue::String(module_path.clone())),
+        ],
+        Statement::Defer { statement, .. } => {
+            vec![field_info("statement", ast_stmt(*statement.clone()))]
+        }
+        Statement::ThisDefer { expr, .. } => {
+            vec![field_info("expr", ast_expr(expr.clone()))]
         }
         Statement::DestructuringImport { names, source, .. } => vec![
             field_info(
@@ -636,39 +822,24 @@ fn statement_fields(stmt: &Statement) -> Result<Vec<ComptimeValue>> {
             "statements",
             ComptimeValue::Array(statements.iter().map(|s| ast_stmt(s.clone())).collect()),
         )],
-        _ => vec![],
     })
 }
 
 fn declaration_fields(decl: &Declaration) -> Result<Vec<ComptimeValue>> {
     Ok(match decl {
-        Declaration::Function(f) => vec![
-            field_info("name", ComptimeValue::String(f.name.clone())),
+        Declaration::Function(f) => function_to_fields(f),
+        Declaration::ExternalFunction(ef) => vec![
+            field_info("name", ComptimeValue::String(ef.name.clone())),
             field_info(
                 "args",
-                ComptimeValue::Array(
-                    f.args
-                        .iter()
-                        .map(|(name, ty)| ComptimeValue::Struct {
-                            name: "Param".to_string(),
-                            fields: HashMap::from([
-                                ("name".to_string(), ComptimeValue::String(name.clone())),
-                                ("type".to_string(), ast_type(ty.clone())),
-                            ]),
-                        })
-                        .collect(),
-                ),
+                ComptimeValue::Array(ef.args.iter().map(|t| ast_type(t.clone())).collect()),
             ),
-            field_info("return_type", ast_type(f.return_type.clone())),
-            field_info(
-                "body",
-                ComptimeValue::Array(f.body.iter().map(|s| ast_stmt(s.clone())).collect()),
-            ),
-            field_info("is_public", ComptimeValue::Bool(f.is_public)),
-            field_info("is_varargs", ComptimeValue::Bool(f.is_varargs)),
+            field_info("return_type", ast_type(ef.return_type.clone())),
+            field_info("is_varargs", ComptimeValue::Bool(ef.is_varargs)),
         ],
         Declaration::Struct(s) => vec![
             field_info("name", ComptimeValue::String(s.name.clone())),
+            field_info("type_params", type_params_to_array(&s.type_params)),
             field_info(
                 "fields",
                 ComptimeValue::Array(
@@ -678,27 +849,25 @@ fn declaration_fields(decl: &Declaration) -> Result<Vec<ComptimeValue>> {
                             name: "StructField".to_string(),
                             fields: HashMap::from([
                                 ("name".to_string(), ComptimeValue::String(f.name.clone())),
-                                ("type".to_string(), ast_type(f.type_.clone())),
+                                ("field_type".to_string(), ast_type(f.type_.clone())),
                                 ("is_mutable".to_string(), ComptimeValue::Bool(f.is_mutable)),
+                                (
+                                    "default_value".to_string(),
+                                    match &f.default_value {
+                                        Some(e) => ast_expr(e.clone()),
+                                        None => ComptimeValue::Null,
+                                    },
+                                ),
                             ]),
                         })
                         .collect(),
                 ),
             ),
-            field_info(
-                "methods",
-                ComptimeValue::Array(
-                    s.methods
-                        .iter()
-                        .map(|m| {
-                            ast_node(ASTNodeValue::Declaration(Declaration::Function(m.clone())))
-                        })
-                        .collect(),
-                ),
-            ),
+            field_info("methods", methods_to_array(&s.methods)),
         ],
         Declaration::Enum(e) => vec![
             field_info("name", ComptimeValue::String(e.name.clone())),
+            field_info("type_params", type_params_to_array(&e.type_params)),
             field_info(
                 "variants",
                 ComptimeValue::Array(
@@ -720,31 +889,62 @@ fn declaration_fields(decl: &Declaration) -> Result<Vec<ComptimeValue>> {
                         .collect(),
                 ),
             ),
+            field_info("methods", methods_to_array(&e.methods)),
+            field_info(
+                "required_traits",
+                ComptimeValue::Array(
+                    e.required_traits
+                        .iter()
+                        .map(|t| ComptimeValue::String(t.clone()))
+                        .collect(),
+                ),
+            ),
+        ],
+        Declaration::Behavior(b) => vec![
+            field_info("name", ComptimeValue::String(b.name.clone())),
+            field_info("type_params", type_params_to_array(&b.type_params)),
             field_info(
                 "methods",
                 ComptimeValue::Array(
-                    e.methods
+                    b.methods
                         .iter()
-                        .map(|m| {
-                            ast_node(ASTNodeValue::Declaration(Declaration::Function(m.clone())))
+                        .map(|m| ComptimeValue::Struct {
+                            name: "BehaviorMethod".to_string(),
+                            fields: HashMap::from([
+                                ("name".to_string(), ComptimeValue::String(m.name.clone())),
+                                (
+                                    "params".to_string(),
+                                    ComptimeValue::Array(
+                                        m.params.iter().map(parameter_to_value).collect(),
+                                    ),
+                                ),
+                                ("return_type".to_string(), ast_type(m.return_type.clone())),
+                            ]),
                         })
                         .collect(),
                 ),
             ),
         ],
-        Declaration::Constant { name, value, .. } => vec![
-            field_info("name", ComptimeValue::String(name.clone())),
-            field_info("value", ast_expr(value.clone())),
-        ],
-        Declaration::ImplBlock(imp) => vec![
-            field_info("type_name", ComptimeValue::String(imp.type_name.clone())),
+        Declaration::Trait(t) => vec![
+            field_info("name", ComptimeValue::String(t.name.clone())),
+            field_info("type_params", type_params_to_array(&t.type_params)),
             field_info(
                 "methods",
                 ComptimeValue::Array(
-                    imp.methods
+                    t.methods
                         .iter()
-                        .map(|m| {
-                            ast_node(ASTNodeValue::Declaration(Declaration::Function(m.clone())))
+                        .map(|m| ComptimeValue::Struct {
+                            name: "TraitMethod".to_string(),
+                            fields: HashMap::from([
+                                ("name".to_string(), ComptimeValue::String(m.name.clone())),
+                                (
+                                    "params".to_string(),
+                                    ComptimeValue::Array(
+                                        m.params.iter().map(parameter_to_value).collect(),
+                                    ),
+                                ),
+                                ("return_type".to_string(), ast_type(m.return_type.clone())),
+                            ]),
                         })
                         .collect(),
                 ),
@@ -753,44 +953,93 @@ fn declaration_fields(decl: &Declaration) -> Result<Vec<ComptimeValue>> {
         Declaration::TraitImplementation(ti) => vec![
             field_info("type_name", ComptimeValue::String(ti.type_name.clone())),
             field_info("trait_name", ComptimeValue::String(ti.trait_name.clone())),
-            field_info(
-                "methods",
-                ComptimeValue::Array(
-                    ti.methods
-                        .iter()
-                        .map(|m| {
-                            ast_node(ASTNodeValue::Declaration(Declaration::Function(m.clone())))
-                        })
-                        .collect(),
-                ),
-            ),
+            field_info("type_params", type_params_to_array(&ti.type_params)),
+            field_info("methods", methods_to_array(&ti.methods)),
         ],
-        Declaration::ExternalFunction(ef) => vec![
-            field_info("name", ComptimeValue::String(ef.name.clone())),
-            field_info(
-                "args",
-                ComptimeValue::Array(ef.args.iter().map(|t| ast_type(t.clone())).collect()),
-            ),
-            field_info("return_type", ast_type(ef.return_type.clone())),
-            field_info("is_varargs", ComptimeValue::Bool(ef.is_varargs)),
+        Declaration::TraitRequirement(tr) => vec![
+            field_info("type_name", ComptimeValue::String(tr.type_name.clone())),
+            field_info("trait_name", ComptimeValue::String(tr.trait_name.clone())),
         ],
-        _ => vec![],
+        Declaration::ImplBlock(imp) => vec![
+            field_info("type_name", ComptimeValue::String(imp.type_name.clone())),
+            field_info("type_params", type_params_to_array(&imp.type_params)),
+            field_info("methods", methods_to_array(&imp.methods)),
+        ],
+        Declaration::ComptimeBlock(stmts) => vec![field_info(
+            "statements",
+            ComptimeValue::Array(stmts.iter().map(|s| ast_stmt(s.clone())).collect()),
+        )],
+        Declaration::Constant {
+            name, value, type_, ..
+        } => vec![
+            field_info("name", ComptimeValue::String(name.clone())),
+            field_info("value", ast_expr(value.clone())),
+            field_info("const_type", opt_type(type_)),
+        ],
+        Declaration::ModuleImport {
+            alias, module_path, ..
+        } => vec![
+            field_info("alias", ComptimeValue::String(alias.clone())),
+            field_info("module_path", ComptimeValue::String(module_path.clone())),
+        ],
+        Declaration::Export { symbols } => vec![field_info(
+            "symbols",
+            ComptimeValue::Array(
+                symbols
+                    .iter()
+                    .map(|s| ComptimeValue::String(s.clone()))
+                    .collect(),
+            ),
+        )],
+        Declaration::TypeAlias(ta) => vec![
+            field_info("name", ComptimeValue::String(ta.name.clone())),
+            field_info("type_params", type_params_to_array(&ta.type_params)),
+            field_info("target_type", ast_type(ta.target_type.clone())),
+        ],
     })
 }
 
 fn type_fields(ty: &AstType) -> Result<Vec<ComptimeValue>> {
     Ok(match ty {
+        // Primitives have no fields
+        AstType::I8
+        | AstType::I16
+        | AstType::I32
+        | AstType::I64
+        | AstType::U8
+        | AstType::U16
+        | AstType::U32
+        | AstType::U64
+        | AstType::Usize
+        | AstType::F32
+        | AstType::F64
+        | AstType::Bool
+        | AstType::StaticLiteral
+        | AstType::StaticString
+        | AstType::Void
+        | AstType::StdModule => vec![],
+
         AstType::Slice(inner) => {
             vec![field_info("element_type", ast_type(*inner.clone()))]
         }
         AstType::FixedArray { element_type, size } => vec![
             field_info("element_type", ast_type(*element_type.clone())),
-            field_info("size", ComptimeValue::U64(*size as u64)),
+            field_info("size", ComptimeValue::I64(*size as i64)),
         ],
         AstType::Function { args, return_type } => vec![
             field_info(
                 "args",
                 ComptimeValue::Array(args.iter().map(|t| ast_type(t.clone())).collect()),
+            ),
+            field_info("return_type", ast_type(*return_type.clone())),
+        ],
+        AstType::FunctionPointer {
+            param_types,
+            return_type,
+        } => vec![
+            field_info(
+                "param_types",
+                ComptimeValue::Array(param_types.iter().map(|t| ast_type(t.clone())).collect()),
             ),
             field_info("return_type", ast_type(*return_type.clone())),
         ],
@@ -801,21 +1050,38 @@ fn type_fields(ty: &AstType) -> Result<Vec<ComptimeValue>> {
                 ComptimeValue::Array(
                     fs.iter()
                         .map(|(n, t)| ComptimeValue::Struct {
-                            name: "TypeField".to_string(),
+                            name: "StructTypeField".to_string(),
                             fields: HashMap::from([
                                 ("name".to_string(), ComptimeValue::String(n.clone())),
-                                ("type".to_string(), ast_type(t.clone())),
+                                ("field_type".to_string(), ast_type(t.clone())),
                             ]),
                         })
                         .collect(),
                 ),
             ),
         ],
-        AstType::Generic { name, type_args } => vec![
+        AstType::Enum { name, variants } => vec![
             field_info("name", ComptimeValue::String(name.clone())),
             field_info(
-                "type_args",
-                ComptimeValue::Array(type_args.iter().map(|t| ast_type(t.clone())).collect()),
+                "variants",
+                ComptimeValue::Array(
+                    variants
+                        .iter()
+                        .map(|v| ComptimeValue::Struct {
+                            name: "EnumVariant".to_string(),
+                            fields: HashMap::from([
+                                ("name".to_string(), ComptimeValue::String(v.name.clone())),
+                                (
+                                    "payload".to_string(),
+                                    match &v.payload {
+                                        Some(t) => ast_type(t.clone()),
+                                        None => ComptimeValue::Null,
+                                    },
+                                ),
+                            ]),
+                        })
+                        .collect(),
+                ),
             ),
         ],
         AstType::Ref(inner) => {
@@ -830,8 +1096,16 @@ fn type_fields(ty: &AstType) -> Result<Vec<ComptimeValue>> {
             field_info("end_type", ast_type(*end_type.clone())),
             field_info("inclusive", ComptimeValue::Bool(*inclusive)),
         ],
-        // Primitives and unit types have no fields
-        _ => vec![],
+        AstType::Generic { name, type_args } => vec![
+            field_info("name", ComptimeValue::String(name.clone())),
+            field_info(
+                "type_args",
+                ComptimeValue::Array(type_args.iter().map(|t| ast_type(t.clone())).collect()),
+            ),
+        ],
+        AstType::EnumType { name } => {
+            vec![field_info("name", ComptimeValue::String(name.clone()))]
+        }
     })
 }
 
@@ -841,6 +1115,23 @@ fn pattern_fields(pat: &Pattern) -> Result<Vec<ComptimeValue>> {
         Pattern::Identifier(name) => {
             vec![field_info("name", ComptimeValue::String(name.clone()))]
         }
+        Pattern::Struct { name, fields: fs } => vec![
+            field_info("name", ComptimeValue::String(name.clone())),
+            field_info(
+                "fields",
+                ComptimeValue::Array(
+                    fs.iter()
+                        .map(|(n, p)| ComptimeValue::Struct {
+                            name: "PatternField".to_string(),
+                            fields: HashMap::from([
+                                ("name".to_string(), ComptimeValue::String(n.clone())),
+                                ("pattern".to_string(), ast_pattern(p.clone())),
+                            ]),
+                        })
+                        .collect(),
+                ),
+            ),
+        ],
         Pattern::EnumVariant {
             enum_name,
             variant,
@@ -848,34 +1139,48 @@ fn pattern_fields(pat: &Pattern) -> Result<Vec<ComptimeValue>> {
         } => vec![
             field_info("enum_name", ComptimeValue::String(enum_name.clone())),
             field_info("variant", ComptimeValue::String(variant.clone())),
-            field_info(
-                "payload",
-                match payload {
-                    Some(p) => ast_pattern(*p.clone()),
-                    None => ComptimeValue::Null,
-                },
-            ),
-        ],
-        Pattern::EnumLiteral { variant, payload } => vec![
-            field_info("variant", ComptimeValue::String(variant.clone())),
-            field_info(
-                "payload",
-                match payload {
-                    Some(p) => ast_pattern(*p.clone()),
-                    None => ComptimeValue::Null,
-                },
-            ),
+            field_info("payload", opt_pattern(payload)),
         ],
         Pattern::Wildcard => vec![],
+        Pattern::EnumLiteral { variant, payload } => vec![
+            field_info("variant", ComptimeValue::String(variant.clone())),
+            field_info("payload", opt_pattern(payload)),
+        ],
         Pattern::Or(pats) => vec![field_info(
             "patterns",
             ComptimeValue::Array(pats.iter().map(|p| ast_pattern(p.clone())).collect()),
         )],
+        Pattern::Tuple(pats) => vec![field_info(
+            "patterns",
+            ComptimeValue::Array(pats.iter().map(|p| ast_pattern(p.clone())).collect()),
+        )],
+        Pattern::Range {
+            start,
+            end,
+            inclusive,
+        } => vec![
+            field_info("start", ast_expr(*start.clone())),
+            field_info("end", ast_expr(*end.clone())),
+            field_info("inclusive", ComptimeValue::Bool(*inclusive)),
+        ],
+        Pattern::Binding { name, pattern } => vec![
+            field_info("name", ComptimeValue::String(name.clone())),
+            field_info("pattern", ast_pattern(*pattern.clone())),
+        ],
+        Pattern::Type { type_name, binding } => vec![
+            field_info("type_name", ComptimeValue::String(type_name.clone())),
+            field_info(
+                "binding",
+                match binding {
+                    Some(b) => ComptimeValue::String(b.clone()),
+                    None => ComptimeValue::String(String::new()),
+                },
+            ),
+        ],
         Pattern::Guard { pattern, condition } => vec![
             field_info("pattern", ast_pattern(*pattern.clone())),
             field_info("condition", ast_expr(*condition.clone())),
         ],
-        _ => vec![],
     })
 }
 
@@ -954,6 +1259,189 @@ fn collect_ast_nodes(value: &ComptimeValue, out: &mut Vec<ComptimeValue>) {
 
 pub fn binary_op_to_comptime(op: &BinaryOperator) -> ComptimeValue {
     ComptimeValue::String(op.to_string())
+}
+
+// ---------------------------------------------------------------------------
+// AST variant name constants for Zen scope
+// These are exposed as meta.Expression, meta.Statement, etc. so Zen code
+// can write `meta.Expression.BinaryOp` instead of `"BinaryOp"`.
+// ---------------------------------------------------------------------------
+
+/// Helper: build a struct of variant name constants (each field maps name → name string)
+fn variant_constants(name: &str, variants: &[&str]) -> ComptimeValue {
+    ComptimeValue::Struct {
+        name: name.to_string(),
+        fields: variants
+            .iter()
+            .map(|v| (v.to_string(), ComptimeValue::String(v.to_string())))
+            .collect(),
+    }
+}
+
+/// Expression variant name constants (meta.Expression.BinaryOp, etc.)
+pub fn expression_variants() -> ComptimeValue {
+    variant_constants(
+        "Expression",
+        &[
+            "Integer8",
+            "Integer16",
+            "Integer32",
+            "Integer64",
+            "Unsigned8",
+            "Unsigned16",
+            "Unsigned32",
+            "Unsigned64",
+            "Float32",
+            "Float64",
+            "Boolean",
+            "String",
+            "Identifier",
+            "Unit",
+            "BinaryOp",
+            "FunctionCall",
+            "QuestionMatch",
+            "Conditional",
+            "AddressOf",
+            "Dereference",
+            "PointerOffset",
+            "StructLiteral",
+            "StructField",
+            "ArrayLiteral",
+            "ArrayIndex",
+            "EnumVariant",
+            "EnumLiteral",
+            "MemberAccess",
+            "PointerDereference",
+            "PointerAddress",
+            "CreateReference",
+            "CreateMutableReference",
+            "StringLength",
+            "Some",
+            "None",
+            "StringInterpolation",
+            "Comptime",
+            "Range",
+            "PatternMatch",
+            "StdReference",
+            "BuiltinReference",
+            "ThisReference",
+            "MethodCall",
+            "Loop",
+            "CollectionLoop",
+            "Closure",
+            "Block",
+            "Return",
+            "Raise",
+            "Defer",
+            "Break",
+            "Continue",
+            "VecConstructor",
+            "DynVecConstructor",
+            "ArrayConstructor",
+        ],
+    )
+}
+
+/// Statement variant name constants (meta.Statement.VariableDeclaration, etc.)
+pub fn statement_variants() -> ComptimeValue {
+    variant_constants(
+        "Statement",
+        &[
+            "Expression",
+            "Return",
+            "VariableDeclaration",
+            "VariableAssignment",
+            "PointerAssignment",
+            "Loop",
+            "Break",
+            "Continue",
+            "ComptimeBlock",
+            "ModuleImport",
+            "Defer",
+            "ThisDefer",
+            "DestructuringImport",
+            "Block",
+        ],
+    )
+}
+
+/// Declaration variant name constants (meta.Declaration.Function, etc.)
+pub fn declaration_variants() -> ComptimeValue {
+    variant_constants(
+        "Declaration",
+        &[
+            "Function",
+            "ExternalFunction",
+            "Struct",
+            "Enum",
+            "Behavior",
+            "Trait",
+            "TraitImplementation",
+            "TraitRequirement",
+            "ImplBlock",
+            "ComptimeBlock",
+            "Constant",
+            "ModuleImport",
+            "Export",
+            "TypeAlias",
+        ],
+    )
+}
+
+/// AstType variant name constants (meta.AstType.I32, meta.AstType.Generic, etc.)
+pub fn type_variants() -> ComptimeValue {
+    variant_constants(
+        "AstType",
+        &[
+            "I8",
+            "I16",
+            "I32",
+            "I64",
+            "U8",
+            "U16",
+            "U32",
+            "U64",
+            "Usize",
+            "F32",
+            "F64",
+            "Bool",
+            "StaticLiteral",
+            "StaticString",
+            "Void",
+            "Slice",
+            "FixedArray",
+            "Function",
+            "FunctionPointer",
+            "Struct",
+            "Enum",
+            "Ref",
+            "Range",
+            "Generic",
+            "EnumType",
+            "StdModule",
+        ],
+    )
+}
+
+/// Pattern variant name constants (meta.Pattern.Wildcard, etc.)
+pub fn pattern_variants() -> ComptimeValue {
+    variant_constants(
+        "Pattern",
+        &[
+            "Literal",
+            "Identifier",
+            "Struct",
+            "EnumVariant",
+            "Wildcard",
+            "EnumLiteral",
+            "Or",
+            "Tuple",
+            "Range",
+            "Binding",
+            "Type",
+            "Guard",
+        ],
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -1057,7 +1545,7 @@ mod tests {
         };
         let node = ASTNodeValue::Statement(stmt);
         let flds = fields(&node).unwrap();
-        assert_eq!(flds.len(), 4); // name, type, initializer, is_mutable
+        assert_eq!(flds.len(), 5); // name, var_type, initializer, is_mutable, declaration_type
     }
 
     #[test]
@@ -1083,7 +1571,7 @@ mod tests {
         };
         let node = ASTNodeValue::Declaration(Declaration::Function(func));
         let flds = fields(&node).unwrap();
-        assert_eq!(flds.len(), 6); // name, args, return_type, body, is_public, is_varargs
+        assert_eq!(flds.len(), 7); // name, type_params, args, return_type, body, is_varargs, is_public
     }
 
     #[test]
@@ -1124,6 +1612,79 @@ mod tests {
         for (stmt, exp) in stmts.iter().zip(expected.iter()) {
             let node = ASTNodeValue::Statement(stmt.clone());
             assert_eq!(variant_name(&node), *exp);
+        }
+    }
+
+    #[test]
+    fn test_variant_constants_expression() {
+        let variants = expression_variants();
+        if let ComptimeValue::Struct { name, fields } = &variants {
+            assert_eq!(name, "Expression");
+            // Spot-check a few variant constants
+            assert_eq!(
+                fields.get("BinaryOp"),
+                Some(&ComptimeValue::String("BinaryOp".to_string()))
+            );
+            assert_eq!(
+                fields.get("FunctionCall"),
+                Some(&ComptimeValue::String("FunctionCall".to_string()))
+            );
+            assert_eq!(
+                fields.get("Integer32"),
+                Some(&ComptimeValue::String("Integer32".to_string()))
+            );
+            // Should not have non-existent variants
+            assert_eq!(fields.get("Nonexistent"), None);
+        } else {
+            panic!("Expected Struct");
+        }
+    }
+
+    #[test]
+    fn test_variant_constants_match_variant_name() {
+        // Verify that the constant value matches what variant_name() returns
+        let expr = Expression::BinaryOp {
+            left: Box::new(Expression::Integer32(1)),
+            op: BinaryOperator::Add,
+            right: Box::new(Expression::Integer32(2)),
+        };
+        let node = ASTNodeValue::Expression(expr);
+        let vname = variant_name(&node);
+
+        let variants = expression_variants();
+        if let ComptimeValue::Struct { fields, .. } = &variants {
+            // meta.Expression.BinaryOp should equal node.variant_name()
+            assert_eq!(
+                fields.get(&vname),
+                Some(&ComptimeValue::String(vname.clone()))
+            );
+        } else {
+            panic!("Expected Struct");
+        }
+    }
+
+    #[test]
+    fn test_variant_constants_all_enums() {
+        // Just verify all 5 build without panic and have correct names
+        let e = expression_variants();
+        let s = statement_variants();
+        let d = declaration_variants();
+        let t = type_variants();
+        let p = pattern_variants();
+
+        for (val, expected_name) in [
+            (&e, "Expression"),
+            (&s, "Statement"),
+            (&d, "Declaration"),
+            (&t, "AstType"),
+            (&p, "Pattern"),
+        ] {
+            if let ComptimeValue::Struct { name, fields } = val {
+                assert_eq!(name, expected_name);
+                assert!(!fields.is_empty(), "{} should have variants", expected_name);
+            } else {
+                panic!("Expected Struct for {}", expected_name);
+            }
         }
     }
 }

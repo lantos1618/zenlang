@@ -414,7 +414,22 @@ impl ComptimeInterpreter {
                         "meta".to_string(),
                         ComptimeValue::Struct {
                             name: "meta".to_string(),
-                            fields: HashMap::new(), // intrinsics dispatched by name
+                            fields: {
+                                let mut meta_fields = HashMap::new();
+                                // AST variant name constants:
+                                //   meta.Expression.BinaryOp, meta.Statement.Return, etc.
+                                meta_fields
+                                    .insert("Expression".to_string(), meta::expression_variants());
+                                meta_fields
+                                    .insert("Statement".to_string(), meta::statement_variants());
+                                meta_fields.insert(
+                                    "Declaration".to_string(),
+                                    meta::declaration_variants(),
+                                );
+                                meta_fields.insert("AstType".to_string(), meta::type_variants());
+                                meta_fields.insert("Pattern".to_string(), meta::pattern_variants());
+                                meta_fields
+                            },
                         },
                     );
 
@@ -1570,6 +1585,170 @@ impl ComptimeInterpreter {
                 } else {
                     Err(CompileError::ComptimeError(
                         "find_struct() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            "find_enum" => {
+                if args.len() != 1 {
+                    return Err(CompileError::ComptimeError(
+                        "find_enum() expects 1 argument (name)".to_string(),
+                        span,
+                    ));
+                }
+                let name_val = self.evaluate_expression(&args[0], span.clone())?;
+                let target_name = match name_val {
+                    ComptimeValue::String(s) => s,
+                    _ => {
+                        return Err(CompileError::ComptimeError(
+                            "find_enum() expects a string argument".to_string(),
+                            span,
+                        ))
+                    }
+                };
+
+                if let ASTNodeValue::Program(prog) = node {
+                    for d in &prog.declarations {
+                        if let Declaration::Enum(e) = d {
+                            if e.name == target_name {
+                                return Ok(ComptimeValue::ASTNode(Rc::new(
+                                    ASTNodeValue::Declaration(d.clone()),
+                                )));
+                            }
+                        }
+                    }
+                    Ok(ComptimeValue::Null)
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "find_enum() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            // Navigation: filter declarations by kind
+            "constants" => {
+                if let ASTNodeValue::Program(prog) = node {
+                    Ok(ComptimeValue::Array(
+                        prog.declarations
+                            .iter()
+                            .filter(|d| matches!(d, Declaration::Constant { .. }))
+                            .map(|d| {
+                                ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
+                                    d.clone(),
+                                )))
+                            })
+                            .collect(),
+                    ))
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "constants() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            "imports" => {
+                if let ASTNodeValue::Program(prog) = node {
+                    Ok(ComptimeValue::Array(
+                        prog.declarations
+                            .iter()
+                            .filter(|d| matches!(d, Declaration::ModuleImport { .. }))
+                            .map(|d| {
+                                ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
+                                    d.clone(),
+                                )))
+                            })
+                            .collect(),
+                    ))
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "imports() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            "traits" => {
+                if let ASTNodeValue::Program(prog) = node {
+                    Ok(ComptimeValue::Array(
+                        prog.declarations
+                            .iter()
+                            .filter(|d| matches!(d, Declaration::Trait(_)))
+                            .map(|d| {
+                                ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
+                                    d.clone(),
+                                )))
+                            })
+                            .collect(),
+                    ))
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "traits() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            "behaviors" => {
+                if let ASTNodeValue::Program(prog) = node {
+                    Ok(ComptimeValue::Array(
+                        prog.declarations
+                            .iter()
+                            .filter(|d| matches!(d, Declaration::Behavior(_)))
+                            .map(|d| {
+                                ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
+                                    d.clone(),
+                                )))
+                            })
+                            .collect(),
+                    ))
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "behaviors() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            "type_aliases" => {
+                if let ASTNodeValue::Program(prog) = node {
+                    Ok(ComptimeValue::Array(
+                        prog.declarations
+                            .iter()
+                            .filter(|d| matches!(d, Declaration::TypeAlias(_)))
+                            .map(|d| {
+                                ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
+                                    d.clone(),
+                                )))
+                            })
+                            .collect(),
+                    ))
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "type_aliases() only works on Program nodes".to_string(),
+                        span,
+                    ))
+                }
+            }
+
+            "impl_blocks" => {
+                if let ASTNodeValue::Program(prog) = node {
+                    Ok(ComptimeValue::Array(
+                        prog.declarations
+                            .iter()
+                            .filter(|d| matches!(d, Declaration::ImplBlock(_)))
+                            .map(|d| {
+                                ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
+                                    d.clone(),
+                                )))
+                            })
+                            .collect(),
+                    ))
+                } else {
+                    Err(CompileError::ComptimeError(
+                        "impl_blocks() only works on Program nodes".to_string(),
                         span,
                     ))
                 }

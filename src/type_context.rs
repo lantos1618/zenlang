@@ -49,6 +49,10 @@ pub struct TypeContext {
     /// Type aliases: "CompletionFn" -> function type
     /// Used to resolve type alias names to their underlying types
     pub type_aliases: HashMap<String, AstType>,
+
+    /// Module imports: alias -> module_path (e.g., "io" -> "@std.io")
+    /// Tracks which modules were imported and their bindings
+    pub module_imports: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone)]

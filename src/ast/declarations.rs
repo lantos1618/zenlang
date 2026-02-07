@@ -145,3 +145,25 @@ pub enum Declaration {
     },
     TypeAlias(TypeAlias),
 }
+
+impl Declaration {
+    /// Returns the variant name of this declaration as a static string.
+    pub fn variant_name(&self) -> &'static str {
+        match self {
+            Declaration::Function(_) => "Function",
+            Declaration::ExternalFunction(_) => "ExternalFunction",
+            Declaration::Struct(_) => "Struct",
+            Declaration::Enum(_) => "Enum",
+            Declaration::Behavior(_) => "Behavior",
+            Declaration::Trait(_) => "Trait",
+            Declaration::TraitImplementation(_) => "TraitImplementation",
+            Declaration::TraitRequirement(_) => "TraitRequirement",
+            Declaration::ImplBlock(_) => "ImplBlock",
+            Declaration::ComptimeBlock(_) => "ComptimeBlock",
+            Declaration::Constant { .. } => "Constant",
+            Declaration::ModuleImport { .. } => "ModuleImport",
+            Declaration::Export { .. } => "Export",
+            Declaration::TypeAlias(_) => "TypeAlias",
+        }
+    }
+}

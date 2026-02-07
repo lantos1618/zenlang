@@ -3,6 +3,7 @@
 use super::expressions::Expression;
 use super::types::AstType;
 use crate::error::Span;
+use std::fmt;
 
 /// A statement with optional source location information
 #[derive(Debug, Clone, PartialEq)]
@@ -88,12 +89,45 @@ pub enum Statement {
     },
 }
 
+impl Statement {
+    /// Returns the variant name of this statement as a static string.
+    pub fn variant_name(&self) -> &'static str {
+        match self {
+            Statement::Expression { .. } => "Expression",
+            Statement::Return { .. } => "Return",
+            Statement::VariableDeclaration { .. } => "VariableDeclaration",
+            Statement::VariableAssignment { .. } => "VariableAssignment",
+            Statement::PointerAssignment { .. } => "PointerAssignment",
+            Statement::Loop { .. } => "Loop",
+            Statement::Break { .. } => "Break",
+            Statement::Continue { .. } => "Continue",
+            Statement::ComptimeBlock { .. } => "ComptimeBlock",
+            Statement::ModuleImport { .. } => "ModuleImport",
+            Statement::Defer { .. } => "Defer",
+            Statement::ThisDefer { .. } => "ThisDefer",
+            Statement::DestructuringImport { .. } => "DestructuringImport",
+            Statement::Block { .. } => "Block",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum VariableDeclarationType {
     InferredImmutable, // = (plain assignment creates immutable in Zen spec)
     InferredMutable,   // ::=
     ExplicitImmutable, // : T (with type annotation, immutable)
     ExplicitMutable,   // :: T (with type annotation, mutable)
+}
+
+impl fmt::Display for VariableDeclarationType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            VariableDeclarationType::InferredImmutable => write!(f, "InferredImmutable"),
+            VariableDeclarationType::InferredMutable => write!(f, "InferredMutable"),
+            VariableDeclarationType::ExplicitImmutable => write!(f, "ExplicitImmutable"),
+            VariableDeclarationType::ExplicitMutable => write!(f, "ExplicitMutable"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

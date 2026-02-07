@@ -129,6 +129,38 @@ pub struct TraitConstraint {
 // ============================================================================
 
 impl AstType {
+    /// Returns the variant name of this type as a static string.
+    pub fn variant_name(&self) -> &'static str {
+        match self {
+            AstType::I8 => "I8",
+            AstType::I16 => "I16",
+            AstType::I32 => "I32",
+            AstType::I64 => "I64",
+            AstType::U8 => "U8",
+            AstType::U16 => "U16",
+            AstType::U32 => "U32",
+            AstType::U64 => "U64",
+            AstType::Usize => "Usize",
+            AstType::F32 => "F32",
+            AstType::F64 => "F64",
+            AstType::Bool => "Bool",
+            AstType::StaticLiteral => "StaticLiteral",
+            AstType::StaticString => "StaticString",
+            AstType::Void => "Void",
+            AstType::Slice(_) => "Slice",
+            AstType::FixedArray { .. } => "FixedArray",
+            AstType::Function { .. } => "Function",
+            AstType::FunctionPointer { .. } => "FunctionPointer",
+            AstType::Struct { .. } => "Struct",
+            AstType::Enum { .. } => "Enum",
+            AstType::Ref(_) => "Ref",
+            AstType::Range { .. } => "Range",
+            AstType::Generic { .. } => "Generic",
+            AstType::EnumType { .. } => "EnumType",
+            AstType::StdModule => "StdModule",
+        }
+    }
+
     /// Create a Ptr<T> type (immutable pointer)
     pub fn ptr(inner: AstType) -> AstType {
         AstType::Generic {

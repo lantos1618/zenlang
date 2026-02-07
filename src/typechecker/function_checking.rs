@@ -8,6 +8,10 @@ use crate::typechecker::TypeChecker;
 pub fn check_function(checker: &mut TypeChecker, function: &Function) -> Result<()> {
     checker.enter_scope();
 
+    // Track current function name for variable collection into TypeContext
+    let prev_function_name = checker.current_function_name.take();
+    checker.current_function_name = Some(function.name.clone());
+
     // Set the expected return type for this function
     checker.set_function_return_type(Some(function.return_type.clone()));
 
@@ -53,6 +57,9 @@ pub fn check_function(checker: &mut TypeChecker, function: &Function) -> Result<
 
     // Clear the expected return type
     checker.set_function_return_type(None);
+
+    // Restore previous function name
+    checker.current_function_name = prev_function_name;
 
     checker.exit_scope();
     Ok(())

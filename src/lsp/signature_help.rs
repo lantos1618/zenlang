@@ -12,6 +12,7 @@ use super::helpers::{
 use super::types::SymbolInfo;
 use crate::ast::Declaration;
 use crate::lsp::utils::format_type;
+use crate::type_context::TypeContext;
 
 // ============================================================================
 // PUBLIC HANDLER FUNCTION
@@ -61,19 +62,24 @@ pub fn handle_signature_help(req: Request, store: &Arc<Mutex<DocumentStore>>) ->
                 doc.symbols.len()
             );
 
-            // Try AST-based lookup first (highest fidelity)
             let mut signature_info = None;
 
-            // Check document AST first for accurate parameter information
-            if let Some(ast) = &doc.ast {
-                if let Some(sig) = find_function_in_ast(ast, &function_name) {
-                    signature_info = Some(sig);
+            // PRIORITY: Use TypeContext for authoritative parameter info
+            if let Some(type_ctx) = &doc.type_context {
+                signature_info = find_function_in_type_context(type_ctx, &function_name);
+            }
+
+            // Try AST-based lookup (highest fidelity after TypeContext)
+            if signature_info.is_none() {
+                if let Some(ast) = &doc.ast {
+                    if let Some(sig) = find_function_in_ast(ast, &function_name) {
+                        signature_info = Some(sig);
+                    }
                 }
             }
 
-            // Check stdlib symbols if not found in AST
+            // Check document symbols
             if signature_info.is_none() {
-                // Try document symbols (may have detail string)
                 if let Some(symbol) = doc.symbols.get(&function_name) {
                     log::debug!("[LSP] Found '{}' in document symbols", function_name);
                     signature_info = Some(create_signature_info(symbol));
@@ -203,6 +209,85 @@ fn find_function_call_at_position(content: &str, position: Position) -> Option<(
     }
 
     Some((function_name, active_param))
+}
+
+/// Find function in TypeContext and create SignatureInformation from typechecker data
+fn find_function_in_type_context(
+    type_ctx: &TypeContext,
+    function_name: &str,
+) -> Option<SignatureInformation> {
+    // Check direct function match
+    if let Some(func_type) = type_ctx.functions.get(function_name) {
+        let params_str = func_type
+            .params
+            .iter()
+            .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let ret_str = format_type(&func_type.return_type);
+        let label = format!("{} = ({}) {}", function_name, params_str, ret_str);
+
+        let parameters: Vec<ParameterInformation> = func_type
+            .params
+            .iter()
+            .map(|(name, ty)| ParameterInformation {
+                label: lsp_types::ParameterLabel::Simple(format!("{}: {}", name, format_type(ty))),
+                documentation: None,
+            })
+            .collect();
+
+        return Some(SignatureInformation {
+            label,
+            documentation: None,
+            parameters: if parameters.is_empty() {
+                None
+            } else {
+                Some(parameters)
+            },
+            active_parameter: None,
+        });
+    }
+
+    // Check methods — try "Type.method" patterns
+    // The function_name from the call site might just be the method name,
+    // so search method_params for any key ending with ".function_name"
+    for (method_key, params) in &type_ctx.method_params {
+        if method_key.ends_with(&format!(".{}", function_name)) {
+            let ret_type = type_ctx.methods.get(method_key)?;
+            let ret_str = format_type(ret_type);
+            let params_str = params
+                .iter()
+                .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let label = format!("{} = ({}) {}", method_key, params_str, ret_str);
+
+            let parameters: Vec<ParameterInformation> = params
+                .iter()
+                .map(|(name, ty)| ParameterInformation {
+                    label: lsp_types::ParameterLabel::Simple(format!(
+                        "{}: {}",
+                        name,
+                        format_type(ty)
+                    )),
+                    documentation: None,
+                })
+                .collect();
+
+            return Some(SignatureInformation {
+                label,
+                documentation: None,
+                parameters: if parameters.is_empty() {
+                    None
+                } else {
+                    Some(parameters)
+                },
+                active_parameter: None,
+            });
+        }
+    }
+
+    None
 }
 
 /// Find function in AST and create SignatureInformation directly from AST nodes

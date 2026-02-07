@@ -263,6 +263,71 @@ pub struct ConditionalArm {
     pub body: Expression,
 }
 
+impl Expression {
+    /// Returns the variant name of this expression as a static string.
+    /// Used by the comptime meta system and anywhere else that needs
+    /// to identify expression variants without duplicating match arms.
+    pub fn variant_name(&self) -> &'static str {
+        match self {
+            Expression::Integer8(_) => "Integer8",
+            Expression::Integer16(_) => "Integer16",
+            Expression::Integer32(_) => "Integer32",
+            Expression::Integer64(_) => "Integer64",
+            Expression::Unsigned8(_) => "Unsigned8",
+            Expression::Unsigned16(_) => "Unsigned16",
+            Expression::Unsigned32(_) => "Unsigned32",
+            Expression::Unsigned64(_) => "Unsigned64",
+            Expression::Float32(_) => "Float32",
+            Expression::Float64(_) => "Float64",
+            Expression::Boolean(_) => "Boolean",
+            Expression::String(_) => "String",
+            Expression::Identifier(_) => "Identifier",
+            Expression::Unit => "Unit",
+            Expression::BinaryOp { .. } => "BinaryOp",
+            Expression::FunctionCall { .. } => "FunctionCall",
+            Expression::QuestionMatch { .. } => "QuestionMatch",
+            Expression::Conditional { .. } => "Conditional",
+            Expression::AddressOf(_) => "AddressOf",
+            Expression::Dereference(_) => "Dereference",
+            Expression::PointerOffset { .. } => "PointerOffset",
+            Expression::StructLiteral { .. } => "StructLiteral",
+            Expression::StructField { .. } => "StructField",
+            Expression::ArrayLiteral(_) => "ArrayLiteral",
+            Expression::ArrayIndex { .. } => "ArrayIndex",
+            Expression::EnumVariant { .. } => "EnumVariant",
+            Expression::EnumLiteral { .. } => "EnumLiteral",
+            Expression::MemberAccess { .. } => "MemberAccess",
+            Expression::PointerDereference(_) => "PointerDereference",
+            Expression::PointerAddress(_) => "PointerAddress",
+            Expression::CreateReference(_) => "CreateReference",
+            Expression::CreateMutableReference(_) => "CreateMutableReference",
+            Expression::StringLength(_) => "StringLength",
+            Expression::Some(_) => "Some",
+            Expression::None => "None",
+            Expression::StringInterpolation { .. } => "StringInterpolation",
+            Expression::Comptime(_) => "Comptime",
+            Expression::Range { .. } => "Range",
+            Expression::PatternMatch { .. } => "PatternMatch",
+            Expression::StdReference => "StdReference",
+            Expression::BuiltinReference => "BuiltinReference",
+            Expression::ThisReference => "ThisReference",
+            Expression::MethodCall { .. } => "MethodCall",
+            Expression::Loop { .. } => "Loop",
+            Expression::CollectionLoop { .. } => "CollectionLoop",
+            Expression::Closure { .. } => "Closure",
+            Expression::Block(_) => "Block",
+            Expression::Return(_) => "Return",
+            Expression::Raise(_) => "Raise",
+            Expression::Defer(_) => "Defer",
+            Expression::Break { .. } => "Break",
+            Expression::Continue { .. } => "Continue",
+            Expression::VecConstructor { .. } => "VecConstructor",
+            Expression::DynVecConstructor { .. } => "DynVecConstructor",
+            Expression::ArrayConstructor { .. } => "ArrayConstructor",
+        }
+    }
+}
+
 /// Expression with optional resolved type information.
 ///
 /// This wrapper carries type information computed by the typechecker,

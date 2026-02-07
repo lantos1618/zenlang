@@ -42,3 +42,23 @@ pub enum Pattern {
         condition: Box<Expression>,
     },
 }
+
+impl Pattern {
+    /// Returns the variant name of this pattern as a static string.
+    pub fn variant_name(&self) -> &'static str {
+        match self {
+            Pattern::Literal(_) => "Literal",
+            Pattern::Identifier(_) => "Identifier",
+            Pattern::Struct { .. } => "Struct",
+            Pattern::EnumVariant { .. } => "EnumVariant",
+            Pattern::Wildcard => "Wildcard",
+            Pattern::EnumLiteral { .. } => "EnumLiteral",
+            Pattern::Or(_) => "Or",
+            Pattern::Tuple(_) => "Tuple",
+            Pattern::Range { .. } => "Range",
+            Pattern::Binding { .. } => "Binding",
+            Pattern::Type { .. } => "Type",
+            Pattern::Guard { .. } => "Guard",
+        }
+    }
+}

@@ -50,6 +50,11 @@ pub struct TypeChecker {
     stdlib_functions: HashMap<String, FunctionSignature>,
     // Type aliases: "CompletionFn" -> (u64, i64) void
     type_aliases: HashMap<String, AstType>,
+    // Collected variable types for TypeContext: "function_name::var_name" -> type
+    // Variables are collected during checking because scopes get popped
+    collected_variables: HashMap<String, AstType>,
+    // Current function name for scoping variables
+    current_function_name: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -181,6 +186,8 @@ impl TypeChecker {
             stdlib_methods: HashMap::new(),
             stdlib_functions: HashMap::new(),
             type_aliases: HashMap::new(),
+            collected_variables: HashMap::new(),
+            current_function_name: None,
         }
     }
 
@@ -250,8 +257,91 @@ impl TypeChecker {
         Ok(self.build_type_context())
     }
 
+    /// Check a program, returning partial TypeContext even on error.
+    /// Returns (TypeContext, Option<CompileError>).
+    /// The TypeContext will contain everything collected before the error occurred.
+    pub fn check_program_tolerant(
+        &mut self,
+        program: &Program,
+    ) -> (TypeContext, Option<crate::error::CompileError>) {
+        let (ctx, errors) = self.check_program_collect_errors(program);
+        (ctx, errors.into_iter().next())
+    }
+
+    /// Like check_program_tolerant but collects ALL errors instead of just the first.
+    /// Continues past declaration errors, body errors — everything possible.
+    pub fn check_program_collect_errors(
+        &mut self,
+        program: &Program,
+    ) -> (TypeContext, Vec<crate::error::CompileError>) {
+        let mut errors: Vec<crate::error::CompileError> = Vec::new();
+
+        // First pass: collect all type definitions and function signatures
+        // Continue past declaration errors to collect as much as possible
+        for declaration in program.declarations.iter() {
+            if let Err(e) = self.collect_declaration_types(declaration) {
+                errors.push(e);
+            }
+        }
+
+        // Second pass: resolve Generic types to Struct types in struct fields
+        let mut changed = true;
+        let mut iterations = 0;
+        const MAX_RESOLUTION_ITERATIONS: usize = 100;
+        while changed && iterations < MAX_RESOLUTION_ITERATIONS {
+            changed = false;
+            iterations += 1;
+
+            let struct_names: Vec<String> = self.structs.keys().cloned().collect();
+            for struct_name in struct_names {
+                let resolved_fields: Vec<(String, AstType)> = {
+                    let struct_info = match self.structs.get(&struct_name) {
+                        Some(info) => info,
+                        None => continue,
+                    };
+                    struct_info
+                        .fields
+                        .iter()
+                        .map(|(name, field_type)| {
+                            let resolved = self.resolve_generic_to_struct(field_type);
+                            if &resolved != field_type {
+                                changed = true;
+                            }
+                            (name.clone(), resolved)
+                        })
+                        .collect()
+                };
+                if let Some(struct_info) = self.structs.get_mut(&struct_name) {
+                    struct_info.fields = resolved_fields;
+                }
+            }
+        }
+
+        // Third pass: infer return types for functions with Void return type
+        for declaration in &program.declarations {
+            if let Declaration::Function(func) = declaration {
+                if func.return_type == AstType::Void && !func.body.is_empty() {
+                    if let Ok(inferred_type) = self.infer_function_return_type(func) {
+                        if let Some(sig) = self.functions.get_mut(&func.name) {
+                            sig.return_type = inferred_type;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fourth pass: type check function bodies — collect all errors
+        for declaration in &program.declarations {
+            if let Err(e) = self.check_declaration(declaration) {
+                errors.push(e);
+            }
+        }
+
+        (self.build_type_context(), errors)
+    }
+
     /// Build TypeContext from typechecker's collected information
-    fn build_type_context(&self) -> TypeContext {
+    pub fn build_type_context(&self) -> TypeContext {
         let mut ctx = TypeContext::new();
 
         // Register functions
@@ -340,6 +430,17 @@ impl TypeChecker {
             ctx.type_aliases.insert(name.clone(), aliased_type.clone());
         }
 
+        // Register collected variables (scope::var_name -> type)
+        for (key, var_type) in &self.collected_variables {
+            ctx.variables.insert(key.clone(), var_type.clone());
+        }
+
+        // Register module imports (alias -> module_path)
+        for (alias, module_path) in &self.module_imports {
+            ctx.module_imports
+                .insert(alias.clone(), module_path.clone());
+        }
+
         ctx
     }
 
@@ -411,6 +512,11 @@ impl TypeChecker {
         is_mutable: bool,
         is_initialized: bool,
     ) -> Result<()> {
+        // Collect variable for TypeContext (used by LSP hover, inlay hints, etc.)
+        if let Some(func_name) = &self.current_function_name {
+            let key = format!("{}::{}", func_name, name);
+            self.collected_variables.insert(key, type_.clone());
+        }
         scope::declare_variable_with_init(self, name, type_, is_mutable, is_initialized, None)
     }
 
@@ -422,6 +528,11 @@ impl TypeChecker {
         is_initialized: bool,
         span: Option<Span>,
     ) -> Result<()> {
+        // Collect variable for TypeContext (used by LSP hover, inlay hints, etc.)
+        if let Some(func_name) = &self.current_function_name {
+            let key = format!("{}::{}", func_name, name);
+            self.collected_variables.insert(key, type_.clone());
+        }
         scope::declare_variable_with_init(self, name, type_, is_mutable, is_initialized, span)
     }
 

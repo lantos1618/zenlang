@@ -119,6 +119,13 @@ mod handler {
                     return response;
                 }
 
+                // PRIORITY: Use TypeContext from the typechecker (authoritative type info)
+                if let Some(response) =
+                    handle_type_context_hover(&symbol_name, doc, position, request_id.clone())
+                {
+                    return response;
+                }
+
                 // Check stdlib symbols
                 if let Some(symbol_info) = store.stdlib_symbols.get(&symbol_name) {
                     return response::create_hover_response(request_id.clone(), symbol_info, None);
@@ -187,6 +194,172 @@ mod handler {
             result: Some(Value::Null),
             error: None,
         }
+    }
+
+    /// Use TypeContext (from the real typechecker) to provide authoritative hover info.
+    /// This checks variables, functions, structs, enums, methods, type aliases,
+    /// and behavior implementations — all resolved by the compiler.
+    fn handle_type_context_hover(
+        symbol_name: &str,
+        doc: &Document,
+        position: Position,
+        request_id: lsp_server::RequestId,
+    ) -> Option<Response> {
+        let type_ctx = doc.type_context.as_ref()?;
+
+        // 1. Check variables — TypeContext stores them as "function_name::var_name"
+        //    We need to figure out which function scope the cursor is in.
+        if let Some(ast) = &doc.ast {
+            for decl in ast {
+                if let crate::ast::Declaration::Function(func) = decl {
+                    if let Some(func_range) = super::super::navigation::utils::find_function_range(
+                        &doc.content,
+                        &func.name,
+                    ) {
+                        if position.line >= func_range.start.line
+                            && position.line <= func_range.end.line
+                        {
+                            // Check function parameters
+                            for (param_name, param_type) in &func.args {
+                                if param_name == symbol_name {
+                                    let type_str = format_type(param_type);
+                                    return Some(create_hover_response_from_string(
+                                        request_id,
+                                        format!(
+                                            "```zen\n{}: {}\n```\n\n**Parameter** of `{}`",
+                                            param_name, type_str, func.name
+                                        ),
+                                    ));
+                                }
+                            }
+
+                            // Check scoped variables from TypeContext
+                            if let Some(var_type) =
+                                type_ctx.get_variable_type(&func.name, symbol_name)
+                            {
+                                let type_str = format_type(&var_type);
+                                let mut hover_parts =
+                                    vec![format!("```zen\n{}: {}\n```", symbol_name, type_str)];
+                                hover_parts.push(format!("**Type:** `{}`", type_str));
+                                return Some(create_hover_response_from_string(
+                                    request_id,
+                                    hover_parts.join("\n\n"),
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Check functions
+        if let Some(func_type) = type_ctx.functions.get(symbol_name) {
+            let params_str = func_type
+                .params
+                .iter()
+                .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let ret_str = format_type(&func_type.return_type);
+            let mut hover_parts = vec![format!(
+                "```zen\n{} = ({}) {}\n```",
+                symbol_name, params_str, ret_str
+            )];
+            if func_type.is_external {
+                hover_parts.push("**External function**".to_string());
+            }
+            hover_parts.push("**Kind:** Function".to_string());
+            return Some(create_hover_response_from_string(
+                request_id,
+                hover_parts.join("\n\n"),
+            ));
+        }
+
+        // 3. Check structs
+        if let Some(fields) = type_ctx.get_struct_fields(symbol_name) {
+            let fields_str = fields
+                .iter()
+                .map(|(name, ty)| format!("    {}: {}", name, format_type(ty)))
+                .collect::<Vec<_>>()
+                .join("\n");
+            let mut hover_parts = vec![format!("```zen\n{}:\n{}\n```", symbol_name, fields_str)];
+            // Show behavior implementations
+            if let Some(behaviors) = type_ctx.behavior_impls.get(symbol_name) {
+                if !behaviors.is_empty() {
+                    hover_parts.push(format!("**Implements:** {}", behaviors.join(", ")));
+                }
+            }
+            hover_parts.push("**Kind:** Struct".to_string());
+            return Some(create_hover_response_from_string(
+                request_id,
+                hover_parts.join("\n\n"),
+            ));
+        }
+
+        // 4. Check enums
+        if let Some(variants) = type_ctx.get_enum_variants(symbol_name) {
+            let variants_str = variants
+                .iter()
+                .map(|(name, payload)| {
+                    if let Some(ty) = payload {
+                        format!("    .{}({})", name, format_type(ty))
+                    } else {
+                        format!("    .{}", name)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            let hover_parts = [
+                format!("```zen\n{}:\n{}\n```", symbol_name, variants_str),
+                "**Kind:** Enum".to_string(),
+            ];
+            return Some(create_hover_response_from_string(
+                request_id,
+                hover_parts.join("\n\n"),
+            ));
+        }
+
+        // 5. Check type aliases
+        if let Some(aliased_type) = type_ctx.type_aliases.get(symbol_name) {
+            let type_str = format_type(aliased_type);
+            return Some(create_hover_response_from_string(
+                request_id,
+                format!(
+                    "```zen\n{} = {}\n```\n\n**Type alias** for `{}`",
+                    symbol_name, type_str, type_str
+                ),
+            ));
+        }
+
+        // 6. Check methods ("Type.method" format) — handle dotted symbol names
+        if symbol_name.contains('.') {
+            if let Some(return_type) = type_ctx.methods.get(symbol_name) {
+                let ret_str = format_type(return_type);
+                let mut hover_parts = vec![format!("```zen\n{} -> {}\n```", symbol_name, ret_str)];
+                if let Some(params) = type_ctx.method_params.get(symbol_name) {
+                    let params_str = params
+                        .iter()
+                        .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    hover_parts.insert(
+                        0,
+                        format!(
+                            "```zen\n{} = ({}) {}\n```",
+                            symbol_name, params_str, ret_str
+                        ),
+                    );
+                    hover_parts.remove(1); // remove the simpler version
+                }
+                hover_parts.push("**Kind:** Method".to_string());
+                return Some(create_hover_response_from_string(
+                    request_id,
+                    hover_parts.join("\n\n"),
+                ));
+            }
+        }
+
+        None
     }
 
     fn handle_method_call_hover(
