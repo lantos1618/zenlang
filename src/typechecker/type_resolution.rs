@@ -89,33 +89,24 @@ fn resolve_generic_to_struct_impl(
                 type_args: resolved_args,
             }
         }
-        t if t.is_immutable_ptr() => match t.ptr_inner() {
-            Some(inner) => AstType::ptr(resolve_generic_to_struct_impl(
-                checker,
-                inner,
-                visited,
-                depth + 1,
-            )),
-            None => t.clone(),
-        },
-        t if t.is_mutable_ptr() => match t.ptr_inner() {
-            Some(inner) => AstType::mut_ptr(resolve_generic_to_struct_impl(
-                checker,
-                inner,
-                visited,
-                depth + 1,
-            )),
-            None => t.clone(),
-        },
-        t if t.is_raw_ptr() => match t.ptr_inner() {
-            Some(inner) => AstType::raw_ptr(resolve_generic_to_struct_impl(
-                checker,
-                inner,
-                visited,
-                depth + 1,
-            )),
-            None => t.clone(),
-        },
+        t if t.is_immutable_ptr() || t.is_mutable_ptr() || t.is_raw_ptr() => {
+            let wrapper: fn(AstType) -> AstType = if t.is_immutable_ptr() {
+                AstType::ptr
+            } else if t.is_mutable_ptr() {
+                AstType::mut_ptr
+            } else {
+                AstType::raw_ptr
+            };
+            match t.ptr_inner() {
+                Some(inner) => wrapper(resolve_generic_to_struct_impl(
+                    checker,
+                    inner,
+                    visited,
+                    depth + 1,
+                )),
+                None => t.clone(),
+            }
+        }
         AstType::Struct { name, fields } => {
             // Recursively resolve fields
             let resolved_fields: Vec<(String, AstType)> = fields

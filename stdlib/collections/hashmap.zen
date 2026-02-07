@@ -64,6 +64,24 @@ HashMap<K, V>.is_empty = (self: HashMap<K, V>) bool {
 // Hash Function
 // ============================================================================
 
+// Helper: Recursively hash bytes using FNV-1a algorithm
+// Processes one byte per recursive call, from index 0 to key_size
+hash_bytes = (key_ptr: RawPtr<u8>, index: usize, key_size: usize, hash_val: u64, fnv_prime: u64) u64 {
+    index >= key_size ?
+        | true {
+            // Base case: processed all bytes
+            return hash_val
+        }
+        | false {
+            // Load byte at current index
+            b = compiler.load<u8>(compiler.gep(key_ptr, index))
+            // Apply FNV-1a: hash = (hash ^ byte) * FNV_PRIME
+            new_hash = (hash_val ^ b) * fnv_prime
+            // Recurse to next byte
+            return hash_bytes(key_ptr, index + 1, key_size, new_hash, fnv_prime)
+        }
+}
+
 // Simple hash function using FNV-1a algorithm
 // For simplicity, we convert the key to bytes and hash them
 // This works for primitive types (integers) by treating them as byte sequences
@@ -79,74 +97,9 @@ hash<K> = (key: K) u64 {
     key_ptr = compiler.raw_allocate(key_size)
     compiler.store<K>(key_ptr, key)
 
-    // Hash each byte using FNV-1a
-    // Since Zen doesn't have traditional loops, we'll manually unroll for common sizes
-    // This handles keys up to 8 bytes (covers i32, i64, u32, u64, pointers)
-    hash_val = FNV_OFFSET
-
-    // Byte 0
-    key_size > 0 ?
-        | true {
-            b = compiler.load<u8>(compiler.gep(key_ptr, 0))
-            hash_val = (hash_val ^ b) * FNV_PRIME
-        }
-        | false { }
-
-    // Byte 1
-    key_size > 1 ?
-        | true {
-            b = compiler.load<u8>(compiler.gep(key_ptr, 1))
-            hash_val = (hash_val ^ b) * FNV_PRIME
-        }
-        | false { }
-
-    // Byte 2
-    key_size > 2 ?
-        | true {
-            b = compiler.load<u8>(compiler.gep(key_ptr, 2))
-            hash_val = (hash_val ^ b) * FNV_PRIME
-        }
-        | false { }
-
-    // Byte 3
-    key_size > 3 ?
-        | true {
-            b = compiler.load<u8>(compiler.gep(key_ptr, 3))
-            hash_val = (hash_val ^ b) * FNV_PRIME
-        }
-        | false { }
-
-    // Byte 4
-    key_size > 4 ?
-        | true {
-            b = compiler.load<u8>(compiler.gep(key_ptr, 4))
-            hash_val = (hash_val ^ b) * FNV_PRIME
-        }
-        | false { }
-
-    // Byte 5
-    key_size > 5 ?
-        | true {
-            b = compiler.load<u8>(compiler.gep(key_ptr, 5))
-            hash_val = (hash_val ^ b) * FNV_PRIME
-        }
-        | false { }
-
-    // Byte 6
-    key_size > 6 ?
-        | true {
-            b = compiler.load<u8>(compiler.gep(key_ptr, 6))
-            hash_val = (hash_val ^ b) * FNV_PRIME
-        }
-        | false { }
-
-    // Byte 7
-    key_size > 7 ?
-        | true {
-            b = compiler.load<u8>(compiler.gep(key_ptr, 7))
-            hash_val = (hash_val ^ b) * FNV_PRIME
-        }
-        | false { }
+    // Hash each byte using FNV-1a via recursive helper
+    // Supports keys of any size
+    hash_val = hash_bytes(key_ptr, 0, key_size, FNV_OFFSET, FNV_PRIME)
 
     // Clean up
     compiler.raw_deallocate(key_ptr, key_size)

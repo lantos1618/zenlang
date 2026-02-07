@@ -44,7 +44,7 @@
 // Math
 // ============================================================================
 
-{ PI, E, sin, cos, tan, asin, acos, atan, atan2, sinh, cosh, tanh, exp, log, log10, log2, pow, sqrt, cbrt, floor, ceil, round, trunc, fabs, fmod, remainder, fmin, fmax, copysign, abs, abs64, factorial, is_even, is_odd, max, min, clamp, I8_MIN, I8_MAX, I16_MIN, I16_MAX, I32_MIN, I32_MAX, U8_MAX, U16_MAX, U32_MAX } = @std.math
+{ PI, E, sin, cos, tan, asin, acos, atan, atan2, sinh, cosh, tanh, exp, log, log10, log2, pow, sqrt, cbrt, floor, ceil, round, trunc, fabs, fmod, remainder, copysign, abs, factorial, is_even, is_odd, max, min, clamp, I8_MIN, I8_MAX, I16_MIN, I16_MAX, I32_MIN, I32_MAX, U8_MAX, U16_MAX, U32_MAX } = @std.math
 
 // ============================================================================
 // Time

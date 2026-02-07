@@ -6,15 +6,8 @@ E = 2.71828182845904523536
 
 // Integer Math Functions
 
-// Absolute value for i32
-abs = (n: i32) i32 {
-    n < 0 ?
-        | true { return -n }
-        | false { return n }
-}
-
-// Absolute value for i64
-abs64 = (n: i64) i64 {
+// Absolute value (generic)
+abs<T> = (n: T) T {
     n < 0 ?
         | true { return -n }
         | false { return n }
@@ -37,15 +30,15 @@ is_odd = (n: i32) bool {
     n % 2 != 0
 }
 
-// Max of two i32
-max = (a: i32, b: i32) i32 {
+// Max of two values (generic)
+max<T> = (a: T, b: T) T {
     a > b ?
         | true { return a }
         | false { return b }
 }
 
-// Min of two i32
-min = (a: i32, b: i32) i32 {
+// Min of two values (generic)
+min<T> = (a: T, b: T) T {
     a < b ?
         | true { return a }
         | false { return b }
@@ -60,19 +53,6 @@ clamp = (n: i32, low: i32, high: i32) i32 {
                 | true { return high }
                 | false { return n }
         }
-}
-
-// Min/Max for f64
-fmin = (x: f64, y: f64) f64 {
-    x < y ?
-        | true { x }
-        | false { y }
-}
-
-fmax = (x: f64, y: f64) f64 {
-    x > y ?
-        | true { x }
-        | false { y }
 }
 
 // Integer bounds constants

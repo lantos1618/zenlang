@@ -1,6 +1,6 @@
 // Document highlight handler
 
-use super::utils::{find_symbol_at_position, is_word_boundary_char};
+use super::utils::{find_all_symbol_occurrences, find_symbol_at_position};
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::helpers::{null_response, success_response, try_lock, try_parse_params};
 use lsp_server::{Request, Response};
@@ -8,37 +8,23 @@ use lsp_types::*;
 
 /// Find all occurrences of a symbol in a document for highlighting
 fn find_symbol_occurrences(content: &str, symbol_name: &str) -> Vec<DocumentHighlight> {
-    let mut highlights = Vec::new();
-    let lines: Vec<&str> = content.lines().collect();
-
-    for (line_idx, line) in lines.iter().enumerate() {
-        let mut start_pos = 0;
-        while let Some(pos) = line[start_pos..].find(symbol_name) {
-            let actual_pos = start_pos + pos;
-            let is_word_start =
-                actual_pos == 0 || is_word_boundary_char(line, actual_pos.saturating_sub(1));
-            let end_pos = actual_pos + symbol_name.len();
-            let is_word_end = end_pos >= line.len() || is_word_boundary_char(line, end_pos);
-
-            if is_word_start && is_word_end {
-                highlights.push(DocumentHighlight {
-                    range: Range {
-                        start: Position {
-                            line: line_idx as u32,
-                            character: actual_pos as u32,
-                        },
-                        end: Position {
-                            line: line_idx as u32,
-                            character: end_pos as u32,
-                        },
-                    },
-                    kind: Some(DocumentHighlightKind::TEXT),
-                });
-            }
-            start_pos = actual_pos + 1;
-        }
-    }
-    highlights
+    let occurrences = find_all_symbol_occurrences(content, symbol_name);
+    occurrences
+        .into_iter()
+        .map(|(line_num, col, _)| DocumentHighlight {
+            range: Range {
+                start: Position {
+                    line: line_num,
+                    character: col as u32,
+                },
+                end: Position {
+                    line: line_num,
+                    character: (col + symbol_name.len()) as u32,
+                },
+            },
+            kind: Some(DocumentHighlightKind::TEXT),
+        })
+        .collect()
 }
 
 /// Handle textDocument/documentHighlight requests

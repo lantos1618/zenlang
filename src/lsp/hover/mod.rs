@@ -15,7 +15,7 @@ use lsp_types::*;
 use serde_json::Value;
 
 use super::document_store::DocumentStore;
-use super::helpers::char_pos_to_byte_pos;
+use super::helpers::{char_pos_to_byte_pos, zen_code_block};
 use super::navigation::find_symbol_at_position;
 use super::navigation::find_symbol_definition_in_content;
 use super::types::*;
@@ -181,10 +181,7 @@ mod handler {
                     return response;
                 }
 
-                return create_hover_response_from_string(
-                    request_id,
-                    format!("```zen\n{}\n```", symbol_name),
-                );
+                return create_hover_response_from_string(request_id, zen_code_block(&symbol_name));
             }
             // If no symbol found at position (empty line, whitespace, etc.), return null
         }
@@ -239,7 +236,7 @@ mod handler {
                             {
                                 let type_str = format_type(&var_type);
                                 let mut hover_parts =
-                                    vec![format!("```zen\n{}: {}\n```", symbol_name, type_str)];
+                                    vec![zen_code_block(&format!("{}: {}", symbol_name, type_str))];
                                 hover_parts.push(format!("**Type:** `{}`", type_str));
                                 return Some(create_hover_response_from_string(
                                     request_id,
@@ -282,7 +279,8 @@ mod handler {
                 .map(|(name, ty)| format!("    {}: {}", name, format_type(ty)))
                 .collect::<Vec<_>>()
                 .join("\n");
-            let mut hover_parts = vec![format!("```zen\n{}:\n{}\n```", symbol_name, fields_str)];
+            let mut hover_parts =
+                vec![zen_code_block(&format!("{}:\n{}", symbol_name, fields_str))];
             // Show behavior implementations
             if let Some(behaviors) = type_ctx.behavior_impls.get(symbol_name) {
                 if !behaviors.is_empty() {
@@ -310,7 +308,7 @@ mod handler {
                 .collect::<Vec<_>>()
                 .join("\n");
             let hover_parts = [
-                format!("```zen\n{}:\n{}\n```", symbol_name, variants_str),
+                zen_code_block(&format!("{}:\n{}", symbol_name, variants_str)),
                 "**Kind:** Enum".to_string(),
             ];
             return Some(create_hover_response_from_string(
@@ -335,7 +333,8 @@ mod handler {
         if symbol_name.contains('.') {
             if let Some(return_type) = type_ctx.methods.get(symbol_name) {
                 let ret_str = format_type(return_type);
-                let mut hover_parts = vec![format!("```zen\n{} -> {}\n```", symbol_name, ret_str)];
+                let mut hover_parts =
+                    vec![zen_code_block(&format!("{} -> {}", symbol_name, ret_str))];
                 if let Some(params) = type_ctx.method_params.get(symbol_name) {
                     let params_str = params
                         .iter()

@@ -225,6 +225,34 @@ pub fn find_stdlib_location(
     None
 }
 
+/// Find all occurrences of a symbol in content with word boundary checking.
+/// Returns Vec<(line_number: u32, col: usize, line_text: &str)> for each match.
+/// Skips occurrences inside strings or comments.
+pub fn find_all_symbol_occurrences<'a>(
+    content: &'a str,
+    symbol_name: &str,
+) -> Vec<(u32, usize, &'a str)> {
+    let mut occurrences = Vec::new();
+    let lines: Vec<&str> = content.lines().collect();
+
+    for (line_num, line) in lines.iter().enumerate() {
+        let mut start_col = 0;
+        while let Some(col) = line[start_col..].find(symbol_name) {
+            let actual_col = start_col + col;
+            let before_ok =
+                actual_col == 0 || is_word_boundary_char(line, actual_col.saturating_sub(1));
+            let after_ok = actual_col + symbol_name.len() >= line.len()
+                || is_word_boundary_char(line, actual_col + symbol_name.len());
+
+            if before_ok && after_ok && !is_in_string_or_comment(line, actual_col) {
+                occurrences.push((line_num as u32, actual_col, *line));
+            }
+            start_col = actual_col + 1;
+        }
+    }
+    occurrences
+}
+
 /// Find symbol definition in content using text search
 pub fn find_symbol_definition_in_content(content: &str, symbol_name: &str) -> Option<Range> {
     let lines: Vec<&str> = content.lines().collect();

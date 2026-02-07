@@ -137,6 +137,10 @@ macro_rules! lock_store {
 pub use lock_store;
 pub use parse_params;
 
+pub fn zen_code_block(code: &str) -> String {
+    format!("```zen\n{}\n```", code)
+}
+
 /// Converts a UTF-16 character offset (LSP standard) to a byte offset in a string.
 /// Returns the byte offset, clamped to valid string boundaries.
 ///

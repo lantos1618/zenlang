@@ -20,38 +20,30 @@ pub fn parse_integer_literal(parser: &mut Parser, value_str: &str) -> Result<Exp
     // Remove underscores used as digit separators
     let clean_str: String = value_str.chars().filter(|&c| c != '_').collect();
 
+    // Helper closure to parse with a given radix and format name
+    let parse_radix = |digits: &str, radix: u32, format_name: &str| -> Result<i64> {
+        i64::from_str_radix(digits, radix).map_err(|_| {
+            let error_msg = if format_name.is_empty() {
+                format!("Invalid integer: {}", value_str)
+            } else {
+                format!("Invalid {} integer: {}", format_name, value_str)
+            };
+            CompileError::SyntaxError(error_msg, Some(parser.current_span.clone()))
+        })
+    };
+
     let value = if clean_str.starts_with("0x") || clean_str.starts_with("0X") {
         // Hexadecimal
-        i64::from_str_radix(&clean_str[2..], 16).map_err(|_| {
-            CompileError::SyntaxError(
-                format!("Invalid hexadecimal integer: {}", value_str),
-                Some(parser.current_span.clone()),
-            )
-        })?
+        parse_radix(&clean_str[2..], 16, "hexadecimal")?
     } else if clean_str.starts_with("0b") || clean_str.starts_with("0B") {
         // Binary
-        i64::from_str_radix(&clean_str[2..], 2).map_err(|_| {
-            CompileError::SyntaxError(
-                format!("Invalid binary integer: {}", value_str),
-                Some(parser.current_span.clone()),
-            )
-        })?
+        parse_radix(&clean_str[2..], 2, "binary")?
     } else if clean_str.starts_with("0o") || clean_str.starts_with("0O") {
         // Octal
-        i64::from_str_radix(&clean_str[2..], 8).map_err(|_| {
-            CompileError::SyntaxError(
-                format!("Invalid octal integer: {}", value_str),
-                Some(parser.current_span.clone()),
-            )
-        })?
+        parse_radix(&clean_str[2..], 8, "octal")?
     } else {
         // Decimal
-        clean_str.parse::<i64>().map_err(|_| {
-            CompileError::SyntaxError(
-                format!("Invalid integer: {}", value_str),
-                Some(parser.current_span.clone()),
-            )
-        })?
+        parse_radix(&clean_str, 10, "")?
     };
     parser.next_token();
 

@@ -63,190 +63,63 @@ AtomicBool.fetch_or = (self: MutPtr<AtomicBool>, value: bool) bool {
 }
 
 // ============================================================================
-// AtomicI32
+// Atomic<T> - Generic atomic type for i32, i64, u32, u64
 // ============================================================================
 
-AtomicI32: {
-    value: i32
+Atomic<T>: {
+    value: T
 }
 
-AtomicI32.new = (initial: i32) AtomicI32 {
-    return AtomicI32 { value: initial }
+Atomic<T>.new = (initial: T) Atomic<T> {
+    return Atomic<T> { value: initial }
 }
 
-AtomicI32.load = (self: Ptr<AtomicI32>) i32 {
-    return compiler.atomic_load(&self.val.value.ref() as Ptr<u64>) as i32
+Atomic<T>.load = (self: Ptr<Atomic<T>>) T {
+    return compiler.atomic_load(&self.val.value.ref() as Ptr<u64>) as T
 }
 
-AtomicI32.store = (self: MutPtr<AtomicI32>, value: i32) void {
+Atomic<T>.store = (self: MutPtr<Atomic<T>>, value: T) void {
     compiler.atomic_store(&self.val.value.ref() as Ptr<u64>, value as u64)
 }
 
-AtomicI32.swap = (self: MutPtr<AtomicI32>, value: i32) i32 {
-    return compiler.atomic_xchg(&self.val.value.ref() as Ptr<u64>, value as u64) as i32
+Atomic<T>.swap = (self: MutPtr<Atomic<T>>, value: T) T {
+    return compiler.atomic_xchg(&self.val.value.ref() as Ptr<u64>, value as u64) as T
 }
 
-AtomicI32.compare_exchange = (self: MutPtr<AtomicI32>, expected: i32, desired: i32) bool {
-    old = compiler.atomic_cas(&self.val.value.ref() as Ptr<u64>, expected as u64, desired as u64) as i32
+Atomic<T>.compare_exchange = (self: MutPtr<Atomic<T>>, expected: T, desired: T) bool {
+    old = compiler.atomic_cas(&self.val.value.ref() as Ptr<u64>, expected as u64, desired as u64) as T
     return old == expected
 }
 
 // Returns old value, adds delta
-AtomicI32.fetch_add = (self: MutPtr<AtomicI32>, delta: i32) i32 {
-    return compiler.atomic_add(&self.val.value.ref() as Ptr<u64>, delta as u64) as i32
+Atomic<T>.fetch_add = (self: MutPtr<Atomic<T>>, delta: T) T {
+    return compiler.atomic_add(&self.val.value.ref() as Ptr<u64>, delta as u64) as T
 }
 
-AtomicI32.fetch_sub = (self: MutPtr<AtomicI32>, delta: i32) i32 {
-    return compiler.atomic_sub(&self.val.value.ref() as Ptr<u64>, delta as u64) as i32
+Atomic<T>.fetch_sub = (self: MutPtr<Atomic<T>>, delta: T) T {
+    return compiler.atomic_sub(&self.val.value.ref() as Ptr<u64>, delta as u64) as T
 }
 
 // Convenience: add and return new value
-AtomicI32.add = (self: MutPtr<AtomicI32>, delta: i32) i32 {
+Atomic<T>.add = (self: MutPtr<Atomic<T>>, delta: T) T {
     old = self.fetch_add(delta)
     return old + delta
 }
 
 // Convenience: subtract and return new value
-AtomicI32.sub = (self: MutPtr<AtomicI32>, delta: i32) i32 {
+Atomic<T>.sub = (self: MutPtr<Atomic<T>>, delta: T) T {
     old = self.fetch_sub(delta)
     return old - delta
 }
 
 // Increment and return new value
-AtomicI32.inc = (self: MutPtr<AtomicI32>) i32 {
+Atomic<T>.inc = (self: MutPtr<Atomic<T>>) T {
     return self.add(1)
 }
 
 // Decrement and return new value
-AtomicI32.dec = (self: MutPtr<AtomicI32>) i32 {
+Atomic<T>.dec = (self: MutPtr<Atomic<T>>) T {
     return self.sub(1)
-}
-
-// ============================================================================
-// AtomicI64
-// ============================================================================
-
-AtomicI64: {
-    value: i64
-}
-
-AtomicI64.new = (initial: i64) AtomicI64 {
-    return AtomicI64 { value: initial }
-}
-
-AtomicI64.load = (self: Ptr<AtomicI64>) i64 {
-    return compiler.atomic_load(&self.val.value.ref() as Ptr<u64>) as i64
-}
-
-AtomicI64.store = (self: MutPtr<AtomicI64>, value: i64) void {
-    compiler.atomic_store(&self.val.value.ref() as Ptr<u64>, value as u64)
-}
-
-AtomicI64.swap = (self: MutPtr<AtomicI64>, value: i64) i64 {
-    return compiler.atomic_xchg(&self.val.value.ref() as Ptr<u64>, value as u64) as i64
-}
-
-AtomicI64.compare_exchange = (self: MutPtr<AtomicI64>, expected: i64, desired: i64) bool {
-    old = compiler.atomic_cas(&self.val.value.ref() as Ptr<u64>, expected as u64, desired as u64) as i64
-    return old == expected
-}
-
-AtomicI64.fetch_add = (self: MutPtr<AtomicI64>, delta: i64) i64 {
-    return compiler.atomic_add(&self.val.value.ref() as Ptr<u64>, delta as u64) as i64
-}
-
-AtomicI64.fetch_sub = (self: MutPtr<AtomicI64>, delta: i64) i64 {
-    return compiler.atomic_sub(&self.val.value.ref() as Ptr<u64>, delta as u64) as i64
-}
-
-AtomicI64.add = (self: MutPtr<AtomicI64>, delta: i64) i64 {
-    return self.fetch_add(delta) + delta
-}
-
-AtomicI64.sub = (self: MutPtr<AtomicI64>, delta: i64) i64 {
-    return self.fetch_sub(delta) - delta
-}
-
-AtomicI64.inc = (self: MutPtr<AtomicI64>) i64 {
-    return self.add(1)
-}
-
-AtomicI64.dec = (self: MutPtr<AtomicI64>) i64 {
-    return self.sub(1)
-}
-
-// ============================================================================
-// AtomicU32
-// ============================================================================
-
-AtomicU32: {
-    value: u32
-}
-
-AtomicU32.new = (initial: u32) AtomicU32 {
-    return AtomicU32 { value: initial }
-}
-
-AtomicU32.load = (self: Ptr<AtomicU32>) u32 {
-    return compiler.atomic_load(&self.val.value.ref() as Ptr<u64>) as u32
-}
-
-AtomicU32.store = (self: MutPtr<AtomicU32>, value: u32) void {
-    compiler.atomic_store(&self.val.value.ref() as Ptr<u64>, value as u64)
-}
-
-AtomicU32.swap = (self: MutPtr<AtomicU32>, value: u32) u32 {
-    return compiler.atomic_xchg(&self.val.value.ref() as Ptr<u64>, value as u64) as u32
-}
-
-AtomicU32.compare_exchange = (self: MutPtr<AtomicU32>, expected: u32, desired: u32) bool {
-    old = compiler.atomic_cas(&self.val.value.ref() as Ptr<u64>, expected as u64, desired as u64) as u32
-    return old == expected
-}
-
-AtomicU32.fetch_add = (self: MutPtr<AtomicU32>, delta: u32) u32 {
-    return compiler.atomic_add(&self.val.value.ref() as Ptr<u64>, delta as u64) as u32
-}
-
-AtomicU32.fetch_sub = (self: MutPtr<AtomicU32>, delta: u32) u32 {
-    return compiler.atomic_sub(&self.val.value.ref() as Ptr<u64>, delta as u64) as u32
-}
-
-// ============================================================================
-// AtomicU64
-// ============================================================================
-
-AtomicU64: {
-    value: u64
-}
-
-AtomicU64.new = (initial: u64) AtomicU64 {
-    return AtomicU64 { value: initial }
-}
-
-AtomicU64.load = (self: Ptr<AtomicU64>) u64 {
-    return compiler.atomic_load(&self.val.value.ref() as Ptr<u64>)
-}
-
-AtomicU64.store = (self: MutPtr<AtomicU64>, value: u64) void {
-    compiler.atomic_store(&self.val.value.ref() as Ptr<u64>, value)
-}
-
-AtomicU64.swap = (self: MutPtr<AtomicU64>, value: u64) u64 {
-    return compiler.atomic_xchg(&self.val.value.ref() as Ptr<u64>, value)
-}
-
-AtomicU64.compare_exchange = (self: MutPtr<AtomicU64>, expected: u64, desired: u64) bool {
-    old = compiler.atomic_cas(&self.val.value.ref() as Ptr<u64>, expected, desired)
-    return old == expected
-}
-
-AtomicU64.fetch_add = (self: MutPtr<AtomicU64>, delta: u64) u64 {
-    return compiler.atomic_add(&self.val.value.ref() as Ptr<u64>, delta)
-}
-
-AtomicU64.fetch_sub = (self: MutPtr<AtomicU64>, delta: u64) u64 {
-    return compiler.atomic_sub(&self.val.value.ref() as Ptr<u64>, delta)
 }
 
 // ============================================================================

@@ -6,9 +6,7 @@
 // - Performance-optimized workspace search
 
 use super::scope::determine_symbol_scope;
-use super::utils::{
-    find_function_range, find_symbol_at_position, is_in_string_or_comment, is_word_boundary_char,
-};
+use super::utils::{find_all_symbol_occurrences, find_function_range, find_symbol_at_position};
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::types::SymbolScope;
 use lsp_server::{Request, Response};
@@ -55,39 +53,25 @@ fn find_local_references(
         return None;
     }
     let func_range = find_function_range(content, function_name)?;
-    let mut references = Vec::new();
-    let lines: Vec<&str> = content.lines().collect();
+    let occurrences = find_all_symbol_occurrences(content, symbol_name);
 
-    for line_num in func_range.start.line..=func_range.end.line {
-        if line_num as usize >= lines.len() {
-            break;
-        }
+    let references = occurrences
+        .into_iter()
+        .filter(|(line_num, _, _)| {
+            *line_num >= func_range.start.line && *line_num <= func_range.end.line
+        })
+        .map(|(line_num, actual_col, _)| Range {
+            start: Position {
+                line: line_num,
+                character: actual_col as u32,
+            },
+            end: Position {
+                line: line_num,
+                character: (actual_col + symbol_name.len()) as u32,
+            },
+        })
+        .collect();
 
-        let line = lines[line_num as usize];
-        let mut start_col = 0;
-
-        while let Some(col) = line[start_col..].find(symbol_name) {
-            let actual_col = start_col + col;
-            let before_ok =
-                actual_col == 0 || is_word_boundary_char(line, actual_col.saturating_sub(1));
-            let after_ok = actual_col + symbol_name.len() >= line.len()
-                || is_word_boundary_char(line, actual_col + symbol_name.len());
-
-            if before_ok && after_ok && !is_in_string_or_comment(line, actual_col) {
-                references.push(Range {
-                    start: Position {
-                        line: line_num,
-                        character: actual_col as u32,
-                    },
-                    end: Position {
-                        line: line_num,
-                        character: (actual_col + symbol_name.len()) as u32,
-                    },
-                });
-            }
-            start_col = actual_col + 1;
-        }
-    }
     Some(references)
 }
 
@@ -104,39 +88,27 @@ pub fn find_enhanced_references_in_document(
     content: &str,
     symbol_name: &str,
 ) -> Vec<EnhancedReference> {
-    let mut references = Vec::new();
-    let lines: Vec<&str> = content.lines().collect();
-
-    for (line_num, line) in lines.iter().enumerate() {
-        let mut start_col = 0;
-        while let Some(col) = line[start_col..].find(symbol_name) {
-            let actual_col = start_col + col;
-            let before_ok =
-                actual_col == 0 || is_word_boundary_char(line, actual_col.saturating_sub(1));
-            let after_ok = actual_col + symbol_name.len() >= line.len()
-                || is_word_boundary_char(line, actual_col + symbol_name.len());
-
-            if before_ok && after_ok && !is_in_string_or_comment(line, actual_col) {
-                let kind = classify_reference(line, actual_col, symbol_name);
-                references.push(EnhancedReference {
-                    range: Range {
-                        start: Position {
-                            line: line_num as u32,
-                            character: actual_col as u32,
-                        },
-                        end: Position {
-                            line: line_num as u32,
-                            character: (actual_col + symbol_name.len()) as u32,
-                        },
+    let occurrences = find_all_symbol_occurrences(content, symbol_name);
+    occurrences
+        .into_iter()
+        .map(|(line_num, actual_col, line)| {
+            let kind = classify_reference(line, actual_col, symbol_name);
+            EnhancedReference {
+                range: Range {
+                    start: Position {
+                        line: line_num,
+                        character: actual_col as u32,
                     },
-                    kind,
-                    context_line: line.trim().to_string(),
-                });
+                    end: Position {
+                        line: line_num,
+                        character: (actual_col + symbol_name.len()) as u32,
+                    },
+                },
+                kind,
+                context_line: line.trim().to_string(),
             }
-            start_col = actual_col + 1;
-        }
-    }
-    references
+        })
+        .collect()
 }
 
 /// Classify a reference as declaration, read, write, or call

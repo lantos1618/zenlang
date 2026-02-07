@@ -296,47 +296,36 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
                             member.clone()
                         };
 
+                        // Helper: consume empty parens `()` for zero-arg built-in methods
+                        let consume_empty_parens =
+                            |p: &mut Parser, method_name: &str| -> Result<()> {
+                                p.next_token(); // consume '('
+                                if p.current_token != Token::Symbol(')') {
+                                    return Err(CompileError::SyntaxError(
+                                        format!("Expected ')' after '.{}('", method_name),
+                                        Some(p.current_span.clone()),
+                                    ));
+                                }
+                                p.next_token(); // consume ')'
+                                Ok(())
+                            };
+
                         // Check for pointer-specific operations first
                         // Only treat .val and .addr as pointer operations if NOT followed by ()
                         // This allows user-defined .val() and .addr() methods to work
                         if member == "val" && parser.current_token != Token::Symbol('(') {
-                            // Pointer dereference: ptr.val (not a method call)
                             expr = Expression::PointerDereference(Box::new(expr));
                         } else if member == "addr" && parser.current_token != Token::Symbol('(') {
-                            // Pointer address: expr.addr (not a method call)
                             expr = Expression::PointerAddress(Box::new(expr));
                         } else if member == "ref" && parser.current_token == Token::Symbol('(') {
-                            // Reference creation: expr.ref()
-                            parser.next_token(); // consume '('
-                            if parser.current_token != Token::Symbol(')') {
-                                return Err(CompileError::SyntaxError(
-                                    "Expected ')' after '.ref('".to_string(),
-                                    Some(parser.current_span.clone()),
-                                ));
-                            }
-                            parser.next_token(); // consume ')'
+                            consume_empty_parens(parser, "ref")?;
                             expr = Expression::CreateReference(Box::new(expr));
                         } else if member == "mut_ref" && parser.current_token == Token::Symbol('(')
                         {
-                            // Mutable reference creation: expr.mut_ref()
-                            parser.next_token(); // consume '('
-                            if parser.current_token != Token::Symbol(')') {
-                                return Err(CompileError::SyntaxError(
-                                    "Expected ')' after '.mut_ref('".to_string(),
-                                    Some(parser.current_span.clone()),
-                                ));
-                            }
-                            parser.next_token(); // consume ')'
+                            consume_empty_parens(parser, "mut_ref")?;
                             expr = Expression::CreateMutableReference(Box::new(expr));
                         } else if member == "raise" && parser.current_token == Token::Symbol('(') {
-                            parser.next_token(); // consume '('
-                            if parser.current_token != Token::Symbol(')') {
-                                return Err(CompileError::SyntaxError(
-                                    "Expected ')' after 'raise('".to_string(),
-                                    Some(parser.current_span.clone()),
-                                ));
-                            }
-                            parser.next_token(); // consume ')'
+                            consume_empty_parens(parser, "raise")?;
                             expr = Expression::Raise(Box::new(expr));
                         } else if member == "step" && parser.current_token == Token::Symbol('(') {
                             // Handle range.step(n) syntax for stepped ranges

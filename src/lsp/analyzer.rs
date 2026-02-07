@@ -3,9 +3,7 @@
 
 use super::pattern_checking::{check_pattern_exhaustiveness, find_missing_variants};
 use super::types::SymbolInfo;
-use super::utils::{
-    compile_error_to_diagnostic, compile_error_to_diagnostic_with_content, format_type,
-};
+use super::utils::{compile_error_to_diagnostic, compile_error_to_diagnostic_with_content};
 use crate::ast::{Declaration, Expression, Program, Statement};
 use crate::lexer::Lexer;
 use crate::module_system::ModuleSystem;
@@ -329,89 +327,7 @@ pub fn infer_expression_type_string(
         return Some(type_str);
     }
 
-    match expr {
-        Expression::Identifier(name) => {
-            for doc in documents
-                .values()
-                .take(crate::lsp::search_limits::QUICK_TYPE_SEARCH)
-            {
-                if let Some(ast) = &doc.ast {
-                    if let Some(type_str) = find_variable_type_in_ast(name, ast) {
-                        return Some(type_str);
-                    }
-                }
-            }
-            None
-        }
-        Expression::FunctionCall { name, .. } => {
-            for doc in documents
-                .values()
-                .take(crate::lsp::search_limits::QUICK_TYPE_SEARCH)
-            {
-                if let Some(ast) = &doc.ast {
-                    for decl in ast {
-                        if let Declaration::Function(func) = decl {
-                            if &func.name == name {
-                                return Some(format_type(&func.return_type));
-                            }
-                        }
-                    }
-                }
-            }
-            if let Some(ret) = stdlib_types().get_function_return_type("", name) {
-                return Some(format_type(ret));
-            }
-            None
-        }
-        _ => None,
-    }
-}
-
-fn find_variable_type_in_ast(var_name: &str, ast: &[Declaration]) -> Option<String> {
-    for decl in ast {
-        if let Declaration::Function(func) = decl {
-            if let Some(type_str) = find_variable_type_in_statements(var_name, &func.body) {
-                return Some(type_str);
-            }
-        }
-    }
     None
-}
-
-fn find_variable_type_in_statements(var_name: &str, stmts: &[Statement]) -> Option<String> {
-    for stmt in stmts {
-        match stmt {
-            Statement::VariableDeclaration {
-                name,
-                initializer,
-                type_,
-                ..
-            } => {
-                if name == var_name {
-                    if let Some(type_ann) = type_ {
-                        return Some(format_type(type_ann));
-                    }
-                    if let Some(init) = initializer {
-                        return crate::lsp::type_query::TypeQuery::infer_literal_type(init);
-                    }
-                }
-            }
-            Statement::Expression { expr, .. } | Statement::Return { expr, .. } => {
-                if let Some(type_str) = find_variable_in_expression(var_name, expr) {
-                    return Some(type_str);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
-}
-
-fn find_variable_in_expression(var_name: &str, expr: &Expression) -> Option<String> {
-    match expr {
-        Expression::Block(stmts) => find_variable_type_in_statements(var_name, stmts),
-        _ => None,
-    }
 }
 
 fn find_pattern_match_position(content: &str, scrutinee: &Expression) -> Option<Position> {
