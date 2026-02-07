@@ -1,16 +1,15 @@
 //! Document analysis - type checking, allocator validation, pattern checking
 //! Extracted from document_store.rs
 
-use super::pattern_checking::{check_pattern_exhaustiveness, find_missing_variants};
+use super::pattern_checking;
 use super::types::SymbolInfo;
 use super::utils::{compile_error_to_diagnostic, compile_error_to_diagnostic_with_content};
 use crate::ast::{Declaration, Expression, Program, Statement};
 use crate::lexer::Lexer;
 use crate::module_system::ModuleSystem;
-use crate::name_utils;
 use crate::parser::Parser;
-use crate::stdlib_types::stdlib_types;
 use crate::type_context::TypeContext;
+use crate::typechecker::validation::check_allocator_violations;
 use crate::typechecker::TypeChecker;
 use lsp_types::*;
 use std::collections::HashMap;
@@ -147,129 +146,37 @@ fn load_imports_for_program(program: &Program) -> (Program, ModuleSystem) {
     (merged, module_system)
 }
 
-/// Check for allocator usage in statements
 pub fn check_allocator_usage(
     statements: &[Statement],
     diagnostics: &mut Vec<Diagnostic>,
     content: &str,
 ) {
-    for stmt in statements {
-        match stmt {
-            Statement::Expression { expr, .. } | Statement::Return { expr, .. } => {
-                check_allocator_in_expression(expr, diagnostics, content);
-            }
-            Statement::VariableDeclaration {
-                initializer: Some(expr),
-                ..
-            }
-            | Statement::VariableAssignment { value: expr, .. } => {
-                check_allocator_in_expression(expr, diagnostics, content);
-            }
-            _ => {}
+    for violation in check_allocator_violations(statements) {
+        if let Some(position) = find_text_position(&violation.call_name, content) {
+            diagnostics.push(Diagnostic {
+                range: Range {
+                    start: position,
+                    end: Position {
+                        line: position.line,
+                        character: position.character + violation.call_name.len() as u32,
+                    },
+                },
+                severity: Some(DiagnosticSeverity::ERROR),
+                code: Some(NumberOrString::String("allocator-required".to_string())),
+                code_description: None,
+                source: Some("zen-lsp".to_string()),
+                message: format!(
+                    "{} requires an allocator for memory management. Add get_default_allocator() as the last parameter.",
+                    violation.type_name
+                ),
+                related_information: None,
+                tags: None,
+                data: None,
+            });
         }
     }
 }
 
-fn check_allocator_in_expression(
-    expr: &Expression,
-    diagnostics: &mut Vec<Diagnostic>,
-    content: &str,
-) {
-    match expr {
-        Expression::FunctionCall { name, args, .. } => {
-            // Check if this type requires an allocator based on its struct definition
-            let base_name = name_utils::strip_generics(name);
-
-            // Use stdlib registry to check if the type has an allocator field
-            let requires_alloc = stdlib_types().requires_allocator(base_name);
-
-            if requires_alloc && (args.is_empty() || !has_allocator_arg(args)) {
-                if let Some(position) = find_text_position(name, content) {
-                    diagnostics.push(Diagnostic {
-                        range: Range {
-                            start: position,
-                            end: Position {
-                                line: position.line,
-                                character: position.character + name.len() as u32,
-                            },
-                        },
-                        severity: Some(DiagnosticSeverity::ERROR),
-                        code: Some(NumberOrString::String("allocator-required".to_string())),
-                        code_description: None,
-                        source: Some("zen-lsp".to_string()),
-                        message: format!(
-                            "{} requires an allocator for memory management. Add get_default_allocator() as the last parameter.",
-                            base_name
-                        ),
-                        related_information: None,
-                        tags: None,
-                        data: None,
-                    });
-                }
-            }
-            for arg in args {
-                check_allocator_in_expression(arg, diagnostics, content);
-            }
-        }
-        Expression::MethodCall {
-            object,
-            method: _,
-            args,
-            ..
-        } => {
-            check_allocator_in_expression(object, diagnostics, content);
-            for arg in args {
-                check_allocator_in_expression(arg, diagnostics, content);
-            }
-        }
-        Expression::Block(stmts) => {
-            check_allocator_usage(stmts, diagnostics, content);
-        }
-        Expression::Conditional { scrutinee, arms } => {
-            check_allocator_in_expression(scrutinee, diagnostics, content);
-            for arm in arms {
-                if let Some(guard) = &arm.guard {
-                    check_allocator_in_expression(guard, diagnostics, content);
-                }
-                check_allocator_in_expression(&arm.body, diagnostics, content);
-            }
-        }
-        Expression::BinaryOp { left, right, .. } => {
-            check_allocator_in_expression(left, diagnostics, content);
-            check_allocator_in_expression(right, diagnostics, content);
-        }
-        _ => {}
-    }
-}
-
-fn has_allocator_arg(args: &[Expression]) -> bool {
-    for arg in args {
-        match arg {
-            Expression::FunctionCall { name, .. } => {
-                if name.contains("allocator") || name == "get_default_allocator" {
-                    return true;
-                }
-            }
-            Expression::Identifier(name) => {
-                if name.contains("alloc") || name.ends_with("_allocator") || name == "allocator" {
-                    return true;
-                }
-            }
-            Expression::MethodCall { object, method, .. } => {
-                if method.contains("allocator") || method == "get_allocator" {
-                    return true;
-                }
-                if has_allocator_arg(&[(**object).clone()]) {
-                    return true;
-                }
-            }
-            _ => {}
-        }
-    }
-    false
-}
-
-/// Wrapper for pattern exhaustiveness checking
 fn check_pattern_exhaustiveness_wrapper(
     statements: &[Statement],
     diagnostics: &mut Vec<Diagnostic>,
@@ -278,21 +185,14 @@ fn check_pattern_exhaustiveness_wrapper(
     workspace_symbols: &HashMap<String, SymbolInfo>,
     stdlib_symbols: &HashMap<String, SymbolInfo>,
 ) {
-    check_pattern_exhaustiveness(
+    let enum_registry =
+        pattern_checking::build_enum_registry(documents, workspace_symbols, stdlib_symbols);
+    pattern_checking::check_pattern_exhaustiveness(
         statements,
         diagnostics,
         content,
+        &enum_registry,
         |expr| infer_expression_type_string(expr, documents),
-        find_pattern_match_position,
-        |scrutinee_type, arms| {
-            find_missing_variants(
-                scrutinee_type,
-                arms,
-                documents,
-                workspace_symbols,
-                stdlib_symbols,
-            )
-        },
     );
 }
 
@@ -327,13 +227,6 @@ pub fn infer_expression_type_string(
         return Some(type_str);
     }
 
-    None
-}
-
-fn find_pattern_match_position(content: &str, scrutinee: &Expression) -> Option<Position> {
-    if let Expression::Identifier(name) = scrutinee {
-        return find_text_position(name, content);
-    }
     None
 }
 

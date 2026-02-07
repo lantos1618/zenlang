@@ -1,6 +1,8 @@
-use crate::ast::AstType;
-use crate::stdlib_types::StdlibTypeRegistry;
+use crate::ast::{AstType, Expression, Pattern as AstPattern, PatternArm, Statement};
+use crate::name_utils;
+use crate::stdlib_types::{stdlib_types, StdlibTypeRegistry};
 use crate::well_known::well_known;
+use std::collections::{HashMap, HashSet};
 
 /// Check if a name looks like a type parameter (single uppercase letter or short uppercase name)
 fn is_type_parameter_name(name: &str) -> bool {
@@ -331,5 +333,293 @@ fn contains_import_expression(expr: &crate::ast::Expression) -> bool {
         }
         crate::ast::Expression::FunctionCall { name, .. } if name.contains("import") => true,
         _ => false,
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AllocatorViolation {
+    /// Full call name (e.g. "Vec<i32>.new") — used by LSP to locate in source text
+    pub call_name: String,
+    /// Base type name (e.g. "Vec") — used in diagnostic messages
+    pub type_name: String,
+}
+
+pub fn check_allocator_violations(statements: &[Statement]) -> Vec<AllocatorViolation> {
+    let mut violations = Vec::new();
+    collect_allocator_violations_in_stmts(statements, &mut violations);
+    violations
+}
+
+fn collect_allocator_violations_in_stmts(
+    statements: &[Statement],
+    violations: &mut Vec<AllocatorViolation>,
+) {
+    for stmt in statements {
+        match stmt {
+            Statement::Expression { expr, .. } | Statement::Return { expr, .. } => {
+                collect_allocator_violations_in_expr(expr, violations);
+            }
+            Statement::VariableDeclaration {
+                initializer: Some(expr),
+                ..
+            }
+            | Statement::VariableAssignment { value: expr, .. } => {
+                collect_allocator_violations_in_expr(expr, violations);
+            }
+            _ => {}
+        }
+    }
+}
+
+fn collect_allocator_violations_in_expr(
+    expr: &Expression,
+    violations: &mut Vec<AllocatorViolation>,
+) {
+    match expr {
+        Expression::FunctionCall { name, args, .. } => {
+            let base_name = name_utils::strip_generics(name);
+
+            let requires_alloc = stdlib_types().requires_allocator(base_name);
+
+            if requires_alloc && (args.is_empty() || !has_allocator_arg(args)) {
+                violations.push(AllocatorViolation {
+                    call_name: name.clone(),
+                    type_name: base_name.to_string(),
+                });
+            }
+            for arg in args {
+                collect_allocator_violations_in_expr(arg, violations);
+            }
+        }
+        Expression::MethodCall { object, args, .. } => {
+            collect_allocator_violations_in_expr(object, violations);
+            for arg in args {
+                collect_allocator_violations_in_expr(arg, violations);
+            }
+        }
+        Expression::Block(stmts) => {
+            collect_allocator_violations_in_stmts(stmts, violations);
+        }
+        Expression::Conditional { scrutinee, arms } => {
+            collect_allocator_violations_in_expr(scrutinee, violations);
+            for arm in arms {
+                if let Some(guard) = &arm.guard {
+                    collect_allocator_violations_in_expr(guard, violations);
+                }
+                collect_allocator_violations_in_expr(&arm.body, violations);
+            }
+        }
+        Expression::BinaryOp { left, right, .. } => {
+            collect_allocator_violations_in_expr(left, violations);
+            collect_allocator_violations_in_expr(right, violations);
+        }
+        _ => {}
+    }
+}
+
+fn has_allocator_arg(args: &[Expression]) -> bool {
+    for arg in args {
+        match arg {
+            Expression::FunctionCall { name, .. } => {
+                if name.contains("allocator") || name == "get_default_allocator" {
+                    return true;
+                }
+            }
+            Expression::Identifier(name) => {
+                if name.contains("alloc") || name.ends_with("_allocator") || name == "allocator" {
+                    return true;
+                }
+            }
+            Expression::MethodCall { object, method, .. } => {
+                if method.contains("allocator") || method == "get_allocator" {
+                    return true;
+                }
+                if has_allocator_arg(&[(**object).clone()]) {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PatternExhaustivenessViolation {
+    pub enum_type: String,
+    pub missing_variants: Vec<String>,
+    /// Retained for LSP position lookup — the compiler itself doesn't use this.
+    pub scrutinee: Expression,
+}
+
+/// Pure pattern exhaustiveness check.  `enum_registry` maps enum names to
+/// their variant names; well-known types (Option, Result) are built-in.
+pub fn check_pattern_exhaustiveness(
+    statements: &[Statement],
+    enum_registry: &HashMap<String, Vec<String>>,
+    infer_type: &impl Fn(&Expression) -> Option<String>,
+) -> Vec<PatternExhaustivenessViolation> {
+    let mut violations = Vec::new();
+    collect_exhaustiveness_in_stmts(statements, enum_registry, infer_type, &mut violations, 0);
+    violations
+}
+
+const MAX_PATTERN_DEPTH: usize = 50;
+
+fn collect_exhaustiveness_in_stmts(
+    statements: &[Statement],
+    enum_registry: &HashMap<String, Vec<String>>,
+    infer_type: &impl Fn(&Expression) -> Option<String>,
+    violations: &mut Vec<PatternExhaustivenessViolation>,
+    depth: usize,
+) {
+    if depth > MAX_PATTERN_DEPTH {
+        return;
+    }
+    for stmt in statements {
+        match stmt {
+            Statement::Expression { expr, .. } | Statement::Return { expr, .. } => {
+                collect_exhaustiveness_in_expr(expr, enum_registry, infer_type, violations, depth);
+            }
+            Statement::VariableDeclaration {
+                initializer: Some(expr),
+                ..
+            }
+            | Statement::VariableAssignment { value: expr, .. } => {
+                collect_exhaustiveness_in_expr(expr, enum_registry, infer_type, violations, depth);
+            }
+            _ => {}
+        }
+    }
+}
+
+fn collect_exhaustiveness_in_expr(
+    expr: &Expression,
+    enum_registry: &HashMap<String, Vec<String>>,
+    infer_type: &impl Fn(&Expression) -> Option<String>,
+    violations: &mut Vec<PatternExhaustivenessViolation>,
+    depth: usize,
+) {
+    match expr {
+        Expression::PatternMatch { scrutinee, arms } => {
+            if let Some(scrutinee_type) = infer_type(scrutinee) {
+                let missing = find_missing_variants_pure(&scrutinee_type, arms, enum_registry);
+                if !missing.is_empty() {
+                    violations.push(PatternExhaustivenessViolation {
+                        enum_type: scrutinee_type,
+                        missing_variants: missing,
+                        scrutinee: (**scrutinee).clone(),
+                    });
+                }
+            }
+            collect_exhaustiveness_in_expr(scrutinee, enum_registry, infer_type, violations, depth);
+            for arm in arms {
+                collect_exhaustiveness_in_expr(
+                    &arm.body,
+                    enum_registry,
+                    infer_type,
+                    violations,
+                    depth,
+                );
+            }
+        }
+        Expression::Block(stmts) => {
+            collect_exhaustiveness_in_stmts(
+                stmts,
+                enum_registry,
+                infer_type,
+                violations,
+                depth + 1,
+            );
+        }
+        Expression::Conditional { scrutinee, arms } => {
+            collect_exhaustiveness_in_expr(scrutinee, enum_registry, infer_type, violations, depth);
+            for arm in arms {
+                if let Some(guard) = &arm.guard {
+                    collect_exhaustiveness_in_expr(
+                        guard,
+                        enum_registry,
+                        infer_type,
+                        violations,
+                        depth,
+                    );
+                }
+                collect_exhaustiveness_in_expr(
+                    &arm.body,
+                    enum_registry,
+                    infer_type,
+                    violations,
+                    depth,
+                );
+            }
+        }
+        Expression::BinaryOp { left, right, .. } => {
+            collect_exhaustiveness_in_expr(left, enum_registry, infer_type, violations, depth);
+            collect_exhaustiveness_in_expr(right, enum_registry, infer_type, violations, depth);
+        }
+        _ => {}
+    }
+}
+
+pub fn find_missing_variants_pure(
+    scrutinee_type: &str,
+    arms: &[PatternArm],
+    enum_registry: &HashMap<String, Vec<String>>,
+) -> Vec<String> {
+    let wk = well_known();
+
+    let base_type = name_utils::strip_generics(scrutinee_type).to_string();
+    let known_variants: Vec<String> = if wk.is_option(&base_type) {
+        vec![wk.some_name().to_string(), wk.none_name().to_string()]
+    } else if wk.is_result(&base_type) {
+        vec![wk.ok_name().to_string(), wk.err_name().to_string()]
+    } else {
+        let enum_name = name_utils::base_name(&base_type).trim().to_string();
+        match enum_registry.get(&enum_name) {
+            Some(variants) => variants.clone(),
+            None => return Vec::new(),
+        }
+    };
+    let mut covered = HashSet::new();
+    let mut has_wildcard = false;
+
+    for arm in arms {
+        collect_covered_variants(&arm.pattern, &mut covered, &mut has_wildcard);
+    }
+
+    if has_wildcard {
+        return Vec::new();
+    }
+
+    known_variants
+        .into_iter()
+        .filter(|v| !covered.contains(v))
+        .collect()
+}
+
+fn collect_covered_variants(
+    pattern: &AstPattern,
+    covered: &mut HashSet<String>,
+    has_wildcard: &mut bool,
+) {
+    match pattern {
+        AstPattern::EnumVariant { variant, .. } => {
+            covered.insert(variant.clone());
+        }
+        AstPattern::EnumLiteral { variant, .. } => {
+            covered.insert(variant.clone());
+        }
+        AstPattern::Wildcard => {
+            *has_wildcard = true;
+        }
+        AstPattern::Or(pats) => {
+            for p in pats {
+                collect_covered_variants(p, covered, has_wildcard);
+            }
+        }
+        AstPattern::Guard { pattern, .. } => {
+            collect_covered_variants(pattern, covered, has_wildcard);
+        }
+        _ => {}
     }
 }
