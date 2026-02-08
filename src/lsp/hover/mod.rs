@@ -20,7 +20,6 @@ use super::navigation::find_symbol_at_position;
 use super::navigation::find_symbol_definition_in_content;
 use super::types::*;
 use super::utils::{format_symbol_kind, format_type};
-use crate::ast::primitives;
 use crate::ast::AstType;
 
 pub use expressions::*;
@@ -37,7 +36,7 @@ mod handler {
     /// Handle textDocument/hover requests
     pub fn handle_hover(
         req: Request,
-        store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+        store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
     ) -> Response {
         let params: HoverParams = match serde_json::from_value(req.params) {
             Ok(p) => p,
@@ -50,7 +49,7 @@ mod handler {
             }
         };
 
-        let store = match store.lock() {
+        let store = match store.read() {
             Ok(s) => s,
             Err(_) => {
                 return Response {
@@ -155,27 +154,11 @@ mod handler {
                     return create_hover_response_from_string(request_id.clone(), builtin_text);
                 }
 
-                // Try to infer type from variable assignment in the current file
-                if let Some(response) =
-                    handle_inferred_type_hover(&symbol_name, doc, &store, request_id.clone())
-                {
-                    return response;
-                }
-
                 // Find definition location with context
                 if let Some(response) = handle_definition_hover(
                     &symbol_name,
                     &doc.content,
                     &params.text_document_position_params.text_document.uri,
-                    request_id.clone(),
-                ) {
-                    return response;
-                }
-
-                if let Some(response) = handle_lightweight_type_inference(
-                    &symbol_name,
-                    &doc.content,
-                    position,
                     request_id.clone(),
                 ) {
                     return response;
@@ -619,34 +602,6 @@ mod handler {
         None
     }
 
-    fn handle_inferred_type_hover(
-        symbol_name: &str,
-        doc: &Document,
-        store: &DocumentStore,
-        request_id: lsp_server::RequestId,
-    ) -> Option<Response> {
-        if let Some(inferred_type) =
-            inference::infer_variable_type(symbol_name, &doc.symbols, store)
-        {
-            let enhanced_type =
-                if let Some(struct_name) = structs::extract_struct_name_from_type(&inferred_type) {
-                    if let Some(struct_def) = store.find_struct_definition(&struct_name) {
-                        format!(
-                            "```zen\n{}\n```",
-                            structs::format_struct_definition(&struct_def)
-                        )
-                    } else {
-                        inferred_type
-                    }
-                } else {
-                    inferred_type
-                };
-
-            return Some(create_hover_response_from_string(request_id, enhanced_type));
-        }
-        None
-    }
-
     fn handle_definition_hover(
         symbol_name: &str,
         content: &str,
@@ -672,164 +627,11 @@ mod handler {
                 range.start.line + 1
             ));
 
-            if let Some(type_str) = inference::extract_type_from_line(line_text) {
-                hover_content.push(format!("**Type:** `{}`", type_str));
-            }
-
             return Some(create_hover_response_from_string(
                 request_id,
                 hover_content.join("\n\n"),
             ));
         }
-        None
-    }
-
-    fn is_inside_format_expression(line: &str, byte_pos: usize) -> bool {
-        // Find the nearest ${ before the cursor
-        use crate::lsp::search_limits::MAX_ITERATIONS;
-        let mut search_pos = 0;
-        let mut iterations = 0;
-
-        while iterations < MAX_ITERATIONS {
-            iterations += 1;
-
-            let search_range = search_pos..byte_pos.min(line.len());
-            if search_range.is_empty() {
-                break;
-            }
-
-            let dollar_pos = if let Some(pos) = line[search_range].rfind('$') {
-                search_pos + pos
-            } else {
-                break;
-            };
-
-            // Check if it's escaped
-            if dollar_pos > 0 && line.as_bytes()[dollar_pos - 1] == b'\\' {
-                search_pos = dollar_pos.saturating_sub(1);
-                continue;
-            }
-
-            // Check if it's ${...
-            if dollar_pos + 1 < line.len() && line.as_bytes()[dollar_pos + 1] == b'{' {
-                // Find the closing }
-                if let Some(close_brace) = line[dollar_pos + 2..].find('}') {
-                    let expr_end = dollar_pos + 2 + close_brace;
-                    // Check if cursor is between ${ and }
-                    if byte_pos > dollar_pos && byte_pos <= expr_end + 1 {
-                        return true;
-                    }
-                } else {
-                    // No closing brace found, but we're inside ${...
-                    if byte_pos > dollar_pos {
-                        return true;
-                    }
-                }
-            }
-
-            if dollar_pos == 0 {
-                break;
-            }
-            search_pos = dollar_pos.saturating_sub(1);
-        }
-
-        false
-    }
-
-    /// Extract string literal if cursor is inside one (public for use in handler)
-    fn extract_string_literal_from_line(line: &str, byte_pos: usize) -> Option<String> {
-        let mut in_string = false;
-        let mut string_start = 0;
-        let mut escape_next = false;
-
-        for (i, ch) in line.char_indices() {
-            if escape_next {
-                escape_next = false;
-                continue;
-            }
-
-            if ch == '\\' {
-                escape_next = true;
-                continue;
-            }
-
-            if ch == '"' {
-                if !in_string {
-                    // Start of string
-                    in_string = true;
-                    string_start = i;
-                } else {
-                    // End of string
-                    // Include boundaries: if cursor is at or between the quotes
-                    if byte_pos >= string_start && byte_pos <= i {
-                        // We're inside this string literal (including on the quotes)
-                        return Some(line[string_start..=i].to_string());
-                    }
-                    in_string = false;
-                }
-            }
-        }
-
-        // If we're still in a string at the end, check if cursor is in it
-        if in_string && byte_pos >= string_start {
-            return Some(line[string_start..].to_string());
-        }
-
-        None
-    }
-
-    fn handle_lightweight_type_inference(
-        symbol_name: &str,
-        content: &str,
-        position: Position,
-        request_id: lsp_server::RequestId,
-    ) -> Option<Response> {
-        let line = content.lines().nth(position.line as usize).unwrap_or("");
-        let char_pos = position.character as usize;
-        let byte_pos = char_pos_to_byte_pos(line, char_pos);
-        let trimmed = symbol_name.trim();
-
-        if trimmed.starts_with('"') && trimmed.ends_with('"') {
-            return Some(create_hover_response_from_string(
-                request_id,
-                format!("```zen\n{}\n```\n\n**Type:** `StaticString`", trimmed),
-            ));
-        }
-
-        if trimmed.parse::<i64>().is_ok() {
-            return Some(create_hover_response_from_string(
-                request_id,
-                format!("```zen\n{}\n```\n\n**Type:** `i32`", trimmed),
-            ));
-        }
-
-        if trimmed.parse::<f64>().is_ok() && trimmed.contains('.') {
-            return Some(create_hover_response_from_string(
-                request_id,
-                format!("```zen\n{}\n```\n\n**Type:** `f64`", trimmed),
-            ));
-        }
-
-        // Use centralized boolean literal check
-        if primitives::is_boolean_literal(trimmed) {
-            return Some(create_hover_response_from_string(
-                request_id,
-                format!("```zen\n{}\n```\n\n**Type:** `bool`", trimmed),
-            ));
-        }
-
-        if !is_inside_format_expression(line, byte_pos) {
-            if let Some(string_literal) = extract_string_literal_from_line(line, byte_pos) {
-                return Some(create_hover_response_from_string(
-                    request_id,
-                    format!(
-                        "```zen\n{}\n```\n\n**Type:** `StaticString`",
-                        string_literal
-                    ),
-                ));
-            }
-        }
-
         None
     }
 

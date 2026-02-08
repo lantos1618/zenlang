@@ -132,12 +132,6 @@ impl DocumentStore {
         content: &str,
         skip_expensive_analysis: bool,
     ) -> Vec<Diagnostic> {
-        analyzer::analyze_document(
-            content,
-            skip_expensive_analysis,
-            &self.documents,
-            &self.workspace_symbols,
-            &self.stdlib_symbols,
-        )
+        analyzer::analyze_document(content, skip_expensive_analysis, &self.documents)
     }
 }

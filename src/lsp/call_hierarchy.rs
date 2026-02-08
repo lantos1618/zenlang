@@ -15,7 +15,7 @@ use super::navigation::find_symbol_at_position;
 /// Handle textDocument/prepareCallHierarchy requests
 pub fn handle_prepare_call_hierarchy(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
     let params: CallHierarchyPrepareParams = match serde_json::from_value(req.params) {
         Ok(p) => p,
@@ -28,7 +28,7 @@ pub fn handle_prepare_call_hierarchy(
         }
     };
 
-    let store = match store.lock() {
+    let store = match store.read() {
         Ok(s) => s,
         Err(_) => {
             return Response {
@@ -120,7 +120,7 @@ pub fn handle_prepare_call_hierarchy(
 /// Handle callHierarchy/incomingCalls requests
 pub fn handle_incoming_calls(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
     let params: CallHierarchyIncomingCallsParams = match serde_json::from_value(req.params) {
         Ok(p) => p,
@@ -133,7 +133,7 @@ pub fn handle_incoming_calls(
         }
     };
 
-    let store = match store.lock() {
+    let store = match store.read() {
         Ok(s) => s,
         Err(_) => {
             return Response {
@@ -181,7 +181,7 @@ pub fn handle_incoming_calls(
 /// Handle callHierarchy/outgoingCalls requests
 pub fn handle_outgoing_calls(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
     let params: CallHierarchyOutgoingCallsParams = match serde_json::from_value(req.params) {
         Ok(p) => p,
@@ -194,7 +194,7 @@ pub fn handle_outgoing_calls(
         }
     };
 
-    let store = match store.lock() {
+    let store = match store.read() {
         Ok(s) => s,
         Err(_) => {
             return Response {

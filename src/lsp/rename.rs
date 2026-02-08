@@ -5,14 +5,14 @@ use lsp_server::{Request, Response};
 use lsp_types::*;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use crate::ast::primitives;
 use crate::ast::{Declaration, Statement};
 use crate::lexer::{Lexer, Token};
 
 use super::document_store::DocumentStore;
-use super::helpers::{null_response, success_response, try_lock, try_parse_params, with_document};
+use super::helpers::{null_response, success_response, try_parse_params, try_read, with_document};
 use super::navigation::find_symbol_at_position;
 use super::navigation::utils::{find_function_range, find_function_range_from_doc};
 use super::types::{Document, SymbolScope};
@@ -117,7 +117,7 @@ pub fn validate_new_name(new_name: &str) -> Option<String> {
 // PREPARE RENAME HANDLER
 // ============================================================================
 
-pub fn handle_prepare_rename(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Response {
+pub fn handle_prepare_rename(req: Request, store: &Arc<RwLock<DocumentStore>>) -> Response {
     with_document::<TextDocumentPositionParams, _>(&req, store, |doc, params, _store| {
         let position = params.position;
 
@@ -191,7 +191,7 @@ fn find_symbol_start(line: &str, cursor_pos: usize, symbol_name: &str) -> Option
 // PUBLIC HANDLER FUNCTION
 // ============================================================================
 
-pub fn handle_rename(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Response {
+pub fn handle_rename(req: Request, store: &Arc<RwLock<DocumentStore>>) -> Response {
     let params: RenameParams = match try_parse_params(&req) {
         Ok(p) => p,
         Err(resp) => return resp,
@@ -206,7 +206,7 @@ pub fn handle_rename(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Respons
         );
     }
 
-    let store = match try_lock(store.as_ref(), &req) {
+    let store = match try_read(store.as_ref(), &req) {
         Ok(s) => s,
         Err(_) => return success_response(&req, WorkspaceEdit::default()),
     };

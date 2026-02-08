@@ -1,6 +1,8 @@
 // Stdlib Module Resolver for LSP
-// Handles resolution of @std module paths to actual files
+// Handles resolution of @std module paths to actual files.
+// Delegates stdlib root discovery to `stdlib_discovery` (shared with compiler).
 
+use crate::stdlib_discovery;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -17,40 +19,12 @@ pub struct StdlibResolver {
 
 impl StdlibResolver {
     pub fn new(workspace_root: Option<&Path>) -> Self {
-        // Find stdlib directory
-        let stdlib_root = Self::find_stdlib_root(workspace_root);
+        let stdlib_root = stdlib_discovery::find_stdlib_root_from_or_default(workspace_root);
 
         Self {
             stdlib_root,
             module_cache: HashMap::new(),
         }
-    }
-
-    fn find_stdlib_root(workspace_root: Option<&Path>) -> PathBuf {
-        // Check environment variable first
-        if let Ok(path) = std::env::var("ZEN_STDLIB_PATH") {
-            let p = PathBuf::from(&path);
-            if p.exists() && p.is_dir() {
-                return p;
-            }
-        }
-
-        // Try workspace-relative and common locations
-        let candidates = vec![
-            workspace_root.map(|p| p.join("stdlib")),
-            Some(PathBuf::from("./stdlib")),
-            Some(PathBuf::from("../stdlib")),
-            Some(PathBuf::from("../../stdlib")),
-        ];
-
-        for candidate in candidates.into_iter().flatten() {
-            if candidate.exists() && candidate.is_dir() {
-                return candidate;
-            }
-        }
-
-        // Default fallback
-        PathBuf::from("./stdlib")
     }
 
     /// Resolve a module path like "@std.io" or "@std.collections.hashmap" to a file path

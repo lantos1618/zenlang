@@ -14,7 +14,7 @@ pub fn find_struct_field_definition(
     content: &str,
     position: Position,
     doc: &Document,
-    store: &std::sync::MutexGuard<'_, DocumentStore>,
+    store: &std::sync::RwLockReadGuard<'_, DocumentStore>,
 ) -> Option<Location> {
     let lines: Vec<&str> = content.lines().collect();
     if position.line as usize >= lines.len() {
@@ -132,7 +132,7 @@ fn find_field_in_struct(
     type_name: &str,
     field_name: &str,
     doc: &Document,
-    store: &std::sync::MutexGuard<'_, DocumentStore>,
+    store: &std::sync::RwLockReadGuard<'_, DocumentStore>,
 ) -> Option<Location> {
     let uri = &doc.uri;
 

@@ -25,7 +25,7 @@ fn extract_type_name(detail: &str) -> Option<String> {
 
 pub fn handle_type_definition(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
     with_document::<GotoDefinitionParams, _>(&req, store, |doc, params, store_guard| {
         let position = params.text_document_position_params.position;

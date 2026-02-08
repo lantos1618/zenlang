@@ -2,7 +2,6 @@
 //! Extracted from document_store.rs
 
 use super::pattern_checking;
-use super::types::SymbolInfo;
 use super::utils::{compile_error_to_diagnostic, compile_error_to_diagnostic_with_content};
 use crate::ast::{Declaration, Expression, Program, Statement};
 use crate::lexer::Lexer;
@@ -20,8 +19,6 @@ pub fn analyze_document(
     content: &str,
     skip_expensive_analysis: bool,
     documents: &HashMap<Url, super::types::Document>,
-    workspace_symbols: &HashMap<String, SymbolInfo>,
-    stdlib_symbols: &HashMap<String, SymbolInfo>,
 ) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
@@ -31,7 +28,9 @@ pub fn analyze_document(
     match parser.parse_program() {
         Ok(program) => {
             if !skip_expensive_analysis {
-                diagnostics.extend(run_compiler_analysis(&program, content));
+                let (type_diags, type_context) =
+                    run_compiler_analysis_with_context(&program, content);
+                diagnostics.extend(type_diags);
 
                 for decl in &program.declarations {
                     if let Declaration::Function(func) = decl {
@@ -40,9 +39,8 @@ pub fn analyze_document(
                             &func.body,
                             &mut diagnostics,
                             content,
+                            type_context.as_deref(),
                             documents,
-                            workspace_symbols,
-                            stdlib_symbols,
                         );
                     }
                 }
@@ -53,12 +51,6 @@ pub fn analyze_document(
         }
     }
 
-    diagnostics
-}
-
-/// Run type checker analysis on parsed program
-fn run_compiler_analysis(program: &Program, content: &str) -> Vec<Diagnostic> {
-    let (diagnostics, _) = run_compiler_analysis_with_context(program, content);
     diagnostics
 }
 
@@ -79,8 +71,11 @@ pub fn run_compiler_analysis_with_context(
     let loaded_modules = module_system.get_modules();
     type_checker.with_stdlib_modules(&loaded_modules);
 
-    let (type_context, first_error) = type_checker.check_program_tolerant(&merged_program);
-    if let Some(err) = first_error {
+    let main_decl_count = program.declarations.len();
+    let (type_context, errors) =
+        type_checker.check_program_collect_errors_for_main(&merged_program, main_decl_count);
+
+    for err in errors {
         diagnostics.push(compile_error_to_diagnostic_with_content(err, Some(content)));
     }
     (diagnostics, Some(Arc::new(type_context)))
@@ -91,8 +86,6 @@ pub fn run_compiler_analysis_with_context(
 pub fn analyze_document_with_context(
     content: &str,
     documents: &HashMap<Url, super::types::Document>,
-    workspace_symbols: &HashMap<String, SymbolInfo>,
-    stdlib_symbols: &HashMap<String, SymbolInfo>,
 ) -> (Vec<Diagnostic>, Option<Arc<TypeContext>>) {
     let mut diagnostics = Vec::new();
 
@@ -111,9 +104,8 @@ pub fn analyze_document_with_context(
                         &func.body,
                         &mut diagnostics,
                         content,
+                        type_context.as_deref(),
                         documents,
-                        workspace_symbols,
-                        stdlib_symbols,
                     );
                 }
             }
@@ -182,12 +174,10 @@ fn check_pattern_exhaustiveness_wrapper(
     statements: &[Statement],
     diagnostics: &mut Vec<Diagnostic>,
     content: &str,
+    type_context: Option<&TypeContext>,
     documents: &HashMap<Url, super::types::Document>,
-    workspace_symbols: &HashMap<String, SymbolInfo>,
-    stdlib_symbols: &HashMap<String, SymbolInfo>,
 ) {
-    let enum_registry =
-        pattern_checking::build_enum_registry(documents, workspace_symbols, stdlib_symbols);
+    let enum_registry = pattern_checking::build_enum_registry(type_context);
     pattern_checking::check_pattern_exhaustiveness(
         statements,
         diagnostics,

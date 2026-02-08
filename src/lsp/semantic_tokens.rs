@@ -35,14 +35,14 @@ const MOD_DEFAULT_LIBRARY: u32 = 0b1000000000;
 
 pub fn handle_semantic_tokens(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
     let params: SemanticTokensParams = match serde_json::from_value(req.params) {
         Ok(p) => p,
         Err(_) => return error_response(req.id, "Invalid parameters"),
     };
 
-    let store = match store.lock() {
+    let store = match store.read() {
         Ok(s) => s,
         Err(_) => return empty_response(req.id),
     };

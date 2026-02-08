@@ -1,46 +1,20 @@
-use super::types::{Document, SymbolInfo};
 use crate::ast::Expression;
+use crate::type_context::TypeContext;
 use crate::typechecker::validation;
 use lsp_types::*;
 use std::collections::HashMap;
 
-pub fn build_enum_registry(
-    documents: &HashMap<Url, Document>,
-    workspace_symbols: &HashMap<String, SymbolInfo>,
-    stdlib_symbols: &HashMap<String, SymbolInfo>,
-) -> HashMap<String, Vec<String>> {
-    let mut registry = HashMap::new();
-
-    for doc in documents
-        .values()
-        .take(crate::lsp::search_limits::ENUM_SEARCH)
-    {
-        for (name, symbol) in &doc.symbols {
-            if let Some(ref variants) = symbol.enum_variants {
-                registry
-                    .entry(name.clone())
-                    .or_insert_with(|| variants.clone());
-            }
-        }
-    }
-
-    for (name, symbol) in workspace_symbols {
-        if let Some(ref variants) = symbol.enum_variants {
-            registry
-                .entry(name.clone())
-                .or_insert_with(|| variants.clone());
-        }
-    }
-
-    for (name, symbol) in stdlib_symbols {
-        if let Some(ref variants) = symbol.enum_variants {
-            registry
-                .entry(name.clone())
-                .or_insert_with(|| variants.clone());
-        }
-    }
-
-    registry
+pub fn build_enum_registry(type_context: Option<&TypeContext>) -> HashMap<String, Vec<String>> {
+    let Some(tc) = type_context else {
+        return HashMap::new();
+    };
+    tc.enums
+        .iter()
+        .map(|(name, variants)| {
+            let names: Vec<String> = variants.iter().map(|(n, _)| n.clone()).collect();
+            (name.clone(), names)
+        })
+        .collect()
 }
 
 pub fn check_pattern_exhaustiveness(

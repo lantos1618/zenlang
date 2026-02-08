@@ -4,7 +4,7 @@
 use lsp_server::{ErrorCode, Request, Response, ResponseError};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use super::document_store::DocumentStore;
 use super::types::Document;
@@ -100,17 +100,17 @@ impl HasDocumentUri for lsp_types::TextDocumentPositionParams {
     }
 }
 
-pub fn with_document<P, F>(req: &Request, store: &Arc<Mutex<DocumentStore>>, f: F) -> Response
+pub fn with_document<P, F>(req: &Request, store: &Arc<RwLock<DocumentStore>>, f: F) -> Response
 where
     P: DeserializeOwned + HasDocumentUri,
-    F: FnOnce(&Document, &P, &std::sync::MutexGuard<'_, DocumentStore>) -> Response,
+    F: FnOnce(&Document, &P, &std::sync::RwLockReadGuard<'_, DocumentStore>) -> Response,
 {
     let params: P = match try_parse_params(req) {
         Ok(p) => p,
         Err(resp) => return resp,
     };
 
-    let store_guard = match try_lock(store.as_ref(), req) {
+    let store_guard = match try_read(store.as_ref(), req) {
         Ok(s) => s,
         Err(resp) => return resp,
     };
@@ -147,11 +147,6 @@ pub fn success_response_id<T: serde::Serialize>(id: lsp_server::RequestId, resul
         result: Some(serde_json::to_value(result).unwrap_or(Value::Null)),
         error: None,
     }
-}
-
-#[inline]
-pub fn error_response(req: &Request, code: ErrorCode, message: impl Into<String>) -> Response {
-    error_response_id(req.id.clone(), code, message)
 }
 
 #[inline]
@@ -200,17 +195,30 @@ pub fn try_parse_params_with_error<T: DeserializeOwned>(req: &Request) -> Result
     })
 }
 
-/// Attempts to acquire a mutex lock, returning a null response on failure.
+/// Attempts to acquire a read lock, returning a null response on failure.
 ///
 /// # Example
 /// ```ignore
-/// let store = try_lock_store(&store_arc, &req)?;
+/// let store = try_read(&store_arc, &req)?;
 /// ```
-pub fn try_lock<'a, T>(
-    mutex: &'a std::sync::Mutex<T>,
+pub fn try_read<'a, T>(
+    rwlock: &'a std::sync::RwLock<T>,
     req: &Request,
-) -> Result<std::sync::MutexGuard<'a, T>, Response> {
-    mutex.lock().map_err(|_| null_response(req))
+) -> Result<std::sync::RwLockReadGuard<'a, T>, Response> {
+    rwlock.read().map_err(|_| null_response(req))
+}
+
+/// Attempts to acquire a write lock, returning a null response on failure.
+///
+/// # Example
+/// ```ignore
+/// let store = try_write(&store_arc, &req)?;
+/// ```
+pub fn try_write<'a, T>(
+    rwlock: &'a std::sync::RwLock<T>,
+    req: &Request,
+) -> Result<std::sync::RwLockWriteGuard<'a, T>, Response> {
+    rwlock.write().map_err(|_| null_response(req))
 }
 
 /// Macro to parse params and return early on failure.
@@ -232,18 +240,16 @@ macro_rules! parse_params {
     };
 }
 
-/// Macro to lock a mutex and return early on failure.
+/// Macro to read-lock a store and return early on failure.
 ///
 /// # Example
 /// ```ignore
-/// lock_store!(store_arc => store, req);
-/// // Expands to:
-/// // let store = try_lock(&store_arc, &req)?;
+/// read_store!(store_arc => store, req);
 /// ```
 #[macro_export]
 macro_rules! lock_store {
-    ($mutex:expr, $req:expr) => {
-        match $crate::lsp::helpers::try_lock($mutex, $req) {
+    ($rwlock:expr, $req:expr) => {
+        match $crate::lsp::helpers::try_read($rwlock, $req) {
             Ok(guard) => guard,
             Err(resp) => return resp,
         }

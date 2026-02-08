@@ -3,10 +3,10 @@
 
 use lsp_server::{Request, Response};
 use lsp_types::*;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use super::document_store::DocumentStore;
-use super::helpers::{success_response, try_lock, try_parse_params};
+use super::helpers::{success_response, try_parse_params, try_read};
 
 mod imports;
 mod quick_fixes;
@@ -25,14 +25,14 @@ pub use utils::*;
 // PUBLIC HANDLER FUNCTION
 // ============================================================================
 
-pub fn handle_code_action(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Response {
+pub fn handle_code_action(req: Request, store: &Arc<RwLock<DocumentStore>>) -> Response {
     let params: CodeActionParams = match try_parse_params(&req) {
         Ok(p) => p,
         Err(resp) => return resp,
     };
 
     let mut actions = Vec::new();
-    let store = match try_lock(store.as_ref(), &req) {
+    let store = match try_read(store.as_ref(), &req) {
         Ok(s) => s,
         Err(_) => return success_response(&req, Vec::<CodeActionOrCommand>::new()),
     };

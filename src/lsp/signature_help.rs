@@ -3,11 +3,11 @@
 
 use lsp_server::{Request, Response};
 use lsp_types::*;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use super::document_store::DocumentStore;
 use super::helpers::{
-    char_pos_to_byte_pos, null_response, success_response, try_lock, try_parse_params,
+    char_pos_to_byte_pos, null_response, success_response, try_parse_params, try_read,
 };
 use super::types::SymbolInfo;
 use crate::lsp::utils::format_type;
@@ -17,7 +17,7 @@ use crate::type_context::TypeContext;
 // PUBLIC HANDLER FUNCTION
 // ============================================================================
 
-pub fn handle_signature_help(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Response {
+pub fn handle_signature_help(req: Request, store: &Arc<RwLock<DocumentStore>>) -> Response {
     let params: SignatureHelpParams = match try_parse_params(&req) {
         Ok(p) => p,
         Err(resp) => return resp,
@@ -29,7 +29,7 @@ pub fn handle_signature_help(req: Request, store: &Arc<Mutex<DocumentStore>>) ->
         active_parameter: None,
     };
 
-    let store = match try_lock(store.as_ref(), &req) {
+    let store = match try_read(store.as_ref(), &req) {
         Ok(s) => s,
         Err(_) => return success_response(&req, empty_help),
     };

@@ -37,7 +37,7 @@ fn origin_location() -> Range {
 
 pub fn handle_definition(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
     with_document::<GotoDefinitionParams, _>(&req, store, |doc, params, store_guard| {
         let doc_uri = params.document_uri();
@@ -415,6 +415,11 @@ fn resolve_symbol_from_stdlib(
                     });
                 }
             }
+
+            return Some(Location {
+                uri: module_uri,
+                range: origin_location(),
+            });
         }
     }
 

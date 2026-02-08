@@ -26,7 +26,7 @@ fn find_symbol_occurrences(content: &str, symbol_name: &str) -> Vec<DocumentHigh
 
 pub fn handle_document_highlight(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
     with_document::<DocumentHighlightParams, _>(&req, store, |doc, params, _store| {
         let position = params.text_document_position_params.position;

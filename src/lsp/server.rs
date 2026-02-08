@@ -6,14 +6,11 @@ use lsp_types::*;
 use serde_json::Value;
 use std::error::Error;
 use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use std::thread;
-
-use inkwell::context::Context;
 
 // AST types used in type_inference.rs
 use crate::ast::primitives;
-use crate::compiler::Compiler;
 use crate::error::{CompileError, Span};
 
 use super::call_hierarchy::{
@@ -450,7 +447,7 @@ fn get_diagnostic_tags(error: &CompileError) -> Option<Vec<DiagnosticTag>> {
 
 pub struct ZenLanguageServer {
     connection: Connection,
-    store: Arc<Mutex<DocumentStore>>,
+    store: Arc<RwLock<DocumentStore>>,
     capabilities: ServerCapabilities,
 }
 
@@ -563,7 +560,7 @@ impl ZenLanguageServer {
 
         Ok(Self {
             connection,
-            store: Arc::new(Mutex::new(DocumentStore::new())),
+            store: Arc::new(RwLock::new(DocumentStore::new())),
             capabilities,
         })
     }
@@ -579,12 +576,12 @@ impl ZenLanguageServer {
             #[allow(deprecated)]
             if let Some(folders) = params.workspace_folders {
                 if let Some(first_folder) = folders.first() {
-                    if let Ok(mut s) = self.store.lock() {
+                    if let Ok(mut s) = self.store.write() {
                         s.set_workspace_root(first_folder.uri.clone());
                     }
                 }
             } else if let Some(root_uri) = params.root_uri {
-                if let Ok(mut s) = self.store.lock() {
+                if let Ok(mut s) = self.store.write() {
                     s.set_workspace_root(root_uri);
                 }
             }
@@ -595,7 +592,7 @@ impl ZenLanguageServer {
         let (result_tx, result_rx) = mpsc::channel();
 
         // Give the analysis sender to the document store
-        if let Ok(mut s) = self.store.lock() {
+        if let Ok(mut s) = self.store.write() {
             s.set_analysis_sender(analysis_tx);
         }
 
@@ -632,9 +629,6 @@ impl ZenLanguageServer {
         use crate::module_system::ModuleSystem;
         use crate::typechecker::TypeChecker;
 
-        let context = Context::create();
-        let compiler = Compiler::new(&context);
-
         // Persisted across analysis runs — modules are cache-invalidated by content hash
         let mut module_system = ModuleSystem::new();
         // Track last-analyzed content hash per URI to skip redundant TypeChecker runs
@@ -642,21 +636,14 @@ impl ZenLanguageServer {
             std::collections::HashMap::new();
 
         while let Ok(job) = job_rx.recv() {
-            let errors = compiler.analyze_for_diagnostics(&job.program);
-
-            let diagnostics: Vec<Diagnostic> = errors
-                .into_iter()
-                .map(compile_error_to_diagnostic)
-                .collect();
-
-            // Skip TypeChecker if content hash unchanged since last analysis for this URI
+            // Skip if content hash unchanged since last analysis for this URI
             let hash_unchanged = last_analyzed_hash
                 .get(&job.uri)
                 .map(|h| *h == job.content_hash)
                 .unwrap_or(false);
 
-            let type_context = if hash_unchanged {
-                None
+            let (diagnostics, type_context) = if hash_unchanged {
+                (Vec::new(), None)
             } else {
                 for decl in &job.program.declarations {
                     if let Declaration::ModuleImport { module_path, .. } = decl {
@@ -664,19 +651,24 @@ impl ZenLanguageServer {
                     }
                 }
 
+                let main_decl_count = job.program.declarations.len();
                 let merged_program = module_system.merge_programs(job.program.clone());
 
                 let mut type_checker = TypeChecker::new();
                 let loaded_modules = module_system.get_modules();
                 type_checker.with_stdlib_modules(&loaded_modules);
 
-                let tc = type_checker
-                    .check_program(&merged_program)
-                    .ok()
-                    .map(std::sync::Arc::new);
+                // Must match zen check / foreground LSP: typechecker only, main-file errors only.
+                let (type_ctx, errors) = type_checker
+                    .check_program_collect_errors_for_main(&merged_program, main_decl_count);
+
+                let diags: Vec<Diagnostic> = errors
+                    .into_iter()
+                    .map(compile_error_to_diagnostic)
+                    .collect();
 
                 last_analyzed_hash.insert(job.uri.clone(), job.content_hash);
-                tc
+                (diags, Some(Arc::new(type_ctx)))
             };
 
             let result = AnalysisResult {
@@ -700,7 +692,7 @@ impl ZenLanguageServer {
                 Ok(result) => {
                     // Store TypeContext in document for semantic features
                     if let Some(type_ctx) = &result.type_context {
-                        if let Ok(mut store) = self.store.lock() {
+                        if let Ok(mut store) = self.store.write() {
                             if let Some(doc) = store.documents.get_mut(&result.uri) {
                                 doc.type_context = Some(type_ctx.clone());
                             }
@@ -797,7 +789,7 @@ impl ZenLanguageServer {
                         return Ok(());
                     }
                 };
-                let diagnostics = match self.store.lock() {
+                let diagnostics = match self.store.write() {
                     Ok(mut s) => s.open(
                         params.text_document.uri.clone(),
                         params.text_document.version,
@@ -822,7 +814,7 @@ impl ZenLanguageServer {
 
                 // Handle all content changes (LSP spec allows array)
                 // IMPORTANT: Changes must be applied sequentially, each to the updated document state
-                let diagnostics = match self.store.lock() {
+                let diagnostics = match self.store.write() {
                     Ok(mut s) => {
                         // Get the current document content (or start fresh if document doesn't exist)
                         let mut current_content = s
@@ -983,7 +975,7 @@ impl ZenLanguageServer {
             }
         };
 
-        let store = match self.store.lock() {
+        let store = match self.store.read() {
             Ok(s) => s,
             Err(_) => {
                 return Response {

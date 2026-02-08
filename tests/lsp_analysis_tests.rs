@@ -590,6 +590,7 @@ mod allocator_validation_tests {
                 name: "Vec<i32>.new".to_string(),
                 type_args: vec![],
                 args: vec![],
+                span: None,
             },
             span: None,
         };
@@ -626,6 +627,7 @@ mod allocator_validation_tests {
                 name: "Vec<i32>.new".to_string(),
                 type_args: vec![],
                 args: vec![Expression::Identifier("allocator".to_string())],
+                span: None,
             },
             span: None,
         };
@@ -653,7 +655,9 @@ mod allocator_validation_tests {
                     name: "get_default_allocator".to_string(),
                     type_args: vec![],
                     args: vec![],
+                    span: None,
                 }],
+                span: None,
             },
             span: None,
         };
@@ -678,6 +682,7 @@ mod allocator_validation_tests {
                 name: "Vec<i32>.new".to_string(),
                 type_args: vec![],
                 args: vec![Expression::Identifier("my_alloc".to_string())],
+                span: None,
             },
             span: None,
         };
@@ -702,6 +707,7 @@ mod allocator_validation_tests {
                 name: "print".to_string(),
                 type_args: vec![],
                 args: vec![Expression::String("hello".to_string())],
+                span: None,
             },
             span: None,
         };
@@ -728,6 +734,7 @@ mod allocator_validation_tests {
                 name: "Vec<i32>.new".to_string(),
                 type_args: vec![],
                 args: vec![Expression::Identifier("allocator".to_string())],
+                span: None,
             }),
             is_mutable: false,
             declaration_type: zen::ast::VariableDeclarationType::InferredImmutable,
@@ -755,6 +762,7 @@ mod allocator_validation_tests {
                     name: "print".to_string(),
                     type_args: vec![],
                     args: vec![],
+                    span: None,
                 },
                 span: None,
             }]),
@@ -781,6 +789,7 @@ mod allocator_validation_tests {
                 name: "print".to_string(),
                 type_args: vec![],
                 args: vec![],
+                span: None,
             },
             span: None,
         };
@@ -808,7 +817,9 @@ mod allocator_validation_tests {
                     name: "print".to_string(),
                     type_args: vec![],
                     args: vec![],
+                    span: None,
                 }],
+                span: None,
             },
             span: None,
         };
@@ -834,6 +845,7 @@ mod allocator_validation_tests {
                 method: "do_thing".to_string(),
                 type_args: vec![],
                 args: vec![Expression::Identifier("x".to_string())],
+                span: None,
             },
             span: None,
         };
@@ -862,7 +874,9 @@ mod allocator_validation_tests {
                     method: "get_allocator".to_string(),
                     type_args: vec![],
                     args: vec![],
+                    span: None,
                 }],
+                span: None,
             },
             span: None,
         };
@@ -888,6 +902,7 @@ mod allocator_validation_tests {
                     name: "print".to_string(),
                     type_args: vec![],
                     args: vec![],
+                    span: None,
                 }),
                 op: zen::ast::BinaryOperator::Add,
                 right: Box::new(Expression::Integer32(1)),
@@ -931,11 +946,57 @@ mod allocator_validation_tests {
 }
 
 #[cfg(test)]
+mod stdlib_phantom_error_tests {
+    use lsp_types::*;
+    use std::collections::HashMap;
+    use zen::lsp::analyzer::analyze_document;
+    use zen::lsp::types::Document;
+
+    #[test]
+    fn test_lsp_no_phantom_errors_file_zen() {
+        let content = std::fs::read_to_string("stdlib/io/files/file.zen").unwrap();
+        let docs: HashMap<Url, Document> = HashMap::new();
+        let diagnostics = analyze_document(&content, false, &docs);
+        let errors: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.severity == Some(DiagnosticSeverity::ERROR))
+            .collect();
+        for e in &errors {
+            eprintln!("file.zen L{}: {}", e.range.start.line + 1, e.message);
+        }
+        assert!(
+            errors.is_empty(),
+            "file.zen should have no LSP errors, got {} errors",
+            errors.len()
+        );
+    }
+
+    #[test]
+    fn test_lsp_no_phantom_errors_fs_zen() {
+        let content = std::fs::read_to_string("stdlib/io/files/fs.zen").unwrap();
+        let docs: HashMap<Url, Document> = HashMap::new();
+        let diagnostics = analyze_document(&content, false, &docs);
+        let errors: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.severity == Some(DiagnosticSeverity::ERROR))
+            .collect();
+        for e in &errors {
+            eprintln!("fs.zen L{}: {}", e.range.start.line + 1, e.message);
+        }
+        assert!(
+            errors.is_empty(),
+            "fs.zen should have no LSP errors, got {} errors",
+            errors.len()
+        );
+    }
+}
+
+#[cfg(test)]
 mod analyzer_integration_tests {
     use lsp_types::*;
     use std::collections::HashMap;
     use zen::lsp::analyzer::analyze_document;
-    use zen::lsp::types::{Document, SymbolInfo};
+    use zen::lsp::types::Document;
 
     #[test]
     fn test_analyze_document_valid_function() {
@@ -945,10 +1006,8 @@ main = () i32 {
 }
 "#;
         let docs: HashMap<Url, Document> = HashMap::new();
-        let ws: HashMap<String, SymbolInfo> = HashMap::new();
-        let stdlib: HashMap<String, SymbolInfo> = HashMap::new();
 
-        let diagnostics = analyze_document(content, false, &docs, &ws, &stdlib);
+        let diagnostics = analyze_document(content, false, &docs);
 
         // Valid code should produce no errors (or only type-checker warnings)
         // This characterizes what the analyzer produces for simple valid code
@@ -969,10 +1028,8 @@ main = () i32 {
         // Invalid syntax should produce a parse error diagnostic
         let content = "this is not valid zen code {{{{";
         let docs: HashMap<Url, Document> = HashMap::new();
-        let ws: HashMap<String, SymbolInfo> = HashMap::new();
-        let stdlib: HashMap<String, SymbolInfo> = HashMap::new();
 
-        let diagnostics = analyze_document(content, false, &docs, &ws, &stdlib);
+        let diagnostics = analyze_document(content, false, &docs);
 
         assert!(
             !diagnostics.is_empty(),
@@ -988,11 +1045,9 @@ main = () i32 {
 }
 "#;
         let docs: HashMap<Url, Document> = HashMap::new();
-        let ws: HashMap<String, SymbolInfo> = HashMap::new();
-        let stdlib: HashMap<String, SymbolInfo> = HashMap::new();
 
         // With skip_expensive_analysis=true, no type checking or validation runs
-        let diagnostics = analyze_document(content, true, &docs, &ws, &stdlib);
+        let diagnostics = analyze_document(content, true, &docs);
 
         // Should have no diagnostics for valid code with skipped analysis
         assert!(

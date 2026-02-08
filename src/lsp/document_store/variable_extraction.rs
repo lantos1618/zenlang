@@ -1,6 +1,5 @@
 // Variable symbol extraction from statements
 use super::super::types::SymbolInfo;
-use super::super::utils::format_type;
 use super::utilities::{make_range, make_symbol};
 use super::DocumentStore;
 use crate::ast::{AstType, Expression, Statement};
@@ -92,21 +91,12 @@ impl DocumentStore {
         &self,
         name: &str,
         type_info: &Option<AstType>,
-        initializer: &Option<Expression>,
+        _initializer: &Option<Expression>,
     ) -> Option<String> {
         if let Some(t) = type_info {
-            return Some(format!("{}: {}", name, format_type(t)));
+            Some(format!("{}: {}", name, t))
+        } else {
+            Some(name.to_string())
         }
-        if let Some(init) = initializer {
-            if let Some(inferred) = self.infer_type_from_expression(init) {
-                return Some(format!("{}: {}", name, inferred));
-            }
-        }
-        Some(name.to_string())
-    }
-
-    pub(super) fn infer_type_from_expression(&self, expr: &Expression) -> Option<String> {
-        use crate::lsp::type_query::TypeQuery;
-        TypeQuery::infer_literal_type(expr)
     }
 }

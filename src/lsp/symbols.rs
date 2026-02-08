@@ -14,7 +14,7 @@ use super::document_store::DocumentStore;
 /// Handle textDocument/documentSymbol requests
 pub fn handle_document_symbols(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
     log::debug!("[LSP SYMBOLS] Starting document symbols request");
     let params: DocumentSymbolParams = match serde_json::from_value(req.params) {
@@ -31,7 +31,7 @@ pub fn handle_document_symbols(
 
     log::debug!("[LSP SYMBOLS] Waiting for store lock...");
     let lock_start = std::time::Instant::now();
-    let store = match store.lock() {
+    let store = match store.read() {
         Ok(s) => {
             log::debug!("[LSP SYMBOLS] Got store lock in {:?}", lock_start.elapsed());
             s
@@ -84,7 +84,7 @@ pub fn handle_document_symbols(
 /// Handle workspace/symbol requests
 pub fn handle_workspace_symbol(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
     let params: WorkspaceSymbolParams = match serde_json::from_value(req.params) {
         Ok(p) => p,
@@ -97,7 +97,7 @@ pub fn handle_workspace_symbol(
         }
     };
 
-    let store = match store.lock() {
+    let store = match store.read() {
         Ok(s) => s,
         Err(_) => {
             return crate::lsp::helpers::success_response_id(req.id, Vec::<WorkspaceSymbol>::new());

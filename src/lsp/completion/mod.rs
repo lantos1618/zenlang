@@ -20,7 +20,7 @@ pub use methods::{get_struct_field_completions, get_ufc_method_completions};
 pub use modules::get_module_path_completions;
 
 use crate::lsp::document_store::DocumentStore;
-use crate::lsp::helpers::{success_response, try_lock, try_parse_params};
+use crate::lsp::helpers::{success_response, try_parse_params, try_read};
 use crate::lsp::semantic_completion::{get_semantic_dot_completions, resolve_receiver_type};
 use crate::lsp::types::ZenCompletionContext;
 use crate::lsp::utils::symbol_kind_to_completion_kind;
@@ -31,9 +31,9 @@ use lsp_types::*;
 /// Main completion request handler
 pub fn handle_completion(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
-    let store_guard = match try_lock(store.as_ref(), &req) {
+    let store_guard = match try_read(store.as_ref(), &req) {
         Ok(guard) => guard,
         Err(_) => return success_response(&req, CompletionResponse::Array(Vec::new())),
     };

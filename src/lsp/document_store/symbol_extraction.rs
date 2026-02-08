@@ -1,6 +1,5 @@
-// Symbol extraction from AST and text fallback
+// Symbol extraction from AST
 use super::super::types::SymbolInfo;
-use super::super::utils::format_type;
 use super::utilities::{make_enum_symbol, make_range, make_symbol};
 use super::DocumentStore;
 use crate::ast::Declaration;
@@ -9,78 +8,10 @@ use std::collections::HashMap;
 
 impl DocumentStore {
     pub(super) fn extract_symbols(&self, content: &str) -> HashMap<String, SymbolInfo> {
-        // Try to parse AST first
         if let Some(ast) = self.parse(content) {
             return self.extract_symbols_from_ast(&ast, content);
         }
-
-        // Fallback: If parsing fails, try text-based extraction for basic symbols
-        // This helps when there are syntax errors but we still want goto-definition to work
-        log::debug!("[LSP] Parse failed, using text-based symbol extraction fallback");
-        self.extract_symbols_text_fallback(content)
-    }
-
-    /// Text-based symbol extraction fallback when AST parsing fails
-    fn extract_symbols_text_fallback(&self, content: &str) -> HashMap<String, SymbolInfo> {
-        let mut symbols = HashMap::new();
-
-        for (line_num, line) in content.lines().enumerate() {
-            let trimmed = line.trim();
-            // Skip comments
-            if trimmed.starts_with("//") {
-                continue;
-            }
-
-            // Look for struct definitions: Name: {
-            if let Some(colon_pos) = trimmed.find(':') {
-                let before_colon = trimmed[..colon_pos].trim();
-                if !before_colon.is_empty()
-                    && before_colon
-                        .chars()
-                        .all(|c| c.is_alphanumeric() || c == '_')
-                    && trimmed[colon_pos + 1..].trim().starts_with('{')
-                {
-                    let char_pos = line.find(before_colon).unwrap_or(0);
-                    let range = make_range(line_num, char_pos, before_colon.len());
-                    symbols.insert(
-                        before_colon.to_string(),
-                        make_symbol(
-                            before_colon.to_string(),
-                            SymbolKind::STRUCT,
-                            range,
-                            Some(format!("{} struct", before_colon)),
-                            None,
-                            None,
-                        ),
-                    );
-                }
-            }
-
-            // Look for function definitions: name = (
-            if let Some(eq_pos) = trimmed.find('=') {
-                let before_eq = trimmed[..eq_pos].trim();
-                if !before_eq.is_empty()
-                    && before_eq.chars().all(|c| c.is_alphanumeric() || c == '_')
-                    && trimmed[eq_pos + 1..].trim().starts_with('(')
-                {
-                    let char_pos = line.find(before_eq).unwrap_or(0);
-                    let range = make_range(line_num, char_pos, before_eq.len());
-                    symbols.insert(
-                        before_eq.to_string(),
-                        make_symbol(
-                            before_eq.to_string(),
-                            SymbolKind::FUNCTION,
-                            range,
-                            Some(format!("{} = (...) ...", before_eq)),
-                            None,
-                            None,
-                        ),
-                    );
-                }
-            }
-        }
-
-        symbols
+        HashMap::new()
     }
 
     pub(super) fn extract_symbols_from_ast(
@@ -107,15 +38,10 @@ impl DocumentStore {
                     let args_str = func
                         .args
                         .iter()
-                        .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
+                        .map(|(name, ty)| format!("{}: {}", name, ty))
                         .collect::<Vec<_>>()
                         .join(", ");
-                    let detail = format!(
-                        "{} = ({}) {}",
-                        func.name,
-                        args_str,
-                        format_type(&func.return_type)
-                    );
+                    let detail = format!("{} = ({}) {}", func.name, args_str, func.return_type);
                     symbols.insert(
                         func.name.clone(),
                         make_symbol(
@@ -181,7 +107,7 @@ impl DocumentStore {
                             name.clone(),
                             SymbolKind::CONSTANT,
                             range,
-                            type_.as_ref().map(format_type),
+                            type_.as_ref().map(|t| t.to_string()),
                             None,
                             type_.clone(),
                         ),
@@ -205,15 +131,12 @@ impl DocumentStore {
                         let args_str = method
                             .args
                             .iter()
-                            .map(|(name, ty)| format!("{}: {}", name, format_type(ty)))
+                            .map(|(name, ty)| format!("{}: {}", name, ty))
                             .collect::<Vec<_>>()
                             .join(", ");
                         let detail = format!(
                             "{}.{} = ({}) {}",
-                            impl_block.type_name,
-                            method.name,
-                            args_str,
-                            format_type(&method.return_type)
+                            impl_block.type_name, method.name, args_str, method.return_type
                         );
                         let doc = format!(
                             "Method from {}.implements({})",

@@ -1,6 +1,6 @@
 use lsp_server::{Request, Response};
 use lsp_types::*;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use crate::ast::primitives;
 use crate::ast::{looks_like_type_name, Declaration, Statement};
@@ -11,13 +11,13 @@ use super::utils::format_type;
 use crate::name_utils;
 use crate::type_context::TypeContext;
 
-pub fn handle_inlay_hints(req: Request, store: &Arc<Mutex<DocumentStore>>) -> Response {
+pub fn handle_inlay_hints(req: Request, store: &Arc<RwLock<DocumentStore>>) -> Response {
     let params: InlayHintParams = match serde_json::from_value(req.params) {
         Ok(p) => p,
         Err(_) => return empty_response(req.id),
     };
 
-    let store = match store.lock() {
+    let store = match store.read() {
         Ok(s) => s,
         Err(_) => return empty_response(req.id),
     };

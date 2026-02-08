@@ -1,7 +1,7 @@
 use lsp_server::{Request, Response};
 use lsp_types::*;
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use crate::formatting::{
     fix_indentation, format_braces, format_enum_variants, normalize_variable_declarations,
@@ -9,15 +9,15 @@ use crate::formatting::{
 };
 
 use super::document_store::DocumentStore;
-use super::helpers::{null_response, success_response, try_lock, try_parse_params_with_error};
+use super::helpers::{null_response, success_response, try_parse_params_with_error, try_read};
 
-pub fn handle_formatting(req: Request, store: Arc<Mutex<DocumentStore>>) -> Response {
+pub fn handle_formatting(req: Request, store: Arc<RwLock<DocumentStore>>) -> Response {
     let params: DocumentFormattingParams = match try_parse_params_with_error(&req) {
         Ok(p) => p,
         Err(resp) => return resp,
     };
 
-    let store = match try_lock(store.as_ref(), &req) {
+    let store = match try_read(store.as_ref(), &req) {
         Ok(s) => s,
         Err(_) => return success_response(&req, Vec::<TextEdit>::new()),
     };

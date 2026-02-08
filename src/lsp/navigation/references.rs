@@ -178,7 +178,7 @@ pub fn count_references_by_kind(refs: &[EnhancedReference]) -> (usize, usize, us
 /// Handle textDocument/references requests
 pub fn handle_references(
     req: Request,
-    store: &std::sync::Arc<std::sync::Mutex<DocumentStore>>,
+    store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
 ) -> Response {
     let params: ReferenceParams = match serde_json::from_value(req.params) {
         Ok(p) => p,
@@ -191,7 +191,7 @@ pub fn handle_references(
         }
     };
 
-    let store_lock = match store.lock() {
+    let store_lock = match store.read() {
         Ok(s) => s,
         Err(_) => {
             return Response {

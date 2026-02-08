@@ -15,7 +15,7 @@ pub fn create_missing_import_fix(
     diagnostic: &Diagnostic,
     uri: &Url,
     content: &str,
-    store: &std::sync::MutexGuard<'_, DocumentStore>,
+    store: &std::sync::RwLockReadGuard<'_, DocumentStore>,
 ) -> Option<CodeAction> {
     let undefined_name = extract_symbol_from_diagnostic(&diagnostic.message);
     if undefined_name.is_empty() {

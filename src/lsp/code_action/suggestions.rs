@@ -16,7 +16,7 @@ pub fn create_did_you_mean_actions(
     diagnostic: &Diagnostic,
     uri: &Url,
     doc: &Document,
-    store: &std::sync::MutexGuard<'_, DocumentStore>,
+    store: &std::sync::RwLockReadGuard<'_, DocumentStore>,
 ) -> Vec<CodeAction> {
     let mut actions = Vec::new();
 
