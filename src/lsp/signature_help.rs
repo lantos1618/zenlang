@@ -172,17 +172,36 @@ fn find_function_call_at_position(content: &str, position: Position) -> Option<(
         return None; // No opening paren found
     }
 
-    // Extract function name before the opening paren
-    let before_paren = &context[..current_pos - 1];
-    let function_name = before_paren
-        .split(|c: char| {
-            c.is_whitespace() || c == '=' || c == ',' || c == ';' || c == '{' || c == '('
-        })
-        .next_back()?
-        .trim()
-        .split('.')
-        .next_back()?
-        .to_string();
+    // Extract function name before the opening paren using the Zen parser.
+    // Find the last statement boundary, then parse the trailing fragment as
+    // an expression to extract the function/method name.
+    let before_paren = context[..current_pos - 1].trim();
+    let expr_text = before_paren
+        .rsplit_once(['=', ';', '{', ',', '('])
+        .map(|(_, after)| after.trim())
+        .unwrap_or(before_paren);
+
+    let lexer = crate::lexer::Lexer::new(expr_text);
+    let mut parser = crate::parser::Parser::new(lexer);
+    let function_name = if let Ok(expr) = parser.parse_expression() {
+        use crate::ast::Expression;
+        match expr {
+            Expression::Identifier(name) => name,
+            Expression::FunctionCall { name, .. } => name,
+            Expression::MethodCall { method, .. } => method,
+            Expression::MemberAccess { member, .. } => member,
+            _ => return None,
+        }
+    } else {
+        // Fallback: split on whitespace/delimiters and take the last dotted segment
+        before_paren
+            .split(|c: char| c.is_whitespace() || c == '=' || c == ',' || c == ';' || c == '{')
+            .next_back()?
+            .trim()
+            .rsplit('.')
+            .next()?
+            .to_string()
+    };
 
     // Count parameters by counting commas at paren_depth = 0
     let inside_parens = &context[current_pos..cursor_pos];

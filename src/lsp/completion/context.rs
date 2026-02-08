@@ -53,35 +53,15 @@ pub fn get_completion_context(
 
     // Check if we're after a dot
     if char_pos > 0 && line.chars().nth(char_pos - 1) == Some('.') {
-        let chars: Vec<char> = line.chars().collect();
-        let mut start = if char_pos > 1 {
-            char_pos - 2
-        } else {
-            0
-        };
-        let mut paren_depth = 0;
-
-        while start > 0 {
-            match chars[start] {
-                ')' => paren_depth += 1,
-                '(' => {
-                    if paren_depth > 0 {
-                        paren_depth -= 1;
-                    } else {
-                        break;
-                    }
-                }
-                ' ' | '\t' | '=' | '{' | '[' | ',' | ';' if paren_depth == 0 => {
-                    start += 1;
-                    break;
-                }
-                _ => {}
-            }
-            start -= 1;
-        }
-
-        let receiver: String = chars[start..(char_pos - 1)].iter().collect();
-        let receiver = receiver.trim();
+        // Extract receiver text using statement-boundary splitting instead of
+        // manual char-by-char walking. The text before the dot is split at the
+        // last statement boundary (=, ;, {, [, ,) and the trailing fragment is
+        // the receiver expression.
+        let before_dot = &line[..byte_pos].trim_end_matches('.');
+        let receiver: &str = before_dot
+            .rsplit_once(['=', ';', '{', '[', ','])
+            .map(|(_, after)| after.trim())
+            .unwrap_or(before_dot.trim());
 
         let receiver_type = doc
             .and_then(|d| {
@@ -217,45 +197,14 @@ fn detect_pattern_match_context(content: &str, position: Position) -> Option<Str
     None
 }
 
-/// Extract the expression immediately before the cursor position
+/// Extract the expression immediately before the cursor position.
+/// Uses statement-boundary splitting instead of manual char-by-char walking.
 fn extract_expression_before(text: &str) -> String {
-    let chars: Vec<char> = text.chars().collect();
-    let mut end = chars.len();
-    let mut start = end;
-    let mut paren_depth = 0;
-
-    // Skip trailing whitespace
-    while start > 0 && chars[start - 1].is_whitespace() {
-        start -= 1;
-        end -= 1;
-    }
-
-    // Walk backwards to find the start of the expression
-    while start > 0 {
-        start -= 1;
-        let ch = chars[start];
-        match ch {
-            ')' => paren_depth += 1,
-            '(' => {
-                if paren_depth > 0 {
-                    paren_depth -= 1;
-                } else {
-                    start += 1;
-                    break;
-                }
-            }
-            ' ' | '\t' | '\n' | '=' | '{' | ';' | ',' if paren_depth == 0 => {
-                start += 1;
-                break;
-            }
-            _ => {}
-        }
-    }
-
-    chars[start..end]
-        .iter()
-        .collect::<String>()
-        .trim()
+    let trimmed = text.trim_end();
+    trimmed
+        .rsplit_once(['=', ';', '{', ','])
+        .map(|(_, after)| after.trim())
+        .unwrap_or(trimmed.trim())
         .to_string()
 }
 

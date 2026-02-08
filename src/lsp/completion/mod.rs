@@ -19,6 +19,7 @@ pub use context::{
 pub use methods::{get_struct_field_completions, get_ufc_method_completions};
 pub use modules::get_module_path_completions;
 
+use crate::ast::primitives;
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::helpers::{success_response, try_parse_params, try_read};
 use crate::lsp::semantic_completion::{get_semantic_dot_completions, resolve_receiver_type};
@@ -123,17 +124,18 @@ fn build_general_completions(
 ) -> Vec<CompletionItem> {
     let mut completions = build_keyword_completions();
 
-    // Add primitive types (priority 2)
-    for ty in PRIMITIVE_TYPES {
+    // Add primitive types from the canonical PRIMITIVE_TYPE_MAP (priority 2)
+    // Source of truth: src/ast/primitives.rs
+    for &(name, _) in primitives::PRIMITIVE_TYPE_MAP {
         completions.push(CompletionItem {
-            label: ty.to_string(),
+            label: name.to_string(),
             kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some(format!("{} - Built-in primitive type", ty)),
+            detail: Some(format!("{} - Built-in primitive type", name)),
             documentation: Some(Documentation::String(format!(
                 "Built-in primitive type `{}`. Always available, no import needed.",
-                ty
+                name
             ))),
-            sort_text: Some(format!("{}{}", priority::PRIMITIVE, ty)),
+            sort_text: Some(format!("{}{}", priority::PRIMITIVE, name)),
             ..Default::default()
         });
     }
@@ -188,149 +190,115 @@ fn build_general_completions(
 }
 
 /// Build keyword and common type completions
+///
+/// Structure:
+/// 1. Language keywords from src/ast/primitives.rs (CONTROL_FLOW + defer)
+/// 2. Well-known types from WellKnownTypes registry (Option/Result/Some/None/Ok/Err)
+/// 3. Module reference syntax (@std, @this)
+///
+/// Collection types (Vec, DynVec, HashMap) are NOT included here — they come
+/// from store.stdlib_symbols via the stdlib symbol loop in build_general_completions.
 fn build_keyword_completions() -> Vec<CompletionItem> {
     let wk = well_known();
-    vec![
-        CompletionItem {
-            label: "main".to_string(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some("main = () i32 { ... }".to_string()),
-            documentation: Some(Documentation::String("Entry point function".to_string())),
-            sort_text: Some(format!("{}main", priority::KEYWORD)),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "loop".to_string(),
+    let mut items = Vec::new();
+
+    // -- Section 1: Language keywords (source of truth: src/ast/primitives.rs) --
+    // CONTROL_FLOW: loop, break, continue, return
+    let keyword_docs: &[(&str, &str, &str)] = &[
+        (
+            "loop",
+            "loop() { ... }",
+            "Infinite loop with break statement",
+        ),
+        ("break", "break", "Break from loop"),
+        ("continue", "continue", "Continue to next iteration"),
+        ("return", "return value", "Return from function"),
+        ("defer", "defer expr", "Defer execution until scope exit"),
+    ];
+    for &(label, detail, doc) in keyword_docs {
+        items.push(CompletionItem {
+            label: label.to_string(),
             kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("loop() { ... }".to_string()),
-            documentation: Some(Documentation::String(
-                "Infinite loop with break statement".to_string(),
-            )),
-            sort_text: Some(format!("{}loop", priority::KEYWORD)),
+            detail: Some(detail.to_string()),
+            documentation: Some(Documentation::String(doc.to_string())),
+            sort_text: Some(format!("{}{}", priority::KEYWORD, label)),
             ..Default::default()
-        },
-        CompletionItem {
-            label: "return".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("return value".to_string()),
-            documentation: Some(Documentation::String("Return from function".to_string())),
-            sort_text: Some(format!("{}return", priority::KEYWORD)),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "break".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("break".to_string()),
-            documentation: Some(Documentation::String("Break from loop".to_string())),
-            sort_text: Some(format!("{}break", priority::KEYWORD)),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "continue".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("continue".to_string()),
-            documentation: Some(Documentation::String(
-                "Continue to next iteration".to_string(),
-            )),
-            sort_text: Some(format!("{}continue", priority::KEYWORD)),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: wk.option_name().to_string(),
-            kind: Some(CompletionItemKind::ENUM),
-            detail: Some(format!("{}<T>", wk.option_name())),
-            documentation: Some(Documentation::String("Optional value type".to_string())),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: wk.result_name().to_string(),
-            kind: Some(CompletionItemKind::ENUM),
-            detail: Some(format!("{}<T, E>", wk.result_name())),
-            documentation: Some(Documentation::String(
-                "Result type for error handling".to_string(),
-            )),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: wk.some_name().to_string(),
-            kind: Some(CompletionItemKind::ENUM_MEMBER),
-            detail: Some(format!("{}(value)", wk.some_name())),
-            documentation: Some(Documentation::String(
-                "Option variant with value".to_string(),
-            )),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: wk.none_name().to_string(),
-            kind: Some(CompletionItemKind::ENUM_MEMBER),
-            detail: Some(wk.none_name().to_string()),
-            documentation: Some(Documentation::String(
-                "Option variant without value".to_string(),
-            )),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: wk.ok_name().to_string(),
-            kind: Some(CompletionItemKind::ENUM_MEMBER),
-            detail: Some(format!("{}(value)", wk.ok_name())),
-            documentation: Some(Documentation::String(
-                "Success variant of Result".to_string(),
-            )),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: wk.err_name().to_string(),
-            kind: Some(CompletionItemKind::ENUM_MEMBER),
-            detail: Some(format!("{}(error)", wk.err_name())),
-            documentation: Some(Documentation::String("Error variant of Result".to_string())),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "Vec".to_string(),
-            kind: Some(CompletionItemKind::STRUCT),
-            detail: Some("Vec<T, size>".to_string()),
-            documentation: Some(Documentation::String(
-                "Fixed-size vector (stack allocated)".to_string(),
-            )),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "DynVec".to_string(),
-            kind: Some(CompletionItemKind::STRUCT),
-            detail: Some("DynVec<T>".to_string()),
-            documentation: Some(Documentation::String(
-                "Dynamic vector (requires allocator)".to_string(),
-            )),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "HashMap".to_string(),
-            kind: Some(CompletionItemKind::STRUCT),
-            detail: Some("HashMap<K, V>".to_string()),
-            documentation: Some(Documentation::String(
-                "Hash map (requires allocator)".to_string(),
-            )),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "@std".to_string(),
-            kind: Some(CompletionItemKind::MODULE),
-            detail: Some("Standard library".to_string()),
-            documentation: Some(Documentation::String(
-                "Import standard library modules".to_string(),
-            )),
-            ..Default::default()
-        },
-        CompletionItem {
-            label: "@this".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("Current module reference".to_string()),
-            documentation: Some(Documentation::String(
-                "Reference to current module".to_string(),
-            )),
-            ..Default::default()
-        },
-    ]
+        });
+    }
+
+    // -- Section 2: Well-known types (source of truth: WellKnownTypes registry) --
+    items.push(CompletionItem {
+        label: wk.option_name().to_string(),
+        kind: Some(CompletionItemKind::ENUM),
+        detail: Some(format!("{}<T>", wk.option_name())),
+        documentation: Some(Documentation::String("Optional value type".to_string())),
+        ..Default::default()
+    });
+    items.push(CompletionItem {
+        label: wk.result_name().to_string(),
+        kind: Some(CompletionItemKind::ENUM),
+        detail: Some(format!("{}<T, E>", wk.result_name())),
+        documentation: Some(Documentation::String(
+            "Result type for error handling".to_string(),
+        )),
+        ..Default::default()
+    });
+    items.push(CompletionItem {
+        label: wk.some_name().to_string(),
+        kind: Some(CompletionItemKind::ENUM_MEMBER),
+        detail: Some(format!("{}(value)", wk.some_name())),
+        documentation: Some(Documentation::String(
+            "Option variant with value".to_string(),
+        )),
+        ..Default::default()
+    });
+    items.push(CompletionItem {
+        label: wk.none_name().to_string(),
+        kind: Some(CompletionItemKind::ENUM_MEMBER),
+        detail: Some(wk.none_name().to_string()),
+        documentation: Some(Documentation::String(
+            "Option variant without value".to_string(),
+        )),
+        ..Default::default()
+    });
+    items.push(CompletionItem {
+        label: wk.ok_name().to_string(),
+        kind: Some(CompletionItemKind::ENUM_MEMBER),
+        detail: Some(format!("{}(value)", wk.ok_name())),
+        documentation: Some(Documentation::String(
+            "Success variant of Result".to_string(),
+        )),
+        ..Default::default()
+    });
+    items.push(CompletionItem {
+        label: wk.err_name().to_string(),
+        kind: Some(CompletionItemKind::ENUM_MEMBER),
+        detail: Some(format!("{}(error)", wk.err_name())),
+        documentation: Some(Documentation::String("Error variant of Result".to_string())),
+        ..Default::default()
+    });
+
+    // -- Section 3: Module reference syntax (special syntax, not types) --
+    items.push(CompletionItem {
+        label: "@std".to_string(),
+        kind: Some(CompletionItemKind::MODULE),
+        detail: Some("Standard library".to_string()),
+        documentation: Some(Documentation::String(
+            "Import standard library modules".to_string(),
+        )),
+        ..Default::default()
+    });
+    items.push(CompletionItem {
+        label: "@this".to_string(),
+        kind: Some(CompletionItemKind::KEYWORD),
+        detail: Some("Current module reference".to_string()),
+        documentation: Some(Documentation::String(
+            "Reference to current module".to_string(),
+        )),
+        ..Default::default()
+    });
+
+    items
 }
 
 /// Add workspace symbols to completions (limited to avoid overwhelming)
@@ -356,23 +324,6 @@ fn add_workspace_symbols(completions: &mut Vec<CompletionItem>, store: &Document
         }
     }
 }
-
-const PRIMITIVE_TYPES: &[&str] = &[
-    "i8",
-    "i16",
-    "i32",
-    "i64",
-    "u8",
-    "u16",
-    "u32",
-    "u64",
-    "usize",
-    "f32",
-    "f64",
-    "bool",
-    "StaticString",
-    "void",
-];
 
 // Re-export infer_variable_type from hover module (where it's now defined)
 pub use crate::lsp::hover::infer_variable_type;
