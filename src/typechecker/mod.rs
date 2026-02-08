@@ -18,7 +18,7 @@ use crate::ast::primitives;
 use crate::ast::{AstType, Declaration, Function, Program, Statement};
 use crate::error::{Result, Span};
 use crate::name_utils;
-use crate::type_context::TypeContext;
+use crate::type_context::{DefinitionLocation, TypeContext};
 use crate::type_system::{new_type_store, TypeStoreRef};
 use crate::well_known::WellKnownTypes;
 use behaviors::BehaviorResolver;
@@ -41,6 +41,8 @@ pub struct TypeChecker {
     collected_variables: HashMap<String, AstType>,
     // Collected variable mutability: same key format as collected_variables
     collected_variable_mutability: HashMap<String, bool>,
+    // Collected definition locations: symbol key -> location
+    collected_locations: HashMap<String, DefinitionLocation>,
 
     behavior_resolver: BehaviorResolver,
     module_imports: HashMap<String, String>,
@@ -223,6 +225,7 @@ impl TypeChecker {
             type_store,
             collected_variables: HashMap::new(),
             collected_variable_mutability: HashMap::new(),
+            collected_locations: HashMap::new(),
             behavior_resolver: BehaviorResolver::new(),
             module_imports: HashMap::new(),
             current_impl_type: None,
@@ -528,6 +531,11 @@ impl TypeChecker {
                 .insert(alias.clone(), module_path.clone());
         }
 
+        // Transfer collected definition locations
+        for (key, location) in &self.collected_locations {
+            ctx.register_location(key.clone(), location.clone());
+        }
+
         ctx
     }
 
@@ -586,6 +594,19 @@ impl TypeChecker {
 
     fn exit_scope(&mut self) {
         scope::exit_scope(self)
+    }
+
+    pub fn collect_location(&mut self, key: &str, span: &Span) {
+        self.collected_locations.insert(
+            key.to_string(),
+            DefinitionLocation {
+                file: None,
+                line: span.line as u32,
+                column: span.column as u32,
+                end_line: span.line as u32,
+                end_column: span.column as u32,
+            },
+        );
     }
 
     fn collect_variable(&mut self, name: &str, type_: &AstType, is_mutable: bool) {
@@ -1233,5 +1254,86 @@ mod tests {
         ";
         let result = check_program(input);
         assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // Definition Location Tests
+    // ========================================================================
+
+    fn check_program_get_context(
+        input: &str,
+    ) -> Result<crate::type_context::TypeContext, CompileError> {
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+        let program = parser
+            .parse_program()
+            .map_err(|e| CompileError::SyntaxError(format!("Parse error: {:?}", e), None))?;
+        let mut type_checker = TypeChecker::new();
+        let ctx = type_checker.check_program(&program)?;
+        Ok(ctx)
+    }
+
+    #[test]
+    fn test_definition_location_struct() {
+        let input = "
+            Point: { x: i32, y: i32 }
+            main = () void { }
+        ";
+        let ctx = check_program_get_context(input).unwrap();
+        let loc = ctx.get_location("Point");
+        assert!(loc.is_some(), "Point should have a definition location");
+        let loc = loc.unwrap();
+        assert!(loc.line > 0, "line should be positive");
+        assert!(loc.column > 0, "column should be positive");
+    }
+
+    #[test]
+    fn test_definition_location_enum() {
+        let input = "
+            Color:
+                Red,
+                Green,
+                Blue
+
+            main = () void { }
+        ";
+        let ctx = check_program_get_context(input).unwrap();
+        let loc = ctx.get_location("Color");
+        assert!(loc.is_some(), "Color should have a definition location");
+        let loc = loc.unwrap();
+        assert!(loc.line > 0, "line should be positive");
+    }
+
+    #[test]
+    fn test_definition_location_constant() {
+        let input = "
+            MAX_SIZE = 100
+            main = () void { }
+        ";
+        let ctx = check_program_get_context(input).unwrap();
+        let loc = ctx.get_location("MAX_SIZE");
+        assert!(loc.is_some(), "MAX_SIZE should have a definition location");
+    }
+
+    #[test]
+    fn test_definition_location_multiple_symbols() {
+        let input = "
+            Point: { x: i32, y: i32 }
+            Color:
+                Red,
+                Green
+
+            main = () void { }
+        ";
+        let ctx = check_program_get_context(input).unwrap();
+        assert!(ctx.get_location("Point").is_some());
+        assert!(ctx.get_location("Color").is_some());
+        // Different symbols should have different locations
+        let point_loc = ctx.get_location("Point").unwrap();
+        let color_loc = ctx.get_location("Color").unwrap();
+        assert_ne!(
+            point_loc.line, color_loc.line,
+            "Point and Color should be on different lines"
+        );
     }
 }

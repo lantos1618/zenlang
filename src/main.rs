@@ -402,7 +402,8 @@ fn analyze_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
 
     // Typecheck (tolerant mode — returns partial TypeContext even on error)
     let mut type_checker = TypeChecker::new();
-    type_checker.with_stdlib_modules(module_system.get_modules());
+    let loaded_modules = module_system.get_modules();
+    type_checker.with_stdlib_modules(&loaded_modules);
 
     let (type_ctx, check_error) = type_checker.check_program_tolerant(&merged);
     let has_errors = check_error.is_some();
@@ -701,7 +702,8 @@ fn check_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
 
     // Typecheck (collect ALL errors, not just the first)
     let mut type_checker = TypeChecker::new();
-    type_checker.with_stdlib_modules(module_system.get_modules());
+    let loaded_modules = module_system.get_modules();
+    type_checker.with_stdlib_modules(&loaded_modules);
 
     let (_type_ctx, errors) = type_checker.check_program_collect_errors(&merged);
 
@@ -822,7 +824,8 @@ fn query_type(location: &str) -> std::io::Result<()> {
 
     // Typecheck (tolerant mode — returns partial TypeContext even on error)
     let mut type_checker = TypeChecker::new();
-    type_checker.with_stdlib_modules(module_system.get_modules());
+    let loaded_modules = module_system.get_modules();
+    type_checker.with_stdlib_modules(&loaded_modules);
 
     let (type_ctx, check_error) = type_checker.check_program_tolerant(&merged);
 
@@ -1503,7 +1506,8 @@ fn query_methods(type_name: &str, file_path: &str) -> std::io::Result<()> {
 
     // Typecheck (tolerant)
     let mut type_checker = TypeChecker::new();
-    type_checker.with_stdlib_modules(module_system.get_modules());
+    let loaded_modules = module_system.get_modules();
+    type_checker.with_stdlib_modules(&loaded_modules);
     let (type_ctx, _) = type_checker.check_program_tolerant(&merged);
 
     let format_ty = zen::lsp::utils::format_type;

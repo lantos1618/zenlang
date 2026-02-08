@@ -102,6 +102,7 @@ pub struct AnalysisJob {
     pub uri: Url,
     pub version: i32,
     pub content: String,
+    pub content_hash: u64,
     pub program: Program,
 }
 

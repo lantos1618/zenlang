@@ -59,6 +59,9 @@ pub fn collect_declaration_types(
                 .type_store
                 .borrow_mut()
                 .register_struct(&struct_def.name, info);
+            if let Some(span) = &struct_def.span {
+                checker.collect_location(&struct_def.name, span);
+            }
         }
         Declaration::Enum(enum_def) => {
             // Convert EnumVariant to (String, Option<AstType>)
@@ -73,6 +76,9 @@ pub fn collect_declaration_types(
                 .type_store
                 .borrow_mut()
                 .register_enum(&enum_def.name, info);
+            if let Some(span) = &enum_def.span {
+                checker.collect_location(&enum_def.name, span);
+            }
         }
         Declaration::Behavior(behavior_def) => {
             checker.behavior_resolver.register_behavior(behavior_def)?;
@@ -139,8 +145,15 @@ pub fn collect_declaration_types(
                 .register_trait_requirement(trait_req)?;
         }
         Declaration::Constant {
-            name, value, type_, ..
+            name,
+            value,
+            type_,
+            span,
+            ..
         } => {
+            if let Some(span) = span {
+                checker.collect_location(name, span);
+            }
             // Check if this is a struct definition pattern: Name = { field: Type, ... }
             if let Expression::StructLiteral { name: _, fields } = value {
                 // This is a struct definition in the form: Point = { x: f64, y: f64 }
@@ -187,8 +200,14 @@ pub fn collect_declaration_types(
             }
         }
         Declaration::ModuleImport {
-            alias, module_path, ..
+            alias,
+            module_path,
+            span,
+            ..
         } => {
+            if let Some(span) = span {
+                checker.collect_location(alias, span);
+            }
             // Track module imports
             checker
                 .module_imports
@@ -219,6 +238,9 @@ pub fn collect_declaration_types(
                     .type_store
                     .borrow_mut()
                     .register_type_alias(&type_alias.name, type_alias.target_type.clone());
+            }
+            if let Some(span) = &type_alias.span {
+                checker.collect_location(&type_alias.name, span);
             }
         }
         _ => {}

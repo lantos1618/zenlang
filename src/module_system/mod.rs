@@ -6,15 +6,42 @@ use crate::parser::Parser;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+/// Maximum number of cached modules before eviction
+const MAX_CACHED_MODULES: usize = 200;
+
+/// Cached module entry with content hash for invalidation
+#[derive(Clone)]
+struct CachedModule {
+    program: Program,
+    content_hash: u64,
+    /// Insertion order for oldest-first eviction
+    insertion_order: u64,
+}
+
+/// Fast hash for content comparison (FNV-1a)
+fn hash_content(content: &str) -> u64 {
+    const FNV_PRIME: u64 = 0x00000100000001B3;
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+
+    let mut hash = FNV_OFFSET;
+    for byte in content.bytes() {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash
+}
+
 /// Module system for Zen language
 pub struct ModuleSystem {
-    /// Map from module paths to their resolved AST
-    modules: HashMap<String, Program>,
+    /// Map from module paths to their cached AST with content hash
+    modules: HashMap<String, CachedModule>,
     /// Search paths for modules
     search_paths: Vec<PathBuf>,
     /// Current working directory
     #[allow(dead_code)] // Stored for future use
     cwd: PathBuf,
+    /// Monotonic counter for insertion ordering (used for eviction)
+    insertion_counter: u64,
 }
 
 impl Default for ModuleSystem {
@@ -84,6 +111,7 @@ impl ModuleSystem {
             modules: HashMap::new(),
             search_paths,
             cwd,
+            insertion_counter: 0,
         }
     }
 
@@ -93,26 +121,15 @@ impl ModuleSystem {
         self.search_paths.push(path);
     }
 
-    /// Resolve and load a module
+    /// Resolve and load a module, using cached version if content unchanged
     pub fn load_module(&mut self, module_path: &str) -> Result<&Program, CompileError> {
-        // Check if already loaded
-        if self.modules.contains_key(module_path) {
-            return Ok(&self.modules[module_path]);
-        }
-
         // Handle @std and std. modules - try to load actual stdlib files
         if module_path.starts_with("@std") || module_path.starts_with("std.") {
-            // Extract module name from path
-            // Examples:
-            // "@std.io" -> "io"
-            // "@std.core.option" -> "core/option"
-            // "std.io" -> "io"
             let path_str = module_path
                 .trim_start_matches("@std.")
                 .trim_start_matches("@std")
                 .trim_start_matches("std.");
 
-            // Validate: module path components should only contain alphanumeric and underscore
             if !path_str.is_empty()
                 && !path_str
                     .chars()
@@ -124,7 +141,6 @@ impl ModuleSystem {
                 ));
             }
 
-            // Reject path traversal patterns
             if path_str.contains("..") {
                 return Err(CompileError::FileNotFound(
                     format!("Invalid module path: {}", module_path),
@@ -133,32 +149,39 @@ impl ModuleSystem {
             }
 
             let path_parts: Vec<&str> = if path_str.is_empty() {
-                // Empty path means @std itself - skip for now
                 vec![]
             } else {
                 path_str.split('.').collect()
             };
 
             if path_parts.is_empty() {
-                // @std itself - return empty program
-                let empty_program = Program {
-                    declarations: Vec::new(),
-                    statements: Vec::new(),
-                };
-                self.modules.insert(module_path.to_string(), empty_program);
-                return Ok(&self.modules[module_path]);
+                // @std itself - return empty program (cached if already present)
+                if !self.modules.contains_key(module_path) {
+                    self.insert_cached(
+                        module_path.to_string(),
+                        Program {
+                            declarations: Vec::new(),
+                            statements: Vec::new(),
+                        },
+                        0,
+                    );
+                }
+                return Ok(&self.modules[module_path].program);
             }
 
-            // Special handling for compiler module - it's built-in, not a file
+            // @std.compiler is a built-in compiler module, not a file
             if path_parts.len() == 1 && path_parts[0] == "compiler" {
-                // @std.compiler is a built-in compiler module, not a file
-                // Return empty program - compiler intrinsics are handled at codegen level
-                let empty_program = Program {
-                    declarations: Vec::new(),
-                    statements: Vec::new(),
-                };
-                self.modules.insert(module_path.to_string(), empty_program);
-                return Ok(&self.modules[module_path]);
+                if !self.modules.contains_key(module_path) {
+                    self.insert_cached(
+                        module_path.to_string(),
+                        Program {
+                            declarations: Vec::new(),
+                            statements: Vec::new(),
+                        },
+                        0,
+                    );
+                }
+                return Ok(&self.modules[module_path].program);
             }
 
             if let Some(file_to_load) = self.find_stdlib_file(&path_parts) {
@@ -169,36 +192,52 @@ impl ModuleSystem {
                     )
                 })?;
 
-                let lexer = crate::lexer::Lexer::new(&source);
-                let mut parser = Parser::new(lexer);
-                let program = parser.parse_program().map_err(|e| {
-                    CompileError::ParseError(
-                        format!("Failed to parse stdlib module {}: {:?}", module_path, e),
-                        None,
-                    )
-                })?;
+                let new_hash = hash_content(&source);
 
-                for decl in &program.declarations {
-                    if let Declaration::ModuleImport {
-                        alias: _,
-                        module_path: import_path,
-                        ..
-                    } = decl
-                    {
-                        self.load_module(import_path)?;
+                let cache_valid = self
+                    .modules
+                    .get(module_path)
+                    .map(|c| c.content_hash == new_hash)
+                    .unwrap_or(false);
+
+                if !cache_valid {
+                    let lexer = crate::lexer::Lexer::new(&source);
+                    let mut parser = Parser::new(lexer);
+                    let program = parser.parse_program().map_err(|e| {
+                        CompileError::ParseError(
+                            format!("Failed to parse stdlib module {}: {:?}", module_path, e),
+                            None,
+                        )
+                    })?;
+
+                    for decl in &program.declarations {
+                        if let Declaration::ModuleImport {
+                            alias: _,
+                            module_path: import_path,
+                            ..
+                        } = decl
+                        {
+                            self.load_module(import_path)?;
+                        }
                     }
-                }
 
-                self.modules.insert(module_path.to_string(), program);
-                return Ok(&self.modules[module_path]);
+                    self.insert_cached(module_path.to_string(), program, new_hash);
+                }
+                return Ok(&self.modules[module_path].program);
             }
 
-            let empty_program = Program {
-                declarations: Vec::new(),
-                statements: Vec::new(),
-            };
-            self.modules.insert(module_path.to_string(), empty_program);
-            return Ok(&self.modules[module_path]);
+            // Module file not found on disk - cache empty program
+            if !self.modules.contains_key(module_path) {
+                self.insert_cached(
+                    module_path.to_string(),
+                    Program {
+                        declarations: Vec::new(),
+                        statements: Vec::new(),
+                    },
+                    0,
+                );
+            }
+            return Ok(&self.modules[module_path].program);
         }
 
         // Try to find the module file
@@ -209,33 +248,39 @@ impl ModuleSystem {
             CompileError::FileNotFound(file_path.display().to_string(), Some(e.to_string()))
         })?;
 
-        let lexer = crate::lexer::Lexer::new(&source);
-        let mut parser = Parser::new(lexer);
-        let program = parser.parse_program().map_err(|e| {
-            CompileError::ParseError(
-                format!("Failed to parse module {}: {:?}", module_path, e),
-                None,
-            )
-        })?;
+        let new_hash = hash_content(&source);
 
-        // Process imports in the loaded module
-        let processed_program = program.clone();
-        for decl in &program.declarations {
-            if let Declaration::ModuleImport {
-                alias: _,
-                module_path: import_path,
-                ..
-            } = decl
-            {
-                // Recursively load imported modules
-                self.load_module(import_path)?;
+        let cache_valid = self
+            .modules
+            .get(module_path)
+            .map(|c| c.content_hash == new_hash)
+            .unwrap_or(false);
+
+        if !cache_valid {
+            let lexer = crate::lexer::Lexer::new(&source);
+            let mut parser = Parser::new(lexer);
+            let program = parser.parse_program().map_err(|e| {
+                CompileError::ParseError(
+                    format!("Failed to parse module {}: {:?}", module_path, e),
+                    None,
+                )
+            })?;
+
+            let processed_program = program.clone();
+            for decl in &program.declarations {
+                if let Declaration::ModuleImport {
+                    alias: _,
+                    module_path: import_path,
+                    ..
+                } = decl
+                {
+                    self.load_module(import_path)?;
+                }
             }
-        }
 
-        // Store the loaded module
-        self.modules
-            .insert(module_path.to_string(), processed_program.clone());
-        Ok(&self.modules[module_path])
+            self.insert_cached(module_path.to_string(), processed_program, new_hash);
+        }
+        Ok(&self.modules[module_path].program)
     }
 
     /// Resolve a module path to a file path
@@ -265,19 +310,18 @@ impl ModuleSystem {
         ))
     }
 
-    /// Get all loaded modules
-    pub fn get_modules(&self) -> &HashMap<String, Program> {
-        &self.modules
+    pub fn get_modules(&self) -> HashMap<String, Program> {
+        self.modules
+            .iter()
+            .map(|(k, v)| (k.clone(), v.program.clone()))
+            .collect()
     }
 
-    /// Merge all loaded modules into a single program
     pub fn merge_programs(&self, main_program: Program) -> Program {
         let mut merged = main_program;
 
-        // Add all declarations from imported modules
-        for module in self.modules.values() {
-            for decl in &module.declarations {
-                // Skip duplicate imports
+        for cached in self.modules.values() {
+            for decl in &cached.program.declarations {
                 if !matches!(decl, Declaration::ModuleImport { .. }) {
                     merged.declarations.push(decl.clone());
                 }
@@ -285,6 +329,39 @@ impl ModuleSystem {
         }
 
         merged
+    }
+
+    fn insert_cached(&mut self, key: String, program: Program, content_hash: u64) {
+        self.evict_if_needed();
+        let order = self.insertion_counter;
+        self.insertion_counter += 1;
+        self.modules.insert(
+            key,
+            CachedModule {
+                program,
+                content_hash,
+                insertion_order: order,
+            },
+        );
+    }
+
+    fn evict_if_needed(&mut self) {
+        if self.modules.len() < MAX_CACHED_MODULES {
+            return;
+        }
+        // Evict oldest entry by insertion_order
+        if let Some(oldest_key) = self
+            .modules
+            .iter()
+            .min_by_key(|(_, v)| v.insertion_order)
+            .map(|(k, _)| k.clone())
+        {
+            self.modules.remove(&oldest_key);
+        }
+    }
+
+    pub fn clear_cache(&mut self) {
+        self.modules.clear();
     }
 
     fn find_stdlib_file(&self, path_parts: &[&str]) -> Option<PathBuf> {

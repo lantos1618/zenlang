@@ -628,52 +628,55 @@ impl ZenLanguageServer {
         job_rx: Receiver<AnalysisJob>,
         result_tx: Sender<AnalysisResult>,
     ) {
-        // Background analysis worker started
+        use crate::ast::Declaration;
+        use crate::module_system::ModuleSystem;
+        use crate::typechecker::TypeChecker;
 
-        // Create LLVM context and compiler (reused for all analyses)
         let context = Context::create();
         let compiler = Compiler::new(&context);
 
-        while let Ok(job) = job_rx.recv() {
-            // Analyzing document
+        // Persisted across analysis runs — modules are cache-invalidated by content hash
+        let mut module_system = ModuleSystem::new();
+        // Track last-analyzed content hash per URI to skip redundant TypeChecker runs
+        let mut last_analyzed_hash: std::collections::HashMap<Url, u64> =
+            std::collections::HashMap::new();
 
+        while let Ok(job) = job_rx.recv() {
             let errors = compiler.analyze_for_diagnostics(&job.program);
 
-            // Analysis complete
-
-            // Convert compiler errors to LSP diagnostics using the shared function
             let diagnostics: Vec<Diagnostic> = errors
                 .into_iter()
                 .map(compile_error_to_diagnostic)
                 .collect();
 
-            // Run TypeChecker to get TypeContext for semantic features
-            // Must load modules and pass them to TypeChecker for type alias resolution
-            let type_context = {
-                use crate::ast::Declaration;
-                use crate::module_system::ModuleSystem;
-                use crate::typechecker::TypeChecker;
+            // Skip TypeChecker if content hash unchanged since last analysis for this URI
+            let hash_unchanged = last_analyzed_hash
+                .get(&job.uri)
+                .map(|h| *h == job.content_hash)
+                .unwrap_or(false);
 
-                // Load modules exactly like analyzer.rs does
-                let mut module_system = ModuleSystem::new();
+            let type_context = if hash_unchanged {
+                None
+            } else {
                 for decl in &job.program.declarations {
                     if let Declaration::ModuleImport { module_path, .. } = decl {
                         let _ = module_system.load_module(module_path);
                     }
                 }
 
-                // Merge programs to include all imports
                 let merged_program = module_system.merge_programs(job.program.clone());
 
-                // Create TypeChecker with module information
                 let mut type_checker = TypeChecker::new();
-                type_checker.with_stdlib_modules(module_system.get_modules());
+                let loaded_modules = module_system.get_modules();
+                type_checker.with_stdlib_modules(&loaded_modules);
 
-                // Type-check the MERGED program, not the original
-                type_checker
+                let tc = type_checker
                     .check_program(&merged_program)
                     .ok()
-                    .map(std::sync::Arc::new)
+                    .map(std::sync::Arc::new);
+
+                last_analyzed_hash.insert(job.uri.clone(), job.content_hash);
+                tc
             };
 
             let result = AnalysisResult {
@@ -683,11 +686,8 @@ impl ZenLanguageServer {
                 type_context,
             };
 
-            // Send result back (ignore if receiver disconnected)
             let _ = result_tx.send(result);
         }
-
-        // Background analysis worker stopped
     }
 
     fn main_loop_with_background(

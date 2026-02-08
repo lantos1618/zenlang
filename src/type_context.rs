@@ -17,6 +17,21 @@
 use crate::ast::AstType;
 use std::collections::HashMap;
 
+/// Location of a symbol definition in source code
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionLocation {
+    /// Source file path (None for built-in/synthetic definitions)
+    pub file: Option<String>,
+    /// 1-based line number of the definition start
+    pub line: u32,
+    /// 1-based column number of the definition start
+    pub column: u32,
+    /// 1-based line number of the definition end
+    pub end_line: u32,
+    /// 1-based column number of the definition end
+    pub end_column: u32,
+}
+
 /// Shared type context that flows from typechecker to codegen
 #[derive(Debug, Clone, Default)]
 pub struct TypeContext {
@@ -56,6 +71,9 @@ pub struct TypeContext {
     /// Module imports: alias -> module_path (e.g., "io" -> "@std.io")
     /// Tracks which modules were imported and their bindings
     pub module_imports: HashMap<String, String>,
+
+    /// Definition locations: symbol key -> source location
+    pub definition_locations: HashMap<String, DefinitionLocation>,
 }
 
 #[derive(Debug, Clone)]
@@ -137,6 +155,14 @@ impl TypeContext {
     pub fn register_variable(&mut self, scope: &str, var_name: &str, var_type: AstType) {
         let key = format!("{}::{}", scope, var_name);
         self.variables.insert(key, var_type);
+    }
+
+    pub fn register_location(&mut self, key: String, location: DefinitionLocation) {
+        self.definition_locations.insert(key, location);
+    }
+
+    pub fn get_location(&self, key: &str) -> Option<&DefinitionLocation> {
+        self.definition_locations.get(key)
     }
 
     pub fn register_variable_with_mutability(

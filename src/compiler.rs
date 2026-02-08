@@ -29,7 +29,8 @@ impl<'ctx> Compiler<'ctx> {
         let processed_program = self.resolve_self_types(processed_program)?;
 
         let mut typechecker = TypeChecker::new();
-        typechecker.with_stdlib_modules(module_system.get_modules());
+        let loaded_modules = module_system.get_modules();
+        typechecker.with_stdlib_modules(&loaded_modules);
         let type_ctx = typechecker.check_program(&processed_program)?;
 
         let mut monomorphizer = Monomorphizer::new(type_ctx);
@@ -84,7 +85,8 @@ impl<'ctx> Compiler<'ctx> {
                 resolver.add_import(alias.clone(), module_path.clone());
 
                 // Extract and register exports
-                if let Some(module) = module_system.get_modules().get(module_path) {
+                let loaded_modules = module_system.get_modules();
+                if let Some(module) = loaded_modules.get(module_path) {
                     let exports = ModuleResolver::extract_exports(module);
                     resolver.add_exports(module_path.clone(), exports);
                 }
@@ -390,7 +392,8 @@ impl<'ctx> Compiler<'ctx> {
 
         // Try to typecheck - pass loaded stdlib modules for type alias resolution
         let mut typechecker = TypeChecker::new();
-        typechecker.with_stdlib_modules(module_system.get_modules());
+        let loaded_modules = module_system.get_modules();
+        typechecker.with_stdlib_modules(&loaded_modules);
         let type_ctx = match typechecker.check_program(&processed_program) {
             Ok(ctx) => ctx,
             Err(err) => {

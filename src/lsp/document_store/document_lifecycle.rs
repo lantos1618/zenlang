@@ -39,6 +39,7 @@ impl DocumentStore {
                     uri,
                     version,
                     content,
+                    content_hash,
                     program: Program {
                         declarations: ast_decls,
                         statements: vec![],
@@ -63,15 +64,17 @@ impl DocumentStore {
             .map(|doc| doc.content_hash != new_hash)
             .unwrap_or(true);
 
-        // If content hasn't changed, return cached diagnostics
+        // Skip full re-analysis if content unchanged AND we already have TypeContext
         if !content_changed {
             if let Some(doc) = self.documents.get(&uri) {
-                // Just update version
+                let has_type_context = doc.type_context.is_some();
                 let cached_diagnostics = doc.diagnostics.clone();
                 if let Some(doc) = self.documents.get_mut(&uri) {
                     doc.version = version;
                 }
-                return cached_diagnostics;
+                if has_type_context {
+                    return cached_diagnostics;
+                }
             }
         }
 
@@ -97,12 +100,12 @@ impl DocumentStore {
                         uri: uri.clone(),
                         version,
                         content: content.clone(),
+                        content_hash: new_hash,
                         program: Program {
                             declarations: ast_decls.clone(),
                             statements: vec![],
                         },
                     };
-                    // Send job to background thread (ignore if receiver dropped)
                     let _ = sender.send(job);
                 }
             }

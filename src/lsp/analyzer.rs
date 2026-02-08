@@ -76,7 +76,8 @@ pub fn run_compiler_analysis_with_context(
     let mut type_checker = TypeChecker::new();
     // Critical: Pass loaded stdlib modules to TypeChecker so it can extract type info
     // This matches what run_pipeline does in the CLI compiler path
-    type_checker.with_stdlib_modules(module_system.get_modules());
+    let loaded_modules = module_system.get_modules();
+    type_checker.with_stdlib_modules(&loaded_modules);
 
     let (type_context, first_error) = type_checker.check_program_tolerant(&merged_program);
     if let Some(err) = first_error {
