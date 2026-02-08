@@ -2,6 +2,7 @@
 // Testing utilities and test runners
 
 { io, memory, compiler } = @std
+{ Vec } = @std.collections.vec
 
 // ============================================================================
 // Test Result Enum
@@ -38,7 +39,7 @@ TestCase: {
 // Collection of tests with tracking for passed/failed
 TestSuite: {
     name: String,
-    tests: DynVec<TestCase>,
+    tests: Vec<TestCase>,
     passed: i32,
     failed: i32,
     allocator: memory.Allocator
@@ -48,7 +49,7 @@ TestSuite: {
 new_test_suite = (name: String, allocator: memory.Allocator) TestSuite {
     return TestSuite {
         name: name,
-        tests: DynVec.new<TestCase>(allocator),
+        tests: Vec<TestCase>.new(allocator),
         passed: 0,
         failed: 0,
         allocator: allocator
@@ -69,19 +70,27 @@ run_tests = (suite: TestSuite) void {
     io.println("Running test suite: ${suite.name}")
     io.println("=" .repeat(50))
 
-    suite.tests.loop((test_case) {
-        result = test_case.test_fn()
-
-        result ?
-            | Pass {
-                suite.passed = suite.passed + 1
-                io.println("  ✓ ${test_case.name}")
+    i ::= 0
+    count = suite.tests.len()
+    loop {
+        i >= count ? | true { break }
+        test_opt = suite.tests.get(i as usize)
+        test_opt ?
+            | Some(test_case) {
+                result = test_case.test_fn()
+                result ?
+                    | Pass {
+                        suite.passed = suite.passed + 1
+                        io.println("  ✓ ${test_case.name}")
+                    }
+                    | Fail(msg) {
+                        suite.failed = suite.failed + 1
+                        io.println("  ✗ ${test_case.name}: ${msg}")
+                    }
             }
-            | Fail(msg) {
-                suite.failed = suite.failed + 1
-                io.println("  ✗ ${test_case.name}: ${msg}")
-            }
-    })
+            | None { }
+        i = i + 1
+    }
 
     io.println("=" .repeat(50))
     total = suite.passed + suite.failed

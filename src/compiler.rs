@@ -36,23 +36,29 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    /// Pipeline: imports → comptime → self-resolution → typecheck → monomorphize → codegen
-    fn run_pipeline(&self, program: &Program) -> Result<LLVMCompiler<'ctx>> {
+    /// Create a ModuleSystem with PackageMap from build.zen discovery (or defaults).
+    fn create_module_system(&self) -> Result<ModuleSystem> {
+        // For the compiler path, we want to propagate build.zen parse errors
+        // rather than silently falling back, so we use discover() directly.
         let mut module_system = ModuleSystem::new();
 
-        // Discover build.zen and set up PackageMap
-        let build_config = self
-            .source_file
-            .as_ref()
-            .and_then(|path| BuildConfig::discover(path));
+        let build_config = match &self.source_file {
+            Some(path) => BuildConfig::discover(path)?,
+            None => None,
+        };
 
         if let Some(ref config) = build_config {
             module_system.set_package_map(config.packages.clone());
         } else {
-            // No build.zen found — use default PackageMap (std => Stdlib)
-            // This ensures { println } = std.io works even without build.zen
             module_system.set_package_map(BuildConfig::default_config().packages);
         }
+
+        Ok(module_system)
+    }
+
+    /// Pipeline: imports → comptime → self-resolution → typecheck → monomorphize → codegen
+    fn run_pipeline(&self, program: &Program) -> Result<LLVMCompiler<'ctx>> {
+        let mut module_system = self.create_module_system()?;
 
         let processed_program = self.process_imports_with_system(program, &mut module_system)?;
         let processed_program = self.execute_comptime(processed_program)?;
@@ -391,19 +397,16 @@ impl<'ctx> Compiler<'ctx> {
     pub fn analyze_for_diagnostics(&self, program: &Program) -> Vec<CompileError> {
         let mut errors = Vec::new();
 
-        // Try to process imports - use process_imports_with_system to get module access
-        let mut module_system = ModuleSystem::new();
-
-        // Set up PackageMap for diagnostics too
-        let build_config = self
-            .source_file
-            .as_ref()
-            .and_then(|path| BuildConfig::discover(path));
-        if let Some(ref config) = build_config {
-            module_system.set_package_map(config.packages.clone());
-        } else {
-            module_system.set_package_map(BuildConfig::default_config().packages);
-        }
+        // Create module system with PackageMap from build.zen
+        let mut module_system = match self.create_module_system() {
+            Ok(ms) => ms,
+            Err(err) => {
+                errors.push(err);
+                let mut ms = ModuleSystem::new();
+                ms.set_package_map(BuildConfig::default_config().packages);
+                ms
+            }
+        };
 
         let processed_program = match self.process_imports_with_system(program, &mut module_system)
         {

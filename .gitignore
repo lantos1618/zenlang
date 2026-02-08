@@ -90,3 +90,4 @@ secrets.yml
 *Authorization*
 .opencode/
 vscode-extension/out/extension.js
+examples/build_demo/target/

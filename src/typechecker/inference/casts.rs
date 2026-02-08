@@ -38,6 +38,12 @@ pub fn infer_cast_type(args: &[Expression], span: Option<crate::error::Span>) ->
                 )),
             };
         }
+
+        // Second argument exists but is not a type identifier
+        return Err(CompileError::TypeError(
+            "cast() second argument must be a type name (e.g., i64, f32, Ptr<u8>)".to_string(),
+            span,
+        ));
     }
 
     Err(CompileError::TypeError(

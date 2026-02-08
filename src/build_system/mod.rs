@@ -9,6 +9,7 @@
 //! - `@` prefix reserved for `@builtin` raw intrinsics (only in compiler.zen)
 //! - If no `build.zen` exists, an implicit PackageMap with `"std" => Stdlib` is used
 
+use crate::error::CompileError;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -79,25 +80,29 @@ pub struct ExecutableTarget {
 
 impl BuildConfig {
     /// Walk up from `start_path` looking for `build.zen`.
-    /// Returns `None` if no build.zen is found (single-file mode).
-    pub fn discover(start_path: &Path) -> Option<BuildConfig> {
+    /// Returns `Ok(None)` if no build.zen is found (single-file mode).
+    /// Returns `Err` if build.zen exists but fails to parse.
+    pub fn discover(start_path: &Path) -> Result<Option<BuildConfig>, CompileError> {
         let start = if start_path.is_file() {
-            start_path.parent()?
+            start_path.parent()
         } else {
-            start_path
+            Some(start_path)
+        };
+        let Some(start) = start else {
+            return Ok(None);
         };
 
         let mut dir = start.to_path_buf();
         loop {
             let build_zen = dir.join("build.zen");
             if build_zen.exists() {
-                return Self::parse_build_file(&build_zen, &dir);
+                return Self::parse_build_file(&build_zen, &dir).map(Some);
             }
             if !dir.pop() {
                 break;
             }
         }
-        None
+        Ok(None)
     }
 
     /// Parse a build.zen file declaratively.
@@ -108,15 +113,19 @@ impl BuildConfig {
     /// - `utils = @builtin.import("./lib")` → PackageSource::Local(path)
     ///
     /// This is NOT executing build.zen — just reading declarations.
-    fn parse_build_file(path: &Path, project_root: &Path) -> Option<BuildConfig> {
-        let source = std::fs::read_to_string(path).ok()?;
+    fn parse_build_file(path: &Path, project_root: &Path) -> Result<BuildConfig, CompileError> {
+        let source = std::fs::read_to_string(path).map_err(|e| {
+            CompileError::BuildError(format!("Failed to read {}: {}", path.display(), e), None)
+        })?;
         let mut packages = HashMap::new();
         let mut executables = Vec::new();
 
         // Use the Zen lexer+parser to parse the file
         let lexer = crate::lexer::Lexer::new(&source);
         let mut parser = crate::parser::Parser::new(lexer);
-        let program = parser.parse_program().ok()?;
+        let program = parser.parse_program().map_err(|e| {
+            CompileError::BuildError(format!("Failed to parse {}: {}", path.display(), e), None)
+        })?;
 
         // Scan top-level declarations for package imports
         for decl in &program.declarations {
@@ -166,7 +175,7 @@ impl BuildConfig {
             packages.insert("std".to_string(), PackageSource::Stdlib);
         }
 
-        Some(BuildConfig {
+        Ok(BuildConfig {
             packages: PackageMap { packages },
             project_root: project_root.to_path_buf(),
             executables,

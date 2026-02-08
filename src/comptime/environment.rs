@@ -62,10 +62,11 @@ impl Environment {
                     span,
                 ));
             }
+            let is_mutable = *is_mutable;
             drop(vars);
             self.variables
                 .borrow_mut()
-                .insert(name.to_string(), (value, true));
+                .insert(name.to_string(), (value, is_mutable));
             Ok(())
         } else {
             drop(vars);

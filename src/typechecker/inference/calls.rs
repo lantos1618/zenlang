@@ -483,7 +483,7 @@ fn try_resolve_instance_method(
 /// differently (e.g., Generic { name: "Point" } vs Struct { name: "Point" }).
 /// The parser creates Generic for type annotations while the typechecker
 /// creates Struct for struct literal inference — this bridges that gap.
-fn types_match_by_name(a: &AstType, b: &AstType) -> bool {
+pub(crate) fn types_match_by_name(a: &AstType, b: &AstType) -> bool {
     let name_a = match a {
         AstType::Struct { name, .. }
         | AstType::Generic { name, .. }

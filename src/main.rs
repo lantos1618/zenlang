@@ -402,7 +402,8 @@ fn build_project(release: bool) -> std::io::Result<()> {
     }
 
     let config = BuildConfig::discover(&build_zen)
-        .ok_or_else(|| io::Error::other("Failed to parse build.zen"))?;
+        .map_err(|e| io::Error::other(format!("{}", e)))?
+        .ok_or_else(|| io::Error::other("Failed to find build.zen"))?;
 
     if config.executables.is_empty() {
         // If no explicit executables declared, look for main.zen or src/main.zen
@@ -537,11 +538,12 @@ fn analyze_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
         .map_err(|e| io::Error::other(format!("Parse error: {}", e)))?;
 
     // Load imports
-    let mut module_system = ModuleSystem::new();
-    module_system.set_package_map(BuildConfig::default_config().packages);
+    let mut module_system = ModuleSystem::with_build_config(None);
     for decl in &program.declarations {
         if let zen::ast::Declaration::ModuleImport { module_path, .. } = decl {
-            let _ = module_system.load_module(module_path);
+            if let Err(e) = module_system.load_module(module_path) {
+                eprintln!("Warning: failed to load module '{}': {}", module_path, e);
+            }
         }
     }
     let merged = module_system.merge_programs(program);
@@ -847,11 +849,12 @@ fn check_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
     };
 
     // Load imports
-    let mut module_system = ModuleSystem::new();
-    module_system.set_package_map(BuildConfig::default_config().packages);
+    let mut module_system = ModuleSystem::with_build_config(None);
     for decl in &program.declarations {
         if let zen::ast::Declaration::ModuleImport { module_path, .. } = decl {
-            let _ = module_system.load_module(module_path);
+            if let Err(e) = module_system.load_module(module_path) {
+                eprintln!("Warning: failed to load module '{}': {}", module_path, e);
+            }
         }
     }
     let main_decl_count = program.declarations.len();
@@ -974,11 +977,12 @@ fn query_type(location: &str) -> std::io::Result<()> {
         .map_err(|e| io::Error::other(format!("Parse error: {}", e)))?;
 
     // Load imports
-    let mut module_system = ModuleSystem::new();
-    module_system.set_package_map(BuildConfig::default_config().packages);
+    let mut module_system = ModuleSystem::with_build_config(None);
     for decl in &program.declarations {
         if let zen::ast::Declaration::ModuleImport { module_path, .. } = decl {
-            let _ = module_system.load_module(module_path);
+            if let Err(e) = module_system.load_module(module_path) {
+                eprintln!("Warning: failed to load module '{}': {}", module_path, e);
+            }
         }
     }
     let merged = module_system.merge_programs(program);
@@ -1702,11 +1706,12 @@ fn query_methods(type_name: &str, file_path: &str) -> std::io::Result<()> {
         .map_err(|e| io::Error::other(format!("Parse error: {}", e)))?;
 
     // Load imports
-    let mut module_system = ModuleSystem::new();
-    module_system.set_package_map(BuildConfig::default_config().packages);
+    let mut module_system = ModuleSystem::with_build_config(None);
     for decl in &program.declarations {
         if let zen::ast::Declaration::ModuleImport { module_path, .. } = decl {
-            let _ = module_system.load_module(module_path);
+            if let Err(e) = module_system.load_module(module_path) {
+                eprintln!("Warning: failed to load module '{}': {}", module_path, e);
+            }
         }
     }
     let merged = module_system.merge_programs(program);

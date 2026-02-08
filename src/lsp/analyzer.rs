@@ -122,17 +122,17 @@ pub fn analyze_document_with_context(
 /// Load imported modules and merge them with the main program
 /// Returns both the merged program and the module system for type extraction
 fn load_imports_for_program(program: &Program) -> (Program, ModuleSystem) {
-    let mut module_system = ModuleSystem::new();
-
-    // Set up default PackageMap so `std.io` imports work in LSP
-    module_system.set_package_map(crate::build_system::BuildConfig::default_config().packages);
+    // Discover build.zen from cwd for PackageMap (so `std.io` imports work)
+    let mut module_system = ModuleSystem::with_build_config(None);
 
     // Load all imported modules
     for decl in &program.declarations {
         if let Declaration::ModuleImport { module_path, .. } = decl {
-            // Try to load the module - ignore errors for LSP analysis
+            // Try to load the module - log errors but don't fail LSP analysis
             // (we don't want to fail on missing modules, just show what we can)
-            let _ = module_system.load_module(module_path);
+            if let Err(e) = module_system.load_module(module_path) {
+                eprintln!("LSP: failed to load module '{}': {}", module_path, e);
+            }
         }
     }
 

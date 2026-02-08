@@ -122,6 +122,21 @@ impl ModuleSystem {
         }
     }
 
+    /// Create a ModuleSystem with PackageMap discovered from build.zen.
+    /// If `workspace_path` is Some, looks for build.zen starting from that path.
+    /// Falls back to default PackageMap (std => Stdlib) on discovery failure or missing build.zen.
+    pub fn with_build_config(workspace_path: Option<&std::path::Path>) -> Self {
+        use crate::build_system::BuildConfig;
+
+        let mut ms = Self::new();
+        let packages = workspace_path
+            .and_then(|path| BuildConfig::discover(path).ok().flatten())
+            .map(|config| config.packages)
+            .unwrap_or_else(|| BuildConfig::default_config().packages);
+        ms.package_map = Some(packages);
+        ms
+    }
+
     /// Set the package map (from build.zen discovery)
     pub fn set_package_map(&mut self, package_map: PackageMap) {
         self.package_map = Some(package_map);

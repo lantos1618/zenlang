@@ -626,15 +626,12 @@ impl ZenLanguageServer {
         result_tx: Sender<AnalysisResult>,
     ) {
         use crate::ast::Declaration;
-        use crate::build_system::BuildConfig;
         use crate::module_system::ModuleSystem;
         use crate::typechecker::TypeChecker;
 
         // Persisted across analysis runs — modules are cache-invalidated by content hash
-        let mut module_system = ModuleSystem::new();
-
-        // Set up default PackageMap so `std.io` imports work in LSP
-        module_system.set_package_map(BuildConfig::default_config().packages);
+        // Discover build.zen from cwd for PackageMap (so `std.io` imports work)
+        let mut module_system = ModuleSystem::with_build_config(None);
         // Track last-analyzed content hash per URI to skip redundant TypeChecker runs
         let mut last_analyzed_hash: std::collections::HashMap<Url, u64> =
             std::collections::HashMap::new();
@@ -651,7 +648,9 @@ impl ZenLanguageServer {
             } else {
                 for decl in &job.program.declarations {
                     if let Declaration::ModuleImport { module_path, .. } = decl {
-                        let _ = module_system.load_module(module_path);
+                        if let Err(e) = module_system.load_module(module_path) {
+                            eprintln!("LSP: failed to load module '{}': {}", module_path, e);
+                        }
                     }
                 }
 
