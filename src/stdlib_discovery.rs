@@ -230,22 +230,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_find_stdlib_root_respects_env_var() {
-        // Note: This test would need actual setup to work properly
-        // Just checking the logic compiles
-        let _ = find_stdlib_root();
-    }
-
-    #[test]
     fn test_find_stdlib_root_or_default_always_returns() {
         let result = find_stdlib_root_or_default();
         assert!(!result.as_os_str().is_empty());
-    }
-
-    #[test]
-    fn test_find_stdlib_root_from_with_base() {
-        let base = Path::new("/some/workspace");
-        let _ = find_stdlib_root_from(Some(base));
     }
 
     #[test]

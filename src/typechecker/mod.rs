@@ -736,7 +736,10 @@ mod tests {
             y : i32 = 100
             z = x + y
         }";
-        assert!(check_program(input).is_ok());
+        let ctx = check_program_get_context(input).unwrap();
+        assert_eq!(ctx.get_variable_type("main", "x"), Some(AstType::I32));
+        assert_eq!(ctx.get_variable_type("main", "y"), Some(AstType::I32));
+        assert_eq!(ctx.get_variable_type("main", "z"), Some(AstType::I32));
     }
 
     #[test]
@@ -765,7 +768,11 @@ mod tests {
             e = a * b
             f = a / b
         }";
-        assert!(check_program(input).is_ok());
+        let ctx = check_program_get_context(input).unwrap();
+        assert_eq!(ctx.get_variable_type("main", "c"), Some(AstType::I32));
+        assert_eq!(ctx.get_variable_type("main", "d"), Some(AstType::I32));
+        assert_eq!(ctx.get_variable_type("main", "e"), Some(AstType::I32));
+        assert_eq!(ctx.get_variable_type("main", "f"), Some(AstType::I32));
     }
 
     #[test]
@@ -776,7 +783,8 @@ mod tests {
             b: i64 = 20
             c = a + b
         }";
-        assert!(check_program(input).is_ok());
+        let ctx = check_program_get_context(input).unwrap();
+        assert_eq!(ctx.get_variable_type("main", "c"), Some(AstType::I64));
     }
 
     #[test]
@@ -787,7 +795,9 @@ mod tests {
             c = a + b
             d = a * b
         }";
-        assert!(check_program(input).is_ok());
+        let ctx = check_program_get_context(input).unwrap();
+        assert_eq!(ctx.get_variable_type("main", "c"), Some(AstType::F64));
+        assert_eq!(ctx.get_variable_type("main", "d"), Some(AstType::F64));
     }
 
     #[test]
@@ -802,7 +812,10 @@ mod tests {
             g = a <= b
             h = a >= b
         }";
-        assert!(check_program(input).is_ok());
+        let ctx = check_program_get_context(input).unwrap();
+        assert_eq!(ctx.get_variable_type("main", "c"), Some(AstType::Bool));
+        assert_eq!(ctx.get_variable_type("main", "d"), Some(AstType::Bool));
+        assert_eq!(ctx.get_variable_type("main", "e"), Some(AstType::Bool));
     }
 
     #[test]
@@ -813,7 +826,9 @@ mod tests {
             c = a && b
             d = a || b
         }";
-        assert!(check_program(input).is_ok());
+        let ctx = check_program_get_context(input).unwrap();
+        assert_eq!(ctx.get_variable_type("main", "c"), Some(AstType::Bool));
+        assert_eq!(ctx.get_variable_type("main", "d"), Some(AstType::Bool));
     }
 
     // ========================================================================
@@ -828,7 +843,8 @@ mod tests {
                 result: i32 = add(1, 2)
             }
         ";
-        assert!(check_program(input).is_ok());
+        let ctx = check_program_get_context(input).unwrap();
+        assert_eq!(ctx.get_variable_type("main", "result"), Some(AstType::I32));
     }
 
     #[test]
@@ -851,7 +867,7 @@ mod tests {
                 do_nothing()
             }
         ";
-        assert!(check_program(input).is_ok());
+        assert!(check_program_get_context(input).is_ok());
     }
 
     // ========================================================================
@@ -866,7 +882,12 @@ mod tests {
                 p = Point { x: 10, y: 20 }
             }
         ";
-        assert!(check_program(input).is_ok());
+        let ctx = check_program_get_context(input).unwrap();
+        let p_type = ctx.get_variable_type("main", "p");
+        match p_type.unwrap() {
+            AstType::Struct { name, .. } => assert_eq!(name, "Point"),
+            other => panic!("Expected Struct for p, got {:?}", other),
+        }
     }
 
     #[test]
@@ -879,7 +900,9 @@ mod tests {
                 b: i32 = p.y
             }
         ";
-        assert!(check_program(input).is_ok());
+        let ctx = check_program_get_context(input).unwrap();
+        assert_eq!(ctx.get_variable_type("main", "a"), Some(AstType::I32));
+        assert_eq!(ctx.get_variable_type("main", "b"), Some(AstType::I32));
     }
 
     #[test]
@@ -953,7 +976,8 @@ mod tests {
                     | false { 2 }
             }
         ";
-        assert!(check_program(input).is_ok());
+        let ctx = check_program_get_context(input).unwrap();
+        assert_eq!(ctx.get_variable_type("main", "y"), Some(AstType::I32));
     }
 
     #[test]
@@ -1074,7 +1098,7 @@ mod tests {
                 return 42
             }
         ";
-        assert!(check_program(input).is_ok());
+        assert!(check_program_get_context(input).is_ok());
     }
 
     // ========================================================================
@@ -1141,10 +1165,20 @@ mod tests {
                 c = a < b
             }
         ";
-        let result = check_program(input);
-        // This may or may not be an error depending on language semantics
-        // For now, just verify it doesn't crash
-        let _ = result;
+        let result = check_program_get_context(input);
+        match result {
+            Ok(ctx) => {
+                assert_eq!(ctx.get_variable_type("main", "c"), Some(AstType::Bool));
+            }
+            Err(e) => {
+                let msg = format!("{:?}", e);
+                assert!(
+                    msg.contains("type") || msg.contains("Type"),
+                    "Unexpected error: {}",
+                    msg
+                );
+            }
+        }
     }
 
     // ========================================================================
