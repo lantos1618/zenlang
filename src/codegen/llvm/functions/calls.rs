@@ -219,6 +219,15 @@ fn dispatch_compiler_function<'ctx>(
     args: &[ast::Expression],
 ) -> Option<Result<BasicValueEnum<'ctx>, CompileError>> {
     let base_func = func.split('<').next().unwrap_or(func);
+
+    // Validate arg count using the intrinsic registry (single source of truth)
+    // Skip call_external since it's variadic in practice
+    if base_func != "call_external" {
+        if let Some(Err(e)) = crate::intrinsics::check_intrinsic_call(base_func, args.len()) {
+            return Some(Err(e));
+        }
+    }
+
     Some(match base_func {
         "inline_c" => stdlib_codegen::compile_inline_c(compiler, args),
         "raw_allocate" => stdlib_codegen::compile_raw_allocate(compiler, args),

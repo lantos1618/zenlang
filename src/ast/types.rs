@@ -302,7 +302,7 @@ impl fmt::Display for AstType {
                 param_types,
                 return_type,
             } => {
-                write!(f, "fn(")?;
+                write!(f, "(")?;
                 for (i, param) in param_types.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;

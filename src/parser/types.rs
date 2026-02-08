@@ -97,7 +97,6 @@ impl<'a> Parser<'a> {
                 self.next_token();
                 let element_type = self.parse_type()?;
 
-                // Check for semicolon to determine if it's a fixed-size array
                 if self.try_consume_symbol(';') {
                     // Parse the size (must be an integer literal for now)
                     match &self.current_token {

@@ -3,11 +3,53 @@
 use super::casts::infer_cast_type;
 use super::helpers::extract_type_name;
 use crate::ast::{AstType, Expression};
-use crate::error::{CompileError, Result};
+use crate::error::{CompileError, Result, Span};
 use crate::stdlib_types::{self, StdlibTypeRegistry};
 use crate::typechecker::intrinsics;
 use crate::typechecker::method_types;
 use crate::typechecker::TypeChecker;
+
+/// Substitute generic type params in a return type based on the caller's concrete type args.
+/// E.g., calling `Ptr<u8>.from_addr(...)` where `from_addr` returns `Ptr<T>` → substitutes T→u8.
+fn substitute_generic_type_params(caller_type_name: &str, return_type: &AstType) -> AstType {
+    let (_, caller_type_args) = crate::parser::parse_generic_type_string(caller_type_name);
+    if caller_type_args.is_empty() {
+        return return_type.clone();
+    }
+    substitute_type_args_recursive(return_type, &caller_type_args, 0)
+}
+
+const MAX_SUBSTITUTION_DEPTH: usize = 64;
+
+fn substitute_type_args_recursive(
+    ty: &AstType,
+    concrete_args: &[AstType],
+    depth: usize,
+) -> AstType {
+    if depth > MAX_SUBSTITUTION_DEPTH {
+        return ty.clone();
+    }
+    match ty {
+        AstType::Generic { name, type_args } => {
+            // Single-letter generic param (T, U, V, etc.) — substitute with concrete arg
+            if name.len() == 1 && name.chars().all(|c| c.is_ascii_uppercase()) {
+                let index = (name.chars().next().unwrap() as usize).saturating_sub('T' as usize);
+                if index < concrete_args.len() {
+                    return concrete_args[index].clone();
+                }
+            }
+            // Recurse into type args (e.g., Ptr<T> → Ptr<u8>)
+            AstType::Generic {
+                name: name.clone(),
+                type_args: type_args
+                    .iter()
+                    .map(|t| substitute_type_args_recursive(t, concrete_args, depth + 1))
+                    .collect(),
+            }
+        }
+        _ => ty.clone(),
+    }
+}
 
 /// Infer the return type of a function call
 pub fn infer_function_call_type(
@@ -15,6 +57,7 @@ pub fn infer_function_call_type(
     name: &str,
     type_args: &[AstType],
     args: &[Expression],
+    call_span: Option<Span>,
 ) -> Result<AstType> {
     if name.contains('.') {
         let parts: Vec<&str> = name.splitn(2, '.').collect();
@@ -31,7 +74,7 @@ pub fn infer_function_call_type(
                             return Err(CompileError::TypeError(
                                 "compiler.inline_c() requires a string literal argument"
                                     .to_string(),
-                                checker.get_current_span(),
+                                call_span.clone().or_else(|| checker.get_current_span()),
                             ))
                         }
                     }
@@ -73,8 +116,15 @@ pub fn infer_function_call_type(
         }
     }
 
+    if name == "not" {
+        return Ok(AstType::Bool);
+    }
+
     if name == "cast" {
-        return infer_cast_type(args, checker.get_current_span());
+        return infer_cast_type(
+            args,
+            call_span.clone().or_else(|| checker.get_current_span()),
+        );
     }
 
     // Handle generic types with explicit type_args from AST
@@ -111,7 +161,7 @@ pub fn infer_function_call_type(
             }
             Err(CompileError::TypeError(
                 format!("'{}' is not a function", name),
-                checker.get_current_span(),
+                call_span.clone().or_else(|| checker.get_current_span()),
             ))
         }
         // Handle Struct type that might be a type alias name
@@ -128,16 +178,16 @@ pub fn infer_function_call_type(
             }
             Err(CompileError::TypeError(
                 format!("'{}' is not a function", name),
-                checker.get_current_span(),
+                call_span.clone().or_else(|| checker.get_current_span()),
             ))
         }
         Ok(_other) => Err(CompileError::not_a_function(
             name,
-            checker.get_current_span(),
+            call_span.clone().or_else(|| checker.get_current_span()),
         )),
         Err(_) => Err(CompileError::unknown_function(
             name,
-            checker.get_current_span(),
+            call_span.or_else(|| checker.get_current_span()),
         )),
     }
 }
@@ -155,6 +205,7 @@ pub fn infer_method_call_type(
     object: &Expression,
     method: &str,
     type_args: &[AstType],
+    call_span: Option<Span>,
 ) -> Result<AstType> {
     // === Phase 1: Static/module calls (object is a type name or module) ===
     if let Expression::Identifier(name) = object {
@@ -192,7 +243,7 @@ pub fn infer_method_call_type(
         .unwrap_or_else(|| format!("{:?}", effective_type));
     Err(CompileError::TypeError(
         format!("Method '{}' not found on type '{}'", method, type_desc),
-        checker.get_current_span(),
+        call_span.or_else(|| checker.get_current_span()),
     ))
 }
 
@@ -240,7 +291,8 @@ fn try_resolve_static_call(
     // 4. User-defined UFC methods (Type.method in function signatures)
     //    Uses find_ufc_method to handle generic names (e.g., "SafePtr<T>.is_valid")
     if let Some(func_sig) = checker.find_ufc_method(name, method) {
-        return Some(Ok(func_sig.return_type.clone()));
+        let return_type = substitute_generic_type_params(name, &func_sig.return_type);
+        return Some(Ok(return_type));
     }
 
     // 5. Constructors with explicit type args (e.g., HashMap.new<i32, String>())
@@ -306,11 +358,31 @@ fn try_resolve_instance_method(
     if let Some(type_name) = extract_type_name(effective_type) {
         // 2. Stdlib methods
         if let Some(return_type) = checker.get_stdlib_method_type(type_name, method) {
-            return Some(return_type.clone());
+            // Apply generic substitution: if the receiver has type args (e.g., Vec<Entry<K,V>>),
+            // substitute them into the return type (e.g., Option<T> -> Option<Entry<K,V>>).
+            let substituted = if let AstType::Generic { type_args, .. } = effective_type {
+                if !type_args.is_empty() {
+                    substitute_type_args_recursive(&return_type, type_args, 0)
+                } else {
+                    return_type.clone()
+                }
+            } else {
+                return_type.clone()
+            };
+            return Some(substituted);
         }
         // 3. User-defined UFC methods (handles generic names like "SafePtr<T>.is_valid")
         if let Some(func_sig) = checker.find_ufc_method(type_name, method) {
-            return Some(func_sig.return_type.clone());
+            let return_type = if let AstType::Generic { type_args, .. } = effective_type {
+                if !type_args.is_empty() {
+                    substitute_type_args_recursive(&func_sig.return_type, type_args, 0)
+                } else {
+                    func_sig.return_type.clone()
+                }
+            } else {
+                func_sig.return_type.clone()
+            };
+            return Some(return_type);
         }
     }
 
@@ -387,7 +459,16 @@ fn try_resolve_instance_method(
         return Some(return_type);
     }
 
-    None // No strategy matched
+    // Strategy 10: Generic type parameter method calls (deferred to monomorphization)
+    //   e.g., behavior.on_start() where behavior is type B (a generic param)
+    //   Single-letter uppercase names are type parameters — accept any method call on them.
+    if let AstType::Generic { name, type_args } = effective_type {
+        if type_args.is_empty() && name.len() == 1 && name.chars().all(|c| c.is_ascii_uppercase()) {
+            return Some(AstType::Void);
+        }
+    }
+
+    None
 }
 
 /// Strategy 9 helper: check if `method` is a function pointer field on the struct.

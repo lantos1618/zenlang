@@ -31,7 +31,6 @@ pub fn infer_closure_type(
 
     checker.enter_scope();
     for (param_name, opt_type) in params {
-        // Untyped params default to i32 (loop counter convention). See doc comment above.
         let param_type = opt_type.clone().unwrap_or(AstType::I32);
         let _ = checker.declare_variable(param_name, param_type, false);
     }
@@ -69,15 +68,14 @@ pub fn infer_closure_type(
                 }
             }
 
-            ret_type
+            Ok(ret_type)
         }
-        _ => {
-            // Propagate type inference errors instead of silently defaulting to i32
-            Box::new(checker.infer_expression_type(body)?)
-        }
+        _ => checker.infer_expression_type(body).map(Box::new),
     };
 
     checker.exit_scope();
+
+    let inferred_return = inferred_return?;
 
     Ok(AstType::FunctionPointer {
         param_types,

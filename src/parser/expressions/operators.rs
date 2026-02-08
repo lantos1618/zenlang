@@ -94,6 +94,16 @@ fn parse_binary_expression_impl(
             } else {
                 break;
             }
+        } else if matches!(&parser.current_token, Token::Identifier(id) if id == "as") {
+            parser.next_token(); // consume 'as'
+            let target_type = parser.parse_type()?;
+            let type_name = target_type.to_string();
+            left = Expression::FunctionCall {
+                name: "cast".to_string(),
+                type_args: vec![],
+                args: vec![left, Expression::Identifier(type_name)],
+                span: Some(parser.current_span.clone()),
+            };
         } else {
             break;
         }
@@ -122,6 +132,7 @@ fn parse_unary_expression(parser: &mut Parser) -> Result<Expression> {
                 name: "not".to_string(),
                 type_args: vec![],
                 args: vec![expr],
+                span: Some(parser.current_span.clone()),
             })
         }
         // Address-of operator: &expr

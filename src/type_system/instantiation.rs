@@ -230,6 +230,7 @@ impl<'a, 'prog> TypeInstantiator<'a, 'prog> {
                 name,
                 type_args,
                 args,
+                span,
             } => Expression::FunctionCall {
                 name: name.clone(),
                 type_args: type_args.clone(),
@@ -237,6 +238,7 @@ impl<'a, 'prog> TypeInstantiator<'a, 'prog> {
                     .iter()
                     .map(|a| self.instantiate_expression(a, substitution))
                     .collect(),
+                span: span.clone(),
             },
             Expression::BinaryOp { left, op, right } => Expression::BinaryOp {
                 left: Box::new(self.instantiate_expression(left, substitution)),

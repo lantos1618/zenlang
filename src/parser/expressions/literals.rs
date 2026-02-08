@@ -20,38 +20,32 @@ pub fn parse_integer_literal(parser: &mut Parser, value_str: &str) -> Result<Exp
     // Remove underscores used as digit separators
     let clean_str: String = value_str.chars().filter(|&c| c != '_').collect();
 
-    // Helper closure to parse with a given radix and format name
-    let parse_radix = |digits: &str, radix: u32, format_name: &str| -> Result<i64> {
-        i64::from_str_radix(digits, radix).map_err(|_| {
-            let error_msg = if format_name.is_empty() {
+    let (digits, radix, format_name) = match clean_str.get(..2).unwrap_or("") {
+        "0x" | "0X" => (&clean_str[2..], 16u32, "hexadecimal"),
+        "0b" | "0B" => (&clean_str[2..], 2u32, "binary"),
+        "0o" | "0O" => (&clean_str[2..], 8u32, "octal"),
+        _ => (clean_str.as_str(), 10u32, ""),
+    };
+
+    let expr = if let Ok(v) = i64::from_str_radix(digits, radix) {
+        if v <= i32::MAX as i64 && v >= i32::MIN as i64 {
+            Expression::Integer32(v as i32)
+        } else {
+            Expression::Integer64(v)
+        }
+    } else if let Ok(v) = u64::from_str_radix(digits, radix) {
+        Expression::Unsigned64(v)
+    } else {
+        return Err(CompileError::SyntaxError(
+            if format_name.is_empty() {
                 format!("Invalid integer: {}", value_str)
             } else {
                 format!("Invalid {} integer: {}", format_name, value_str)
-            };
-            CompileError::SyntaxError(error_msg, Some(parser.current_span.clone()))
-        })
-    };
-
-    let value = if clean_str.starts_with("0x") || clean_str.starts_with("0X") {
-        // Hexadecimal
-        parse_radix(&clean_str[2..], 16, "hexadecimal")?
-    } else if clean_str.starts_with("0b") || clean_str.starts_with("0B") {
-        // Binary
-        parse_radix(&clean_str[2..], 2, "binary")?
-    } else if clean_str.starts_with("0o") || clean_str.starts_with("0O") {
-        // Octal
-        parse_radix(&clean_str[2..], 8, "octal")?
-    } else {
-        // Decimal
-        parse_radix(&clean_str, 10, "")?
+            },
+            Some(parser.current_span.clone()),
+        ));
     };
     parser.next_token();
-
-    let expr = if value <= i32::MAX as i64 && value >= i32::MIN as i64 {
-        Expression::Integer32(value as i32)
-    } else {
-        Expression::Integer64(value)
-    };
 
     parse_method_chain(parser, expr)
 }

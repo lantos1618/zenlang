@@ -134,9 +134,7 @@ pub fn infer_hashset_method_type(method: &str) -> Option<AstType> {
 pub fn infer_vec_method_type(method: &str, element_type: &AstType) -> Option<AstType> {
     let wk = well_known();
     match method {
-        "get" => Some(element_type.clone()), // Returns element directly
-        "pop" => Some(AstType::Generic {
-            // Returns Option<element>
+        "get" | "pop" => Some(AstType::Generic {
             name: wk.option_name().to_string(),
             type_args: vec![element_type.clone()],
         }),

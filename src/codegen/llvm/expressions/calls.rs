@@ -33,6 +33,7 @@ pub fn compile_method_call<'ctx>(
             method,
             type_args,
             args,
+            ..
         } => compiler.compile_method_call_with_type_args(object, method, type_args, args),
         _ => Err(CompileError::InternalError(
             format!("Expected MethodCall, got {:?}", expr),

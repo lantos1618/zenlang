@@ -4,8 +4,7 @@ use crate::stdlib_types::{stdlib_types, StdlibTypeRegistry};
 use crate::well_known::well_known;
 use std::collections::{HashMap, HashSet};
 
-/// Check if a name looks like a type parameter (single uppercase letter or short uppercase name)
-fn is_type_parameter_name(name: &str) -> bool {
+pub(crate) fn is_type_parameter_name(name: &str) -> bool {
     // Type parameters are typically single uppercase letters (T, U, V, K, V)
     // or short uppercase names (Self)
     if name.is_empty() {
@@ -156,27 +155,26 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
                 name: actual_name, ..
             },
         ) => expected_name == actual_name,
-        // Allow Generic type to match Enum type when name matches (for type declarations)
+        // Allow Generic type to match Enum type when name matches (for type declarations and generic enums like Ptr<T>)
         (
             AstType::Generic {
                 name: expected_name,
-                type_args,
+                ..
             },
             AstType::Enum {
                 name: actual_name, ..
             },
-        ) => expected_name == actual_name && type_args.is_empty(),
-        // Allow Enum type to match Generic type when name matches (for type declarations)
+        ) => expected_name == actual_name,
+        // Allow Enum type to match Generic type when name matches (for type declarations and generic enums)
         (
             AstType::Enum {
                 name: expected_name,
                 ..
             },
             AstType::Generic {
-                name: actual_name,
-                type_args,
+                name: actual_name, ..
             },
-        ) => expected_name == actual_name && type_args.is_empty(),
+        ) => expected_name == actual_name,
         // Allow struct type to be assigned to enum if the struct is one of the enum's variants
         (
             AstType::Enum { variants, .. },
@@ -270,9 +268,27 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
                     .all(|(e, a)| types_compatible(e, a))
                 && types_compatible(expected_ret, actual_ret)
         }
+        // FixedArray compatibility (same size, compatible element types)
+        (
+            AstType::FixedArray {
+                element_type: expected_elem,
+                size: expected_size,
+            },
+            AstType::FixedArray {
+                element_type: actual_elem,
+                size: actual_size,
+            },
+        ) => expected_size == actual_size && types_compatible(expected_elem, actual_elem),
+        // Allow Slice to be assigned to FixedArray if element types match
+        (
+            AstType::FixedArray {
+                element_type: expected_elem,
+                ..
+            },
+            AstType::Slice(actual_elem),
+        ) => types_compatible(expected_elem, actual_elem),
         // Void is only compatible with void
         (AstType::Void, AstType::Void) => true,
-        // All other combinations are incompatible
         _ => false,
     }
 }

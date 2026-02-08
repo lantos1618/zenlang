@@ -320,12 +320,30 @@ impl<'a> Parser<'a> {
                         }
 
                         // Need to look ahead to determine if it's a struct, enum, behavior, trait, or function
+                        // OR a typed constant: name: Type = value
                         self.next_token(); // Move to ':'
                         self.next_token(); // Move past ':' to see what comes after
 
+                        // Check for typed constant: name: Type = value
+                        // After ':', if we see a type followed by '=', it's a typed constant
+                        let is_typed_constant =
+                            if matches!(&self.current_token, Token::Identifier(_)) {
+                                self.with_lookahead(|p| {
+                                    // Try to parse a type, then check for '='
+                                    if p.parse_type().is_ok() {
+                                        p.current_token == Token::Operator("=".to_string())
+                                    } else {
+                                        false
+                                    }
+                                })
+                            } else {
+                                false
+                            };
+
                         // Check what comes after ':'
-                        let is_enum = matches!(&self.current_token, Token::Identifier(_))
-                            || matches!(&self.current_token, Token::Symbol('.'));
+                        let is_enum = !is_typed_constant
+                            && (matches!(&self.current_token, Token::Identifier(_))
+                                || matches!(&self.current_token, Token::Symbol('.')));
                         let is_function_or_external =
                             matches!(&self.current_token, Token::Symbol('('));
                         let is_behavior = matches!(&self.current_token, Token::Identifier(name) if name == "behavior");
@@ -357,7 +375,20 @@ impl<'a> Parser<'a> {
                         // Restore lexer state
                         self.restore_state(saved_state);
 
-                        if is_behavior {
+                        if is_typed_constant {
+                            let const_name = self.expect_identifier("constant name")?;
+                            self.expect_symbol(':')?;
+                            let type_annotation = self.parse_type()?;
+                            self.expect_operator("=")?;
+                            let value = self.parse_expression()?;
+                            self.skip_optional_semicolon();
+                            declarations.push(Declaration::Constant {
+                                name: const_name,
+                                value,
+                                type_: Some(type_annotation),
+                                span: Some(self.current_span.clone()),
+                            });
+                        } else if is_behavior {
                             declarations.push(Declaration::Behavior(self.parse_behavior()?));
                         } else if is_trait {
                             declarations.push(Declaration::Trait(self.parse_trait()?));
@@ -771,7 +802,15 @@ impl<'a> Parser<'a> {
 
     /// Synchronize parser state after an error.
     /// Skips tokens until we find a likely declaration start.
+    /// IMPORTANT: Always advances at least one token to prevent infinite loops
+    /// when parse_program_with_recovery fails to parse a declaration and
+    /// restore_state puts us back at the same position.
     fn synchronize_to_declaration(&mut self) {
+        // Always skip at least one token to guarantee forward progress.
+        // Without this, a failed parse that restores state + a synchronize
+        // that breaks on the same token = infinite loop.
+        self.next_token();
+
         loop {
             if self.current_token == Token::Eof {
                 break;
@@ -968,6 +1007,7 @@ impl<'a> Parser<'a> {
                 }
             }
             Token::Symbol('?') | Token::Symbol('(') => self.parse_expression_statement(),
+            Token::Operator(ref op) if op == "!" || op == "-" => self.parse_expression_statement(),
             Token::Symbol('{') => self.parse_destructuring_import(),
             Token::Integer(_) | Token::Float(_) | Token::StringLiteral(_) => {
                 self.parse_expression_statement()

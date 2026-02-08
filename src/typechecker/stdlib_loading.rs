@@ -27,14 +27,9 @@ impl TypeChecker {
         for decl in &program.declarations {
             match decl {
                 Declaration::Struct(def) => {
-                    let fields: Vec<(String, AstType)> = def
-                        .fields
-                        .iter()
-                        .map(|f| (f.name.clone(), f.type_.clone()))
-                        .collect();
                     self.type_store
                         .borrow_mut()
-                        .register_struct(&def.name, StructInfo::new(fields));
+                        .register_struct(&def.name, StructInfo::from(def));
                 }
                 Declaration::Function(func) => {
                     if let Some((receiver, method)) = func.name.split_once('.') {
@@ -70,14 +65,9 @@ impl TypeChecker {
                     }
                 }
                 Declaration::Enum(def) => {
-                    let variants: Vec<(String, Option<AstType>)> = def
-                        .variants
-                        .iter()
-                        .map(|v| (v.name.clone(), v.payload.clone()))
-                        .collect();
                     self.type_store
                         .borrow_mut()
-                        .register_enum(&def.name, EnumInfo { variants });
+                        .register_enum(&def.name, EnumInfo::from(def));
                 }
                 Declaration::Trait(trait_def) => {
                     // Register the trait in behavior resolver so it can be used in trait implementations

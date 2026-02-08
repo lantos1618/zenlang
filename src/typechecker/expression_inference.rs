@@ -22,7 +22,8 @@ impl TypeChecker {
                 name,
                 type_args,
                 args,
-            } => inference::infer_function_call_type(self, name, type_args, args),
+                span,
+            } => inference::infer_function_call_type(self, name, type_args, args, span.clone()),
             Expression::MemberAccess { object, member } => {
                 // Check if accessing @std namespace
                 if let Expression::Identifier(name) = &**object {
@@ -42,6 +43,7 @@ impl TypeChecker {
                     type_store.get_all_structs(),
                     type_store.get_all_enums(),
                     self.get_current_span(),
+                    0,
                 )
             }
             Expression::Comptime(inner) => self.infer_expression_type(inner),
@@ -163,10 +165,14 @@ impl TypeChecker {
             Expression::Unsigned32(_) => Ok(AstType::U32),
             Expression::Unsigned64(_) => Ok(AstType::U64),
             Expression::ArrayLiteral(elements) => {
-                // Infer type from first element - array literals produce slices
+                // Infer type from first element
+                // Array literals with known count produce FixedArray, empty ones produce Slice
                 if let Some(first_elem) = elements.first() {
                     let elem_type = self.infer_expression_type(first_elem)?;
-                    Ok(AstType::Slice(Box::new(elem_type)))
+                    Ok(AstType::FixedArray {
+                        element_type: Box::new(elem_type),
+                        size: elements.len(),
+                    })
                 } else {
                     Ok(AstType::Slice(Box::new(AstType::Void)))
                 }
@@ -183,61 +189,22 @@ impl TypeChecker {
                 } else {
                     let mut result_type = AstType::Void;
 
-                    // Process each arm with its own pattern bindings
                     for (i, arm) in arms.iter().enumerate() {
-                        // Enter a new scope for the pattern bindings
                         self.enter_scope();
 
-                        // Extract pattern bindings and add them to the scope
-                        // Pass the scrutinee type for proper typing
-                        self.add_pattern_bindings_to_scope_with_type(
-                            &arm.pattern,
-                            &scrutinee_type,
-                        )?;
+                        let arm_result =
+                            self.check_match_arm_body(&arm.pattern, &arm.body, &scrutinee_type);
 
-                        // Special handling for blocks with early returns
-                        // If the arm body is a block, we need to check if it actually
-                        // produces a value or just has side effects before returning
-                        let arm_type = if let Expression::Block(stmts) = &arm.body {
-                            // Check if the block has any non-return statements before the return
-                            let mut block_type = AstType::Void;
-                            let has_early_return = false;
+                        self.exit_scope();
 
-                            for (j, stmt) in stmts.iter().enumerate() {
-                                match stmt {
-                                    Statement::Return { .. } => {
-                                        // Don't use return statement to determine block type
-                                        break;
-                                    }
-                                    Statement::Expression { expr, .. } => {
-                                        // If this is the last statement and there's no early return after it
-                                        if j == stmts.len() - 1 && !has_early_return {
-                                            block_type = self.infer_expression_type(expr)?;
-                                        } else {
-                                            // Still type-check intermediate expressions
-                                            let _ = self.infer_expression_type(expr)?;
-                                        }
-                                    }
-                                    _ => {
-                                        self.check_statement(stmt)?;
-                                    }
-                                }
-                            }
-                            block_type
-                        } else {
-                            self.infer_expression_type(&arm.body)?
-                        };
+                        let arm_type = arm_result?;
 
-                        // The first non-void arm determines the type, or use first arm if all void
                         if i == 0
                             || (matches!(result_type, AstType::Void)
                                 && !matches!(arm_type, AstType::Void))
                         {
                             result_type = arm_type;
                         }
-
-                        // Exit the scope to remove the bindings
-                        self.exit_scope();
                     }
 
                     Ok(result_type)
@@ -275,34 +242,36 @@ impl TypeChecker {
                 }
             }
             Expression::Block(statements) => {
-                // Enter a new scope for the block
                 self.enter_scope();
 
                 let mut block_type = AstType::Void;
+                let mut err = None;
 
-                // Process all statements in the block
                 for (i, stmt) in statements.iter().enumerate() {
-                    match stmt {
+                    let result = match stmt {
                         Statement::Expression { expr, .. } => {
-                            // The last expression determines the block's type
                             if i == statements.len() - 1 {
-                                block_type = self.infer_expression_type(expr)?;
+                                self.infer_expression_type(expr).map(|t| {
+                                    block_type = t;
+                                })
                             } else {
-                                // Still type-check intermediate expressions
-                                self.infer_expression_type(expr)?;
+                                self.infer_expression_type(expr).map(|_| ())
                             }
                         }
-                        _ => {
-                            // Process other statements (declarations, assignments, etc.)
-                            self.check_statement(stmt)?;
-                        }
+                        _ => self.check_statement(stmt),
+                    };
+                    if let Err(e) = result {
+                        err = Some(e);
+                        break;
                     }
                 }
 
-                // Exit the block's scope
                 self.exit_scope();
 
-                Ok(block_type)
+                match err {
+                    Some(e) => Err(e),
+                    None => Ok(block_type),
+                }
             }
             Expression::Return(expr) => self.infer_expression_type(expr),
             Expression::EnumVariant {
@@ -316,7 +285,8 @@ impl TypeChecker {
                 method,
                 type_args,
                 args: _,
-            } => inference::infer_method_call_type(self, object, method, type_args),
+                span,
+            } => inference::infer_method_call_type(self, object, method, type_args, span.clone()),
             Expression::Loop { body: _ } => {
                 // Loop expressions return void for now
                 Ok(AstType::Void)
@@ -339,24 +309,19 @@ impl TypeChecker {
                 } else {
                     let mut result_type = AstType::Void;
 
-                    // Process each arm with its own pattern bindings
                     for (i, arm) in arms.iter().enumerate() {
                         self.enter_scope();
 
-                        // Extract pattern bindings and add them to the scope
-                        self.add_pattern_bindings_to_scope_with_type(
-                            &arm.pattern,
-                            &scrutinee_type,
-                        )?;
+                        let arm_result =
+                            self.check_match_arm_body(&arm.pattern, &arm.body, &scrutinee_type);
 
-                        let arm_type = self.infer_expression_type(&arm.body)?;
+                        self.exit_scope();
 
-                        // The first arm determines the type
+                        let arm_type = arm_result?;
+
                         if i == 0 {
                             result_type = arm_type;
                         }
-
-                        self.exit_scope();
                     }
 
                     Ok(result_type)
@@ -453,10 +418,42 @@ impl TypeChecker {
                 // collection.loop() returns unit/void
                 Ok(AstType::Void)
             }
-            Expression::Defer(_) => {
-                // @this.defer() returns unit/void
-                Ok(AstType::Void)
+            Expression::Defer(_) => Ok(AstType::Void),
+        }
+    }
+
+    fn check_match_arm_body(
+        &mut self,
+        pattern: &crate::ast::Pattern,
+        body: &Expression,
+        scrutinee_type: &AstType,
+    ) -> Result<AstType> {
+        self.add_pattern_bindings_to_scope_with_type(pattern, scrutinee_type)?;
+
+        if let Expression::Block(stmts) = body {
+            let mut block_type = AstType::Void;
+            let has_early_return = false;
+
+            for (j, stmt) in stmts.iter().enumerate() {
+                match stmt {
+                    Statement::Return { .. } => {
+                        break;
+                    }
+                    Statement::Expression { expr, .. } => {
+                        if j == stmts.len() - 1 && !has_early_return {
+                            block_type = self.infer_expression_type(expr)?;
+                        } else {
+                            let _ = self.infer_expression_type(expr)?;
+                        }
+                    }
+                    _ => {
+                        self.check_statement(stmt)?;
+                    }
+                }
             }
+            Ok(block_type)
+        } else {
+            self.infer_expression_type(body)
         }
     }
 }

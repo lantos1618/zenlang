@@ -5,6 +5,8 @@ use crate::error::{CompileError, Result};
 use crate::typechecker::{EnumInfo, StructInfo};
 use std::collections::HashMap;
 
+const MAX_MEMBER_DEPTH: usize = 64;
+
 /// Infer the type of a member access expression
 pub fn infer_member_type(
     object_type: &AstType,
@@ -12,7 +14,17 @@ pub fn infer_member_type(
     structs: &HashMap<String, StructInfo>,
     enums: &HashMap<String, EnumInfo>,
     span: Option<crate::error::Span>,
+    depth: usize,
 ) -> Result<AstType> {
+    if depth > MAX_MEMBER_DEPTH {
+        return Err(CompileError::TypeError(
+            format!(
+                "Type resolution depth exceeded for member '{}' access",
+                member
+            ),
+            span,
+        ));
+    }
     match object_type {
         AstType::Struct { name, .. } => {
             if let Some(struct_info) = structs.get(name) {
@@ -36,11 +48,13 @@ pub fn infer_member_type(
                 ))
             }
         }
-        // Handle pointer to struct types
         t if t.is_ptr_type() => {
-            // Dereference the pointer and check the inner type
             if let Some(inner) = t.ptr_inner() {
-                infer_member_type(inner, member, structs, enums, span)
+                match member {
+                    "val" => Ok(inner.clone()),
+                    "addr" => Ok(AstType::raw_ptr(AstType::U8)),
+                    _ => infer_member_type(inner, member, structs, enums, span, depth + 1),
+                }
             } else {
                 Err(CompileError::TypeError(
                     format!("Cannot access member '{}' on type {}: pointer does not point to a struct", member, t),
@@ -159,6 +173,7 @@ pub fn infer_struct_field_type(
                         structs,
                         enums,
                         span,
+                        0,
                     ),
                     AstType::Generic { name, .. } => infer_member_type(
                         &AstType::Generic {
@@ -169,6 +184,7 @@ pub fn infer_struct_field_type(
                         structs,
                         enums,
                         span,
+                        0,
                     ),
                     _ => Err(CompileError::TypeError(
                         format!("Cannot access field '{}' on pointer to {}: field access requires a pointer to a struct", field, inner),
@@ -183,7 +199,7 @@ pub fn infer_struct_field_type(
             }
         }
         AstType::Struct { .. } | AstType::Generic { .. } => {
-            infer_member_type(struct_type, field, structs, enums, span)
+            infer_member_type(struct_type, field, structs, enums, span, 0)
         }
         _ => Err(CompileError::TypeError(
             format!("Cannot access field '{}' on type {}: field access requires a struct or pointer to a struct", field, struct_type),

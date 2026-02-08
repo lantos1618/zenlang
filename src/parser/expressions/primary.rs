@@ -344,6 +344,7 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
                                 method: "step".to_string(),
                                 type_args: vec![],
                                 args: vec![step_value],
+                                span: Some(parser.current_span.clone()),
                             };
                         } else {
                             // Check if this could be an enum variant constructor (EnumName.Variant)

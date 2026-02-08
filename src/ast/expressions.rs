@@ -89,6 +89,7 @@ pub enum Expression {
         name: String,
         type_args: Vec<AstType>,
         args: Vec<Expression>,
+        span: Option<crate::error::Span>,
     },
     // Pattern matching with ? operator (no match keyword!)
     QuestionMatch {
@@ -183,6 +184,7 @@ pub enum Expression {
         method: String,
         type_args: Vec<AstType>,
         args: Vec<Expression>,
+        span: Option<crate::error::Span>,
     },
     // Loop expression (returns value)
     Loop {
@@ -364,6 +366,7 @@ impl AstFields for Expression {
                 name,
                 type_args,
                 args,
+                ..
             } => vec![
                 ("name", FieldValue::String(name.clone())),
                 ("type_args", FieldValue::type_array(type_args)),
@@ -375,6 +378,7 @@ impl AstFields for Expression {
                 method,
                 type_args,
                 args,
+                ..
             } => vec![
                 ("object", FieldValue::boxed_expr(object)),
                 ("method", FieldValue::String(method.clone())),

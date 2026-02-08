@@ -109,27 +109,116 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
 
         // Not a ternary - check if it's a pattern match or bool short form
         // First check if it could be a pattern (starts with identifier, number, _, -, etc.)
-        let is_pattern_match = match &parser.current_token {
+        let is_arrow_pattern_match = match &parser.current_token {
             Token::Integer(_)
             | Token::Float(_)
             | Token::StringLiteral(_)
             | Token::Underscore
             | Token::Symbol('.') => true,
-            Token::Operator(op) if op == "-" => true, // negative number pattern
-            // Use centralized boolean literal check
+            Token::Operator(op) if op == "-" => true,
             Token::Identifier(name) if primitives::is_boolean_literal(name) => true,
             _ => false,
         };
 
-        if is_pattern_match {
+        if parser.current_token == Token::Pipe {
+            let mut arms = vec![];
+            while parser.current_token == Token::Pipe {
+                parser.next_token();
+
+                let mut patterns = vec![parser.parse_pattern()?];
+                while parser.current_token == Token::Pipe
+                    && parser.peek_token != Token::Pipe
+                    && parser.peek_token != Token::Eof
+                {
+                    parser.next_token();
+                    patterns.push(parser.parse_pattern()?);
+                }
+                let pattern = if patterns.len() == 1 {
+                    patterns.remove(0)
+                } else {
+                    Pattern::Or(patterns)
+                };
+
+                let guard = if parser.current_token == Token::Operator("->".to_string()) {
+                    parser.next_token();
+                    Some(parser.parse_expression()?)
+                } else {
+                    None
+                };
+
+                let body = if parser.current_token == Token::Symbol('{') {
+                    parser.next_token();
+                    let mut statements = Vec::new();
+                    let mut final_expr = None;
+                    while parser.current_token != Token::Symbol('}')
+                        && parser.current_token != Token::Eof
+                    {
+                        if parser.peek_token == Token::Symbol('}') {
+                            let expr = parser.parse_expression()?;
+                            if parser.current_token == Token::Symbol(';') {
+                                parser.next_token();
+                                statements.push(crate::ast::Statement::Expression {
+                                    expr,
+                                    span: Some(parser.current_span.clone()),
+                                });
+                            } else {
+                                final_expr = Some(expr);
+                            }
+                        } else {
+                            let stmt = parser.parse_statement()?;
+                            statements.push(stmt);
+                        }
+                    }
+                    if parser.current_token != Token::Symbol('}') {
+                        return Err(CompileError::SyntaxError(
+                            "Expected '}' to close block in match arm".to_string(),
+                            Some(parser.current_span.clone()),
+                        ));
+                    }
+                    parser.next_token(); // consume '}'
+                    if !statements.is_empty() || final_expr.is_some() {
+                        if let Some(expr) = final_expr {
+                            statements.push(crate::ast::Statement::Expression {
+                                expr,
+                                span: Some(parser.current_span.clone()),
+                            });
+                        }
+                        Expression::Block(statements)
+                    } else {
+                        Expression::Block(vec![])
+                    }
+                } else if parser.current_token == Token::Operator("=>".to_string()) {
+                    parser.next_token(); // consume '=>'
+                    parser.parse_expression()?
+                } else {
+                    return Err(CompileError::SyntaxError(
+                        "Expected '{' or '=>' after pattern in match arm".to_string(),
+                        Some(parser.current_span.clone()),
+                    ));
+                };
+                arms.push(MatchArm {
+                    pattern,
+                    guard,
+                    body,
+                });
+            }
+
+            if parser.current_token != Token::Symbol('}') {
+                return Err(CompileError::SyntaxError(
+                    "Expected '}' after pattern match block".to_string(),
+                    Some(parser.current_span.clone()),
+                ));
+            }
+            parser.next_token(); // consume '}'
+
+            return Ok(Expression::QuestionMatch { scrutinee, arms });
+        } else if is_arrow_pattern_match {
             // Block-based pattern match: { pattern => expr, pattern => expr, ... }
             let mut arms = vec![];
 
             while parser.current_token != Token::Symbol('}') && parser.current_token != Token::Eof {
-                // Parse pattern
                 let pattern = parser.parse_pattern()?;
 
-                // Expect '=>'
                 if parser.current_token != Token::Operator("=>".to_string()) {
                     return Err(CompileError::SyntaxError(
                         "Expected '=>' after pattern in block match".to_string(),
@@ -138,8 +227,6 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
                 }
                 parser.next_token(); // consume '=>'
 
-                // Parse body expression - but stop before tokens that could start a new pattern
-                // This prevents "-13" being parsed as "body - 13" (subtraction)
                 let body = parse_match_arm_body(parser)?;
 
                 arms.push(MatchArm {
@@ -148,7 +235,6 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
                     body,
                 });
 
-                // Optional newline or comma between arms
                 if parser.current_token == Token::Symbol(',') {
                     parser.next_token();
                 }

@@ -222,39 +222,43 @@ pub fn check_statement(checker: &mut TypeChecker, statement: &Statement) -> Resu
         Statement::Loop { kind, body, .. } => {
             checker.enter_scope();
 
-            // Handle loop-specific variables
-            match kind {
-                LoopKind::Infinite => {
-                    // No special handling needed
-                }
-                LoopKind::Condition(expr) => {
-                    // Type check the condition
-                    let cond_type = checker.infer_expression_type(expr)?;
-                    // Condition should be boolean or integer (truthy)
-                    if !matches!(cond_type, AstType::Bool | AstType::I32 | AstType::I64) {
-                        return Err(CompileError::TypeError(
-                            format!(
-                                "Loop condition must be boolean or integer, got {:?}",
-                                cond_type
-                            ),
-                            checker.get_current_span(),
-                        ));
+            let result = (|| -> Result<()> {
+                match kind {
+                    LoopKind::Infinite => {}
+                    LoopKind::Condition(expr) => {
+                        let cond_type = checker.infer_expression_type(expr)?;
+                        if !matches!(cond_type, AstType::Bool | AstType::I32 | AstType::I64) {
+                            return Err(CompileError::TypeError(
+                                format!(
+                                    "Loop condition must be boolean or integer, got {:?}",
+                                    cond_type
+                                ),
+                                checker.get_current_span(),
+                            ));
+                        }
                     }
                 }
-            }
+                for stmt in body {
+                    checker.check_statement(stmt)?;
+                }
+                Ok(())
+            })();
 
-            // Check loop body with the variable in scope
-            for stmt in body {
-                checker.check_statement(stmt)?;
-            }
             checker.exit_scope();
+            result?;
         }
         Statement::ComptimeBlock { statements, .. } => {
             checker.enter_scope();
-            for stmt in statements {
-                checker.check_statement(stmt)?;
-            }
+
+            let result = (|| -> Result<()> {
+                for stmt in statements {
+                    checker.check_statement(stmt)?;
+                }
+                Ok(())
+            })();
+
             checker.exit_scope();
+            result?;
         }
         Statement::PointerAssignment {
             pointer,
@@ -267,8 +271,11 @@ pub fn check_statement(checker: &mut TypeChecker, statement: &Statement) -> Resu
             let pointer_type = checker.infer_expression_type(pointer)?;
             let value_type = checker.infer_expression_type(value)?;
 
-            // Type check that value is compatible with the pointed-to type
-            if let Some(inner_type) = pointer_type.ptr_inner() {
+            // Type check: first check if value matches the full target type (field assignment through pointer),
+            // then fall back to checking against the pointed-to type (direct pointer dereference write).
+            if types_compatible(&pointer_type, &value_type) {
+                // Direct type match — field assignment through pointer (e.g., self.val.data = Ptr<u8>.from_addr(...))
+            } else if let Some(inner_type) = pointer_type.ptr_inner() {
                 if !types_compatible(inner_type, &value_type) {
                     return Err(CompileError::TypeError(
                         format!(

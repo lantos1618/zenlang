@@ -137,6 +137,28 @@ pub struct EnumInfo {
     pub variants: Vec<(String, Option<AstType>)>,
 }
 
+impl From<&crate::ast::StructDefinition> for StructInfo {
+    fn from(def: &crate::ast::StructDefinition) -> Self {
+        let fields: Vec<(String, crate::ast::AstType)> = def
+            .fields
+            .iter()
+            .map(|f| (f.name.clone(), f.type_.clone()))
+            .collect();
+        StructInfo::new(fields)
+    }
+}
+
+impl From<&crate::ast::EnumDefinition> for EnumInfo {
+    fn from(def: &crate::ast::EnumDefinition) -> Self {
+        let variants = def
+            .variants
+            .iter()
+            .map(|v| (v.name.clone(), v.payload.clone()))
+            .collect();
+        EnumInfo { variants }
+    }
+}
+
 impl TypeChecker {
     /// Resolve Generic types to Struct types if they're known structs
     /// This handles the case where the parser represents struct types as Generic
@@ -169,9 +191,22 @@ impl TypeChecker {
     }
 
     /// Look up a UFC method in function signatures by type name and method name.
+    /// Handles generic types by also trying the base name (e.g., "Ptr<T>" -> "Ptr").
     pub fn find_ufc_method(&self, type_name: &str, method: &str) -> Option<FunctionSignature> {
         let exact_key = name_utils::method_key(type_name, method);
-        self.type_store.borrow().get_function(&exact_key).cloned()
+        let store = self.type_store.borrow();
+        if let Some(sig) = store.get_function(&exact_key) {
+            return Some(sig.clone());
+        }
+        // Try with generics stripped (e.g., "Ptr<T>.from_addr" -> "Ptr.from_addr")
+        let base = name_utils::strip_generics(type_name);
+        if base != type_name {
+            let base_key = name_utils::method_key(base, method);
+            if let Some(sig) = store.get_function(&base_key) {
+                return Some(sig.clone());
+            }
+        }
+        None
     }
 
     /// Resolve a type alias (e.g., "CompletionFn" -> function type)
@@ -400,6 +435,90 @@ impl TypeChecker {
 
         // Fourth pass: type check function bodies — collect all errors
         for declaration in &program.declarations {
+            if let Err(e) = self.check_declaration(declaration) {
+                errors.push(e);
+            }
+        }
+
+        (self.build_type_context(), errors)
+    }
+
+    /// Like `check_program_collect_errors`, but only reports errors from the first
+    /// `main_decl_count` declarations. Passes 1-3 still run on the full merged program
+    /// so imported types are available, but pass 4 skips imported declarations.
+    pub fn check_program_collect_errors_for_main(
+        &mut self,
+        program: &Program,
+        main_decl_count: usize,
+    ) -> (TypeContext, Vec<crate::error::CompileError>) {
+        let mut errors: Vec<crate::error::CompileError> = Vec::new();
+
+        for declaration in program.declarations.iter() {
+            let _ = self.collect_declaration_types(declaration);
+        }
+
+        let mut changed = true;
+        let mut iterations = 0;
+        const MAX_RESOLUTION_ITERATIONS: usize = 100;
+        while changed && iterations < MAX_RESOLUTION_ITERATIONS {
+            changed = false;
+            iterations += 1;
+
+            let struct_names: Vec<String> = self
+                .type_store
+                .borrow()
+                .get_all_structs()
+                .keys()
+                .cloned()
+                .collect();
+            for struct_name in struct_names {
+                let resolved_fields: Option<Vec<(String, AstType)>> = {
+                    let type_store = self.type_store.borrow();
+                    let struct_info = type_store.get_struct(&struct_name);
+                    struct_info.map(|info| {
+                        info.fields
+                            .iter()
+                            .map(|(name, field_type)| {
+                                let resolved = self.resolve_generic_to_struct(field_type);
+                                if &resolved != field_type {
+                                    changed = true;
+                                }
+                                (name.clone(), resolved)
+                            })
+                            .collect()
+                    })
+                };
+                if let Some(fields) = resolved_fields {
+                    let existing = self.type_store.borrow().get_struct(&struct_name).cloned();
+                    if let Some(mut info) = existing {
+                        info.fields = fields;
+                        info.rebuild_index();
+                        self.type_store
+                            .borrow_mut()
+                            .register_struct(&struct_name, info);
+                    }
+                }
+            }
+        }
+
+        for declaration in &program.declarations {
+            if let Declaration::Function(func) = declaration {
+                if func.return_type == AstType::Void && !func.body.is_empty() {
+                    if let Ok(inferred_type) = self.infer_function_return_type(func) {
+                        let existing_sig =
+                            self.type_store.borrow().get_function(&func.name).cloned();
+                        if let Some(mut sig) = existing_sig {
+                            sig.return_type = inferred_type;
+                            self.type_store
+                                .borrow_mut()
+                                .register_function(&func.name, sig);
+                        }
+                    }
+                }
+            }
+        }
+
+        for declaration in program.declarations.iter().take(main_decl_count) {
             if let Err(e) = self.check_declaration(declaration) {
                 errors.push(e);
             }
@@ -653,37 +772,26 @@ impl TypeChecker {
 
     /// Infer the return type of a function from its body
     fn infer_function_return_type(&mut self, func: &Function) -> Result<AstType> {
-        // Create a temporary scope for the function
         self.enter_scope();
 
-        // Add function parameters to scope
-        for (param_name, param_type) in &func.args {
-            self.declare_variable(param_name, param_type.clone(), false)?;
-        }
-
-        // Analyze the body to find the return type
-        let return_type = if let Some(last_stmt) = func.body.last() {
-            match last_stmt {
-                Statement::Expression { expr, .. } => {
-                    // The last expression is the return value
-                    self.infer_expression_type(expr)?
-                }
-                Statement::Return { expr, .. } => {
-                    // Explicit return statement
-                    self.infer_expression_type(expr)?
-                }
-                _ => {
-                    // Other statements don't produce a return value
-                    AstType::Void
-                }
+        let result = (|| -> Result<AstType> {
+            for (param_name, param_type) in &func.args {
+                self.declare_variable(param_name, param_type.clone(), false)?;
             }
-        } else {
-            // Empty body returns void
-            AstType::Void
-        };
+
+            if let Some(last_stmt) = func.body.last() {
+                match last_stmt {
+                    Statement::Expression { expr, .. } => self.infer_expression_type(expr),
+                    Statement::Return { expr, .. } => self.infer_expression_type(expr),
+                    _ => Ok(AstType::Void),
+                }
+            } else {
+                Ok(AstType::Void)
+            }
+        })();
 
         self.exit_scope();
-        Ok(return_type)
+        result
     }
 
     fn get_variable_type(&self, name: &str) -> Result<AstType> {
@@ -1035,8 +1143,11 @@ mod tests {
         assert!(types_comparable(&AstType::I32, &AstType::I64));
         assert!(types_comparable(&AstType::F32, &AstType::F64));
 
+        // Bool and numeric are comparable (atomic ops return i32, compared with bool)
+        assert!(types_comparable(&AstType::I32, &AstType::Bool));
+        assert!(types_comparable(&AstType::Bool, &AstType::I64));
+
         // Different categories are not comparable
-        assert!(!types_comparable(&AstType::I32, &AstType::Bool));
         assert!(!types_comparable(&AstType::I32, &AstType::StaticString));
     }
 

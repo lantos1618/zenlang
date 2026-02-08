@@ -26,8 +26,17 @@ pub fn declare_variable(
 ) -> Result<()> {
     // Only check current scope for duplicates - shadowing from outer scopes is allowed
     if variable_exists_in_current_scope(checker, name) {
+        let existing_type = checker
+            .scopes
+            .last()
+            .and_then(|s| s.get(name))
+            .map(|v| format!("{:?}", v.type_))
+            .unwrap_or_else(|| "unknown".to_string());
         return Err(CompileError::TypeError(
-            format!("Variable '{}' already declared in this scope", name),
+            format!(
+                "Variable '{}' already declared in this scope (existing: {}, new: {:?})",
+                name, existing_type, type_
+            ),
             span,
         ));
     }
@@ -61,8 +70,17 @@ pub fn declare_variable_with_init(
 ) -> Result<()> {
     // Only check current scope for duplicates - shadowing from outer scopes is allowed
     if variable_exists_in_current_scope(checker, name) {
+        let existing_type = checker
+            .scopes
+            .last()
+            .and_then(|s| s.get(name))
+            .map(|v| format!("{:?}", v.type_))
+            .unwrap_or_else(|| "unknown".to_string());
         return Err(CompileError::TypeError(
-            format!("Variable '{}' already declared in this scope", name),
+            format!(
+                "Variable '{}' already declared in this scope (existing: {}, new: {:?})",
+                name, existing_type, type_
+            ),
             span,
         ));
     }

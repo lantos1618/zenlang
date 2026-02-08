@@ -4,7 +4,7 @@ use crate::ast::{AstType, Declaration, Expression};
 use crate::error::{CompileError, Result};
 use crate::typechecker::behaviors::MethodInfo;
 use crate::typechecker::validation;
-use crate::typechecker::{FunctionSignature, StructInfo, TypeChecker};
+use crate::typechecker::{EnumInfo, FunctionSignature, StructInfo, TypeChecker};
 
 /// Collect all type definitions and function signatures (first pass)
 pub fn collect_declaration_types(
@@ -46,15 +46,7 @@ pub fn collect_declaration_types(
                 .register_function(&normalized_name, signature);
         }
         Declaration::Struct(struct_def) => {
-            // Convert StructField to (String, AstType)
-            // Store field types as-is for now (may contain Generic types for forward references)
-            // We'll resolve Generic to Struct in a second pass after all structs are registered
-            let fields: Vec<(String, AstType)> = struct_def
-                .fields
-                .iter()
-                .map(|f| (f.name.clone(), f.type_.clone()))
-                .collect();
-            let info = StructInfo::new(fields.clone());
+            let info = StructInfo::from(struct_def);
             checker
                 .type_store
                 .borrow_mut()
@@ -64,14 +56,7 @@ pub fn collect_declaration_types(
             }
         }
         Declaration::Enum(enum_def) => {
-            // Convert EnumVariant to (String, Option<AstType>)
-            let variants = enum_def
-                .variants
-                .iter()
-                .map(|v| (v.name.clone(), v.payload.clone()))
-                .collect();
-            use crate::typechecker::EnumInfo;
-            let info = EnumInfo { variants };
+            let info = EnumInfo::from(enum_def);
             checker
                 .type_store
                 .borrow_mut()
@@ -182,8 +167,8 @@ pub fn collect_declaration_types(
                 // Type check the constant value
                 let inferred_type = checker.infer_expression_type(value)?;
 
-                // If a type was specified, verify it matches
-                if let Some(declared_type) = type_ {
+                // If a type was specified, verify it matches and use the declared type
+                let final_type = if let Some(declared_type) = type_ {
                     if !checker.types_compatible(declared_type, &inferred_type) {
                         return Err(CompileError::TypeError(
                                 format!(
@@ -193,10 +178,12 @@ pub fn collect_declaration_types(
                                 None
                             ));
                     }
-                }
+                    declared_type.clone()
+                } else {
+                    inferred_type
+                };
 
-                // Store the constant as a global variable (constants are immutable)
-                checker.declare_variable(name, inferred_type, false)?;
+                checker.declare_variable(name, final_type, false)?;
             }
         }
         Declaration::ModuleImport {
@@ -263,10 +250,14 @@ pub fn check_declaration(checker: &mut TypeChecker, declaration: &Declaration) -
             }
 
             checker.enter_scope();
-            for statement in statements {
-                super::statement_checking::check_statement(checker, statement)?;
-            }
+            let result = (|| -> Result<()> {
+                for statement in statements {
+                    super::statement_checking::check_statement(checker, statement)?;
+                }
+                Ok(())
+            })();
             checker.exit_scope();
+            result?;
         }
         Declaration::Trait(_) => {
             // Trait definitions don't need additional checking beyond registration
@@ -298,10 +289,13 @@ pub fn check_declaration(checker: &mut TypeChecker, declaration: &Declaration) -
             module_path: _,
             ..
         } => {
-            // Handle module imports like { io, math } = @std which become
-            // ModuleImport declarations at the top level
-            // Register the imported module as a variable with StdModule type
-            checker.declare_variable_with_init(alias, AstType::StdModule, false, true)?;
+            // Module imports register the alias as a variable with StdModule type.
+            // Skip if the variable already exists — this happens when a destructuring
+            // import like `{ SYS_FUTEX } = @std.sys.syscall` merges the module's
+            // constants (which declare the same name) before this pass runs.
+            if !super::scope::variable_exists_in_current_scope(checker, alias) {
+                checker.declare_variable_with_init(alias, AstType::StdModule, false, true)?;
+            }
         }
         Declaration::TypeAlias(_) => {
             // TypeAlias already handled in collect_declaration_types

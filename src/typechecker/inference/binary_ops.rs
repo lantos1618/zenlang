@@ -192,12 +192,51 @@ pub fn types_comparable(left: &AstType, right: &AstType) -> bool {
         return true;
     }
 
+    if (left.is_ptr_type() && right.is_numeric()) || (left.is_numeric() && right.is_ptr_type()) {
+        return true;
+    }
+
     if is_string_type(left) && is_string_type(right) {
         return true;
     }
 
     if matches!(left, AstType::Bool) && matches!(right, AstType::Bool) {
         return true;
+    }
+
+    // Allow bool-to-integer and integer-to-bool comparisons (e.g. atomic ops return i32)
+    if (matches!(left, AstType::Bool) && right.is_numeric())
+        || (left.is_numeric() && matches!(right, AstType::Bool))
+    {
+        return true;
+    }
+
+    // Allow enum-to-enum comparison by name (e.g. TaskState == TaskState)
+    if matches!((left, right), (AstType::Enum { .. }, AstType::Enum { .. })) {
+        return true;
+    }
+
+    // Allow Generic/Enum cross-comparison (field typed as Generic "TaskState" vs enum literal TaskState.Completed)
+    match (left, right) {
+        (
+            AstType::Generic {
+                name: left_name,
+                type_args,
+            },
+            AstType::Enum {
+                name: right_name, ..
+            },
+        ) if type_args.is_empty() && left_name == right_name => return true,
+        (
+            AstType::Enum {
+                name: left_name, ..
+            },
+            AstType::Generic {
+                name: right_name,
+                type_args,
+            },
+        ) if type_args.is_empty() && left_name == right_name => return true,
+        _ => {}
     }
 
     false

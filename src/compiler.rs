@@ -279,6 +279,7 @@ impl<'ctx> Compiler<'ctx> {
                 name,
                 type_args,
                 args,
+                span,
             } => {
                 let mut processed_args = Vec::new();
                 for arg in args {
@@ -288,6 +289,7 @@ impl<'ctx> Compiler<'ctx> {
                     name: name.clone(),
                     type_args: type_args.clone(),
                     args: processed_args,
+                    span: span.clone(),
                 })
             }
             Expression::ArrayLiteral(elements) => {

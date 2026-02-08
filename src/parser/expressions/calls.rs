@@ -16,6 +16,7 @@ pub fn parse_call_expression_with_type_args(
         name: function_name,
         type_args,
         args: arguments,
+        span: Some(parser.current_span.clone()),
     };
 
     parse_method_chain(parser, expr)
@@ -76,6 +77,7 @@ pub fn parse_call_expression_with_object(
             method: base_method,
             type_args,
             args: arguments,
+            span: Some(parser.current_span.clone()),
         }
     };
 
@@ -204,11 +206,13 @@ fn build_builtin_call(
                 name: format!("{}.{}", member, method_name),
                 type_args,
                 args,
+                span: None,
             }),
             Expression::BuiltinReference => Ok(Expression::FunctionCall {
                 name: format!("builtin.{}.{}", member, method_name),
                 type_args,
                 args,
+                span: None,
             }),
             other => Err(crate::error::CompileError::InternalError(
                 format!(
@@ -222,6 +226,7 @@ fn build_builtin_call(
             name: format!("builtin.{}", method_name),
             type_args,
             args,
+            span: None,
         }),
         other => Err(crate::error::CompileError::InternalError(
             format!(
