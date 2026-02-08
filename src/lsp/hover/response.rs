@@ -3,8 +3,10 @@
 use lsp_server::{RequestId, Response};
 use lsp_types::*;
 
+use crate::ast::AstType;
 use crate::lsp::types::SymbolInfo;
 use crate::lsp::utils::format_type;
+use crate::name_utils;
 use crate::well_known::{well_known, WellKnownType};
 
 /// Create a hover response from symbol info
@@ -21,7 +23,9 @@ pub fn create_hover_response(
 
         // For functions, extract and display parameter info
         if symbol_info.kind == SymbolKind::FUNCTION || symbol_info.kind == SymbolKind::METHOD {
-            if let Some(params_doc) = extract_parameter_docs(detail) {
+            if let Some(params_doc) =
+                extract_parameter_docs_from_params(symbol_info.params.as_deref())
+            {
                 hover_content.push(params_doc);
             }
         }
@@ -70,47 +74,21 @@ pub fn create_hover_response(
     crate::lsp::helpers::success_response_id(id, Hover { contents, range })
 }
 
-/// Extract parameter documentation from a function signature
-fn extract_parameter_docs(signature: &str) -> Option<String> {
-    // Parse signature like: "func_name = (param1: Type1, param2: Type2) ReturnType"
-    let open_paren = signature.find('(')?;
-    let close_paren = signature.find(')')?;
-
-    if close_paren <= open_paren + 1 {
-        return None; // Empty params
-    }
-
-    let params_str = &signature[open_paren + 1..close_paren];
-    if params_str.trim().is_empty() {
-        return None;
-    }
-
-    let params: Vec<&str> = params_str.split(',').collect();
+/// Extract parameter documentation from structured parameter data
+fn extract_parameter_docs_from_params(params: Option<&[(String, AstType)]>) -> Option<String> {
+    let params = params?;
     if params.is_empty() {
         return None;
     }
 
     let mut doc = String::from("**Parameters:**\n");
-    for param in params {
-        let param = param.trim();
-        if param.is_empty() {
-            continue;
-        }
-
-        // Parse "name: Type" format
-        if let Some(colon_pos) = param.find(':') {
-            let name = param[..colon_pos].trim();
-            let type_str = param[colon_pos + 1..].trim();
-
-            // Add contextual hints based on type
-            let hint = get_type_hint(type_str);
-            if let Some(h) = hint {
-                doc.push_str(&format!("- `{}`: `{}` — {}\n", name, type_str, h));
-            } else {
-                doc.push_str(&format!("- `{}`: `{}`\n", name, type_str));
-            }
+    for (name, ty) in params {
+        let type_str = format_type(ty);
+        let hint = get_type_hint_from_ast(ty, &type_str);
+        if let Some(h) = hint {
+            doc.push_str(&format!("- `{}`: `{}` — {}\n", name, type_str, h));
         } else {
-            doc.push_str(&format!("- `{}`\n", param));
+            doc.push_str(&format!("- `{}`: `{}`\n", name, type_str));
         }
     }
 
@@ -118,11 +96,12 @@ fn extract_parameter_docs(signature: &str) -> Option<String> {
 }
 
 /// Get contextual hint for common parameter types using the compiler's well-known types
-fn get_type_hint(type_str: &str) -> Option<&'static str> {
+/// and the structured AstType directly.
+fn get_type_hint_from_ast(ast_type: &AstType, type_str: &str) -> Option<&'static str> {
     let wk = well_known();
 
-    // Extract the base type name (before any generic parameters)
-    let base_type = extract_base_type(type_str);
+    // Extract the base type name using name_utils instead of manual .find('<')
+    let base_type = name_utils::strip_generics(type_str);
 
     // Check well-known types from compiler registry
     if let Some(wk_type) = wk.get_type(base_type) {
@@ -135,35 +114,27 @@ fn get_type_hint(type_str: &str) -> Option<&'static str> {
         });
     }
 
-    // Additional hints for common stdlib types (not in well_known registry)
-    let type_lower = type_str.to_lowercase();
-
-    // Allocator hints
-    if type_lower.contains("allocator") {
-        return Some("Use `get_default_allocator()` or pass a specific allocator");
+    // Check for allocator types using AstType structure
+    match ast_type {
+        AstType::Struct { name, .. } if name.to_lowercase().contains("allocator") => {
+            return Some("Use `get_default_allocator()` or pass a specific allocator");
+        }
+        AstType::Generic { name, .. } if name.to_lowercase().contains("allocator") => {
+            return Some("Use `get_default_allocator()` or pass a specific allocator");
+        }
+        _ => {}
     }
 
-    // String hints
+    // Additional hints for common stdlib types
     if base_type == "StaticString" {
         return Some("String literal or `.as_static()` result");
     }
     if base_type == "String" {
         return Some("Heap-allocated string");
     }
-
-    // Common numeric types
     if base_type == "usize" {
         return Some("Unsigned size type (array indices, lengths)");
     }
 
     None
-}
-
-/// Extract the base type name from a potentially generic type string
-/// e.g., "Option<i32>" -> "Option", "Ptr<String>" -> "Ptr"
-fn extract_base_type(type_str: &str) -> &str {
-    match type_str.find('<') {
-        Some(pos) => &type_str[..pos],
-        None => type_str,
-    }
 }

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use crate::ast::Declaration;
 use crate::lsp::document_store::DocumentStore;
+use crate::lsp::stdlib_resolver::StdlibResolver;
 
 use super::utils::extract_symbol_from_diagnostic;
 
@@ -30,14 +31,14 @@ pub fn create_missing_import_fix(
     // Check if symbol exists in stdlib
     if let Some(symbol_info) = store.stdlib_symbols.get(&undefined_name) {
         if let Some(ref def_uri) = symbol_info.definition_uri {
-            if let Some(module_path) = get_module_path_from_uri(def_uri) {
+            if let Some(module_path) = get_module_path_from_uri(def_uri, &store.stdlib_resolver) {
                 // Check if already imported using AST
-                if is_symbol_imported(&undefined_name, ast, content) {
+                if is_symbol_imported(&undefined_name, ast) {
                     return None;
                 }
 
-                // Find import insert position
-                let insert_pos = find_import_insert_position(content);
+                // Find import insert position using AST
+                let insert_pos = find_import_insert_position(ast, content);
                 let import_stmt = format!("{{ {} }} = {}\n", undefined_name, module_path);
 
                 let text_edit = TextEdit {
@@ -82,7 +83,7 @@ pub fn create_missing_import_fix(
                     continue;
                 }
 
-                let insert_pos = find_import_insert_position(content);
+                let insert_pos = find_import_insert_position(ast, content);
                 let import_stmt = format!("{{ {} }} = {}\n", undefined_name, import_path);
 
                 let text_edit = TextEdit {
@@ -120,9 +121,10 @@ pub fn create_missing_import_fix(
     None
 }
 
-/// Check if a symbol is already imported, using AST if available, falling back to content scan.
-fn is_symbol_imported(symbol: &str, ast: Option<&Vec<Declaration>>, content: &str) -> bool {
-    // Prefer AST-based check
+/// Check if a symbol is already imported using AST declarations.
+/// The parser converts destructured imports like `{ io, math } = @std` into
+/// individual `Declaration::ModuleImport` entries, so AST check is comprehensive.
+fn is_symbol_imported(symbol: &str, ast: Option<&Vec<Declaration>>) -> bool {
     if let Some(declarations) = ast {
         for decl in declarations {
             if let Declaration::ModuleImport { alias, .. } = decl {
@@ -131,52 +133,42 @@ fn is_symbol_imported(symbol: &str, ast: Option<&Vec<Declaration>>, content: &st
                 }
             }
         }
-        // Also check for the symbol in the document's symbol table would be ideal,
-        // but ModuleImport with destructuring is represented differently.
-        // Fall through to content check for destructured imports like { io, math } = @std
     }
-
-    // Fallback: scan content for destructured import patterns containing the symbol.
-    // This is still needed because destructured imports (e.g., `{ io, math } = @std`)
-    // are parsed as separate statements, not always as Declaration::ModuleImport.
-    // We use a targeted line-by-line check rather than fragile substring matching.
-    for line in content.lines() {
-        let trimmed = line.trim();
-        // Match lines like: { symbol, ... } = @... or { ..., symbol } = @...
-        if trimmed.starts_with('{') && trimmed.contains("} =") {
-            // Extract the names between { and }
-            if let Some(brace_end) = trimmed.find('}') {
-                let names_section = &trimmed[1..brace_end];
-                for name in names_section.split(',') {
-                    if name.trim() == symbol {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-
     false
 }
 
-pub fn find_import_insert_position(content: &str) -> Position {
-    let lines: Vec<&str> = content.lines().collect();
-    let mut last_import_line = 0;
-
-    for (i, line) in lines.iter().enumerate() {
-        let trimmed = line.trim();
-        // Check for import pattern: { ... } = @...
-        if trimmed.starts_with('{') && trimmed.contains("} =") && trimmed.contains('@') {
-            last_import_line = i + 1;
+/// Find the position to insert a new import statement.
+/// Uses AST spans to find the last import declaration, falling back to after top comments.
+pub fn find_import_insert_position(ast: Option<&Vec<Declaration>>, content: &str) -> Position {
+    // Use AST to find the last import declaration's line
+    if let Some(declarations) = ast {
+        let mut last_import_line: Option<u32> = None;
+        for decl in declarations {
+            if let Declaration::ModuleImport { span: Some(s), .. } = decl {
+                last_import_line = Some(s.line as u32);
+            }
         }
-        // Skip comments at the top
-        if trimmed.starts_with("//") && last_import_line == 0 {
-            last_import_line = i + 1;
+        if let Some(line) = last_import_line {
+            return Position {
+                line: line + 1, // Insert after the last import
+                character: 0,
+            };
+        }
+    }
+
+    // Fallback: skip past leading comments
+    let mut insert_line = 0u32;
+    for (i, line) in content.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("//") {
+            insert_line = (i + 1) as u32;
+        } else if !trimmed.is_empty() {
+            break;
         }
     }
 
     Position {
-        line: last_import_line as u32,
+        line: insert_line,
         character: 0,
     }
 }
@@ -228,31 +220,25 @@ fn generate_import_path(from_uri: &Url, to_uri: &Url) -> String {
 // ADD IMPORT ACTION
 // ============================================================================
 
-pub fn create_add_import_action(uri: &Url, content: &str) -> Option<CodeAction> {
-    // Check if io/allocator symbols are used but not imported.
-    // We still check content for usage (since that's what the user typed),
-    // but use structured line-by-line import detection instead of fragile substring matching.
-    let has_std_import = content.lines().any(|line| {
-        let trimmed = line.trim();
-        trimmed.starts_with('{') && trimmed.contains("} =") && trimmed.contains("@std")
-    });
+pub fn create_add_import_action(
+    uri: &Url,
+    content: &str,
+    ast: Option<&Vec<Declaration>>,
+) -> Option<CodeAction> {
+    // Use AST to check existing imports instead of string parsing.
+    // The parser splits `{ io, GPA } = @std` into individual Declaration::ModuleImport entries.
+    let has_io_import = is_symbol_imported("io", ast);
+    let has_allocator_import = is_symbol_imported("GPA", ast)
+        || is_symbol_imported("get_default_allocator", ast)
+        || is_symbol_imported("AsyncPool", ast);
 
-    let has_io_import = content.lines().any(|line| {
-        let trimmed = line.trim();
-        if trimmed.starts_with('{') && trimmed.contains("} =") {
-            if let Some(brace_end) = trimmed.find('}') {
-                let names = &trimmed[1..brace_end];
-                return names.split(',').any(|n| n.trim() == "io");
-            }
-        }
-        false
-    });
-
+    // Check content for usage of these symbols (this is appropriate — we're checking
+    // what the user typed, not parsing code structure).
     let needs_io = content.contains("io.") && !has_io_import;
     let needs_allocator = (content.contains("get_default_allocator")
         || content.contains("GPA")
         || content.contains("AsyncPool"))
-        && !has_std_import;
+        && !has_allocator_import;
 
     if !needs_io && !needs_allocator {
         return None;
@@ -266,7 +252,7 @@ pub fn create_add_import_action(uri: &Url, content: &str) -> Option<CodeAction> 
         "{ GPA, AsyncPool } = @std\n"
     };
 
-    let insert_pos = find_import_insert_position(content);
+    let insert_pos = find_import_insert_position(ast, content);
 
     let text_edit = TextEdit {
         range: Range {
@@ -302,26 +288,8 @@ pub fn create_add_import_action(uri: &Url, content: &str) -> Option<CodeAction> 
 // HELPER FUNCTION (from completion module)
 // ============================================================================
 
-pub fn get_module_path_from_uri(uri: &Url) -> Option<String> {
-    let path = uri.path();
-
-    // Check if it's a stdlib path
-    if path.contains("/std/") || path.contains("/stdlib/") {
-        // Extract module name from stdlib path
-        if let Some(std_idx) = path.rfind("/std/").or_else(|| path.rfind("/stdlib/")) {
-            let after_std = &path[std_idx + 5..]; // Skip "/std/"
-            let module_name = after_std.trim_end_matches(".zen").replace('/', ".");
-            return Some(format!("@std.{}", module_name));
-        }
-
-        // Handle top-level std files
-        if let Some(file_name) = path.split('/').next_back() {
-            let module_name = file_name.trim_end_matches(".zen");
-            if !module_name.is_empty() {
-                return Some(format!("@std.{}", module_name));
-            }
-        }
-    }
-
-    None
+/// Convert a URI to a module path using StdlibResolver for stdlib detection.
+pub fn get_module_path_from_uri(uri: &Url, stdlib_resolver: &StdlibResolver) -> Option<String> {
+    let path = std::path::Path::new(uri.path());
+    stdlib_resolver.path_to_module_path(path)
 }

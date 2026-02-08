@@ -62,6 +62,7 @@ pub struct SymbolInfo {
     pub definition_uri: Option<Url>,
     pub references: Vec<Range>,
     pub enum_variants: Option<Vec<String>>, // For enums: list of variant names
+    pub params: Option<Vec<(String, AstType)>>, // For functions/methods: structured parameter list
 }
 
 #[derive(Debug, Clone)]

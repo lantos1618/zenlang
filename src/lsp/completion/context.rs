@@ -5,11 +5,11 @@
 use lsp_types::*;
 use std::collections::HashSet;
 
+use crate::ast::Declaration;
 use crate::lsp::helpers::char_pos_to_byte_pos;
 use crate::lsp::type_query::TypeQuery;
 use crate::lsp::types::ZenCompletionContext;
 use crate::lsp::utils::format_type;
-use crate::name_utils;
 
 /// Detect the completion context at the given position
 pub fn get_completion_context(
@@ -86,7 +86,7 @@ pub fn get_completion_context(
         let receiver_type = doc
             .and_then(|d| {
                 let tq = TypeQuery::new(d);
-                let func_name = find_enclosing_function_name(content, position);
+                let func_name = find_enclosing_function_name(d.ast.as_deref(), content, position);
                 if let Some(ref fname) = func_name {
                     if let Some(t) = tq.resolve_receiver_in_function(receiver, fname) {
                         return Some(t);
@@ -102,7 +102,64 @@ pub fn get_completion_context(
     Some(ZenCompletionContext::General)
 }
 
-fn find_enclosing_function_name(content: &str, position: Position) -> Option<String> {
+/// Extract span from a Statement variant.
+fn statement_span(stmt: &crate::ast::Statement) -> Option<&crate::error::Span> {
+    use crate::ast::Statement;
+    match stmt {
+        Statement::Expression { span, .. }
+        | Statement::Return { span, .. }
+        | Statement::VariableDeclaration { span, .. }
+        | Statement::VariableAssignment { span, .. }
+        | Statement::PointerAssignment { span, .. }
+        | Statement::Loop { span, .. }
+        | Statement::Break { span, .. }
+        | Statement::Continue { span, .. }
+        | Statement::ComptimeBlock { span, .. }
+        | Statement::Defer { span, .. }
+        | Statement::ThisDefer { span, .. }
+        | Statement::DestructuringImport { span, .. }
+        | Statement::Block { span, .. } => span.as_ref(),
+        Statement::ModuleImport { .. } => None,
+    }
+}
+
+/// Find the name of the function enclosing the given cursor position.
+/// Uses the AST when available: walks Declaration::Function nodes and checks
+/// whether any body statement's span encompasses the cursor line.
+/// Falls back to backward line scanning when no AST is available.
+fn find_enclosing_function_name(
+    ast: Option<&[Declaration]>,
+    content: &str,
+    position: Position,
+) -> Option<String> {
+    // AST-based approach: check each function's body statement spans
+    if let Some(declarations) = ast {
+        let cursor_line = position.line as usize + 1; // spans use 1-based lines
+        for decl in declarations {
+            if let Declaration::Function(func) = decl {
+                let first_line = func
+                    .body
+                    .iter()
+                    .filter_map(|s| statement_span(s))
+                    .map(|s| s.line)
+                    .min();
+                let last_line = func
+                    .body
+                    .iter()
+                    .filter_map(|s| statement_span(s))
+                    .map(|s| s.line)
+                    .max();
+                if let (Some(first), Some(last)) = (first_line, last_line) {
+                    // Allow a margin after the last statement for closing braces
+                    if cursor_line >= first && cursor_line <= last + 5 {
+                        return Some(func.name.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback: backward line scanning for `name = (` pattern
     let lines: Vec<&str> = content.lines().collect();
     for line_idx in (0..=position.line as usize).rev() {
         if let Some(line) = lines.get(line_idx) {
@@ -512,58 +569,34 @@ pub fn get_pattern_match_completions(
     completions
 }
 
-/// Infer the type of a matched expression for pattern matching
+/// Infer the type of a matched expression for pattern matching.
+/// Parses the expression text into an AST node and resolves its type
+/// using TypeContext, falling back to heuristics when needed.
 fn infer_matched_expression_type(expr: &str, doc: &crate::lsp::types::Document) -> Option<String> {
-    // Try TypeContext first
-    if let Some(type_ctx) = doc.type_context.as_ref() {
-        // Check if expr is a variable
-        for (key, var_type) in &type_ctx.variables {
-            if key.ends_with(&format!("::{}", expr)) || key == expr {
-                return Some(format_type(var_type));
-            }
-        }
-
-        // Check if expr is a function call - look up return type
-        if let Some(paren_pos) = expr.find('(') {
-            let func_name = expr[..paren_pos].trim();
-            if let Some(func_type) = type_ctx.functions.get(func_name) {
-                return Some(format_type(&func_type.return_type));
-            }
-        }
-
-        // Check for field access
-        if expr.contains('.') {
-            let parts: Vec<&str> = expr.split('.').collect();
-            if parts.len() >= 2 {
-                // Try to resolve the type through field access
-                let base = parts[0];
-                for (key, var_type) in &type_ctx.variables {
-                    if key.ends_with(&format!("::{}", base)) || key == base {
-                        let mut current_type = format_type(var_type);
-                        for field_name in &parts[1..] {
-                            let struct_name = name_utils::strip_generics(&current_type);
-                            if let Some(fields) = type_ctx.structs.get(struct_name) {
-                                if let Some((_, field_type)) =
-                                    fields.iter().find(|(n, _)| n == *field_name)
-                                {
-                                    current_type = format_type(field_type);
-                                } else {
-                                    return None;
-                                }
-                            } else {
-                                return None;
-                            }
-                        }
-                        return Some(current_type);
-                    }
-                }
-            }
-        }
+    // Try parsing the expression and resolving via semantic_completion
+    if let Some(ast_type) =
+        crate::lsp::semantic_completion::resolve_receiver_type(expr, doc, Position::default())
+    {
+        return Some(format_type(&ast_type));
     }
 
-    // Check for comparison expressions (result is bool)
-    if expr.contains("==") || expr.contains("!=") || expr.contains('<') || expr.contains('>') {
-        return Some("bool".to_string());
+    // Fallback: try to parse the expression and detect comparison operators
+    let lexer = crate::lexer::Lexer::new(expr);
+    let mut parser = crate::parser::Parser::new(lexer);
+    if let Ok(crate::ast::Expression::BinaryOp { op, .. }) = parser.parse_expression() {
+        use crate::ast::BinaryOperator;
+        // Comparison operators always produce bool
+        if matches!(
+            op,
+            BinaryOperator::Equals
+                | BinaryOperator::NotEquals
+                | BinaryOperator::LessThan
+                | BinaryOperator::GreaterThan
+                | BinaryOperator::LessThanEquals
+                | BinaryOperator::GreaterThanEquals
+        ) {
+            return Some("bool".to_string());
+        }
     }
 
     None

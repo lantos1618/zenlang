@@ -280,15 +280,26 @@ fn find_function_in_type_context(
     None
 }
 
+/// Create SignatureInformation from a SymbolInfo, using structured params when available.
 fn create_signature_info(symbol: &SymbolInfo) -> SignatureInformation {
-    // Extract function signature from symbol detail
     let label = symbol
         .detail
         .clone()
         .unwrap_or_else(|| format!("{}(...)", symbol.name));
 
-    // Parse parameters from the function signature
-    let parameters = parse_function_parameters(&label);
+    // Use structured params from SymbolInfo when available
+    let parameters = if let Some(params) = &symbol.params {
+        params
+            .iter()
+            .map(|(name, ty)| ParameterInformation {
+                label: lsp_types::ParameterLabel::Simple(format!("{}: {}", name, format_type(ty))),
+                documentation: None,
+            })
+            .collect()
+    } else {
+        // Fallback: parse from the detail string for symbols without structured params
+        parse_function_parameters(&label)
+    };
 
     SignatureInformation {
         label,
@@ -305,8 +316,9 @@ fn create_signature_info(symbol: &SymbolInfo) -> SignatureInformation {
     }
 }
 
+/// Fallback: parse parameter info from a formatted signature string.
+/// Only used when structured params are not available in SymbolInfo.
 fn parse_function_parameters(signature: &str) -> Vec<ParameterInformation> {
-    // Parse signature like "function_name = (param1: Type1, param2: Type2) ReturnType"
     let mut parameters = Vec::new();
 
     // Find the parameter section between ( and )
@@ -314,7 +326,6 @@ fn parse_function_parameters(signature: &str) -> Vec<ParameterInformation> {
         if let Some(end) = signature[start..].find(')') {
             let params_str = &signature[start + 1..start + end];
 
-            // Split by commas (simple for now, could be enhanced for nested types)
             for param in params_str.split(',') {
                 let param = param.trim();
                 if !param.is_empty() {

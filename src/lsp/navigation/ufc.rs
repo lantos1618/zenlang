@@ -165,19 +165,19 @@ pub fn resolve_ufc_method(
                 symbol.kind,
                 lsp_types::SymbolKind::FUNCTION | lsp_types::SymbolKind::METHOD
             ) {
-                if let Some(detail) = &symbol.detail {
-                    if let Some(params_start) = detail.find('(') {
-                        if let Some(params_end) = detail.find(')') {
-                            let params = &detail[params_start + 1..params_end];
-                            if !params.is_empty() {
-                                if let Some(first_param) = params.split(',').next() {
-                                    if let Some(receiver_type) = &receiver_type {
-                                        if first_param.contains(receiver_type) {
-                                            return Some(Location {
-                                                uri: uri.clone(),
-                                                range: symbol.range,
-                                            });
-                                        }
+                // Use TypeContext to check if the first param matches the receiver type
+                if let Some(receiver_type) = &receiver_type {
+                    if let Some(type_ctx) = &doc.type_context {
+                        if let Some(params) = type_ctx.get_function_params(&method_info.method_name)
+                        {
+                            if let Some((_, first_param_type)) = params.first() {
+                                if let Some(param_base) = first_param_type.base_name() {
+                                    let recv_base = name_utils::strip_generics(receiver_type);
+                                    if param_base == recv_base {
+                                        return Some(Location {
+                                            uri: uri.clone(),
+                                            range: symbol.range,
+                                        });
                                     }
                                 }
                             }

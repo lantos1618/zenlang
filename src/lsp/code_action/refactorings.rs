@@ -3,6 +3,8 @@
 use lsp_types::*;
 use std::collections::HashMap;
 
+use crate::ast::Declaration;
+
 // ============================================================================
 // EXTRACT VARIABLE
 // ============================================================================
@@ -164,6 +166,7 @@ pub fn create_extract_function_action(
     range: &Range,
     uri: &Url,
     content: &str,
+    ast: Option<&Vec<Declaration>>,
 ) -> Option<CodeAction> {
     // Extract the selected text
     let lines: Vec<&str> = content.lines().collect();
@@ -254,7 +257,7 @@ pub fn create_extract_function_action(
     );
 
     // Find where to insert the new function (before the current function)
-    let insert_line = find_function_start(content, range.start.line);
+    let insert_line = find_function_start(ast, range.start.line);
 
     let mut changes = Vec::new();
 
@@ -314,28 +317,69 @@ fn utf16_offset_to_byte_offset(line: &str, utf16_offset: usize) -> usize {
     line.len()
 }
 
-fn find_function_start(content: &str, from_line: u32) -> u32 {
-    // Find the start of the enclosing function by looking backwards
-    // Zen uses: name = (params) return_type { }
-    let lines: Vec<&str> = content.lines().collect();
-    for i in (0..=from_line).rev() {
-        if let Some(line) = lines.get(i as usize) {
-            let trimmed = line.trim_start();
-            // Match Zen function syntax: identifier = (...) type {
-            if trimmed.contains(" = (") && trimmed.contains('{') {
-                return i;
+/// Find the start line of the enclosing function using AST Declaration::Function spans.
+/// Falls back to line 0 if AST is unavailable or no enclosing function is found.
+fn find_function_start(ast: Option<&Vec<Declaration>>, from_line: u32) -> u32 {
+    if let Some(declarations) = ast {
+        let mut best_line: Option<u32> = None;
+        for decl in declarations {
+            if let Declaration::Function(f) = decl {
+                // Find the line range of this function from its body statement spans.
+                let (func_start, func_end) = function_body_line_range(&f.body);
+                if let (Some(start), Some(end)) = (func_start, func_end) {
+                    // Allow margin before the first body statement for the function header
+                    let header_start = start.saturating_sub(2);
+                    if from_line >= header_start && from_line <= end + 1 {
+                        best_line =
+                            Some(best_line.map_or(header_start, |b: u32| b.max(header_start)));
+                    }
+                }
             }
         }
+        if let Some(line) = best_line {
+            return line;
+        }
     }
-    // If no function found, insert at the beginning
     0
 }
 
+/// Extract the line range (min, max) of statements in a function body using their spans.
+fn function_body_line_range(body: &[crate::ast::Statement]) -> (Option<u32>, Option<u32>) {
+    use crate::ast::Statement;
+    let mut min_line = None;
+    let mut max_line = None;
+    for stmt in body {
+        let span = match stmt {
+            Statement::Expression { span, .. }
+            | Statement::Return { span, .. }
+            | Statement::VariableDeclaration { span, .. }
+            | Statement::VariableAssignment { span, .. }
+            | Statement::PointerAssignment { span, .. }
+            | Statement::Loop { span, .. }
+            | Statement::Break { span, .. }
+            | Statement::Continue { span, .. }
+            | Statement::ComptimeBlock { span, .. }
+            | Statement::Defer { span, .. }
+            | Statement::ThisDefer { span, .. }
+            | Statement::DestructuringImport { span, .. }
+            | Statement::Block { span, .. } => span.as_ref(),
+            Statement::ModuleImport { .. } => None,
+        };
+        if let Some(s) = span {
+            let line = s.line as u32;
+            min_line = Some(min_line.map_or(line, |m: u32| m.min(line)));
+            max_line = Some(max_line.map_or(line, |m: u32| m.max(line)));
+        }
+    }
+    (min_line, max_line)
+}
+
 fn generate_function_name(code: &str) -> String {
-    // Generate a descriptive function name based on the code content
+    // Generate a descriptive function name from the selected code text.
+    // This is text manipulation on a user-selected snippet, not structural parsing.
     let code_trimmed = code.trim();
 
-    // If it contains a method call, use that as a hint
+    // If the code is primarily a method call like `obj.method(args)`, use the method name
     if let Some(dot_pos) = code_trimmed.find('.') {
         if let Some(paren_pos) = code_trimmed[dot_pos..].find('(') {
             let method_part = &code_trimmed[dot_pos + 1..dot_pos + paren_pos];
@@ -347,20 +391,7 @@ fn generate_function_name(code: &str) -> String {
         }
     }
 
-    // If it contains specific keywords, use them as hints
-    if code_trimmed.contains("loop") {
-        return "process_loop".to_string();
-    }
-    if code_trimmed.contains("println") || code_trimmed.contains("print") {
-        return "print_output".to_string();
-    }
-    if code_trimmed.contains("push") {
-        return "add_items".to_string();
-    }
-    if code_trimmed.contains("get") {
-        return "get_value".to_string();
-    }
-
-    // Default name
+    // Default name — avoid guessing from keywords like "loop", "get", "push"
+    // which produces misleading names for unrelated code
     "extracted_fn".to_string()
 }

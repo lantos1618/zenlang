@@ -5,6 +5,7 @@
 use lsp_types::*;
 use std::collections::HashSet;
 
+use crate::ast::Declaration;
 use crate::lsp::types::SymbolInfo;
 use crate::lsp::utils::symbol_kind_to_completion_kind;
 
@@ -21,7 +22,19 @@ pub fn get_module_path_from_uri(uri: &Url) -> Option<String> {
     None
 }
 
-/// Get symbols that are already imported in the document
+/// Get symbols that are already imported in the document.
+/// Uses the AST when available, falling back to content scanning.
+pub fn get_imported_symbols_from_ast(ast: &[Declaration]) -> HashSet<String> {
+    let mut imported = HashSet::new();
+    for decl in ast {
+        if let Declaration::ModuleImport { alias, .. } = decl {
+            imported.insert(alias.clone());
+        }
+    }
+    imported
+}
+
+/// Get symbols that are already imported in the document (content-based fallback)
 pub fn get_imported_symbols(content: &str) -> HashSet<String> {
     let mut imported = HashSet::new();
 
@@ -42,7 +55,24 @@ pub fn get_imported_symbols(content: &str) -> HashSet<String> {
     imported
 }
 
-/// Find the best position to insert an import statement
+/// Find the best position to insert an import statement.
+/// Uses the AST when available to find the last import declaration's span.
+pub fn find_import_insert_position_from_ast(ast: &[Declaration]) -> Option<Position> {
+    let mut last_import_line = None;
+    for decl in ast {
+        if let Declaration::ModuleImport { span: Some(s), .. } = decl {
+            // span.line is 1-based from the parser
+            let line = s.line.saturating_sub(1);
+            last_import_line = Some(line);
+        }
+    }
+    last_import_line.map(|line| Position {
+        line: (line + 1) as u32,
+        character: 0,
+    })
+}
+
+/// Find the best position to insert an import statement (content-based fallback)
 pub fn find_import_insert_position(content: &str) -> Position {
     let mut last_import_line = 0;
     let mut found_import = false;
@@ -71,14 +101,26 @@ pub fn find_import_insert_position(content: &str) -> Position {
     }
 }
 
-/// Create a TextEdit for inserting an import statement
-pub fn create_import_edit(symbol_name: &str, module_path: &str, content: &str) -> Option<TextEdit> {
-    let imported = get_imported_symbols(content);
+/// Create a TextEdit for inserting an import statement.
+/// Prefers AST-based analysis when available.
+pub fn create_import_edit(
+    symbol_name: &str,
+    module_path: &str,
+    ast: Option<&Vec<Declaration>>,
+    content: &str,
+) -> Option<TextEdit> {
+    let imported = if let Some(ast) = ast {
+        get_imported_symbols_from_ast(ast)
+    } else {
+        get_imported_symbols(content)
+    };
     if imported.contains(symbol_name) {
         return None;
     }
 
-    let insert_pos = find_import_insert_position(content);
+    let insert_pos = ast
+        .and_then(|a| find_import_insert_position_from_ast(a))
+        .unwrap_or_else(|| find_import_insert_position(content));
     let import_line = format!("{{ {} }} = {}\n", symbol_name, module_path);
 
     Some(TextEdit {
@@ -95,6 +137,7 @@ pub fn create_completion_with_import(
     name: &str,
     symbol: &SymbolInfo,
     module_path: &str,
+    ast: Option<&Vec<Declaration>>,
     content: &str,
 ) -> CompletionItem {
     let mut item = CompletionItem {
@@ -108,7 +151,7 @@ pub fn create_completion_with_import(
         ..Default::default()
     };
 
-    if let Some(edit) = create_import_edit(name, module_path, content) {
+    if let Some(edit) = create_import_edit(name, module_path, ast, content) {
         item.additional_text_edits = Some(vec![edit]);
         item.label_details = Some(CompletionItemLabelDetails {
             detail: Some(format!(" ({})", module_path)),

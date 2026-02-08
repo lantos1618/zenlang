@@ -5,24 +5,6 @@ use lsp_server::{Request, Response};
 use lsp_types::*;
 use serde_json::Value;
 
-fn extract_type_name(detail: &str) -> Option<String> {
-    // TODO: Refactor to use SymbolInfo.type_info + AstType::base_name() instead of string parsing
-    // This function parses strings like "var: Type" to extract "Type"
-    // Ideally, we should have AstType available and use base_name() directly
-    if let Some(colon_pos) = detail.find(':') {
-        let type_part = detail[colon_pos + 1..].trim();
-        let type_name = if let Some(generic_start) = type_part.find('<') {
-            &type_part[..generic_start]
-        } else if let Some(space_pos) = type_part.find(' ') {
-            &type_part[..space_pos]
-        } else {
-            type_part
-        };
-        return Some(type_name.trim().to_string());
-    }
-    None
-}
-
 pub fn handle_type_definition(
     req: Request,
     store: &std::sync::Arc<std::sync::RwLock<DocumentStore>>,
@@ -32,28 +14,31 @@ pub fn handle_type_definition(
 
         if let Some(symbol_name) = find_symbol_at_position(&doc.content, position) {
             if let Some(symbol_info) = doc.symbols.get(&symbol_name) {
-                if let Some(detail) = &symbol_info.detail {
-                    if let Some(type_name) = extract_type_name(detail) {
-                        if let Some(type_symbol) = store_guard.resolve_symbol(doc, &type_name) {
-                            let uri = type_symbol
-                                .definition_uri
-                                .as_ref()
-                                .unwrap_or(params.document_uri());
+                // Use SymbolInfo.type_info with AstType::base_name() instead of parsing detail strings
+                let type_name = symbol_info
+                    .type_info
+                    .as_ref()
+                    .and_then(|t| t.base_name().map(|s| s.to_string()));
+                if let Some(type_name) = type_name {
+                    if let Some(type_symbol) = store_guard.resolve_symbol(doc, &type_name) {
+                        let uri = type_symbol
+                            .definition_uri
+                            .as_ref()
+                            .unwrap_or(params.document_uri());
 
-                            let location = Location {
-                                uri: uri.clone(),
-                                range: type_symbol.range,
-                            };
+                        let location = Location {
+                            uri: uri.clone(),
+                            range: type_symbol.range,
+                        };
 
-                            return Response {
-                                id: req.id.clone(),
-                                result: Some(
-                                    serde_json::to_value(GotoDefinitionResponse::Scalar(location))
-                                        .unwrap_or(Value::Null),
-                                ),
-                                error: None,
-                            };
-                        }
+                        return Response {
+                            id: req.id.clone(),
+                            result: Some(
+                                serde_json::to_value(GotoDefinitionResponse::Scalar(location))
+                                    .unwrap_or(Value::Null),
+                            ),
+                            error: None,
+                        };
                     }
                 }
             }

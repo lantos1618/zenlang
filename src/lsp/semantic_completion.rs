@@ -186,9 +186,9 @@ fn add_ufc_methods(type_name: &str, type_ctx: &TypeContext, completions: &mut Ve
     }
 }
 
-/// Check if a parameter name indicates self (e.g., "self", "this", "s")
+/// Check if a parameter name indicates self
 fn is_self_param(name: &str) -> bool {
-    matches!(name, "self" | "this" | "s")
+    matches!(name, "self" | "this")
 }
 
 /// Specialize generic type parameters based on concrete receiver type.

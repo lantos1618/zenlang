@@ -69,6 +69,7 @@ pub fn extract_symbols_static(
                         definition_uri: None,
                         references: Vec::new(),
                         enum_variants: None,
+                        params: Some(func.args.clone()),
                     },
                 );
             }
@@ -92,6 +93,7 @@ pub fn extract_symbols_static(
                         definition_uri: None,
                         references: Vec::new(),
                         enum_variants: None,
+                        params: None,
                     },
                 );
             }
@@ -117,6 +119,7 @@ pub fn extract_symbols_static(
                         definition_uri: None,
                         references: Vec::new(),
                         enum_variants: Some(variant_names.clone()),
+                        params: None,
                     },
                 );
 
@@ -136,6 +139,7 @@ pub fn extract_symbols_static(
                             definition_uri: None,
                             references: Vec::new(),
                             enum_variants: None,
+                            params: None,
                         },
                     );
                 }
@@ -154,6 +158,7 @@ pub fn extract_symbols_static(
                         definition_uri: None,
                         references: Vec::new(),
                         enum_variants: None,
+                        params: None,
                     },
                 );
             }
@@ -189,6 +194,7 @@ pub fn extract_symbols_static(
                             definition_uri: None,
                             references: Vec::new(),
                             enum_variants: None,
+                            params: Some(method.args.clone()),
                         },
                     );
                 }
@@ -260,6 +266,7 @@ pub fn extract_symbols_with_path(
                             definition_uri: None,
                             references: Vec::new(),
                             enum_variants: None,
+                            params: Some(func.args.clone()),
                         },
                     );
                 }
@@ -283,6 +290,7 @@ pub fn extract_symbols_with_path(
                             definition_uri: None,
                             references: Vec::new(),
                             enum_variants: None,
+                            params: None,
                         },
                     );
                 }
@@ -309,6 +317,7 @@ pub fn extract_symbols_with_path(
                             definition_uri: None,
                             references: Vec::new(),
                             enum_variants: Some(variant_names),
+                            params: None,
                         },
                     );
 
@@ -328,6 +337,7 @@ pub fn extract_symbols_with_path(
                                 definition_uri: None,
                                 references: Vec::new(),
                                 enum_variants: None,
+                                params: None,
                             },
                         );
                     }
@@ -346,6 +356,7 @@ pub fn extract_symbols_with_path(
                             definition_uri: None,
                             references: Vec::new(),
                             enum_variants: None,
+                            params: None,
                         },
                     );
                 }
@@ -381,6 +392,7 @@ pub fn extract_symbols_with_path(
                                 definition_uri: None,
                                 references: Vec::new(),
                                 enum_variants: None,
+                                params: Some(method.args.clone()),
                             },
                         );
                     }

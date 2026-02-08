@@ -3,7 +3,7 @@
 use lsp_types::Position;
 use std::collections::HashMap;
 
-use crate::ast::AstType;
+use crate::ast::{AstType, Declaration, Expression, Statement};
 use crate::lsp::type_query::TypeQuery;
 use crate::lsp::types::*;
 use crate::lsp::utils::{find_pattern_match_question, format_type, is_pattern_arm_line};
@@ -47,7 +47,7 @@ fn infer_function_return_types_via_sema(
     for doc in all_docs.values() {
         if let Some(ast) = &doc.ast {
             for decl in ast {
-                if let crate::ast::Declaration::Function(func) = decl {
+                if let Declaration::Function(func) = decl {
                     if func.name == func_name {
                         let pair = extract_generic_pair(&func.return_type);
                         if pair.0.is_some() {
@@ -60,6 +60,47 @@ fn infer_function_return_types_via_sema(
     }
 
     (None, None)
+}
+
+/// Try to find the function name from a variable's initializer expression in the AST.
+/// Returns the function name if the variable is initialized with a function call.
+fn find_scrutinee_function_call_in_ast(
+    ast: &[Declaration],
+    scrutinee_name: &str,
+) -> Option<String> {
+    for decl in ast {
+        if let Declaration::Function(func) = decl {
+            if let Some(name) = find_function_call_in_statements(&func.body, scrutinee_name) {
+                return Some(name);
+            }
+        }
+    }
+    None
+}
+
+/// Search statements for a variable declaration whose initializer is a function call.
+fn find_function_call_in_statements(stmts: &[Statement], var_name: &str) -> Option<String> {
+    for stmt in stmts {
+        if let Statement::VariableDeclaration {
+            name,
+            initializer: Some(expr),
+            ..
+        } = stmt
+        {
+            if name == var_name {
+                return extract_function_name_from_expr(expr);
+            }
+        }
+    }
+    None
+}
+
+/// Extract the function name from a function call expression.
+fn extract_function_name_from_expr(expr: &Expression) -> Option<String> {
+    match expr {
+        Expression::FunctionCall { name, .. } => Some(name.clone()),
+        _ => None,
+    }
 }
 
 pub fn get_pattern_match_hover(
@@ -84,7 +125,6 @@ pub fn get_pattern_match_hover(
 
     // Find the scrutinee by looking backwards for 'variable ?' using lexer-based detection
     let mut scrutinee_name = None;
-    let mut scrutinee_line = None;
     for i in (0..=position.line).rev() {
         let line = lines[i as usize].trim();
         // Use lexer-based pattern match detection
@@ -94,7 +134,6 @@ pub fn get_pattern_match_hover(
             // Get the last word before '?'
             if let Some(var) = before_q.split_whitespace().last() {
                 scrutinee_name = Some(var.to_string());
-                scrutinee_line = Some(i);
                 break;
             }
         }
@@ -105,91 +144,58 @@ pub fn get_pattern_match_hover(
     }
 
     if let Some(scrutinee) = scrutinee_name {
-        // Try to infer the type of the scrutinee by looking at its definition
-        if let Some(scrutinee_line_num) = scrutinee_line {
-            // Look backwards from scrutinee for its definition
-            for i in (0..scrutinee_line_num).rev() {
+        // Try to find the function call via AST first (structured approach)
+        let mut func_name_from_ast = None;
+        for doc in all_docs.values() {
+            if let Some(ast) = &doc.ast {
+                if let Some(name) = find_scrutinee_function_call_in_ast(ast, &scrutinee) {
+                    func_name_from_ast = Some(name);
+                    break;
+                }
+            }
+        }
+
+        if let Some(func_name) = &func_name_from_ast {
+            // Use SEMA to find the function's return type generics
+            let (concrete_ok_type, concrete_err_type) =
+                infer_function_return_types_via_sema(func_name, all_docs);
+
+            if let Some(hover) = build_pattern_hover(
+                symbol_name,
+                current_line,
+                func_name,
+                &concrete_ok_type,
+                &concrete_err_type,
+            ) {
+                return Some(hover);
+            }
+        }
+
+        // Fallback: scan source text backwards for the assignment
+        if let Some(scrutinee_line) = find_scrutinee_line(lines.as_slice(), position.line) {
+            for i in (0..scrutinee_line).rev() {
                 let line = lines[i as usize];
-                // Check if this line defines the scrutinee
                 if line.contains(&format!("{} =", scrutinee)) {
-                    // Try to infer type from the assignment
-                    // Example: result = divide(10.0, 2.0)
                     if let Some(eq_pos) = line.find('=') {
                         let rhs = line[eq_pos + 1..].trim();
-
-                        // Check if it's a function call
                         if let Some(paren_pos) = rhs.find('(') {
                             let func_name = rhs[..paren_pos].trim();
-
-                            // Use SEMA to find the function's return type generics
                             let (concrete_ok_type, concrete_err_type) =
                                 infer_function_return_types_via_sema(func_name, all_docs);
 
-                            // Now determine what pattern variable we're hovering over
-                            // Example: | Ok(val) or | Err(msg)
-                            let pattern_arm = current_line.trim();
-
-                            if pattern_arm.contains(&format!("Ok({}", symbol_name))
-                                || pattern_arm.contains(&format!("Ok({})", symbol_name))
-                            {
-                                // This is the Ok variant - extract the success type
-                                let type_display =
-                                    concrete_ok_type.clone().unwrap_or_else(|| "T".to_string());
-                                let full_result_type = if let (Some(ok), Some(err)) =
-                                    (&concrete_ok_type, &concrete_err_type)
-                                {
-                                    format!("Result<{}, {}>", ok, err)
-                                } else {
-                                    "Result<T, E>".to_string()
-                                };
-
-                                return Some(format!(
-                                    "```zen\n{}: {}\n```\n\n**Pattern match variable**\n\nExtracted from `{}` (assigned from `{}()`)\n\nThis is the success value from the `Ok` variant.",
-                                    symbol_name,
-                                    type_display,
-                                    full_result_type,
-                                    func_name
-                                ));
-                            } else if pattern_arm.contains(&format!("Err({}", symbol_name))
-                                || pattern_arm.contains(&format!("Err({})", symbol_name))
-                            {
-                                // This is the Err variant - extract the error type
-                                let type_display =
-                                    concrete_err_type.clone().unwrap_or_else(|| "E".to_string());
-                                let full_result_type = if let (Some(ok), Some(err)) =
-                                    (&concrete_ok_type, &concrete_err_type)
-                                {
-                                    format!("Result<{}, {}>", ok, err)
-                                } else {
-                                    "Result<T, E>".to_string()
-                                };
-
-                                return Some(format!(
-                                    "```zen\n{}: {}\n```\n\n**Pattern match variable**\n\nExtracted from `{}` (assigned from `{}()`)\n\nThis is the error value from the `Err` variant.",
-                                    symbol_name,
-                                    type_display,
-                                    full_result_type,
-                                    func_name
-                                ));
-                            } else if pattern_arm.contains(&format!("Some({}", symbol_name))
-                                || pattern_arm.contains(&format!("Some({})", symbol_name))
-                            {
-                                // This is Option.Some
-                                let inner_type =
-                                    concrete_ok_type.clone().unwrap_or_else(|| "T".to_string());
-                                return Some(format!(
-                                    "```zen\n{}: {}\n```\n\n**Pattern match variable**\n\nExtracted from `Option<{}>` (assigned from `{}()`)\n\nThis is the value from the `Some` variant.",
-                                    symbol_name,
-                                    inner_type,
-                                    inner_type,
-                                    func_name
-                                ));
+                            if let Some(hover) = build_pattern_hover(
+                                symbol_name,
+                                current_line,
+                                func_name,
+                                &concrete_ok_type,
+                                &concrete_err_type,
+                            ) {
+                                return Some(hover);
                             }
                         }
                     }
                 }
-                // Don't search too far back
-                if scrutinee_line_num - i > 20 {
+                if scrutinee_line - i > 20 {
                     break;
                 }
             }
@@ -199,11 +205,80 @@ pub fn get_pattern_match_hover(
     None
 }
 
-/// Get hover information for enum variants
+/// Find the scrutinee line number by looking backwards for the pattern match question
+fn find_scrutinee_line(lines: &[&str], current_line: u32) -> Option<u32> {
+    for i in (0..=current_line).rev() {
+        let line = lines[i as usize].trim();
+        if find_pattern_match_question(line).is_some() {
+            return Some(i);
+        }
+        if current_line - i > 10 {
+            break;
+        }
+    }
+    None
+}
+
+/// Build the hover text for a pattern match variable
+fn build_pattern_hover(
+    symbol_name: &str,
+    current_line: &str,
+    func_name: &str,
+    concrete_ok_type: &Option<String>,
+    concrete_err_type: &Option<String>,
+) -> Option<String> {
+    let pattern_arm = current_line.trim();
+
+    if pattern_arm.contains(&format!("Ok({}", symbol_name))
+        || pattern_arm.contains(&format!("Ok({})", symbol_name))
+    {
+        let type_display = concrete_ok_type.clone().unwrap_or_else(|| "T".to_string());
+        let full_result_type = if let (Some(ok), Some(err)) = (concrete_ok_type, concrete_err_type)
+        {
+            format!("Result<{}, {}>", ok, err)
+        } else {
+            "Result<T, E>".to_string()
+        };
+
+        return Some(format!(
+            "```zen\n{}: {}\n```\n\n**Pattern match variable**\n\nExtracted from `{}` (assigned from `{}()`)\n\nThis is the success value from the `Ok` variant.",
+            symbol_name, type_display, full_result_type, func_name
+        ));
+    } else if pattern_arm.contains(&format!("Err({}", symbol_name))
+        || pattern_arm.contains(&format!("Err({})", symbol_name))
+    {
+        let type_display = concrete_err_type.clone().unwrap_or_else(|| "E".to_string());
+        let full_result_type = if let (Some(ok), Some(err)) = (concrete_ok_type, concrete_err_type)
+        {
+            format!("Result<{}, {}>", ok, err)
+        } else {
+            "Result<T, E>".to_string()
+        };
+
+        return Some(format!(
+            "```zen\n{}: {}\n```\n\n**Pattern match variable**\n\nExtracted from `{}` (assigned from `{}()`)\n\nThis is the error value from the `Err` variant.",
+            symbol_name, type_display, full_result_type, func_name
+        ));
+    } else if pattern_arm.contains(&format!("Some({}", symbol_name))
+        || pattern_arm.contains(&format!("Some({})", symbol_name))
+    {
+        let inner_type = concrete_ok_type.clone().unwrap_or_else(|| "T".to_string());
+        return Some(format!(
+            "```zen\n{}: {}\n```\n\n**Pattern match variable**\n\nExtracted from `Option<{}>` (assigned from `{}()`)\n\nThis is the value from the `Some` variant.",
+            symbol_name, inner_type, inner_type, func_name
+        ));
+    }
+
+    None
+}
+
+/// Get hover information for enum variants.
+/// When AST is available, uses Declaration::Enum for structured detection.
 pub fn get_enum_variant_hover(
     content: &str,
     position: Position,
     symbol_name: &str,
+    ast: Option<&Vec<Declaration>>,
 ) -> Option<String> {
     let lines: Vec<&str> = content.lines().collect();
     if position.line as usize >= lines.len() {
@@ -220,7 +295,29 @@ pub fn get_enum_variant_hover(
         return None;
     }
 
-    // Find the enum name by looking backwards
+    // Try AST-based enum detection first
+    if let Some(ast) = ast {
+        for decl in ast.iter() {
+            if let Declaration::Enum(enum_def) = decl {
+                for variant in &enum_def.variants {
+                    if variant.name == symbol_name {
+                        let payload_info = match &variant.payload {
+                            Some(ty) => format!(" of type `{}`", format_type(ty)),
+                            None => String::new(),
+                        };
+
+                        let enum_base = name_utils::strip_generics(&enum_def.name);
+                        return Some(format!(
+                            "```zen\n{}\n    {}...\n```\n\n**Enum variant** `{}`{}\n\nPart of enum `{}`",
+                            enum_def.name, symbol_name, symbol_name, payload_info, enum_base
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback: scan source text backwards for the enum definition
     let mut enum_name = None;
     for i in (0..position.line).rev() {
         let line = lines[i as usize].trim();

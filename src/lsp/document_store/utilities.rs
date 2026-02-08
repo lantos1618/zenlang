@@ -51,6 +51,7 @@ pub fn make_symbol(
         definition_uri: None,
         references: Vec::new(),
         enum_variants: None,
+        params: None,
     }
 }
 
@@ -72,5 +73,6 @@ pub fn make_enum_symbol(
         definition_uri: None,
         references: Vec::new(),
         enum_variants: Some(variants),
+        params: None,
     }
 }
