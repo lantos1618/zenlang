@@ -520,7 +520,10 @@ fn analyze_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
             output["diagnostics"] = serde_json::json!([compile_error_to_diagnostic(err)]);
         }
 
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
     } else {
         // Human-readable output
         let format_ty = zen::lsp::utils::format_type;
@@ -661,7 +664,10 @@ fn check_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
                     }],
                     "summary": { "errors": 1, "warnings": 0 }
                 });
-                println!("{}", serde_json::to_string_pretty(&err_obj).unwrap());
+                match serde_json::to_string_pretty(&err_obj) {
+                    Ok(json) => println!("{}", json),
+                    Err(e) => eprintln!("Error serializing JSON: {}", e),
+                }
             } else {
                 eprintln!("Error: Failed to read file: {}", e);
             }
@@ -683,7 +689,10 @@ fn check_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
                     "diagnostics": [diag],
                     "summary": { "errors": 1, "warnings": 0 }
                 });
-                println!("{}", serde_json::to_string_pretty(&output).unwrap());
+                match serde_json::to_string_pretty(&output) {
+                    Ok(json) => println!("{}", json),
+                    Err(e) => eprintln!("Error serializing JSON: {}", e),
+                }
             } else {
                 eprintln!("{}", e);
             }
@@ -698,14 +707,15 @@ fn check_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
             let _ = module_system.load_module(module_path);
         }
     }
+    let main_decl_count = program.declarations.len();
     let merged = module_system.merge_programs(program);
 
-    // Typecheck (collect ALL errors, not just the first)
     let mut type_checker = TypeChecker::new();
     let loaded_modules = module_system.get_modules();
     type_checker.with_stdlib_modules(&loaded_modules);
 
-    let (_type_ctx, errors) = type_checker.check_program_collect_errors(&merged);
+    let (_type_ctx, errors) =
+        type_checker.check_program_collect_errors_for_main(&merged, main_decl_count);
 
     let diagnostics: Vec<serde_json::Value> =
         errors.iter().map(compile_error_to_diagnostic).collect();
@@ -718,7 +728,10 @@ fn check_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
             "diagnostics": diagnostics,
             "summary": { "errors": error_count, "warnings": 0 }
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
     } else if error_count == 0 {
         println!("{}: OK", file_path);
     } else {
@@ -837,7 +850,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
         let output = serde_json::json!({
             "error": format!("Line {} out of range (file has {} lines)", line, source_lines.len())
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
         return Ok(());
     }
 
@@ -848,7 +864,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
         let output = serde_json::json!({
             "error": format!("No symbol at {}:{}:{}", file_path, line, col)
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
         return Ok(());
     }
 
@@ -869,7 +888,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
                     "receiver_type": recv_type_name,
                     "scope": scope
                 });
-                println!("{}", serde_json::to_string_pretty(&output).unwrap());
+                match serde_json::to_string_pretty(&output) {
+                    Ok(json) => println!("{}", json),
+                    Err(e) => eprintln!("Error serializing JSON: {}", e),
+                }
                 return Ok(());
             }
             // Check if symbol is a method on the receiver type
@@ -890,7 +912,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
                     "receiver_type": recv_type_name,
                     "scope": scope
                 });
-                println!("{}", serde_json::to_string_pretty(&output).unwrap());
+                match serde_json::to_string_pretty(&output) {
+                    Ok(json) => println!("{}", json),
+                    Err(e) => eprintln!("Error serializing JSON: {}", e),
+                }
                 return Ok(());
             }
             // Check for UFC: a free function whose first param matches the receiver type
@@ -911,7 +936,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
                             "receiver_type": recv_type_name,
                             "scope": scope
                         });
-                        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+                        match serde_json::to_string_pretty(&output) {
+                            Ok(json) => println!("{}", json),
+                            Err(e) => eprintln!("Error serializing JSON: {}", e),
+                        }
                         return Ok(());
                     }
                 }
@@ -930,7 +958,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
                 "kind": "variable",
                 "scope": func_name
             });
-            println!("{}", serde_json::to_string_pretty(&output).unwrap());
+            match serde_json::to_string_pretty(&output) {
+                Ok(json) => println!("{}", json),
+                Err(e) => eprintln!("Error serializing JSON: {}", e),
+            }
             return Ok(());
         }
         // Check if it's a function parameter
@@ -943,7 +974,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
                         "kind": "parameter",
                         "scope": func_name
                     });
-                    println!("{}", serde_json::to_string_pretty(&output).unwrap());
+                    match serde_json::to_string_pretty(&output) {
+                        Ok(json) => println!("{}", json),
+                        Err(e) => eprintln!("Error serializing JSON: {}", e),
+                    }
                     return Ok(());
                 }
             }
@@ -964,7 +998,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
             "kind": "function",
             "scope": serde_json::Value::Null
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
         return Ok(());
     }
 
@@ -976,7 +1013,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
             "kind": "struct",
             "scope": serde_json::Value::Null
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
         return Ok(());
     }
 
@@ -988,7 +1028,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
             "kind": "enum",
             "scope": serde_json::Value::Null
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
         return Ok(());
     }
 
@@ -1000,7 +1043,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
             "kind": "type_alias",
             "scope": serde_json::Value::Null
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
         return Ok(());
     }
 
@@ -1012,7 +1058,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
             "kind": "module",
             "scope": serde_json::Value::Null
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
         return Ok(());
     }
 
@@ -1026,7 +1075,10 @@ fn query_type(location: &str) -> std::io::Result<()> {
     if let Some(err) = check_error {
         result["note"] = serde_json::json!(format!("file has type errors: {}", err));
     }
-    println!("{}", serde_json::to_string_pretty(&result).unwrap());
+    match serde_json::to_string_pretty(&result) {
+        Ok(json) => println!("{}", json),
+        Err(e) => eprintln!("Error serializing JSON: {}", e),
+    }
     Ok(())
 }
 
@@ -1176,7 +1228,10 @@ fn list_symbols(file_path: &str, json_output: bool) -> std::io::Result<()> {
                     "error": format!("{}", e),
                     "symbols": []
                 });
-                println!("{}", serde_json::to_string_pretty(&output).unwrap());
+                match serde_json::to_string_pretty(&output) {
+                    Ok(json) => println!("{}", json),
+                    Err(e) => eprintln!("Error serializing JSON: {}", e),
+                }
             } else {
                 eprintln!("Parse error: {}", e);
             }
@@ -1349,7 +1404,10 @@ fn list_symbols(file_path: &str, json_output: bool) -> std::io::Result<()> {
             "file": file_path,
             "symbols": symbols
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
     } else {
         println!("=== Symbols: {} ===\n", file_path);
         for sym in &symbols {
@@ -1589,7 +1647,10 @@ fn query_methods(type_name: &str, file_path: &str) -> std::io::Result<()> {
         "methods": methods,
         "behaviors": behaviors
     });
-    println!("{}", serde_json::to_string_pretty(&output).unwrap());
+    match serde_json::to_string_pretty(&output) {
+        Ok(json) => println!("{}", json),
+        Err(e) => eprintln!("Error serializing JSON: {}", e),
+    }
     Ok(())
 }
 
@@ -1754,7 +1815,10 @@ fn list_symbols_recursive(dir_path: &str, json_output: bool) -> std::io::Result<
             "total_files": zen_files.len(),
             "total_symbols": total_symbols
         });
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing JSON: {}", e),
+        }
     } else {
         for file_entry in &all_files {
             let file = file_entry["file"].as_str().unwrap_or("?");
