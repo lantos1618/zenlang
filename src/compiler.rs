@@ -2,6 +2,7 @@
 //! This module ties the frontend (parser) and the backend (codegen) together.
 
 use crate::ast::{Declaration, Program};
+use crate::build_system::BuildConfig;
 use crate::codegen::llvm::LLVMCompiler;
 use crate::comptime::ComptimeInterpreter;
 use crate::error::{CompileError, Result};
@@ -10,20 +11,49 @@ use crate::type_system::Monomorphizer;
 use crate::typechecker::TypeChecker;
 use inkwell::context::Context;
 use inkwell::module::Module;
+use std::path::PathBuf;
 
 /// The main compiler structure.
 pub struct Compiler<'ctx> {
     context: &'ctx Context,
+    /// Optional source file path for build.zen discovery
+    source_file: Option<PathBuf>,
 }
 
 impl<'ctx> Compiler<'ctx> {
     pub fn new(context: &'ctx Context) -> Self {
-        Self { context }
+        Self {
+            context,
+            source_file: None,
+        }
+    }
+
+    /// Create a compiler with a known source file path (for build.zen discovery)
+    pub fn with_source_file(context: &'ctx Context, source_file: PathBuf) -> Self {
+        Self {
+            context,
+            source_file: Some(source_file),
+        }
     }
 
     /// Pipeline: imports → comptime → self-resolution → typecheck → monomorphize → codegen
     fn run_pipeline(&self, program: &Program) -> Result<LLVMCompiler<'ctx>> {
         let mut module_system = ModuleSystem::new();
+
+        // Discover build.zen and set up PackageMap
+        let build_config = self
+            .source_file
+            .as_ref()
+            .and_then(|path| BuildConfig::discover(path));
+
+        if let Some(ref config) = build_config {
+            module_system.set_package_map(config.packages.clone());
+        } else {
+            // No build.zen found — use default PackageMap (std => Stdlib)
+            // This ensures { println } = std.io works even without build.zen
+            module_system.set_package_map(BuildConfig::default_config().packages);
+        }
+
         let processed_program = self.process_imports_with_system(program, &mut module_system)?;
         let processed_program = self.execute_comptime(processed_program)?;
         let processed_program = self.resolve_self_types(processed_program)?;
@@ -363,6 +393,18 @@ impl<'ctx> Compiler<'ctx> {
 
         // Try to process imports - use process_imports_with_system to get module access
         let mut module_system = ModuleSystem::new();
+
+        // Set up PackageMap for diagnostics too
+        let build_config = self
+            .source_file
+            .as_ref()
+            .and_then(|path| BuildConfig::discover(path));
+        if let Some(ref config) = build_config {
+            module_system.set_package_map(config.packages.clone());
+        } else {
+            module_system.set_package_map(BuildConfig::default_config().packages);
+        }
+
         let processed_program = match self.process_imports_with_system(program, &mut module_system)
         {
             Ok(p) => p,

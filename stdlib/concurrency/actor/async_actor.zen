@@ -82,7 +82,7 @@ AsyncMailbox.try_send = (self: MutPtr<AsyncMailbox<M>>, msg: M) Result<(), i32> 
 
     // Write message
     dest = compiler.int_to_ptr(self.val.buffer + idx * cast(msg_size, i64))
-    compiler.memcpy(dest, cast(&msg.ref(), RawPtr<u8>), msg_size)
+    compiler.memcpy(dest, compiler.raw_ptr_cast(&msg.ref()), msg_size)
 
     // Signal if mailbox was empty
     old_count == 0 ? {
@@ -112,7 +112,7 @@ AsyncMailbox.try_recv = (self: MutPtr<AsyncMailbox<M>>) Option<M> {
     // Read message
     src = compiler.int_to_ptr(self.val.buffer + idx * cast(msg_size, i64))
     msg: M = compiler.zeroed<M>()
-    compiler.memcpy(cast(&msg.mut_ref(), RawPtr<u8>), src, msg_size)
+    compiler.memcpy(compiler.raw_ptr_cast(&msg.mut_ref()), src, msg_size)
 
     return Option.Some(msg)
 }
@@ -144,12 +144,12 @@ AsyncActorRef<M>: {
 }
 
 AsyncActorRef.send = (self: AsyncActorRef<M>, msg: M) Result<(), i32> {
-    mailbox = cast(compiler.int_to_ptr(self.mailbox), MutPtr<AsyncMailbox<M>>)
+    mailbox: MutPtr<AsyncMailbox<M>> = cast(compiler.int_to_ptr(self.mailbox), MutPtr<AsyncMailbox<M>>)
     return mailbox.try_send(msg)
 }
 
 AsyncActorRef.is_alive = (self: AsyncActorRef<M>) bool {
-    state_ptr = cast(compiler.int_to_ptr(self.state), Ptr<Atomic<i32>>)
+    state_ptr: Ptr<Atomic<i32>> = cast(compiler.int_to_ptr(self.state), Ptr<Atomic<i32>>)
     return state_ptr.val.load() == 1  // RUNNING
 }
 
@@ -203,7 +203,7 @@ AsyncActor.new = (behavior: B, mailbox_size: usize, async_pool: MutPtr<AsyncPool
                 mailbox: mailbox,
                 behavior: behavior,
                 task_id: 0,
-                async_pool: compiler.ptr_to_int(cast(async_pool, RawPtr<u8>))
+                async_pool: compiler.ptr_to_int(compiler.raw_ptr_cast(async_pool))
             })
         }
     }
@@ -213,8 +213,8 @@ AsyncActor.new = (behavior: B, mailbox_size: usize, async_pool: MutPtr<AsyncPool
 AsyncActor.ref = (self: Ptr<AsyncActor<M, B>>) AsyncActorRef<M> {
     return AsyncActorRef<M> {
         id: self.val.id,
-        mailbox: compiler.ptr_to_int(cast(&self.val.mailbox.ref(), RawPtr<u8>)),
-        state: compiler.ptr_to_int(cast(&self.val.state.ref(), RawPtr<u8>))
+        mailbox: compiler.ptr_to_int(compiler.raw_ptr_cast(&self.val.mailbox.ref())),
+        state: compiler.ptr_to_int(compiler.raw_ptr_cast(&self.val.state.ref()))
     }
 }
 
@@ -223,7 +223,7 @@ AsyncActor.run = (self: MutPtr<AsyncActor<M, B>>) void {
     self.val.state.store(ASYNC_ACTOR_RUNNING)
     self.val.behavior.on_start()
 
-    async_pool = cast(compiler.int_to_ptr(self.val.async_pool), MutPtr<AsyncPool>)
+    async_pool: MutPtr<AsyncPool> = cast(compiler.int_to_ptr(self.val.async_pool), MutPtr<AsyncPool>)
 
     // Message loop
     self.val.state.load() == ASYNC_ACTOR_RUNNING ? {
@@ -246,7 +246,7 @@ AsyncActor.run = (self: MutPtr<AsyncActor<M, B>>) void {
                     8,
                     0,
                     async_actor_wakeup_callback,
-                    cast(compiler.ptr_to_int(cast(self, RawPtr<u8>)), u64)
+                    cast(compiler.ptr_to_int(compiler.raw_ptr_cast(self)), u64)
                 )
 
                 // Yield to scheduler - we'll be resumed when eventfd signals

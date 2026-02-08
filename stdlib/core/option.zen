@@ -1,6 +1,8 @@
 // Option type for nullable values
 // No null! Only Option types
 
+{ compiler } = @std
+
 // Option type - represents a value that may or may not exist
 Option<T>:
     Some: T,
@@ -48,5 +50,5 @@ unwrap_or<T> = (opt: Option<T>, default: T) T {
 unwrap<T> = (opt: Option<T>) T {
     opt ?
         | Some(val) { val }
-        | None { @builtin.panic("unwrap called on None") }
+        | None { compiler.panic("unwrap called on None") }
 }

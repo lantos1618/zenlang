@@ -124,6 +124,9 @@ pub fn analyze_document_with_context(
 fn load_imports_for_program(program: &Program) -> (Program, ModuleSystem) {
     let mut module_system = ModuleSystem::new();
 
+    // Set up default PackageMap so `std.io` imports work in LSP
+    module_system.set_package_map(crate::build_system::BuildConfig::default_config().packages);
+
     // Load all imported modules
     for decl in &program.declarations {
         if let Declaration::ModuleImport { module_path, .. } = decl {

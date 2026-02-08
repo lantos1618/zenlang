@@ -6,16 +6,7 @@
 { Result } = @std.core.result
 { Option } = @std.core.option
 { Allocator } = @std.memory.allocator
-
-// ============================================================================
-// Syscall Numbers (x86-64)
-// ============================================================================
-
-SYS_MKDIR = 83
-SYS_RMDIR = 84
-SYS_GETDENTS64 = 217
-SYS_OPENAT = 257
-SYS_CLOSE = 3
+{ SYS_MKDIR, SYS_RMDIR, SYS_GETDENTS64, SYS_OPENAT, SYS_CLOSE } = @std.sys.syscall
 
 // ============================================================================
 // Constants

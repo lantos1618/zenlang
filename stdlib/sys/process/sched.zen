@@ -4,21 +4,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-// ============================================================================
-// Linux x86-64 Syscall Numbers
-// ============================================================================
-
-SYS_SCHED_YIELD = 24
-SYS_SCHED_SETSCHEDULER = 144
-SYS_SCHED_GETSCHEDULER = 145
-SYS_SCHED_SETPARAM = 142
-SYS_SCHED_GETPARAM = 143
-SYS_SCHED_GET_PRIORITY_MAX = 146
-SYS_SCHED_GET_PRIORITY_MIN = 147
-SYS_SCHED_SETAFFINITY = 203
-SYS_SCHED_GETAFFINITY = 204
-SYS_GETCPU = 309
+{ SYS_SCHED_YIELD, SYS_SCHED_SETSCHEDULER, SYS_SCHED_GETSCHEDULER, SYS_SCHED_SETPARAM, SYS_SCHED_GETPARAM, SYS_SCHED_GET_PRIORITY_MAX, SYS_SCHED_GET_PRIORITY_MIN, SYS_SCHED_SETAFFINITY, SYS_SCHED_GETAFFINITY, SYS_GETCPU, SYS_GETPRIORITY, SYS_SETPRIORITY } = @std.sys.syscall
 
 // ============================================================================
 // Scheduling Policies
@@ -167,9 +153,6 @@ CpuInfo: {
 // ============================================================================
 // Nice Value (Process Priority)
 // ============================================================================
-
-SYS_GETPRIORITY = 140
-SYS_SETPRIORITY = 141
 
 PRIO_PROCESS = 0
 PRIO_PGRP = 1

@@ -35,9 +35,9 @@ Semaphore.binary = () Semaphore {
 // Acquire a permit (decrement count), blocking if count is zero
 Semaphore.acquire = (self: MutPtr<Semaphore>) void {
     // Fast path: try to decrement if count > 0
-    count = cast(compiler.atomic_load(cast(&self.val.count.ref(), Ptr<u64>)), i32)
+    count = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
     count > 0 ? {
-        old = compiler.atomic_cas(cast(&self.val.count.ref(), Ptr<u64>), count, count - 1)
+        old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.count.ref()), count, count - 1)
         old == count ? { return }
     }
 
@@ -50,21 +50,21 @@ Semaphore.acquire_slow = (self: MutPtr<Semaphore>) void {
     acquired ::= false
     acquired == false ? {
         // Register as waiter
-        compiler.atomic_add(cast(&self.val.waiters.ref(), Ptr<u64>), 1)
+        compiler.atomic_add(compiler.raw_ptr_cast(&self.val.waiters.ref()), 1)
 
         // Check count and wait if zero
-        count ::= cast(compiler.atomic_load(cast(&self.val.count.ref(), Ptr<u64>)), i32)
+        count ::= cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
         count == 0 ? {
             futex_wait(&self.val.count.ref(), 0)
         }
 
         // Unregister as waiter
-        compiler.atomic_sub(cast(&self.val.waiters.ref(), Ptr<u64>), 1)
+        compiler.atomic_sub(compiler.raw_ptr_cast(&self.val.waiters.ref()), 1)
 
         // Try to acquire
-        count = cast(compiler.atomic_load(cast(&self.val.count.ref(), Ptr<u64>)), i32)
+        count = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
         count > 0 ? {
-            old = compiler.atomic_cas(cast(&self.val.count.ref(), Ptr<u64>), count, count - 1)
+            old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.count.ref()), count, count - 1)
             old == count ? { acquired = true }
         }
     }
@@ -73,9 +73,9 @@ Semaphore.acquire_slow = (self: MutPtr<Semaphore>) void {
 // Try to acquire without blocking
 // Returns true if permit was acquired, false if count was zero
 Semaphore.try_acquire = (self: MutPtr<Semaphore>) bool {
-    count = cast(compiler.atomic_load(cast(&self.val.count.ref(), Ptr<u64>)), i32)
+    count = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
     count > 0 ? {
-        old = compiler.atomic_cas(cast(&self.val.count.ref(), Ptr<u64>), count, count - 1)
+        old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.count.ref()), count, count - 1)
         return old == count
     }
     return false
@@ -84,10 +84,10 @@ Semaphore.try_acquire = (self: MutPtr<Semaphore>) bool {
 // Release a permit (increment count), waking one waiter if any
 Semaphore.release = (self: MutPtr<Semaphore>) void {
     // Increment count
-    compiler.atomic_add(cast(&self.val.count.ref(), Ptr<u64>), 1)
+    compiler.atomic_add(compiler.raw_ptr_cast(&self.val.count.ref()), 1)
 
     // Wake one waiter if there are any
-    waiters = cast(compiler.atomic_load(cast(&self.val.waiters.ref(), Ptr<u64>)), i32)
+    waiters = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.waiters.ref())), i32)
     waiters > 0 ? {
         futex_wake_one(&self.val.count.ref())
     }
@@ -96,10 +96,10 @@ Semaphore.release = (self: MutPtr<Semaphore>) void {
 // Release multiple permits at once
 Semaphore.release_n = (self: MutPtr<Semaphore>, n: i32) void {
     // Increment count by n
-    compiler.atomic_add(cast(&self.val.count.ref(), Ptr<u64>), n)
+    compiler.atomic_add(compiler.raw_ptr_cast(&self.val.count.ref()), n)
 
     // Wake waiters
-    waiters = cast(compiler.atomic_load(cast(&self.val.waiters.ref(), Ptr<u64>)), i32)
+    waiters = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.waiters.ref())), i32)
     waiters > 0 ? {
         // Wake up to n waiters
         wake_count = n < waiters ? { n } : { waiters }
@@ -109,7 +109,7 @@ Semaphore.release_n = (self: MutPtr<Semaphore>, n: i32) void {
 
 // Get current count (for debugging/testing)
 Semaphore.available = (self: Ptr<Semaphore>) i32 {
-    return cast(compiler.atomic_load(cast(&self.val.count.ref(), Ptr<u64>)), i32)
+    return cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
 }
 
 // ============================================================================

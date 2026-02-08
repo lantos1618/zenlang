@@ -2,7 +2,7 @@
 // main.zen - Comprehensive demonstration of Zen language features
 // This example showcases practical features of the Zen programming language
 
-{ io } = @std
+{ io } = std
 
 // ============================================================================
 // 1. STRUCTS - Custom data types with fields

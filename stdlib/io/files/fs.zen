@@ -4,27 +4,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-// ============================================================================
-// Syscall Numbers (x86-64)
-// ============================================================================
-
-SYS_CHMOD = 90
-SYS_FCHMOD = 91
-SYS_CHOWN = 92
-SYS_FCHOWN = 93
-SYS_LCHOWN = 94
-SYS_ACCESS = 21
-SYS_FACCESSAT = 269
-SYS_TRUNCATE = 76
-SYS_FTRUNCATE = 77
-SYS_SYNC = 162
-SYS_SYNCFS = 306
-SYS_FSYNC = 74
-SYS_FDATASYNC = 75
-SYS_FCHMODAT = 268
-SYS_FCHOWNAT = 260
-SYS_UTIMENSAT = 280
+{ SYS_CHMOD, SYS_FCHMOD, SYS_CHOWN, SYS_FCHOWN, SYS_LCHOWN, SYS_ACCESS, SYS_FACCESSAT, SYS_TRUNCATE, SYS_FTRUNCATE, SYS_SYNC, SYS_SYNCFS, SYS_FSYNC, SYS_FDATASYNC, SYS_FCHMODAT, SYS_FCHOWNAT, SYS_UTIMENSAT } = @std.sys.syscall
 
 // ============================================================================
 // Constants
@@ -229,7 +209,7 @@ touch = (path: i64) Result<(), i32> {
         Timespec { tv_sec: 0, tv_nsec: UTIME_NOW },
         Timespec { tv_sec: 0, tv_nsec: UTIME_NOW }
     ]
-    return utimensat(AT_FDCWD, path, compiler.ptr_to_int(cast(&times.ref(), RawPtr<u8>)), 0)
+    return utimensat(AT_FDCWD, path, compiler.ptr_to_int(compiler.raw_ptr_cast(&times.ref())), 0)
 }
 
 // Touch via file descriptor (update timestamps to now)
@@ -238,5 +218,5 @@ ftouch = (fd: i32) Result<(), i32> {
         Timespec { tv_sec: 0, tv_nsec: UTIME_NOW },
         Timespec { tv_sec: 0, tv_nsec: UTIME_NOW }
     ]
-    return utimensat(fd, 0, compiler.ptr_to_int(cast(&times.ref(), RawPtr<u8>)), AT_EMPTY_PATH)
+    return utimensat(fd, 0, compiler.ptr_to_int(compiler.raw_ptr_cast(&times.ref())), AT_EMPTY_PATH)
 }

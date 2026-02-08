@@ -4,15 +4,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-// ============================================================================
-// Linux x86-64 Syscall Numbers
-// ============================================================================
-
-SYS_GETRLIMIT = 97
-SYS_SETRLIMIT = 160
-SYS_PRLIMIT64 = 302
-SYS_GETRUSAGE = 98
+{ SYS_GETRLIMIT, SYS_SETRLIMIT, SYS_PRLIMIT64, SYS_GETRUSAGE } = @std.sys.syscall
 
 // ============================================================================
 // Resource Types

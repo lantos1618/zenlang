@@ -276,7 +276,7 @@ IoUring.new = (entries: u32) Result<IoUring, i32> {
 
 // Get next SQE slot (returns null if queue full)
 IoUring.get_sqe = (self: MutPtr<IoUring>) i64 {
-    head = cast(compiler.atomic_load(cast(compiler.int_to_ptr(self.val.sq_head), Ptr<u64>)), u32)
+    head = cast(compiler.atomic_load(compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.sq_head))), u32)
     tail = compiler.load<u32>(compiler.int_to_ptr(self.val.sq_tail))
 
     // Check if queue is full
@@ -304,7 +304,7 @@ IoUring.submit_sqe = (self: MutPtr<IoUring>, sqe_ptr: i64) void {
 
     // Increment tail
     compiler.atomic_store(
-        cast(compiler.int_to_ptr(self.val.sq_tail), Ptr<u64>),
+        compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.sq_tail)),
         cast(tail + 1, u64)
     )
 }
@@ -335,8 +335,8 @@ IoUring.submit_and_wait = (self: MutPtr<IoUring>, min_complete: u32) Result<i32,
 
 // Get next CQE (returns None if no completions)
 IoUring.peek_cqe = (self: MutPtr<IoUring>) Option<CQE> {
-    head = cast(compiler.atomic_load(cast(compiler.int_to_ptr(self.val.cq_head), Ptr<u64>)), u32)
-    tail = cast(compiler.atomic_load(cast(compiler.int_to_ptr(self.val.cq_tail), Ptr<u64>)), u32)
+    head = cast(compiler.atomic_load(compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.cq_head))), u32)
+    tail = cast(compiler.atomic_load(compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.cq_tail))), u32)
 
     head == tail ? { return Option.None }
 
@@ -354,9 +354,9 @@ IoUring.peek_cqe = (self: MutPtr<IoUring>) Option<CQE> {
 
 // Advance CQ head after processing CQE
 IoUring.cqe_seen = (self: MutPtr<IoUring>) void {
-    head = cast(compiler.atomic_load(cast(compiler.int_to_ptr(self.val.cq_head), Ptr<u64>)), u32)
+    head = cast(compiler.atomic_load(compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.cq_head))), u32)
     compiler.atomic_store(
-        cast(compiler.int_to_ptr(self.val.cq_head), Ptr<u64>),
+        compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.cq_head)),
         cast(head + 1, u64)
     )
 }

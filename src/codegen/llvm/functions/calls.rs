@@ -399,7 +399,7 @@ pub fn compile_function_call<'ctx>(
             return Ok(result);
         }
     }
-    if name == "cast" {
+    if name == "cast" || name == "builtin.cast" {
         return compile_cast_builtin(compiler, args);
     }
     if let Some(result) = try_compile_direct_call(compiler, name, args)? {

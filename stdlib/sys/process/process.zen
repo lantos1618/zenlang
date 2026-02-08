@@ -3,15 +3,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-// Syscall numbers (Linux x86-64)
-SYS_FORK = 57
-SYS_EXECVE = 59
-SYS_WAIT4 = 61
-SYS_EXIT = 60
-SYS_GETPID = 39
-SYS_GETPPID = 110
-SYS_KILL = 62
+{ SYS_FORK, SYS_EXECVE, SYS_WAIT4, SYS_EXIT, SYS_GETPID, SYS_GETPPID, SYS_KILL } = @std.sys.syscall
 
 // Wait options
 WNOHANG = 1

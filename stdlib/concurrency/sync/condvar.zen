@@ -5,12 +5,7 @@
 { compiler } = @std
 { Mutex } = @std.concurrency.sync.mutex
 { futex_wait, futex_wake_one, futex_wake_all } = @std.concurrency.primitives.futex
-
-// ============================================================================
-// Syscall for timeout support
-// ============================================================================
-
-SYS_FUTEX = 202
+{ SYS_FUTEX } = @std.sys.syscall
 FUTEX_WAIT = 0
 FUTEX_WAKE = 1
 FUTEX_WAIT_PRIVATE = 128
@@ -42,7 +37,7 @@ CondVar.new = () CondVar {
 //
 CondVar.wait = (self: MutPtr<CondVar>, mutex: MutPtr<Mutex>) void {
     // Capture current sequence number
-    seq = cast(compiler.atomic_load(cast(&self.val.seq.ref(), Ptr<u64>)), i32)
+    seq = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.seq.ref())), i32)
 
     // Release the mutex before sleeping
     mutex.unlock()
@@ -57,7 +52,7 @@ CondVar.wait = (self: MutPtr<CondVar>, mutex: MutPtr<Mutex>) void {
 // Wait with timeout (nanoseconds)
 // Returns true if signaled, false if timed out
 CondVar.wait_timeout = (self: MutPtr<CondVar>, mutex: MutPtr<Mutex>, timeout_ns: i64) bool {
-    seq = cast(compiler.atomic_load(cast(&self.val.seq.ref(), Ptr<u64>)), i32)
+    seq = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.seq.ref())), i32)
 
     mutex.unlock()
 
@@ -92,9 +87,9 @@ CondVar.signal = (self: MutPtr<CondVar>) void {
     // Increment sequence number (atomic)
     done ::= false
     done == false ? {
-        old_seq = cast(compiler.atomic_load(cast(&self.val.seq.ref(), Ptr<u64>)), i32)
+        old_seq = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.seq.ref())), i32)
         new_seq = old_seq + 1
-        result = compiler.atomic_cas(cast(&self.val.seq.ref(), Ptr<u64>), old_seq, new_seq)
+        result = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.seq.ref()), old_seq, new_seq)
         result == old_seq ? { done = true }
     }
 
@@ -107,9 +102,9 @@ CondVar.broadcast = (self: MutPtr<CondVar>) void {
     // Increment sequence number
     done ::= false
     done == false ? {
-        old_seq = cast(compiler.atomic_load(cast(&self.val.seq.ref(), Ptr<u64>)), i32)
+        old_seq = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.seq.ref())), i32)
         new_seq = old_seq + 1
-        result = compiler.atomic_cas(cast(&self.val.seq.ref(), Ptr<u64>), old_seq, new_seq)
+        result = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.seq.ref()), old_seq, new_seq)
         result == old_seq ? { done = true }
     }
 

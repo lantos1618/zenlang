@@ -101,7 +101,7 @@ run_tests = (suite: TestSuite) void {
 
 fail = (message: String) void {
     io.eprintln("[FAIL] ${message}")
-    @builtin.panic("Test assertion failed")
+    compiler.panic("Test assertion failed")
 }
 
 // ============================================================================

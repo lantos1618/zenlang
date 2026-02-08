@@ -1,14 +1,14 @@
 // test.zen - Test suite for the Zen full example project
 // This file demonstrates how to write tests in Zen
 
-{ print, println } = @std.io
-{ Option, Result } = @std
-{ HashMap, HashSet } = @std.collections
-{ Vec, DynVec, Array } = @std
-{ memory } = @std
+{ print, println } = std.io
+{ Option, Result } = std
+{ HashMap, HashSet } = std.collections
+{ Vec, DynVec, Array } = std
+{ memory } = std
 
 // Import the test framework from stdlib
-{ TestResult, TestSuite, new_test_suite, add_test, run_tests } = @std.testing.runner
+{ TestResult, TestSuite, new_test_suite, add_test, run_tests } = std.testing
 
 // Import the main module functions to test
 // TODO: Import functions from main.zen once module imports are implemented
@@ -159,7 +159,7 @@ test_calculate_success = () TestResult {
 
 // Test collections with allocators
 test_collections = () TestResult {
-    allocator = @std.get_default_allocator()
+    allocator = memory.get_default_allocator()
 
     // Test HashMap
     map = HashMap.new<StaticString, i32>(allocator)

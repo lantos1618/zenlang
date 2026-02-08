@@ -30,19 +30,19 @@ AtomicBool.new = (initial: bool) AtomicBool {
 }
 
 AtomicBool.load = (self: Ptr<AtomicBool>) bool {
-    val = cast(compiler.atomic_load(cast(&self.val.value.ref(), Ptr<u64>)), i32)
+    val = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.value.ref())), i32)
     return val != 0
 }
 
 AtomicBool.store = (self: MutPtr<AtomicBool>, value: bool) void {
     val = value ? { 1 } : { 0 }
-    compiler.atomic_store(cast(&self.val.value.ref(), Ptr<u64>), cast(val, u64))
+    compiler.atomic_store(compiler.raw_ptr_cast(&self.val.value.ref()), cast(val, u64))
 }
 
 // Swap and return old value
 AtomicBool.swap = (self: MutPtr<AtomicBool>, value: bool) bool {
     new_val = value ? { 1 } : { 0 }
-    old = cast(compiler.atomic_xchg(cast(&self.val.value.ref(), Ptr<u64>), cast(new_val, u64)), i32)
+    old = cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.value.ref()), cast(new_val, u64)), i32)
     return old != 0
 }
 
@@ -51,14 +51,14 @@ AtomicBool.swap = (self: MutPtr<AtomicBool>, value: bool) bool {
 AtomicBool.compare_exchange = (self: MutPtr<AtomicBool>, expected: bool, desired: bool) bool {
     exp = expected ? { 1 } : { 0 }
     des = desired ? { 1 } : { 0 }
-    old = cast(compiler.atomic_cas(cast(&self.val.value.ref(), Ptr<u64>), cast(exp, u64), cast(des, u64)), i32)
+    old = cast(compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.value.ref()), cast(exp, u64), cast(des, u64)), i32)
     return old == exp
 }
 
 // Fetch and set to true, return old value
 AtomicBool.fetch_or = (self: MutPtr<AtomicBool>, value: bool) bool {
     value == false ? { return self.load() }
-    old = cast(compiler.atomic_xchg(cast(&self.val.value.ref(), Ptr<u64>), 1), i32)
+    old = cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.value.ref()), 1), i32)
     return old != 0
 }
 
@@ -75,29 +75,29 @@ Atomic<T>.new = (initial: T) Atomic<T> {
 }
 
 Atomic<T>.load = (self: Ptr<Atomic<T>>) T {
-    return cast(compiler.atomic_load(cast(&self.val.value.ref(), Ptr<u64>)), T)
+    return cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.value.ref())), T)
 }
 
 Atomic<T>.store = (self: MutPtr<Atomic<T>>, value: T) void {
-    compiler.atomic_store(cast(&self.val.value.ref(), Ptr<u64>), cast(value, u64))
+    compiler.atomic_store(compiler.raw_ptr_cast(&self.val.value.ref()), cast(value, u64))
 }
 
 Atomic<T>.swap = (self: MutPtr<Atomic<T>>, value: T) T {
-    return cast(compiler.atomic_xchg(cast(&self.val.value.ref(), Ptr<u64>), cast(value, u64)), T)
+    return cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.value.ref()), cast(value, u64)), T)
 }
 
 Atomic<T>.compare_exchange = (self: MutPtr<Atomic<T>>, expected: T, desired: T) bool {
-    old = cast(compiler.atomic_cas(cast(&self.val.value.ref(), Ptr<u64>), cast(expected, u64), cast(desired, u64)), T)
+    old = cast(compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.value.ref()), cast(expected, u64), cast(desired, u64)), T)
     return old == expected
 }
 
 // Returns old value, adds delta
 Atomic<T>.fetch_add = (self: MutPtr<Atomic<T>>, delta: T) T {
-    return cast(compiler.atomic_add(cast(&self.val.value.ref(), Ptr<u64>), cast(delta, u64)), T)
+    return cast(compiler.atomic_add(compiler.raw_ptr_cast(&self.val.value.ref()), cast(delta, u64)), T)
 }
 
 Atomic<T>.fetch_sub = (self: MutPtr<Atomic<T>>, delta: T) T {
-    return cast(compiler.atomic_sub(cast(&self.val.value.ref(), Ptr<u64>), cast(delta, u64)), T)
+    return cast(compiler.atomic_sub(compiler.raw_ptr_cast(&self.val.value.ref()), cast(delta, u64)), T)
 }
 
 // Convenience: add and return new value
@@ -131,7 +131,7 @@ AtomicPtr<T>: {
 }
 
 AtomicPtr.new = (initial: Ptr<T>) AtomicPtr<T> {
-    return AtomicPtr<T> { ptr: compiler.ptr_to_int(cast(&initial.ref(), RawPtr<u8>)) }
+    return AtomicPtr<T> { ptr: compiler.ptr_to_int(compiler.raw_ptr_cast(&initial.ref())) }
 }
 
 AtomicPtr.null = () AtomicPtr<T> {
@@ -139,19 +139,19 @@ AtomicPtr.null = () AtomicPtr<T> {
 }
 
 AtomicPtr.load = (self: Ptr<AtomicPtr<T>>) i64 {
-    return cast(compiler.atomic_load(cast(&self.val.ptr.ref(), Ptr<u64>)), i64)
+    return cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.ptr.ref())), i64)
 }
 
 AtomicPtr.store = (self: MutPtr<AtomicPtr<T>>, ptr: i64) void {
-    compiler.atomic_store(cast(&self.val.ptr.ref(), Ptr<u64>), cast(ptr, u64))
+    compiler.atomic_store(compiler.raw_ptr_cast(&self.val.ptr.ref()), cast(ptr, u64))
 }
 
 AtomicPtr.swap = (self: MutPtr<AtomicPtr<T>>, ptr: i64) i64 {
-    return cast(compiler.atomic_xchg(cast(&self.val.ptr.ref(), Ptr<u64>), cast(ptr, u64)), i64)
+    return cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.ptr.ref()), cast(ptr, u64)), i64)
 }
 
 AtomicPtr.compare_exchange = (self: MutPtr<AtomicPtr<T>>, expected: i64, desired: i64) bool {
-    old = cast(compiler.atomic_cas(cast(&self.val.ptr.ref(), Ptr<u64>), cast(expected, u64), cast(desired, u64)), i64)
+    old = cast(compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.ptr.ref()), cast(expected, u64), cast(desired, u64)), i64)
     return old == expected
 }
 

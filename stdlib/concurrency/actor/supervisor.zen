@@ -141,7 +141,7 @@ Supervisor.add_child = (self: MutPtr<Supervisor>, spec: ChildSpec) Result<i32, i
     offset = self.val.child_count * 64
     compiler.memcpy(
         compiler.int_to_ptr(self.val.children + cast(offset, i64)),
-        cast(&child_state.ref(), RawPtr<u8>),
+        compiler.raw_ptr_cast(&child_state.ref()),
         64
     )
 
@@ -172,7 +172,7 @@ Supervisor.start = (self: MutPtr<Supervisor>) Result<(), i32> {
 Supervisor.start_child = (self: MutPtr<Supervisor>, idx: i32) Result<(), i32> {
     idx >= self.val.child_count ? { return Result.Err(-22) }  // EINVAL
 
-    child_ptr = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
+    child_ptr: MutPtr<ChildState> = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
 
     // Call the start function
     // start_fn signature: (context: i64, allocator: Allocator) i64 (returns actor_ptr)
@@ -202,7 +202,7 @@ Supervisor.stop = (self: MutPtr<Supervisor>) void {
 Supervisor.stop_child = (self: MutPtr<Supervisor>, idx: i32) void {
     idx >= self.val.child_count ? { return }
 
-    child_ptr = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
+    child_ptr: MutPtr<ChildState> = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
     child_ptr.val.state.store(ACTOR_STOPPED)
 }
 
@@ -210,7 +210,7 @@ Supervisor.stop_child = (self: MutPtr<Supervisor>, idx: i32) void {
 Supervisor.handle_failure = (self: MutPtr<Supervisor>, idx: i32) void {
     idx >= self.val.child_count ? { return }
 
-    child_ptr = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
+    child_ptr: MutPtr<ChildState> = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
     restart_policy = child_ptr.val.spec.restart
 
     // Check restart policy
@@ -239,7 +239,7 @@ Supervisor.handle_failure = (self: MutPtr<Supervisor>, idx: i32) void {
 
 // Restart a single child
 Supervisor.restart_child = (self: MutPtr<Supervisor>, idx: i32) void {
-    child_ptr = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
+    child_ptr: MutPtr<ChildState> = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
     child_ptr.val.restart_count = child_ptr.val.restart_count + 1
     self.start_child(idx)
 }

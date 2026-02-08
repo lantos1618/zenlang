@@ -2,7 +2,7 @@
 // Zen uses Result<T, E> and Option<T> with pattern matching
 // No exceptions, no null - explicit error handling everywhere
 
-{ io } = @std
+{ io } = std
 
 // A function that can fail
 divide = (a: f64, b: f64) Result<f64, StringLiteral> {

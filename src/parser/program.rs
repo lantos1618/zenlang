@@ -159,45 +159,34 @@ impl<'a> Parser<'a> {
             }
             Ok(declarations)
         } else if let Token::Identifier(module) = &self.current_token {
-            if module.starts_with("@std") {
-                let mut module_path = module.clone();
+            // Handle both @std.module and package-name.module patterns (e.g., std.io, http.server)
+            let mut module_path = module.clone();
+            self.next_token();
+
+            // Handle dotted paths
+            while self.current_token == Token::Symbol('.') {
                 self.next_token();
-
-                // Handle @std.module syntax
-                while self.current_token == Token::Symbol('.') {
+                if let Token::Identifier(member) = &self.current_token {
+                    module_path.push('.');
+                    module_path.push_str(member);
                     self.next_token();
-                    if let Token::Identifier(member) = &self.current_token {
-                        module_path.push('.');
-                        module_path.push_str(member);
-                        self.next_token();
-                    } else {
-                        return Err(CompileError::SyntaxError(
-                            "Expected identifier after '.'".to_string(),
-                            Some(self.current_span.clone()),
-                        ));
-                    }
+                } else {
+                    return Err(CompileError::SyntaxError(
+                        "Expected identifier after '.'".to_string(),
+                        Some(self.current_span.clone()),
+                    ));
                 }
-
-                // Create imports from the specified module
-                // For destructuring imports like { Range } = @std.core.iterator,
-                // we need to load the entire module (not @std.core.iterator.Range)
-                // but alias the import as the imported name.
-                let mut declarations = vec![];
-                for name in imported_names {
-                    declarations.push(Declaration::ModuleImport {
-                        alias: name.clone(),
-                        module_path: module_path.clone(), // Load the whole module, not module.name
-                        span: Some(self.current_span.clone()),
-                    });
-                }
-                Ok(declarations)
-            } else {
-                Err(CompileError::SyntaxError(
-                    "Expected '@std' or '@std.module' after '=' in destructuring import"
-                        .to_string(),
-                    Some(self.current_span.clone()),
-                ))
             }
+
+            let mut declarations = vec![];
+            for name in imported_names {
+                declarations.push(Declaration::ModuleImport {
+                    alias: name.clone(),
+                    module_path: module_path.clone(),
+                    span: Some(self.current_span.clone()),
+                });
+            }
+            Ok(declarations)
         } else {
             Err(CompileError::SyntaxError(
                 "Expected module reference after '=' in destructuring import".to_string(),

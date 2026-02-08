@@ -325,7 +325,13 @@ impl TypeChecker {
             }
         }
         if iterations >= MAX_RESOLUTION_ITERATIONS && changed {
-            eprintln!("Warning: struct field type resolution did not converge after {} iterations (possible circular dependency)", MAX_RESOLUTION_ITERATIONS);
+            return Err(crate::error::CompileError::CyclicDependency(
+                format!(
+                    "Circular type dependency detected in struct fields (resolution did not converge after {} iterations)",
+                    MAX_RESOLUTION_ITERATIONS
+                ),
+                None,
+            ));
         }
 
         // Third pass: infer return types for functions with Void return type
@@ -414,6 +420,15 @@ impl TypeChecker {
                 }
             }
         }
+        if iterations >= MAX_RESOLUTION_ITERATIONS && changed {
+            errors.push(crate::error::CompileError::CyclicDependency(
+                format!(
+                    "Circular type dependency detected in struct fields (resolution did not converge after {} iterations)",
+                    MAX_RESOLUTION_ITERATIONS
+                ),
+                None,
+            ));
+        }
 
         // Third pass: infer return types for functions with Void return type
         for declaration in &program.declarations {
@@ -499,6 +514,15 @@ impl TypeChecker {
                     }
                 }
             }
+        }
+        if iterations >= MAX_RESOLUTION_ITERATIONS && changed {
+            errors.push(crate::error::CompileError::CyclicDependency(
+                format!(
+                    "Circular type dependency detected in struct fields (resolution did not converge after {} iterations)",
+                    MAX_RESOLUTION_ITERATIONS
+                ),
+                None,
+            ));
         }
 
         for declaration in &program.declarations {

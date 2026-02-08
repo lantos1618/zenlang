@@ -1,8 +1,12 @@
 // build.zen - Build configuration for the full example
-// Uses the standard library build system
+//
+// Package declarations: these tell the compiler where packages come from.
+// The `std` name is then available to all source files in the project.
+std = @builtin.import_std()
 
-{ io, fs } = @std
-{ build } = @std
+// Import specific modules from std
+{ io, fs } = std
+{ build } = std
 
 // ============================================================================
 // Build Configuration

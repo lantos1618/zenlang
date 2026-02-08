@@ -4,22 +4,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-// ============================================================================
-// Syscall Numbers (x86-64)
-// ============================================================================
-
-SYS_LINK = 86
-SYS_UNLINK = 87
-SYS_SYMLINK = 88
-SYS_READLINK = 89
-SYS_RENAME = 82
-SYS_LINKAT = 265
-SYS_UNLINKAT = 263
-SYS_SYMLINKAT = 266
-SYS_READLINKAT = 267
-SYS_RENAMEAT = 264
-SYS_RENAMEAT2 = 316
+{ SYS_LINK, SYS_UNLINK, SYS_SYMLINK, SYS_READLINK, SYS_RENAME, SYS_LINKAT, SYS_UNLINKAT, SYS_SYMLINKAT, SYS_READLINKAT, SYS_RENAMEAT, SYS_RENAMEAT2 } = @std.sys.syscall
 
 // ============================================================================
 // Constants

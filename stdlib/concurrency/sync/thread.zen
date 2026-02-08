@@ -6,7 +6,7 @@
 { Result } = @std.core.result
 { Allocator } = @std.memory.allocator
 { futex_wait } = @std.concurrency.primitives.futex
-{ SYS_CLONE, SYS_EXIT, SYS_TGKILL, SYS_FUTEX, SYS_GETTID } = @std.sys.syscall
+{ SYS_CLONE, SYS_EXIT, SYS_TGKILL, SYS_FUTEX, SYS_GETTID, SYS_SCHED_YIELD } = @std.sys.syscall
 
 // ============================================================================
 // Clone Flags
@@ -141,7 +141,7 @@ ThreadHandle.join = (self: MutPtr<ThreadHandle>) Result<(), i32> {
     // Wait for thread to exit using futex on TID
     // The kernel clears the TID and wakes futex when thread exits
     tid_ptr = &self.val.tid.ref()
-    tid = cast(compiler.atomic_load(cast(&self.val.tid.ref(), Ptr<u64>)), i32)
+    tid = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.tid.ref())), i32)
 
     tid != 0 ? {
         futex_wait(tid_ptr, tid)
@@ -156,7 +156,7 @@ ThreadHandle.join = (self: MutPtr<ThreadHandle>) Result<(), i32> {
 
 // Check if thread has finished (non-blocking)
 ThreadHandle.is_finished = (self: Ptr<ThreadHandle>) bool {
-    tid = cast(compiler.atomic_load(cast(&self.val.tid.ref(), Ptr<u64>)), i32)
+    tid = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.tid.ref())), i32)
     return tid == 0
 }
 
@@ -168,8 +168,6 @@ ThreadHandle.id = (self: Ptr<ThreadHandle>) i32 {
 // ============================================================================
 // Thread Yield
 // ============================================================================
-
-SYS_SCHED_YIELD = 24
 
 // Yield execution to other threads
 thread_yield = () void {

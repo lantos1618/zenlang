@@ -41,19 +41,19 @@ ActorRef<M>: {
 
 // Send a message (blocking if mailbox is full)
 ActorRef.send = (self: ActorRef<M>, msg: M) Result<(), ChannelError> {
-    mailbox = cast(compiler.int_to_ptr(self.mailbox), MutPtr<Channel<M>>)
+    mailbox: MutPtr<Channel<M>> = cast(compiler.int_to_ptr(self.mailbox), MutPtr<Channel<M>>)
     return mailbox.send(msg)
 }
 
 // Non-blocking send
 ActorRef.try_send = (self: ActorRef<M>, msg: M) Result<(), ChannelError> {
-    mailbox = cast(compiler.int_to_ptr(self.mailbox), MutPtr<Channel<M>>)
+    mailbox: MutPtr<Channel<M>> = cast(compiler.int_to_ptr(self.mailbox), MutPtr<Channel<M>>)
     return mailbox.try_send(msg)
 }
 
 // Check if actor is alive
 ActorRef.is_alive = (self: ActorRef<M>) bool {
-    state_ptr = cast(compiler.int_to_ptr(self.state), Ptr<Atomic<i32>>)
+    state_ptr: Ptr<Atomic<i32>> = cast(compiler.int_to_ptr(self.state), Ptr<Atomic<i32>>)
     state = state_ptr.load()
     return state == ACTOR_RUNNING
 }
@@ -134,8 +134,8 @@ Actor.new = (behavior: B, mailbox_size: usize, allocator: Allocator) Actor<M, B>
 Actor.ref = (self: Ptr<Actor<M, B>>) ActorRef<M> {
     return ActorRef<M> {
         id: self.val.id,
-        mailbox: compiler.ptr_to_int(cast(&self.val.mailbox.ref(), RawPtr<u8>)),
-        state: compiler.ptr_to_int(cast(&self.val.state.ref(), RawPtr<u8>))
+        mailbox: compiler.ptr_to_int(compiler.raw_ptr_cast(&self.val.mailbox.ref())),
+        state: compiler.ptr_to_int(compiler.raw_ptr_cast(&self.val.state.ref()))
     }
 }
 

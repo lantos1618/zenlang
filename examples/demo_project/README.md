@@ -79,7 +79,7 @@ zen test.zen
 ## Build System
 
 The `build.zen` file demonstrates an advanced Zen build system with:
-- **Real stdlib integration** using `@std.build` and proper imports
+- **Real stdlib integration** using `std.build` and proper imports
 - **Conditional compilation** based on `--release`/`--debug` flags
 - **OS-specific configuration** with pattern matching for Linux/macOS/Windows
 - **Realistic external dependencies** from GitHub (SDL2, ImGui, nlohmann-json)

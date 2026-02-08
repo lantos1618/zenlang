@@ -180,6 +180,7 @@ fn build_intrinsics() -> HashMap<&'static str, Intrinsic> {
 
     // -- Type conversions -------------------------------------------------
     intrinsic!(m, "cast",            ("value" => AstType::I64, "target_type" => AstType::I64) -> AstType::I64, "Cast a value to a numeric type: cast(value, i64)", "Convert");
+    intrinsic!(m, "builtin.cast",    ("value" => AstType::I64, "target_type" => AstType::I64) -> AstType::I64, "Cast a value to a numeric type (builtin form)", "Convert");
     intrinsic!(m, "trunc_f64_i64",  ("value" => AstType::F64) -> AstType::I64, "Truncate f64 to i64", "Convert");
     intrinsic!(m, "trunc_f32_i32",  ("value" => AstType::F32) -> AstType::I32, "Truncate f32 to i32", "Convert");
     intrinsic!(m, "sitofp_i64_f64", ("value" => AstType::I64) -> AstType::F64, "Convert signed i64 to f64", "Convert");

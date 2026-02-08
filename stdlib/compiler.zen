@@ -193,6 +193,16 @@ allocate_zeroed = (size: usize) RawPtr<u8> {
 }
 
 // =============================================================================
+// TYPE CASTING
+// =============================================================================
+
+// Cast a value to a different numeric type
+// This is the explicit form of the `as` keyword: value as Type
+cast = (value: i64, target_type: i64) i64 {
+    return @builtin.cast(value, target_type)
+}
+
+// =============================================================================
 // DYNAMIC LIBRARY LOADING (FFI)
 // =============================================================================
 // These intrinsics provide platform-native dynamic library operations:
@@ -248,4 +258,36 @@ libc_write = (fd: i32, buf: RawPtr<u8>, len: usize) i64 {
 // Returns: number of bytes read, or negative on error
 libc_read = (fd: i32, buf: RawPtr<u8>, len: usize) i64 {
     return @builtin.libc_read(fd, buf, len)
+}
+
+// =============================================================================
+// SYSCALL WRAPPERS (Linux x86-64)
+// =============================================================================
+
+syscall0 = (number: i64) i64 {
+    return @builtin.syscall0(number)
+}
+
+syscall1 = (number: i64, arg0: i64) i64 {
+    return @builtin.syscall1(number, arg0)
+}
+
+syscall2 = (number: i64, arg0: i64, arg1: i64) i64 {
+    return @builtin.syscall2(number, arg0, arg1)
+}
+
+syscall3 = (number: i64, arg0: i64, arg1: i64, arg2: i64) i64 {
+    return @builtin.syscall3(number, arg0, arg1, arg2)
+}
+
+syscall4 = (number: i64, arg0: i64, arg1: i64, arg2: i64, arg3: i64) i64 {
+    return @builtin.syscall4(number, arg0, arg1, arg2, arg3)
+}
+
+syscall5 = (number: i64, arg0: i64, arg1: i64, arg2: i64, arg3: i64, arg4: i64) i64 {
+    return @builtin.syscall5(number, arg0, arg1, arg2, arg3, arg4)
+}
+
+syscall6 = (number: i64, arg0: i64, arg1: i64, arg2: i64, arg3: i64, arg4: i64, arg5: i64) i64 {
+    return @builtin.syscall6(number, arg0, arg1, arg2, arg3, arg4, arg5)
 }

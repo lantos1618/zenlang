@@ -1,6 +1,8 @@
 // Result type for error handling
 // Result<T, E> for success/failure handling
 
+{ compiler } = @std
+
 // Result type - represents success (Ok) or failure (Err)
 Result<T, E>:
     Ok: T,
@@ -55,12 +57,12 @@ unwrap_or<T, E> = (res: Result<T, E>, default: T) T {
 unwrap<T, E> = (res: Result<T, E>) T {
     res ?
         | Ok(val) { val }
-        | Err(_) { @builtin.panic("unwrap called on Err") }
+        | Err(_) { compiler.panic("unwrap called on Err") }
 }
 
 // Get the Err value or panic
 unwrap_err<T, E> = (res: Result<T, E>) E {
     res ?
         | Err(err) { err }
-        | Ok(_) { @builtin.panic("unwrap_err called on Ok") }
+        | Ok(_) { compiler.panic("unwrap_err called on Ok") }
 }

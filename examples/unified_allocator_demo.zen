@@ -16,10 +16,10 @@
 //
 // ============================================================================
 
-{ io } = @std
-{ Heap } = @std.memory.heap
-{ Arena } = @std.memory.arena
-{ Allocator, ExecutionMode } = @std.memory.allocator
+{ io } = std
+{ Heap } = std.memory.heap
+{ Arena } = std.memory.arena
+{ Allocator, ExecutionMode } = std.memory.allocator
 
 // ============================================================================
 // THE KEY FUNCTION: Works with ANY allocator!

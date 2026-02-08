@@ -1,7 +1,7 @@
 // Structs and Methods in Zen
 // Zen uses UFC (Uniform Function Call) - any function is also a method
 
-{ io } = @std
+{ io } = std
 
 // Struct with fields
 Point: {
@@ -10,9 +10,8 @@ Point: {
 }
 
 // Functions that work as methods via UFC
-distance = (p: Point) f64 {
-    // sqrt(x^2 + y^2)
-    return @std.math.sqrt(p.x * p.x + p.y * p.y)
+distance_squared = (p: Point) f64 {
+    return p.x * p.x + p.y * p.y
 }
 
 add_points = (a: Point, b: Point) Point {
@@ -43,9 +42,9 @@ perimeter = (r: Rectangle) f64 {
 }
 
 contains = (r: Rectangle, p: Point) bool {
-    x_in = p.x >= r.origin.x and p.x <= r.origin.x + r.width
-    y_in = p.y >= r.origin.y and p.y <= r.origin.y + r.height
-    return x_in and y_in
+    x_in = p.x >= r.origin.x && p.x <= r.origin.x + r.width
+    y_in = p.y >= r.origin.y && p.y <= r.origin.y + r.height
+    return x_in && y_in
 }
 
 main = () i32 {
@@ -56,9 +55,9 @@ main = () i32 {
     // UFC: function call as method
     io.println("p1 = ${p1.to_string()}")
     io.println("p2 = ${p2.to_string()}")
-    io.println("Distance from origin: ${p1.distance()}")
+    io.println("Distance squared from origin: ${p1.distance_squared()}")
 
-    // Chaining via UFC
+    // UFC with multiple params
     p3 = p1.add_points(p2)
     io.println("p1 + p2 = ${p3.to_string()}")
 

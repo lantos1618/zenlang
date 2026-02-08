@@ -55,13 +55,13 @@ Spinlock.new = () Spinlock {
 
 Spinlock.lock = (self: MutPtr<Spinlock>) void {
     // Try to acquire (0 -> 1)
-    old ::= compiler.atomic_cas(cast(&self.val.state.ref(), Ptr<u64>), 0, 1)
+    old ::= compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), 0, 1)
     old == 0 ? { return }
 
     // Spin then wait
     i ::= 0
     i < 100 ? {
-        old = compiler.atomic_cas(cast(&self.val.state.ref(), Ptr<u64>), 0, 1)
+        old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), 0, 1)
         old == 0 ? { return }
         i = i + 1
     }
@@ -73,6 +73,6 @@ Spinlock.lock = (self: MutPtr<Spinlock>) void {
 }
 
 Spinlock.unlock = (self: MutPtr<Spinlock>) void {
-    compiler.atomic_store(cast(&self.val.state.ref(), Ptr<u64>), 0)
+    compiler.atomic_store(compiler.raw_ptr_cast(&self.val.state.ref()), 0)
     futex_wake_one(&self.val.state.ref())
 }

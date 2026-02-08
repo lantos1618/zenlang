@@ -99,7 +99,7 @@ fn parse_binary_expression_impl(
             let target_type = parser.parse_type()?;
             let type_name = target_type.to_string();
             left = Expression::FunctionCall {
-                name: "cast".to_string(),
+                name: "builtin.cast".to_string(),
                 type_args: vec![],
                 args: vec![left, Expression::Identifier(type_name)],
                 span: Some(parser.current_span.clone()),

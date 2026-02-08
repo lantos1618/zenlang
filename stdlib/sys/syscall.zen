@@ -60,6 +60,13 @@ SYS_VMSPLICE = 278
 SYS_FALLOCATE = 285
 SYS_PIPE2 = 293
 SYS_COPY_FILE_RANGE = 326
+SYS_GETDENTS64 = 217
+SYS_RENAMEAT2 = 316
+SYS_SYNC = 162
+SYS_SYNCFS = 306
+SYS_FCHOWNAT = 260
+SYS_UTIMENSAT = 280
+SYS_STATX = 332
 
 // ============================================================================
 // Memory Management
@@ -120,8 +127,13 @@ SYS_GETPRIORITY = 140
 SYS_SETPRIORITY = 141
 SYS_SCHED_SETSCHEDULER = 144
 SYS_SCHED_GETSCHEDULER = 145
+SYS_SCHED_SETPARAM = 142
+SYS_SCHED_GETPARAM = 143
 SYS_SCHED_SETAFFINITY = 203
 SYS_SCHED_GETAFFINITY = 204
+SYS_SCHED_GET_PRIORITY_MAX = 146
+SYS_SCHED_GET_PRIORITY_MIN = 147
+SYS_GETCPU = 309
 
 // ============================================================================
 // Time
@@ -158,6 +170,7 @@ SYS_GETSOCKOPT = 55
 SYS_ACCEPT4 = 288
 SYS_RECVMMSG = 299
 SYS_SENDMMSG = 307
+SYS_SENDFILE = 40
 
 // ============================================================================
 // I/O Multiplexing
@@ -207,6 +220,7 @@ SYS_SIGNALFD4 = 289
 // Random
 // ============================================================================
 SYS_GETRANDOM = 318
+SYS_SECCOMP = 317
 
 // ============================================================================
 // Miscellaneous
@@ -216,6 +230,7 @@ SYS_SYSINFO = 99
 SYS_GETRLIMIT = 97
 SYS_SETRLIMIT = 160
 SYS_GETRUSAGE = 98
+SYS_PRLIMIT64 = 302
 SYS_TIMES = 100
 SYS_IOCTL = 16
 SYS_UMASK = 95

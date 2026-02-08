@@ -4,20 +4,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-// ============================================================================
-// Linux x86-64 Syscall Numbers
-// ============================================================================
-
-SYS_MEMFD_CREATE = 319
-SYS_MMAP = 9
-SYS_MUNMAP = 11
-SYS_FTRUNCATE = 77
-SYS_CLOSE = 3
-SYS_FCNTL = 72
-SYS_WRITE = 1
-SYS_READ = 0
-SYS_LSEEK = 8
+{ SYS_MEMFD_CREATE, SYS_MMAP, SYS_MUNMAP, SYS_FTRUNCATE, SYS_CLOSE, SYS_FCNTL, SYS_WRITE, SYS_READ, SYS_LSEEK } = @std.sys.syscall
 
 // ============================================================================
 // memfd_create Flags

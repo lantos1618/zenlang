@@ -1,7 +1,7 @@
 // Pattern Matching in Zen
 // Zen uses the ? operator instead of if/else/match/switch keywords
 
-{ io } = @std
+{ io } = std
 
 // Simple enum
 Color: Red, Green, Blue
@@ -23,9 +23,9 @@ describe_color = (c: Color) StringLiteral {
 // Pattern matching with payload extraction
 area = (s: Shape) f64 {
     s ?
-        | .Circle(radius) { 3.14159 * radius * radius }
-        | .Rectangle(r) { r.width * r.height }
-        | .Triangle(t) { 0.5 * t.base * t.height }
+        | .Circle(radius) { return 3.14159 * radius * radius }
+        | .Rectangle(r) { return r.width * r.height }
+        | .Triangle(t) { return 0.5 * t.base * t.height }
 }
 
 // Conditional (boolean pattern matching)

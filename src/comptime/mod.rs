@@ -51,11 +51,15 @@ impl ComptimeInterpreter {
     }
 
     pub fn set_variable(&mut self, name: String, value: ComptimeValue) {
-        self.env.variables.borrow_mut().insert(name, value);
+        self.env.variables.borrow_mut().insert(name, (value, true));
     }
 
     pub fn get_variable(&self, name: &str) -> Option<ComptimeValue> {
-        self.env.variables.borrow().get(name).cloned()
+        self.env
+            .variables
+            .borrow()
+            .get(name)
+            .map(|(v, _)| v.clone())
     }
 
     /// Execute a closure in a child scope. The environment is always restored,
@@ -239,6 +243,14 @@ impl ComptimeInterpreter {
                 },
             },
         );
+
+        // Register "std" as an alias for "@std" so that both
+        // `{ meta } = @std` and `{ meta } = std` work in comptime code
+        if let Some(std_val) = self.modules.get("@std").cloned() {
+            self.modules.insert("std".to_string(), std_val.clone());
+            // Also make "std" available as a variable for expression evaluation
+            self.env.define("std".to_string(), std_val, false);
+        }
     }
 }
 
@@ -329,7 +341,9 @@ mod integration_tests {
         let std_val = interp.modules.get("@std").unwrap().clone();
         if let ComptimeValue::Struct { fields, .. } = std_val {
             if let Some(meta_val) = fields.get("meta") {
-                interp.env.define("meta".to_string(), meta_val.clone());
+                interp
+                    .env
+                    .define("meta".to_string(), meta_val.clone(), false);
             }
         }
         let meta_obj = interp.env.get("meta").unwrap();
@@ -351,7 +365,7 @@ mod integration_tests {
         let func_node = ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Declaration(
             program.declarations[0].clone(),
         )));
-        interp.env.define("func".to_string(), func_node);
+        interp.env.define("func".to_string(), func_node, false);
         let func_val = interp.env.get("func").unwrap();
         let name = interp
             .evaluate_member_access(func_val, "name", None)
@@ -368,7 +382,7 @@ mod integration_tests {
         };
         let node = ComptimeValue::ASTNode(Rc::new(ASTNodeValue::Expression(expr)));
         let mut interp = ComptimeInterpreter::new();
-        interp.env.define("expr".to_string(), node);
+        interp.env.define("expr".to_string(), node, false);
         let expr_val = interp.env.get("expr").unwrap();
         let op = interp
             .evaluate_member_access(expr_val.clone(), "op", None)
@@ -397,7 +411,7 @@ mod integration_tests {
             ComptimeValue::I32(2),
             ComptimeValue::I32(3),
         ]);
-        interp.env.define("arr".to_string(), arr);
+        interp.env.define("arr".to_string(), arr, false);
         let arr_val = interp.env.get("arr").unwrap();
         let len = interp
             .evaluate_method_call(arr_val, "len", &[], None)
@@ -440,7 +454,9 @@ mod integration_tests {
                 None,
             )
             .unwrap();
-        interp.env.define("program".to_string(), ast_node.clone());
+        interp
+            .env
+            .define("program".to_string(), ast_node.clone(), false);
 
         let decls = interp
             .evaluate_member_access(ast_node, "declarations", None)
@@ -562,7 +578,9 @@ mod integration_tests {
     #[test]
     fn test_loop_with_condition() {
         let mut interp = ComptimeInterpreter::new();
-        interp.env.define("i".to_string(), ComptimeValue::I32(0));
+        interp
+            .env
+            .define("i".to_string(), ComptimeValue::I32(0), true);
         let loop_stmt = Statement::Loop {
             kind: ast::LoopKind::Condition(Expression::BinaryOp {
                 left: Box::new(Expression::Identifier("i".to_string())),
@@ -588,7 +606,9 @@ mod integration_tests {
     #[test]
     fn test_loop_with_break() {
         let mut interp = ComptimeInterpreter::new();
-        interp.env.define("i".to_string(), ComptimeValue::I32(0));
+        interp
+            .env
+            .define("i".to_string(), ComptimeValue::I32(0), true);
         let loop_stmt = Statement::Loop {
             kind: ast::LoopKind::Infinite,
             label: None,
@@ -644,6 +664,7 @@ mod integration_tests {
                 ComptimeValue::I32(20),
                 ComptimeValue::I32(30),
             ]),
+            false,
         );
         let expr = Expression::ArrayIndex {
             array: Box::new(Expression::Identifier("arr".to_string())),
@@ -659,6 +680,7 @@ mod integration_tests {
         interp.env.define(
             "arr".to_string(),
             ComptimeValue::Array(vec![ComptimeValue::I32(1)]),
+            false,
         );
         let expr = Expression::ArrayIndex {
             array: Box::new(Expression::Identifier("arr".to_string())),
@@ -682,10 +704,14 @@ mod integration_tests {
     #[test]
     fn test_string_interpolation() {
         let mut interp = ComptimeInterpreter::new();
+        interp.env.define(
+            "name".to_string(),
+            ComptimeValue::String("Zen".to_string()),
+            false,
+        );
         interp
             .env
-            .define("name".to_string(), ComptimeValue::String("Zen".to_string()));
-        interp.env.define("ver".to_string(), ComptimeValue::I32(7));
+            .define("ver".to_string(), ComptimeValue::I32(7), false);
         let expr = Expression::StringInterpolation {
             parts: vec![
                 ast::StringPart::Interpolation(Expression::Identifier("name".to_string())),
@@ -700,10 +726,14 @@ mod integration_tests {
     #[test]
     fn test_string_building_with_loop() {
         let mut interp = ComptimeInterpreter::new();
+        interp.env.define(
+            "result".to_string(),
+            ComptimeValue::String("".to_string()),
+            true,
+        );
         interp
             .env
-            .define("result".to_string(), ComptimeValue::String("".to_string()));
-        interp.env.define("i".to_string(), ComptimeValue::I32(0));
+            .define("i".to_string(), ComptimeValue::I32(0), true);
         let loop_stmt = Statement::Loop {
             kind: ast::LoopKind::Condition(Expression::BinaryOp {
                 left: Box::new(Expression::Identifier("i".to_string())),
@@ -767,7 +797,7 @@ mod integration_tests {
                 None,
             )
             .unwrap();
-        interp.env.define("program".to_string(), ast_node);
+        interp.env.define("program".to_string(), ast_node, false);
         let prog = interp.env.get("program").unwrap();
         let func = interp
             .evaluate_method_call(
@@ -780,7 +810,7 @@ mod integration_tests {
         let vname = interp
             .evaluate_method_call(func, "variant_name", &[], None)
             .unwrap();
-        interp.env.define("vname".to_string(), vname);
+        interp.env.define("vname".to_string(), vname, false);
         let match_expr = Expression::QuestionMatch {
             scrutinee: Box::new(Expression::Identifier("vname".to_string())),
             arms: vec![

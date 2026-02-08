@@ -1,9 +1,9 @@
 // utils.zen - Example assertions and demo
 // Shows how to use stdlib modules
 
-{ io } = @std
-{ is_digit, is_alpha, is_whitespace } = @std.char
-{ abs, max } = @std.math.math
+{ io } = std
+{ is_digit, is_alpha, is_whitespace } = std.char
+{ abs, max } = std.math.math
 
 // ============================================================================
 // SIMPLE ASSERTIONS (see stdlib/testing for full test runner)
@@ -34,14 +34,14 @@ assert_false = (cond: bool, msg: StaticString) void {
 run_utils_demo = () void {
     io.println("=== STDLIB USAGE DEMO ===\n")
 
-    // Character utilities from @std.char
-    io.println("@std.char:")
+    // Character utilities from std.char
+    io.println("std.char:")
     io.println("  is_digit('5') = ${is_digit(53)}")
     io.println("  is_alpha('A') = ${is_alpha(65)}")
     io.println("  is_whitespace(' ') = ${is_whitespace(32)}")
 
-    // Math utilities from @std.math
-    io.println("\n@std.math:")
+    // Math utilities from std.math
+    io.println("\nstd.math:")
     io.println("  abs(-42) = ${abs(-42)}")
     io.println("  max(5, 10) = ${max(5, 10)}")
 

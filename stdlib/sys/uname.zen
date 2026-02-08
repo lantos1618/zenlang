@@ -3,13 +3,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-// Syscall numbers (Linux x86-64)
-SYS_UNAME = 63
-SYS_GETUID = 102
-SYS_GETGID = 104
-SYS_GETEUID = 107
-SYS_GETEGID = 108
+{ SYS_UNAME, SYS_GETUID, SYS_GETGID, SYS_GETEUID, SYS_GETEGID } = @std.sys.syscall
 
 SysError: { code: i32 }
 

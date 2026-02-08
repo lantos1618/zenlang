@@ -3,8 +3,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-SYS_GETRANDOM = 318
+{ SYS_GETRANDOM } = @std.sys.syscall
 
 GRND_NONBLOCK = 1
 GRND_RANDOM = 2
@@ -22,14 +21,14 @@ getrandom = (buf: Ptr<u8>, len: usize, flags: u32) Result<usize, RandomError> {
 // Get random u64
 random_u64 = () Result<u64, RandomError> {
     value: u64 = 0
-    getrandom(cast(&value.ref(), Ptr<u8>), 8, 0).raise()
+    getrandom(compiler.raw_ptr_cast(&value.ref()), 8, 0).raise()
     return Result.Ok(value)
 }
 
 // Get random u32
 random_u32 = () Result<u32, RandomError> {
     value: u32 = 0
-    getrandom(cast(&value.ref(), Ptr<u8>), 4, 0).raise()
+    getrandom(compiler.raw_ptr_cast(&value.ref()), 4, 0).raise()
     return Result.Ok(value)
 }
 

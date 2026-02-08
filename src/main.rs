@@ -4,9 +4,10 @@ use inkwell::targets::{CodeModel, FileType, RelocMode, Target, TargetMachine};
 use inkwell::OptimizationLevel;
 use std::env;
 use std::io::{self, BufRead, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use zen::build_system::BuildConfig;
 use zen::compiler::Compiler;
 use zen::error::{CompileError, Result};
 use zen::lexer::Lexer;
@@ -89,6 +90,9 @@ fn main() -> std::io::Result<()> {
         } else {
             list_symbols(&args[2], json_output)?;
         }
+    } else if args[1] == "build" {
+        let release = args.contains(&"--release".to_string());
+        build_project(release)?;
     } else if args.contains(&"-o".to_string()) {
         compile_file(&args)?;
     } else if args.len() == 2 {
@@ -107,6 +111,7 @@ fn print_usage() {
     println!("  zen                                    Start interactive REPL");
     println!("  zen <file.zen>                         Compile and run a Zen file");
     println!("  zen <file.zen> -o <output>             Compile to executable (output in target/)");
+    println!("  zen build [--release]                  Build project from build.zen");
     println!("  zen analyze <file.zen> [--json]        Full semantic analysis");
     println!("  zen check <file.zen> [--json]          Type-check and report ALL diagnostics");
     println!("  zen query type <file>:<line>:<col>     Type at position (supports member access)");
@@ -199,7 +204,8 @@ fn run_file(file_path: &str) -> std::io::Result<()> {
     })?;
 
     let context = Context::create();
-    let compiler = Compiler::new(&context);
+    let abs_path = std::fs::canonicalize(file_path).unwrap_or_else(|_| PathBuf::from(file_path));
+    let compiler = Compiler::with_source_file(&context, abs_path);
 
     let lexer = Lexer::new(&source);
     let mut parser = Parser::new(lexer);
@@ -309,7 +315,8 @@ fn compile_file(args: &[String]) -> std::io::Result<()> {
     })?;
 
     let context = Context::create();
-    let compiler = Compiler::new(&context);
+    let abs_path = std::fs::canonicalize(input_file).unwrap_or_else(|_| PathBuf::from(input_file));
+    let compiler = Compiler::with_source_file(&context, abs_path);
 
     // Parse the source
     let lexer = Lexer::new(&source);
@@ -371,7 +378,145 @@ fn compile_file(args: &[String]) -> std::io::Result<()> {
     // Clean up object file
     std::fs::remove_file(&obj_path).ok();
 
-    println!("✅ Successfully compiled to: {}", output_file);
+    println!("Successfully compiled to: {}", output_file);
+
+    Ok(())
+}
+
+/// `zen build [--release]` - Build project from build.zen
+fn build_project(release: bool) -> std::io::Result<()> {
+    let cwd = std::env::current_dir()?;
+    let build_zen = cwd.join("build.zen");
+
+    if !build_zen.exists() {
+        eprintln!("Error: No build.zen found in current directory");
+        eprintln!("Create a build.zen file to define your project.");
+        eprintln!();
+        eprintln!("Example build.zen:");
+        eprintln!("  std = @builtin.import_std()");
+        eprintln!();
+        eprintln!("  build = (b: std.build.Builder) void {{");
+        eprintln!("      b.add_executable({{ name: \"myapp\", root: \"src/main.zen\" }})");
+        eprintln!("  }}");
+        return Ok(());
+    }
+
+    let config = BuildConfig::discover(&build_zen)
+        .ok_or_else(|| io::Error::other("Failed to parse build.zen"))?;
+
+    if config.executables.is_empty() {
+        // If no explicit executables declared, look for main.zen or src/main.zen
+        let main_candidates = ["src/main.zen", "main.zen"];
+        let mut found_main = None;
+        for candidate in &main_candidates {
+            let path = cwd.join(candidate);
+            if path.exists() {
+                found_main = Some(path);
+                break;
+            }
+        }
+
+        if let Some(main_path) = found_main {
+            let project_name = cwd.file_name().and_then(|n| n.to_str()).unwrap_or("app");
+            println!("Building {} ...", project_name);
+            compile_single_target(&main_path.to_string_lossy(), project_name, release)?;
+        } else {
+            eprintln!("Error: No executable targets found in build.zen");
+            eprintln!("Add a main.zen or src/main.zen file, or declare executables in build.zen");
+        }
+    } else {
+        for target in &config.executables {
+            let root_path = config.project_root.join(&target.root);
+            if !root_path.exists() {
+                eprintln!(
+                    "Warning: Source file '{}' not found for target '{}'",
+                    target.root, target.name
+                );
+                continue;
+            }
+            println!("Building {} ...", target.name);
+            compile_single_target(&root_path.to_string_lossy(), &target.name, release)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Compile a single target to an executable in target/
+fn compile_single_target(
+    input_file: &str,
+    output_name: &str,
+    _release: bool,
+) -> std::io::Result<()> {
+    let output_file = format!("target/{}", output_name);
+
+    // Ensure target directory exists
+    std::fs::create_dir_all("target")
+        .map_err(|e| io::Error::other(format!("Failed to create target directory: {}", e)))?;
+
+    let source = std::fs::read_to_string(input_file).map_err(|e| {
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("Failed to read file: {}", e),
+        )
+    })?;
+
+    let context = Context::create();
+    let abs_path = std::fs::canonicalize(input_file).unwrap_or_else(|_| PathBuf::from(input_file));
+    let compiler = Compiler::with_source_file(&context, abs_path);
+
+    let lexer = Lexer::new(&source);
+    let mut parser = Parser::new(lexer);
+    let program = parser
+        .parse_program()
+        .map_err(|e| io::Error::other(format!("Parse error: {}", e)))?;
+
+    let module = compiler
+        .get_module(&program)
+        .map_err(|e| io::Error::other(format!("Compilation error: {}", e)))?;
+
+    // Get target machine
+    let target_triple = TargetMachine::get_default_triple();
+    let target = Target::from_triple(&target_triple)
+        .map_err(|e| io::Error::other(format!("Failed to get target: {}", e)))?;
+
+    let target_machine = target
+        .create_target_machine(
+            &target_triple,
+            "generic",
+            "",
+            OptimizationLevel::Default,
+            RelocMode::Default,
+            CodeModel::Default,
+        )
+        .ok_or_else(|| io::Error::other("Failed to create target machine"))?;
+
+    // Write object file
+    let obj_path = format!("{}.o", output_file);
+    target_machine
+        .write_to_file(&module, FileType::Object, Path::new(&obj_path))
+        .map_err(|e| io::Error::other(format!("Failed to write object file: {}", e)))?;
+
+    // Link
+    let mut cmd = Command::new("cc");
+    cmd.arg(&obj_path)
+        .arg("-o")
+        .arg(&output_file)
+        .arg("-no-pie")
+        .arg("-lm");
+
+    let status = cmd
+        .status()
+        .map_err(|e| io::Error::other(format!("Failed to link: {}", e)))?;
+
+    if !status.success() {
+        std::fs::remove_file(&obj_path).ok();
+        return Err(io::Error::other("Linking failed"));
+    }
+
+    std::fs::remove_file(&obj_path).ok();
+
+    println!("  -> {}", output_file);
 
     Ok(())
 }
@@ -393,6 +538,7 @@ fn analyze_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
 
     // Load imports
     let mut module_system = ModuleSystem::new();
+    module_system.set_package_map(BuildConfig::default_config().packages);
     for decl in &program.declarations {
         if let zen::ast::Declaration::ModuleImport { module_path, .. } = decl {
             let _ = module_system.load_module(module_path);
@@ -702,6 +848,7 @@ fn check_file(file_path: &str, json_output: bool) -> std::io::Result<()> {
 
     // Load imports
     let mut module_system = ModuleSystem::new();
+    module_system.set_package_map(BuildConfig::default_config().packages);
     for decl in &program.declarations {
         if let zen::ast::Declaration::ModuleImport { module_path, .. } = decl {
             let _ = module_system.load_module(module_path);
@@ -828,6 +975,7 @@ fn query_type(location: &str) -> std::io::Result<()> {
 
     // Load imports
     let mut module_system = ModuleSystem::new();
+    module_system.set_package_map(BuildConfig::default_config().packages);
     for decl in &program.declarations {
         if let zen::ast::Declaration::ModuleImport { module_path, .. } = decl {
             let _ = module_system.load_module(module_path);
@@ -1555,6 +1703,7 @@ fn query_methods(type_name: &str, file_path: &str) -> std::io::Result<()> {
 
     // Load imports
     let mut module_system = ModuleSystem::new();
+    module_system.set_package_map(BuildConfig::default_config().packages);
     for decl in &program.declarations {
         if let zen::ast::Declaration::ModuleImport { module_path, .. } = decl {
             let _ = module_system.load_module(module_path);

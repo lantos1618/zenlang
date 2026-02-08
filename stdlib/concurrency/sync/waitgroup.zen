@@ -35,13 +35,13 @@ WaitGroup.new = () WaitGroup {
 WaitGroup.add = (self: MutPtr<WaitGroup>, delta: i32) void {
     // Add to upper 32 bits
     delta64 = (cast(delta, i64)) << 32
-    compiler.atomic_add(cast(&self.val.counter.ref(), Ptr<u64>), cast(delta64, u64))
+    compiler.atomic_add(compiler.raw_ptr_cast(&self.val.counter.ref()), cast(delta64, u64))
 }
 
 // Mark one task as done (equivalent to add(-1))
 WaitGroup.done = (self: MutPtr<WaitGroup>) void {
     // Decrement upper 32 bits
-    old = cast(compiler.atomic_sub(cast(&self.val.counter.ref(), Ptr<u64>), cast(cast(1, i64) << 32, u64)), i64)
+    old = cast(compiler.atomic_sub(compiler.raw_ptr_cast(&self.val.counter.ref()), cast(cast(1, i64) << 32, u64)), i64)
 
     // Extract counter and waiters
     counter = cast(old >> 32, i32) - 1
@@ -57,19 +57,19 @@ WaitGroup.done = (self: MutPtr<WaitGroup>) void {
 
 // Wait until counter reaches zero
 WaitGroup.wait = (self: MutPtr<WaitGroup>) void {
-    val = cast(compiler.atomic_load(cast(&self.val.counter.ref(), Ptr<u64>)), i64)
+    val = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.counter.ref())), i64)
     counter ::= cast(val >> 32, i32)
 
     // Fast path: already done
     counter == 0 ? { return }
 
     // Increment waiter count (lower 32 bits)
-    compiler.atomic_add(cast(&self.val.counter.ref(), Ptr<u64>), 1)
+    compiler.atomic_add(compiler.raw_ptr_cast(&self.val.counter.ref()), 1)
 
     // Wait loop
     done ::= false
     done == false ? {
-        raw_val = cast(compiler.atomic_load(cast(&self.val.counter.ref(), Ptr<u64>)), i64)
+        raw_val = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.counter.ref())), i64)
         counter = cast(raw_val >> 32, i32)
 
         counter == 0 ? { done = true }
@@ -79,12 +79,12 @@ WaitGroup.wait = (self: MutPtr<WaitGroup>) void {
     }
 
     // Decrement waiter count
-    compiler.atomic_sub(cast(&self.val.counter.ref(), Ptr<u64>), 1)
+    compiler.atomic_sub(compiler.raw_ptr_cast(&self.val.counter.ref()), 1)
 }
 
 // Get current counter value (for debugging)
 WaitGroup.counter = (self: Ptr<WaitGroup>) i32 {
-    val = cast(compiler.atomic_load(cast(&self.val.counter.ref(), Ptr<u64>)), i64)
+    val = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.counter.ref())), i64)
     return cast(val >> 32, i32)
 }
 
@@ -111,7 +111,7 @@ Latch.new = (count: i32) Latch {
 
 // Count down by one
 Latch.count_down = (self: MutPtr<Latch>) void {
-    old = cast(compiler.atomic_sub(cast(&self.val.count.ref(), Ptr<u64>), 1), i32) - 1
+    old = cast(compiler.atomic_sub(compiler.raw_ptr_cast(&self.val.count.ref()), 1), i32) - 1
 
     // If we hit zero, wake all waiters
     old == 0 ? {
@@ -121,7 +121,7 @@ Latch.count_down = (self: MutPtr<Latch>) void {
 
 // Wait until count reaches zero
 Latch.wait = (self: MutPtr<Latch>) void {
-    count ::= cast(compiler.atomic_load(cast(&self.val.count.ref(), Ptr<u64>)), i32)
+    count ::= cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
 
     // Fast path
     count <= 0 ? { return }
@@ -129,7 +129,7 @@ Latch.wait = (self: MutPtr<Latch>) void {
     // Wait loop
     count > 0 ? {
         futex_wait(&self.val.count.ref(), count)
-        count = cast(compiler.atomic_load(cast(&self.val.count.ref(), Ptr<u64>)), i32)
+        count = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
     }
 }
 
@@ -141,7 +141,7 @@ Latch.arrive_and_wait = (self: MutPtr<Latch>) void {
 
 // Check if latch has triggered
 Latch.is_ready = (self: Ptr<Latch>) bool {
-    count = cast(compiler.atomic_load(cast(&self.val.count.ref(), Ptr<u64>)), i32)
+    count = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
     return count <= 0
 }
 
@@ -159,24 +159,24 @@ CountDownEvent.new = (count: i32) CountDownEvent {
 }
 
 CountDownEvent.signal = (self: MutPtr<CountDownEvent>) void {
-    old = cast(compiler.atomic_sub(cast(&self.val.current.ref(), Ptr<u64>), 1), i32) - 1
+    old = cast(compiler.atomic_sub(compiler.raw_ptr_cast(&self.val.current.ref()), 1), i32) - 1
     old == 0 ? {
         futex_wake_all(&self.val.current.ref())
     }
 }
 
 CountDownEvent.wait = (self: MutPtr<CountDownEvent>) void {
-    count = cast(compiler.atomic_load(cast(&self.val.current.ref(), Ptr<u64>)), i32)
+    count = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.current.ref())), i32)
     count > 0 ? {
         futex_wait(&self.val.current.ref(), count)
     }
 }
 
 CountDownEvent.reset = (self: MutPtr<CountDownEvent>) void {
-    compiler.atomic_store(cast(&self.val.current.ref(), Ptr<u64>), cast(self.val.initial, u64))
+    compiler.atomic_store(compiler.raw_ptr_cast(&self.val.current.ref()), cast(self.val.initial, u64))
 }
 
 CountDownEvent.is_set = (self: Ptr<CountDownEvent>) bool {
-    count = cast(compiler.atomic_load(cast(&self.val.current.ref(), Ptr<u64>)), i32)
+    count = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.current.ref())), i32)
     return count <= 0
 }

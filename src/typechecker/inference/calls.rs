@@ -120,7 +120,7 @@ pub fn infer_function_call_type(
         return Ok(AstType::Bool);
     }
 
-    if name == "cast" {
+    if name == "cast" || name == "builtin.cast" {
         return infer_cast_type(
             args,
             call_span.clone().or_else(|| checker.get_current_span()),
@@ -345,7 +345,11 @@ fn try_resolve_instance_method(
     if let Some(func_type) = checker.get_function_signatures().get(method) {
         if !func_type.params.is_empty() {
             let (_, first_param_type) = &func_type.params[0];
-            if first_param_type == effective_type || first_param_type == object_type {
+            if first_param_type == effective_type
+                || first_param_type == object_type
+                || types_match_by_name(first_param_type, effective_type)
+                || types_match_by_name(first_param_type, object_type)
+            {
                 return Some(func_type.return_type.clone());
             }
         }
@@ -475,6 +479,26 @@ fn try_resolve_instance_method(
 ///
 /// Handles both `AstType::Struct { name }` and `AstType::Generic { name }` — the old code
 /// only checked Generic, silently missing Struct types.
+/// Check if two types refer to the same named type, even when represented
+/// differently (e.g., Generic { name: "Point" } vs Struct { name: "Point" }).
+/// The parser creates Generic for type annotations while the typechecker
+/// creates Struct for struct literal inference — this bridges that gap.
+fn types_match_by_name(a: &AstType, b: &AstType) -> bool {
+    let name_a = match a {
+        AstType::Struct { name, .. }
+        | AstType::Generic { name, .. }
+        | AstType::Enum { name, .. } => Some(name.as_str()),
+        _ => None,
+    };
+    let name_b = match b {
+        AstType::Struct { name, .. }
+        | AstType::Generic { name, .. }
+        | AstType::Enum { name, .. } => Some(name.as_str()),
+        _ => None,
+    };
+    name_a.is_some() && name_a == name_b
+}
+
 fn try_resolve_fn_ptr_field(
     checker: &TypeChecker,
     effective_type: &AstType,

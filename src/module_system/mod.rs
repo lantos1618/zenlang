@@ -1,6 +1,7 @@
 pub mod resolver;
 
 use crate::ast::{Declaration, Program};
+use crate::build_system::{PackageMap, PackageSource};
 use crate::error::CompileError;
 use crate::parser::Parser;
 use std::collections::HashMap;
@@ -42,6 +43,10 @@ pub struct ModuleSystem {
     cwd: PathBuf,
     /// Monotonic counter for insertion ordering (used for eviction)
     insertion_counter: u64,
+    /// Stack of modules currently being loaded (for circular import detection)
+    loading_stack: Vec<String>,
+    /// Package map from build.zen (maps package names to sources)
+    package_map: Option<PackageMap>,
 }
 
 impl Default for ModuleSystem {
@@ -112,7 +117,14 @@ impl ModuleSystem {
             search_paths,
             cwd,
             insertion_counter: 0,
+            loading_stack: Vec::new(),
+            package_map: None,
         }
+    }
+
+    /// Set the package map (from build.zen discovery)
+    pub fn set_package_map(&mut self, package_map: PackageMap) {
+        self.package_map = Some(package_map);
     }
 
     /// Add a search path for modules
@@ -123,6 +135,64 @@ impl ModuleSystem {
 
     /// Resolve and load a module, using cached version if content unchanged
     pub fn load_module(&mut self, module_path: &str) -> Result<&Program, CompileError> {
+        // Check for circular imports: if this module is already being loaded
+        // up the call stack, we have a cycle
+        if self.loading_stack.contains(&module_path.to_string()) {
+            return Err(CompileError::CyclicDependency(
+                format!("circular import detected: {}", module_path),
+                None,
+            ));
+        }
+
+        // Check PackageMap: resolve package-prefixed paths like "std.io"
+        // This also handles paths like "http.server" from build.zen
+        if let Some(ref package_map) = self.package_map.clone() {
+            if let Some((_pkg_name, source, rest)) = package_map.resolve(module_path) {
+                match source {
+                    PackageSource::Stdlib => {
+                        // Rewrite to @std form for existing resolution logic
+                        let std_path = if rest.is_empty() {
+                            "@std".to_string()
+                        } else {
+                            format!("@std.{}", rest)
+                        };
+                        // Avoid infinite recursion: only redirect if the path actually changed
+                        if std_path != module_path {
+                            return self.load_module(&std_path);
+                        }
+                    }
+                    PackageSource::Local(base_path) => {
+                        // Resolve local package: rest becomes a path relative to base_path
+                        if !rest.is_empty() {
+                            let relative = rest.replace('.', "/") + ".zen";
+                            let file_path = base_path.join(&relative);
+                            if file_path.exists() {
+                                return self.load_file_module(module_path, &file_path);
+                            }
+                            // Try folder-name-as-index pattern
+                            let parts: Vec<&str> = rest.split('.').collect();
+                            if let Some(last) = parts.last() {
+                                let dir_path: PathBuf =
+                                    parts.iter().fold(base_path.clone(), |p, part| p.join(part));
+                                let index_path = dir_path.join(format!("{}.zen", last));
+                                if index_path.exists() {
+                                    return self.load_file_module(module_path, &index_path);
+                                }
+                            }
+                        }
+                    }
+                    PackageSource::Remote { .. } => {
+                        // Future: resolve remote packages
+                        // For now, return an error
+                        return Err(CompileError::ImportError(
+                            format!("Remote packages not yet supported: {}", module_path),
+                            None,
+                        ));
+                    }
+                }
+            }
+        }
+
         // Handle @std and std. modules - try to load actual stdlib files
         if module_path.starts_with("@std") || module_path.starts_with("std.") {
             let path_str = module_path
@@ -210,16 +280,22 @@ impl ModuleSystem {
                         )
                     })?;
 
-                    for decl in &program.declarations {
-                        if let Declaration::ModuleImport {
-                            alias: _,
-                            module_path: import_path,
-                            ..
-                        } = decl
-                        {
-                            self.load_module(import_path)?;
+                    self.loading_stack.push(module_path.to_string());
+                    let result: Result<(), CompileError> = (|| {
+                        for decl in &program.declarations {
+                            if let Declaration::ModuleImport {
+                                alias: _,
+                                module_path: import_path,
+                                ..
+                            } = decl
+                            {
+                                self.load_module(import_path)?;
+                            }
                         }
-                    }
+                        Ok(())
+                    })();
+                    self.loading_stack.pop();
+                    result?;
 
                     self.insert_cached(module_path.to_string(), program, new_hash);
                 }
@@ -267,18 +343,73 @@ impl ModuleSystem {
             })?;
 
             let processed_program = program.clone();
-            for decl in &program.declarations {
-                if let Declaration::ModuleImport {
-                    alias: _,
-                    module_path: import_path,
-                    ..
-                } = decl
-                {
-                    self.load_module(import_path)?;
+            self.loading_stack.push(module_path.to_string());
+            let result: Result<(), CompileError> = (|| {
+                for decl in &program.declarations {
+                    if let Declaration::ModuleImport {
+                        alias: _,
+                        module_path: import_path,
+                        ..
+                    } = decl
+                    {
+                        self.load_module(import_path)?;
+                    }
                 }
-            }
+                Ok(())
+            })();
+            self.loading_stack.pop();
+            result?;
 
             self.insert_cached(module_path.to_string(), processed_program, new_hash);
+        }
+        Ok(&self.modules[module_path].program)
+    }
+
+    /// Load a module from a specific file path (used by PackageMap resolution)
+    fn load_file_module(
+        &mut self,
+        module_path: &str,
+        file_path: &PathBuf,
+    ) -> Result<&Program, CompileError> {
+        let source = std::fs::read_to_string(file_path).map_err(|e| {
+            CompileError::FileNotFound(file_path.display().to_string(), Some(e.to_string()))
+        })?;
+
+        let new_hash = hash_content(&source);
+        let cache_valid = self
+            .modules
+            .get(module_path)
+            .map(|c| c.content_hash == new_hash)
+            .unwrap_or(false);
+
+        if !cache_valid {
+            let lexer = crate::lexer::Lexer::new(&source);
+            let mut parser = Parser::new(lexer);
+            let program = parser.parse_program().map_err(|e| {
+                CompileError::ParseError(
+                    format!("Failed to parse module {}: {:?}", module_path, e),
+                    None,
+                )
+            })?;
+
+            self.loading_stack.push(module_path.to_string());
+            let result: Result<(), CompileError> = (|| {
+                for decl in &program.declarations {
+                    if let Declaration::ModuleImport {
+                        alias: _,
+                        module_path: import_path,
+                        ..
+                    } = decl
+                    {
+                        self.load_module(import_path)?;
+                    }
+                }
+                Ok(())
+            })();
+            self.loading_stack.pop();
+            result?;
+
+            self.insert_cached(module_path.to_string(), program, new_hash);
         }
         Ok(&self.modules[module_path].program)
     }
@@ -295,7 +426,17 @@ impl ModuleSystem {
                 return Ok(full_path);
             }
 
-            // Also try as a directory with mod.zen
+            // Folder-name-as-index: foo.bar -> foo/bar/bar.zen
+            let parts: Vec<&str> = module_path.split('.').collect();
+            if let Some(last_part) = parts.last() {
+                let dir_path = search_path.join(module_path.replace('.', "/"));
+                let index_path = dir_path.join(format!("{}.zen", last_part));
+                if index_path.exists() {
+                    return Ok(index_path);
+                }
+            }
+
+            // Also try as a directory with mod.zen (legacy fallback)
             let mod_path = search_path
                 .join(module_path.replace('.', "/"))
                 .join("mod.zen");
@@ -380,12 +521,17 @@ impl ModuleSystem {
                 return Some(file_path);
             }
 
-            if path_parts.len() == 1 {
-                let alt_path = search_path
-                    .join(path_parts[0])
-                    .join(format!("{}.zen", path_parts[0]));
-                if alt_path.exists() {
-                    return Some(alt_path);
+            // Folder-name-as-index pattern: concurrency/async/async.zen
+            // Works for any depth: @std.compiler -> compiler/compiler.zen
+            //                      @std.concurrency.async -> concurrency/async/async.zen
+            if let Some(last_part) = path_parts.last() {
+                let mut dir_path = search_path.clone();
+                for part in path_parts {
+                    dir_path = dir_path.join(part);
+                }
+                let index_path = dir_path.join(format!("{}.zen", last_part));
+                if index_path.exists() {
+                    return Some(index_path);
                 }
             }
         }

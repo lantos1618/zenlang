@@ -3,9 +3,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-// Syscall number (Linux x86-64)
-SYS_POLL = 7
+{ SYS_POLL } = @std.sys.syscall
 
 // Poll events
 POLLIN = 1

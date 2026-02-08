@@ -22,10 +22,8 @@ impl ComptimeInterpreter {
             Expression::String(v) => Ok(ComptimeValue::String(v.clone())),
 
             Expression::Identifier(name) => {
-                if name.starts_with("@") {
-                    if let Some(module) = self.modules.get(name) {
-                        return Ok(module.clone());
-                    }
+                if let Some(module) = self.modules.get(name.as_str()) {
+                    return Ok(module.clone());
                 }
 
                 self.env.get(name).ok_or_else(|| {
@@ -272,7 +270,7 @@ impl ComptimeInterpreter {
             if let Some(bindings) = self.match_pattern(&scrutinee, &arm.pattern)? {
                 let define_bindings = |interp: &mut Self| {
                     for (name, val) in &bindings {
-                        interp.env.define(name.clone(), val.clone());
+                        interp.env.define(name.clone(), val.clone(), false);
                     }
                 };
 
@@ -422,7 +420,7 @@ impl ComptimeInterpreter {
                 if let Some(bindings) = self.match_pattern(value, pattern)? {
                     let guard_result = self.with_scope(|interp| {
                         for (name, val) in &bindings {
-                            interp.env.define(name.clone(), val.clone());
+                            interp.env.define(name.clone(), val.clone(), false);
                         }
                         interp.evaluate_expression(condition, None)
                     })?;

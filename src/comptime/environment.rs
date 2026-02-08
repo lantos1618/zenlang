@@ -9,7 +9,7 @@ use super::ComptimeValue;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    pub(crate) variables: Rc<RefCell<HashMap<String, ComptimeValue>>>,
+    pub(crate) variables: Rc<RefCell<HashMap<String, (ComptimeValue, bool)>>>,
     parent: Option<Box<Environment>>,
 }
 
@@ -34,15 +34,17 @@ impl Environment {
         }
     }
 
-    pub fn define(&self, name: String, value: ComptimeValue) {
-        self.variables.borrow_mut().insert(name, value);
+    pub fn define(&self, name: String, value: ComptimeValue, is_mutable: bool) {
+        self.variables
+            .borrow_mut()
+            .insert(name, (value, is_mutable));
     }
 
     pub fn get(&self, name: &str) -> Option<ComptimeValue> {
         self.variables
             .borrow()
             .get(name)
-            .cloned()
+            .map(|(value, _)| value.clone())
             .or_else(|| self.parent.as_ref()?.get(name))
     }
 
@@ -52,16 +54,29 @@ impl Environment {
         value: ComptimeValue,
         span: Option<crate::error::Span>,
     ) -> Result<()> {
-        if self.variables.borrow().contains_key(name) {
-            self.variables.borrow_mut().insert(name.to_string(), value);
+        let vars = self.variables.borrow();
+        if let Some((_, is_mutable)) = vars.get(name) {
+            if !is_mutable {
+                return Err(CompileError::ComptimeError(
+                    format!("Cannot assign to immutable variable '{}'", name),
+                    span,
+                ));
+            }
+            drop(vars);
+            self.variables
+                .borrow_mut()
+                .insert(name.to_string(), (value, true));
             Ok(())
-        } else if let Some(parent) = &self.parent {
-            parent.set(name, value, span)
         } else {
-            Err(CompileError::ComptimeError(
-                format!("Undefined variable: {}", name),
-                span,
-            ))
+            drop(vars);
+            if let Some(parent) = &self.parent {
+                parent.set(name, value, span)
+            } else {
+                Err(CompileError::ComptimeError(
+                    format!("Undefined variable: {}", name),
+                    span,
+                ))
+            }
         }
     }
 }

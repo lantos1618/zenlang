@@ -1,7 +1,7 @@
 // Variables and Types in Zen
 // 6 variable declaration forms, explicit pointer types, no null
 
-{ io } = @std
+{ io } = std
 
 main = () i32 {
     // === Variable Declaration Forms ===
@@ -29,16 +29,16 @@ main = () i32 {
     // === Numeric Types ===
 
     // Signed integers
-    small: i8 = 127
+    small = cast(127, i8)
     medium: i32 = 2147483647
     big: i64 = 9223372036854775807
 
     // Unsigned integers
-    byte: u8 = 255
-    word: u32 = 4294967295
+    byte = cast(255, u8)
+    word = cast(4294967295, u32)
 
     // Floating point
-    single: f32 = 3.14
+    single = cast(3.14, f32)
     double: f64 = 3.14159265358979
 
     io.println("i8 max: ${small}")

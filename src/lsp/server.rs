@@ -626,11 +626,15 @@ impl ZenLanguageServer {
         result_tx: Sender<AnalysisResult>,
     ) {
         use crate::ast::Declaration;
+        use crate::build_system::BuildConfig;
         use crate::module_system::ModuleSystem;
         use crate::typechecker::TypeChecker;
 
         // Persisted across analysis runs — modules are cache-invalidated by content hash
         let mut module_system = ModuleSystem::new();
+
+        // Set up default PackageMap so `std.io` imports work in LSP
+        module_system.set_package_map(BuildConfig::default_config().packages);
         // Track last-analyzed content hash per URI to skip redundant TypeChecker runs
         let mut last_analyzed_hash: std::collections::HashMap<Url, u64> =
             std::collections::HashMap::new();

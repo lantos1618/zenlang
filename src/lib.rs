@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod build_system;
 pub mod codegen;
 pub mod compiler;
 pub mod comptime;

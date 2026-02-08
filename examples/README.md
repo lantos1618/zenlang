@@ -20,9 +20,9 @@ Foreign Function Interface demonstration - calling C from Zen.
 
 ### demo_project/
 Complete multi-file project demonstrating:
-- Build system using `@std.build`
-- Standard library imports (`@std.char`, `@std.math`)
-- Test framework using `@std.testing.runner`
+- Build system using `std.build`
+- Standard library imports (`std.char`, `std.math`)
+- Test framework using `std.testing.runner`
 - Structs, enums, pattern matching, UFC
 - Practical project organization
 

@@ -6,22 +6,7 @@
 { Result } = @std.core.result
 { Allocator } = @std.memory.allocator
 { String } = @std.collections.string
-
-// ============================================================================
-// Linux x86-64 Syscall Numbers
-// ============================================================================
-
-SYS_SOCKET = 41
-SYS_CONNECT = 42
-SYS_ACCEPT = 43
-SYS_SENDTO = 44
-SYS_RECVFROM = 45
-SYS_SHUTDOWN = 48
-SYS_BIND = 49
-SYS_LISTEN = 50
-SYS_SOCKETPAIR = 53
-SYS_CLOSE = 3
-SYS_UNLINK = 87
+{ SYS_SOCKET, SYS_CONNECT, SYS_ACCEPT, SYS_SENDTO, SYS_RECVFROM, SYS_SHUTDOWN, SYS_BIND, SYS_LISTEN, SYS_SOCKETPAIR, SYS_CLOSE, SYS_UNLINK } = @std.sys.syscall
 
 // ============================================================================
 // Constants

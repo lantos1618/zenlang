@@ -3,12 +3,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-// Syscall numbers (Linux x86-64)
-SYS_RT_SIGACTION = 13
-SYS_RT_SIGPROCMASK = 14
-SYS_KILL = 62
-SYS_GETPID = 39
+{ SYS_RT_SIGACTION, SYS_RT_SIGPROCMASK, SYS_KILL, SYS_GETPID } = @std.sys.syscall
 
 // Signals
 SIGHUP = 1

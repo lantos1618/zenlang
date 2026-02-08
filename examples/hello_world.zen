@@ -1,6 +1,6 @@
 // Hello World in Zen
 
-{ io } = @std
+{ io } = std
 
 main = () i32 {
     io.println("Hello, World!")

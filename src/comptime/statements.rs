@@ -32,6 +32,7 @@ impl ComptimeInterpreter {
             Statement::VariableDeclaration {
                 name,
                 initializer,
+                is_mutable,
                 span,
                 ..
             } => {
@@ -39,7 +40,7 @@ impl ComptimeInterpreter {
                     let value = self
                         .evaluate_expression(init, span.clone())
                         .map_err(ComptimeSignal::Error)?;
-                    self.env.define(name.clone(), value);
+                    self.env.define(name.clone(), value, *is_mutable);
                 }
                 Ok(None)
             }
@@ -83,7 +84,7 @@ impl ComptimeInterpreter {
                 if let ComptimeValue::Struct { fields, .. } = source_val {
                     for name in names {
                         if let Some(val) = fields.get(name) {
-                            self.env.define(name.clone(), val.clone());
+                            self.env.define(name.clone(), val.clone(), false);
                         } else {
                             return Err(ComptimeSignal::Error(CompileError::ComptimeError(
                                 format!("Module has no member '{}'", name),
@@ -289,7 +290,7 @@ impl ComptimeInterpreter {
 
             for (param, arg) in params.iter().zip(args) {
                 let val = self.evaluate_expression(arg, span.clone())?;
-                func_env.define(param.clone(), val);
+                func_env.define(param.clone(), val, false);
             }
 
             let saved_env = std::mem::replace(&mut self.env, func_env);

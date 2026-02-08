@@ -29,7 +29,7 @@ Once.new = () Once {
 
 // Check if initialization has completed
 Once.is_completed = (self: Ptr<Once>) bool {
-    state = cast(compiler.atomic_load(cast(&self.val.state.ref(), Ptr<u64>)), i32)
+    state = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.state.ref())), i32)
     return state == ONCE_COMPLETE
 }
 
@@ -45,11 +45,11 @@ Once.is_completed = (self: Ptr<Once>) bool {
 // Returns true if this call should perform initialization
 Once.call_once = (self: MutPtr<Once>) bool {
     // Fast path: already complete
-    state = cast(compiler.atomic_load(cast(&self.val.state.ref(), Ptr<u64>)), i32)
+    state = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.state.ref())), i32)
     state == ONCE_COMPLETE ? { return false }
 
     // Try to become the initializer
-    old = compiler.atomic_cas(cast(&self.val.state.ref(), Ptr<u64>), ONCE_INCOMPLETE, ONCE_RUNNING)
+    old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), ONCE_INCOMPLETE, ONCE_RUNNING)
 
     // We won the race - we are the initializer
     old == ONCE_INCOMPLETE ? { return true }
@@ -64,13 +64,13 @@ Once.call_once = (self: MutPtr<Once>) bool {
 
 // Mark initialization as complete (must be called by initializer)
 Once.complete = (self: MutPtr<Once>) void {
-    compiler.atomic_store(cast(&self.val.state.ref(), Ptr<u64>), ONCE_COMPLETE)
+    compiler.atomic_store(compiler.raw_ptr_cast(&self.val.state.ref()), ONCE_COMPLETE)
     futex_wake_all(&self.val.state.ref())
 }
 
 // Wait for another thread to complete initialization
 Once.wait_for_completion = (self: MutPtr<Once>) void {
-    state = cast(compiler.atomic_load(cast(&self.val.state.ref(), Ptr<u64>)), i32)
+    state = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.state.ref())), i32)
     state == ONCE_RUNNING ? {
         futex_wait(&self.val.state.ref(), ONCE_RUNNING)
     }

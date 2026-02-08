@@ -6,8 +6,8 @@
 // Note: For higher-level FFI with Result types, see stdlib/ffi/ffi.zen
 // (requires additional compiler work for struct/Result integration)
 
-{ io } = @std
-{ compiler } = @std
+{ io } = std
+{ compiler } = std
 
 main = () i32 {
     io.println("=== FFI Demo: Dynamic Library Loading ===")

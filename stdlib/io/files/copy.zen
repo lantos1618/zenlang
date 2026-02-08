@@ -5,13 +5,7 @@
 { compiler } = @std
 { Result } = @std.core.result
 { Allocator } = @std.memory.allocator
-
-// ============================================================================
-// Syscall Numbers (x86-64)
-// ============================================================================
-
-SYS_SENDFILE = 40
-SYS_COPY_FILE_RANGE = 326
+{ SYS_SENDFILE, SYS_COPY_FILE_RANGE, SYS_READ, SYS_WRITE } = @std.sys.syscall
 
 // ============================================================================
 // copy_file_range - Kernel-space copy between files
@@ -112,9 +106,6 @@ sendfile_all = (socket_fd: i32, file_fd: i32, len: usize) Result<usize, i32> {
 // Fallback Copy (user-space buffer)
 // ============================================================================
 // For when copy_file_range/sendfile aren't available
-
-SYS_READ = 0
-SYS_WRITE = 1
 
 // Copy between fds using user-space buffer
 copy_fd_buffered = (src_fd: i32, dst_fd: i32, buf: i64, buf_size: usize) Result<usize, i32> {

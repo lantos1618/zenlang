@@ -4,16 +4,7 @@
 
 { compiler } = @std
 { Result } = @std.core.result
-
-// ============================================================================
-// Syscall Numbers (x86-64)
-// ============================================================================
-
-SYS_STAT = 4
-SYS_FSTAT = 5
-SYS_LSTAT = 6
-SYS_FSTATAT = 262
-SYS_STATX = 332
+{ SYS_STAT, SYS_FSTAT, SYS_LSTAT, SYS_FSTATAT, SYS_STATX } = @std.sys.syscall
 
 // ============================================================================
 // Stat Structure (matches Linux struct stat for x86-64)
@@ -156,7 +147,7 @@ stat = (path_ptr: i64) Result<Stat, i32> {
         st_ctime: 0, st_ctime_nsec: 0
     }
 
-    result = compiler.syscall2(SYS_STAT, path_ptr, compiler.ptr_to_int(cast(&buf.ref(), RawPtr<u8>)))
+    result = compiler.syscall2(SYS_STAT, path_ptr, compiler.ptr_to_int(compiler.raw_ptr_cast(&buf.ref())))
     result < 0 ? { return Result.Err(cast(result, i32)) }
 
     return Result.Ok(buf)
@@ -173,7 +164,7 @@ fstat = (fd: i32) Result<Stat, i32> {
         st_ctime: 0, st_ctime_nsec: 0
     }
 
-    result = compiler.syscall2(SYS_FSTAT, fd, compiler.ptr_to_int(cast(&buf.ref(), RawPtr<u8>)))
+    result = compiler.syscall2(SYS_FSTAT, fd, compiler.ptr_to_int(compiler.raw_ptr_cast(&buf.ref())))
     result < 0 ? { return Result.Err(cast(result, i32)) }
 
     return Result.Ok(buf)
@@ -190,7 +181,7 @@ lstat = (path_ptr: i64) Result<Stat, i32> {
         st_ctime: 0, st_ctime_nsec: 0
     }
 
-    result = compiler.syscall2(SYS_LSTAT, path_ptr, compiler.ptr_to_int(cast(&buf.ref(), RawPtr<u8>)))
+    result = compiler.syscall2(SYS_LSTAT, path_ptr, compiler.ptr_to_int(compiler.raw_ptr_cast(&buf.ref())))
     result < 0 ? { return Result.Err(cast(result, i32)) }
 
     return Result.Ok(buf)
