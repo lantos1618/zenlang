@@ -3,7 +3,9 @@
 // Uses compile-time generics with Vec<T>
 
 { compiler } = @std
-{ Ptr, Option } = @std.core
+{ Ptr } = @std.core.ptr
+{ Option } = @std.core.option
+{ Vec } = @std.collections.vec
 { Allocator } = @std.memory.allocator
 
 // Queue<T> - implemented using Vec<T> internally with head/tail indices

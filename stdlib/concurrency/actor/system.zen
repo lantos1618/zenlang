@@ -7,7 +7,7 @@
 { Option } = @std.core.option
 { Allocator } = @std.memory.allocator
 { Mutex } = @std.concurrency.sync.mutex
-{ AtomicI32, AtomicI64 } = @std.concurrency.primitives.atomic
+{ Atomic } = @std.concurrency.primitives.atomic
 { HashMap } = @std.collections.hashmap
 { Thread, ThreadHandle, thread_exit } = @std.concurrency.sync.thread
 { Actor, ActorRef, ACTOR_RUNNING, ACTOR_STOPPED } = @std.concurrency.actor.actor
@@ -21,8 +21,8 @@
 
 ActorSystem: {
     name: i64,           // Pointer to name string
-    state: AtomicI32,
-    actor_count: AtomicI64,
+    state: Atomic<i32>,
+    actor_count: Atomic<i64>,
     registry: HashMap<u64, i64>,  // name_hash -> ActorRef pointer
     registry_lock: Mutex,
     root_supervisor: i64, // Pointer to root supervisor
@@ -42,11 +42,11 @@ ActorSystem.new = (name_ptr: i64, allocator: Allocator) ActorSystem {
 
     return ActorSystem {
         name: name_ptr,
-        state: AtomicI32.new(SYSTEM_CREATED),
-        actor_count: AtomicI64.new(0),
+        state: Atomic<i32>.new(SYSTEM_CREATED),
+        actor_count: Atomic<i64>.new(0),
         registry: HashMap<u64, i64>.with_capacity(allocator, 64),
         registry_lock: Mutex.new(),
-        root_supervisor: compiler.ptr_to_int(&root_sup.ref() as RawPtr<u8>),
+        root_supervisor: compiler.ptr_to_int(cast(&root_sup.ref(), RawPtr<u8>)),
         allocator: allocator
     }
 }
@@ -56,7 +56,7 @@ ActorSystem.start = (self: MutPtr<ActorSystem>) Result<(), i32> {
     self.val.state.store(SYSTEM_RUNNING)
 
     // Start root supervisor
-    root_sup = compiler.int_to_ptr(self.val.root_supervisor) as MutPtr<Supervisor>
+    root_sup = cast(compiler.int_to_ptr(self.val.root_supervisor), MutPtr<Supervisor>)
     return root_sup.start()
 }
 
@@ -65,7 +65,7 @@ ActorSystem.shutdown = (self: MutPtr<ActorSystem>) void {
     self.val.state.store(SYSTEM_STOPPING)
 
     // Stop root supervisor (cascades to all children)
-    root_sup = compiler.int_to_ptr(self.val.root_supervisor) as MutPtr<Supervisor>
+    root_sup = cast(compiler.int_to_ptr(self.val.root_supervisor), MutPtr<Supervisor>)
     root_sup.stop()
 
     self.val.state.store(SYSTEM_STOPPED)
@@ -139,11 +139,11 @@ ActorSystem.actor_terminated = (self: MutPtr<ActorSystem>) void {
 
 // Simple hash function for names
 hash_name = (name_ptr: i64, len: usize) u64 {
-    hash: u64 = 5381
-    i: usize = 0
+    hash :: u64 = 5381
+    i :: usize = 0
     i < len ? {
-        c = compiler.load<u8>(compiler.int_to_ptr(name_ptr + i as i64))
-        hash = ((hash << 5) + hash) + c as u64
+        c = compiler.load<u8>(compiler.int_to_ptr(name_ptr + cast(i, i64)))
+        hash = ((hash << 5) + hash) + cast(c, u64)
         i = i + 1
     }
     return hash
@@ -195,7 +195,7 @@ ActorSystem.free = (self: MutPtr<ActorSystem>) void {
     self.shutdown()
 
     // Free root supervisor
-    root_sup = compiler.int_to_ptr(self.val.root_supervisor) as MutPtr<Supervisor>
+    root_sup = cast(compiler.int_to_ptr(self.val.root_supervisor), MutPtr<Supervisor>)
     root_sup.free()
 
     // HashMap cleans up via its own free method

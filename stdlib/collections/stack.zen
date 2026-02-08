@@ -2,7 +2,8 @@
 // LIFO (Last-In-First-Out) data structure using safe pointers
 
 { compiler } = @std
-{ Ptr, Option } = @std.core
+{ Ptr } = @std.core.ptr
+{ Option } = @std.core.option
 { Allocator } = @std.memory.allocator
 
 // Stack<T> - LIFO collection with dynamic growth

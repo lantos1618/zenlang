@@ -14,7 +14,7 @@ EFD_SEMAPHORE = 1
 EventfdError: { code: i32 }
 
 EventfdError.from_errno = (errno: i64) EventfdError {
-    return EventfdError { code: (0 - errno) as i32 }
+    return EventfdError { code: cast(0 - errno, i32) }
 }
 
 Eventfd: { fd: i32 }
@@ -23,14 +23,14 @@ Eventfd: { fd: i32 }
 Eventfd.new = (initval: u32) Result<Eventfd, EventfdError> {
     result = compiler.syscall2(SYS_EVENTFD2, initval, EFD_CLOEXEC)
     result < 0 ? { return Result.Err(EventfdError.from_errno(result)) }
-    return Result.Ok(Eventfd { fd: result as i32 })
+    return Result.Ok(Eventfd { fd: cast(result, i32) })
 }
 
 // Create semaphore-like eventfd
 Eventfd.semaphore = (initval: u32) Result<Eventfd, EventfdError> {
     result = compiler.syscall2(SYS_EVENTFD2, initval, EFD_CLOEXEC | EFD_SEMAPHORE)
     result < 0 ? { return Result.Err(EventfdError.from_errno(result)) }
-    return Result.Ok(Eventfd { fd: result as i32 })
+    return Result.Ok(Eventfd { fd: cast(result, i32) })
 }
 
 // Read counter (blocks if 0, resets to 0 or decrements for semaphore)

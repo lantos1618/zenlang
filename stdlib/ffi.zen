@@ -57,8 +57,8 @@ load_library = (path: String) CLibrary {
 // Get function pointer from library
 // Returns CFuncPtr with null ptr on failure
 get_function = (lib: CLibrary, symbol: String) CFuncPtr {
-    ptr = compiler.get_symbol(lib.handle, symbol)
-    return CFuncPtr { ptr: ptr }
+    fn_ptr = compiler.get_symbol(lib.handle, symbol)
+    return CFuncPtr { ptr: fn_ptr }
 }
 
 // Get raw symbol pointer from library
@@ -68,12 +68,12 @@ get_symbol = (lib: CLibrary, symbol: String) RawPtr<u8> {
 
 // Check if library was loaded successfully
 is_loaded = (lib: CLibrary) bool {
-    return ptr.is_valid(lib.handle)
+    return compiler.ptr_to_int(lib.handle) != 0
 }
 
 // Check if function pointer is valid
 is_valid = (func: CFuncPtr) bool {
-    return ptr.is_valid(func.ptr)
+    return compiler.ptr_to_int(func.ptr) != 0
 }
 
 // Unload library

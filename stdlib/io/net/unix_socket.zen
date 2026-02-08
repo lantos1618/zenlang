@@ -51,7 +51,7 @@ UnixSocketError: {
 }
 
 UnixSocketError.from_errno = (errno: i64) UnixSocketError {
-    code = (0 - errno) as i32
+    code = cast(0 - errno, i32)
     msg = errno ? {
         -2 => "No such file"
         -9 => "Bad file descriptor"
@@ -92,7 +92,7 @@ UnixAddr: {
 // Create address from path string
 UnixAddr.from_path = (path: String, allocator: Allocator) UnixAddr {
     addr = UnixAddr {
-        family: AF_UNIX as u16,
+        family: cast(AF_UNIX, u16),
         path_data: 0, path_data2: 0, path_data3: 0, path_data4: 0,
         path_data5: 0, path_data6: 0, path_data7: 0, path_data8: 0,
         path_data9: 0, path_data10: 0, path_data11: 0, path_data12: 0,
@@ -188,15 +188,15 @@ UnixListener.bind = (path: String, allocator: Allocator) Result<UnixListener, Un
     sys_unlink(path_cstr)
 
     // Bind
-    result = sys_bind(fd as i32, addr_ptr, 110)  // sizeof(sockaddr_un)
+    result = sys_bind(cast(fd, i32), addr_ptr, 110)  // sizeof(sockaddr_un)
     result < 0 ? {
-        sys_close(fd as i32)
+        sys_close(cast(fd, i32))
         allocator.deallocate(path_cstr, path.len() + 1)
         return Result.Err(UnixSocketError.from_errno(result))
     }
 
     return Result.Ok(UnixListener {
-        fd: fd as i32,
+        fd: cast(fd, i32),
         path_ptr: path_cstr,
         path_len: path.len()
     })
@@ -215,7 +215,7 @@ UnixListener.accept = (self: MutPtr<UnixListener>) Result<UnixStream, UnixSocket
     client_fd < 0 ? {
         return Result.Err(UnixSocketError.from_errno(client_fd))
     }
-    return Result.Ok(UnixStream { fd: client_fd as i32 })
+    return Result.Ok(UnixStream { fd: cast(client_fd, i32) })
 }
 
 UnixListener.close = (self: MutPtr<UnixListener>, allocator: Allocator) void {
@@ -245,13 +245,13 @@ UnixStream.connect = (path: String, allocator: Allocator) Result<UnixStream, Uni
     addr_ptr = compiler.ptr_to_int(&addr.ref())
 
     // Connect
-    result = sys_connect(fd as i32, addr_ptr, 110)
+    result = sys_connect(cast(fd, i32), addr_ptr, 110)
     result < 0 ? {
-        sys_close(fd as i32)
+        sys_close(cast(fd, i32))
         return Result.Err(UnixSocketError.from_errno(result))
     }
 
-    return Result.Ok(UnixStream { fd: fd as i32 })
+    return Result.Ok(UnixStream { fd: cast(fd, i32) })
 }
 
 UnixStream.read = (self: MutPtr<UnixStream>, buf: Ptr<u8>, len: i64) Result<i64, UnixSocketError> {
@@ -312,15 +312,15 @@ UnixDatagram.bind = (path: String, allocator: Allocator) Result<UnixDatagram, Un
     sys_unlink(path_cstr)
 
     // Bind
-    result = sys_bind(fd as i32, addr_ptr, 110)
+    result = sys_bind(cast(fd, i32), addr_ptr, 110)
     result < 0 ? {
-        sys_close(fd as i32)
+        sys_close(cast(fd, i32))
         allocator.deallocate(path_cstr, path.len() + 1)
         return Result.Err(UnixSocketError.from_errno(result))
     }
 
     return Result.Ok(UnixDatagram {
-        fd: fd as i32,
+        fd: cast(fd, i32),
         bound_path_ptr: path_cstr,
         bound_path_len: path.len()
     })
@@ -331,7 +331,7 @@ UnixDatagram.unbound = () Result<UnixDatagram, UnixSocketError> {
     fd < 0 ? {
         return Result.Err(UnixSocketError.from_errno(fd))
     }
-    return Result.Ok(UnixDatagram { fd: fd as i32, bound_path_ptr: 0, bound_path_len: 0 })
+    return Result.Ok(UnixDatagram { fd: cast(fd, i32), bound_path_ptr: 0, bound_path_len: 0 })
 }
 
 UnixDatagram.send_to = (self: MutPtr<UnixDatagram>, buf: Ptr<u8>, len: i64, dest: UnixAddr) Result<i64, UnixSocketError> {

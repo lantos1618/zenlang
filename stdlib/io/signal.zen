@@ -43,7 +43,7 @@ SIG_SETMASK = 2
 SignalError: { code: i32 }
 
 SignalError.from_errno = (errno: i64) SignalError {
-    return SignalError { code: (0 - errno) as i32 }
+    return SignalError { code: cast(0 - errno, i32) }
 }
 
 // Send signal to current process

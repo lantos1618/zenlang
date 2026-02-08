@@ -3,7 +3,8 @@
 // Uses compile-time generics with Vec<T>
 
 { compiler } = @std
-{ Ptr, Option } = @std.core
+{ Ptr } = @std.core.ptr
+{ Option } = @std.core.option
 { Allocator } = @std.memory.allocator
 { Vec } = @std.collections.vec
 
@@ -196,14 +197,13 @@ HashMap<K, V>.insert = (self: MutPtr<HashMap<K, V>>, key: K, value: V) void {
     slot_index = find_slot<K, V>(self.val.entries, key, start_index, 0, self.val.capacity)
 
     // Get pointer to entry at slot_index and update it
-    entry_ptr = self.val.entries.val.data.at(slot_index)
-    entry_ptr ?
-        | Some(_) {
-            addr = entry_ptr.addr()
+        entry_ptr = self.val.entries.data.at(slot_index)
+        entry_ptr ?
+            | Some(_) {
+                addr = entry_ptr.addr()
 
-            // Check if this is a new insertion
-            existing_opt = self.val.entries.get(slot_index)
-            is_new = false
+                existing_opt = self.val.entries.get(slot_index)
+            is_new ::= false
             existing_opt ?
                 | Some(existing) {
                     is_new = !existing.occupied
@@ -301,7 +301,7 @@ HashMap<K, V>.remove = (self: MutPtr<HashMap<K, V>>, key: K) Option<V> {
                     keys_equal<K>(entry.key, key) ?
                         | true {
                             // Get pointer to entry and mark as unoccupied
-                            entry_ptr = self.val.entries.val.data.at(slot_index)
+                            entry_ptr = self.val.entries.data.at(slot_index)
                             entry_ptr ?
                                 | Some(_) {
                                     addr = entry_ptr.addr()

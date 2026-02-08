@@ -30,21 +30,21 @@ Barrier.new = (n: i32) Barrier {
 // Wait at the barrier until all threads arrive
 // Returns true for exactly one thread (the "leader"), false for others
 Barrier.wait = (self: MutPtr<Barrier>) bool {
-    gen = compiler.atomic_load(&self.val.generation.ref() as Ptr<u64>) as i32
+    gen = cast(compiler.atomic_load(cast(&self.val.generation.ref(), Ptr<u64>)), i32)
 
     // Decrement count
-    remaining = compiler.atomic_sub(&self.val.count.ref() as Ptr<u64>, 1) as i32 - 1
+    remaining = cast(compiler.atomic_sub(cast(&self.val.count.ref(), Ptr<u64>), 1), i32) - 1
 
     remaining == 0 ? {
         // Last thread to arrive - reset and wake all
-        compiler.atomic_store(&self.val.count.ref() as Ptr<u64>, self.val.expected)
-        compiler.atomic_add(&self.val.generation.ref() as Ptr<u64>, 1)
+        compiler.atomic_store(cast(&self.val.count.ref(), Ptr<u64>), self.val.expected)
+        compiler.atomic_add(cast(&self.val.generation.ref(), Ptr<u64>), 1)
         futex_wake_all(&self.val.generation.ref())
         return true  // Leader
     }
 
     // Wait for generation to change
-    current_gen = compiler.atomic_load(&self.val.generation.ref() as Ptr<u64>) as i32
+    current_gen = cast(compiler.atomic_load(cast(&self.val.generation.ref(), Ptr<u64>)), i32)
     current_gen == gen ? {
         futex_wait(&self.val.generation.ref(), gen)
     }
@@ -59,6 +59,6 @@ Barrier.party_count = (self: Ptr<Barrier>) i32 {
 
 // Check if barrier is waiting (not all threads arrived)
 Barrier.is_waiting = (self: Ptr<Barrier>) bool {
-    count = compiler.atomic_load(&self.val.count.ref() as Ptr<u64>) as i32
+    count = cast(compiler.atomic_load(cast(&self.val.count.ref(), Ptr<u64>)), i32)
     return count < self.val.expected && count > 0
 }

@@ -143,36 +143,36 @@ PR_GET_NO_NEW_PRIVS = 39
 // Enable strict mode (only read, write, _exit, sigreturn allowed)
 seccomp_strict = () Result<(), i32> {
     result = compiler.syscall3(SYS_PRCTL, PR_SET_SECCOMP, SECCOMP_MODE_STRICT, 0)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Set no_new_privs (required before seccomp filter without CAP_SYS_ADMIN)
 set_no_new_privs = () Result<(), i32> {
     result = compiler.syscall4(SYS_PRCTL, PR_SET_NO_NEW_PRIVS, 1, 0, 0)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Check if no_new_privs is set
 get_no_new_privs = () Result<bool, i32> {
     result = compiler.syscall4(SYS_PRCTL, PR_GET_NO_NEW_PRIVS, 0, 0, 0)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(result != 0)
 }
 
 // Install BPF filter
 seccomp_filter = (prog_ptr: i64, flags: u32) Result<(), i32> {
     result = compiler.syscall3(SYS_SECCOMP, SECCOMP_SET_MODE_FILTER, flags, prog_ptr)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Get current seccomp mode
 seccomp_mode = () Result<i32, i32> {
     result = compiler.syscall3(SYS_PRCTL, PR_GET_SECCOMP, 0, 0)
-    result < 0 ? { return Result.Err(result as i32) }
-    return Result.Ok(result as i32)
+    result < 0 ? { return Result.Err(cast(result, i32)) }
+    return Result.Ok(cast(result, i32))
 }
 
 // ============================================================================
@@ -182,7 +182,7 @@ seccomp_mode = () Result<i32, i32> {
 // Load syscall number
 bpf_load_syscall_nr = () BpfInsn {
     return BpfInsn {
-        code: (BPF_LD | BPF_W | BPF_ABS) as u16,
+        code: cast(BPF_LD | BPF_W | BPF_ABS, u16),
         jt: 0,
         jf: 0,
         k: SECCOMP_DATA_NR
@@ -192,7 +192,7 @@ bpf_load_syscall_nr = () BpfInsn {
 // Load architecture
 bpf_load_arch = () BpfInsn {
     return BpfInsn {
-        code: (BPF_LD | BPF_W | BPF_ABS) as u16,
+        code: cast(BPF_LD | BPF_W | BPF_ABS, u16),
         jt: 0,
         jf: 0,
         k: SECCOMP_DATA_ARCH
@@ -202,7 +202,7 @@ bpf_load_arch = () BpfInsn {
 // Jump if equal
 bpf_jeq = (value: u32, jt: u8, jf: u8) BpfInsn {
     return BpfInsn {
-        code: (BPF_JMP | BPF_JEQ | BPF_K) as u16,
+        code: cast(BPF_JMP | BPF_JEQ | BPF_K, u16),
         jt: jt,
         jf: jf,
         k: value
@@ -212,7 +212,7 @@ bpf_jeq = (value: u32, jt: u8, jf: u8) BpfInsn {
 // Return action
 bpf_ret = (action: u32) BpfInsn {
     return BpfInsn {
-        code: (BPF_RET | BPF_K) as u16,
+        code: cast(BPF_RET | BPF_K, u16),
         jt: 0,
         jf: 0,
         k: action
@@ -234,42 +234,42 @@ build_allowlist = (syscalls: i64, count: usize, filter_buf: i64) BpfProg {
     // 3. For each allowed syscall: jump to ALLOW if match
     // 4. Return KILL
 
-    pos: usize = 0
+    pos :: usize = 0
 
     // Load architecture
-    compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + (pos * 8) as i64), bpf_load_arch())
+    compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + cast(pos * 8, i64)), bpf_load_arch())
     pos = pos + 1
 
     // Verify x86-64 (jump to kill if not)
-    kill_offset = (count + 2) as u8  // Skip to kill instruction
-    compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + (pos * 8) as i64), bpf_jeq(AUDIT_ARCH_X86_64, 0, kill_offset))
+    kill_offset = cast(count + 2, u8)  // Skip to kill instruction
+    compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + cast(pos * 8, i64)), bpf_jeq(AUDIT_ARCH_X86_64, 0, kill_offset))
     pos = pos + 1
 
     // Load syscall number
-    compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + (pos * 8) as i64), bpf_load_syscall_nr())
+    compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + cast(pos * 8, i64)), bpf_load_syscall_nr())
     pos = pos + 1
 
     // Check each allowed syscall
-    i: usize = 0
+    i :: usize = 0
     i < count ? {
-        nr = compiler.load<i32>(compiler.int_to_ptr(syscalls + (i * 4) as i64))
-        remaining = (count - i - 1) as u8
-        allow_offset = (remaining + 1) as u8  // Jump to allow instruction
-        compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + (pos * 8) as i64), bpf_jeq(nr as u32, allow_offset, 0))
+        nr = compiler.load<i32>(compiler.int_to_ptr(syscalls + cast(i * 4, i64)))
+        remaining = cast(count - i - 1, u8)
+        allow_offset = cast(remaining + 1, u8)  // Jump to allow instruction
+        compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + cast(pos * 8, i64)), bpf_jeq(cast(nr, u32), allow_offset, 0))
         pos = pos + 1
         i = i + 1
     }
 
     // Kill (default action)
-    compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + (pos * 8) as i64), bpf_ret(SECCOMP_RET_KILL_PROCESS))
+    compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + cast(pos * 8, i64)), bpf_ret(SECCOMP_RET_KILL_PROCESS))
     pos = pos + 1
 
     // Allow
-    compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + (pos * 8) as i64), bpf_ret(SECCOMP_RET_ALLOW))
+    compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + cast(pos * 8, i64)), bpf_ret(SECCOMP_RET_ALLOW))
     pos = pos + 1
 
     return BpfProg {
-        len: pos as u16,
+        len: cast(pos, u16),
         filter: filter_buf
     }
 }

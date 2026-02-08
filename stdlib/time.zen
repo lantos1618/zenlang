@@ -16,7 +16,7 @@ CLOCK_BOOTTIME = 7
 TimeError: { code: i32, message: StaticString }
 
 TimeError.from_errno = (errno: i64) TimeError {
-    code = (0 - errno) as i32
+    code = cast(0 - errno, i32)
     return TimeError { code: code, message: "Time error" }
 }
 

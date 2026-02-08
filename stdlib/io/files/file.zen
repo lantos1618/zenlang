@@ -7,6 +7,8 @@
 { Option } = @std.core.option
 { String } = @std.collections.string
 { Allocator } = @std.memory.allocator
+{ Vec } = @std.collections.vec
+{ Ptr } = @std.core.ptr
 { SYS_READ, SYS_WRITE, SYS_OPEN, SYS_CLOSE, SYS_STAT, SYS_FSTAT,
   SYS_LSEEK, SYS_MMAP, SYS_MUNMAP, SYS_ACCESS, SYS_MKDIR, SYS_RMDIR,
   SYS_UNLINK, SYS_RENAME, SYS_GETCWD, SYS_CHDIR } = @std.sys.syscall
@@ -148,7 +150,7 @@ string_to_cstr = (s: String, allocator: Allocator) i64 {
     // Add null terminator
     compiler.store<u8>(compiler.gep(ptr, len), 0)
 
-    return ptr
+    return cast(ptr, i64)
 }
 
 // Free C string allocated by string_to_cstr
@@ -365,7 +367,7 @@ getcwd = (allocator: Allocator) Result<String, IoError> {
         }
         | false {
             // Find null terminator to get actual length
-            len = 0
+            len ::= 0
             loop {
                 b = compiler.load<u8>(compiler.gep(buf, len))
                 b == 0 ?
@@ -429,8 +431,13 @@ read_file = (path: String, allocator: Allocator) Result<Vec<u8>, IoError> {
                             return Result.Err(e)
                         }
                         | Ok(bytes_read) {
-                            // Create Vec from buffer
-                            vec = Vec<u8>.from_ptr(buf, bytes_read, allocator)
+                            // Create Vec from raw buffer
+                            vec = Vec<u8> {
+                                data: Ptr<u8>.from_addr(buf),
+                                len: bytes_read,
+                                capacity: size,
+                                allocator: allocator
+                            }
                             return Result.Ok(vec)
                         }
                 }

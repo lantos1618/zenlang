@@ -41,14 +41,14 @@ RENAME_WHITEOUT = 4          // Whiteout source (overlay fs)
 // Create a hard link
 link = (old_path: i64, new_path: i64) Result<(), i32> {
     result = compiler.syscall2(SYS_LINK, old_path, new_path)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Create hard link relative to directory fds
 linkat = (old_dirfd: i32, old_path: i64, new_dirfd: i32, new_path: i64, flags: i32) Result<(), i32> {
     result = compiler.syscall5(SYS_LINKAT, old_dirfd, old_path, new_dirfd, new_path, flags)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -59,14 +59,14 @@ linkat = (old_dirfd: i32, old_path: i64, new_dirfd: i32, new_path: i64, flags: i
 // Create a symbolic link
 symlink = (target: i64, link_path: i64) Result<(), i32> {
     result = compiler.syscall2(SYS_SYMLINK, target, link_path)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Create symbolic link relative to directory fd
 symlinkat = (target: i64, dirfd: i32, link_path: i64) Result<(), i32> {
     result = compiler.syscall3(SYS_SYMLINKAT, target, dirfd, link_path)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -74,15 +74,15 @@ symlinkat = (target: i64, dirfd: i32, link_path: i64) Result<(), i32> {
 // Returns number of bytes written to buf (not null-terminated)
 readlink = (path: i64, buf: i64, buf_size: usize) Result<usize, i32> {
     result = compiler.syscall3(SYS_READLINK, path, buf, buf_size)
-    result < 0 ? { return Result.Err(result as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ? { return Result.Err(cast(result, i32)) }
+    return Result.Ok(cast(result, usize))
 }
 
 // Read symlink relative to directory fd
 readlinkat = (dirfd: i32, path: i64, buf: i64, buf_size: usize) Result<usize, i32> {
     result = compiler.syscall4(SYS_READLINKAT, dirfd, path, buf, buf_size)
-    result < 0 ? { return Result.Err(result as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ? { return Result.Err(cast(result, i32)) }
+    return Result.Ok(cast(result, usize))
 }
 
 // ============================================================================
@@ -92,14 +92,14 @@ readlinkat = (dirfd: i32, path: i64, buf: i64, buf_size: usize) Result<usize, i3
 // Remove a file
 unlink = (path: i64) Result<(), i32> {
     result = compiler.syscall1(SYS_UNLINK, path)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Remove file or directory relative to directory fd
 unlinkat = (dirfd: i32, path: i64, flags: i32) Result<(), i32> {
     result = compiler.syscall3(SYS_UNLINKAT, dirfd, path, flags)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -120,21 +120,21 @@ remove_dir = (path: i64) Result<(), i32> {
 // Rename/move a file or directory
 rename = (old_path: i64, new_path: i64) Result<(), i32> {
     result = compiler.syscall2(SYS_RENAME, old_path, new_path)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Rename relative to directory fds
 renameat = (old_dirfd: i32, old_path: i64, new_dirfd: i32, new_path: i64) Result<(), i32> {
     result = compiler.syscall4(SYS_RENAMEAT, old_dirfd, old_path, new_dirfd, new_path)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Rename with flags (RENAME_NOREPLACE, RENAME_EXCHANGE)
 renameat2 = (old_dirfd: i32, old_path: i64, new_dirfd: i32, new_path: i64, flags: u32) Result<(), i32> {
     result = compiler.syscall5(SYS_RENAMEAT2, old_dirfd, old_path, new_dirfd, new_path, flags)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -167,7 +167,7 @@ readlink_z = (path: i64, buf: i64, buf_size: usize) Result<usize, i32> {
     result ? {
         | Ok(len) {
             // Null terminate
-            compiler.store<u8>(compiler.int_to_ptr(buf + len as i64), 0)
+            compiler.store<u8>(compiler.int_to_ptr(buf + cast(len, i64)), 0)
             return Result.Ok(len)
         }
         | Err(e) { return Result.Err(e) }

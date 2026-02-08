@@ -18,7 +18,7 @@ POLLNVAL = 32
 PollError: { code: i32 }
 
 PollError.from_errno = (errno: i64) PollError {
-    return PollError { code: (0 - errno) as i32 }
+    return PollError { code: cast(0 - errno, i32) }
 }
 
 // pollfd structure
@@ -48,19 +48,19 @@ Pollfd.hung_up = (self: Pollfd) bool {
 poll = (fds: Ptr<Pollfd>, nfds: i32, timeout_ms: i32) Result<i32, PollError> {
     result = compiler.syscall3(SYS_POLL, compiler.ptr_to_int(fds), nfds, timeout_ms)
     result < 0 ? { return Result.Err(PollError.from_errno(result)) }
-    return Result.Ok(result as i32)
+    return Result.Ok(cast(result, i32))
 }
 
 // Poll single fd for read
 poll_read = (fd: i32, timeout_ms: i32) Result<bool, PollError> {
-    pfd = Pollfd.new(fd, POLLIN as i16)
+    pfd = Pollfd.new(fd, cast(POLLIN, i16))
     result = poll(&pfd.ref(), 1, timeout_ms).raise()
     return Result.Ok(result > 0 && pfd.read_ready())
 }
 
 // Poll single fd for write
 poll_write = (fd: i32, timeout_ms: i32) Result<bool, PollError> {
-    pfd = Pollfd.new(fd, POLLOUT as i16)
+    pfd = Pollfd.new(fd, cast(POLLOUT, i16))
     result = poll(&pfd.ref(), 1, timeout_ms).raise()
     return Result.Ok(result > 0 && pfd.write_ready())
 }

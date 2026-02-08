@@ -26,7 +26,7 @@ SIGHUP = 1
 ProcessError: { code: i32, message: StaticString }
 
 ProcessError.from_errno = (errno: i64) ProcessError {
-    code = (0 - errno) as i32
+    code = cast(0 - errno, i32)
     return ProcessError { code: code, message: "Process error" }
 }
 
@@ -35,19 +35,19 @@ Pid: { value: i32 }
 
 Pid.current = () Pid {
     result = compiler.syscall0(SYS_GETPID)
-    return Pid { value: result as i32 }
+    return Pid { value: cast(result, i32) }
 }
 
 Pid.parent = () Pid {
     result = compiler.syscall0(SYS_GETPPID)
-    return Pid { value: result as i32 }
+    return Pid { value: cast(result, i32) }
 }
 
 // Fork the current process
 fork = () Result<Pid, ProcessError> {
     result = compiler.syscall0(SYS_FORK)
     result < 0 ? { return Result.Err(ProcessError.from_errno(result)) }
-    return Result.Ok(Pid { value: result as i32 })
+    return Result.Ok(Pid { value: cast(result, i32) })
 }
 
 // Exit the current process

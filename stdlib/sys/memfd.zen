@@ -85,9 +85,9 @@ MemFd: {
 // flags: MFD_CLOEXEC | MFD_ALLOW_SEALING etc.
 MemFd.create = (name_ptr: i64, flags: u32) Result<MemFd, i32> {
     fd = compiler.syscall2(SYS_MEMFD_CREATE, name_ptr, flags)
-    fd < 0 ? { return Result.Err((0 - fd) as i32) }
+    fd < 0 ? { return Result.Err(cast(0 - fd, i32)) }
 
-    return Result.Ok(MemFd { fd: fd as i32, size: 0 })
+    return Result.Ok(MemFd { fd: cast(fd, i32), size: 0 })
 }
 
 // Create with common defaults (cloexec + allow sealing)
@@ -98,7 +98,7 @@ MemFd.new = (name_ptr: i64) Result<MemFd, i32> {
 // Set the size of the memory file
 MemFd.truncate = (self: MutPtr<MemFd>, size: usize) Result<(), i32> {
     result = compiler.syscall2(SYS_FTRUNCATE, self.val.fd, size)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
     self.val.size = size
     return Result.Ok(())
 }
@@ -114,7 +114,7 @@ MemFd.map = (self: MutPtr<MemFd>, offset: usize, length: usize, prot: i32) Resul
         self.val.fd,
         offset
     )
-    addr < 0 ? { return Result.Err((0 - addr) as i32) }
+    addr < 0 ? { return Result.Err(cast(0 - addr, i32)) }
     return Result.Ok(addr)
 }
 
@@ -126,7 +126,7 @@ MemFd.map_all = (self: MutPtr<MemFd>, prot: i32) Result<i64, i32> {
 // Unmap a region
 MemFd.unmap = (addr: i64, length: usize) Result<(), i32> {
     result = compiler.syscall2(SYS_MUNMAP, addr, length)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
     return Result.Ok(())
 }
 
@@ -137,15 +137,15 @@ MemFd.unmap = (addr: i64, length: usize) Result<(), i32> {
 // Add seals to prevent certain operations
 MemFd.add_seals = (self: MutPtr<MemFd>, seals: u32) Result<(), i32> {
     result = compiler.syscall3(SYS_FCNTL, self.val.fd, F_ADD_SEALS, seals)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
     return Result.Ok(())
 }
 
 // Get current seals
 MemFd.get_seals = (self: Ptr<MemFd>) Result<u32, i32> {
     result = compiler.syscall2(SYS_FCNTL, self.val.fd, F_GET_SEALS)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
-    return Result.Ok(result as u32)
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
+    return Result.Ok(cast(result, u32))
 }
 
 // Seal the file completely (no modifications allowed)
@@ -161,21 +161,21 @@ MemFd.seal_all = (self: MutPtr<MemFd>) Result<(), i32> {
 // Write data to the memory file
 MemFd.write = (self: MutPtr<MemFd>, buf: i64, len: usize) Result<usize, i32> {
     result = compiler.syscall3(SYS_WRITE, self.val.fd, buf, len)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
+    return Result.Ok(cast(result, usize))
 }
 
 // Read data from the memory file
 MemFd.read = (self: MutPtr<MemFd>, buf: i64, len: usize) Result<usize, i32> {
     result = compiler.syscall3(SYS_READ, self.val.fd, buf, len)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
+    return Result.Ok(cast(result, usize))
 }
 
 // Seek to position
 MemFd.seek = (self: MutPtr<MemFd>, offset: i64, whence: i32) Result<i64, i32> {
     result = compiler.syscall3(SYS_LSEEK, self.val.fd, offset, whence)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
     return Result.Ok(result)
 }
 
@@ -205,7 +205,7 @@ MemFd.close = (self: MutPtr<MemFd>) void {
 
 SharedMemory: {
     memfd: MemFd,
-    addr: i64,
+    base_addr: i64,
     size: usize
 }
 
@@ -237,7 +237,7 @@ SharedMemory.new = (name_ptr: i64, size: usize) Result<SharedMemory, i32> {
                 | Ok(addr) {
                     return Result.Ok(SharedMemory {
                         memfd: mfd_mut,
-                        addr: addr,
+                        base_addr: addr,
                         size: size
                     })
                 }
@@ -248,7 +248,7 @@ SharedMemory.new = (name_ptr: i64, size: usize) Result<SharedMemory, i32> {
 
 // Get pointer to shared memory
 SharedMemory.ptr = (self: Ptr<SharedMemory>) i64 {
-    return self.val.addr
+    return self.val.base_addr
 }
 
 // Get size
@@ -263,6 +263,6 @@ SharedMemory.fd = (self: Ptr<SharedMemory>) i32 {
 
 // Close and unmap
 SharedMemory.close = (self: MutPtr<SharedMemory>) void {
-    MemFd.unmap(self.val.addr, self.val.size)
+    MemFd.unmap(self.val.base_addr, self.val.size)
     self.val.memfd.close()
 }

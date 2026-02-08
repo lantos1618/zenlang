@@ -51,21 +51,21 @@ UTIME_OMIT = 1073741822  // Don't change (0x3ffffffe)
 // Change file mode bits
 chmod = (path: i64, mode: u32) Result<(), i32> {
     result = compiler.syscall2(SYS_CHMOD, path, mode)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Change mode on open file descriptor
 fchmod = (fd: i32, mode: u32) Result<(), i32> {
     result = compiler.syscall2(SYS_FCHMOD, fd, mode)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Change mode relative to directory fd
 fchmodat = (dirfd: i32, path: i64, mode: u32, flags: i32) Result<(), i32> {
     result = compiler.syscall4(SYS_FCHMODAT, dirfd, path, mode, flags)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -77,28 +77,28 @@ fchmodat = (dirfd: i32, path: i64, mode: u32, flags: i32) Result<(), i32> {
 // Use -1 for uid/gid to leave unchanged
 chown = (path: i64, uid: u32, gid: u32) Result<(), i32> {
     result = compiler.syscall3(SYS_CHOWN, path, uid, gid)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Change ownership on open file descriptor
 fchown = (fd: i32, uid: u32, gid: u32) Result<(), i32> {
     result = compiler.syscall3(SYS_FCHOWN, fd, uid, gid)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Change ownership of symlink itself (not target)
 lchown = (path: i64, uid: u32, gid: u32) Result<(), i32> {
     result = compiler.syscall3(SYS_LCHOWN, path, uid, gid)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Change ownership relative to directory fd
 fchownat = (dirfd: i32, path: i64, uid: u32, gid: u32, flags: i32) Result<(), i32> {
     result = compiler.syscall5(SYS_FCHOWNAT, dirfd, path, uid, gid, flags)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -110,14 +110,14 @@ fchownat = (dirfd: i32, path: i64, uid: u32, gid: u32, flags: i32) Result<(), i3
 // mode: F_OK, R_OK, W_OK, X_OK (can be ORed together)
 access = (path: i64, mode: i32) Result<(), i32> {
     result = compiler.syscall2(SYS_ACCESS, path, mode)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Check access relative to directory fd
 faccessat = (dirfd: i32, path: i64, mode: i32, flags: i32) Result<(), i32> {
     result = compiler.syscall4(SYS_FACCESSAT, dirfd, path, mode, flags)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -164,14 +164,14 @@ is_executable = (path: i64) bool {
 // Truncate file to specified length
 truncate = (path: i64, length: i64) Result<(), i32> {
     result = compiler.syscall2(SYS_TRUNCATE, path, length)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Truncate open file descriptor
 ftruncate = (fd: i32, length: i64) Result<(), i32> {
     result = compiler.syscall2(SYS_FTRUNCATE, fd, length)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -187,21 +187,21 @@ sync = () void {
 // Sync filesystem containing fd
 syncfs = (fd: i32) Result<(), i32> {
     result = compiler.syscall1(SYS_SYNCFS, fd)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Sync file data and metadata to disk
 fsync = (fd: i32) Result<(), i32> {
     result = compiler.syscall1(SYS_FSYNC, fd)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Sync only file data (not metadata)
 fdatasync = (fd: i32) Result<(), i32> {
     result = compiler.syscall1(SYS_FDATASYNC, fd)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -219,24 +219,24 @@ Timespec: {
 // Use UTIME_NOW or UTIME_OMIT for special handling
 utimensat = (dirfd: i32, path: i64, times_ptr: i64, flags: i32) Result<(), i32> {
     result = compiler.syscall4(SYS_UTIMENSAT, dirfd, path, times_ptr, flags)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
 // Touch file (update timestamps to now)
 touch = (path: i64) Result<(), i32> {
-    times: [2]Timespec = [
+    times: [Timespec; 2] = [
         Timespec { tv_sec: 0, tv_nsec: UTIME_NOW },
         Timespec { tv_sec: 0, tv_nsec: UTIME_NOW }
     ]
-    return utimensat(AT_FDCWD, path, compiler.ptr_to_int(&times.ref() as RawPtr<u8>), 0)
+    return utimensat(AT_FDCWD, path, compiler.ptr_to_int(cast(&times.ref(), RawPtr<u8>)), 0)
 }
 
 // Touch via file descriptor (update timestamps to now)
 ftouch = (fd: i32) Result<(), i32> {
-    times: [2]Timespec = [
+    times: [Timespec; 2] = [
         Timespec { tv_sec: 0, tv_nsec: UTIME_NOW },
         Timespec { tv_sec: 0, tv_nsec: UTIME_NOW }
     ]
-    return utimensat(fd, 0, compiler.ptr_to_int(&times.ref() as RawPtr<u8>), AT_EMPTY_PATH)
+    return utimensat(fd, 0, compiler.ptr_to_int(cast(&times.ref(), RawPtr<u8>)), AT_EMPTY_PATH)
 }

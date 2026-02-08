@@ -179,7 +179,7 @@ IoUring.new = (entries: u32) Result<IoUring, i32> {
     fd = compiler.syscall2(SYS_IO_URING_SETUP, entries, compiler.ptr_to_int(params_ptr))
     fd < 0 ? {
         compiler.raw_deallocate(params_ptr, 120)
-        return Result.Err((0 - fd) as i32)
+        return Result.Err(cast(0 - fd, i32))
     }
 
     // Read params
@@ -199,71 +199,71 @@ IoUring.new = (entries: u32) Result<IoUring, i32> {
     cq_off_cqes = compiler.load<u32>(compiler.gep(params_ptr, 88))
 
     // Calculate ring sizes
-    sq_ring_size = sq_off_array as usize + sq_entries as usize * 4
-    cq_ring_size = cq_off_cqes as usize + cq_entries as usize * 16
-    sqes_size = sq_entries as usize * 64
+    sq_ring_size = cast(sq_off_array, usize) + cast(sq_entries, usize) * 4
+    cq_ring_size = cast(cq_off_cqes, usize) + cast(cq_entries, usize) * 16
+    sqes_size = cast(sq_entries, usize) * 64
 
     // Map SQ ring
     sq_ring_ptr = compiler.syscall6(
         SYS_MMAP, 0, sq_ring_size,
         PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
-        fd as i32, IORING_OFF_SQ_RING
+        cast(fd, i32), IORING_OFF_SQ_RING
     )
     sq_ring_ptr < 0 ? {
-        compiler.syscall1(SYS_CLOSE, fd as i32)
+        compiler.syscall1(SYS_CLOSE, cast(fd, i32))
         compiler.raw_deallocate(params_ptr, 120)
-        return Result.Err((0 - sq_ring_ptr) as i32)
+        return Result.Err(cast(0 - sq_ring_ptr, i32))
     }
 
     // Map SQEs
     sqes_ptr = compiler.syscall6(
         SYS_MMAP, 0, sqes_size,
         PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
-        fd as i32, IORING_OFF_SQES
+        cast(fd, i32), IORING_OFF_SQES
     )
     sqes_ptr < 0 ? {
         compiler.syscall2(SYS_MUNMAP, sq_ring_ptr, sq_ring_size)
-        compiler.syscall1(SYS_CLOSE, fd as i32)
+        compiler.syscall1(SYS_CLOSE, cast(fd, i32))
         compiler.raw_deallocate(params_ptr, 120)
-        return Result.Err((0 - sqes_ptr) as i32)
+        return Result.Err(cast(0 - sqes_ptr, i32))
     }
 
     // Map CQ ring
     cq_ring_ptr = compiler.syscall6(
         SYS_MMAP, 0, cq_ring_size,
         PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
-        fd as i32, IORING_OFF_CQ_RING
+        cast(fd, i32), IORING_OFF_CQ_RING
     )
     cq_ring_ptr < 0 ? {
         compiler.syscall2(SYS_MUNMAP, sqes_ptr, sqes_size)
         compiler.syscall2(SYS_MUNMAP, sq_ring_ptr, sq_ring_size)
-        compiler.syscall1(SYS_CLOSE, fd as i32)
+        compiler.syscall1(SYS_CLOSE, cast(fd, i32))
         compiler.raw_deallocate(params_ptr, 120)
-        return Result.Err((0 - cq_ring_ptr) as i32)
+        return Result.Err(cast(0 - cq_ring_ptr, i32))
     }
 
     // Read masks
-    sq_mask = compiler.load<u32>(compiler.int_to_ptr(sq_ring_ptr + sq_off_ring_mask as i64))
-    cq_mask = compiler.load<u32>(compiler.int_to_ptr(cq_ring_ptr + cq_off_ring_mask as i64))
+    sq_mask = compiler.load<u32>(compiler.int_to_ptr(sq_ring_ptr + cast(sq_off_ring_mask, i64)))
+    cq_mask = compiler.load<u32>(compiler.int_to_ptr(cq_ring_ptr + cast(cq_off_ring_mask, i64)))
 
     ring = IoUring {
-        ring_fd: fd as i32,
+        ring_fd: cast(fd, i32),
         sq_entries: sq_entries,
         cq_entries: cq_entries,
         sq_ring_ptr: sq_ring_ptr,
         sq_ring_size: sq_ring_size,
         sqes_ptr: sqes_ptr,
         sqes_size: sqes_size,
-        sq_head: sq_ring_ptr + sq_off_head as i64,
-        sq_tail: sq_ring_ptr + sq_off_tail as i64,
+        sq_head: sq_ring_ptr + cast(sq_off_head, i64),
+        sq_tail: sq_ring_ptr + cast(sq_off_tail, i64),
         sq_mask: sq_mask,
-        sq_array: sq_ring_ptr + sq_off_array as i64,
+        sq_array: sq_ring_ptr + cast(sq_off_array, i64),
         cq_ring_ptr: cq_ring_ptr,
         cq_ring_size: cq_ring_size,
-        cq_head: cq_ring_ptr + cq_off_head as i64,
-        cq_tail: cq_ring_ptr + cq_off_tail as i64,
+        cq_head: cq_ring_ptr + cast(cq_off_head, i64),
+        cq_tail: cq_ring_ptr + cast(cq_off_tail, i64),
         cq_mask: cq_mask,
-        cqes: cq_ring_ptr + cq_off_cqes as i64
+        cqes: cq_ring_ptr + cast(cq_off_cqes, i64)
     }
 
     compiler.raw_deallocate(params_ptr, 120)
@@ -276,14 +276,14 @@ IoUring.new = (entries: u32) Result<IoUring, i32> {
 
 // Get next SQE slot (returns null if queue full)
 IoUring.get_sqe = (self: MutPtr<IoUring>) i64 {
-    head = compiler.atomic_load(compiler.int_to_ptr(self.val.sq_head) as Ptr<u64>) as u32
+    head = cast(compiler.atomic_load(cast(compiler.int_to_ptr(self.val.sq_head), Ptr<u64>)), u32)
     tail = compiler.load<u32>(compiler.int_to_ptr(self.val.sq_tail))
 
     // Check if queue is full
     (tail - head) >= self.val.sq_entries ? { return 0 }
 
     idx = tail & self.val.sq_mask
-    sqe_ptr = self.val.sqes_ptr + (idx as i64 * 64)
+    sqe_ptr = self.val.sqes_ptr + (cast(idx, i64) * 64)
 
     // Clear the SQE
     compiler.memset(compiler.int_to_ptr(sqe_ptr), 0, 64)
@@ -298,22 +298,22 @@ IoUring.submit_sqe = (self: MutPtr<IoUring>, sqe_ptr: i64) void {
 
     // Write index to array
     compiler.store<u32>(
-        compiler.int_to_ptr(self.val.sq_array + idx as i64 * 4),
+        compiler.int_to_ptr(self.val.sq_array + cast(idx, i64) * 4),
         idx
     )
 
     // Increment tail
     compiler.atomic_store(
-        compiler.int_to_ptr(self.val.sq_tail) as Ptr<u64>,
-        (tail + 1) as u64
+        cast(compiler.int_to_ptr(self.val.sq_tail), Ptr<u64>),
+        cast(tail + 1, u64)
     )
 }
 
 // Submit all pending SQEs to kernel
 IoUring.submit = (self: MutPtr<IoUring>) Result<i32, i32> {
     result = compiler.syscall3(SYS_IO_URING_ENTER, self.val.ring_fd, 0, 0)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
-    return Result.Ok(result as i32)
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
+    return Result.Ok(cast(result, i32))
 }
 
 // Submit and wait for at least min_complete completions
@@ -325,8 +325,8 @@ IoUring.submit_and_wait = (self: MutPtr<IoUring>, min_complete: u32) Result<i32,
         min_complete,
         IORING_ENTER_GETEVENTS
     )
-    result < 0 ? { return Result.Err((0 - result) as i32) }
-    return Result.Ok(result as i32)
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
+    return Result.Ok(cast(result, i32))
 }
 
 // ============================================================================
@@ -335,13 +335,13 @@ IoUring.submit_and_wait = (self: MutPtr<IoUring>, min_complete: u32) Result<i32,
 
 // Get next CQE (returns None if no completions)
 IoUring.peek_cqe = (self: MutPtr<IoUring>) Option<CQE> {
-    head = compiler.atomic_load(compiler.int_to_ptr(self.val.cq_head) as Ptr<u64>) as u32
-    tail = compiler.atomic_load(compiler.int_to_ptr(self.val.cq_tail) as Ptr<u64>) as u32
+    head = cast(compiler.atomic_load(cast(compiler.int_to_ptr(self.val.cq_head), Ptr<u64>)), u32)
+    tail = cast(compiler.atomic_load(cast(compiler.int_to_ptr(self.val.cq_tail), Ptr<u64>)), u32)
 
     head == tail ? { return Option.None }
 
     idx = head & self.val.cq_mask
-    cqe_ptr = self.val.cqes + (idx as i64 * 16)
+    cqe_ptr = self.val.cqes + (cast(idx, i64) * 16)
 
     cqe = CQE {
         user_data: compiler.load<u64>(compiler.int_to_ptr(cqe_ptr)),
@@ -354,18 +354,18 @@ IoUring.peek_cqe = (self: MutPtr<IoUring>) Option<CQE> {
 
 // Advance CQ head after processing CQE
 IoUring.cqe_seen = (self: MutPtr<IoUring>) void {
-    head = compiler.atomic_load(compiler.int_to_ptr(self.val.cq_head) as Ptr<u64>) as u32
+    head = cast(compiler.atomic_load(cast(compiler.int_to_ptr(self.val.cq_head), Ptr<u64>)), u32)
     compiler.atomic_store(
-        compiler.int_to_ptr(self.val.cq_head) as Ptr<u64>,
-        (head + 1) as u64
+        cast(compiler.int_to_ptr(self.val.cq_head), Ptr<u64>),
+        cast(head + 1, u64)
     )
 }
 
 // Wait for at least one completion
 IoUring.wait_cqe = (self: MutPtr<IoUring>) Result<CQE, i32> {
     // Check if already available
-    cqe = self.peek_cqe()
-    cqe ? {
+    cqe_check = self.peek_cqe()
+    cqe_check ? {
         | Some(c) { return Result.Ok(c) }
         | None { }
     }
@@ -378,7 +378,7 @@ IoUring.wait_cqe = (self: MutPtr<IoUring>) Result<CQE, i32> {
         1,
         IORING_ENTER_GETEVENTS
     )
-    result < 0 ? { return Result.Err((0 - result) as i32) }
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
 
     // Get the CQE
     cqe = self.peek_cqe()
@@ -400,7 +400,7 @@ IoUring.prep_read = (self: MutPtr<IoUring>, fd: i32, buf: i64, len: u32, offset:
     compiler.store<u8>(compiler.int_to_ptr(sqe_ptr), IORING_OP_READ)      // opcode
     compiler.store<i32>(compiler.int_to_ptr(sqe_ptr + 4), fd)             // fd
     compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 8), offset)         // off
-    compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 16), buf as u64)    // addr
+    compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 16), cast(buf, u64))    // addr
     compiler.store<u32>(compiler.int_to_ptr(sqe_ptr + 24), len)           // len
     compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 32), user_data)     // user_data
 
@@ -416,7 +416,7 @@ IoUring.prep_write = (self: MutPtr<IoUring>, fd: i32, buf: i64, len: u32, offset
     compiler.store<u8>(compiler.int_to_ptr(sqe_ptr), IORING_OP_WRITE)
     compiler.store<i32>(compiler.int_to_ptr(sqe_ptr + 4), fd)
     compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 8), offset)
-    compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 16), buf as u64)
+    compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 16), cast(buf, u64))
     compiler.store<u32>(compiler.int_to_ptr(sqe_ptr + 24), len)
     compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 32), user_data)
 
@@ -431,8 +431,8 @@ IoUring.prep_accept = (self: MutPtr<IoUring>, fd: i32, addr: i64, addrlen: i64, 
 
     compiler.store<u8>(compiler.int_to_ptr(sqe_ptr), IORING_OP_ACCEPT)
     compiler.store<i32>(compiler.int_to_ptr(sqe_ptr + 4), fd)
-    compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 16), addr as u64)
-    compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 8), addrlen as u64)  // off field used for addrlen ptr
+    compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 16), cast(addr, u64))
+    compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 8), cast(addrlen, u64))  // off field used for addrlen ptr
     compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 32), user_data)
 
     self.submit_sqe(sqe_ptr)

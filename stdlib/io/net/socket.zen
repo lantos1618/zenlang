@@ -93,7 +93,7 @@ SocketError: {
 }
 
 SocketError.from_errno = (errno: i64) SocketError {
-    code = (0 - errno) as i32
+    code = cast(0 - errno, i32)
     msg = errno ? {
         -9 => "Bad file descriptor"
         -13 => "Permission denied"
@@ -127,7 +127,7 @@ Ipv4Addr: {
 
 Ipv4Addr.new = (a: u8, b: u8, c: u8, d: u8) Ipv4Addr {
     // Pack bytes into u32 (network byte order - big endian)
-    packed = ((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8) | (d as u32)
+    packed = ((cast(a, u32)) << 24) | ((cast(b, u32)) << 16) | ((cast(c, u32)) << 8) | (cast(d, u32))
     return Ipv4Addr { addr: packed }
 }
 
@@ -160,7 +160,7 @@ SocketAddrV4.new = (ip: Ipv4Addr, port: u16) SocketAddrV4 {
     // Convert addr to network byte order
     addr_be = compiler.bswap32(ip.addr)
     return SocketAddrV4 {
-        family: AF_INET as u16,
+        family: cast(AF_INET, u16),
         port: port_be,
         addr: addr_be,
         zero: 0
@@ -241,17 +241,17 @@ TcpListener.bind = (addr: SocketAddrV4) Result<TcpListener, SocketError> {
     // Set SO_REUSEADDR
     opt_val = 1
     opt_ptr = compiler.ptr_to_int(&opt_val.ref())
-    sys_setsockopt(fd as i32, SOL_SOCKET, SO_REUSEADDR, opt_ptr, 4)
+    sys_setsockopt(cast(fd, i32), SOL_SOCKET, SO_REUSEADDR, opt_ptr, 4)
 
     // Bind to address
     addr_ptr = compiler.ptr_to_int(&addr.ref())
-    result = sys_bind(fd as i32, addr_ptr, 16)  // sizeof(sockaddr_in) = 16
+    result = sys_bind(cast(fd, i32), addr_ptr, 16)  // sizeof(sockaddr_in) = 16
     result < 0 ? {
-        sys_close(fd as i32)
+        sys_close(cast(fd, i32))
         return Result.Err(SocketError.from_errno(result))
     }
 
-    return Result.Ok(TcpListener { fd: fd as i32 })
+    return Result.Ok(TcpListener { fd: cast(fd, i32) })
 }
 
 TcpListener.listen = (self: MutPtr<TcpListener>, backlog: i32) Result<(), SocketError> {
@@ -268,7 +268,7 @@ TcpListener.accept = (self: MutPtr<TcpListener>) Result<TcpStream, SocketError> 
     client_fd < 0 ? {
         return Result.Err(SocketError.from_errno(client_fd))
     }
-    return Result.Ok(TcpStream { fd: client_fd as i32 })
+    return Result.Ok(TcpStream { fd: cast(client_fd, i32) })
 }
 
 TcpListener.close = (self: MutPtr<TcpListener>) void {
@@ -292,13 +292,13 @@ TcpStream.connect = (addr: SocketAddrV4) Result<TcpStream, SocketError> {
 
     // Connect to address
     addr_ptr = compiler.ptr_to_int(&addr.ref())
-    result = sys_connect(fd as i32, addr_ptr, 16)
+    result = sys_connect(cast(fd, i32), addr_ptr, 16)
     result < 0 ? {
-        sys_close(fd as i32)
+        sys_close(cast(fd, i32))
         return Result.Err(SocketError.from_errno(result))
     }
 
-    return Result.Ok(TcpStream { fd: fd as i32 })
+    return Result.Ok(TcpStream { fd: cast(fd, i32) })
 }
 
 TcpStream.read = (self: MutPtr<TcpStream>, buf: Ptr<u8>, len: i64) Result<i64, SocketError> {
@@ -320,13 +320,13 @@ TcpStream.write = (self: MutPtr<TcpStream>, buf: Ptr<u8>, len: i64) Result<i64, 
 }
 
 TcpStream.write_all = (self: MutPtr<TcpStream>, buf: Ptr<u8>, len: i64) Result<(), SocketError> {
-    written = 0
+    written :: i64 = 0
     written < len ? {
         buf_offset = compiler.raw_ptr_offset(buf, written)
         result = self.write(buf_offset, len - written)
         result ? {
-            Ok(n) => { written = written + n }
-            Err(e) => { return Result.Err(e) }
+            | Ok(n) { written = written + n }
+            | Err(e) { return Result.Err(e) }
         }
     }
     return Result.Ok(())
@@ -371,13 +371,13 @@ UdpSocket.bind = (addr: SocketAddrV4) Result<UdpSocket, SocketError> {
 
     // Bind to address
     addr_ptr = compiler.ptr_to_int(&addr.ref())
-    result = sys_bind(fd as i32, addr_ptr, 16)
+    result = sys_bind(cast(fd, i32), addr_ptr, 16)
     result < 0 ? {
-        sys_close(fd as i32)
+        sys_close(cast(fd, i32))
         return Result.Err(SocketError.from_errno(result))
     }
 
-    return Result.Ok(UdpSocket { fd: fd as i32 })
+    return Result.Ok(UdpSocket { fd: cast(fd, i32) })
 }
 
 UdpSocket.send_to = (self: MutPtr<UdpSocket>, buf: Ptr<u8>, len: i64, dest: SocketAddrV4) Result<i64, SocketError> {

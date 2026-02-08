@@ -58,7 +58,7 @@ DT_SOCK = 12
 // Create a directory
 mkdir = (path_ptr: i64, mode: u32) Result<(), i32> {
     result = compiler.syscall2(SYS_MKDIR, path_ptr, mode)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -83,23 +83,22 @@ mkdir_all = (path_ptr: i64, mode: u32, allocator: Allocator) Result<(), i32> {
     }
 
     // Find the path length
-    len: usize = 0
+    len :: usize = 0
     len < 4096 ? {
-        c = compiler.load<u8>(compiler.int_to_ptr(path_ptr + len as i64))
-        c == 0 ? { len = 4096 }  // Break
+        c = compiler.load<u8>(compiler.int_to_ptr(path_ptr + cast(len, i64)))
+        c == 0 ? { len = 4096 }
         c != 0 ? { len = len + 1 }
     }
 
-    // Work backwards to find last separator
-    i = len
+    i ::= len
     i > 0 ? {
         i = i - 1
-        c = compiler.load<u8>(compiler.int_to_ptr(path_ptr + i as i64))
+        c = compiler.load<u8>(compiler.int_to_ptr(path_ptr + cast(i, i64)))
         c == 47 ? {  // '/'
             // Allocate buffer for parent path
             parent = allocator.allocate(i + 1)
             compiler.memcpy(compiler.int_to_ptr(parent), compiler.int_to_ptr(path_ptr), i)
-            compiler.store<u8>(compiler.int_to_ptr(parent + i as i64), 0)
+            compiler.store<u8>(compiler.int_to_ptr(parent + cast(i, i64)), 0)
 
             // Recursively create parent
             parent_result = mkdir_all(parent, mode, allocator)
@@ -121,7 +120,7 @@ mkdir_all = (path_ptr: i64, mode: u32, allocator: Allocator) Result<(), i32> {
 // Remove an empty directory
 rmdir = (path_ptr: i64) Result<(), i32> {
     result = compiler.syscall1(SYS_RMDIR, path_ptr)
-    result < 0 ? { return Result.Err(result as i32) }
+    result < 0 ? { return Result.Err(cast(result, i32)) }
     return Result.Ok(())
 }
 
@@ -143,7 +142,7 @@ Dir: {
 Dir.open = (path_ptr: i64, allocator: Allocator) Result<Dir, i32> {
     // Open with O_DIRECTORY to ensure it's a directory
     fd = compiler.syscall4(SYS_OPENAT, AT_FDCWD, path_ptr, O_RDONLY | O_DIRECTORY | O_CLOEXEC, 0)
-    fd < 0 ? { return Result.Err(fd as i32) }
+    fd < 0 ? { return Result.Err(cast(fd, i32)) }
 
     // Allocate read buffer (4KB)
     buf_size: usize = 4096
@@ -154,7 +153,7 @@ Dir.open = (path_ptr: i64, allocator: Allocator) Result<Dir, i32> {
     }
 
     dir = Dir {
-        fd: fd as i32,
+        fd: cast(fd, i32),
         buf: buf,
         buf_size: buf_size,
         buf_pos: 0,
@@ -171,12 +170,12 @@ Dir.next = (self: MutPtr<Dir>) Option<DirEntry> {
     self.val.buf_pos >= self.val.buf_len ? {
         nread = compiler.syscall3(SYS_GETDENTS64, self.val.fd, self.val.buf, self.val.buf_size)
         nread <= 0 ? { return Option.None }
-        self.val.buf_len = nread as usize
+        self.val.buf_len = cast(nread, usize)
         self.val.buf_pos = 0
     }
 
     // Parse entry at current position
-    entry_ptr = self.val.buf + self.val.buf_pos as i64
+    entry_ptr = self.val.buf + cast(self.val.buf_pos, i64)
 
     d_ino = compiler.load<u64>(compiler.int_to_ptr(entry_ptr))
     d_off = compiler.load<i64>(compiler.int_to_ptr(entry_ptr + 8))
@@ -193,7 +192,7 @@ Dir.next = (self: MutPtr<Dir>) Option<DirEntry> {
     }
 
     // Advance position
-    self.val.buf_pos = self.val.buf_pos + d_reclen as usize
+    self.val.buf_pos = self.val.buf_pos + cast(d_reclen, usize)
 
     return Option.Some(entry)
 }
@@ -236,9 +235,9 @@ DirEntry.is_dot = (self: DirEntry) bool {
 
 // Get name length
 DirEntry.name_len = (self: DirEntry) usize {
-    len: usize = 0
+    len :: usize = 0
     len < 256 ? {
-        c = compiler.load<u8>(compiler.int_to_ptr(self.d_name + len as i64))
+        c = compiler.load<u8>(compiler.int_to_ptr(self.d_name + cast(len, i64)))
         c == 0 ? { return len }
         len = len + 1
     }

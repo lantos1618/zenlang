@@ -138,7 +138,7 @@ Stat.is_sticky = (self: Stat) bool {
 
 // Get permission bits only (no file type)
 Stat.permissions = (self: Stat) u32 {
-    return self.st_mode & 4095  // 0o7777
+    return cast(self.st_mode & 4095, u32)  // 0o7777
 }
 
 // ============================================================================
@@ -156,8 +156,8 @@ stat = (path_ptr: i64) Result<Stat, i32> {
         st_ctime: 0, st_ctime_nsec: 0
     }
 
-    result = compiler.syscall2(SYS_STAT, path_ptr, compiler.ptr_to_int(&buf.ref() as RawPtr<u8>))
-    result < 0 ? { return Result.Err(result as i32) }
+    result = compiler.syscall2(SYS_STAT, path_ptr, compiler.ptr_to_int(cast(&buf.ref(), RawPtr<u8>)))
+    result < 0 ? { return Result.Err(cast(result, i32)) }
 
     return Result.Ok(buf)
 }
@@ -173,8 +173,8 @@ fstat = (fd: i32) Result<Stat, i32> {
         st_ctime: 0, st_ctime_nsec: 0
     }
 
-    result = compiler.syscall2(SYS_FSTAT, fd, compiler.ptr_to_int(&buf.ref() as RawPtr<u8>))
-    result < 0 ? { return Result.Err(result as i32) }
+    result = compiler.syscall2(SYS_FSTAT, fd, compiler.ptr_to_int(cast(&buf.ref(), RawPtr<u8>)))
+    result < 0 ? { return Result.Err(cast(result, i32)) }
 
     return Result.Ok(buf)
 }
@@ -190,8 +190,8 @@ lstat = (path_ptr: i64) Result<Stat, i32> {
         st_ctime: 0, st_ctime_nsec: 0
     }
 
-    result = compiler.syscall2(SYS_LSTAT, path_ptr, compiler.ptr_to_int(&buf.ref() as RawPtr<u8>))
-    result < 0 ? { return Result.Err(result as i32) }
+    result = compiler.syscall2(SYS_LSTAT, path_ptr, compiler.ptr_to_int(cast(&buf.ref(), RawPtr<u8>)))
+    result < 0 ? { return Result.Err(cast(result, i32)) }
 
     return Result.Ok(buf)
 }

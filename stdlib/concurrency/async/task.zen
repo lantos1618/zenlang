@@ -85,7 +85,7 @@ Task.new = (entry: i64, arg: i64, allocator: Allocator) Result<Task, i32> {
         0
     )
     stack_base < 0 ? {
-        return Result.Err((0 - stack_base) as i32)
+        return Result.Err(cast(0 - stack_base, i32))
     }
 
     // Set guard page (bottom of stack) to no-access
@@ -97,7 +97,7 @@ Task.new = (entry: i64, arg: i64, allocator: Allocator) Result<Task, i32> {
     )
 
     // Stack grows down, so top is base + size
-    stack_top = stack_base + total_size as i64 - 8
+    stack_top = stack_base + cast(total_size, i64) - 8
 
     // Initialize context for first switch
     // Set up stack so context_switch will jump to task_entry
@@ -107,14 +107,14 @@ Task.new = (entry: i64, arg: i64, allocator: Allocator) Result<Task, i32> {
         id: 0,  // Will be set by scheduler
         state: TaskState.Created,
         context: TaskContext {
-            rsp: initial_rsp as u64,
+            rsp: cast(initial_rsp, u64),
             rbp: 0,
             rbx: 0,
             r12: 0,
             r13: 0,
             r14: 0,
             r15: 0,
-            rip: task_entry_trampoline as u64
+            rip: cast(task_entry_trampoline, u64)
         },
         stack_base: stack_base,
         stack_size: total_size,
@@ -126,7 +126,7 @@ Task.new = (entry: i64, arg: i64, allocator: Allocator) Result<Task, i32> {
     }
 
     // Store task pointer and arg on initial stack for trampoline
-    compiler.store<i64>(compiler.int_to_ptr(initial_rsp), &task.ref() as i64)
+    compiler.store<i64>(compiler.int_to_ptr(initial_rsp), cast(&task.ref(), i64))
     compiler.store<i64>(compiler.int_to_ptr(initial_rsp + 8), arg)
 
     return Result.Ok(task)
@@ -243,7 +243,7 @@ Task.destroy = (self: MutPtr<Task>) void {
 
 // Global current task pointer (simple model, not thread-safe)
 // Real implementation would use TLS
-CURRENT_TASK: i64 = 0
+CURRENT_TASK :: i64 = 0
 
 set_current_task = (task: i64) void {
     CURRENT_TASK = task
@@ -251,7 +251,7 @@ set_current_task = (task: i64) void {
 
 get_current_task = () Option<MutPtr<Task>> {
     CURRENT_TASK == 0 ? { return Option.None }
-    return Option.Some(compiler.int_to_ptr(CURRENT_TASK) as MutPtr<Task>)
+    return Option.Some(cast(compiler.int_to_ptr(CURRENT_TASK), MutPtr<Task>))
 }
 
 // ============================================================================

@@ -20,19 +20,19 @@ MAP_FIXED = 16
 MmapError: { code: i32, message: StaticString }
 
 MmapError.from_errno = (errno: i64) MmapError {
-    code = (0 - errno) as i32
+    code = cast(0 - errno, i32)
     return MmapError { code: code, message: "Mmap error" }
 }
 
 // Memory-mapped region
-Mmap: { addr: i64, len: usize }
+Mmap: { base_addr: i64, len: usize }
 
 // Map anonymous memory (no file backing)
 Mmap.anonymous = (len: usize, prot: i32) Result<Mmap, MmapError> {
     flags = MAP_PRIVATE | MAP_ANONYMOUS
     result = compiler.syscall6(SYS_MMAP, 0, len, prot, flags, -1, 0)
     result < 0 ? { return Result.Err(MmapError.from_errno(result)) }
-    return Result.Ok(Mmap { addr: result, len: len })
+    return Result.Ok(Mmap { base_addr: result, len: len })
 }
 
 // Map with read/write access
@@ -42,21 +42,21 @@ Mmap.alloc = (len: usize) Result<Mmap, MmapError> {
 
 // Get pointer to mapped memory
 Mmap.ptr = (self: Mmap) Ptr<u8> {
-    return compiler.int_to_ptr(self.addr)
+    return compiler.int_to_ptr(self.base_addr)
 }
 
 // Change protection
 Mmap.protect = (self: MutPtr<Mmap>, prot: i32) Result<(), MmapError> {
-    result = compiler.syscall3(SYS_MPROTECT, self.val.addr, self.val.len, prot)
+    result = compiler.syscall3(SYS_MPROTECT, self.val.base_addr, self.val.len, prot)
     result < 0 ? { return Result.Err(MmapError.from_errno(result)) }
     return Result.Ok(())
 }
 
 // Unmap memory
 Mmap.unmap = (self: MutPtr<Mmap>) Result<(), MmapError> {
-    result = compiler.syscall2(SYS_MUNMAP, self.val.addr, self.val.len)
+    result = compiler.syscall2(SYS_MUNMAP, self.val.base_addr, self.val.len)
     result < 0 ? { return Result.Err(MmapError.from_errno(result)) }
-    self.val.addr = 0
+    self.val.base_addr = 0
     self.val.len = 0
     return Result.Ok(())
 }

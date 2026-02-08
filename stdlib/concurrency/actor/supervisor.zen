@@ -5,7 +5,7 @@
 { compiler } = @std
 { Result } = @std.core.result
 { Allocator } = @std.memory.allocator
-{ AtomicI32 } = @std.concurrency.primitives.atomic
+{ Atomic } = @std.concurrency.primitives.atomic
 { ACTOR_RUNNING, ACTOR_STOPPED, ACTOR_FAILED } = @std.concurrency.actor.actor
 
 // ============================================================================
@@ -72,7 +72,7 @@ ChildState: {
     spec: ChildSpec,
     pid: i64,           // Thread/process ID
     actor_ptr: i64,     // Pointer to actor instance
-    state: AtomicI32,
+    state: Atomic<i32>,
     restart_count: i32,
     last_restart: i64   // Timestamp of last restart
 }
@@ -82,7 +82,7 @@ ChildState.new = (spec: ChildSpec) ChildState {
         spec: spec,
         pid: 0,
         actor_ptr: 0,
-        state: AtomicI32.new(ACTOR_STOPPED),
+        state: Atomic<i32>.new(ACTOR_STOPPED),
         restart_count: 0,
         last_restart: 0
     }
@@ -99,7 +99,7 @@ Supervisor: {
     children: i64,         // Pointer to child array
     child_count: i32,
     child_capacity: i32,
-    state: AtomicI32,
+    state: Atomic<i32>,
     allocator: Allocator
 }
 
@@ -115,7 +115,7 @@ Supervisor.new = (strategy: i32, max_restarts: i32, max_time: i32, allocator: Al
         children: children_ptr,
         child_count: 0,
         child_capacity: capacity,
-        state: AtomicI32.new(ACTOR_STOPPED),
+        state: Atomic<i32>.new(ACTOR_STOPPED),
         allocator: allocator
     }
 }
@@ -140,8 +140,8 @@ Supervisor.add_child = (self: MutPtr<Supervisor>, spec: ChildSpec) Result<i32, i
     child_state = ChildState.new(spec)
     offset = self.val.child_count * 64
     compiler.memcpy(
-        compiler.int_to_ptr(self.val.children + offset as i64),
-        &child_state.ref() as RawPtr<u8>,
+        compiler.int_to_ptr(self.val.children + cast(offset, i64)),
+        cast(&child_state.ref(), RawPtr<u8>),
         64
     )
 
@@ -155,7 +155,7 @@ Supervisor.add_child = (self: MutPtr<Supervisor>, spec: ChildSpec) Result<i32, i
 Supervisor.start = (self: MutPtr<Supervisor>) Result<(), i32> {
     self.val.state.store(ACTOR_RUNNING)
 
-    i = 0
+    i ::= 0
     i < self.val.child_count ? {
         result = self.start_child(i)
         result ? {
@@ -172,7 +172,7 @@ Supervisor.start = (self: MutPtr<Supervisor>) Result<(), i32> {
 Supervisor.start_child = (self: MutPtr<Supervisor>, idx: i32) Result<(), i32> {
     idx >= self.val.child_count ? { return Result.Err(-22) }  // EINVAL
 
-    child_ptr = compiler.int_to_ptr(self.val.children + (idx * 64) as i64) as MutPtr<ChildState>
+    child_ptr = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
 
     // Call the start function
     // start_fn signature: (context: i64, allocator: Allocator) i64 (returns actor_ptr)
@@ -191,7 +191,7 @@ Supervisor.stop = (self: MutPtr<Supervisor>) void {
     self.val.state.store(ACTOR_STOPPED)
 
     // Stop children in reverse order
-    i = self.val.child_count - 1
+    i ::= self.val.child_count - 1
     i >= 0 ? {
         self.stop_child(i)
         i = i - 1
@@ -202,7 +202,7 @@ Supervisor.stop = (self: MutPtr<Supervisor>) void {
 Supervisor.stop_child = (self: MutPtr<Supervisor>, idx: i32) void {
     idx >= self.val.child_count ? { return }
 
-    child_ptr = compiler.int_to_ptr(self.val.children + (idx * 64) as i64) as MutPtr<ChildState>
+    child_ptr = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
     child_ptr.val.state.store(ACTOR_STOPPED)
 }
 
@@ -210,7 +210,7 @@ Supervisor.stop_child = (self: MutPtr<Supervisor>, idx: i32) void {
 Supervisor.handle_failure = (self: MutPtr<Supervisor>, idx: i32) void {
     idx >= self.val.child_count ? { return }
 
-    child_ptr = compiler.int_to_ptr(self.val.children + (idx * 64) as i64) as MutPtr<ChildState>
+    child_ptr = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
     restart_policy = child_ptr.val.spec.restart
 
     // Check restart policy
@@ -239,7 +239,7 @@ Supervisor.handle_failure = (self: MutPtr<Supervisor>, idx: i32) void {
 
 // Restart a single child
 Supervisor.restart_child = (self: MutPtr<Supervisor>, idx: i32) void {
-    child_ptr = compiler.int_to_ptr(self.val.children + (idx * 64) as i64) as MutPtr<ChildState>
+    child_ptr = cast(compiler.int_to_ptr(self.val.children + cast(idx * 64, i64)), MutPtr<ChildState>)
     child_ptr.val.restart_count = child_ptr.val.restart_count + 1
     self.start_child(idx)
 }
@@ -247,14 +247,14 @@ Supervisor.restart_child = (self: MutPtr<Supervisor>, idx: i32) void {
 // Restart all children
 Supervisor.restart_all = (self: MutPtr<Supervisor>) void {
     // Stop all first
-    i = self.val.child_count - 1
+    i ::= self.val.child_count - 1
     i >= 0 ? {
         self.stop_child(i)
         i = i - 1
     }
 
     // Start all
-    i = 0
+    i ::= 0
     i < self.val.child_count ? {
         self.start_child(i)
         i = i + 1
@@ -264,14 +264,14 @@ Supervisor.restart_all = (self: MutPtr<Supervisor>) void {
 // Restart failed child and all started after it
 Supervisor.restart_rest = (self: MutPtr<Supervisor>, idx: i32) void {
     // Stop from idx onwards (reverse)
-    i = self.val.child_count - 1
+    i ::= self.val.child_count - 1
     i >= idx ? {
         self.stop_child(i)
         i = i - 1
     }
 
     // Start from idx onwards
-    i = idx
+    i ::= idx
     i < self.val.child_count ? {
         self.start_child(i)
         i = i + 1

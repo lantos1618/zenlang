@@ -39,12 +39,11 @@ copy_file_range = (fd_in: i32, off_in: i64, fd_out: i32, off_out: i64, len: usiz
 // Simple file-to-file copy using copy_file_range
 // Copies entire file from current position
 copy_fd = (src_fd: i32, dst_fd: i32, len: usize) Result<usize, i32> {
-    total: usize = 0
-    remaining = len
+    total :: usize = 0
+    remaining ::= len
 
     remaining > 0 ? {
-        // Copy in chunks (kernel may limit per-call)
-        chunk = remaining
+        chunk ::= remaining
         chunk > 1073741824 ? { chunk = 1073741824 }  // Max 1GB per call
 
         result = copy_file_range(src_fd, 0, dst_fd, 0, chunk, 0)
@@ -82,8 +81,8 @@ sendfile = (out_fd: i32, in_fd: i32, offset: i64, count: usize) Result<usize, i3
 
 // Send entire file to socket
 sendfile_all = (socket_fd: i32, file_fd: i32, len: usize) Result<usize, i32> {
-    total: usize = 0
-    remaining = len
+    total :: usize = 0
+    remaining ::= len
 
     remaining > 0 ? {
         result = sendfile(socket_fd, file_fd, 0, remaining)
@@ -119,9 +118,9 @@ SYS_WRITE = 1
 
 // Copy between fds using user-space buffer
 copy_fd_buffered = (src_fd: i32, dst_fd: i32, buf: i64, buf_size: usize) Result<usize, i32> {
-    total: usize = 0
+    total :: usize = 0
 
-    done = false
+    done ::= false
     done == false ? {
         // Read chunk
         nread = compiler.syscall3(SYS_READ, src_fd, buf, buf_size)
@@ -130,7 +129,7 @@ copy_fd_buffered = (src_fd: i32, dst_fd: i32, buf: i64, buf_size: usize) Result<
 
         nread > 0 ? {
             // Write all read data
-            written: usize = 0
+            written :: usize = 0
             written < nread as usize ? {
                 nwrite = compiler.syscall3(
                     SYS_WRITE,
@@ -163,7 +162,7 @@ copy_smart = (src_fd: i32, dst_fd: i32, len: usize, allocator: Allocator) Result
             // EXDEV (-18): different filesystems on older kernel
             // EINVAL (-22): not supported for these fds
             // Fall back to buffered copy
-            (e == -18) | (e == -22) | (e == -38) ? {
+            (e == -18) ? {
                 // Allocate buffer
                 buf_size: usize = 65536  // 64KB
                 buf = allocator.allocate(buf_size)
@@ -172,6 +171,28 @@ copy_smart = (src_fd: i32, dst_fd: i32, len: usize, allocator: Allocator) Result
                 copy_result = copy_fd_buffered(src_fd, dst_fd, buf, buf_size)
                 allocator.deallocate(buf, buf_size)
                 return copy_result
+            } : {
+                (e == -22) ? {
+                    // Allocate buffer
+                    buf_size: usize = 65536  // 64KB
+                    buf = allocator.allocate(buf_size)
+                    buf == 0 ? { return Result.Err(-12) }  // ENOMEM
+
+                    copy_result = copy_fd_buffered(src_fd, dst_fd, buf, buf_size)
+                    allocator.deallocate(buf, buf_size)
+                    return copy_result
+                } : {
+                    (e == -38) ? {
+                        // Allocate buffer
+                        buf_size: usize = 65536  // 64KB
+                        buf = allocator.allocate(buf_size)
+                        buf == 0 ? { return Result.Err(-12) }  // ENOMEM
+
+                        copy_result = copy_fd_buffered(src_fd, dst_fd, buf, buf_size)
+                        allocator.deallocate(buf, buf_size)
+                        return copy_result
+                    }
+                }
             }
             return Result.Err(e)
         }

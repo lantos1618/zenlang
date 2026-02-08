@@ -2,7 +2,7 @@
 // Dynamic growable UTF-8 string with allocator support
 
 { compiler } = @std
-{ Ptr } = @std.core
+{ Ptr } = @std.core.ptr
 { Allocator } = @std.memory.allocator
 
 // String - dynamic growable text buffer

@@ -15,7 +15,7 @@ FUTEX_WAKE_PRIVATE = 129
 FutexError: { code: i32 }
 
 FutexError.from_errno = (errno: i64) FutexError {
-    return FutexError { code: (0 - errno) as i32 }
+    return FutexError { code: cast(0 - errno, i32) }
 }
 
 // Wait on futex (block if *addr == expected)
@@ -33,7 +33,7 @@ futex_wait = (addr: Ptr<i32>, expected: i32) Result<(), FutexError> {
 futex_wake = (addr: Ptr<i32>, count: i32) Result<i32, FutexError> {
     result = compiler.syscall3(SYS_FUTEX, compiler.ptr_to_int(addr), FUTEX_WAKE_PRIVATE, count)
     result < 0 ? { return Result.Err(FutexError.from_errno(result)) }
-    return Result.Ok(result as i32)
+    return Result.Ok(cast(result, i32))
 }
 
 // Wake one waiter
@@ -55,13 +55,13 @@ Spinlock.new = () Spinlock {
 
 Spinlock.lock = (self: MutPtr<Spinlock>) void {
     // Try to acquire (0 -> 1)
-    old = compiler.atomic_cas(&self.val.state.ref() as Ptr<u64>, 0, 1)
+    old ::= compiler.atomic_cas(cast(&self.val.state.ref(), Ptr<u64>), 0, 1)
     old == 0 ? { return }
 
     // Spin then wait
-    i = 0
+    i ::= 0
     i < 100 ? {
-        old = compiler.atomic_cas(&self.val.state.ref() as Ptr<u64>, 0, 1)
+        old = compiler.atomic_cas(cast(&self.val.state.ref(), Ptr<u64>), 0, 1)
         old == 0 ? { return }
         i = i + 1
     }
@@ -73,6 +73,6 @@ Spinlock.lock = (self: MutPtr<Spinlock>) void {
 }
 
 Spinlock.unlock = (self: MutPtr<Spinlock>) void {
-    compiler.atomic_store(&self.val.state.ref() as Ptr<u64>, 0)
+    compiler.atomic_store(cast(&self.val.state.ref(), Ptr<u64>), 0)
     futex_wake_one(&self.val.state.ref())
 }

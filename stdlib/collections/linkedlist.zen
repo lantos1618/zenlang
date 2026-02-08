@@ -2,7 +2,8 @@
 // Doubly-linked list with safe pointers and allocator support
 
 { compiler } = @std
-{ Ptr, Option } = @std.core
+{ Ptr } = @std.core.ptr
+{ Option } = @std.core.option
 { Allocator } = @std.memory.allocator
 
 // ============================================================================
@@ -65,7 +66,7 @@ LinkedList<T>.is_empty = (self: LinkedList<T>) bool {
 
 // Get first element
 LinkedList<T>.front = (self: LinkedList<T>) Option<T> {
-    self.head.is_null() ? {
+    self.head.is_none() ? {
         return Option.None
     }
     return Option.Some(self.head.val.value)
@@ -73,7 +74,7 @@ LinkedList<T>.front = (self: LinkedList<T>) Option<T> {
 
 // Get last element
 LinkedList<T>.back = (self: LinkedList<T>) Option<T> {
-    self.tail.is_null() ? {
+    self.tail.is_none() ? {
         return Option.None
     }
     return Option.Some(self.tail.val.value)
@@ -88,8 +89,8 @@ LinkedList<T>.get = (self: LinkedList<T>, index: usize) Option<T> {
     // Walk from head or tail depending on which is closer
     index < self.len / 2 ? {
         // Walk from head
-        current = self.head
-        i = 0
+        current ::= self.head
+        i ::= 0
         i < index ? {
             current = current.val.next
             i = i + 1
@@ -98,8 +99,8 @@ LinkedList<T>.get = (self: LinkedList<T>, index: usize) Option<T> {
     }
 
     // Walk from tail
-    current = self.tail
-    i = self.len - 1
+    current ::= self.tail
+    i ::= self.len - 1
     i > index ? {
         current = current.val.prev
         i = i - 1
@@ -109,8 +110,8 @@ LinkedList<T>.get = (self: LinkedList<T>, index: usize) Option<T> {
 
 // Check if list contains value
 LinkedList<T>.contains = (self: LinkedList<T>, value: T) bool {
-    current = self.head
-    !current.is_null() ? {
+    current ::= self.head
+    !current.is_none() ? {
         current.val.value == value ? {
             return true
         }
@@ -150,7 +151,7 @@ LinkedList<T>.free_node = (self: MutPtr<LinkedList<T>>, node: Ptr<Node<T>>) void
 LinkedList<T>.push_front = (self: MutPtr<LinkedList<T>>, value: T) void {
     new_node = self.alloc_node(value)
 
-    self.val.head.is_null() ? {
+    self.val.head.is_none() ? {
         // Empty list - new node is both head and tail
         self.val.head = new_node
         self.val.tail = new_node
@@ -168,7 +169,7 @@ LinkedList<T>.push_front = (self: MutPtr<LinkedList<T>>, value: T) void {
 LinkedList<T>.push_back = (self: MutPtr<LinkedList<T>>, value: T) void {
     new_node = self.alloc_node(value)
 
-    self.val.tail.is_null() ? {
+    self.val.tail.is_none() ? {
         // Empty list - new node is both head and tail
         self.val.head = new_node
         self.val.tail = new_node
@@ -184,7 +185,7 @@ LinkedList<T>.push_back = (self: MutPtr<LinkedList<T>>, value: T) void {
 
 // Pop element from front
 LinkedList<T>.pop_front = (self: MutPtr<LinkedList<T>>) Option<T> {
-    self.val.head.is_null() ? {
+    self.val.head.is_none() ? {
         return Option.None
     }
 
@@ -192,7 +193,7 @@ LinkedList<T>.pop_front = (self: MutPtr<LinkedList<T>>) Option<T> {
     value = old_head.val.value
 
     self.val.head = old_head.val.next
-    self.val.head.is_null() ? {
+    self.val.head.is_none() ? {
         // List is now empty
         self.val.tail = Ptr<Node<T>>.none()
     } : {
@@ -208,7 +209,7 @@ LinkedList<T>.pop_front = (self: MutPtr<LinkedList<T>>) Option<T> {
 
 // Pop element from back
 LinkedList<T>.pop_back = (self: MutPtr<LinkedList<T>>) Option<T> {
-    self.val.tail.is_null() ? {
+    self.val.tail.is_none() ? {
         return Option.None
     }
 
@@ -216,7 +217,7 @@ LinkedList<T>.pop_back = (self: MutPtr<LinkedList<T>>) Option<T> {
     value = old_tail.val.value
 
     self.val.tail = old_tail.val.prev
-    self.val.tail.is_null() ? {
+    self.val.tail.is_none() ? {
         // List is now empty
         self.val.head = Ptr<Node<T>>.none()
     } : {
@@ -247,8 +248,8 @@ LinkedList<T>.insert = (self: MutPtr<LinkedList<T>>, index: usize, value: T) boo
     }
 
     // Find node at index
-    current = self.val.head
-    i = 0
+    current ::= self.val.head
+    i ::= 0
     i < index ? {
         current = current.val.next
         i = i + 1
@@ -282,8 +283,8 @@ LinkedList<T>.remove = (self: MutPtr<LinkedList<T>>, index: usize) Option<T> {
     }
 
     // Find node at index
-    current = self.val.head
-    i = 0
+    current ::= self.val.head
+    i ::= 0
     i < index ? {
         current = current.val.next
         i = i + 1
@@ -305,9 +306,9 @@ LinkedList<T>.remove = (self: MutPtr<LinkedList<T>>, index: usize) Option<T> {
 
 // Clear all elements
 LinkedList<T>.clear = (self: MutPtr<LinkedList<T>>) void {
-    !self.val.head.is_null() ? {
-        current = self.val.head
-        !current.is_null() ? {
+    !self.val.head.is_none() ? {
+        current ::= self.val.head
+        !current.is_none() ? {
             next = current.val.next
             self.free_node(current)
             current = next
@@ -342,12 +343,12 @@ LinkedList<T>.iter = (self: LinkedList<T>) LinkedListIter<T> {
 
 // Check if iterator has more elements
 LinkedListIter<T>.has_next = (self: LinkedListIter<T>) bool {
-    return !self.current.is_null()
+    return !self.current.is_none()
 }
 
 // Get next element
 LinkedListIter<T>.next = (self: MutPtr<LinkedListIter<T>>) Option<T> {
-    self.val.current.is_null() ? {
+    self.val.current.is_none() ? {
         return Option.None
     }
 

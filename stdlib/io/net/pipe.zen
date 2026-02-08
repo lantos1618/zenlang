@@ -14,14 +14,14 @@ F_SETFL = 4
 PipeError: { code: i32, message: StaticString }
 
 PipeError.from_errno = (errno: i64) PipeError {
-    code = (0 - errno) as i32
+    code = cast(0 - errno, i32)
     return PipeError { code: code, message: "Pipe error" }
 }
 
 Pipe: { read_fd: i32, write_fd: i32 }
 
 Pipe.new = () Result<Pipe, PipeError> {
-    fds: [2]i32 = [0, 0]
+    fds: [i32; 2] = [0, 0]
     result = compiler.syscall2(SYS_PIPE2, compiler.ptr_to_int(&fds.ref()), O_CLOEXEC)
     result < 0 ? { return Result.Err(PipeError.from_errno(result)) }
     return Result.Ok(Pipe { read_fd: fds[0], write_fd: fds[1] })

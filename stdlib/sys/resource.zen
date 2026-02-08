@@ -67,7 +67,7 @@ getrlimit = (resource: i32) Result<RLimit, i32> {
         resource,
         compiler.ptr_to_int(&rlimit.ref())
     )
-    result < 0 ? { return Result.Err((0 - result) as i32) }
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
     return Result.Ok(rlimit)
 }
 
@@ -80,7 +80,7 @@ setrlimit = (resource: i32, rlimit: Ptr<RLimit>) Result<(), i32> {
         resource,
         compiler.ptr_to_int(rlimit)
     )
-    result < 0 ? { return Result.Err((0 - result) as i32) }
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
     return Result.Ok(())
 }
 
@@ -95,7 +95,7 @@ prlimit = (pid: i32, resource: i32, new_limit: i64, old_limit: i64) Result<(), i
         new_limit,
         old_limit
     )
-    result < 0 ? { return Result.Err((0 - result) as i32) }
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
     return Result.Ok(())
 }
 
@@ -148,7 +148,7 @@ getrusage = (who: i32) Result<RUsage, i32> {
 
     result < 0 ? {
         compiler.raw_deallocate(rusage_ptr, 144)
-        return Result.Err((0 - result) as i32)
+        return Result.Err(cast(0 - result, i32))
     }
 
     // Extract fields

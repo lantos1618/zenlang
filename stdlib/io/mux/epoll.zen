@@ -23,14 +23,14 @@ EPOLL_CLOEXEC = 524288
 EpollError: { code: i32, message: StaticString }
 
 EpollError.from_errno = (errno: i64) EpollError {
-    code = (0 - errno) as i32
+    code = cast(0 - errno, i32)
     return EpollError { code: code, message: "Epoll error" }
 }
 
 EpollEvent: { events: u32, data: u64 }
 
 EpollEvent.for_fd = (events: u32, fd: i32) EpollEvent {
-    return EpollEvent { events: events, data: fd as u64 }
+    return EpollEvent { events: events, data: cast(fd, u64) }
 }
 
 Epoll: { fd: i32 }
@@ -38,7 +38,7 @@ Epoll: { fd: i32 }
 Epoll.new = () Result<Epoll, EpollError> {
     result = compiler.syscall1(SYS_EPOLL_CREATE1, EPOLL_CLOEXEC)
     result < 0 ? { return Result.Err(EpollError.from_errno(result)) }
-    return Result.Ok(Epoll { fd: result as i32 })
+    return Result.Ok(Epoll { fd: cast(result, i32) })
 }
 
 Epoll.add = (self: MutPtr<Epoll>, fd: i32, events: u32) Result<(), EpollError> {
@@ -57,7 +57,7 @@ Epoll.remove = (self: MutPtr<Epoll>, fd: i32) Result<(), EpollError> {
 Epoll.wait = (self: MutPtr<Epoll>, events: Ptr<EpollEvent>, max: i32, timeout_ms: i32) Result<i32, EpollError> {
     result = compiler.syscall4(SYS_EPOLL_WAIT, self.val.fd, compiler.ptr_to_int(events), max, timeout_ms)
     result < 0 ? { return Result.Err(EpollError.from_errno(result)) }
-    return Result.Ok(result as i32)
+    return Result.Ok(cast(result, i32))
 }
 
 Epoll.close = (self: MutPtr<Epoll>) void {

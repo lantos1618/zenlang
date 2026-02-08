@@ -10,26 +10,26 @@ GRND_NONBLOCK = 1
 GRND_RANDOM = 2
 
 RandomError: { code: i32 }
-RandomError.from_errno = (errno: i64) RandomError { return RandomError { code: (0 - errno) as i32 } }
+RandomError.from_errno = (errno: i64) RandomError { return RandomError { code: cast(0 - errno, i32) } }
 
 // Get random bytes from kernel
 getrandom = (buf: Ptr<u8>, len: usize, flags: u32) Result<usize, RandomError> {
     result = compiler.syscall3(SYS_GETRANDOM, compiler.ptr_to_int(buf), len, flags)
     result < 0 ? { return Result.Err(RandomError.from_errno(result)) }
-    return Result.Ok(result as usize)
+    return Result.Ok(cast(result, usize))
 }
 
 // Get random u64
 random_u64 = () Result<u64, RandomError> {
     value: u64 = 0
-    getrandom(&value.ref() as Ptr<u8>, 8, 0).raise()
+    getrandom(cast(&value.ref(), Ptr<u8>), 8, 0).raise()
     return Result.Ok(value)
 }
 
 // Get random u32
 random_u32 = () Result<u32, RandomError> {
     value: u32 = 0
-    getrandom(&value.ref() as Ptr<u8>, 4, 0).raise()
+    getrandom(cast(&value.ref(), Ptr<u8>), 4, 0).raise()
     return Result.Ok(value)
 }
 

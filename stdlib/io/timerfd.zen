@@ -11,7 +11,7 @@ TFD_CLOEXEC = 524288
 TFD_NONBLOCK = 2048
 
 TimerError: { code: i32 }
-TimerError.from_errno = (errno: i64) TimerError { return TimerError { code: (0 - errno) as i32 } }
+TimerError.from_errno = (errno: i64) TimerError { return TimerError { code: cast(0 - errno, i32) } }
 
 Itimerspec: { interval_sec: i64, interval_nsec: i64, value_sec: i64, value_nsec: i64 }
 
@@ -20,7 +20,7 @@ Timerfd: { fd: i32 }
 Timerfd.new = () Result<Timerfd, TimerError> {
     result = compiler.syscall2(SYS_TIMERFD_CREATE, CLOCK_MONOTONIC, TFD_CLOEXEC)
     result < 0 ? { return Result.Err(TimerError.from_errno(result)) }
-    return Result.Ok(Timerfd { fd: result as i32 })
+    return Result.Ok(Timerfd { fd: cast(result, i32) })
 }
 
 Timerfd.set_oneshot_ms = (self: MutPtr<Timerfd>, ms: i64) Result<(), TimerError> {

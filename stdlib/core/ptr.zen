@@ -70,7 +70,7 @@ Ptr<T>.offset = (self: Ptr<T>, count: i64) Ptr<T> {
     self ?
         | Some(addr_i64) {
             addr = compiler.int_to_ptr(addr_i64)
-            item_size = compiler.sizeof<T>() as i64
+            item_size = cast(compiler.sizeof<T>(), i64)
             byte_offset = count * item_size
             new_addr = compiler.gep(addr, byte_offset)
             new_addr_int = compiler.ptr_to_int(new_addr)

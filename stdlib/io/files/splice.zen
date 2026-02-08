@@ -37,8 +37,8 @@ splice = (fd_in: i32, off_in: i64, fd_out: i32, off_out: i64, len: usize, flags:
         len,
         flags
     )
-    result < 0 ? { return Result.Err((0 - result) as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
+    return Result.Ok(cast(result, usize))
 }
 
 // Splice from current position (no offset tracking)
@@ -58,8 +58,8 @@ splice_simple = (fd_in: i32, fd_out: i32, len: usize, flags: u32) Result<usize, 
 
 tee = (fd_in: i32, fd_out: i32, len: usize, flags: u32) Result<usize, i32> {
     result = compiler.syscall4(SYS_TEE, fd_in, fd_out, len, flags)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
+    return Result.Ok(cast(result, usize))
 }
 
 // ============================================================================
@@ -76,8 +76,8 @@ IoVec: {
 
 vmsplice = (fd: i32, iov: i64, nr_segs: usize, flags: u32) Result<usize, i32> {
     result = compiler.syscall4(SYS_VMSPLICE, fd, iov, nr_segs, flags)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
+    return Result.Ok(cast(result, usize))
 }
 
 // Simple single-buffer vmsplice
@@ -85,7 +85,7 @@ vmsplice_buf = (fd: i32, buf: i64, len: usize, flags: u32) Result<usize, i32> {
     // Create iovec on stack
     iov_ptr = compiler.raw_allocate(16)  // sizeof(IoVec)
     compiler.store<i64>(iov_ptr, buf)
-    compiler.store<u64>(compiler.gep(iov_ptr, 8), len as u64)
+    compiler.store<u64>(compiler.gep(iov_ptr, 8), cast(len, u64))
 
     result = vmsplice(fd, compiler.ptr_to_int(iov_ptr), 1, flags)
 
@@ -102,8 +102,8 @@ vmsplice_buf = (fd: i32, buf: i64, len: usize, flags: u32) Result<usize, i32> {
 sendfile = (out_fd: i32, in_fd: i32, offset: i64, count: usize) Result<usize, i32> {
     // offset is a pointer to the offset (or 0 to use current position)
     result = compiler.syscall4(SYS_SENDFILE, out_fd, in_fd, offset, count)
-    result < 0 ? { return Result.Err((0 - result) as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
+    return Result.Ok(cast(result, usize))
 }
 
 // Send file from current position
@@ -127,8 +127,8 @@ copy_file_range = (fd_in: i32, off_in: i64, fd_out: i32, off_out: i64, len: usiz
         len,
         flags
     )
-    result < 0 ? { return Result.Err((0 - result) as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
+    return Result.Ok(cast(result, usize))
 }
 
 // ============================================================================
@@ -152,7 +152,7 @@ Pipe.new = () Result<Pipe, i32> {
     result = compiler.syscall2(SYS_PIPE2, compiler.ptr_to_int(fds_ptr), 0)
     result < 0 ? {
         compiler.raw_deallocate(fds_ptr, 8)
-        return Result.Err((0 - result) as i32)
+        return Result.Err(cast(0 - result, i32))
     }
 
     read_fd = compiler.load<i32>(fds_ptr)
@@ -169,7 +169,7 @@ Pipe.with_flags = (flags: i32) Result<Pipe, i32> {
     result = compiler.syscall2(SYS_PIPE2, compiler.ptr_to_int(fds_ptr), flags)
     result < 0 ? {
         compiler.raw_deallocate(fds_ptr, 8)
-        return Result.Err((0 - result) as i32)
+        return Result.Err(cast(0 - result, i32))
     }
 
     read_fd = compiler.load<i32>(fds_ptr)

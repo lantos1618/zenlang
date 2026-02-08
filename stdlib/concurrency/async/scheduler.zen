@@ -46,13 +46,13 @@ TaskQueue.new = (capacity: usize, allocator: Allocator) TaskQueue {
 }
 
 TaskQueue.push = (self: MutPtr<TaskQueue>, task_ptr: i64) bool {
-    self.val.count >= self.val.capacity as u32 ? {
+    self.val.count >= cast(self.val.capacity, u32) ? {
         return false  // Queue full
     }
 
-    idx = self.val.tail % self.val.capacity as u32
+    idx = self.val.tail % cast(self.val.capacity, u32)
     compiler.store<i64>(
-        compiler.int_to_ptr(self.val.tasks + idx as i64 * 8),
+        compiler.int_to_ptr(self.val.tasks + cast(idx, i64) * 8),
         task_ptr
     )
     self.val.tail = self.val.tail + 1
@@ -65,9 +65,9 @@ TaskQueue.pop = (self: MutPtr<TaskQueue>) Option<i64> {
         return Option.None
     }
 
-    idx = self.val.head % self.val.capacity as u32
+    idx = self.val.head % cast(self.val.capacity, u32)
     task_ptr = compiler.load<i64>(
-        compiler.int_to_ptr(self.val.tasks + idx as i64 * 8)
+        compiler.int_to_ptr(self.val.tasks + cast(idx, i64) * 8)
     )
     self.val.head = self.val.head + 1
     self.val.count = self.val.count - 1
@@ -150,12 +150,12 @@ Scheduler.spawn = (self: MutPtr<Scheduler>, entry: i64, arg: i64) Result<u64, i3
             task_ptr = self.val.allocator.allocate(compiler.sizeof<Task>())
             compiler.memcpy(
                 compiler.int_to_ptr(task_ptr),
-                &task.ref() as i64,
+                cast(&task.ref(), i64),
                 compiler.sizeof<Task>()
             )
 
             // Set ID on the copied task
-            task_copy = compiler.int_to_ptr(task_ptr) as MutPtr<Task>
+            task_copy = cast(compiler.int_to_ptr(task_ptr), MutPtr<Task>)
             task_copy.val.id = self.val.next_task_id
             self.val.next_task_id = self.val.next_task_id + 1
 
@@ -201,7 +201,7 @@ Scheduler.run = (self: MutPtr<Scheduler>) void {
 
 // Run a single task until it suspends or completes
 Scheduler.run_task = (self: MutPtr<Scheduler>, task_ptr: i64) void {
-    task = compiler.int_to_ptr(task_ptr) as MutPtr<Task>
+    task = cast(compiler.int_to_ptr(task_ptr), MutPtr<Task>)
 
     // Set as current task
     self.val.current_task = task_ptr
@@ -211,8 +211,8 @@ Scheduler.run_task = (self: MutPtr<Scheduler>, task_ptr: i64) void {
     task.val.state = TaskState.Running
 
     // Switch to task (save scheduler context, load task context)
-    ctx_ptr = &task.val.context.ref() as i64
-    sched_ctx_ptr = &self.val.scheduler_ctx.ref() as i64
+    ctx_ptr = cast(&task.val.context.ref(), i64)
+    sched_ctx_ptr = cast(&self.val.scheduler_ctx.ref(), i64)
 
     // In real implementation, this would do actual context switch
     // context_switch(sched_ctx_ptr, ctx_ptr)
@@ -230,7 +230,7 @@ Scheduler.run_task = (self: MutPtr<Scheduler>, task_ptr: i64) void {
     task.val.state ? {
         | Suspended {
             // Add to suspended list
-            idx = self.val.suspended_count as i64
+            idx = cast(self.val.suspended_count, i64)
             compiler.store<i64>(
                 compiler.int_to_ptr(self.val.suspended + idx * 8),
                 task_ptr
@@ -254,12 +254,12 @@ Scheduler.run_task = (self: MutPtr<Scheduler>, task_ptr: i64) void {
 // Finds the suspended task and makes it runnable
 Scheduler.on_io_complete = (self: MutPtr<Scheduler>, op_id: u64, result: i64) void {
     // Find task waiting on this operation
-    i = 0
-    i < self.val.suspended_count as i32 ? {
+    i ::= 0
+    i < cast(self.val.suspended_count, i32) ? {
         task_ptr = compiler.load<i64>(
-            compiler.int_to_ptr(self.val.suspended + i as i64 * 8)
+            compiler.int_to_ptr(self.val.suspended + cast(i, i64) * 8)
         )
-        task = compiler.int_to_ptr(task_ptr) as MutPtr<Task>
+        task = cast(compiler.int_to_ptr(task_ptr), MutPtr<Task>)
 
         // Check if this task was waiting for this op
         // (In real impl, would track op_id -> task mapping)
@@ -271,10 +271,10 @@ Scheduler.on_io_complete = (self: MutPtr<Scheduler>, op_id: u64, result: i64) vo
             // Remove from suspended (swap with last)
             last_idx = self.val.suspended_count - 1
             last_ptr = compiler.load<i64>(
-                compiler.int_to_ptr(self.val.suspended + last_idx as i64 * 8)
+                compiler.int_to_ptr(self.val.suspended + cast(last_idx, i64) * 8)
             )
             compiler.store<i64>(
-                compiler.int_to_ptr(self.val.suspended + i as i64 * 8),
+                compiler.int_to_ptr(self.val.suspended + cast(i, i64) * 8),
                 last_ptr
             )
             self.val.suspended_count = self.val.suspended_count - 1
@@ -293,7 +293,7 @@ Scheduler.on_io_complete = (self: MutPtr<Scheduler>, op_id: u64, result: i64) vo
 // Yield current task, allowing other tasks to run
 Scheduler.yield = (self: MutPtr<Scheduler>) void {
     self.val.current_task != 0 ? {
-        task = compiler.int_to_ptr(self.val.current_task) as MutPtr<Task>
+        task = cast(compiler.int_to_ptr(self.val.current_task), MutPtr<Task>)
         task.val.state = TaskState.Suspended
 
         // Re-add to runnable queue (not truly suspended, just yielding)
@@ -317,7 +317,7 @@ Scheduler.destroy = (self: MutPtr<Scheduler>) void {
 // ============================================================================
 
 // Global scheduler pointer (for simple single-threaded use)
-GLOBAL_SCHEDULER: i64 = 0
+GLOBAL_SCHEDULER :: i64 = 0
 
 set_scheduler = (sched: i64) void {
     GLOBAL_SCHEDULER = sched
@@ -325,7 +325,7 @@ set_scheduler = (sched: i64) void {
 
 get_scheduler = () Option<MutPtr<Scheduler>> {
     GLOBAL_SCHEDULER == 0 ? { return Option.None }
-    return Option.Some(compiler.int_to_ptr(GLOBAL_SCHEDULER) as MutPtr<Scheduler>)
+    return Option.Some(cast(compiler.int_to_ptr(GLOBAL_SCHEDULER), MutPtr<Scheduler>))
 }
 
 // Convenience: yield from current task
