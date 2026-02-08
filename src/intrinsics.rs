@@ -141,6 +141,7 @@ fn build_intrinsics() -> HashMap<&'static str, Intrinsic> {
     intrinsic!(m, "nullptr",        () -> ptr.clone(), "Alias for null_ptr", "Pointer");
     intrinsic!(m, "gep",            ("base_ptr" => ptr.clone(), "offset" => AstType::I64) -> ptr.clone(), "GetElementPointer - byte-level pointer arithmetic", "Pointer");
     intrinsic!(m, "gep_struct",     ("struct_ptr" => ptr.clone(), "field_index" => AstType::I32) -> ptr.clone(), "Struct field access using GEP", "Pointer");
+    intrinsic!(m, "is_null",        ("ptr" => ptr.clone()) -> AstType::Bool, "Check if pointer is null", "Pointer");
 
     // -- Memory operations ------------------------------------------------
     intrinsic!(m, "memcpy",  ("dest" => ptr.clone(), "src" => ptr.clone(), "size" => AstType::Usize) -> AstType::Void, "Copy bytes (non-overlapping)", "Memory");
@@ -178,6 +179,7 @@ fn build_intrinsics() -> HashMap<&'static str, Intrinsic> {
     intrinsic!(m, "mul_overflow", ("a" => AstType::I64, "b" => AstType::I64) -> overflow_result, "Multiply with overflow detection", "Overflow");
 
     // -- Type conversions -------------------------------------------------
+    intrinsic!(m, "cast",            ("value" => AstType::I64, "target_type" => AstType::I64) -> AstType::I64, "Cast a value to a numeric type: cast(value, i64)", "Convert");
     intrinsic!(m, "trunc_f64_i64",  ("value" => AstType::F64) -> AstType::I64, "Truncate f64 to i64", "Convert");
     intrinsic!(m, "trunc_f32_i32",  ("value" => AstType::F32) -> AstType::I32, "Truncate f32 to i32", "Convert");
     intrinsic!(m, "sitofp_i64_f64", ("value" => AstType::I64) -> AstType::F64, "Convert signed i64 to f64", "Convert");
@@ -203,6 +205,11 @@ fn build_intrinsics() -> HashMap<&'static str, Intrinsic> {
     intrinsic!(m, "get_symbol",     ("lib_handle" => ptr.clone(), "symbol_name" => AstType::StaticString) -> ptr.clone(), "Get symbol from library", "FFI");
     intrinsic!(m, "unload_library", ("lib_handle" => ptr.clone()) -> AstType::Void, "Unload a dynamic library", "FFI");
     intrinsic!(m, "dlerror",        () -> ptr.clone(), "Get dynamic linker error", "FFI");
+    intrinsic!(m, "call_external",  ("func_ptr" => ptr.clone()) -> AstType::I64, "Call external function pointer", "FFI");
+
+    // -- String operations ------------------------------------------------
+    intrinsic!(m, "strlen", ("str" => AstType::StaticString) -> AstType::Usize, "Get length of a static string", "String");
+    intrinsic!(m, "static_string_ptr", ("str" => AstType::StaticString) -> ptr.clone(), "Get pointer to static string data", "String");
 
     // -- IO operations (libc wrappers) ------------------------------------
     intrinsic!(m, "libc_write", ("fd" => AstType::I32, "buf" => ptr.clone(), "len" => AstType::Usize) -> AstType::I64, "Write via libc", "IO");
