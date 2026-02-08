@@ -124,50 +124,34 @@ fn statement_span(stmt: &crate::ast::Statement) -> Option<&crate::error::Span> {
 }
 
 /// Find the name of the function enclosing the given cursor position.
-/// Uses the AST when available: walks Declaration::Function nodes and checks
+/// Uses the AST: walks Declaration::Function nodes and checks
 /// whether any body statement's span encompasses the cursor line.
-/// Falls back to backward line scanning when no AST is available.
+/// Returns None if no AST is available or cursor is not inside a function.
 fn find_enclosing_function_name(
     ast: Option<&[Declaration]>,
-    content: &str,
+    _content: &str,
     position: Position,
 ) -> Option<String> {
-    // AST-based approach: check each function's body statement spans
-    if let Some(declarations) = ast {
-        let cursor_line = position.line as usize + 1; // spans use 1-based lines
-        for decl in declarations {
-            if let Declaration::Function(func) = decl {
-                let first_line = func
-                    .body
-                    .iter()
-                    .filter_map(|s| statement_span(s))
-                    .map(|s| s.line)
-                    .min();
-                let last_line = func
-                    .body
-                    .iter()
-                    .filter_map(|s| statement_span(s))
-                    .map(|s| s.line)
-                    .max();
-                if let (Some(first), Some(last)) = (first_line, last_line) {
-                    // Allow a margin after the last statement for closing braces
-                    if cursor_line >= first && cursor_line <= last + 5 {
-                        return Some(func.name.clone());
-                    }
-                }
-            }
-        }
-    }
-
-    // Fallback: backward line scanning for `name = (` pattern
-    let lines: Vec<&str> = content.lines().collect();
-    for line_idx in (0..=position.line as usize).rev() {
-        if let Some(line) = lines.get(line_idx) {
-            let trimmed = line.trim();
-            if trimmed.contains("= (") && trimmed.contains(')') {
-                let name = trimmed.split('=').next()?.trim();
-                if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                    return Some(name.to_string());
+    let declarations = ast?;
+    let cursor_line = position.line as usize + 1; // spans use 1-based lines
+    for decl in declarations {
+        if let Declaration::Function(func) = decl {
+            let first_line = func
+                .body
+                .iter()
+                .filter_map(|s| statement_span(s))
+                .map(|s| s.line)
+                .min();
+            let last_line = func
+                .body
+                .iter()
+                .filter_map(|s| statement_span(s))
+                .map(|s| s.line)
+                .max();
+            if let (Some(first), Some(last)) = (first_line, last_line) {
+                // Allow a margin after the last statement for closing braces
+                if cursor_line >= first && cursor_line <= last + 5 {
+                    return Some(func.name.clone());
                 }
             }
         }

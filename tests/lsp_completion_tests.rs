@@ -228,36 +228,7 @@ mod pattern_match_completion_tests {
 
 #[cfg(test)]
 mod auto_import_tests {
-    use zen::lsp::completion::auto_import::{
-        find_import_insert_position, get_imported_symbols, get_module_path_from_uri,
-    };
-
-    #[test]
-    fn test_get_imported_symbols() {
-        let content = "{ io, types } = @std\n{ HashMap } = @std.collections\n\nmain = () void {}";
-
-        let imported = get_imported_symbols(content);
-        assert!(imported.contains("io"));
-        assert!(imported.contains("types"));
-        assert!(imported.contains("HashMap"));
-        assert!(!imported.contains("main"));
-    }
-
-    #[test]
-    fn test_find_import_insert_position_after_imports() {
-        let content = "// Comment\n{ io } = @std\n\nmain = () void {}";
-
-        let pos = find_import_insert_position(content);
-        assert_eq!(pos.line, 2); // After the import line
-    }
-
-    #[test]
-    fn test_find_import_insert_position_no_imports() {
-        let content = "// Comment\nmain = () void {}";
-
-        let pos = find_import_insert_position(content);
-        assert_eq!(pos.line, 1); // After comment
-    }
+    use zen::lsp::completion::auto_import::get_module_path_from_uri;
 
     #[test]
     fn test_get_module_path_from_uri() {

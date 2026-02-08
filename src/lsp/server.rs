@@ -277,22 +277,13 @@ fn enhance_error_message(error: &CompileError) -> (String, Option<String>) {
             (msg.clone(), hint)
         }
         ImportError(msg, _) => {
-            let hint = if msg.contains("not found") {
-                Some(
-                    "Check the module path. Use @std for stdlib, @this for local modules"
-                        .to_string(),
-                )
-            } else {
-                None
-            };
+            let hint = Some(
+                "Check the module path. Use @std for stdlib, @this for local modules".to_string(),
+            );
             (msg.clone(), hint)
         }
         ParseError(msg, _) | SyntaxError(msg, _) => {
-            let hint = if msg.contains("expected") {
-                Some("Check for missing brackets, parentheses, or punctuation".to_string())
-            } else {
-                None
-            };
+            let hint = Some("Check for missing brackets, parentheses, or punctuation".to_string());
             (msg.clone(), hint)
         }
         InvalidPattern(msg, _) => {

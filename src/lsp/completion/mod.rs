@@ -159,14 +159,12 @@ fn build_general_completions(
     let current_doc = store
         .documents
         .get(&params.text_document_position.text_document.uri);
-    let doc_content = current_doc.map(|d| d.content.as_str()).unwrap_or("");
     let doc_ast = current_doc.and_then(|d| d.ast.as_ref());
 
     for (name, symbol) in &store.stdlib_symbols {
         if let Some(ref uri) = symbol.definition_uri {
             if let Some(module_path) = get_module_path_from_uri(uri) {
-                let mut item =
-                    create_completion_with_import(name, symbol, &module_path, doc_ast, doc_content);
+                let mut item = create_completion_with_import(name, symbol, &module_path, doc_ast);
                 item.sort_text = Some(format!("{}{}", priority::STDLIB, name));
                 completions.push(item);
                 continue;

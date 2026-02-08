@@ -170,52 +170,8 @@ pub fn get_pattern_match_hover(
                 return Some(hover);
             }
         }
-
-        // Fallback: scan source text backwards for the assignment
-        if let Some(scrutinee_line) = find_scrutinee_line(lines.as_slice(), position.line) {
-            for i in (0..scrutinee_line).rev() {
-                let line = lines[i as usize];
-                if line.contains(&format!("{} =", scrutinee)) {
-                    if let Some(eq_pos) = line.find('=') {
-                        let rhs = line[eq_pos + 1..].trim();
-                        if let Some(paren_pos) = rhs.find('(') {
-                            let func_name = rhs[..paren_pos].trim();
-                            let (concrete_ok_type, concrete_err_type) =
-                                infer_function_return_types_via_sema(func_name, all_docs);
-
-                            if let Some(hover) = build_pattern_hover(
-                                symbol_name,
-                                current_line,
-                                func_name,
-                                &concrete_ok_type,
-                                &concrete_err_type,
-                            ) {
-                                return Some(hover);
-                            }
-                        }
-                    }
-                }
-                if scrutinee_line - i > 20 {
-                    break;
-                }
-            }
-        }
     }
 
-    None
-}
-
-/// Find the scrutinee line number by looking backwards for the pattern match question
-fn find_scrutinee_line(lines: &[&str], current_line: u32) -> Option<u32> {
-    for i in (0..=current_line).rev() {
-        let line = lines[i as usize].trim();
-        if find_pattern_match_question(line).is_some() {
-            return Some(i);
-        }
-        if current_line - i > 10 {
-            break;
-        }
-    }
     None
 }
 
@@ -287,15 +243,7 @@ pub fn get_enum_variant_hover(
 
     let current_line = lines[position.line as usize];
 
-    // Check if this line is an enum variant (has ':' or ',' after the symbol)
-    // Enums use comma-separated variants: MyEnum: Variant1, Variant2: Type, Variant3
-    if !current_line.contains(&format!("{}:", symbol_name))
-        && !current_line.contains(&format!("{},", symbol_name))
-    {
-        return None;
-    }
-
-    // Try AST-based enum detection first
+    // If AST is available, go straight to structured detection
     if let Some(ast) = ast {
         for decl in ast.iter() {
             if let Declaration::Enum(enum_def) = decl {
@@ -315,62 +263,15 @@ pub fn get_enum_variant_hover(
                 }
             }
         }
+        return None;
     }
 
-    // Fallback: scan source text backwards for the enum definition
-    let mut enum_name = None;
-    for i in (0..position.line).rev() {
-        let line = lines[i as usize].trim();
-        if line.is_empty() || line.starts_with("//") {
-            continue;
-        }
-        // Check if this line is an enum definition (identifier followed by ':' at end)
-        if line.ends_with(':') && !line.contains("::") {
-            let name = line.trim_end_matches(':').trim();
-            if name
-                .chars()
-                .all(|c| c.is_alphanumeric() || c == '_' || c == '<' || c == '>' || c == ',')
-            {
-                enum_name = Some(name.to_string());
-                break;
-            }
-        }
-        // If we hit something that's not a variant, stop
-        if !line.contains(':') && !line.contains(',') {
-            break;
-        }
+    // No AST available — use text pre-filter as a guard before returning None
+    if !current_line.contains(&format!("{}:", symbol_name))
+        && !current_line.contains(&format!("{},", symbol_name))
+    {
+        return None;
     }
 
-    if let Some(enum_name) = enum_name {
-        // Extract variant payload info from current line
-        let payload_info = if current_line.contains('{') {
-            // Struct-like payload
-            let start = current_line.find('{')?;
-            let end = current_line.rfind('}')?;
-            let fields = &current_line[start + 1..end];
-            format!(" with fields: `{}`", fields.trim())
-        } else if current_line.contains(": ") {
-            // Type payload
-            let parts: Vec<&str> = current_line.split(':').collect();
-            if parts.len() >= 2 {
-                let type_part = parts[1].trim().trim_end_matches(',');
-                format!(" of type `{}`", type_part)
-            } else {
-                String::new()
-            }
-        } else {
-            String::new()
-        };
-
-        Some(format!(
-            "```zen\n{}\n    {}...\n```\n\n**Enum variant** `{}`{}\n\nPart of enum `{}`",
-            enum_name,
-            symbol_name,
-            symbol_name,
-            payload_info,
-            name_utils::strip_generics(&enum_name)
-        ))
-    } else {
-        None
-    }
+    None
 }

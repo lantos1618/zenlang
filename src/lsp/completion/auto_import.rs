@@ -22,8 +22,7 @@ pub fn get_module_path_from_uri(uri: &Url) -> Option<String> {
     None
 }
 
-/// Get symbols that are already imported in the document.
-/// Uses the AST when available, falling back to content scanning.
+/// Get symbols that are already imported in the document using AST declarations.
 pub fn get_imported_symbols_from_ast(ast: &[Declaration]) -> HashSet<String> {
     let mut imported = HashSet::new();
     for decl in ast {
@@ -34,29 +33,8 @@ pub fn get_imported_symbols_from_ast(ast: &[Declaration]) -> HashSet<String> {
     imported
 }
 
-/// Get symbols that are already imported in the document (content-based fallback)
-pub fn get_imported_symbols(content: &str) -> HashSet<String> {
-    let mut imported = HashSet::new();
-
-    for line in content.lines() {
-        let trimmed = line.trim();
-
-        // Match: { symbol1, symbol2 } = @std.module
-        if trimmed.starts_with('{') && trimmed.contains("} =") {
-            if let Some(brace_end) = trimmed.find('}') {
-                let symbols_str = &trimmed[1..brace_end];
-                for symbol in symbols_str.split(',') {
-                    imported.insert(symbol.trim().to_string());
-                }
-            }
-        }
-    }
-
-    imported
-}
-
 /// Find the best position to insert an import statement.
-/// Uses the AST when available to find the last import declaration's span.
+/// Uses the AST to find the last import declaration's span.
 pub fn find_import_insert_position_from_ast(ast: &[Declaration]) -> Option<Position> {
     let mut last_import_line = None;
     for decl in ast {
@@ -72,55 +50,20 @@ pub fn find_import_insert_position_from_ast(ast: &[Declaration]) -> Option<Posit
     })
 }
 
-/// Find the best position to insert an import statement (content-based fallback)
-pub fn find_import_insert_position(content: &str) -> Position {
-    let mut last_import_line = 0;
-    let mut found_import = false;
-
-    for (line_num, line) in content.lines().enumerate() {
-        let trimmed = line.trim();
-
-        if trimmed.starts_with("//") {
-            if !found_import {
-                last_import_line = line_num + 1;
-            }
-            continue;
-        }
-
-        if trimmed.starts_with('{') && trimmed.contains("} =") && trimmed.contains('@') {
-            last_import_line = line_num + 1;
-            found_import = true;
-        } else if !trimmed.is_empty() {
-            break;
-        }
-    }
-
-    Position {
-        line: last_import_line as u32,
-        character: 0,
-    }
-}
-
 /// Create a TextEdit for inserting an import statement.
-/// Prefers AST-based analysis when available.
+/// Requires AST for analysis; returns None if AST is unavailable.
 pub fn create_import_edit(
     symbol_name: &str,
     module_path: &str,
     ast: Option<&Vec<Declaration>>,
-    content: &str,
 ) -> Option<TextEdit> {
-    let imported = if let Some(ast) = ast {
-        get_imported_symbols_from_ast(ast)
-    } else {
-        get_imported_symbols(content)
-    };
+    let ast = ast?;
+    let imported = get_imported_symbols_from_ast(ast);
     if imported.contains(symbol_name) {
         return None;
     }
 
-    let insert_pos = ast
-        .and_then(|a| find_import_insert_position_from_ast(a))
-        .unwrap_or_else(|| find_import_insert_position(content));
+    let insert_pos = find_import_insert_position_from_ast(ast)?;
     let import_line = format!("{{ {} }} = {}\n", symbol_name, module_path);
 
     Some(TextEdit {
@@ -138,7 +81,6 @@ pub fn create_completion_with_import(
     symbol: &SymbolInfo,
     module_path: &str,
     ast: Option<&Vec<Declaration>>,
-    content: &str,
 ) -> CompletionItem {
     let mut item = CompletionItem {
         label: name.to_string(),
@@ -151,7 +93,7 @@ pub fn create_completion_with_import(
         ..Default::default()
     };
 
-    if let Some(edit) = create_import_edit(name, module_path, ast, content) {
+    if let Some(edit) = create_import_edit(name, module_path, ast) {
         item.additional_text_edits = Some(vec![edit]);
         item.label_details = Some(CompletionItemLabelDetails {
             detail: Some(format!(" ({})", module_path)),

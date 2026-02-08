@@ -128,14 +128,6 @@ pub fn handle_code_action(req: Request, store: &Arc<RwLock<DocumentStore>>) -> R
                 actions.push(action);
             }
         }
-
-        if let Some(action) = imports::create_add_import_action(
-            &params.text_document.uri,
-            &doc.content,
-            doc.ast.as_ref(),
-        ) {
-            actions.push(action);
-        }
     }
 
     success_response(&req, actions)

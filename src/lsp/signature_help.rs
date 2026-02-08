@@ -297,8 +297,7 @@ fn create_signature_info(symbol: &SymbolInfo) -> SignatureInformation {
             })
             .collect()
     } else {
-        // Fallback: parse from the detail string for symbols without structured params
-        parse_function_parameters(&label)
+        vec![] // No structured params available — don't guess from text
     };
 
     SignatureInformation {
@@ -314,29 +313,4 @@ fn create_signature_info(symbol: &SymbolInfo) -> SignatureInformation {
         },
         active_parameter: None,
     }
-}
-
-/// Fallback: parse parameter info from a formatted signature string.
-/// Only used when structured params are not available in SymbolInfo.
-fn parse_function_parameters(signature: &str) -> Vec<ParameterInformation> {
-    let mut parameters = Vec::new();
-
-    // Find the parameter section between ( and )
-    if let Some(start) = signature.find('(') {
-        if let Some(end) = signature[start..].find(')') {
-            let params_str = &signature[start + 1..start + end];
-
-            for param in params_str.split(',') {
-                let param = param.trim();
-                if !param.is_empty() {
-                    parameters.push(ParameterInformation {
-                        label: lsp_types::ParameterLabel::Simple(param.to_string()),
-                        documentation: None,
-                    });
-                }
-            }
-        }
-    }
-
-    parameters
 }

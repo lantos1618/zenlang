@@ -3,6 +3,7 @@ use lsp_types::*;
 use std::sync::{Arc, RwLock};
 
 use crate::ast::looks_like_type_name;
+use crate::ast::{Declaration, Expression, Statement, VariableDeclarationType};
 
 use super::document_store::DocumentStore;
 use super::utils::format_type;
@@ -29,7 +30,13 @@ pub fn handle_inlay_hints(req: Request, store: &Arc<RwLock<DocumentStore>>) -> R
 
     // If we have TypeContext from the typechecker, use it for authoritative hints
     if let Some(type_ctx) = &doc.type_context {
-        collect_hints_from_type_context(&doc.content, type_ctx, &mut hints, &mut seen);
+        collect_hints_from_type_context(
+            &doc.content,
+            type_ctx,
+            doc.ast.as_deref(),
+            &mut hints,
+            &mut seen,
+        );
     }
     // When TypeContext is not available, we don't show type hints rather than
     // guessing with fragile string-based heuristics. The TypeContext should be
@@ -43,158 +50,182 @@ fn empty_response(id: lsp_server::RequestId) -> Response {
 }
 
 /// Collect inlay hints using authoritative type data from the TypeContext.
-/// This uses the real typechecker output instead of heuristics.
+/// Walks the AST to find variable declarations with inferred types, then
+/// looks up their resolved types from the TypeContext.
 fn collect_hints_from_type_context(
     content: &str,
     type_ctx: &TypeContext,
+    ast: Option<&[Declaration]>,
     hints: &mut Vec<InlayHint>,
     seen: &mut std::collections::HashSet<(u32, u32)>,
 ) {
-    // Iterate through all variables in the TypeContext
-    // Keys are "function_name::var_name", values are AstType
-    for (scoped_key, var_type) in &type_ctx.variables {
-        // Parse "function_name::var_name"
-        let var_name = match scoped_key.rsplit_once("::") {
-            Some((_, name)) => name,
-            None => continue,
-        };
+    let declarations = match ast {
+        Some(decls) => decls,
+        None => {
+            // Fallback: no AST available, skip hint generation
+            return;
+        }
+    };
 
-        // Find the variable declaration in source to get position
-        if let Some((line_num, hint_pos, is_mutable, is_colon_eq)) =
-            find_var_decl_position(content, var_name)
-        {
-            let key = (line_num, hint_pos);
-            if seen.contains(&key) {
-                continue;
+    let lines: Vec<&str> = content.lines().collect();
+
+    for decl in declarations {
+        match decl {
+            Declaration::Function(func) => {
+                collect_hints_from_statements(
+                    &lines, type_ctx, &func.name, &func.body, hints, seen,
+                );
             }
-            seen.insert(key);
-
-            let type_str = format_type(var_type);
-            let line = content.lines().nth(line_num as usize).unwrap_or("");
-
-            let (hint_label, hint_char_pos) = if is_mutable {
-                if let Some(dce_pos) = line.find("::=") {
-                    (format!(" {} ", type_str), (dce_pos + 2) as u32)
-                } else {
-                    continue;
+            Declaration::ImplBlock(impl_block) => {
+                for method in &impl_block.methods {
+                    collect_hints_from_statements(
+                        &lines,
+                        type_ctx,
+                        &method.name,
+                        &method.body,
+                        hints,
+                        seen,
+                    );
                 }
-            } else if is_colon_eq {
-                if let Some(colon_eq_pos) = line.find(":=") {
-                    (format!(" {} ", type_str), (colon_eq_pos + 1) as u32)
-                } else {
-                    continue;
-                }
-            } else {
-                (format!(": {} ", type_str), hint_pos)
-            };
-
-            hints.push(InlayHint {
-                position: Position {
-                    line: line_num,
-                    character: hint_char_pos,
-                },
-                label: InlayHintLabel::String(hint_label),
-                kind: Some(InlayHintKind::TYPE),
-                text_edits: None,
-                tooltip: None,
-                padding_left: None,
-                padding_right: None,
-                data: None,
-            });
+            }
+            _ => {}
         }
     }
 }
 
-/// Find a variable declaration position in source content.
-/// Returns (line_num, char_after_varname, is_mutable, is_colon_eq) or None.
-fn find_var_decl_position(content: &str, var_name: &str) -> Option<(u32, u32, bool, bool)> {
-    let mut in_struct_def = false;
-    let mut brace_depth: i32 = 0;
-
-    for (line_num, line) in content.lines().enumerate() {
-        let trimmed = line.trim();
-
-        // Track struct/enum definitions to skip them
-        if !trimmed.is_empty() && !trimmed.starts_with("//") {
-            if let Some(colon_pos) = trimmed.find(':') {
-                let before = trimmed[..colon_pos].trim();
-                let after = trimmed[colon_pos + 1..].trim();
-                if !before.is_empty()
-                    && looks_like_type_name(before)
-                    && !before.contains('=')
-                    && !before.contains(' ')
-                    && (after.starts_with('{') || after.contains('{'))
-                {
-                    in_struct_def = true;
-                    brace_depth = 0;
+/// Walk a list of statements (recursing into nested blocks/loops) and emit
+/// inlay hints for variable declarations with inferred types.
+fn collect_hints_from_statements(
+    lines: &[&str],
+    type_ctx: &TypeContext,
+    func_name: &str,
+    statements: &[Statement],
+    hints: &mut Vec<InlayHint>,
+    seen: &mut std::collections::HashSet<(u32, u32)>,
+) {
+    for stmt in statements {
+        match stmt {
+            Statement::VariableDeclaration {
+                name,
+                type_,
+                initializer,
+                declaration_type,
+                span,
+                ..
+            } => {
+                // Only show hints for inferred types (type_ is None)
+                if type_.is_some() {
+                    continue;
                 }
-            }
-            if in_struct_def {
-                for ch in trimmed.chars() {
-                    if ch == '{' {
-                        brace_depth += 1;
-                    } else if ch == '}' {
-                        brace_depth -= 1;
-                        if brace_depth <= 0 {
-                            in_struct_def = false;
-                        }
+
+                // Only inferred declaration types need hints
+                let is_mutable =
+                    matches!(declaration_type, VariableDeclarationType::InferredMutable);
+                let is_inferred = matches!(
+                    declaration_type,
+                    VariableDeclarationType::InferredImmutable
+                        | VariableDeclarationType::InferredMutable
+                );
+                if !is_inferred {
+                    continue;
+                }
+
+                // Skip function/closure definitions
+                if let Some(init) = initializer {
+                    if matches!(init, Expression::Closure { .. }) {
+                        continue;
                     }
                 }
-            }
-        }
 
-        if in_struct_def {
-            continue;
-        }
-
-        // Look for variable declaration
-        if let Some(pos) = line.find(var_name) {
-            let before_ok = pos == 0
-                || line
-                    .as_bytes()
-                    .get(pos - 1)
-                    .map(|&b| b.is_ascii_whitespace())
-                    .unwrap_or(true);
-            let after = &line[pos + var_name.len()..].trim_start();
-
-            if !before_ok {
-                continue;
-            }
-
-            // Detect declaration type
-            let has_explicit_type = (after.starts_with("::") && !after.starts_with("::="))
-                || (after.starts_with(':') && !after.starts_with(":="));
-
-            if has_explicit_type {
-                continue; // Already has type annotation
-            }
-
-            let is_mutable = after.starts_with("::=");
-            let is_colon_eq = after.starts_with(":=");
-            let is_assign = after.starts_with('=') || is_mutable || is_colon_eq;
-
-            if is_assign {
-                // Don't show hints for function definitions
-                if after.contains("= (") || after.contains("= @") {
+                // Skip PascalCase names (type/struct names)
+                if looks_like_type_name(name) {
                     continue;
                 }
-                // Skip PascalCase (type/struct names)
-                if var_name
-                    .chars()
-                    .next()
-                    .map(|c| c.is_uppercase())
-                    .unwrap_or(false)
-                {
+
+                let span = match span {
+                    Some(s) => s,
+                    None => continue,
+                };
+
+                // Look up the resolved type from TypeContext
+                let scoped_key = format!("{}::{}", func_name, name);
+                let var_type = match type_ctx.variables.get(&scoped_key) {
+                    Some(t) => t,
+                    None => continue,
+                };
+
+                // AST spans are 1-based; LSP positions are 0-based
+                let line_num = if span.line > 0 {
+                    (span.line - 1) as u32
+                } else {
+                    0
+                };
+                let var_col = span.column as u32;
+
+                let line = match lines.get(line_num as usize) {
+                    Some(l) => *l,
+                    None => continue,
+                };
+
+                let type_str = format_type(var_type);
+
+                // Determine hint label and position based on declaration syntax
+                let (hint_label, hint_char_pos) = if is_mutable {
+                    // ::= syntax: insert type between :: and =
+                    if let Some(dce_pos) = line.find("::=") {
+                        (format!(" {} ", type_str), (dce_pos + 2) as u32)
+                    } else {
+                        continue;
+                    }
+                } else {
+                    // Check source line to distinguish := from =
+                    // Look for := after the variable name position
+                    let after_var = &line[var_col as usize + name.len()..];
+                    let trimmed_after = after_var.trim_start();
+                    if trimmed_after.starts_with(":=") {
+                        // := syntax: insert type between : and =
+                        if let Some(colon_eq_pos) = line.find(":=") {
+                            (format!(" {} ", type_str), (colon_eq_pos + 1) as u32)
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        // Plain = syntax: insert `: type` after variable name
+                        (format!(": {} ", type_str), var_col + name.len() as u32)
+                    }
+                };
+
+                let key = (line_num, hint_char_pos);
+                if seen.contains(&key) {
                     continue;
                 }
-                return Some((
-                    line_num as u32,
-                    (pos + var_name.len()) as u32,
-                    is_mutable,
-                    is_colon_eq,
-                ));
+                seen.insert(key);
+
+                hints.push(InlayHint {
+                    position: Position {
+                        line: line_num,
+                        character: hint_char_pos,
+                    },
+                    label: InlayHintLabel::String(hint_label),
+                    kind: Some(InlayHintKind::TYPE),
+                    text_edits: None,
+                    tooltip: None,
+                    padding_left: None,
+                    padding_right: None,
+                    data: None,
+                });
             }
+            // Recurse into nested statement blocks
+            Statement::Loop { body, .. } => {
+                collect_hints_from_statements(lines, type_ctx, func_name, body, hints, seen);
+            }
+            Statement::Block { statements, .. } => {
+                collect_hints_from_statements(lines, type_ctx, func_name, statements, hints, seen);
+            }
+            Statement::ComptimeBlock { statements, .. } => {
+                collect_hints_from_statements(lines, type_ctx, func_name, statements, hints, seen);
+            }
+            _ => {}
         }
     }
-    None
 }
