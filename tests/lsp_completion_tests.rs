@@ -19,9 +19,9 @@ mod completion_context_tests {
             line: 0,
             character: 16,
         };
-        let store = create_test_store();
+        let _store = create_test_store();
 
-        let context = get_completion_context(content, position, &store);
+        let context = get_completion_context(content, position, None);
         assert!(matches!(
             context,
             Some(ZenCompletionContext::StructLiteral { struct_name }) if struct_name == "Point"
@@ -35,9 +35,9 @@ mod completion_context_tests {
             line: 0,
             character: 22,
         };
-        let store = create_test_store();
+        let _store = create_test_store();
 
-        let context = get_completion_context(content, position, &store);
+        let context = get_completion_context(content, position, None);
         assert!(matches!(
             context,
             Some(ZenCompletionContext::StructLiteral { struct_name }) if struct_name == "Point"
@@ -52,9 +52,9 @@ mod completion_context_tests {
             line: 0,
             character: 19,
         };
-        let store = create_test_store();
+        let _store = create_test_store();
 
-        let context = get_completion_context(content, position, &store);
+        let context = get_completion_context(content, position, None);
         // Should be General, not StructLiteral (we're typing a value, not a field name)
         assert!(matches!(context, Some(ZenCompletionContext::General)));
     }
@@ -66,9 +66,9 @@ mod completion_context_tests {
             line: 0,
             character: 19,
         };
-        let store = create_test_store();
+        let _store = create_test_store();
 
-        let context = get_completion_context(content, position, &store);
+        let context = get_completion_context(content, position, None);
         assert!(matches!(
             context,
             Some(ZenCompletionContext::UfcMethod { .. })
@@ -82,9 +82,9 @@ mod completion_context_tests {
             line: 0,
             character: 14,
         };
-        let store = create_test_store();
+        let _store = create_test_store();
 
-        let context = get_completion_context(content, position, &store);
+        let context = get_completion_context(content, position, None);
         assert!(matches!(
             context,
             Some(ZenCompletionContext::ModulePath { base }) if base == "@std"
@@ -98,9 +98,9 @@ mod completion_context_tests {
             line: 1,
             character: 4,
         };
-        let store = create_test_store();
+        let _store = create_test_store();
 
-        let context = get_completion_context(content, position, &store);
+        let context = get_completion_context(content, position, None);
         assert!(matches!(context, Some(ZenCompletionContext::General)));
     }
 }
@@ -167,9 +167,9 @@ mod pattern_match_completion_tests {
             line: 0,
             character: 18,
         };
-        let store = create_test_store();
+        let _store = create_test_store();
 
-        let context = get_completion_context(content, position, &store);
+        let context = get_completion_context(content, position, None);
         assert!(matches!(
             context,
             Some(ZenCompletionContext::PatternMatch { matched_type }) if matched_type == "value"
@@ -185,9 +185,9 @@ mod pattern_match_completion_tests {
             line: 0,
             character: 19,
         };
-        let store = create_test_store();
+        let _store = create_test_store();
 
-        let context = get_completion_context(content, position, &store);
+        let context = get_completion_context(content, position, None);
         // Still pattern match context - user is typing the pattern
         assert!(matches!(
             context,
@@ -203,9 +203,9 @@ mod pattern_match_completion_tests {
             line: 0,
             character: 31,
         };
-        let store = create_test_store();
+        let _store = create_test_store();
 
-        let context = get_completion_context(content, position, &store);
+        let context = get_completion_context(content, position, None);
         assert!(matches!(
             context,
             Some(ZenCompletionContext::PatternMatch { .. })
@@ -219,9 +219,9 @@ mod pattern_match_completion_tests {
             line: 0,
             character: 6,
         };
-        let store = create_test_store();
+        let _store = create_test_store();
 
-        let context = get_completion_context(content, position, &store);
+        let context = get_completion_context(content, position, None);
         assert!(matches!(context, Some(ZenCompletionContext::General)));
     }
 }

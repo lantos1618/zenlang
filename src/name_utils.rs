@@ -37,6 +37,31 @@ pub fn strip_generics(name: &str) -> &str {
     }
 }
 
+/// Normalize a UFC method name by stripping generic type parameters from the type portion.
+/// This ensures consistent method key generation regardless of how generics are written.
+///
+/// Examples:
+/// - `"SafePtr<T>.is_valid"` → `"SafePtr.is_valid"`
+/// - `"HashMap<K, V>.get"` → `"HashMap.get"`
+/// - `"Foo<Bar<T>>.method"` → `"Foo.method"` (nested generics)
+/// - `"plain_function"` → `"plain_function"` (no dot, no change)
+/// - `"Point.distance"` → `"Point.distance"` (no generics, no change)
+pub fn normalize_ufc_name(func_name: &str) -> String {
+    // If there's no dot, it's not a UFC method - return as-is
+    if !func_name.contains('.') {
+        return func_name.to_string();
+    }
+
+    // Split on the first dot to get type_name and method_name
+    if let Some((type_part, method_part)) = func_name.split_once('.') {
+        // Strip generics from the type part
+        let normalized_type = strip_generics(type_part);
+        format!("{}.{}", normalized_type, method_part)
+    } else {
+        func_name.to_string()
+    }
+}
+
 /// Construct a method key: `"TypeName.method"`.
 /// This is the canonical format used across TypeContext, TypeStore, and codegen.
 /// Always use this instead of ad-hoc `format!("{}.{}", ...)` calls.
@@ -148,5 +173,35 @@ mod tests {
         assert_eq!(strip_generics("Vec<i32>"), "Vec");
         assert_eq!(strip_generics("HashMap<String, i32>"), "HashMap");
         assert_eq!(strip_generics("i32"), "i32");
+    }
+
+    #[test]
+    fn test_normalize_ufc_name() {
+        // Generic types with methods
+        assert_eq!(
+            normalize_ufc_name("SafePtr<T>.is_valid"),
+            "SafePtr.is_valid"
+        );
+        assert_eq!(normalize_ufc_name("HashMap<K, V>.get"), "HashMap.get");
+        assert_eq!(normalize_ufc_name("Vec<i32>.push"), "Vec.push");
+
+        // Nested generics
+        assert_eq!(normalize_ufc_name("Foo<Bar<T>>.method"), "Foo.method");
+        assert_eq!(
+            normalize_ufc_name("Result<Vec<String>, Error>.unwrap"),
+            "Result.unwrap"
+        );
+
+        // Non-generic types with methods
+        assert_eq!(normalize_ufc_name("Point.distance"), "Point.distance");
+        assert_eq!(normalize_ufc_name("String.len"), "String.len");
+
+        // Plain functions (no dot)
+        assert_eq!(normalize_ufc_name("plain_function"), "plain_function");
+        assert_eq!(normalize_ufc_name("add"), "add");
+
+        // Edge cases
+        assert_eq!(normalize_ufc_name("T.method"), "T.method");
+        assert_eq!(normalize_ufc_name("Option<T>.unwrap"), "Option.unwrap");
     }
 }

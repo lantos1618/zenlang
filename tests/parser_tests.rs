@@ -111,3 +111,117 @@ test = () void {
         }
     }
 }
+
+#[test]
+fn test_not_operator_basic() {
+    // Test basic ! operator: !true
+    let code = r#"
+test = () void {
+    x = !true
+}
+"#;
+
+    let lexer = Lexer::new(code);
+    let mut parser = Parser::new(lexer);
+
+    match parser.parse_program() {
+        Ok(program) => {
+            assert!(!program.declarations.is_empty(), "Should have declarations");
+        }
+        Err(e) => {
+            panic!("Parse error for ! operator: {:?}", e);
+        }
+    }
+}
+
+#[test]
+fn test_not_operator_with_variable() {
+    // Test ! operator with variable: !x
+    let code = r#"
+test = () void {
+    x: bool = true
+    y = !x
+}
+"#;
+
+    let lexer = Lexer::new(code);
+    let mut parser = Parser::new(lexer);
+
+    match parser.parse_program() {
+        Ok(program) => {
+            assert!(!program.declarations.is_empty(), "Should have declarations");
+        }
+        Err(e) => {
+            panic!("Parse error for !variable: {:?}", e);
+        }
+    }
+}
+
+#[test]
+fn test_not_operator_with_method_call() {
+    // Test ! operator with method call: !foo.bar
+    let code = r#"
+test = () void {
+    x = !entry.occupied()
+}
+"#;
+
+    let lexer = Lexer::new(code);
+    let mut parser = Parser::new(lexer);
+
+    match parser.parse_program() {
+        Ok(program) => {
+            assert!(!program.declarations.is_empty(), "Should have declarations");
+        }
+        Err(e) => {
+            panic!("Parse error for !method_call: {:?}", e);
+        }
+    }
+}
+
+#[test]
+fn test_not_operator_nested() {
+    // Test nested ! operator: !!x
+    let code = r#"
+test = () void {
+    x: bool = true
+    y = !!x
+}
+"#;
+
+    let lexer = Lexer::new(code);
+    let mut parser = Parser::new(lexer);
+
+    match parser.parse_program() {
+        Ok(program) => {
+            assert!(!program.declarations.is_empty(), "Should have declarations");
+        }
+        Err(e) => {
+            panic!("Parse error for nested ! operator: {:?}", e);
+        }
+    }
+}
+
+#[test]
+fn test_not_equal_still_works() {
+    // Verify != operator still works correctly
+    let code = r#"
+test = () void {
+    x = 5
+    y = 3
+    result = x != y
+}
+"#;
+
+    let lexer = Lexer::new(code);
+    let mut parser = Parser::new(lexer);
+
+    match parser.parse_program() {
+        Ok(program) => {
+            assert!(!program.declarations.is_empty(), "Should have declarations");
+        }
+        Err(e) => {
+            panic!("Parse error for != operator: {:?}", e);
+        }
+    }
+}

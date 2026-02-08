@@ -442,6 +442,8 @@ impl TypeChecker {
 
         // Register methods from behavior resolver (inherent methods - impl blocks without trait)
         for (type_name, methods) in &self.behavior_resolver.inherent_methods {
+            // Normalize type name to strip generics (e.g., SafePtr<T> -> SafePtr)
+            let normalized_type_name = name_utils::strip_generics(type_name);
             for method in methods {
                 // Convert param_types to named params (using index-based names)
                 let params: Vec<(String, AstType)> = method
@@ -451,7 +453,7 @@ impl TypeChecker {
                     .map(|(i, t)| (format!("arg{}", i), t.clone()))
                     .collect();
                 ctx.register_method_with_params(
-                    type_name,
+                    normalized_type_name,
                     &method.name,
                     params,
                     method.return_type.clone(),
@@ -475,14 +477,20 @@ impl TypeChecker {
                         }
                         other => other.clone(),
                     };
-                    ctx.register_constructor(type_name, &method.name, constructor_return);
+                    ctx.register_constructor(
+                        normalized_type_name,
+                        &method.name,
+                        constructor_return,
+                    );
                 }
             }
         }
 
         // Register behavior implementations and their methods
         for ((type_name, behavior_name), impl_info) in self.behavior_resolver.implementations() {
-            ctx.register_behavior_impl(type_name, behavior_name);
+            // Normalize type name to strip generics (e.g., SafePtr<T> -> SafePtr)
+            let normalized_type_name = name_utils::strip_generics(type_name);
+            ctx.register_behavior_impl(normalized_type_name, behavior_name);
 
             // Also register the actual method signatures from the trait implementation
             for (method_name, method_info) in &impl_info.methods {
@@ -493,7 +501,7 @@ impl TypeChecker {
                     .map(|(i, t)| (format!("arg{}", i), t.clone()))
                     .collect();
                 ctx.register_method_with_params(
-                    type_name,
+                    normalized_type_name,
                     method_name,
                     params,
                     method_info.return_type.clone(),

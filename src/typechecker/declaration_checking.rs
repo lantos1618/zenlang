@@ -20,10 +20,11 @@ pub fn collect_declaration_types(
                 return_type: func.return_type.clone(),
                 is_external: false,
             };
+            let normalized_name = crate::name_utils::normalize_ufc_name(&func.name);
             checker
                 .type_store
                 .borrow_mut()
-                .register_function(&func.name, signature);
+                .register_function(&normalized_name, signature);
         }
         Declaration::ExternalFunction(ext_func) => {
             // External functions have args as Vec<AstType>, convert to params format
@@ -38,10 +39,11 @@ pub fn collect_declaration_types(
                 return_type: ext_func.return_type.clone(),
                 is_external: true,
             };
+            let normalized_name = crate::name_utils::normalize_ufc_name(&ext_func.name);
             checker
                 .type_store
                 .borrow_mut()
-                .register_function(&ext_func.name, signature);
+                .register_function(&normalized_name, signature);
         }
         Declaration::Struct(struct_def) => {
             // Convert StructField to (String, AstType)

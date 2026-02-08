@@ -383,7 +383,7 @@ impl<'a> Lexer<'a> {
                     self.read_char();
                     Token::Operator("!=".to_string())
                 } else {
-                    Token::Symbol('!')
+                    Token::Operator("!".to_string())
                 }
             }
             Some(c) if self.is_symbol(c) => {
