@@ -257,6 +257,42 @@ pub fn zen_code_block(code: &str) -> String {
     format!("```zen\n{}\n```", code)
 }
 
+/// Convert a TypeContext DefinitionLocation to an LSP Location.
+///
+/// If the DefinitionLocation has no file path, `fallback_uri` is used (same-file definition).
+/// Line/column in DefinitionLocation are 1-based; LSP uses 0-based.
+pub fn type_context_to_lsp_location(
+    loc: &crate::type_context::DefinitionLocation,
+    fallback_uri: &lsp_types::Url,
+) -> Option<lsp_types::Location> {
+    let uri = if let Some(ref file_path) = loc.file {
+        let path = std::path::Path::new(file_path);
+        lsp_types::Url::from_file_path(path).ok()?
+    } else {
+        fallback_uri.clone()
+    };
+
+    // DefinitionLocation uses 1-based line/column; LSP uses 0-based
+    let start_line = loc.line.saturating_sub(1);
+    let start_col = loc.column.saturating_sub(1);
+    let end_line = loc.end_line.saturating_sub(1);
+    let end_col = loc.end_column.saturating_sub(1);
+
+    Some(lsp_types::Location {
+        uri,
+        range: lsp_types::Range {
+            start: lsp_types::Position {
+                line: start_line,
+                character: start_col,
+            },
+            end: lsp_types::Position {
+                line: end_line,
+                character: end_col,
+            },
+        },
+    })
+}
+
 /// Converts a UTF-16 character offset (LSP standard) to a byte offset in a string.
 /// Returns the byte offset, clamped to valid string boundaries.
 ///

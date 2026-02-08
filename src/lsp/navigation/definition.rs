@@ -5,7 +5,9 @@ use super::struct_fields::find_struct_field_definition;
 use super::ufc::{find_ufc_method_at_position, resolve_ufc_method};
 use super::utils::{find_symbol_at_position, find_symbol_definition_in_content};
 use crate::lsp::document_store::DocumentStore;
-use crate::lsp::helpers::{null_response, with_document, HasDocumentUri};
+use crate::lsp::helpers::{
+    null_response, type_context_to_lsp_location, with_document, HasDocumentUri,
+};
 use lsp_server::{Request, Response};
 use lsp_types::*;
 
@@ -76,6 +78,7 @@ fn resolve_symbol_definition(
 
     resolve_std_qualified_name(&symbol_name, store)
         .or_else(|| resolve_qualified_name(&symbol_name, position, doc, store))
+        .or_else(|| resolve_type_context_definition(&symbol_name, doc, doc_uri))
         .or_else(|| resolve_std_import_ref(&symbol_name, content, position, store))
         .or_else(|| resolve_imported_symbol(&symbol_name, position, doc, store))
         .or_else(|| resolve_local_variable(&symbol_name, content, doc_uri))
@@ -83,7 +86,6 @@ fn resolve_symbol_definition(
         .or_else(|| resolve_workspace_symbol(&symbol_name, store))
         .or_else(|| resolve_other_documents(&symbol_name, doc_uri, store))
         .or_else(|| resolve_workspace_search(&symbol_name, store))
-        .or_else(|| resolve_text_fallback(&symbol_name, content, doc_uri))
 }
 
 fn resolve_std_qualified_name(symbol_name: &str, store: &DocumentStore) -> Option<Location> {
@@ -194,6 +196,21 @@ fn resolve_qualified_name(
     None
 }
 
+fn resolve_type_context_definition(
+    symbol_name: &str,
+    doc: &crate::lsp::types::Document,
+    doc_uri: &Url,
+) -> Option<Location> {
+    let type_ctx = doc.type_context.as_ref()?;
+    let def_loc = type_ctx.get_location(symbol_name)?;
+    log::debug!(
+        "[LSP] TypeContext hit for '{}' at line {}",
+        symbol_name,
+        def_loc.line
+    );
+    type_context_to_lsp_location(def_loc, doc_uri)
+}
+
 fn resolve_member_in_module(
     module_path: &str,
     member_name: &str,
@@ -231,28 +248,6 @@ fn resolve_member_in_module(
                 uri: module_uri,
                 range: symbol_info.range,
             });
-        }
-    }
-
-    if file_path.exists() {
-        log::debug!(
-            "[LSP] Searching file directly for {}: {:?}",
-            member_name,
-            file_path
-        );
-        if let Ok(content) = std::fs::read_to_string(&file_path) {
-            if let Some(range) = find_symbol_definition_in_content(&content, member_name) {
-                log::debug!(
-                    "[LSP] Found {} at line {} in {:?}",
-                    member_name,
-                    range.start.line,
-                    file_path
-                );
-                return Some(Location {
-                    uri: module_uri,
-                    range,
-                });
-            }
         }
     }
 
@@ -420,17 +415,6 @@ fn resolve_symbol_from_stdlib(
                     });
                 }
             }
-
-            if file_path.exists() {
-                if let Ok(content) = std::fs::read_to_string(&file_path) {
-                    if let Some(range) = find_symbol_definition_in_content(&content, symbol_name) {
-                        return Some(Location {
-                            uri: module_uri,
-                            range,
-                        });
-                    }
-                }
-            }
         }
     }
 
@@ -535,15 +519,5 @@ fn resolve_workspace_search(symbol_name: &str, store: &DocumentStore) -> Option<
     Some(Location {
         uri: uri.clone(),
         range: symbol_info.range,
-    })
-}
-
-fn resolve_text_fallback(symbol_name: &str, content: &str, doc_uri: &Url) -> Option<Location> {
-    log::debug!("[LSP] Trying text search fallback for: '{}'", symbol_name);
-    let range = find_symbol_definition_in_content(content, symbol_name)?;
-    log::debug!("[LSP] Found via text search at line {}", range.start.line);
-    Some(Location {
-        uri: doc_uri.clone(),
-        range,
     })
 }

@@ -15,7 +15,7 @@ use lsp_types::*;
 use serde_json::Value;
 
 use super::document_store::DocumentStore;
-use super::helpers::{char_pos_to_byte_pos, zen_code_block};
+use super::helpers::{char_pos_to_byte_pos, type_context_to_lsp_location, zen_code_block};
 use super::navigation::find_symbol_at_position;
 use super::navigation::find_symbol_definition_in_content;
 use super::types::*;
@@ -193,9 +193,30 @@ mod handler {
         }
     }
 
-    /// Use TypeContext (from the real typechecker) to provide authoritative hover info.
-    /// This checks variables, functions, structs, enums, methods, type aliases,
-    /// and behavior implementations — all resolved by the compiler.
+    fn append_definition_location(
+        hover_parts: &mut Vec<String>,
+        symbol_name: &str,
+        doc: &Document,
+    ) {
+        if let Some(type_ctx) = doc.type_context.as_ref() {
+            if let Some(def_loc) = type_ctx.get_location(symbol_name) {
+                if let Some(lsp_loc) = type_context_to_lsp_location(def_loc, &doc.uri) {
+                    let path_display = lsp_loc
+                        .uri
+                        .to_file_path()
+                        .ok()
+                        .and_then(|p| p.file_name().map(|f| f.to_string_lossy().into_owned()))
+                        .unwrap_or_else(|| "current file".to_string());
+                    hover_parts.push(format!(
+                        "**Defined at:** `{}:{}`",
+                        path_display,
+                        lsp_loc.range.start.line + 1
+                    ));
+                }
+            }
+        }
+    }
+
     fn handle_type_context_hover(
         symbol_name: &str,
         doc: &Document,
@@ -266,6 +287,7 @@ mod handler {
                 hover_parts.push("**External function**".to_string());
             }
             hover_parts.push("**Kind:** Function".to_string());
+            append_definition_location(&mut hover_parts, symbol_name, doc);
             return Some(create_hover_response_from_string(
                 request_id,
                 hover_parts.join("\n\n"),
@@ -288,6 +310,7 @@ mod handler {
                 }
             }
             hover_parts.push("**Kind:** Struct".to_string());
+            append_definition_location(&mut hover_parts, symbol_name, doc);
             return Some(create_hover_response_from_string(
                 request_id,
                 hover_parts.join("\n\n"),
@@ -307,10 +330,11 @@ mod handler {
                 })
                 .collect::<Vec<_>>()
                 .join("\n");
-            let hover_parts = [
+            let mut hover_parts = vec![
                 zen_code_block(&format!("{}:\n{}", symbol_name, variants_str)),
                 "**Kind:** Enum".to_string(),
             ];
+            append_definition_location(&mut hover_parts, symbol_name, doc);
             return Some(create_hover_response_from_string(
                 request_id,
                 hover_parts.join("\n\n"),
@@ -320,12 +344,14 @@ mod handler {
         // 5. Check type aliases
         if let Some(aliased_type) = type_ctx.type_aliases.get(symbol_name) {
             let type_str = format_type(aliased_type);
+            let mut hover_parts = vec![
+                format!("```zen\n{} = {}\n```", symbol_name, type_str),
+                format!("**Type alias** for `{}`", type_str),
+            ];
+            append_definition_location(&mut hover_parts, symbol_name, doc);
             return Some(create_hover_response_from_string(
                 request_id,
-                format!(
-                    "```zen\n{} = {}\n```\n\n**Type alias** for `{}`",
-                    symbol_name, type_str, type_str
-                ),
+                hover_parts.join("\n\n"),
             ));
         }
 
@@ -351,6 +377,7 @@ mod handler {
                     hover_parts.remove(1); // remove the simpler version
                 }
                 hover_parts.push("**Kind:** Method".to_string());
+                append_definition_location(&mut hover_parts, symbol_name, doc);
                 return Some(create_hover_response_from_string(
                     request_id,
                     hover_parts.join("\n\n"),
