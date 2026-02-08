@@ -175,10 +175,7 @@ impl<'a> Parser<'a> {
                             });
                         } else {
                             // Look ahead to see if this is "name: Type" or just "Type"
-                            let saved_state = self.lexer.save_state();
-                            let saved_current_token = self.current_token.clone();
-                            let saved_peek_token = self.peek_token.clone();
-                            let saved_span = self.current_span.clone();
+                            let saved = self.save_state();
 
                             self.next_token();
 
@@ -187,10 +184,7 @@ impl<'a> Parser<'a> {
                                 param_types.push(self.parse_type()?);
                             } else {
                                 // Not a named parameter, restore and parse as type
-                                self.lexer.restore_state(saved_state);
-                                self.current_token = saved_current_token;
-                                self.peek_token = saved_peek_token;
-                                self.current_span = saved_span;
+                                self.restore_state(saved);
                                 param_types.push(self.parse_type()?);
                             }
                         }

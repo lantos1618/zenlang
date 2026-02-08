@@ -238,7 +238,7 @@ fn build_builtin_call(
     }
 }
 
-/// Parse method chaining after an expression: `.member`, `.method()`, `.val`, etc.
+/// Parse dot-only method chaining after an expression: `.member`, `.method()`, `.val`, etc.
 /// Public so it can be reused by other expression parsers (literals, etc.)
 pub fn parse_method_chain(parser: &mut Parser, mut expr: Expression) -> Result<Expression> {
     loop {
@@ -246,6 +246,14 @@ pub fn parse_method_chain(parser: &mut Parser, mut expr: Expression) -> Result<E
             break;
         }
         parser.next_token(); // consume '.'
+
+        // Check for .loop(...) collection loop
+        if let Token::Identifier(id) = &parser.current_token {
+            if id == "loop" {
+                expr = super::literals::parse_collection_loop(parser, expr)?;
+                continue;
+            }
+        }
 
         let member = match &parser.current_token {
             Token::Identifier(name) => name.clone(),
@@ -259,7 +267,114 @@ pub fn parse_method_chain(parser: &mut Parser, mut expr: Expression) -> Result<E
     Ok(expr)
 }
 
-/// Parse a single member access or method call
+/// Parse full postfix chain after an identifier expression: `.member`, `[index]`, `(args)`, `{ fields }`.
+/// Only used from parse_identifier_expression where `(`, `[`, `{` are valid continuations.
+pub fn parse_postfix_chain(parser: &mut Parser, mut expr: Expression) -> Result<Expression> {
+    loop {
+        match &parser.current_token {
+            Token::Symbol('.') => {
+                parser.next_token(); // consume '.'
+
+                // Check for .loop(...) collection loop
+                if let Token::Identifier(id) = &parser.current_token {
+                    if id == "loop" {
+                        expr = super::literals::parse_collection_loop(parser, expr)?;
+                        continue;
+                    }
+                }
+
+                let member = match &parser.current_token {
+                    Token::Identifier(name) => name.clone(),
+                    _ => return Err(parser.syntax_error("Expected identifier after '.'")),
+                };
+                parser.next_token();
+
+                expr = parse_member_access(parser, expr, member)?;
+            }
+            Token::Symbol('[') => {
+                // Array indexing
+                parser.next_token(); // consume '['
+                let index = parser.parse_expression()?;
+                parser.expect_symbol(']')?;
+                expr = Expression::ArrayIndex {
+                    array: Box::new(expr),
+                    index: Box::new(index),
+                };
+            }
+            Token::Symbol('(') => {
+                // Function call or enum variant constructor with payload
+                if let Expression::MemberAccess { object, member } = expr {
+                    return parse_call_expression_with_object(parser, *object, member);
+                } else if let Expression::Identifier(name) = expr {
+                    return parse_call_expression(parser, name);
+                } else if let Expression::EnumVariant {
+                    enum_name,
+                    variant,
+                    payload: None,
+                } = expr
+                {
+                    // Check if this looks like a struct literal: Module.Struct(field: value, ...)
+                    // vs an enum variant with payload: Module.Variant(expression)
+                    let saved = parser.save_state();
+
+                    parser.next_token(); // consume '('
+
+                    let looks_like_struct_literal =
+                        if let Token::Identifier(_) = &parser.current_token {
+                            parser.next_token();
+                            parser.current_token == Token::Symbol(':')
+                        } else {
+                            false
+                        };
+
+                    parser.restore_state(saved);
+
+                    if looks_like_struct_literal {
+                        let qualified_name = format!("{}.{}", enum_name, variant);
+                        return super::structs::parse_struct_literal(
+                            parser,
+                            qualified_name,
+                            '(',
+                            ')',
+                        );
+                    } else {
+                        parser.next_token(); // consume '('
+                        let payload_expr = parser.parse_expression()?;
+                        parser.expect_symbol(')')?;
+                        expr = Expression::EnumVariant {
+                            enum_name,
+                            variant,
+                            payload: Some(Box::new(payload_expr)),
+                        };
+                    }
+                } else {
+                    // Expression doesn't support function call syntax here.
+                    // Break and let the outer parser handle '(' as a new expression.
+                    break;
+                }
+            }
+            Token::Symbol('{') => {
+                // Struct literal after a qualified name: Module.Struct { ... }
+                if let Expression::EnumVariant {
+                    enum_name,
+                    variant,
+                    payload: None,
+                } = &expr
+                {
+                    let qualified_name = format!("{}.{}", enum_name, variant);
+                    return super::structs::parse_struct_literal(parser, qualified_name, '{', '}');
+                }
+                // Not an EnumVariant — break and let outer code handle it
+                break;
+            }
+            _ => break,
+        }
+    }
+
+    Ok(expr)
+}
+
+/// Parse a single member access or method call after `.member` has been consumed
 fn parse_member_access(
     parser: &mut Parser,
     expr: Expression,
@@ -276,30 +391,70 @@ fn parse_member_access(
         }
     }
 
-    // Reference operations (require empty parentheses)
+    // Built-in call operations (require parentheses)
     if is_call {
         match member.as_str() {
             "ref" => {
                 parser.next_token(); // consume '('
-                parser.expect_symbol(')')?; // validates and consumes ')'
+                parser.expect_symbol(')')?;
                 return Ok(Expression::CreateReference(Box::new(expr)));
             }
             "mut_ref" => {
                 parser.next_token(); // consume '('
-                parser.expect_symbol(')')?; // validates and consumes ')'
+                parser.expect_symbol(')')?;
                 return Ok(Expression::CreateMutableReference(Box::new(expr)));
+            }
+            "raise" => {
+                parser.next_token(); // consume '('
+                parser.expect_symbol(')')?;
+                return Ok(Expression::Raise(Box::new(expr)));
+            }
+            "step" => {
+                parser.next_token(); // consume '('
+                let step_value = parser.parse_expression()?;
+                parser.expect_symbol(')')?;
+                return Ok(Expression::MethodCall {
+                    object: Box::new(expr),
+                    method: "step".to_string(),
+                    type_args: vec![],
+                    args: vec![step_value],
+                    span: Some(parser.current_span.clone()),
+                });
             }
             _ => {}
         }
     }
 
+    // Check for generic type arguments on the member: member<T>
+    let member_with_generics = if parser.current_token == Token::Operator("<".to_string())
+        && super::collections::looks_like_generic_type_args(parser)
+    {
+        let type_args_str = super::literals::parse_generic_type_args_to_string(parser)?;
+        format!("{}<{}>", member, type_args_str)
+    } else {
+        member.clone()
+    };
+
+    // Enum variant detection: EnumName.Variant where Variant starts with uppercase.
+    // Must be checked BEFORE method call dispatch so Result.Ok(value) becomes
+    // EnumVariant (with payload handled by parse_postfix_chain's '(' handler).
+    if member.chars().next().is_some_and(|c| c.is_uppercase()) {
+        if let Expression::Identifier(enum_name) = &expr {
+            return Ok(Expression::EnumVariant {
+                enum_name: enum_name.clone(),
+                variant: member_with_generics,
+                payload: None,
+            });
+        }
+    }
+
     // Method call or member access
-    if is_call {
-        parse_call_expression_with_object(parser, expr, member)
+    if parser.current_token == Token::Symbol('(') {
+        parse_call_expression_with_object(parser, expr, member_with_generics)
     } else {
         Ok(Expression::MemberAccess {
             object: Box::new(expr),
-            member,
+            member: member_with_generics,
         })
     }
 }

@@ -1,5 +1,4 @@
 pub mod behaviors;
-pub mod comptime;
 pub mod core;
 pub mod enums;
 pub mod expressions;

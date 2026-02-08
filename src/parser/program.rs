@@ -26,39 +26,9 @@ impl<'a> Parser<'a> {
                 Some(self.current_span.clone()),
             ));
         }
-        self.next_token();
+        self.next_token(); // consume '{'
 
-        let mut exported_symbols = vec![];
-
-        // Parse exported symbol names
-        while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
-            if let Token::Identifier(name) = &self.current_token {
-                exported_symbols.push(name.clone());
-                self.next_token();
-
-                if self.current_token == Token::Symbol(',') {
-                    self.next_token();
-                } else if self.current_token != Token::Symbol('}') {
-                    return Err(CompileError::SyntaxError(
-                        "Expected ',' or '}' in @export list".to_string(),
-                        Some(self.current_span.clone()),
-                    ));
-                }
-            } else {
-                return Err(CompileError::SyntaxError(
-                    "Expected identifier in @export list".to_string(),
-                    Some(self.current_span.clone()),
-                ));
-            }
-        }
-
-        if self.current_token != Token::Symbol('}') {
-            return Err(CompileError::SyntaxError(
-                "Expected '}' to close @export".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
+        let exported_symbols = self.parse_identifier_list('}', "@export list")?;
 
         Ok(Declaration::Export {
             symbols: exported_symbols,
@@ -67,38 +37,8 @@ impl<'a> Parser<'a> {
 
     /// Parse a destructuring import: { name, name } = @std
     pub fn parse_destructuring_import_declaration(&mut self) -> Result<Vec<Declaration>> {
-        self.next_token();
-        let mut imported_names = vec![];
-
-        // Parse imported names
-        while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
-            if let Token::Identifier(name) = &self.current_token {
-                imported_names.push(name.clone());
-                self.next_token();
-
-                if self.current_token == Token::Symbol(',') {
-                    self.next_token();
-                } else if self.current_token != Token::Symbol('}') {
-                    return Err(CompileError::SyntaxError(
-                        "Expected ',' or '}' in destructuring import".to_string(),
-                        Some(self.current_span.clone()),
-                    ));
-                }
-            } else {
-                return Err(CompileError::SyntaxError(
-                    "Expected identifier in destructuring import".to_string(),
-                    Some(self.current_span.clone()),
-                ));
-            }
-        }
-
-        if self.current_token != Token::Symbol('}') {
-            return Err(CompileError::SyntaxError(
-                "Expected '}' to close destructuring import".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
+        self.next_token(); // consume '{'
+        let imported_names = self.parse_identifier_list('}', "destructuring import")?;
 
         // Expect '=' operator
         if self.current_token != Token::Operator("=".to_string()) {

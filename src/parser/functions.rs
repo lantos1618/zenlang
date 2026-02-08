@@ -59,10 +59,7 @@ impl<'a> Parser<'a> {
                     && self.current_token != Token::Operator("::".to_string())
                 {
                     // For 'self' without explicit type, use a placeholder type
-                    crate::ast::AstType::Generic {
-                        name: "Self".to_string(),
-                        type_args: Vec::new(),
-                    }
+                    crate::ast::AstType::self_type()
                 } else {
                     let _is_double_colon = if self.try_consume_symbol(':') {
                         false

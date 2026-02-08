@@ -133,6 +133,15 @@ pub struct TraitConstraint {
 // ============================================================================
 
 impl AstType {
+    /// Create a Self-type placeholder for implicit `self` parameters.
+    /// This is resolved during type checking based on the implementing type.
+    pub fn self_type() -> AstType {
+        AstType::Generic {
+            name: "Self".to_string(),
+            type_args: Vec::new(),
+        }
+    }
+
     /// Returns the variant name of this type as a static string.
     pub fn variant_name(&self) -> &'static str {
         match self {

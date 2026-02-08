@@ -6,6 +6,16 @@ use crate::ast::{Declaration, Expression, Program, Statement, VariableDeclaratio
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
 
+/// Classification of what type of declaration follows after generics
+#[derive(Debug, PartialEq)]
+enum DeclKind {
+    Struct,
+    Enum,
+    Function,
+    Behavior,
+    Unknown,
+}
+
 impl<'a> Parser<'a> {
     // ========================================================================
     // HELPER METHODS FOR PARSING COMMON PATTERNS
@@ -131,25 +141,29 @@ impl<'a> Parser<'a> {
     }
 
     /// Detect what type of declaration follows after generics
-    /// Returns (is_struct, is_enum, is_function, is_external_fn, is_behavior, is_trait)
-    fn detect_declaration_type(&mut self) -> (bool, bool, bool, bool, bool, bool) {
+    fn detect_declaration_type(&mut self) -> DeclKind {
         // We're past the generics, check what comes next
-        let is_struct =
-            self.current_token == Token::Symbol(':') && self.peek_token == Token::Symbol('{');
-        let is_enum = self.current_token == Token::Symbol(':')
+        if self.current_token == Token::Symbol(':')
+            && matches!(&self.peek_token, Token::Identifier(name) if name == "behavior")
+        {
+            DeclKind::Behavior
+        } else if self.current_token == Token::Symbol(':') && self.peek_token == Token::Symbol('{')
+        {
+            DeclKind::Struct
+        } else if self.current_token == Token::Symbol(':') && self.peek_token == Token::Symbol('(')
+            || self.current_token == Token::Symbol('(')
+            || (self.current_token == Token::Operator("=".to_string())
+                && self.peek_token == Token::Symbol('('))
+        {
+            DeclKind::Function
+        } else if self.current_token == Token::Symbol(':')
             && (matches!(&self.peek_token, Token::Identifier(_))
-                || self.peek_token == Token::Symbol('.'));
-        let is_generic_function = self.current_token == Token::Symbol('(');
-        let is_equals_function = self.current_token == Token::Operator("=".to_string())
-            && self.peek_token == Token::Symbol('(');
-        let is_function = (self.current_token == Token::Symbol(':')
-            && self.peek_token == Token::Symbol('('))
-            || is_generic_function
-            || is_equals_function;
-        let is_behavior = self.current_token == Token::Symbol(':')
-            && matches!(&self.peek_token, Token::Identifier(name) if name == "behavior");
-
-        (is_struct, is_enum, is_function, false, is_behavior, false)
+                || self.peek_token == Token::Symbol('.'))
+        {
+            DeclKind::Enum
+        } else {
+            DeclKind::Unknown
+        }
     }
 
     // ========================================================================
@@ -272,23 +286,27 @@ impl<'a> Parser<'a> {
                             }
 
                             // Check what comes after the generics using helper
-                            let (is_struct, is_enum, is_function, _, is_behavior, _) =
-                                self.detect_declaration_type();
+                            let decl_kind = self.detect_declaration_type();
 
                             // Restore lexer state
                             self.restore_state(saved_state);
 
-                            if is_behavior {
-                                declarations.push(Declaration::Behavior(self.parse_behavior()?));
-                            } else if is_enum {
-                                declarations.push(Declaration::Enum(self.parse_enum()?));
-                            } else if is_function {
-                                declarations.push(Declaration::Function(self.parse_function()?));
-                            } else if is_struct {
-                                declarations.push(Declaration::Struct(self.parse_struct()?));
-                            } else {
-                                // Default to struct for backward compatibility
-                                declarations.push(Declaration::Struct(self.parse_struct()?));
+                            match decl_kind {
+                                DeclKind::Behavior => {
+                                    declarations
+                                        .push(Declaration::Behavior(self.parse_behavior()?));
+                                }
+                                DeclKind::Enum => {
+                                    declarations.push(Declaration::Enum(self.parse_enum()?));
+                                }
+                                DeclKind::Function => {
+                                    declarations
+                                        .push(Declaration::Function(self.parse_function()?));
+                                }
+                                DeclKind::Struct | DeclKind::Unknown => {
+                                    // Default to struct for backward compatibility
+                                    declarations.push(Declaration::Struct(self.parse_struct()?));
+                                }
                             }
                         } else {
                             // Malformed generics, restore and try to parse as struct
@@ -1182,44 +1200,6 @@ impl<'a> Parser<'a> {
         })
     }
 
-    #[allow(dead_code)]
-    fn parse_variable_assignment(&mut self) -> Result<Statement> {
-        // Capture span at start of assignment for error reporting
-        let start_span = self.current_span.clone();
-
-        // Parse as either declaration or assignment - typechecker will determine which
-        let name = if let Token::Identifier(name) = &self.current_token {
-            name.clone()
-        } else {
-            return Err(CompileError::SyntaxError(
-                "Expected variable name".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        };
-        self.next_token(); // consume identifier
-
-        // Consume the '=' operator
-        if self.current_token != Token::Operator("=".to_string()) {
-            return Err(CompileError::SyntaxError(
-                "Expected '=' for assignment".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
-
-        // Parse the value expression
-        let value = self.parse_expression()?;
-
-        self.skip_optional_semicolon();
-
-        // Return a VariableAssignment statement - the typechecker will determine if this is valid
-        Ok(Statement::VariableAssignment {
-            name,
-            value,
-            span: Some(start_span),
-        })
-    }
-
     // ========================================================================
     // HELPER FUNCTIONS FOR parse_program
     // ========================================================================
@@ -1291,32 +1271,7 @@ impl<'a> Parser<'a> {
         // Parse { io, maths } = @std
         self.next_token(); // consume '{'
 
-        let mut names = vec![];
-
-        // Parse the list of identifiers
-        while self.current_token != Token::Symbol('}') {
-            if let Token::Identifier(name) = &self.current_token {
-                names.push(name.clone());
-                self.next_token();
-
-                // Check for comma
-                if self.current_token == Token::Symbol(',') {
-                    self.next_token();
-                } else if self.current_token != Token::Symbol('}') {
-                    return Err(CompileError::SyntaxError(
-                        "Expected ',' or '}' in destructuring import".to_string(),
-                        Some(self.current_span.clone()),
-                    ));
-                }
-            } else {
-                return Err(CompileError::SyntaxError(
-                    "Expected identifier in destructuring import".to_string(),
-                    Some(self.current_span.clone()),
-                ));
-            }
-        }
-
-        self.next_token(); // consume '}'
+        let names = self.parse_identifier_list('}', "destructuring import")?;
 
         // Expect '='
         if self.current_token != Token::Operator("=".to_string()) {

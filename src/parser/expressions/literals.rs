@@ -1,7 +1,5 @@
 //! Literal expression parsing: integers, floats, strings
 
-#![allow(dead_code)]
-
 use crate::ast::{AstType, Expression};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;

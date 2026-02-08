@@ -15,6 +15,58 @@ fn parse_match_arm_body(parser: &mut Parser) -> Result<Expression> {
     super::primary::parse_primary_expression(parser)
 }
 
+/// Parse a block body `{ statements... final_expr }` for a match arm.
+/// Detects the final expression by peeking for `}`.
+fn parse_match_arm_block_body(parser: &mut Parser) -> Result<Expression> {
+    parser.next_token(); // consume '{'
+
+    let mut statements = Vec::new();
+    let mut final_expr = None;
+
+    while parser.current_token != Token::Symbol('}') && parser.current_token != Token::Eof {
+        // Check if this could be the final expression
+        if parser.peek_token == Token::Symbol('}') {
+            // This might be the final expression (no semicolon)
+            let expr = parser.parse_expression()?;
+            if parser.current_token == Token::Symbol(';') {
+                // It's a statement, not the final expression
+                parser.next_token();
+                statements.push(crate::ast::Statement::Expression {
+                    expr,
+                    span: Some(parser.current_span.clone()),
+                });
+            } else {
+                // It's the final expression
+                final_expr = Some(expr);
+            }
+        } else {
+            // Parse as statement to handle variable declarations and assignments
+            let stmt = parser.parse_statement()?;
+            statements.push(stmt);
+        }
+    }
+
+    if parser.current_token != Token::Symbol('}') {
+        return Err(CompileError::SyntaxError(
+            "Expected '}' to close block in match arm".to_string(),
+            Some(parser.current_span.clone()),
+        ));
+    }
+    parser.next_token(); // consume '}'
+
+    if !statements.is_empty() || final_expr.is_some() {
+        if let Some(expr) = final_expr {
+            statements.push(crate::ast::Statement::Expression {
+                expr,
+                span: Some(parser.current_span.clone()),
+            });
+        }
+        Ok(Expression::Block(statements))
+    } else {
+        Ok(Expression::Block(vec![]))
+    }
+}
+
 pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result<Expression> {
     // Parse: scrutinee ? | pattern => expr | pattern => expr ...
     // OR bool short form: scrutinee ? { block }
@@ -147,46 +199,7 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
                 };
 
                 let body = if parser.current_token == Token::Symbol('{') {
-                    parser.next_token();
-                    let mut statements = Vec::new();
-                    let mut final_expr = None;
-                    while parser.current_token != Token::Symbol('}')
-                        && parser.current_token != Token::Eof
-                    {
-                        if parser.peek_token == Token::Symbol('}') {
-                            let expr = parser.parse_expression()?;
-                            if parser.current_token == Token::Symbol(';') {
-                                parser.next_token();
-                                statements.push(crate::ast::Statement::Expression {
-                                    expr,
-                                    span: Some(parser.current_span.clone()),
-                                });
-                            } else {
-                                final_expr = Some(expr);
-                            }
-                        } else {
-                            let stmt = parser.parse_statement()?;
-                            statements.push(stmt);
-                        }
-                    }
-                    if parser.current_token != Token::Symbol('}') {
-                        return Err(CompileError::SyntaxError(
-                            "Expected '}' to close block in match arm".to_string(),
-                            Some(parser.current_span.clone()),
-                        ));
-                    }
-                    parser.next_token(); // consume '}'
-                    if !statements.is_empty() || final_expr.is_some() {
-                        if let Some(expr) = final_expr {
-                            statements.push(crate::ast::Statement::Expression {
-                                expr,
-                                span: Some(parser.current_span.clone()),
-                            });
-                        }
-                        Expression::Block(statements)
-                    } else {
-                        Expression::Block(vec![])
-                    }
+                    parse_match_arm_block_body(parser)?
                 } else if parser.current_token == Token::Operator("=>".to_string()) {
                     parser.next_token(); // consume '=>'
                     parser.parse_expression()?
@@ -316,58 +329,7 @@ pub fn parse_pattern_match(parser: &mut Parser, scrutinee: Expression) -> Result
 
         // Parse body - can be either { block } or => expr (for compatibility)
         let body = if parser.current_token == Token::Symbol('{') {
-            // Parse block as expression
-            parser.next_token(); // consume '{'
-
-            let mut statements = Vec::new();
-            let mut final_expr = None;
-
-            while parser.current_token != Token::Symbol('}') && parser.current_token != Token::Eof {
-                // Check if this could be the final expression
-                if parser.peek_token == Token::Symbol('}') {
-                    // This might be the final expression (no semicolon)
-                    let expr = parser.parse_expression()?;
-                    if parser.current_token == Token::Symbol(';') {
-                        // It's a statement, not the final expression
-                        parser.next_token();
-                        statements.push(crate::ast::Statement::Expression {
-                            expr,
-                            span: Some(parser.current_span.clone()),
-                        });
-                    } else {
-                        // It's the final expression
-                        final_expr = Some(expr);
-                    }
-                } else {
-                    // Parse as statement to handle variable declarations and assignments
-                    let stmt = parser.parse_statement()?;
-                    statements.push(stmt);
-                }
-            }
-
-            if parser.current_token != Token::Symbol('}') {
-                return Err(CompileError::SyntaxError(
-                    "Expected '}' to close block in match arm".to_string(),
-                    Some(parser.current_span.clone()),
-                ));
-            }
-            parser.next_token(); // consume '}'
-
-            // If we have statements, return a block expression
-            // Otherwise return the final expression or an empty block
-            if !statements.is_empty() || final_expr.is_some() {
-                // If there's a final expression, add it to the statements
-                if let Some(expr) = final_expr {
-                    statements.push(crate::ast::Statement::Expression {
-                        expr,
-                        span: Some(parser.current_span.clone()),
-                    });
-                }
-                Expression::Block(statements)
-            } else {
-                // Empty block
-                Expression::Block(vec![])
-            }
+            parse_match_arm_block_body(parser)?
         } else if parser.current_token == Token::Operator("=>".to_string()) {
             // Legacy => syntax for compatibility
             parser.next_token(); // consume '=>'

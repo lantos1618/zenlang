@@ -70,10 +70,7 @@ impl<'a> Parser<'a> {
         let type_ = if name == "self" && self.current_token != Token::Symbol(':') {
             // For 'self' without explicit type, use a placeholder type
             // This will be resolved during type checking based on the implementing type
-            Type::Generic {
-                name: "Self".to_string(),
-                type_args: Vec::new(),
-            }
+            Type::self_type()
         } else {
             // Expect ':' for type annotation
             self.expect_symbol(':')?;
@@ -263,94 +260,7 @@ impl<'a> Parser<'a> {
                 let param_type = if param_name == "self" && self.current_token != Token::Symbol(':')
                 {
                     // For 'self' without explicit type, use a placeholder type
-                    Type::Generic {
-                        name: "Self".to_string(),
-                        type_args: Vec::new(),
-                    }
-                } else {
-                    self.expect_symbol(':')?;
-                    self.parse_type()?
-                };
-                args.push((param_name, param_type));
-
-                if self.current_token == Token::Symbol(')') {
-                    break;
-                }
-                if !self.try_consume_symbol(',') {
-                    return Err(self.syntax_error("Expected ',' or ')' in parameter list"));
-                }
-            }
-        }
-        self.next_token(); // consume ')'
-
-        // Check for return type (it should be present for impl functions)
-        let return_type = if self.current_token != Token::Symbol('{') {
-            // If it's not '{', then we have a return type
-            self.parse_type()?
-        } else {
-            // Default to void/unit type if no return type specified
-            crate::ast::AstType::Void
-        };
-
-        // Function body
-        self.expect_symbol('{')?;
-
-        let mut body = vec![];
-        while self.current_token != Token::Symbol('}') && self.current_token != Token::Eof {
-            body.push(self.parse_statement()?);
-        }
-
-        if self.current_token != Token::Symbol('}') {
-            return Err(self.syntax_error("Expected '}' to close function body"));
-        }
-        self.next_token();
-
-        // Check visibility before moving name
-        let is_public = !name.starts_with("__");
-
-        Ok(Function {
-            name,
-            type_params,
-            args,
-            return_type,
-            body,
-            is_varargs: false,
-            is_public,
-        })
-    }
-
-    /// Parse a function within an impl block context
-    /// This is different from parse_function() because the function name and '=' have already been consumed
-    #[allow(dead_code)]
-    pub fn parse_impl_function(&mut self) -> Result<crate::ast::Function> {
-        use crate::ast::Function;
-
-        // Function name
-        let name = self.expect_identifier("function name")?;
-
-        // Parse generic type parameters if present: <T: Constraint, U, ...>
-        let type_params = self.parse_type_parameters()?;
-
-        // Expect '=' (function signature separator)
-        self.expect_operator("=")?;
-
-        // Parameters
-        self.expect_symbol('(')?;
-
-        let mut args = vec![];
-        if self.current_token != Token::Symbol(')') {
-            loop {
-                // Parameter name
-                let param_name = self.expect_identifier("parameter name")?;
-
-                // Parameter type - special handling for 'self'
-                let param_type = if param_name == "self" && self.current_token != Token::Symbol(':')
-                {
-                    // For 'self' without explicit type, use a placeholder type
-                    Type::Generic {
-                        name: "Self".to_string(),
-                        type_args: Vec::new(),
-                    }
+                    Type::self_type()
                 } else {
                     self.expect_symbol(':')?;
                     self.parse_type()?

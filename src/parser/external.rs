@@ -1,47 +1,23 @@
 use super::core::Parser;
 use crate::ast::ExternalFunction;
-use crate::error::{CompileError, Result};
+use crate::error::Result;
 use crate::lexer::Token;
 
 impl<'a> Parser<'a> {
     pub fn parse_external_function(&mut self) -> Result<ExternalFunction> {
-        // External function name
-        let name = if let Token::Identifier(name) = &self.current_token {
-            name.clone()
-        } else {
-            return Err(CompileError::SyntaxError(
-                "Expected external function name".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        };
-        self.next_token();
+        let name = self.expect_identifier("external function name")?;
 
-        // Skip the ':' symbol
-        if self.current_token != Token::Symbol(':') {
-            return Err(CompileError::SyntaxError(
-                "Expected ':' after external function name".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
+        self.expect_symbol(':')?;
 
-        // Parameters
-        if self.current_token != Token::Symbol('(') {
-            return Err(CompileError::SyntaxError(
-                "Expected '(' for external function parameters".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
+        self.expect_symbol('(')?;
 
         let mut args = vec![];
         let mut is_varargs = false;
 
         if self.current_token != Token::Symbol(')') {
             loop {
-                if self.current_token == Token::Operator("...".to_string()) {
+                if self.try_consume_operator("...") {
                     is_varargs = true;
-                    self.next_token();
                     break;
                 }
 
@@ -61,18 +37,14 @@ impl<'a> Parser<'a> {
                 if self.current_token == Token::Symbol(')') {
                     break;
                 }
-                if self.current_token != Token::Symbol(',') {
-                    return Err(CompileError::SyntaxError(
-                        "Expected ',' or ')' in external function parameter list".to_string(),
-                        Some(self.current_span.clone()),
-                    ));
+                if !self.try_consume_symbol(',') {
+                    return Err(self
+                        .syntax_error("Expected ',' or ')' in external function parameter list"));
                 }
-                self.next_token();
             }
         }
         self.next_token(); // consume ')'
 
-        // Return type
         let return_type = self.parse_type()?;
 
         Ok(ExternalFunction {

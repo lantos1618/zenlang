@@ -1,6 +1,6 @@
 use super::core::Parser;
-use crate::ast::{AstType, Function, StructDefinition, StructField};
-use crate::error::{CompileError, Result};
+use crate::ast::{StructDefinition, StructField};
+use crate::error::Result;
 use crate::lexer::Token;
 
 impl<'a> Parser<'a> {
@@ -91,99 +91,6 @@ impl<'a> Parser<'a> {
             fields,
             methods,
             span: Some(start_span),
-        })
-    }
-
-    #[allow(dead_code)]
-    fn parse_method(&mut self) -> Result<Function> {
-        // Method name (after 'fn' keyword)
-        let name = if let Token::Identifier(name) = &self.current_token {
-            name.clone()
-        } else {
-            return Err(CompileError::SyntaxError(
-                "Expected method name".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        };
-        self.next_token();
-
-        // Parse generic type parameters if present: <T, U, ...>
-        let type_params = self.parse_type_parameters()?;
-
-        // Parameters in parentheses
-        if self.current_token != Token::Symbol('(') {
-            return Err(CompileError::SyntaxError(
-                "Expected '(' for method parameters".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
-
-        let mut parameters = Vec::new();
-        while self.current_token != Token::Symbol(')') {
-            // Parameter name
-            let param_name = if let Token::Identifier(name) = &self.current_token {
-                name.clone()
-            } else {
-                return Err(CompileError::SyntaxError(
-                    "Expected parameter name".to_string(),
-                    Some(self.current_span.clone()),
-                ));
-            };
-            self.next_token();
-
-            // Parameter type (optional - if next token is ')' or ',', skip type parsing)
-            let param_type = if self.current_token == Token::Symbol(')')
-                || self.current_token == Token::Symbol(',')
-            {
-                // No explicit type, use a default (could be inferred later)
-                AstType::I32 // Default type for now
-            } else {
-                self.parse_type()?
-            };
-            parameters.push((param_name, param_type));
-
-            // Comma or closing parenthesis
-            if self.current_token == Token::Symbol(',') {
-                self.next_token();
-            } else if self.current_token != Token::Symbol(')') {
-                return Err(CompileError::SyntaxError(
-                    "Expected ',' or ')' after parameter".to_string(),
-                    Some(self.current_span.clone()),
-                ));
-            }
-        }
-        self.next_token(); // consume ')'
-
-        // Return type
-        let return_type = self.parse_type()?;
-
-        // Function body
-        if self.current_token != Token::Symbol('{') {
-            return Err(CompileError::SyntaxError(
-                "Expected '{' for method body".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
-
-        let mut body = Vec::new();
-        while self.current_token != Token::Symbol('}') {
-            body.push(self.parse_statement()?);
-        }
-        self.next_token(); // consume '}'
-
-        // Check visibility before moving name
-        let is_public = !name.starts_with("__");
-
-        Ok(Function {
-            name,
-            type_params,
-            args: parameters,
-            return_type,
-            body,
-            is_varargs: false,
-            is_public,
         })
     }
 }

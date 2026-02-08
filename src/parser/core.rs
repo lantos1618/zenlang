@@ -69,28 +69,29 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Try to split a `>>` or `>>=` token by consuming one `>`.
+    /// Returns true if successfully consumed a `>` (either standalone or by splitting).
+    /// Does NOT advance past a standalone `>` — that's done by the caller.
+    fn try_split_right_angle(&mut self) -> bool {
+        if self.current_token == Token::Operator(">>".to_string()) {
+            self.current_token = Token::Operator(">".to_string());
+            true
+        } else if self.current_token == Token::Operator(">>=".to_string()) {
+            self.current_token = Token::Operator(">=".to_string());
+            true
+        } else {
+            false
+        }
+    }
+
     /// Expect current token to be a specific operator, return error if not
     /// Special handling for `>` when current token is `>>` or `>>=` (needed for nested generics)
     pub fn expect_operator(&mut self, expected: &str) -> crate::error::Result<()> {
         if self.current_token == Token::Operator(expected.to_string()) {
             self.next_token();
             Ok(())
-        } else if expected == ">" {
-            // Handle nested generics: when expecting `>`, split `>>` into two `>` tokens
-            if self.current_token == Token::Operator(">>".to_string()) {
-                // Replace `>>` with single `>` (the remaining part after consuming one `>`)
-                self.current_token = Token::Operator(">".to_string());
-                Ok(())
-            } else if self.current_token == Token::Operator(">>=".to_string()) {
-                // Replace `>>=` with `>=` (the remaining part after consuming one `>`)
-                self.current_token = Token::Operator(">=".to_string());
-                Ok(())
-            } else {
-                Err(self.syntax_error(format!(
-                    "Expected '{}', got {:?}",
-                    expected, self.current_token
-                )))
-            }
+        } else if expected == ">" && self.try_split_right_angle() {
+            Ok(())
         } else {
             Err(self.syntax_error(format!(
                 "Expected '{}', got {:?}",
@@ -115,21 +116,8 @@ impl<'a> Parser<'a> {
         if self.current_token == Token::Operator(op.to_string()) {
             self.next_token();
             true
-        } else if op == ">" {
-            // Handle nested generics: when looking for `>`, split `>>` into two `>` tokens
-            if self.current_token == Token::Operator(">>".to_string()) {
-                // Replace `>>` with single `>` (the remaining part after consuming one `>`)
-                self.current_token = Token::Operator(">".to_string());
-                true
-            } else if self.current_token == Token::Operator(">>=".to_string()) {
-                // Replace `>>=` with `>=` (the remaining part after consuming one `>`)
-                self.current_token = Token::Operator(">=".to_string());
-                true
-            } else {
-                false
-            }
         } else {
-            false
+            op == ">" && self.try_split_right_angle()
         }
     }
 
@@ -187,14 +175,8 @@ impl<'a> Parser<'a> {
             if self.current_token == Token::Symbol(',') {
                 result.push(',');
                 self.next_token();
-            } else if self.current_token == Token::Operator(">".to_string()) {
+            } else if self.try_consume_operator(">") {
                 result.push('>');
-                self.next_token();
-                break;
-            } else if self.current_token == Token::Operator(">>".to_string()) {
-                // Handle nested generics: split `>>` into `>` + `>`
-                result.push('>');
-                self.current_token = Token::Operator(">".to_string());
                 break;
             } else {
                 break;
@@ -223,6 +205,48 @@ impl<'a> Parser<'a> {
         } else {
             None
         }
+    }
+
+    /// Parse a dotted identifier path: `initial.member1.member2...`
+    /// Consumes `.identifier` pairs as long as they're available.
+    pub fn parse_dotted_path(&mut self, initial: String) -> String {
+        let mut path = initial;
+        while self.current_token == Token::Symbol('.') {
+            self.next_token();
+            if let Token::Identifier(member) = &self.current_token {
+                path.push('.');
+                path.push_str(member);
+                self.next_token();
+            } else {
+                break;
+            }
+        }
+        path
+    }
+
+    /// Parse a comma-separated list of identifiers enclosed by `close` char.
+    /// Assumes the opening delimiter has already been consumed.
+    /// Consumes the closing delimiter.
+    pub fn parse_identifier_list(
+        &mut self,
+        close: char,
+        context: &str,
+    ) -> crate::error::Result<Vec<String>> {
+        let mut names = vec![];
+        while self.current_token != Token::Symbol(close) && self.current_token != Token::Eof {
+            let name = self.expect_identifier(context)?;
+            names.push(name);
+            if !self.try_consume_symbol(',') && self.current_token != Token::Symbol(close) {
+                return Err(
+                    self.syntax_error(format!("Expected ',' or '{}' in {}", close, context))
+                );
+            }
+        }
+        if self.current_token != Token::Symbol(close) {
+            return Err(self.syntax_error(format!("Expected '{}' to close {}", close, context)));
+        }
+        self.next_token(); // consume close
+        Ok(names)
     }
 
     // ========================================================================

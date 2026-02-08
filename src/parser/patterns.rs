@@ -409,32 +409,4 @@ impl<'a> Parser<'a> {
             )),
         }
     }
-
-    #[allow(dead_code)]
-    pub fn parse_binding_pattern(&mut self) -> Result<Pattern> {
-        // Parse binding pattern: name -> pattern
-        let name = if let Token::Identifier(name) = &self.current_token {
-            name.clone()
-        } else {
-            return Err(CompileError::SyntaxError(
-                "Expected identifier for binding".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        };
-        self.next_token();
-
-        if self.current_token != Token::Operator("->".to_string()) {
-            return Err(CompileError::SyntaxError(
-                "Expected '->' in binding pattern".to_string(),
-                Some(self.current_span.clone()),
-            ));
-        }
-        self.next_token();
-
-        let pattern = self.parse_pattern()?;
-        Ok(Pattern::Binding {
-            name,
-            pattern: Box::new(pattern),
-        })
-    }
 }
