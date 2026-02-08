@@ -5,7 +5,6 @@ mod common;
 use common::run_expecting_success;
 
 #[test]
-#[ignore = "SIGSEGV at runtime — compiler.raw_deallocate causes segfault"]
 fn test_raw_pointer_allocation() {
     // Test raw pointer allocation and deallocation using compiler intrinsics
     let code = r#"
@@ -29,7 +28,6 @@ fn test_raw_pointer_allocation() {
 }
 
 #[test]
-#[ignore = "SIGSEGV at runtime — compiler.raw_deallocate causes segfault"]
 fn test_pointer_comparison() {
     // Test pointer comparison
     let code = r#"

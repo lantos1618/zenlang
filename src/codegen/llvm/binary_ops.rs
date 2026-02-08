@@ -315,9 +315,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
         left: BasicValueEnum<'ctx>,
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // Special case: string comparison
         if left.is_pointer_value() && right.is_pointer_value() {
-            return self.compile_string_compare(left, right, IntPredicate::EQ, "strcmp_eq");
+            let result = self.builder.build_int_compare(
+                IntPredicate::EQ,
+                left.into_pointer_value(),
+                right.into_pointer_value(),
+                "ptr_eq",
+            )?;
+            return Ok(result.into());
         }
 
         match self.normalize_numeric_operands(left, right)? {
@@ -341,9 +346,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
         left: BasicValueEnum<'ctx>,
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        // Special case: string comparison
         if left.is_pointer_value() && right.is_pointer_value() {
-            return self.compile_string_compare(left, right, IntPredicate::NE, "strcmp_ne");
+            let result = self.builder.build_int_compare(
+                IntPredicate::NE,
+                left.into_pointer_value(),
+                right.into_pointer_value(),
+                "ptr_ne",
+            )?;
+            return Ok(result.into());
         }
 
         match self.normalize_numeric_operands(left, right)? {

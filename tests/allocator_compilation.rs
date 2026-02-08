@@ -60,7 +60,6 @@ fn test_allocator_reallocate() {
 }
 
 #[test]
-#[ignore] // SIGSEGV: pointer comparison with null_ptr crashes at runtime (compiler codegen bug)
 fn test_allocator_with_null_check() {
     let code = r#"
         main = () i32 {
@@ -145,7 +144,6 @@ fn test_allocator_loop_allocations() {
 }
 
 #[test]
-#[ignore] // SIGSEGV: conditional pointer allocation with null_ptr comparison crashes at runtime
 fn test_allocator_conditional_allocation() {
     let code = r#"
         main = () i32 {

@@ -249,7 +249,11 @@ pub fn compile_raw_deallocate<'ctx>(
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     require_args(args, 2, "raw_deallocate", compiler.get_current_span())?;
-    let ptr = compiler.compile_expression(&args[0])?;
+    let ptr = as_ptr(
+        compiler.compile_expression(&args[0])?,
+        "raw_deallocate arg 0",
+        compiler,
+    )?;
     let _size = compiler.compile_expression(&args[1])?;
     let free = get_or_declare_fn(compiler, "free", None, &[ptr_type(compiler).into()]);
     compiler.builder.build_call(free, &[ptr.into()], "")?;
