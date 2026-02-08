@@ -40,8 +40,10 @@ pub fn handle_code_action(req: Request, store: &Arc<RwLock<DocumentStore>>) -> R
     if let Some(doc) = store.documents.get(&params.text_document.uri) {
         // Check diagnostics in the requested range
         for diagnostic in &params.context.diagnostics {
-            if diagnostic.message.contains("requires an allocator") {
-                // Create a code action to add get_default_allocator()
+            let code = utils::diagnostic_code(diagnostic);
+
+            // Allocator-required fix (from analyzer diagnostic)
+            if code == "allocator-required" {
                 actions.push(quick_fixes::create_allocator_fix_action(
                     diagnostic,
                     &params.text_document.uri,
@@ -49,11 +51,8 @@ pub fn handle_code_action(req: Request, store: &Arc<RwLock<DocumentStore>>) -> R
                 ));
             }
 
-            // Add code action for string conversions
-            if diagnostic.message.contains("type mismatch")
-                && (diagnostic.message.contains("StaticString")
-                    || diagnostic.message.contains("String"))
-            {
+            // String conversion fix for type mismatches involving String/StaticString
+            if code == "type-mismatch" {
                 if let Some(action) = quick_fixes::create_string_conversion_action(
                     diagnostic,
                     &params.text_document.uri,
@@ -63,7 +62,8 @@ pub fn handle_code_action(req: Request, store: &Arc<RwLock<DocumentStore>>) -> R
                 }
             }
 
-            if diagnostic.message.contains("Result") && diagnostic.message.contains("unwrap") {
+            // Error handling: suggest .raise() for .unwrap()
+            if code == "type-error" || code == "type-mismatch" {
                 if let Some(action) = quick_fixes::create_error_handling_action(
                     diagnostic,
                     &params.text_document.uri,
@@ -73,11 +73,8 @@ pub fn handle_code_action(req: Request, store: &Arc<RwLock<DocumentStore>>) -> R
                 }
             }
 
-            // Quick-fix for undefined/undeclared variable - suggest similar names
-            if diagnostic.message.contains("undeclared")
-                || diagnostic.message.contains("undefined")
-                || diagnostic.message.contains("not found")
-            {
+            // Quick-fix for undefined/undeclared symbols - suggest similar names
+            if code == "undeclared-variable" || code == "undeclared-function" {
                 actions.extend(suggestions::create_did_you_mean_actions(
                     diagnostic,
                     &params.text_document.uri,
@@ -87,10 +84,7 @@ pub fn handle_code_action(req: Request, store: &Arc<RwLock<DocumentStore>>) -> R
             }
 
             // Quick-fix for unused variable - prefix with underscore
-            if diagnostic.message.contains("unused")
-                && (diagnostic.message.contains("variable")
-                    || diagnostic.message.contains("binding"))
-            {
+            if code == "unused-variable" || code == "unused-binding" {
                 if let Some(action) = quick_fixes::create_unused_variable_fix(
                     diagnostic,
                     &params.text_document.uri,
@@ -101,8 +95,7 @@ pub fn handle_code_action(req: Request, store: &Arc<RwLock<DocumentStore>>) -> R
             }
 
             // Quick-fix for missing import - add import statement
-            if diagnostic.message.contains("not found") || diagnostic.message.contains("undefined")
-            {
+            if code == "undeclared-variable" || code == "undeclared-function" {
                 if let Some(action) = imports::create_missing_import_fix(
                     diagnostic,
                     &params.text_document.uri,

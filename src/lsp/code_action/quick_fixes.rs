@@ -109,16 +109,22 @@ pub fn create_string_conversion_action(
         return None;
     };
 
-    // Determine conversion direction and create actual edit
-    let (title, new_text) = if diagnostic.message.contains("expected StaticString") {
-        // If it's a String, call .as_static() - common pattern
-        (
-            "Convert to StaticString",
-            format!("{}.as_static()", selected),
-        )
-    } else if diagnostic.message.contains("expected String") {
-        // If it's a StaticString (literal), wrap with String.from()
-        ("Convert to String", format!("String.from({})", selected))
+    // Determine conversion direction from the diagnostic message.
+    // The message format from TypeMismatch is: "Type mismatch: expected `X`, found `Y`"
+    // or from Display: "Type mismatch: Expected X, found Y"
+    // We parse the expected type from the structured message rather than checking
+    // for exact English phrases.
+    let (title, new_text) = if let Some(expected) = extract_expected_type(&diagnostic.message) {
+        if expected.contains("StaticString") {
+            (
+                "Convert to StaticString",
+                format!("{}.as_static()", selected),
+            )
+        } else if expected.contains("String") {
+            ("Convert to String", format!("String.from({})", selected))
+        } else {
+            return None;
+        }
     } else {
         return None;
     };
@@ -248,6 +254,33 @@ fn utf16_offset_to_byte_offset(line: &str, utf16_offset: usize) -> usize {
     }
     // If we've consumed all characters, return byte length (clamp to end)
     line.len()
+}
+
+/// Extract the expected type from a type mismatch diagnostic message.
+/// Handles formats like:
+///   "Type mismatch: expected `String`, found `StaticString`"
+///   "Type mismatch: Expected String, found StaticString"
+fn extract_expected_type(message: &str) -> Option<String> {
+    // Try backtick-delimited format first: "expected `Type`"
+    if let Some(start) = message.find("expected `") {
+        let after = &message[start + 10..]; // skip "expected `"
+        if let Some(end) = after.find('`') {
+            return Some(after[..end].to_string());
+        }
+    }
+    // Try format without backticks: "expected Type," or "Expected Type,"
+    let lower = message.to_lowercase();
+    if let Some(start) = lower.find("expected ") {
+        let after = &message[start + 9..]; // skip "expected "
+        let type_name: String = after
+            .chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect();
+        if !type_name.is_empty() {
+            return Some(type_name);
+        }
+    }
+    None
 }
 
 fn create_underscore_prefix_action(

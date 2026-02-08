@@ -1,6 +1,6 @@
 // Definition handler - go-to-definition
 
-use super::imports::{find_import_info, find_import_info_from_ast};
+use super::imports::find_import_info_from_ast;
 use super::struct_fields::find_struct_field_definition;
 use super::ufc::{find_ufc_method_at_position, resolve_ufc_method};
 use super::utils::{find_symbol_at_position, find_symbol_definition_in_content};
@@ -77,10 +77,10 @@ fn resolve_symbol_definition(
     log::debug!("[LSP] Go-to-definition for: '{}'", symbol_name);
 
     resolve_std_qualified_name(&symbol_name, store)
-        .or_else(|| resolve_qualified_name(&symbol_name, position, doc, store))
+        .or_else(|| resolve_qualified_name(&symbol_name, doc, store))
         .or_else(|| resolve_type_context_definition(&symbol_name, doc, doc_uri))
         .or_else(|| resolve_std_import_ref(&symbol_name, content, position, store))
-        .or_else(|| resolve_imported_symbol(&symbol_name, position, doc, store))
+        .or_else(|| resolve_imported_symbol(&symbol_name, doc, store))
         .or_else(|| resolve_local_variable(&symbol_name, content, doc_uri))
         .or_else(|| resolve_document_symbol(&symbol_name, doc, doc_uri))
         .or_else(|| resolve_workspace_symbol(&symbol_name, store))
@@ -96,34 +96,30 @@ fn resolve_std_qualified_name(symbol_name: &str, store: &DocumentStore) -> Optio
     if parts.len() < 3 {
         return None;
     }
-    let module_name = parts[1];
     let symbol_name_in_module = parts[2..].join(".");
 
-    for (uri, stdlib_doc) in &store.documents {
-        let uri_path = uri.path();
-        if uri_path.contains("stdlib")
-            && (uri_path.ends_with(&format!("{}/{}.zen", module_name, module_name))
-                || uri_path.contains(&format!("{}/{}", module_name, module_name)))
-        {
-            if let Some(symbol_info) = stdlib_doc.symbols.get(&symbol_name_in_module) {
-                return Some(Location {
-                    uri: uri.clone(),
-                    range: symbol_info.range,
-                });
-            }
+    // Use stdlib_resolver for module path resolution instead of URI string matching
+    let module_path = format!("@std.{}", parts[1]);
+    let file_path = store.stdlib_resolver.resolve_module_path(&module_path)?;
+    let module_uri = Url::from_file_path(&file_path).ok()?;
 
+    if let Some(stdlib_doc) = store.documents.get(&module_uri) {
+        if let Some(symbol_info) = stdlib_doc.symbols.get(&symbol_name_in_module) {
             return Some(Location {
-                uri: uri.clone(),
-                range: origin_location(),
+                uri: module_uri,
+                range: symbol_info.range,
             });
         }
     }
-    None
+
+    Some(Location {
+        uri: module_uri,
+        range: origin_location(),
+    })
 }
 
 fn resolve_qualified_name(
     symbol_name: &str,
-    position: Position,
     doc: &crate::lsp::types::Document,
     store: &DocumentStore,
 ) -> Option<Location> {
@@ -145,8 +141,7 @@ fn resolve_qualified_name(
     let import_info = doc
         .ast
         .as_ref()
-        .and_then(|ast| find_import_info_from_ast(ast, module_alias))
-        .or_else(|| find_import_info(&doc.content, module_alias, position));
+        .and_then(|ast| find_import_info_from_ast(ast, module_alias));
 
     if let Some(import_info) = import_info {
         log::debug!(
@@ -161,22 +156,20 @@ fn resolve_qualified_name(
             import_info.source.clone()
         };
 
-        if let Some(loc) = resolve_member_in_module(&module_path, &member_name, module_alias, store)
-        {
+        if let Some(loc) = resolve_member_in_module(&module_path, &member_name, store) {
             return Some(loc);
         }
 
-        for (uri, stdlib_doc) in &store.documents {
-            let uri_path = uri.path();
-            if uri_path.contains("stdlib")
-                && (uri_path.ends_with(&format!("{}/{}.zen", module_alias, module_alias))
-                    || uri_path.contains(&format!("{}/{}", module_alias, module_alias)))
-            {
-                if let Some(symbol_info) = stdlib_doc.symbols.get(&member_name) {
-                    return Some(Location {
-                        uri: uri.clone(),
-                        range: symbol_info.range,
-                    });
+        // Fallback: resolve via stdlib_resolver and look up symbol in module doc
+        if let Some(file_path) = store.stdlib_resolver.resolve_module_path(&module_path) {
+            if let Ok(module_uri) = Url::from_file_path(&file_path) {
+                if let Some(stdlib_doc) = store.documents.get(&module_uri) {
+                    if let Some(symbol_info) = stdlib_doc.symbols.get(&member_name) {
+                        return Some(Location {
+                            uri: module_uri,
+                            range: symbol_info.range,
+                        });
+                    }
                 }
             }
         }
@@ -187,8 +180,7 @@ fn resolve_qualified_name(
             module_alias
         );
         let module_path = format!("@std.{}", module_alias);
-        if let Some(loc) = resolve_member_in_module(&module_path, &member_name, module_alias, store)
-        {
+        if let Some(loc) = resolve_member_in_module(&module_path, &member_name, store) {
             return Some(loc);
         }
     }
@@ -214,7 +206,6 @@ fn resolve_type_context_definition(
 fn resolve_member_in_module(
     module_path: &str,
     member_name: &str,
-    module_alias: &str,
     store: &DocumentStore,
 ) -> Option<Location> {
     let file_path = store.stdlib_resolver.resolve_module_path(module_path)?;
@@ -228,7 +219,13 @@ fn resolve_member_in_module(
 
     if let Some(symbol_info) = store.stdlib_symbols.get(member_name) {
         if let Some(def_uri) = &symbol_info.definition_uri {
-            if def_uri.path().contains(&format!("/{}/", module_alias)) {
+            // Check if the symbol's definition is in the resolved module directory
+            let module_dir = file_path.parent().map(|p| p.to_string_lossy().to_string());
+            let def_in_module = def_uri == &module_uri
+                || module_dir
+                    .as_ref()
+                    .is_some_and(|dir| def_uri.path().starts_with(dir.as_str()));
+            if def_in_module {
                 log::debug!(
                     "[LSP] Found {} in stdlib_symbols from {}",
                     member_name,
@@ -304,16 +301,13 @@ fn resolve_std_import_ref(
 
 fn resolve_imported_symbol(
     symbol_name: &str,
-    position: Position,
     doc: &crate::lsp::types::Document,
     store: &DocumentStore,
 ) -> Option<Location> {
     let import_info = doc
         .ast
         .as_ref()
-        .and_then(|ast| find_import_info_from_ast(ast, symbol_name))
-        .or_else(|| find_import_info(&doc.content, symbol_name, position));
-    let import_info = import_info?;
+        .and_then(|ast| find_import_info_from_ast(ast, symbol_name))?;
 
     if !import_info.source.starts_with("@std") {
         return None;
@@ -358,33 +352,14 @@ fn resolve_module_import(
         }
     }
 
-    for uri in store.documents.keys() {
-        let uri_path = uri.path();
-        if uri_path.contains("stdlib")
-            && (uri_path.ends_with(&format!("{}/{}.zen", module_name, module_name))
-                || uri_path.contains(&format!("{}/{}", module_name, module_name)))
-        {
+    // Use stdlib_resolver to find the module file
+    let module_path = format!("@std.{}", module_name);
+    if let Some(file_path) = store.stdlib_resolver.resolve_module_path(&module_path) {
+        if let Ok(uri) = Url::from_file_path(&file_path) {
             return Some(Location {
-                uri: uri.clone(),
+                uri,
                 range: origin_location(),
             });
-        }
-    }
-
-    if let Some(workspace_root) = &store.workspace_root {
-        if let Ok(workspace_path) = workspace_root.to_file_path() {
-            let module_file = workspace_path
-                .join("stdlib")
-                .join(module_name)
-                .join(format!("{}.zen", module_name));
-            if module_file.exists() {
-                if let Ok(uri) = Url::from_file_path(&module_file) {
-                    return Some(Location {
-                        uri,
-                        range: origin_location(),
-                    });
-                }
-            }
         }
     }
 
@@ -420,18 +395,6 @@ fn resolve_symbol_from_stdlib(
                 uri: module_uri,
                 range: origin_location(),
             });
-        }
-    }
-
-    for (uri, stdlib_doc) in &store.documents {
-        let uri_path = uri.path();
-        if uri_path.contains("stdlib") {
-            if let Some(symbol_info) = stdlib_doc.symbols.get(symbol_name) {
-                return Some(Location {
-                    uri: uri.clone(),
-                    range: symbol_info.range,
-                });
-            }
         }
     }
 

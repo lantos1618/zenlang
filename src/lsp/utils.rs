@@ -409,60 +409,19 @@ pub fn symbol_kind_to_completion_kind(kind: SymbolKind) -> CompletionItemKind {
 }
 
 pub fn format_type(ast_type: &AstType) -> String {
-    // Handle special cases first
-    if let AstType::StaticLiteral = ast_type {
-        return "str".to_string(); // Internal string literal type
-    }
-    if let AstType::Struct { name, .. } = ast_type {
-        if StdlibTypeRegistry::is_string_type(name) {
+    // LSP-specific overrides that differ from AstType::Display
+    match ast_type {
+        AstType::StaticLiteral => return "str".to_string(),
+        AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name) => {
             return "String".to_string();
         }
-    }
-
-    // Use centralized primitive type lookup
-    if let Some(name) = ast_type.primitive_name() {
-        return name.to_string();
-    }
-
-    match ast_type {
-        t if t.is_immutable_ptr() => {
-            if let Some(inner) = t.ptr_inner() {
-                format!("Ptr<{}>", format_type(inner))
-            } else {
-                "Ptr<?>".to_string()
-            }
-        }
-        t if t.is_mutable_ptr() => {
-            if let Some(inner) = t.ptr_inner() {
-                format!("MutPtr<{}>", format_type(inner))
-            } else {
-                "MutPtr<?>".to_string()
-            }
-        }
-        t if t.is_raw_ptr() => {
-            if let Some(inner) = t.ptr_inner() {
-                format!("RawPtr<{}>", format_type(inner))
-            } else {
-                "RawPtr<?>".to_string()
-            }
-        }
-        AstType::Ref(inner) => format!("&{}", format_type(inner)),
-        AstType::Range {
-            start_type,
-            end_type,
-            inclusive,
-        } => {
-            if *inclusive {
-                format!("{}..={}", format_type(start_type), format_type(end_type))
-            } else {
-                format!("{}..{}", format_type(start_type), format_type(end_type))
-            }
-        }
+        AstType::Ref(inner) => return format!("&{}", format_type(inner)),
+        AstType::StdModule => return "module".to_string(),
         AstType::FunctionPointer {
             param_types,
             return_type,
         } => {
-            format!(
+            return format!(
                 "fn({}) {}",
                 param_types
                     .iter()
@@ -470,43 +429,24 @@ pub fn format_type(ast_type: &AstType) -> String {
                     .collect::<Vec<_>>()
                     .join(", "),
                 format_type(return_type)
-            )
+            );
         }
-        AstType::EnumType { name } => name.clone(),
-        AstType::StdModule => "module".to_string(),
-        AstType::Slice(elem) => format!("[{}]", format_type(elem)),
-        AstType::FixedArray { element_type, size } => {
-            format!("[{}; {}]", format_type(element_type), size)
-        }
-        // Vec<T>, DynVec<T>, HashMap<K,V> are now Generic types from stdlib
-        // Option and Result are now Generic types - handled in Generic match below
-        AstType::Struct { name, .. } => name.clone(),
-        AstType::Enum { name, .. } => name.clone(),
-        AstType::Generic { name, type_args } => {
-            if type_args.is_empty() {
-                name.clone()
+        AstType::Range {
+            start_type,
+            end_type,
+            inclusive,
+        } => {
+            if *inclusive {
+                return format!("{}..={}", format_type(start_type), format_type(end_type));
             } else {
-                format!(
-                    "{}<{}>",
-                    name,
-                    type_args
-                        .iter()
-                        .map(format_type)
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                )
+                return format!("{}..{}", format_type(start_type), format_type(end_type));
             }
         }
-        AstType::Function { args, return_type } => {
-            format!(
-                "({}) {}",
-                args.iter().map(format_type).collect::<Vec<_>>().join(", "),
-                format_type(return_type)
-            )
-        }
-        // Catch-all for any remaining types (primitives handled above by primitive_name())
-        _ => format!("{:?}", ast_type),
+        _ => {}
     }
+
+    // Delegate to AstType's Display impl for everything else
+    format!("{}", ast_type)
 }
 
 #[cfg(test)]

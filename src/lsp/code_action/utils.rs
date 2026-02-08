@@ -1,5 +1,15 @@
 // Utility functions for code actions
 
+/// Extract the error code string from a diagnostic's code field.
+/// Returns an empty string if no code is set.
+pub fn diagnostic_code(diagnostic: &lsp_types::Diagnostic) -> String {
+    match &diagnostic.code {
+        Some(lsp_types::NumberOrString::String(s)) => s.clone(),
+        Some(lsp_types::NumberOrString::Number(n)) => n.to_string(),
+        None => String::new(),
+    }
+}
+
 /// Extract the symbol name from a diagnostic message like "undeclared identifier 'foo'"
 pub fn extract_symbol_from_diagnostic(message: &str) -> String {
     // Try to find quoted symbol: 'symbol' or "symbol" or `symbol`

@@ -21,27 +21,6 @@ pub fn format_struct_definition(struct_def: &crate::ast::StructDefinition) -> St
     result
 }
 
-/// Extract struct name from type string
-pub fn extract_struct_name_from_type(type_str: &str) -> Option<String> {
-    // Look for patterns like "Type: `Person`" or "Type: `Person`\n"
-    if let Some(start) = type_str.find("**Type:** `") {
-        let after_type = &type_str[start + 11..];
-        if let Some(end) = after_type.find('`') {
-            let struct_name = after_type[..end].to_string();
-            // Check if it looks like a struct name (starts with uppercase)
-            if struct_name
-                .chars()
-                .next()
-                .map(|c| c.is_uppercase())
-                .unwrap_or(false)
-            {
-                return Some(struct_name);
-            }
-        }
-    }
-    None
-}
-
 /// Handle hover on a variable that might be a struct
 pub fn handle_variable_hover(
     var_name: &str,

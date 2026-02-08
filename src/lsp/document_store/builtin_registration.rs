@@ -1,9 +1,8 @@
 // Built-in type and compiler intrinsic registration
-use super::super::utils::format_type;
 use super::utilities::{dummy_range, make_symbol};
 use super::DocumentStore;
 use crate::ast::{AstType, PRIMITIVE_TYPE_MAP};
-use crate::well_known::well_known;
+use crate::well_known::{well_known, WellKnownType};
 use lsp_types::*;
 
 impl DocumentStore {
@@ -29,9 +28,19 @@ impl DocumentStore {
             );
         }
 
-        // Also register built-in generic types (Option, Result)
+        // Register all well-known types from the registry
         let wk = well_known();
-        for name in [wk.option_name(), wk.result_name()] {
+        for (name, wk_type) in [
+            (wk.option_name(), WellKnownType::Option),
+            (wk.result_name(), WellKnownType::Result),
+            (wk.ptr_name(), WellKnownType::Ptr),
+            (wk.mut_ptr_name(), WellKnownType::MutPtr),
+            (wk.raw_ptr_name(), WellKnownType::RawPtr),
+        ] {
+            let (kind, desc) = match wk_type {
+                WellKnownType::Option | WellKnownType::Result => (SymbolKind::ENUM, "generic type"),
+                _ => (SymbolKind::STRUCT, "pointer type"),
+            };
             let type_ = AstType::Generic {
                 name: name.to_string(),
                 type_args: vec![],
@@ -40,12 +49,12 @@ impl DocumentStore {
                 name.to_string(),
                 make_symbol(
                     name.to_string(),
-                    SymbolKind::ENUM,
+                    kind,
                     range,
-                    Some(format!("{}<T> - Built-in generic type", name)),
+                    Some(format!("{}<T> - Built-in {}", name, desc)),
                     Some(format!(
-                        "Built-in generic type `{}`. Always available, no import needed.",
-                        name
+                        "Built-in {} `{}`. Always available, no import needed.",
+                        desc, name
                     )),
                     Some(type_),
                 ),
@@ -61,17 +70,16 @@ impl DocumentStore {
         let intrinsics = get_all_intrinsics();
 
         for (name, func) in intrinsics {
+            // Use AstType Display impl for type formatting
             let params_str = func
                 .params
                 .iter()
-                .map(|(pname, ptype)| format!("{}: {}", pname, format_type(ptype)))
+                .map(|(pname, ptype)| format!("{}: {}", pname, ptype))
                 .collect::<Vec<_>>()
                 .join(", ");
             let detail = format!(
                 "@std.compiler.{}({}) -> {}",
-                name,
-                params_str,
-                format_type(&func.return_type)
+                name, params_str, func.return_type
             );
             let full_doc = format!(
                 "{}\n\n**Category:** {}\n\n**Signature:**\n```zen\n{}\n```",

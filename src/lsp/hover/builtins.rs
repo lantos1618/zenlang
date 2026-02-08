@@ -52,95 +52,13 @@ fn format_intrinsic_hover(name: &str, intrinsic: &Intrinsic) -> String {
             ""
         };
 
-    let description = get_intrinsic_description(name);
+    // Use the doc string from intrinsics registry (single source of truth)
+    let description = intrinsic.doc;
 
     format!(
-        "```zen\n@std.compiler.{}{}({}) -> {}\n```\n\n**Compiler intrinsic**\n\n{}",
-        name, generic_suffix, params, return_type, description
+        "```zen\n@std.compiler.{}{}({}) -> {}\n```\n\n**Compiler intrinsic** ({})\n\n{}",
+        name, generic_suffix, params, return_type, intrinsic.category, description
     )
-}
-
-/// Get description for intrinsics
-fn get_intrinsic_description(name: &str) -> &'static str {
-    match name {
-        // Memory allocation
-        "raw_allocate" => "Allocates raw memory using malloc. Returns null if allocation fails.",
-        "raw_deallocate" => "Deallocates memory previously allocated with raw_allocate.",
-        "raw_reallocate" => "Reallocates memory to new size, preserving existing data.",
-
-        // Pointer operations
-        "null_ptr" | "nullptr" => "Returns a null pointer (address 0).",
-        "gep" => "GetElementPointer - byte-level pointer arithmetic. Offset can be negative.",
-        "gep_struct" => "Returns pointer to struct field at given index.",
-        "raw_ptr_offset" => "Offset a raw pointer by bytes.",
-        "raw_ptr_cast" => "Cast pointer type (zero-cost, affects type only).",
-        "ptr_to_int" => "Convert pointer to integer address.",
-        "int_to_ptr" => "Convert integer address to pointer.",
-
-        // Memory operations
-        "load" => "Load a value from a pointer. Type T is inferred from context.",
-        "store" => "Store a value to a pointer. Type T is inferred from value.",
-        "memcpy" => "Copy bytes from src to dest. Regions must not overlap.",
-        "memmove" => "Copy bytes, safe for overlapping regions.",
-        "memset" => "Set all bytes in memory to a value.",
-        "memcmp" => "Compare bytes in memory. Returns 0 if equal.",
-
-        // Type introspection
-        "sizeof" => "Returns the size of type T in bytes.",
-        "alignof" => "Returns the alignment of type T in bytes.",
-
-        // Enum intrinsics
-        "discriminant" => "Reads the variant tag from an enum.",
-        "set_discriminant" => "Sets the variant tag of an enum.",
-        "get_payload" => "Returns pointer to enum payload data.",
-        "set_payload" => "Sets enum payload data.",
-
-        // Atomic operations
-        "atomic_load" => "Atomically load a value with sequential consistency.",
-        "atomic_store" => "Atomically store a value with sequential consistency.",
-        "atomic_add" => "Atomically add and return old value.",
-        "atomic_sub" => "Atomically subtract and return old value.",
-        "atomic_cas" => "Compare-and-swap. Returns true if swap succeeded.",
-        "atomic_xchg" => "Atomically exchange and return old value.",
-        "fence" => "Memory fence with sequential consistency.",
-
-        // Bitwise operations
-        "bswap16" | "bswap32" | "bswap64" => "Byte swap for endianness conversion.",
-        "ctlz" => "Count leading zero bits.",
-        "cttz" => "Count trailing zero bits.",
-        "ctpop" => "Population count - number of bits set to 1.",
-
-        // Overflow arithmetic
-        "add_overflow" => "Add with overflow detection. Returns {result, overflow}.",
-        "sub_overflow" => "Subtract with overflow detection. Returns {result, overflow}.",
-        "mul_overflow" => "Multiply with overflow detection. Returns {result, overflow}.",
-
-        // Type conversions
-        "trunc_f64_i64" => "Truncate f64 to i64.",
-        "trunc_f32_i32" => "Truncate f32 to i32.",
-        "sitofp_i64_f64" => "Convert signed i64 to f64.",
-        "uitofp_u64_f64" => "Convert unsigned u64 to f64.",
-
-        // Debug/trap
-        "trap" => "Trigger a trap/abort.",
-        "debugtrap" => "Trigger a debug trap (breakpoint).",
-        "unreachable" => "Mark code as unreachable. UB if reached.",
-
-        // Syscalls
-        "syscall0" | "syscall1" | "syscall2" | "syscall3" | "syscall4" | "syscall5"
-        | "syscall6" => "Linux x86-64 syscall. Number is first arg, then up to 6 arguments.",
-
-        // FFI
-        "load_library" => "Load a dynamic library by path. Returns handle or null.",
-        "get_symbol" => "Get symbol from loaded library. Returns pointer or null.",
-        "unload_library" => "Unload a dynamic library.",
-        "dlerror" => "Get last dynamic loading error message.",
-
-        // Inline C
-        "inline_c" => "Inline C code (for FFI interop).",
-
-        _ => "Compiler intrinsic.",
-    }
 }
 
 /// Format hover for well-known types (Option, Result, Ptr)

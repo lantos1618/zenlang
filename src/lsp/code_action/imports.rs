@@ -3,6 +3,7 @@
 use lsp_types::*;
 use std::collections::HashMap;
 
+use crate::ast::Declaration;
 use crate::lsp::document_store::DocumentStore;
 
 use super::utils::extract_symbol_from_diagnostic;
@@ -22,16 +23,16 @@ pub fn create_missing_import_fix(
         return None;
     }
 
+    // Use AST from document to check existing imports
+    let doc = store.documents.get(uri);
+    let ast = doc.and_then(|d| d.ast.as_ref());
+
     // Check if symbol exists in stdlib
     if let Some(symbol_info) = store.stdlib_symbols.get(&undefined_name) {
         if let Some(ref def_uri) = symbol_info.definition_uri {
             if let Some(module_path) = get_module_path_from_uri(def_uri) {
-                // Check if already imported
-                if content.contains(&format!("{{ {} }}", undefined_name))
-                    || content.contains(&format!("{{{}}} ", undefined_name))
-                    || content.contains(&format!(", {} }}", undefined_name))
-                    || content.contains(&format!("{},", undefined_name))
-                {
+                // Check if already imported using AST
+                if is_symbol_imported(&undefined_name, ast, content) {
                     return None;
                 }
 
@@ -119,6 +120,45 @@ pub fn create_missing_import_fix(
     None
 }
 
+/// Check if a symbol is already imported, using AST if available, falling back to content scan.
+fn is_symbol_imported(symbol: &str, ast: Option<&Vec<Declaration>>, content: &str) -> bool {
+    // Prefer AST-based check
+    if let Some(declarations) = ast {
+        for decl in declarations {
+            if let Declaration::ModuleImport { alias, .. } = decl {
+                if alias == symbol {
+                    return true;
+                }
+            }
+        }
+        // Also check for the symbol in the document's symbol table would be ideal,
+        // but ModuleImport with destructuring is represented differently.
+        // Fall through to content check for destructured imports like { io, math } = @std
+    }
+
+    // Fallback: scan content for destructured import patterns containing the symbol.
+    // This is still needed because destructured imports (e.g., `{ io, math } = @std`)
+    // are parsed as separate statements, not always as Declaration::ModuleImport.
+    // We use a targeted line-by-line check rather than fragile substring matching.
+    for line in content.lines() {
+        let trimmed = line.trim();
+        // Match lines like: { symbol, ... } = @... or { ..., symbol } = @...
+        if trimmed.starts_with('{') && trimmed.contains("} =") {
+            // Extract the names between { and }
+            if let Some(brace_end) = trimmed.find('}') {
+                let names_section = &trimmed[1..brace_end];
+                for name in names_section.split(',') {
+                    if name.trim() == symbol {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    false
+}
+
 pub fn find_import_insert_position(content: &str) -> Position {
     let lines: Vec<&str> = content.lines().collect();
     let mut last_import_line = 0;
@@ -189,12 +229,30 @@ fn generate_import_path(from_uri: &Url, to_uri: &Url) -> String {
 // ============================================================================
 
 pub fn create_add_import_action(uri: &Url, content: &str) -> Option<CodeAction> {
-    let needs_io =
-        content.contains("io.") && !content.contains("{ io }") && !content.contains("{io}");
+    // Check if io/allocator symbols are used but not imported.
+    // We still check content for usage (since that's what the user typed),
+    // but use structured line-by-line import detection instead of fragile substring matching.
+    let has_std_import = content.lines().any(|line| {
+        let trimmed = line.trim();
+        trimmed.starts_with('{') && trimmed.contains("} =") && trimmed.contains("@std")
+    });
+
+    let has_io_import = content.lines().any(|line| {
+        let trimmed = line.trim();
+        if trimmed.starts_with('{') && trimmed.contains("} =") {
+            if let Some(brace_end) = trimmed.find('}') {
+                let names = &trimmed[1..brace_end];
+                return names.split(',').any(|n| n.trim() == "io");
+            }
+        }
+        false
+    });
+
+    let needs_io = content.contains("io.") && !has_io_import;
     let needs_allocator = (content.contains("get_default_allocator")
         || content.contains("GPA")
         || content.contains("AsyncPool"))
-        && !content.contains("@std");
+        && !has_std_import;
 
     if !needs_io && !needs_allocator {
         return None;
@@ -208,16 +266,12 @@ pub fn create_add_import_action(uri: &Url, content: &str) -> Option<CodeAction> 
         "{ GPA, AsyncPool } = @std\n"
     };
 
+    let insert_pos = find_import_insert_position(content);
+
     let text_edit = TextEdit {
         range: Range {
-            start: Position {
-                line: 0,
-                character: 0,
-            },
-            end: Position {
-                line: 0,
-                character: 0,
-            },
+            start: insert_pos,
+            end: insert_pos,
         },
         new_text: import_statement.to_string(),
     };
