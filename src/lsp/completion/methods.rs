@@ -1,6 +1,7 @@
 //! Method and field completions
 //!
-//! Handles UFC method completions and struct field access completions.
+//! Handles struct field access completions for dot-access contexts.
+//! UFC method completions are handled by semantic_completion.rs via TypeContext.
 
 use lsp_types::*;
 
@@ -34,13 +35,4 @@ pub fn get_struct_field_completions(
     }
 
     items
-}
-
-/// Get UFC method completions for a receiver type.
-/// TODO: Reimplement using TypeContext/TypeQuery once stdlib is indexed through SEMA.
-pub fn get_ufc_method_completions(
-    _receiver_type: &str,
-    _store: &DocumentStore,
-) -> Vec<CompletionItem> {
-    Vec::new()
 }

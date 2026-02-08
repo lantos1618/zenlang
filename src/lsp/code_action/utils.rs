@@ -1,5 +1,19 @@
 // Utility functions for code actions
 
+/// Convert a UTF-16 character offset to a byte offset in a UTF-8 string.
+/// LSP positions use UTF-16 offsets, but Rust strings are UTF-8.
+pub fn utf16_offset_to_byte_offset(line: &str, utf16_offset: usize) -> usize {
+    let mut utf16_count = 0;
+    for (byte_idx, ch) in line.char_indices() {
+        if utf16_count >= utf16_offset {
+            return byte_idx;
+        }
+        utf16_count += ch.len_utf16();
+    }
+    // If we've consumed all characters, return byte length (clamp to end)
+    line.len()
+}
+
 /// Extract the error code string from a diagnostic's code field.
 /// Returns an empty string if no code is set.
 pub fn diagnostic_code(diagnostic: &lsp_types::Diagnostic) -> String {

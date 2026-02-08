@@ -1,6 +1,6 @@
 // Scope-related helper functions for references
 
-use super::utils::find_function_range;
+use super::utils::find_function_range_from_doc;
 use crate::ast::{Function, Statement};
 use crate::lsp::types::{Document, SymbolScope};
 use lsp_types::*;
@@ -14,7 +14,7 @@ pub fn determine_symbol_scope(
     if let Some(ast) = &doc.ast {
         for decl in ast {
             if let crate::ast::Declaration::Function(func) = decl {
-                if let Some(func_range) = find_function_range(&doc.content, &func.name) {
+                if let Some(func_range) = find_function_range_from_doc(doc, &func.name) {
                     if position.line >= func_range.start.line
                         && position.line <= func_range.end.line
                         && is_local_symbol_in_function(func, symbol_name)

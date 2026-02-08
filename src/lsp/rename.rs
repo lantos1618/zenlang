@@ -8,14 +8,14 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use crate::ast::primitives;
-use crate::ast::{Declaration, Statement};
 use crate::lexer::{Lexer, Token};
 
 use super::document_store::DocumentStore;
 use super::helpers::{null_response, success_response, try_parse_params, try_read, with_document};
 use super::navigation::find_symbol_at_position;
-use super::navigation::utils::{find_function_range, find_function_range_from_doc};
-use super::types::{Document, SymbolScope};
+use super::navigation::scope::determine_symbol_scope;
+use super::navigation::utils::find_function_range;
+use super::types::SymbolScope;
 
 // ============================================================================
 // IDENTIFIER VALIDATION USING LEXER
@@ -312,62 +312,6 @@ pub fn handle_rename(req: Request, store: &Arc<RwLock<DocumentStore>>) -> Respon
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-pub(crate) fn determine_symbol_scope(
-    doc: &Document,
-    symbol_name: &str,
-    position: Position,
-) -> SymbolScope {
-    if let Some(ast) = &doc.ast {
-        for decl in ast {
-            if let Declaration::Function(func) = decl {
-                if let Some(func_range) = find_function_range_from_doc(doc, &func.name) {
-                    if position.line >= func_range.start.line
-                        && position.line <= func_range.end.line
-                        && is_local_symbol_in_function(func, symbol_name)
-                    {
-                        return SymbolScope::Local {
-                            function_name: func.name.clone(),
-                        };
-                    }
-                }
-            }
-        }
-    }
-
-    if doc.symbols.contains_key(symbol_name) {
-        return SymbolScope::ModuleLevel;
-    }
-
-    SymbolScope::Unknown
-}
-
-fn is_local_symbol_in_function(func: &crate::ast::Function, symbol_name: &str) -> bool {
-    for (param_name, _param_type) in &func.args {
-        if param_name == symbol_name {
-            return true;
-        }
-    }
-
-    is_symbol_in_statements(&func.body, symbol_name)
-}
-
-fn is_symbol_in_statements(statements: &[Statement], symbol_name: &str) -> bool {
-    for stmt in statements {
-        match stmt {
-            Statement::VariableDeclaration { name, .. } if name == symbol_name => {
-                return true;
-            }
-            Statement::Loop { body, .. } => {
-                if is_symbol_in_statements(body, symbol_name) {
-                    return true;
-                }
-            }
-            _ => {}
-        }
-    }
-    false
-}
 
 fn rename_local_symbol(
     content: &str,

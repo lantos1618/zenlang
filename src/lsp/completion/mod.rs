@@ -16,7 +16,7 @@ pub use auto_import::{create_completion_with_import, get_module_path_from_uri};
 pub use context::{
     get_completion_context, get_pattern_match_completions, get_struct_literal_completions,
 };
-pub use methods::{get_struct_field_completions, get_ufc_method_completions};
+pub use methods::get_struct_field_completions;
 pub use modules::get_module_path_completions;
 
 use crate::ast::primitives;
@@ -69,17 +69,8 @@ pub fn handle_completion(
                         }
                     }
 
-                    // Fallback to heuristics
-                    let mut completions = get_struct_field_completions(&receiver_type, store);
-                    if completions.is_empty()
-                        || !receiver_type
-                            .chars()
-                            .next()
-                            .map(|c| c.is_uppercase())
-                            .unwrap_or(false)
-                    {
-                        completions.extend(get_ufc_method_completions(&receiver_type, store));
-                    }
+                    // Fallback to struct field heuristics
+                    let completions = get_struct_field_completions(&receiver_type, store);
 
                     return success_response(&req, CompletionResponse::Array(completions));
                 }

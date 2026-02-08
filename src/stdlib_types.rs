@@ -339,6 +339,25 @@ impl StdlibTypeRegistry {
         self.methods.contains_key(&alloc_key) || self.methods.contains_key(&dealloc_key)
     }
 
+    /// Find the stdlib source path for a method by searching all registered methods.
+    /// Returns the source path of the receiver type that defines the method.
+    /// This replaces hardcoded method-to-file mappings (e.g., "loop" -> "iterator.zen").
+    pub fn find_method_source_path(&self, method_name: &str) -> Option<String> {
+        // Search through registered methods for one matching the given method name
+        let suffix = format!(".{}", method_name);
+        for key in self.methods.keys() {
+            if key.ends_with(&suffix) {
+                // Extract the receiver type from the method key (e.g., "Range.next" -> "Range")
+                if let Some(receiver) = key.strip_suffix(&suffix) {
+                    if let Some(path) = self.struct_sources.get(receiver) {
+                        return Some(path.clone());
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// Check if a struct type is defined in stdlib
     pub fn has_struct(&self, name: &str) -> bool {
         self.structs.contains_key(name)

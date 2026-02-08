@@ -54,25 +54,3 @@ pub fn make_symbol(
         params: None,
     }
 }
-
-/// Create a SymbolInfo for an enum (with variants)
-pub fn make_enum_symbol(
-    name: String,
-    range: Range,
-    detail: String,
-    variants: Vec<String>,
-) -> SymbolInfo {
-    SymbolInfo {
-        name,
-        kind: SymbolKind::ENUM,
-        range,
-        selection_range: range,
-        detail: Some(detail),
-        documentation: None,
-        type_info: None,
-        definition_uri: None,
-        references: Vec::new(),
-        enum_variants: Some(variants),
-        params: None,
-    }
-}

@@ -131,7 +131,8 @@ pub fn resolve_ufc_method(
     };
 
     // Look up stdlib path dynamically from the registry
-    if let Some(stdlib_path) = stdlib_types().get_type_source_path(&normalized_type) {
+    let stdlib_reg = stdlib_types();
+    if let Some(stdlib_path) = stdlib_reg.get_type_source_path(&normalized_type) {
         if let Some(location) = find_stdlib_location(
             stdlib_path,
             &method_info.method_name,
@@ -142,20 +143,33 @@ pub fn resolve_ufc_method(
         }
     }
 
-    // Special case: GPA is an alias for Allocator
-    if normalized_type == "GPA" {
-        if let Some(location) = find_stdlib_location(
-            "memory/allocator.zen",
-            &method_info.method_name,
-            Some("Allocator"),
-            store,
-        ) {
-            return Some(location);
+    // Resolve type aliases via TypeContext (e.g., GPA -> Allocator)
+    // instead of hardcoding individual alias mappings
+    if let Some(type_ctx) = &doc.type_context {
+        if let Some(aliased_type) = type_ctx.type_aliases.get(&normalized_type) {
+            if let Some(alias_base) = aliased_type.base_name() {
+                if let Some(stdlib_path) = stdlib_reg.get_type_source_path(alias_base) {
+                    if let Some(location) = find_stdlib_location(
+                        stdlib_path,
+                        &method_info.method_name,
+                        Some(alias_base),
+                        store,
+                    ) {
+                        return Some(location);
+                    }
+                }
+            }
         }
     }
 
-    if method_info.method_name == "loop" || method_info.method_name == "iter" {
-        return find_stdlib_location("iterator.zen", &method_info.method_name, None, store);
+    // Check if the method itself is defined on a known stdlib type by searching
+    // the registry for any type that has this method (handles iter, loop, etc.)
+    if let Some(stdlib_path) = stdlib_reg.find_method_source_path(&method_info.method_name) {
+        if let Some(location) =
+            find_stdlib_location(&stdlib_path, &method_info.method_name, None, store)
+        {
+            return Some(location);
+        }
     }
 
     // Enhanced UFC function search - any function can be called as a method

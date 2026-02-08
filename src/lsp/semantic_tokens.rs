@@ -7,6 +7,8 @@ use lsp_types::*;
 use super::document_store::DocumentStore;
 use crate::ast::primitives;
 use crate::lexer::{Lexer, Token};
+use crate::stdlib_types::StdlibTypeRegistry;
+use crate::well_known::well_known;
 
 // Token type indices (must match server capabilities legend)
 const TYPE_NAMESPACE: u32 = 0;
@@ -291,8 +293,8 @@ fn classify_identifier(name: &str, after_fn: bool, after_dot: bool) -> (u32, u32
         return result;
     }
 
-    // Uppercase = likely type
-    if name.chars().next().is_some_and(|c| c.is_uppercase()) {
+    // PascalCase = likely user-defined type (catches user-defined types too)
+    if crate::ast::looks_like_type_name(name) {
         return (TYPE_TYPE, 0);
     }
 
@@ -306,7 +308,7 @@ fn is_keyword(name: &str) -> bool {
 }
 
 fn classify_type(name: &str) -> Option<(u32, u32)> {
-    // Use shared primitive definitions
+    // Use shared primitive definitions (i8, u32, bool, void, StaticString, etc.)
     if primitives::is_primitive_name(name) {
         return Some((TYPE_TYPE, MOD_DEFAULT_LIBRARY));
     }
@@ -316,23 +318,34 @@ fn classify_type(name: &str) -> Option<(u32, u32)> {
         return Some((TYPE_CLASS, MOD_DEFAULT_LIBRARY));
     }
 
-    // Pointer types
+    // Pointer types (Ptr, MutPtr, RawPtr)
     if primitives::is_pointer_type(name) {
         return Some((TYPE_TYPE, MOD_DEFAULT_LIBRARY));
     }
 
-    // Other well-known types
-    Some(match name {
-        // String types
-        "String" => (TYPE_TYPE, MOD_DEFAULT_LIBRARY),
-        // Sum types (use well_known in future)
-        "Option" | "Result" => (TYPE_ENUM, MOD_DEFAULT_LIBRARY),
-        // Enum members (use well_known in future)
-        "Some" | "None" | "Ok" | "Err" => (TYPE_ENUM_MEMBER, 0),
-        // Interfaces
-        "Allocator" => (TYPE_INTERFACE, MOD_DEFAULT_LIBRARY),
-        _ => return None,
-    })
+    // String type (from stdlib registry)
+    if StdlibTypeRegistry::is_string_type(name) {
+        return Some((TYPE_TYPE, MOD_DEFAULT_LIBRARY));
+    }
+
+    let wk = well_known();
+
+    // Well-known sum types: Option, Result (from well_known registry)
+    if wk.is_option_or_result(name) {
+        return Some((TYPE_ENUM, MOD_DEFAULT_LIBRARY));
+    }
+
+    // Well-known enum variants: Some, None, Ok, Err (from well_known registry)
+    if wk.get_variant(name).is_some() {
+        return Some((TYPE_ENUM_MEMBER, 0));
+    }
+
+    // Allocator-like types (dynamically discovered from stdlib)
+    if crate::stdlib_types::stdlib_types().is_allocator_type(name) {
+        return Some((TYPE_INTERFACE, MOD_DEFAULT_LIBRARY));
+    }
+
+    None
 }
 
 // ============================================================================

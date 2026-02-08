@@ -1,6 +1,8 @@
-// Symbol extraction from AST
+// Symbol extraction from AST - delegates to shared core logic
+use super::super::symbol_extraction::{
+    extract_declaration_symbols, insert_trait_impl_symbols, ExtractionOptions,
+};
 use super::super::types::SymbolInfo;
-use super::utilities::{make_enum_symbol, make_range, make_symbol};
 use super::DocumentStore;
 use crate::ast::Declaration;
 use lsp_types::*;
@@ -19,105 +21,36 @@ impl DocumentStore {
         ast: &[Declaration],
         content: &str,
     ) -> HashMap<String, SymbolInfo> {
-        let mut symbols = HashMap::new();
+        let opts = ExtractionOptions::default();
 
-        // First pass: Extract symbol definitions
-        for (decl_index, decl) in ast.iter().enumerate() {
-            let (line, char_pos) = self.find_declaration_position(content, decl, decl_index);
-            let symbol_name = match decl {
-                Declaration::Function(f) => &f.name,
-                Declaration::Struct(s) => &s.name,
-                Declaration::Enum(e) => &e.name,
-                Declaration::Constant { name, .. } => name,
-                _ => continue,
-            };
-            let range = make_range(line, char_pos, symbol_name.len());
+        // First pass: extract definitions using the shared core
+        let mut symbols = extract_declaration_symbols(
+            ast,
+            &|decl, decl_index| {
+                let (line, char_pos) = self.find_declaration_position(content, decl, decl_index);
+                let symbol_name = match decl {
+                    Declaration::Function(f) => &f.name,
+                    Declaration::Struct(s) => &s.name,
+                    Declaration::Enum(e) => &e.name,
+                    Declaration::Constant { name, .. } => name,
+                    _ => return Range::default(),
+                };
+                let name_end = char_pos + symbol_name.len();
+                Range {
+                    start: Position {
+                        line: line as u32,
+                        character: char_pos as u32,
+                    },
+                    end: Position {
+                        line: line as u32,
+                        character: name_end as u32,
+                    },
+                }
+            },
+            &opts,
+        );
 
-            match decl {
-                Declaration::Function(func) => {
-                    let args_str = func
-                        .args
-                        .iter()
-                        .map(|(name, ty)| format!("{}: {}", name, ty))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    let detail = format!("{} = ({}) {}", func.name, args_str, func.return_type);
-                    symbols.insert(
-                        func.name.clone(),
-                        make_symbol(
-                            func.name.clone(),
-                            SymbolKind::FUNCTION,
-                            range,
-                            Some(detail),
-                            None,
-                            Some(func.return_type.clone()),
-                        ),
-                    );
-                }
-                Declaration::Struct(struct_def) => {
-                    let detail = format!(
-                        "{} struct with {} fields",
-                        struct_def.name,
-                        struct_def.fields.len()
-                    );
-                    symbols.insert(
-                        struct_def.name.clone(),
-                        make_symbol(
-                            struct_def.name.clone(),
-                            SymbolKind::STRUCT,
-                            range,
-                            Some(detail),
-                            None,
-                            None,
-                        ),
-                    );
-                }
-                Declaration::Enum(enum_def) => {
-                    let detail = format!(
-                        "{} enum with {} variants",
-                        enum_def.name,
-                        enum_def.variants.len()
-                    );
-                    let variant_names: Vec<String> =
-                        enum_def.variants.iter().map(|v| v.name.clone()).collect();
-                    symbols.insert(
-                        enum_def.name.clone(),
-                        make_enum_symbol(enum_def.name.clone(), range, detail, variant_names),
-                    );
-                    // Add enum variants as symbols
-                    for variant in &enum_def.variants {
-                        let variant_key = format!("{}::{}", enum_def.name, variant.name);
-                        symbols.insert(
-                            variant_key.clone(),
-                            make_symbol(
-                                variant.name.clone(),
-                                SymbolKind::ENUM_MEMBER,
-                                range,
-                                Some(variant_key.clone()),
-                                None,
-                                None,
-                            ),
-                        );
-                    }
-                }
-                Declaration::Constant { name, type_, .. } => {
-                    symbols.insert(
-                        name.clone(),
-                        make_symbol(
-                            name.clone(),
-                            SymbolKind::CONSTANT,
-                            range,
-                            type_.as_ref().map(|t| t.to_string()),
-                            None,
-                            type_.clone(),
-                        ),
-                    );
-                }
-                _ => {}
-            }
-        }
-
-        // Second pass: Find references, extract variables, and handle impl blocks
+        // Second pass: references, variables, and trait implementation methods
         for decl in ast {
             match decl {
                 Declaration::Function(func) => {
@@ -126,34 +59,7 @@ impl DocumentStore {
                 }
                 Declaration::TraitImplementation(impl_block) => {
                     let impl_range = self.find_impl_block_range(content, &impl_block.type_name);
-                    for method in &impl_block.methods {
-                        let method_name = format!("{}.{}", impl_block.type_name, method.name);
-                        let args_str = method
-                            .args
-                            .iter()
-                            .map(|(name, ty)| format!("{}: {}", name, ty))
-                            .collect::<Vec<_>>()
-                            .join(", ");
-                        let detail = format!(
-                            "{}.{} = ({}) {}",
-                            impl_block.type_name, method.name, args_str, method.return_type
-                        );
-                        let doc = format!(
-                            "Method from {}.implements({})",
-                            impl_block.type_name, impl_block.trait_name
-                        );
-                        symbols.insert(
-                            method_name,
-                            make_symbol(
-                                method.name.clone(),
-                                SymbolKind::METHOD,
-                                impl_range,
-                                Some(detail),
-                                Some(doc),
-                                Some(method.return_type.clone()),
-                            ),
-                        );
-                    }
+                    insert_trait_impl_symbols(impl_block, impl_range, &opts, &mut symbols);
                 }
                 _ => {}
             }

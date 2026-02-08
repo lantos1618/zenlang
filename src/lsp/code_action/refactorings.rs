@@ -3,6 +3,7 @@
 use lsp_types::*;
 use std::collections::HashMap;
 
+use super::utils::utf16_offset_to_byte_offset;
 use crate::ast::Declaration;
 
 // ============================================================================
@@ -302,19 +303,6 @@ pub fn create_extract_function_action(
         disabled: None,
         data: None,
     })
-}
-
-/// Convert a UTF-16 character offset to a byte offset in a UTF-8 string.
-/// LSP positions use UTF-16 offsets, but Rust strings are UTF-8.
-fn utf16_offset_to_byte_offset(line: &str, utf16_offset: usize) -> usize {
-    let mut utf16_count = 0;
-    for (byte_idx, ch) in line.char_indices() {
-        if utf16_count >= utf16_offset {
-            return byte_idx;
-        }
-        utf16_count += ch.len_utf16();
-    }
-    line.len()
 }
 
 /// Find the start line of the enclosing function using AST Declaration::Function spans.
