@@ -1,6 +1,6 @@
 # Zen Compiler Architecture
 
-**Last Updated:** February 2026 (SEMA integration, type_inference/compiler_integration deleted, Response helpers unified)
+**Last Updated:** February 2026
 
 ---
 
@@ -19,12 +19,12 @@ Source (.zen)
      │
      ▼
 ┌─────────┐
-│  Lexer  │  lexer.rs (780 LOC)
+│  Lexer  │  lexer.rs
 └────┬────┘
      │ Tokens
      ▼
 ┌─────────┐
-│ Parser  │  parser/ (6,798 LOC)
+│ Parser  │  parser/
 └────┬────┘
      │ AST
      ▼
@@ -46,7 +46,7 @@ Source (.zen)
      │ Typed AST (no generics)
      ▼
 ┌──────────┐
-│ Codegen  │  codegen/ (12,381 LOC)
+│ Codegen  │  codegen/
 └────┬─────┘
      │ LLVM IR
      ▼
@@ -60,220 +60,341 @@ Source (.zen)
 
 ---
 
-## Module Structure
+## Source Tree with LOC
 
 ```
-src/                             ~54,000 LOC total
-├── lib.rs               (18 LOC)    Module exports
-├── compiler.rs          (433 LOC)   Pipeline orchestration
-├── lexer.rs             (780 LOC)   Tokenization
-├── error.rs             (700 LOC)   Error types & helpers
-├── well_known.rs        (307 LOC)   Built-in type registry
-├── stdlib_types.rs      (423 LOC)   Stdlib type parsing (recursive scanner)
-├── stdlib_discovery.rs  (256 LOC)   Stdlib path resolution
-├── intrinsics.rs        (217 LOC)   Compiler intrinsics
-├── formatting.rs        (594 LOC)   Code formatter
-├── name_utils.rs        (141 LOC)   Canonical key construction & parsing
-├── type_context.rs      (233 LOC)   Type info bridge (typechecker → codegen)
+src/                                53,949 LOC total
+├── lib.rs                              18
+├── main.rs                          1,873
+├── compiler.rs                        436   Pipeline orchestration
+├── lexer.rs                           780   Tokenization
+├── error.rs                           700   Error types & helpers
+├── well_known.rs                      307   Built-in type registry
+├── stdlib_types.rs                    423   Stdlib type parsing (recursive scanner)
+├── stdlib_discovery.rs                243   Stdlib path resolution
+├── intrinsics.rs                      226   Compiler intrinsics
+├── formatting.rs                      594   Code formatter
+├── name_utils.rs                      207   Canonical key construction & parsing
+├── type_context.rs                    278   Type info bridge (typechecker → codegen)
 │
-├── ast/                 (1,641 LOC)  Abstract Syntax Tree
-│   ├── mod.rs                        Program, node definitions
-│   ├── expressions.rs                Expression enum (50+ variants)
-│   ├── statements.rs                 Statement enum
-│   ├── declarations.rs               Function/struct/enum decls
-│   ├── types.rs                      AstType enum
-│   ├── patterns.rs                   Pattern matching AST
-│   ├── primitives.rs                 Primitive types, constants
-│   └── builtins.rs                   Builtin type definitions
+├── ast/                             2,846
+│   ├── mod.rs                          63   Program, node definitions
+│   ├── expressions.rs                 742   Expression enum (50+ variants)
+│   ├── statements.rs                  244   Statement enum
+│   ├── declarations.rs                330   Function/struct/enum decls
+│   ├── types.rs                       452   AstType enum
+│   ├── fields.rs                      385   Field definitions
+│   ├── patterns.rs                    138   Pattern matching AST
+│   ├── primitives.rs                  408   Primitive types, constants
+│   └── builtins.rs                     84   Builtin type definitions
 │
-├── parser/              (6,798 LOC)  Syntax analysis
-│   ├── mod.rs                        Parser struct, entry point
-│   ├── core.rs                       Token consumption, recursion limits
-│   ├── program.rs                    Top-level parsing
-│   ├── statements.rs                 Statement parsing
-│   ├── statements_guard.rs           Statement boundary detection
-│   ├── patterns.rs                   Pattern matching
-│   ├── types.rs                      Type annotations
-│   ├── functions.rs                  Function declarations
-│   ├── structs.rs                    Struct definitions
-│   ├── enums.rs                      Enum definitions
-│   ├── behaviors.rs                  Behavior definitions
-│   ├── comptime.rs                   Comptime block parsing
-│   ├── external.rs                   External declarations
-│   └── expressions/     (2,530 LOC)  Expression parsing
-│       ├── primary.rs                Identifiers, literals
-│       ├── operators.rs              Binary/unary ops
-│       ├── calls.rs                  Function/method calls
-│       ├── control_flow.rs           if/match/while exprs
-│       ├── collections.rs            Array/map literals
-│       ├── blocks.rs                 Block expressions
-│       ├── literals.rs               Literal parsing
-│       ├── patterns.rs               Pattern expressions
-│       └── structs.rs                Struct literal parsing
+├── parser/                          7,138
+│   ├── mod.rs                          85   Parser struct, entry point
+│   ├── core.rs                        325   Token consumption, recursion limits
+│   ├── program.rs                     386   Top-level parsing
+│   ├── statements.rs                1,307   Statement parsing + error recovery
+│   ├── statements_guard.rs            238   Statement boundary detection
+│   ├── patterns.rs                    440   Pattern matching
+│   ├── types.rs                       346   Type annotations
+│   ├── functions.rs                   151   Function declarations
+│   ├── structs.rs                     189   Struct definitions
+│   ├── enums.rs                        91   Enum definitions
+│   ├── behaviors.rs                   508   Behavior definitions
+│   ├── comptime.rs                    125   Comptime block parsing
+│   ├── external.rs                     85   External declarations
+│   └── expressions/                 2,511
+│       ├── mod.rs                      28
+│       ├── primary.rs                 799   Identifiers, literals
+│       ├── operators.rs               184   Binary/unary ops
+│       ├── calls.rs                   300   Function/method calls
+│       ├── control_flow.rs            165   if/match/while exprs
+│       ├── collections.rs             272   Array/map literals
+│       ├── blocks.rs                   83   Block expressions
+│       ├── literals.rs                292   Literal parsing
+│       ├── patterns.rs                321   Pattern expressions
+│       └── structs.rs                  67   Struct literal parsing
 │
-├── typechecker/         (5,603 LOC)  Type checking
-│   ├── mod.rs           (1,220 LOC)  Main typechecker, StructInfo with field index
-│   ├── expression_inference.rs       Expression type inference
-│   ├── statement_checking.rs         Validate statements
-│   ├── declaration_checking.rs       Validate declarations
-│   ├── behaviors.rs                  Behavior checking
-│   ├── validation.rs                 Type compatibility
-│   ├── self_resolution.rs            Self type resolution
-│   ├── type_resolution.rs            Resolve type names
-│   ├── scope.rs                      Scope management
-│   ├── stdlib_loading.rs             Stdlib type loading
-│   ├── method_types.rs               Method type inference
-│   ├── function_checking.rs          Function body checking
-│   ├── pattern_binding.rs            Pattern variable binding
-│   ├── types.rs                      Type helper definitions
-│   ├── intrinsics.rs                 Intrinsic type checking
-│   └── inference/       (1,343 LOC)  Specialized inference
-│       ├── mod.rs                    Module exports
-│       ├── calls.rs                  Method call resolution (4-phase pipeline)
-│       ├── enums.rs                  Enum variant inference
-│       ├── member_access.rs          Field access (O(1) via StructInfo index)
-│       ├── binary_ops.rs             Binary operation types
-│       ├── identifiers.rs            Identifier resolution
-│       ├── closures.rs               Closure type inference
-│       ├── casts.rs                  Cast validation
-│       ├── result_ops.rs             Result/Option operations
-│       └── helpers.rs                Shared helpers
+├── typechecker/                     5,866
+│   ├── mod.rs                       1,373   Main typechecker, StructInfo with field index
+│   ├── expression_inference.rs        462   Expression type inference
+│   ├── statement_checking.rs          305   Validate statements
+│   ├── declaration_checking.rs        312   Validate declarations
+│   ├── behaviors.rs                   457   Behavior checking
+│   ├── validation.rs                  625   Type compatibility
+│   ├── self_resolution.rs             173   Self type resolution
+│   ├── type_resolution.rs             146   Resolve type names
+│   ├── scope.rs                       169   Scope management
+│   ├── stdlib_loading.rs              171   Stdlib type loading
+│   ├── method_types.rs                175   Method type inference
+│   ├── function_checking.rs            71   Function body checking
+│   ├── pattern_binding.rs             144   Pattern variable binding
+│   ├── types.rs                       109   Type helper definitions
+│   ├── intrinsics.rs                   26   Intrinsic type checking
+│   └── inference/                   1,148
+│       ├── mod.rs                      22
+│       ├── calls.rs                   421   Method call resolution (4-phase pipeline)
+│       ├── enums.rs                   247   Enum variant inference
+│       ├── member_access.rs           193   Field access (O(1) via StructInfo index)
+│       ├── binary_ops.rs              204   Binary operation types
+│       ├── identifiers.rs              81   Identifier resolution
+│       ├── closures.rs                 86   Closure type inference
+│       ├── casts.rs                    44   Cast validation
+│       ├── result_ops.rs               25   Result/Option operations
+│       └── helpers.rs                  20   Shared helpers
 │
-├── type_system/         (1,671 LOC)  Type storage & monomorphization
-│   ├── mod.rs                        Public exports
-│   ├── type_store.rs    (425 LOC)    Unified type storage (single source of truth)
-│   ├── type_aliases.rs  (296 LOC)    Alias resolution with cycle detection
-│   ├── monomorphization.rs           Generic instantiation
-│   ├── instantiation.rs              Type substitution
-│   └── environment.rs                Type environment
+├── type_system/                     1,671
+│   ├── mod.rs                         128   Public exports
+│   ├── type_store.rs                  425   Unified type storage (single source of truth)
+│   ├── type_aliases.rs                296   Alias resolution with cycle detection
+│   ├── monomorphization.rs            428   Generic instantiation
+│   ├── instantiation.rs               288   Type substitution
+│   └── environment.rs                 106   Type environment
 │
-├── codegen/             (12,381 LOC) LLVM backend
+├── codegen/                        12,576
+│   ├── mod.rs                           5
 │   └── llvm/
-│       ├── mod.rs       (860 LOC)    LLVMCompiler struct
-│       ├── types.rs                  AstType → LLVM type
-│       ├── symbols.rs                Symbol table
-│       ├── behaviors.rs              Behavior dispatch
-│       ├── generics.rs               Generic tracking
-│       ├── binary_ops.rs             Arithmetic/logic ops
-│       ├── literals.rs               Literal codegen
-│       ├── patterns.rs               Pattern matching
-│       ├── structs.rs                Struct layout
-│       ├── pointers.rs               Pointer ops
-│       ├── builtins.rs               Builtin operations
-│       ├── functions/   (1,154 LOC)
-│       │   ├── decl.rs               Function declarations
-│       │   ├── calls.rs              Call site codegen
-│       │   └── mod.rs                Module exports
-│       ├── expressions/ (3,673 LOC)
-│       │   ├── inference.rs          Type inference (~1,100 LOC)
-│       │   ├── utils.rs              Utilities (~970 LOC)
-│       │   ├── enums.rs              Enum variants
-│       │   ├── control.rs            If/match codegen
-│       │   ├── patterns.rs           Pattern codegen
-│       │   ├── calls.rs              Call codegen
-│       │   ├── collections.rs        Collection ops
-│       │   ├── structs.rs            Struct expressions
-│       │   ├── literals.rs           Literal expressions
-│       │   ├── operations.rs         Operations
-│       │   └── mod.rs                Module exports
-│       ├── statements/  (897 LOC)
-│       │   ├── variables.rs          Variable decl/assign
-│       │   ├── control.rs            Return/loop/break
-│       │   ├── deferred.rs           Defer execution
-│       │   └── mod.rs                Module exports
-│       └── stdlib_codegen/ (1,476 LOC)
-│           ├── compiler.rs           Intrinsic implementations
-│           ├── helpers.rs            Codegen helpers
-│           └── mod.rs                Module exports
+│       ├── mod.rs                     860   LLVMCompiler struct
+│       ├── types.rs                   537   AstType → LLVM type
+│       ├── symbols.rs                 209   Symbol table
+│       ├── behaviors.rs               739   Behavior dispatch
+│       ├── generics.rs                138   Generic tracking
+│       ├── binary_ops.rs              676   Arithmetic/logic ops
+│       ├── literals.rs                478   Literal codegen
+│       ├── patterns.rs                443   Pattern matching
+│       ├── structs.rs                 729   Struct layout
+│       ├── pointers.rs                250   Pointer ops
+│       ├── builtins.rs                125   Builtin operations
+│       ├── functions/               1,154
+│       │   ├── mod.rs                  63
+│       │   ├── decl.rs                409   Function declarations
+│       │   └── calls.rs               682   Call site codegen
+│       ├── expressions/             3,673
+│       │   ├── mod.rs                 185
+│       │   ├── inference.rs         1,110   Type inference
+│       │   ├── utils.rs               972   Utilities
+│       │   ├── enums.rs               443   Enum variants
+│       │   ├── control.rs             291   If/match codegen
+│       │   ├── patterns.rs            363   Pattern codegen
+│       │   ├── calls.rs               151   Call codegen
+│       │   ├── collections.rs          38   Collection ops
+│       │   ├── structs.rs              48   Struct expressions
+│       │   ├── literals.rs             53   Literal expressions
+│       │   └── operations.rs           19   Operations
+│       ├── statements/                897
+│       │   ├── mod.rs                  49
+│       │   ├── variables.rs           631   Variable decl/assign
+│       │   ├── control.rs             180   Return/loop/break
+│       │   └── deferred.rs             37   Defer execution
+│       └── stdlib_codegen/          1,480
+│           ├── mod.rs                  70
+│           ├── compiler.rs          1,338   Intrinsic implementations
+│           └── helpers.rs              72   Codegen helpers
 │
-├── lsp/                 (14,937 LOC) Language Server
-│   ├── server.rs        (1,080 LOC)  Main server loop, request routing
-│   ├── mod.rs                        Constants, search limits
-│   ├── types.rs                      Document, SymbolInfo types
-│   ├── analyzer.rs                   Background analysis coordination
-│   ├── utils.rs                      Shared utilities
-│   ├── helpers.rs                    Response helpers, param parsing
-│   ├── type_query.rs    (218 LOC)    TypeContext facade for LSP consumers
-│   ├── stdlib_resolver.rs            Stdlib symbol resolution
-│   ├── symbol_extraction.rs          Symbol extraction
-│   ├── semantic_completion.rs        TypeContext-based completion
-│   ├── pattern_checking.rs           Pattern completeness
-│   ├── signature_help.rs             Function signatures
-│   ├── inlay_hints.rs                Inline type hints
-│   ├── semantic_tokens.rs            Syntax highlighting
-│   ├── rename.rs                     Symbol renaming
-│   ├── code_lens.rs                  Run/Build/Test buttons
-│   ├── call_hierarchy.rs             Call tree
-│   ├── symbols.rs                    Document/workspace symbols
-│   ├── formatting.rs                 Code formatting
-│   ├── indexing.rs                   Symbol indexing
-│   ├── document_store/  (1,277 LOC)  Open document management
-│   │   ├── mod.rs                    Store struct, lifecycle
-│   │   ├── symbol_extraction.rs      Extract symbols from AST
-│   │   ├── builtin_registration.rs   Register stdlib symbols
-│   │   ├── symbol_search.rs          Symbol search
-│   │   ├── document_lifecycle.rs     Open/close/update
-│   │   ├── variable_extraction.rs    Extract variable info
-│   │   ├── reference_tracking.rs     Reference tracking
-│   │   ├── utilities.rs              Utility functions
-│   │   └── parsing.rs                Document parsing
-│   ├── completion/      (1,195 LOC)  Code completion
-│   │   ├── mod.rs                    Completion dispatcher
-│   │   ├── context.rs               Context analysis
-│   │   ├── methods.rs               Method completions
-│   │   ├── auto_import.rs           Auto-import support
-│   │   └── modules.rs              Module completions
-│   ├── hover/           (2,201 LOC)  Hover information
-│   │   ├── mod.rs       (832 LOC)   Main dispatcher
-│   │   ├── expressions.rs           Expression hover
-│   │   ├── patterns.rs              Pattern hover
-│   │   ├── builtins.rs              Builtin hover
-│   │   ├── format_string.rs         Format string hover
-│   │   ├── structs.rs               Struct hover
-│   │   ├── inference.rs             Type inference hover
-│   │   ├── response.rs              Response formatting
-│   │   └── imports.rs               Import hover
-│   ├── navigation/                   Navigation features
-│   │   ├── definition.rs (576 LOC)  Go-to-definition (decomposed resolvers)
-│   │   ├── struct_fields.rs         Struct field navigation
-│   │   ├── references.rs            Find references
-│   │   ├── ufc.rs                   UFC navigation
-│   │   ├── utils.rs                 Navigation utilities
-│   │   ├── type_definition.rs       Type definition
-│   │   ├── highlight.rs             Document highlight
-│   │   ├── scope.rs                 Scope navigation
-│   │   ├── imports.rs               Import navigation
-│   │   └── mod.rs                   Module exports
-│   └── code_action/     (1,272 LOC)  Quick fixes & refactoring
-│       ├── refactorings.rs          Refactoring actions
-│       ├── quick_fixes.rs           Quick fix suggestions
-│       ├── imports.rs               Import fixes
-│       ├── mod.rs                   Action dispatcher
-│       ├── utils.rs                 Utility functions
-│       └── suggestions.rs           Code suggestions
+├── lsp/                            15,028
+│   ├── mod.rs                          66   Constants, search limits
+│   ├── server.rs                    1,080   Main server loop, request routing
+│   ├── types.rs                       117   Document, SymbolInfo types
+│   ├── helpers.rs                     310   Response helpers, param parsing
+│   ├── analyzer.rs                    232   Background analysis coordination
+│   ├── utils.rs                       705   Shared utilities
+│   ├── type_query.rs                  304   TypeContext facade for LSP consumers
+│   ├── stdlib_resolver.rs             224   Stdlib symbol resolution
+│   ├── symbol_extraction.rs           403   Symbol extraction
+│   ├── semantic_completion.rs         349   TypeContext-based completion
+│   ├── pattern_checking.rs             65   Pattern completeness
+│   ├── signature_help.rs             331   Function signatures
+│   ├── inlay_hints.rs                 604   Inline type hints
+│   ├── semantic_tokens.rs             368   Syntax highlighting
+│   ├── rename.rs                      603   Symbol renaming
+│   ├── code_lens.rs                   177   Run/Build/Test buttons
+│   ├── call_hierarchy.rs              390   Call tree
+│   ├── symbols.rs                     175   Document/workspace symbols
+│   ├── formatting.rs                   63   Code formatting
+│   ├── indexing.rs                     96   Symbol indexing
+│   ├── document_store/              1,119
+│   │   ├── mod.rs                     200   Store struct, lifecycle
+│   │   ├── parsing.rs                  69   Document parsing
+│   │   ├── symbol_extraction.rs       184   Extract symbols from AST
+│   │   ├── builtin_registration.rs     97   Register stdlib symbols
+│   │   ├── symbol_search.rs           153   Symbol search
+│   │   ├── document_lifecycle.rs      137   Open/close/update
+│   │   ├── variable_extraction.rs     102   Extract variable info
+│   │   ├── reference_tracking.rs      101   Reference tracking
+│   │   └── utilities.rs                76   Utility functions
+│   ├── completion/                  1,178
+│   │   ├── mod.rs                     388   Completion dispatcher
+│   │   ├── context.rs                 570   Context analysis
+│   │   ├── auto_import.rs             120   Auto-import support
+│   │   ├── methods.rs                  46   Method completions
+│   │   └── modules.rs                  54   Module completions
+│   ├── hover/                       1,898
+│   │   ├── mod.rs                     656   Main dispatcher
+│   │   ├── patterns.rs                279   Pattern hover
+│   │   ├── builtins.rs                251   Builtin hover
+│   │   ├── format_string.rs           243   Format string hover
+│   │   ├── expressions.rs             177   Expression hover
+│   │   ├── response.rs                169   Response formatting
+│   │   ├── structs.rs                  66   Struct hover
+│   │   ├── inference.rs                53   Type inference hover
+│   │   └── imports.rs                   4   Import hover
+│   ├── navigation/                  1,847
+│   │   ├── mod.rs                      20
+│   │   ├── definition.rs              523   Go-to-definition (decomposed resolvers)
+│   │   ├── references.rs              272   Find references
+│   │   ├── struct_fields.rs           258   Struct field navigation
+│   │   ├── ufc.rs                     223   UFC navigation
+│   │   ├── utils.rs                   303   Navigation utilities
+│   │   ├── type_definition.rs          85   Type definition
+│   │   ├── scope.rs                    64   Scope navigation
+│   │   ├── imports.rs                  60   Import navigation
+│   │   └── highlight.rs                39   Document highlight
+│   └── code_action/                 1,272
+│       ├── mod.rs                     146   Action dispatcher
+│       ├── refactorings.rs            366   Refactoring actions
+│       ├── quick_fixes.rs             290   Quick fix suggestions
+│       ├── imports.rs                 273   Import fixes
+│       ├── utils.rs                   106   Utility functions
+│       └── suggestions.rs             91   Code suggestions
 │
-├── comptime/            (4,020 LOC)  Compile-time evaluation
-│   ├── mod.rs           (871 LOC)   Interpreter core, with_scope, control flow
-│   ├── expressions.rs               Expression evaluation
-│   ├── statements.rs                Statement evaluation
-│   ├── methods.rs                   Method call evaluation
-│   ├── values.rs                    ComptimeValue + Display
-│   ├── environment.rs               Variable environment
-│   └── meta/            (1,518 LOC) AST introspection
-│       ├── mod.rs                   Meta API entry point
-│       ├── fields.rs                AST field extraction
-│       ├── helpers.rs               Shared builders
-│       ├── variants.rs              Variant name constants
-│       └── tests.rs                 Meta tests
+├── comptime/                        3,127
+│   ├── mod.rs                         871   Interpreter core, with_scope, control flow
+│   ├── expressions.rs                 444   Expression evaluation
+│   ├── statements.rs                  328   Statement evaluation
+│   ├── methods.rs                     476   Method call evaluation
+│   ├── values.rs                      316   ComptimeValue + Display
+│   ├── environment.rs                  67   Variable environment
+│   └── meta/                          625
+│       ├── mod.rs                     140   Meta API entry point
+│       ├── tests.rs                   204   Meta tests
+│       ├── variants.rs                177   Variant name constants
+│       ├── helpers.rs                  72   Shared builders
+│       └── fields.rs                   32   AST field extraction
 │
-├── module_system/       (520 LOC)   Module resolution
-│   ├── mod.rs                       Module registry
-│   └── resolver.rs                  Import resolution
+├── module_system/                     597
+│   ├── mod.rs                         415   Module registry
+│   └── resolver.rs                    182   Import resolution
 │
-└── bin/                 (406 LOC)
-    ├── zen-lsp.rs                   LSP server binary
-    ├── zen-format.rs                Formatter binary
-    └── zen-check.rs                 Checker binary
+└── bin/                               406
+    ├── zen-format.rs                  261   Formatter binary
+    ├── zen-check.rs                   133   Checker binary
+    └── zen-lsp.rs                      12   LSP server binary
+```
+
+```
+stdlib/                             13,053 LOC total
+├── std.zen                             75   Entry point, re-exports
+├── build.zen                          275   Build system
+├── compiler.zen                       251   Compiler intrinsics
+├── ffi.zen                             99   Foreign function interface
+├── math.zen                            67   Math functions
+├── testing.zen                        165   Test framework
+├── time.zen                           113   Time operations
+│
+├── core/                              651
+│   ├── option.zen                      52   Option<T>: Some, None
+│   ├── result.zen                      66   Result<T,E>: Ok, Err
+│   ├── ptr.zen                        127   Ptr<T>, MutPtr<T>, RawPtr<T>
+│   ├── iterator.zen                    58   Range, Iterator behavior
+│   ├── slice.zen                      234   Slice<T>
+│   ├── buffer.zen                      94   Buffer
+│   └── propagate.zen                   20   Error propagation
+│
+├── collections/                     2,117
+│   ├── string.zen                     338   Dynamic UTF-8 string
+│   ├── vec.zen                        224   Dynamic array Vec<T>
+│   ├── hashmap.zen                    463   HashMap<K,V>
+│   ├── linkedlist.zen                 357   LinkedList<T>
+│   ├── stack.zen                      287   Stack<T>
+│   ├── set.zen                        196   Set<T>
+│   ├── queue.zen                      133   Queue<T>
+│   └── char.zen                       119   Character utilities
+│
+├── memory/                            439
+│   ├── allocator.zen                  106   Allocator behavior
+│   ├── heap.zen                       117   Heap allocator
+│   ├── arena.zen                      113   Arena allocator
+│   ├── mmap.zen                        62   Memory-mapped regions
+│   ├── async_helpers.zen               59   Async helpers
+│   └── async_allocator.zen             42   Async allocator behavior
+│
+├── concurrency/                     3,354
+│   ├── primitives/
+│   │   ├── atomic.zen                 204   Atomic operations
+│   │   └── futex.zen                   78   Futex
+│   ├── sync/
+│   │   ├── channel.zen                282   Channel
+│   │   ├── thread.zen                 187   Thread
+│   │   ├── waitgroup.zen              182   WaitGroup
+│   │   ├── rwlock.zen                 168   RWLock
+│   │   ├── once.zen                   131   Once
+│   │   ├── semaphore.zen              130   Semaphore
+│   │   ├── condvar.zen                130   CondVar
+│   │   ├── mutex.zen                  114   Mutex
+│   │   └── barrier.zen                 64   Barrier
+│   ├── async/
+│   │   ├── scheduler.zen              338   Scheduler
+│   │   └── task.zen                   279   Task
+│   └── actor/
+│       ├── supervisor.zen             295   Supervisor
+│       ├── async_actor.zen            295   Async actor
+│       ├── actor.zen                  214   Actor
+│       └── system.zen                 203   System
+│
+├── io/                              2,788
+│   ├── io.zen                          73   Basic print/read
+│   ├── terminal.zen                   165   Terminal
+│   ├── signal.zen                      62   Signal handling
+│   ├── eventfd.zen                     64   EventFD
+│   ├── inotify.zen                     49   Inotify
+│   ├── timerfd.zen                     49   TimerFD
+│   ├── files/
+│   │   ├── file.zen                   456   File operations
+│   │   ├── dir.zen                    246   Directory operations
+│   │   ├── stat.zen                   246   File status
+│   │   ├── fs.zen                     242   Filesystem operations
+│   │   ├── splice.zen                 240   Splice/sendfile
+│   │   ├── copy.zen                   179   File copy
+│   │   └── link.zen                   175   Hard/symlinks
+│   ├── net/
+│   │   ├── socket.zen                 415   TCP/UDP sockets
+│   │   ├── unix_socket.zen            398   Unix domain sockets
+│   │   └── pipe.zen                    45   Pipes
+│   └── mux/
+│       ├── uring.zen                  464   io_uring
+│       ├── poll.zen                     66   Poll
+│       └── epoll.zen                   65   Epoll
+│
+└── sys/                             1,454
+    ├── syscall.zen                    221   Syscall numbers
+    ├── seccomp.zen                    275   Seccomp filters
+    ├── memfd.zen                      268   Memory FDs
+    ├── resource.zen                   229   Resource limits
+    ├── process/
+    │   ├── prctl.zen                  255   Process control
+    │   ├── sched.zen                  194   Scheduling
+    │   └── process.zen                 95   Process management
+    ├── random/
+    │   ├── prng.zen                    85   PRNG
+    │   └── getrandom.zen               46   Getrandom
+    ├── uname.zen                       43   System info
+    └── env.zen                         37   Environment variables
+```
+
+```
+tests/                               4,395 LOC total
+├── lsp_analysis_tests.rs            1,004
+├── behavioral_tests.rs                944
+├── lsp_text_edit.rs                   274
+├── lsp_completion_tests.rs            270
+├── lsp_code_action_tests.rs           263
+├── ptr_ref_tests.rs                   263
+├── lsp_navigation_tests.rs            243
+├── codegen_integration.rs             240
+├── allocator_compilation.rs           238
+├── parser_tests.rs                    227
+├── lexer_integration.rs               227
+├── common/mod.rs                      148
+└── lexer_tests.rs                      54
 ```
 
 ---
@@ -282,22 +403,11 @@ src/                             ~54,000 LOC total
 
 | Metric | Value |
 |--------|-------|
-| Total LOC | ~54,000 |
-| Test count (lib) | 143 |
-
-### Module Sizes
-
-| Module | LOC | Notes |
-|--------|-----|-------|
-| lsp/ | 14,937 | Full LSP via TypeQuery → SEMA |
-| codegen/ | 12,381 | LLVM backend |
-| parser/ | 6,798 | Syntax analysis |
-| typechecker/ | 5,612 | Type checking & inference |
-| comptime/ | 4,020 | Compile-time evaluation + meta API |
-| type_system/ | 1,671 | TypeStore, aliases, monomorphization |
-| ast/ | 1,641 | AST definitions |
-| lexer.rs | 780 | Single-file tokenizer |
-| module_system/ | 520 | Module resolution |
+| Compiler source | 53,949 LOC |
+| Standard library | 13,053 LOC |
+| Tests | 4,395 LOC |
+| **Total** | **71,397 LOC** |
+| Lib unit tests | 146 |
 
 ---
 
@@ -305,24 +415,13 @@ src/                             ~54,000 LOC total
 
 ### TypeStore (Single Source of Truth)
 
-`src/type_system/type_store.rs` is the unified type storage used by the TypeChecker. All struct, enum, function, method, and variable type information flows through TypeStore.
-
-```rust
-pub struct TypeStore {
-    structs: HashMap<String, StructInfo>,
-    enums: HashMap<String, EnumInfo>,
-    functions: HashMap<String, FunctionType>,
-    methods: HashMap<String, AstType>,
-    variables: HashMap<String, AstType>,
-    // ...
-}
-```
+`src/type_system/type_store.rs` — unified type storage used by the TypeChecker. All struct, enum, function, method, and variable type information flows through TypeStore.
 
 The TypeChecker holds `Rc<RefCell<TypeStore>>` and populates it during analysis. TypeContext then provides a read-only view for codegen and LSP.
 
 ### TypeQuery (LSP → SEMA Bridge)
 
-`src/lsp/type_query.rs` is a thin facade over TypeContext for LSP consumers. All LSP modules use TypeQuery instead of hand-rolled type inference:
+`src/lsp/type_query.rs` — thin facade over TypeContext for LSP consumers:
 
 ```
 LSP Request → Parser → AST → TypeChecker → TypeContext → TypeQuery → LSP Response
@@ -332,7 +431,7 @@ Key methods: `find_variable_type()`, `resolve_chain()`, `has_struct()`, `functio
 
 ### name_utils (Canonical Key Construction)
 
-`src/name_utils.rs` provides canonical key construction functions to eliminate ad-hoc string formatting:
+`src/name_utils.rs` — eliminates ad-hoc string formatting:
 
 | Function | Format | Example |
 |----------|--------|---------|
@@ -345,21 +444,20 @@ All method keys use `"."` separator (unified from mixed `.`/`::` formats).
 
 ### StructInfo with Field Index
 
-`StructInfo` (in `typechecker/mod.rs`) provides O(1) field lookups via a lazy `HashMap` index:
+`StructInfo` (in `typechecker/mod.rs`) provides O(1) field lookups via a lazy `HashMap` index, built on first access for structs with >4 fields.
 
-```rust
-pub struct StructInfo {
-    pub fields: Vec<(String, AstType)>,
-    field_index: Option<HashMap<String, usize>>,
-}
+---
 
-impl StructInfo {
-    pub fn get_field_type(&mut self, name: &str) -> Option<&AstType>;
-    pub fn has_field(&mut self, name: &str) -> bool;
-}
-```
+## Phase Responsibilities
 
-The index is built on first access for structs with >4 fields.
+| Phase | Module | Responsibility |
+|-------|--------|----------------|
+| Lexer | `lexer.rs` | Source text → tokens. No semantic analysis. |
+| Parser | `parser/` | Tokens → AST. Recursion depth limiting (256). Error recovery for LSP (partial AST on syntax errors). |
+| Typechecker | `typechecker/` | Type inference/checking via TypeStore. Behavior verification. Self type resolution. Method call resolution (4-phase pipeline). O(1) struct field lookups. |
+| Monomorphizer | `type_system/` | Instantiate generic types with concrete types. No type inference (trusts typechecker). |
+| Comptime | `comptime/` | Compile-time expression evaluation. AST introspection via meta API. Code generation via `emit()`. Scoped environment via `with_scope()` RAII. |
+| Codegen | `codegen/` | Typed AST → LLVM IR. No type decisions (trusts previous phases). Implements intrinsics. |
 
 ---
 
@@ -382,146 +480,13 @@ See `docs/INTRINSICS_REFERENCE.md` for full intrinsics documentation.
 
 ---
 
-## Phase Responsibilities
-
-### Lexer (`lexer.rs`)
-- Converts source text to tokens
-- No semantic analysis
-- Reports lexical errors
-
-### Parser (`parser/`)
-- Builds AST from tokens
-- No type checking
-- Recursion depth limiting (MAX_RECURSION_DEPTH = 256)
-- Error recovery for LSP (partial AST on syntax errors)
-- Reports syntax errors
-
-### Typechecker (`typechecker/`)
-- Type inference and checking via TypeStore
-- Behavior implementation verification
-- Self type resolution
-- Method call resolution (4-phase pipeline in `inference/calls.rs`)
-- O(1) struct field lookups via StructInfo index
-- Reports type errors
-
-### Monomorphizer (`type_system/`)
-- Instantiates generic types with concrete types
-- Creates specialized versions of generic functions
-- No type inference (trusts typechecker)
-
-### Comptime (`comptime/`)
-- Compile-time expression evaluation
-- AST introspection via meta API (`@type_info`, `@fields`, etc.)
-- Code generation via `emit()` builtin
-- Proper control flow (Break/Continue/Return enum, not error strings)
-- Scoped environment via `with_scope()` RAII pattern
-
-### Codegen (`codegen/`)
-- Generates LLVM IR from typed AST
-- No type decisions (trusts previous phases)
-- Implements intrinsics
-
----
-
-## Standard Library Structure
-
-```
-stdlib/
-├── std.zen             Entry point, re-exports
-├── build.zen           Build system
-├── compiler.zen        Compiler intrinsics
-├── ffi.zen             Foreign function interface
-├── math.zen            Math functions
-├── testing.zen         Test framework
-├── time.zen            Time operations
-│
-├── core/               Core types
-│   ├── option.zen      Option<T>: Some, None
-│   ├── result.zen      Result<T,E>: Ok, Err
-│   ├── ptr.zen         Ptr<T>, MutPtr<T>, RawPtr<T>
-│   ├── iterator.zen    Range, Iterator behavior
-│   └── propagate.zen   Error propagation
-│
-├── collections/        All container types
-│   ├── string.zen      Dynamic UTF-8 string
-│   ├── vec.zen         Dynamic array Vec<T>
-│   ├── char.zen        Character utilities
-│   ├── hashmap.zen     HashMap<K,V>
-│   ├── set.zen         Set<T>
-│   ├── stack.zen       Stack<T>
-│   ├── queue.zen       Queue<T>
-│   └── linkedlist.zen  LinkedList<T>
-│
-├── memory/             Memory management
-│   ├── allocator.zen   Allocator behavior
-│   ├── gpa.zen         General purpose allocator
-│   ├── mmap.zen        Memory-mapped regions
-│   ├── async_allocator.zen  Async allocator behavior
-│   └── async_pool.zen  io_uring-based allocator
-│
-├── concurrency/        ALL concurrency in one place
-│   ├── primitives/     Low-level (atomic, futex)
-│   ├── sync/           Thread-based (mutex, channel, thread, etc.)
-│   ├── async/          Task-based (task, executor, scheduler)
-│   └── actor/          Actor model (actor, supervisor, system)
-│
-├── io/                 I/O operations
-│   ├── io.zen          Basic print/read
-│   ├── files/          File ops (file, fs, dir, stat, link, copy, splice)
-│   ├── net/            Networking (socket, unix_socket, pipe)
-│   └── mux/            I/O multiplexing (epoll, poll, uring)
-│
-└── sys/                System interface
-    ├── syscall.zen     Syscall numbers
-    ├── process/        Process management (process, prctl, sched)
-    ├── random/         Random (getrandom, prng)
-    └── ...             (env, uname, resource, seccomp, memfd)
-```
-
----
-
 ## LSP Features
 
-The language server (`src/lsp/`) implements full LSP support:
-
-- Hover with type info
-- Go-to-definition (including nested member access)
-- Find all references
-- Code completion (`.`, `:`, `@`, `?` triggers)
-- Signature help
-- Document/workspace symbols
-- Rename with prepare
-- Folding ranges
-- Inlay hints
-- Call hierarchy
-- Semantic tokens
-- Document formatting
-- Code actions (quick fixes, refactorings, import management)
-- Code lens (Run/Build/Test)
+Hover, go-to-definition (including nested member access), find references, completion (`.` `:` `@` `?` triggers), signature help, document/workspace symbols, rename with prepare, folding ranges, inlay hints, call hierarchy, semantic tokens, formatting, code actions (quick fixes, refactorings, import management), code lens (Run/Build/Test).
 
 ---
 
-## Build & Test
-
-```bash
-# Build
-cargo build --release
-
-# Run all tests
-cargo test
-
-# Run compiler
-./target/release/zen examples/hello.zen
-
-# Run LSP
-./target/release/zen-lsp
-```
-
----
-
-## Compiler Internals
-
-### Well-Known Types
+## Well-Known Types
 
 The compiler has special knowledge of these types (`src/well_known.rs`):
 
@@ -534,45 +499,9 @@ The compiler has special knowledge of these types (`src/well_known.rs`):
 | `HashMap<K,V>` | Iteration |
 | `Range` | Loop codegen |
 
-### Key Data Structures
+---
 
-**AST Types** (`src/ast/`):
-```rust
-pub enum Expression {
-    Integer32(i32),
-    BinaryOp { left, op, right },
-    FunctionCall { name, args, generics },
-    StructLiteral { name, fields },
-    Match { value, arms },
-    // ... 50+ variants
-}
-
-pub enum Statement {
-    Let { name, type_annotation, value },
-    Return(Option<Expression>),
-    If { condition, then_block, else_block },
-    While { condition, body },
-    // ...
-}
-```
-
-**Compiler State** (`src/codegen/llvm/mod.rs`):
-```rust
-pub struct LLVMCompiler<'ctx> {
-    context: &'ctx Context,
-    module: Module<'ctx>,
-    builder: Builder<'ctx>,
-
-    variables: HashMap<String, VariableInfo>,
-    functions: HashMap<String, FunctionValue>,
-    struct_types: HashMap<String, StructTypeInfo>,
-
-    generic_tracker: GenericTypeTracker,
-    well_known: WellKnownTypes,
-}
-```
-
-### Extension Points
+## Extension Points
 
 **Adding a new intrinsic:**
 1. Declare in `src/intrinsics.rs`
@@ -591,11 +520,23 @@ pub struct LLVMCompiler<'ctx> {
 
 ---
 
+## Build & Test
+
+```bash
+cargo build --release          # Build compiler
+cargo test --lib               # Run unit tests (146 tests)
+cargo test --all               # Run all tests
+./target/release/zen FILE      # Run a .zen file
+./target/release/zen-lsp       # Start LSP
+```
+
+---
+
 ## Related Documentation
 
-- `docs/INTRINSICS_REFERENCE.md` - Compiler intrinsics reference
-- `docs/ROADMAP.md` - Development roadmap
-- `docs/design/STDLIB_DESIGN.md` - Stdlib API design
-- `docs/design/TYPE_SYSTEM_CLEANUP.md` - Type system cleanup plan
-- `docs/design/SEPARATION_OF_CONCERNS.md` - Three-layer architecture
-- `docs/QUICK_START.md` - Getting started guide
+- `docs/INTRINSICS_REFERENCE.md` — Compiler intrinsics reference
+- `docs/ROADMAP.md` — Development roadmap
+- `docs/design/STDLIB_DESIGN.md` — Stdlib API design
+- `docs/design/TYPE_SYSTEM_CLEANUP.md` — Type system cleanup plan
+- `docs/design/SEPARATION_OF_CONCERNS.md` — Three-layer architecture
+- `docs/QUICK_START.md` — Getting started guide

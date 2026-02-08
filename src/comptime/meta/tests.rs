@@ -46,6 +46,7 @@ fn test_fields_function_call() {
         name: "add".to_string(),
         type_args: vec![],
         args: vec![Expression::Integer32(1), Expression::Integer32(2)],
+        span: None,
     };
     let flds = fields(&ASTNodeValue::Expression(expr)).unwrap();
     assert_eq!(flds.len(), 3);
