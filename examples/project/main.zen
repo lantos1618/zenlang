@@ -1,0 +1,17 @@
+// main.zen - Entry point for a multi-file Zen project
+//
+// `std` comes from build.zen packages. `.` prefix means local project file.
+
+{ io } = std
+{ clamp, factorial, is_even } = .math_utils
+
+main = () i32 {
+    io.println("factorial(6) = ${factorial(6)}")
+    io.println("clamp(15, 0, 10) = ${clamp(15, 0, 10)}")
+
+    is_even(42) ?
+        | true { io.println("42 is even") }
+        | false { io.println("42 is odd") }
+
+    return 0
+}

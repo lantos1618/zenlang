@@ -1,0 +1,19 @@
+// math_utils.zen - A small utility library
+//
+// Shows how to organize reusable functions in a separate file.
+
+{ abs, max, min } = std.math.math
+
+clamp = (value: i32, lo: i32, hi: i32) i32 {
+    return value.max(lo).min(hi)
+}
+
+factorial = (n: i32) i32 {
+    n <= 1 ?
+        | true { return 1 }
+        | false { return n * factorial(n - 1) }
+}
+
+is_even = (n: i32) bool {
+    return n % 2 == 0
+}

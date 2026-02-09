@@ -1,0 +1,73 @@
+// Loops and Closures in Zen
+// No for/while keywords - loops use `loop` with closures or conditions
+
+{ io } = std
+
+// Counter loop using loop closure
+count_to = (n: i32) void {
+    i ::= 0
+    loop(() {
+        i >= n ? | true { break }
+        io.println("  ${i}")
+        i = i + 1
+    })
+}
+
+// Infinite loop with break
+find_power_of_two = (target: i32) i32 {
+    val ::= 1
+    loop {
+        val >= target ? | true { return val }
+        val = val * 2
+    }
+}
+
+// Fibonacci using loop
+fibonacci = (n: i32) i32 {
+    n <= 1 ? | true { return n }
+
+    a ::= 0
+    b ::= 1
+    i ::= 2
+    loop {
+        i > n ? | true { break }
+        temp = a + b
+        a = b
+        b = temp
+        i = i + 1
+    }
+    return b
+}
+
+// Collection loop
+sum_array = (arr: [i32; 5]) i32 {
+    total ::= 0
+    i ::= 0
+    loop(() {
+        i >= 5 ? | true { break }
+        total = total + arr[i]
+        i = i + 1
+    })
+    return total
+}
+
+main = () i32 {
+    io.println("Counting to 5:")
+    count_to(5)
+
+    io.println("Next power of 2 >= 100: ${find_power_of_two(100)}")
+    io.println("Next power of 2 >= 1000: ${find_power_of_two(1000)}")
+
+    io.println("Fibonacci sequence:")
+    i ::= 0
+    loop(() {
+        i >= 10 ? | true { break }
+        io.println("  fib(${i}) = ${fibonacci(i)}")
+        i = i + 1
+    })
+
+    numbers = [10, 20, 30, 40, 50]
+    io.println("Sum: ${sum_array(numbers)}")
+
+    return 0
+}
