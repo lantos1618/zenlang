@@ -1,0 +1,9 @@
+// Zen Standard Library: Collections (convenience re-export)
+// Re-exports all collection types from sub-modules
+
+{ HashMap } = @std.collections.hashmap
+{ Vec } = @std.collections.vec
+{ Queue } = @std.collections.queue
+{ Stack } = @std.collections.stack
+{ Set } = @std.collections.set
+{ String } = @std.collections.string

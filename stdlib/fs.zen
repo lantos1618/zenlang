@@ -1,0 +1,12 @@
+// Zen Standard Library: Filesystem Operations (convenience re-export)
+// Re-exports from @std.io.files submodules
+
+{ mkdir, mkdir_default, rmdir, DirEntry } = @std.io.files.dir
+{ FileDescriptor, sys_open, sys_close, sys_read, O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_TRUNC, O_APPEND } = @std.io.files.file
+{ chmod, chown, access, exists, truncate, touch } = @std.io.files.fs
+{ Result } = @std.core.result
+
+// Convenience: create a directory with default permissions (0755)
+create_dir = (path: i64) Result<(), i32> {
+    return mkdir_default(path)
+}

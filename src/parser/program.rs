@@ -5,8 +5,6 @@ use super::core::Parser;
 use crate::ast::{Declaration, Statement};
 use crate::error::{CompileError, Result};
 use crate::lexer::Token;
-use crate::well_known::well_known;
-
 impl<'a> Parser<'a> {
     /// Parse an @export declaration
     pub fn parse_export(&mut self) -> Result<Declaration> {
@@ -75,17 +73,9 @@ impl<'a> Parser<'a> {
             let mut declarations = vec![];
             for name in imported_names {
                 let actual_module_path = if module_path == "@std" {
-                    // Map common symbols to their actual module locations
-                    let wk = well_known();
-                    if wk.is_option(&name) || wk.is_option_variant(&name) {
-                        "@std.core.option".to_string()
-                    } else if wk.is_result(&name) || wk.is_result_variant(&name) {
-                        "@std.core.result".to_string()
-                    } else if name == "io" || name == "println" || name == "print" {
-                        "@std.io".to_string()
-                    } else {
-                        format!("{}.{}", module_path, name)
-                    }
+                    // Convention: { name } = @std loads @std.{name}
+                    // Module system handles actual file resolution
+                    format!("@std.{}", name)
                 } else {
                     // Import from specific module like @std.core.iterator
                     // Load the whole module, not module.name
@@ -120,9 +110,17 @@ impl<'a> Parser<'a> {
 
             let mut declarations = vec![];
             for name in imported_names {
+                let actual_module_path = if !module_path.contains('.') {
+                    // Single identifier like `std`: expand each name to `std.name`
+                    // This matches the @std expansion behavior above
+                    format!("{}.{}", module_path, name)
+                } else {
+                    // Dotted path like `std.math.math`: import from specific module
+                    module_path.clone()
+                };
                 declarations.push(Declaration::ModuleImport {
                     alias: name.clone(),
-                    module_path: module_path.clone(),
+                    module_path: actual_module_path,
                     span: Some(self.current_span.clone()),
                 });
             }

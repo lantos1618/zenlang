@@ -240,7 +240,55 @@ impl ModuleSystem {
             };
 
             if path_parts.is_empty() {
-                // @std itself - return empty program (cached if already present)
+                // @std itself - load stdlib/std.zen (the prelude with re-exports)
+                if let Some(file_to_load) = self.find_stdlib_file(&["std"]) {
+                    let source = std::fs::read_to_string(&file_to_load).map_err(|e| {
+                        CompileError::FileNotFound(
+                            file_to_load.display().to_string(),
+                            Some(e.to_string()),
+                        )
+                    })?;
+
+                    let new_hash = hash_content(&source);
+                    let cache_valid = self
+                        .modules
+                        .get(module_path)
+                        .map(|c| c.content_hash == new_hash)
+                        .unwrap_or(false);
+
+                    if !cache_valid {
+                        let lexer = crate::lexer::Lexer::new(&source);
+                        let mut parser = Parser::new(lexer);
+                        let program = parser.parse_program().map_err(|e| {
+                            CompileError::ParseError(
+                                format!("Failed to parse stdlib module {}: {:?}", module_path, e),
+                                None,
+                            )
+                        })?;
+
+                        self.loading_stack.push(module_path.to_string());
+                        let result: Result<(), CompileError> = (|| {
+                            for decl in &program.declarations {
+                                if let Declaration::ModuleImport {
+                                    alias: _,
+                                    module_path: import_path,
+                                    ..
+                                } = decl
+                                {
+                                    self.load_module(import_path)?;
+                                }
+                            }
+                            Ok(())
+                        })();
+                        self.loading_stack.pop();
+                        result?;
+
+                        self.insert_cached(module_path.to_string(), program, new_hash);
+                    }
+                    return Ok(&self.modules[module_path].program);
+                }
+
+                // Fallback: no std.zen found, return empty program
                 if !self.modules.contains_key(module_path) {
                     self.insert_cached(
                         module_path.to_string(),
@@ -254,8 +302,12 @@ impl ModuleSystem {
                 return Ok(&self.modules[module_path].program);
             }
 
-            // @std.compiler is a built-in compiler module, not a file
-            if path_parts.len() == 1 && path_parts[0] == "compiler" {
+            // @std.compiler is NOT loaded from disk — its functions are thin wrappers
+            // around @builtin.* intrinsics. The codegen dispatches compiler.* calls
+            // directly to intrinsic codegen (see is_compiler_intrinsic_module).
+            // Loading compiler.zen would produce invalid LLVM IR because generic
+            // functions like load<T>/store<T>/sizeof<T> can't be compiled standalone.
+            if path_parts.len() == 1 && path_parts[0] == crate::intrinsics::COMPILER_MODULE {
                 if !self.modules.contains_key(module_path) {
                     self.insert_cached(
                         module_path.to_string(),

@@ -54,65 +54,57 @@ fn substitute_type_args_recursive(
 /// Infer the return type of a function call
 pub fn infer_function_call_type(
     checker: &mut TypeChecker,
+    module: Option<&str>,
     name: &str,
     type_args: &[AstType],
     args: &[Expression],
     call_span: Option<Span>,
 ) -> Result<AstType> {
-    if name.contains('.') {
-        let parts: Vec<&str> = name.splitn(2, '.').collect();
-        if parts.len() == 2 {
-            let module = parts[0];
-            let func = parts[1];
-
-            if let Some(result) = intrinsics::check_compiler_intrinsic(module, func, args.len()) {
-                if module == "compiler" && func == "inline_c" && args.len() == 1 {
-                    let arg_type = checker.infer_expression_type(&args[0])?;
-                    match arg_type {
-                        AstType::StaticString | AstType::StaticLiteral => {}
-                        _ => {
-                            return Err(CompileError::TypeError(
-                                "compiler.inline_c() requires a string literal argument"
-                                    .to_string(),
-                                call_span.clone().or_else(|| checker.get_current_span()),
-                            ))
-                        }
+    // Qualified call: module.function()
+    if let Some(module) = module {
+        if let Some(result) = intrinsics::check_compiler_intrinsic(module, name, args.len()) {
+            if crate::intrinsics::is_compiler_intrinsic_module(module)
+                && name == "inline_c"
+                && args.len() == 1
+            {
+                let arg_type = checker.infer_expression_type(&args[0])?;
+                match arg_type {
+                    AstType::StaticString | AstType::StaticLiteral => {}
+                    _ => {
+                        return Err(CompileError::TypeError(
+                            "compiler.inline_c() requires a string literal argument".to_string(),
+                            call_span.clone().or_else(|| checker.get_current_span()),
+                        ))
                     }
                 }
+            }
 
-                // Handle generic intrinsics: if return type is Generic<T> and type_args provided, substitute
-                let return_type = result?;
-                if !type_args.is_empty() {
-                    if let AstType::Generic { name, .. } = &return_type {
-                        // Single-letter generic names like "T" should be substituted
-                        if name.len() == 1 && name.chars().all(|c| c.is_ascii_uppercase()) {
-                            // Substitute with the first type argument
-                            if !type_args.is_empty() {
-                                return Ok(type_args[0].clone());
-                            }
-                        }
+            // Handle generic intrinsics: if return type is Generic<T> and type_args provided, substitute
+            let return_type = result?;
+            if !type_args.is_empty() {
+                if let AstType::Generic { name, .. } = &return_type {
+                    if name.len() == 1 && name.chars().all(|c| c.is_ascii_uppercase()) {
+                        return Ok(type_args[0].clone());
                     }
                 }
-                return Ok(return_type);
             }
+            return Ok(return_type);
+        }
 
-            if let Some(return_type) = checker.get_stdlib_function_type(module, func) {
-                return Ok(return_type.clone());
-            }
+        if let Some(return_type) = checker.get_stdlib_function_type(module, name) {
+            return Ok(return_type.clone());
+        }
 
-            // Handle generic constructors like HashMap.new<K, V> or Vec.new<T>
-            if func == "new" && !type_args.is_empty() {
-                // If we have explicit type args, return a generic type with those args
-                // Check if it's a known struct type
-                if checker.type_store.borrow().has_struct(module)
-                    || checker.get_stdlib_struct(module).is_some()
-                {
-                    return Ok(AstType::Generic {
-                        name: module.to_string(),
-                        type_args: type_args.to_vec(),
-                    });
-                }
-            }
+        // Handle generic constructors like HashMap.new<K, V> or Vec.new<T>
+        if name == "new"
+            && !type_args.is_empty()
+            && (checker.type_store.borrow().has_struct(module)
+                || checker.get_stdlib_struct(module).is_some())
+        {
+            return Ok(AstType::Generic {
+                name: module.to_string(),
+                type_args: type_args.to_vec(),
+            });
         }
     }
 
@@ -120,7 +112,8 @@ pub fn infer_function_call_type(
         return Ok(AstType::Bool);
     }
 
-    if name == "cast" || name == "builtin.cast" {
+    // Handle cast (from `as` keyword lowering — module is Some("@builtin"), name is "cast")
+    if name == "cast" {
         return infer_cast_type(
             args,
             call_span.clone().or_else(|| checker.get_current_span()),
@@ -261,7 +254,7 @@ fn try_resolve_static_call(
     type_args: &[AstType],
 ) -> Option<Result<AstType>> {
     // 1. Compiler intrinsics (compiler.*, @builtin.*)
-    if name == "compiler" || name == "builtin" || name == "@builtin" {
+    if crate::intrinsics::is_compiler_intrinsic_module(name) {
         if let Some(return_type) = crate::intrinsics::get_intrinsic_return_type(method) {
             // Substitute generic type params (e.g., compiler.alloc<MyStruct>())
             if !type_args.is_empty() {
@@ -284,7 +277,20 @@ fn try_resolve_static_call(
     }
 
     // 3. Stdlib functions (module::function in stdlib_functions registry)
-    if let Some(return_type) = checker.get_stdlib_function_type(name, method) {
+    //    Strip generic params: "sizeof<i32>" → "sizeof"
+    let base_method = crate::name_utils::strip_generics(method);
+    if let Some(return_type) = checker.get_stdlib_function_type(name, base_method) {
+        // Substitute generic type params if provided
+        if !type_args.is_empty() {
+            if let AstType::Generic {
+                name: type_name, ..
+            } = &return_type
+            {
+                if type_name.len() == 1 && type_name.chars().all(|c| c.is_ascii_uppercase()) {
+                    return Some(Ok(type_args[0].clone()));
+                }
+            }
+        }
         return Some(Ok(return_type.clone()));
     }
 

@@ -1,0 +1,4 @@
+// Zen Standard Library: Character Utilities (convenience re-export)
+// Re-exports all functions from @std.collections.char
+
+{ is_digit, is_alpha, is_alphanumeric, is_whitespace, is_uppercase, is_lowercase, is_hex_digit, is_printable, is_control, to_uppercase, to_lowercase, digit_to_int, hex_to_int } = @std.collections.char

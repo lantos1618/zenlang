@@ -1,0 +1,10 @@
+// Zen Standard Library: Memory (convenience re-export)
+// Re-exports allocator types from sub-modules
+
+{ Allocator, ExecutionMode, CompletionFn } = @std.memory.allocator
+{ Heap, HeapSync } = @std.memory.heap
+
+// Convenience function: returns a default blocking heap allocator
+get_default_allocator = () Allocator {
+    return Heap.sync()
+}
