@@ -7,6 +7,28 @@ use std::collections::HashMap;
 
 const MAX_MEMBER_DEPTH: usize = 64;
 
+/// Build a "field not found" error with available fields suggestion
+fn field_not_found_error(
+    type_name: &str,
+    member: &str,
+    info: &StructInfo,
+    span: Option<crate::error::Span>,
+) -> CompileError {
+    let available_fields: Vec<String> = info.fields.iter().map(|(n, _)| n.clone()).collect();
+    let suggestion = if available_fields.is_empty() {
+        String::new()
+    } else {
+        format!(". Available fields: {}", available_fields.join(", "))
+    };
+    CompileError::TypeError(
+        format!(
+            "Struct '{}' has no field '{}'{}",
+            type_name, member, suggestion
+        ),
+        span,
+    )
+}
+
 /// Infer the type of a member access expression
 pub fn infer_member_type(
     object_type: &AstType,
@@ -31,16 +53,7 @@ pub fn infer_member_type(
                 if let Some(field_type) = struct_info.get_field_type(member) {
                     return Ok(field_type.clone());
                 }
-                let available_fields: Vec<String> = struct_info.fields.iter().map(|(n, _)| n.clone()).collect();
-                let suggestion = if available_fields.is_empty() {
-                    String::new()
-                } else {
-                    format!(". Available fields: {}", available_fields.join(", "))
-                };
-                Err(CompileError::TypeError(
-                    format!("Struct '{}' has no field '{}'{}", name, member, suggestion),
-                    span,
-                ))
+                Err(field_not_found_error(name, member, struct_info, span))
             } else {
                 Err(CompileError::TypeError(
                     format!("Unknown struct type: {}", name),
@@ -69,16 +82,7 @@ pub fn infer_member_type(
                 if let Some(field_type) = struct_info.get_field_type(member) {
                     return Ok(field_type.clone());
                 }
-                let available_fields: Vec<String> = struct_info.fields.iter().map(|(n, _)| n.clone()).collect();
-                let suggestion = if available_fields.is_empty() {
-                    String::new()
-                } else {
-                    format!(". Available fields: {}", available_fields.join(", "))
-                };
-                Err(CompileError::TypeError(
-                    format!("Struct '{}' has no field '{}'{}", name, member, suggestion),
-                    span,
-                ))
+                Err(field_not_found_error(name, member, struct_info, span))
             } else {
                 Err(CompileError::TypeError(
                     format!("Type '{}' is not a struct or is not defined", name),

@@ -4,10 +4,10 @@ use lsp_server::{RequestId, Response};
 use lsp_types::*;
 
 use crate::ast::AstType;
+use crate::intrinsics::{well_known, WellKnownType};
 use crate::lsp::types::SymbolInfo;
 use crate::lsp::utils::format_type;
 use crate::name_utils;
-use crate::well_known::{well_known, WellKnownType};
 
 /// Create a hover response from symbol info
 pub fn create_hover_response(

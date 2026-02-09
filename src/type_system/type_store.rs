@@ -200,7 +200,7 @@ impl TypeStore {
         }
 
         // Try stripping generic parameters (e.g., "Vec<T>" -> "Vec")
-        let base_name = strip_generic_params(type_name);
+        let base_name = name_utils::strip_generics(type_name);
         self.get_method(base_name, method_name)
     }
 
@@ -365,11 +365,6 @@ pub type TypeStoreRef = Rc<RefCell<TypeStore>>;
 /// Create a new TypeStore wrapped in Rc<RefCell>
 pub fn new_type_store() -> TypeStoreRef {
     Rc::new(RefCell::new(TypeStore::new()))
-}
-
-/// Helper function to strip generic parameters from type names
-fn strip_generic_params(type_str: &str) -> &str {
-    type_str.split('<').next().unwrap_or(type_str)
 }
 
 // ============================================================================

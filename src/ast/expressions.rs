@@ -86,6 +86,11 @@ pub enum Expression {
         right: Box<Expression>,
     },
     FunctionCall {
+        /// Optional qualifier before the dot (module name, type name, or intrinsic prefix).
+        /// e.g., `compiler.sizeof()` → module = Some("compiler"), name = "sizeof"
+        /// e.g., `@builtin.cast()` → module = Some("@builtin"), name = "cast"
+        /// e.g., `println()` → module = None, name = "println"
+        module: Option<String>,
         name: String,
         type_args: Vec<AstType>,
         args: Vec<Expression>,
@@ -363,15 +368,22 @@ impl AstFields for Expression {
             ],
 
             Expression::FunctionCall {
+                module,
                 name,
                 type_args,
                 args,
                 ..
-            } => vec![
-                ("name", FieldValue::String(name.clone())),
-                ("type_args", FieldValue::type_array(type_args)),
-                ("args", FieldValue::expr_array(args)),
-            ],
+            } => {
+                let qualified_name = match module {
+                    Some(m) => format!("{}.{}", m, name),
+                    None => name.clone(),
+                };
+                vec![
+                    ("name", FieldValue::String(qualified_name)),
+                    ("type_args", FieldValue::type_array(type_args)),
+                    ("args", FieldValue::expr_array(args)),
+                ]
+            }
 
             Expression::MethodCall {
                 object,

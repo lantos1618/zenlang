@@ -36,10 +36,11 @@ impl<'ctx> LLVMCompiler<'ctx> {
     // Function calls
     pub fn compile_function_call(
         &mut self,
+        module: Option<&str>,
         name: &str,
         args: &[ast::Expression],
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        calls::compile_function_call(self, name, args)
+        calls::compile_function_call(self, module, name, args)
     }
 
     // Result helpers (used by collections, etc.)

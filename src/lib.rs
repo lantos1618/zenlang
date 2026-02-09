@@ -16,4 +16,3 @@ pub mod stdlib_types;
 pub mod type_context;
 pub mod type_system;
 pub mod typechecker;
-pub mod well_known;

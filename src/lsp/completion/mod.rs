@@ -20,12 +20,12 @@ pub use methods::get_struct_field_completions;
 pub use modules::get_module_path_completions;
 
 use crate::ast::primitives;
+use crate::intrinsics::well_known;
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::helpers::{success_response, try_parse_params, try_read};
 use crate::lsp::semantic_completion::{get_semantic_dot_completions, resolve_receiver_type};
 use crate::lsp::types::ZenCompletionContext;
 use crate::lsp::utils::symbol_kind_to_completion_kind;
-use crate::well_known::well_known;
 use lsp_server::{Request, Response};
 use lsp_types::*;
 

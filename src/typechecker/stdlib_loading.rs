@@ -1,5 +1,6 @@
-use crate::ast::{strip_generic_params, AstType, Declaration, Program};
+use crate::ast::{AstType, Declaration, Program};
 use crate::error::Result;
+use crate::name_utils;
 use crate::typechecker::{EnumInfo, FunctionSignature, MethodSignature, StructInfo, TypeChecker};
 use std::collections::HashMap;
 
@@ -11,14 +12,14 @@ impl TypeChecker {
         Ok(())
     }
 
-    /// Initialize TypeChecker with already-loaded stdlib modules from ModuleSystem
-    /// Extracts type information from the loaded modules
+    /// Initialize TypeChecker with already-loaded modules from ModuleSystem.
+    /// Extracts type information (structs, enums, functions, traits) from ALL
+    /// imported modules — both stdlib and user packages — so that cross-module
+    /// type references are available before the main type-checking passes run.
     pub fn with_stdlib_modules(&mut self, modules: &HashMap<String, Program>) {
         for (path, program) in modules {
-            if path.starts_with("@std") || path.starts_with("std.") {
-                self.extract_types_from_program(program, path);
-                self.stdlib_modules.insert(path.clone(), program.clone());
-            }
+            self.extract_types_from_program(program, path);
+            self.stdlib_modules.insert(path.clone(), program.clone());
         }
     }
 
@@ -35,7 +36,7 @@ impl TypeChecker {
                     if let Some((receiver, method)) = func.name.split_once('.') {
                         // Method: Type.method
                         // Extract base type name (strip generic params: "Vec<T>" -> "Vec")
-                        let base_receiver = strip_generic_params(receiver);
+                        let base_receiver = name_utils::strip_generics(receiver);
                         let sig = MethodSignature {
                             receiver_type: base_receiver.to_string(),
                             method_name: method.to_string(),

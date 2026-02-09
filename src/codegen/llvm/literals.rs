@@ -63,150 +63,29 @@ impl<'ctx> LLVMCompiler<'ctx> {
             let (ptr, ast_type) = self.get_variable(name)?;
 
             // Load the value from the alloca based on type
+            let ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
+            let load_name = format!("{}_load", name);
+
             let loaded: BasicValueEnum = match &ast_type {
-                AstType::Bool => {
-                    // Booleans - load as bool_type (i1)
-                    // Use empty string to let LLVM auto-generate unique names
-                    match self.builder.build_load(self.context.bool_type(), ptr, "") {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
-                }
+                AstType::Bool => self.builder.build_load(self.context.bool_type(), ptr, "")?,
                 AstType::I32 => {
-                    // Load as i32
-                    // Use a descriptive name for debugging
-                    let load_name = format!("{}_load", name);
-                    match self
-                        .builder
-                        .build_load(self.context.i32_type(), ptr, &load_name)
-                    {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
+                    self.builder
+                        .build_load(self.context.i32_type(), ptr, &load_name)?
                 }
-                AstType::I64 => {
-                    // Load as i64
-                    // Use a descriptive name for debugging
-                    let load_name = format!("{}_load", name);
-                    match self
-                        .builder
-                        .build_load(self.context.i64_type(), ptr, &load_name)
-                    {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
+                AstType::I64 | AstType::StdModule => {
+                    self.builder
+                        .build_load(self.context.i64_type(), ptr, &load_name)?
                 }
-                AstType::F32 => {
-                    // Load as f32
-                    // Use empty string to let LLVM auto-generate unique names
-                    match self.builder.build_load(self.context.f32_type(), ptr, "") {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
-                }
-                AstType::F64 => {
-                    // Load as f64
-                    // Use empty string to let LLVM auto-generate unique names
-                    match self.builder.build_load(self.context.f64_type(), ptr, "") {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
-                }
-                AstType::StaticLiteral | AstType::StaticString => {
-                    // Static strings are stored as pointers
-                    // Use empty string to let LLVM auto-generate unique names
-                    match self.builder.build_load(
-                        self.context.ptr_type(inkwell::AddressSpace::default()),
-                        ptr,
-                        "",
-                    ) {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
+                AstType::F32 => self.builder.build_load(self.context.f32_type(), ptr, "")?,
+                AstType::F64 => self.builder.build_load(self.context.f64_type(), ptr, "")?,
+                AstType::StaticLiteral | AstType::StaticString | AstType::Function { .. } => {
+                    self.builder.build_load(ptr_type, ptr, "")?
                 }
                 AstType::Struct { name, .. } if StdlibTypeRegistry::is_string_type(name) => {
-                    match self.builder.build_load(
-                        self.context.ptr_type(inkwell::AddressSpace::default()),
-                        ptr,
-                        "",
-                    ) {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
+                    self.builder.build_load(ptr_type, ptr, "")?
                 }
-                t if t.is_ptr_type() => {
-                    // For pointer types (Ptr, MutPtr, RawPtr)
-                    // We need to load the pointer value from the alloca
-                    // All pointer types are loaded as LLVM pointers
-                    // Use empty string to let LLVM auto-generate unique names
-                    match self.builder.build_load(
-                        self.context.ptr_type(inkwell::AddressSpace::default()),
-                        ptr,
-                        "",
-                    ) {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
-                }
-                AstType::Function { .. } => {
-                    // Use empty string to let LLVM auto-generate unique names
-                    match self.builder.build_load(
-                        self.context.ptr_type(inkwell::AddressSpace::default()),
-                        ptr,
-                        "",
-                    ) {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
-                }
+                t if t.is_ptr_type() => self.builder.build_load(ptr_type, ptr, "")?,
                 AstType::EnumType { .. } => {
-                    // For enum types, we need to load the struct value
-                    // First get the enum struct type from the symbols
                     let enum_struct_type = self.context.struct_type(
                         &[
                             self.context.i64_type().into(),
@@ -214,64 +93,20 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         ],
                         false,
                     );
-                    // Use empty string to let LLVM auto-generate unique names
-                    match self.builder.build_load(enum_struct_type, ptr, "") {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
-                }
-                AstType::StdModule => {
-                    // For stdlib module references, return the module marker value
-                    // This value is used to identify which module is being referenced
-                    // Use empty string to let LLVM auto-generate unique names
-                    match self.builder.build_load(self.context.i64_type(), ptr, "") {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
+                    self.builder.build_load(enum_struct_type, ptr, "")?
                 }
                 AstType::Generic {
                     name: enum_name, ..
                 } if self.well_known.is_option(enum_name)
                     || self.well_known.is_result(enum_name) =>
                 {
-                    // For Option and Result generics, load as enum struct
                     let enum_struct_type = self.well_known_enum_type();
-                    // Use empty string to let LLVM auto-generate unique names
-                    let loaded: BasicValueEnum =
-                        match self.builder.build_load(enum_struct_type, ptr, "") {
-                            Ok(val) => val,
-                            Err(e) => {
-                                return Err(CompileError::InternalError(
-                                    e.to_string(),
-                                    self.get_current_span(),
-                                ))
-                            }
-                        };
-                    loaded
+                    self.builder.build_load(enum_struct_type, ptr, "")?
                 }
                 _ => {
                     let elem_type = self.to_llvm_type(&ast_type)?;
                     let basic_type = self.expect_basic_type(elem_type)?;
-                    // Use empty string to let LLVM auto-generate unique names
-                    match self.builder.build_load(basic_type, ptr, "") {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(CompileError::InternalError(
-                                e.to_string(),
-                                self.get_current_span(),
-                            ))
-                        }
-                    }
+                    self.builder.build_load(basic_type, ptr, "")?
                 }
             };
             Ok(loaded)

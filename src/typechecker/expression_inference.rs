@@ -19,11 +19,19 @@ impl TypeChecker {
                 inference::infer_binary_op_type(self, left, op, right)
             }
             Expression::FunctionCall {
+                module,
                 name,
                 type_args,
                 args,
                 span,
-            } => inference::infer_function_call_type(self, name, type_args, args, span.clone()),
+            } => inference::infer_function_call_type(
+                self,
+                module.as_deref(),
+                name,
+                type_args,
+                args,
+                span.clone(),
+            ),
             Expression::MemberAccess { object, member } => {
                 // Check if accessing @std namespace
                 if let Expression::Identifier(name) = &**object {

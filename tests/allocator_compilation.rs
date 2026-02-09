@@ -1,9 +1,5 @@
 //! Integration tests for allocator interface behavioral verification
 //! Tests that stdlib allocator modules compile, run, and produce correct results
-//!
-//! NOTE: These tests call compiler.raw_allocate directly without importing @std
-//! The @std module system is still being implemented. When it's ready, tests
-//! should be updated to use: { compiler } = @std
 
 mod common;
 use common::run_expecting_success;
@@ -11,6 +7,7 @@ use common::run_expecting_success;
 #[test]
 fn test_gpa_allocator_basic() {
     let code = r#"
+        { compiler } = @std
         main = () i32 {
             alloc = compiler.raw_allocate(100)
             compiler.raw_deallocate(alloc, 100)
@@ -28,6 +25,7 @@ fn test_gpa_allocator_basic() {
 #[test]
 fn test_allocator_allocate_array() {
     let code = r#"
+        { compiler } = @std
         main = () i32 {
             size = 10
             total = size * 8
@@ -44,6 +42,7 @@ fn test_allocator_allocate_array() {
 #[test]
 fn test_allocator_reallocate() {
     let code = r#"
+        { compiler } = @std
         main = () i32 {
             ptr = compiler.raw_allocate(50)
             new_ptr = compiler.raw_reallocate(ptr, 50, 100)
@@ -62,14 +61,14 @@ fn test_allocator_reallocate() {
 #[test]
 fn test_allocator_with_null_check() {
     let code = r#"
+        { compiler } = @std
         main = () i32 {
             ptr = compiler.raw_allocate(100)
-            null_ptr = compiler.null_ptr()
-            is_null = ptr == null_ptr ?
-                | true { 1 }
-                | false { 0 }
+            is_null = compiler.is_null(ptr)
             compiler.raw_deallocate(ptr, 100)
-            return is_null
+            is_null ?
+                | true { return 1 }
+                | false { return 0 }
         }
     "#;
 
@@ -83,15 +82,16 @@ fn test_allocator_with_null_check() {
 #[test]
 fn test_gpa_allocate_multiple() {
     let code = r#"
+        { compiler } = @std
         main = () i32 {
             ptr1 = compiler.raw_allocate(100)
             ptr2 = compiler.raw_allocate(200)
             ptr3 = compiler.raw_allocate(50)
-            
+
             compiler.raw_deallocate(ptr1, 100)
             compiler.raw_deallocate(ptr2, 200)
             compiler.raw_deallocate(ptr3, 50)
-            
+
             return 0
         }
     "#;
@@ -106,6 +106,7 @@ fn test_gpa_allocate_multiple() {
 #[test]
 fn test_allocator_with_pointer_arithmetic() {
     let code = r#"
+        { compiler } = @std
         main = () i32 {
             base = compiler.raw_allocate(1000)
             offset = compiler.gep(base, 100)
@@ -125,6 +126,7 @@ fn test_allocator_with_pointer_arithmetic() {
 #[test]
 fn test_allocator_loop_allocations() {
     let code = r#"
+        { compiler } = @std
         main = () i32 {
             i:: i32 = 0
             loop {
@@ -146,16 +148,17 @@ fn test_allocator_loop_allocations() {
 #[test]
 fn test_allocator_conditional_allocation() {
     let code = r#"
+        { compiler } = @std
         main = () i32 {
             size = 100
             ptr = size > 50 ?
                 | true { compiler.raw_allocate(size) }
                 | false { compiler.null_ptr() }
-            
+
             ptr != compiler.null_ptr() ?
                 | true { compiler.raw_deallocate(ptr, size) }
                 | false { }
-            
+
             return 0
         }
     "#;
@@ -170,19 +173,20 @@ fn test_allocator_conditional_allocation() {
 #[test]
 fn test_allocator_overflow_check() {
     let code = r#"
+        { compiler } = @std
         main = () i32 {
             count = 1000000
             item_size = 8
             total_size = count * item_size
-            
+
             // Check for overflow
             overflow = total_size < count ?
                 | true { 1 }
                 | false { 0 }
-            
+
             ptr = compiler.raw_allocate(total_size)
             compiler.raw_deallocate(ptr, total_size)
-            
+
             return overflow
         }
     "#;
@@ -197,16 +201,17 @@ fn test_allocator_overflow_check() {
 #[test]
 fn test_allocator_with_type_casting() {
     let code = r#"
+        { compiler } = @std
         main = () i32 {
             // Allocate for i32 array
             count = 10
             item_size = 4
             total_size = count * item_size
-            
+
             ptr = compiler.raw_allocate(total_size)
             typed_ptr = compiler.raw_ptr_cast(ptr)
             compiler.raw_deallocate(ptr, total_size)
-            
+
             return 0
         }
     "#;

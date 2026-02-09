@@ -1,9 +1,9 @@
 use crate::ast::primitives;
 use crate::ast::{AstType, Expression, Statement};
 use crate::error::{CompileError, Result};
+use crate::intrinsics::well_known;
 use crate::lexer::Token;
 use crate::parser::core::Parser;
-use crate::well_known::well_known;
 
 // Use shared chain parsers from calls module
 use super::calls::{parse_method_chain, parse_postfix_chain};
@@ -38,7 +38,10 @@ pub fn parse_primary_expression(parser: &mut Parser) -> Result<Expression> {
         Token::Symbol('.') => super::literals::parse_shorthand_enum_variant(parser),
         Token::AtStd => super::literals::parse_special_identifier_with_ufc(parser, "@std"),
         Token::AtThis => super::literals::parse_special_identifier_with_ufc(parser, "@this"),
-        Token::AtBuiltin => super::literals::parse_special_identifier_with_ufc(parser, "@builtin"),
+        Token::AtBuiltin => super::literals::parse_special_identifier_with_ufc(
+            parser,
+            crate::intrinsics::INTRINSIC_PREFIX,
+        ),
         Token::Identifier(name) => {
             let name = name.clone();
             parse_identifier_expression(parser, name)

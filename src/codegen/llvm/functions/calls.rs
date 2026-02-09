@@ -205,11 +205,10 @@ fn try_dispatch_compiler_intrinsic<'ctx>(
     func: &str,
     args: &[ast::Expression],
 ) -> Option<Result<BasicValueEnum<'ctx>, CompileError>> {
-    match module {
-        "compiler" | "builtin" | "@builtin" => dispatch_compiler_function(compiler, func, args),
-        // NOTE: "io" module is now implemented in stdlib/io/io.zen using intrinsics
-        // The magic dispatch has been removed - io.* functions are now real Zen functions
-        _ => None,
+    if crate::intrinsics::is_compiler_intrinsic_module(module) {
+        dispatch_compiler_function(compiler, func, args)
+    } else {
+        None
     }
 }
 
@@ -375,41 +374,56 @@ fn try_compile_indirect_call<'ctx>(
 
 pub fn compile_function_call<'ctx>(
     compiler: &mut LLVMCompiler<'ctx>,
+    module: Option<&str>,
     name: &str,
     args: &[ast::Expression],
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-    // NOTE: Collection constructors (Range.new, HashMap.new, etc.) are now in stdlib
-    // They use the normal function resolution path below
-    if let Some((module, func)) = name.split_once('.') {
-        // Only dispatch compiler intrinsics - stdlib (io/fs/core/math) is in Zen
-        if let Some(result) = try_dispatch_compiler_intrinsic(compiler, module, func, args) {
+    // Qualified call: module.function()
+    if let Some(module) = module {
+        // Dispatch compiler intrinsics (@builtin.* and compiler.*)
+        if let Some(result) = try_dispatch_compiler_intrinsic(compiler, module, name, args) {
             return result;
         }
+        // Enum constructors (Option.Some, Result.Ok, etc.)
         if compiler.well_known.is_result(module) || compiler.well_known.is_option(module) {
             let payload = args.first().map(|a| Box::new(a.clone()));
-            return compiler.compile_enum_variant(module, func, &payload);
+            return compiler.compile_enum_variant(module, name, &payload);
         }
-        // Try the fully qualified name first (e.g., "ByteBuffer.free")
-        // This handles type methods like Type.method
+        // Try qualified name (e.g., "ByteBuffer.free")
+        let qualified = format!("{}.{}", module, name);
+        if let Some(result) = try_compile_direct_call(compiler, &qualified, args)? {
+            return Ok(result);
+        }
+        // Try generic variant (e.g., "SafePtr<T>.is_valid" for type "SafePtr")
+        let generic_qualified = format!("{}<T>.{}", module, name);
+        if let Some(result) = try_compile_direct_call(compiler, &generic_qualified, args)? {
+            return Ok(result);
+        }
+        // Fallback: try bare function name (stdlib module functions)
         if let Some(result) = try_compile_direct_call(compiler, name, args)? {
             return Ok(result);
         }
-        // Fallback: try simple name for stdlib module functions (e.g., io.println -> println)
-        if let Some(result) = try_compile_direct_call(compiler, func, args)? {
-            return Ok(result);
-        }
     }
-    if name == "cast" || name == "builtin.cast" {
+
+    // Cast intrinsic (from `as` keyword lowering)
+    if name == "cast" {
         return compile_cast_builtin(compiler, args);
     }
+
+    // Unqualified call: try direct, then indirect
     if let Some(result) = try_compile_direct_call(compiler, name, args)? {
         return Ok(result);
     }
     if let Some(result) = try_compile_indirect_call(compiler, name, args)? {
         return Ok(result);
     }
+
+    let display_name = match module {
+        Some(m) => format!("{}.{}", m, name),
+        None => name.to_string(),
+    };
     Err(CompileError::UndeclaredFunction(
-        name.to_string(),
+        display_name,
         compiler.get_current_span(),
     ))
 }

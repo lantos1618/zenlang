@@ -2,7 +2,46 @@ use crate::ast::{AstType, Expression, Statement, VariableDeclarationType};
 use crate::codegen::llvm::LLVMCompiler;
 use crate::codegen::llvm::Type;
 use crate::error::CompileError;
-use inkwell::{types::BasicTypeEnum, values::BasicValueEnum};
+use inkwell::types::BasicTypeEnum;
+use inkwell::values::{BasicValueEnum, PointerValue};
+
+/// Insert a variable into the compiler's variable map with a VariableInfo entry.
+fn insert_variable<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    name: &str,
+    pointer: PointerValue<'ctx>,
+    ast_type: AstType,
+    is_mutable: bool,
+    is_initialized: bool,
+) {
+    compiler.variables.insert(
+        name.to_string(),
+        crate::codegen::llvm::VariableInfo {
+            pointer,
+            ast_type,
+            is_mutable,
+            is_initialized,
+            definition_span: compiler.get_current_span(),
+        },
+    );
+}
+
+/// Fallback for pointer assignment: check that the value is a pointer and store.
+fn store_to_pointer<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    ptr_value: BasicValueEnum<'ctx>,
+    val: BasicValueEnum<'ctx>,
+) -> Result<(), CompileError> {
+    if let BasicValueEnum::PointerValue(ptr) = ptr_value {
+        compiler.builder.build_store(ptr, val)?;
+        Ok(())
+    } else {
+        Err(CompileError::TypeError(
+            "Pointer assignment requires a pointer value".to_string(),
+            compiler.get_current_span(),
+        ))
+    }
+}
 
 pub fn compile_expression_statement<'ctx>(
     compiler: &mut LLVMCompiler<'ctx>,
@@ -85,9 +124,6 @@ pub fn compile_variable_declaration<'ctx>(
 
     // Keep track of inferred AST type for closures
     let mut inferred_ast_type: Option<AstType> = None;
-
-    // Save generic context before compiling to handle raise() correctly
-    let _saved_ok_type = compiler.generic_type_context.get("Result_Ok_Type").cloned();
 
     let llvm_type = match type_ {
         Some(type_) => compiler.to_llvm_type(type_)?,
@@ -312,16 +348,7 @@ pub fn compile_variable_declaration<'ctx>(
                             .builder
                             .build_store(alloca, func_ptr)
                             .map_err(CompileError::from)?;
-                        compiler.variables.insert(
-                            name.clone(),
-                            crate::codegen::llvm::VariableInfo {
-                                pointer: alloca,
-                                ast_type: type_.clone(),
-                                is_mutable: *is_mutable,
-                                is_initialized: true,
-                                definition_span: compiler.get_current_span(),
-                            },
-                        );
+                        insert_variable(compiler, name, alloca, type_.clone(), *is_mutable, true);
                         return Ok(());
                     } else {
                         return Err(CompileError::UndeclaredFunction(
@@ -341,16 +368,7 @@ pub fn compile_variable_declaration<'ctx>(
                     .builder
                     .build_store(alloca, value)
                     .map_err(CompileError::from)?;
-                compiler.variables.insert(
-                    name.clone(),
-                    crate::codegen::llvm::VariableInfo {
-                        pointer: alloca,
-                        ast_type: type_.clone(),
-                        is_mutable: *is_mutable,
-                        is_initialized: true,
-                        definition_span: compiler.get_current_span(),
-                    },
-                );
+                insert_variable(compiler, name, alloca, type_.clone(), *is_mutable, true);
                 return Ok(());
             } else if type_.is_ptr_type() {
                 // For pointers, if the initializer is AddressOf, use the pointer inside the alloca
@@ -368,16 +386,7 @@ pub fn compile_variable_declaration<'ctx>(
                     .builder
                     .build_store(alloca, ptr_value)
                     .map_err(CompileError::from)?;
-                compiler.variables.insert(
-                    name.clone(),
-                    crate::codegen::llvm::VariableInfo {
-                        pointer: alloca,
-                        ast_type: type_.clone(),
-                        is_mutable: *is_mutable,
-                        is_initialized: true,
-                        definition_span: compiler.get_current_span(),
-                    },
-                );
+                insert_variable(compiler, name, alloca, type_.clone(), *is_mutable, true);
                 return Ok(());
             }
         }
@@ -415,16 +424,7 @@ pub fn compile_variable_declaration<'ctx>(
             }
         };
 
-        compiler.variables.insert(
-            name.clone(),
-            crate::codegen::llvm::VariableInfo {
-                pointer: alloca,
-                ast_type: ast_type_to_store,
-                is_mutable: *is_mutable,
-                is_initialized: true,
-                definition_span: compiler.get_current_span(),
-            },
-        );
+        insert_variable(compiler, name, alloca, ast_type_to_store, *is_mutable, true);
         Ok(())
     } else {
         // No initializer - initialize to zero/default
@@ -441,32 +441,14 @@ pub fn compile_variable_declaration<'ctx>(
             .build_store(alloca, zero)
             .map_err(CompileError::from)?;
 
-        if let Some(type_) = type_ {
-            compiler.variables.insert(
-                name.clone(),
-                crate::codegen::llvm::VariableInfo {
-                    pointer: alloca,
-                    ast_type: type_.clone(),
-                    is_mutable: *is_mutable,
-                    is_initialized: false, // Forward declaration without initializer
-                    definition_span: compiler.get_current_span(),
-                },
-            );
-            Ok(())
+        let ast_type = if let Some(type_) = type_ {
+            type_.clone()
         } else {
             // For inferred types without initializer, default to i64
-            compiler.variables.insert(
-                name.clone(),
-                crate::codegen::llvm::VariableInfo {
-                    pointer: alloca,
-                    ast_type: AstType::I64,
-                    is_mutable: *is_mutable,
-                    is_initialized: false, // Forward declaration without initializer
-                    definition_span: compiler.get_current_span(),
-                },
-            );
-            Ok(())
-        }
+            AstType::I64
+        };
+        insert_variable(compiler, name, alloca, ast_type, *is_mutable, false);
+        Ok(())
     }
 }
 
@@ -546,15 +528,7 @@ pub fn compile_assignment<'ctx>(
                 }
                 let ptr_value = compiler.compile_expression(ptr_expr)?;
                 let val = compiler.compile_expression(value)?;
-                if let BasicValueEnum::PointerValue(ptr) = ptr_value {
-                    compiler.builder.build_store(ptr, val)?;
-                    Ok(())
-                } else {
-                    Err(CompileError::TypeError(
-                        "Pointer assignment requires a pointer value".to_string(),
-                        compiler.get_current_span(),
-                    ))
-                }
+                store_to_pointer(compiler, ptr_value, val)
             } else if let Expression::MemberAccess { object, member } = pointer {
                 // ptr.val.field = value: store value at field within dereferenced struct
                 if let Expression::PointerDereference(ptr_expr) = &**object {
@@ -592,27 +566,11 @@ pub fn compile_assignment<'ctx>(
                 }
                 let ptr_value = compiler.compile_expression(pointer)?;
                 let val = compiler.compile_expression(value)?;
-                if let BasicValueEnum::PointerValue(ptr) = ptr_value {
-                    compiler.builder.build_store(ptr, val)?;
-                    Ok(())
-                } else {
-                    Err(CompileError::TypeError(
-                        "Pointer assignment requires a pointer value".to_string(),
-                        compiler.get_current_span(),
-                    ))
-                }
+                store_to_pointer(compiler, ptr_value, val)
             } else {
                 let ptr_value = compiler.compile_expression(pointer)?;
                 let val = compiler.compile_expression(value)?;
-                if let BasicValueEnum::PointerValue(ptr) = ptr_value {
-                    compiler.builder.build_store(ptr, val)?;
-                    Ok(())
-                } else {
-                    Err(CompileError::TypeError(
-                        "Pointer assignment requires a pointer value".to_string(),
-                        compiler.get_current_span(),
-                    ))
-                }
+                store_to_pointer(compiler, ptr_value, val)
             }
         }
         _ => Err(CompileError::InternalError(

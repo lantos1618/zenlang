@@ -1,8 +1,8 @@
 use crate::ast::{AstType, Expression, Statement};
+use crate::intrinsics::well_known;
 use crate::lsp::utils::format_type;
 use crate::stdlib_types::stdlib_types;
 use crate::type_context::TypeContext;
-use crate::well_known::well_known;
 
 use super::types::Document;
 

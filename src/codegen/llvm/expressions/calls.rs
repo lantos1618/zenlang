@@ -13,9 +13,9 @@ pub fn compile_function_call<'ctx>(
     expr: &Expression,
 ) -> Result<BasicValueEnum<'ctx>, CompileError> {
     match expr {
-        Expression::FunctionCall { name, args, .. } => {
-            function_calls::compile_function_call(compiler, name, args)
-        }
+        Expression::FunctionCall {
+            module, name, args, ..
+        } => function_calls::compile_function_call(compiler, module.as_deref(), name, args),
         _ => Err(CompileError::InternalError(
             format!("Expected FunctionCall, got {:?}", expr),
             compiler.get_current_span(),

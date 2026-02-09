@@ -2,8 +2,8 @@ use super::core::Parser;
 use crate::ast::primitives;
 use crate::ast::{BinaryOperator, Expression, Pattern};
 use crate::error::{CompileError, Result};
+use crate::intrinsics::well_known;
 use crate::lexer::Token;
-use crate::well_known::well_known;
 
 impl<'a> Parser<'a> {
     pub fn parse_pattern(&mut self) -> Result<Pattern> {

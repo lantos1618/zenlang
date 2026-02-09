@@ -2,7 +2,7 @@
 use super::utilities::{dummy_range, make_symbol};
 use super::DocumentStore;
 use crate::ast::{AstType, PRIMITIVE_TYPE_MAP};
-use crate::well_known::{well_known, WellKnownType};
+use crate::intrinsics::{well_known, WellKnownType};
 use lsp_types::*;
 
 impl DocumentStore {

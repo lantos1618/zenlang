@@ -2,15 +2,15 @@
 //
 // This module provides hover text by querying compiler metadata sources:
 // - intrinsics.rs: Compiler intrinsics (@std.compiler.*)
-// - well_known.rs: Option, Result, Ptr types
+// - intrinsics.rs: Option, Result, Ptr types (well-known types)
 // - stdlib_types.rs: Parsed stdlib definitions (Vec, HashMap, String, etc.)
 //
 // Only truly primitive types and keywords are hardcoded here.
 
 use crate::ast::AstType;
 use crate::intrinsics::{get_intrinsic, Intrinsic};
+use crate::intrinsics::{well_known, WellKnownType};
 use crate::stdlib_types::stdlib_types;
-use crate::well_known::{well_known, WellKnownType};
 
 /// Get hover text for built-in types and keywords
 pub fn get_builtin_hover_text(symbol_name: &str) -> Option<String> {

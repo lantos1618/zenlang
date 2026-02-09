@@ -105,20 +105,11 @@ impl BuildConfig {
         Ok(None)
     }
 
-    /// Parse a build.zen file declaratively.
-    ///
-    /// We scan top-level assignments for patterns like:
-    /// - `std = @builtin.import_std()`   → PackageSource::Stdlib
-    /// - `http = @builtin.import("url")` → PackageSource::Remote { url }
-    /// - `utils = @builtin.import("./lib")` → PackageSource::Local(path)
-    ///
-    /// This is NOT executing build.zen — just reading declarations.
+    /// Parse a build.zen file — tries comptime execution first, falls back to pattern matching.
     fn parse_build_file(path: &Path, project_root: &Path) -> Result<BuildConfig, CompileError> {
         let source = std::fs::read_to_string(path).map_err(|e| {
             CompileError::BuildError(format!("Failed to read {}: {}", path.display(), e), None)
         })?;
-        let mut packages = HashMap::new();
-        let mut executables = Vec::new();
 
         // Use the Zen lexer+parser to parse the file
         let lexer = crate::lexer::Lexer::new(&source);
@@ -126,6 +117,36 @@ impl BuildConfig {
         let program = parser.parse_program().map_err(|e| {
             CompileError::BuildError(format!("Failed to parse {}: {}", path.display(), e), None)
         })?;
+
+        // Try comptime execution first
+        if let Ok(config) = Self::execute_build_file(&program, project_root) {
+            return Ok(config);
+        }
+
+        // Fallback: pattern-match the AST declaratively
+        Self::parse_build_file_fallback(&program, project_root)
+    }
+
+    /// Execute a build.zen through the comptime interpreter to extract a PackageMap.
+    fn execute_build_file(
+        program: &crate::ast::Program,
+        project_root: &Path,
+    ) -> Result<BuildConfig, CompileError> {
+        let mut interp = crate::comptime::ComptimeInterpreter::new();
+        interp.execute_program(program)?;
+        extract_packages_from_interpreter(&interp, project_root)
+    }
+
+    /// Fallback: scan top-level assignments for patterns like:
+    /// - `std = @builtin.import_std()`   → PackageSource::Stdlib
+    /// - `http = @builtin.import("url")` → PackageSource::Remote { url }
+    /// - `utils = @builtin.import("./lib")` → PackageSource::Local(path)
+    fn parse_build_file_fallback(
+        program: &crate::ast::Program,
+        project_root: &Path,
+    ) -> Result<BuildConfig, CompileError> {
+        let mut packages = HashMap::new();
+        let mut executables = Vec::new();
 
         // Scan top-level declarations for package imports
         for decl in &program.declarations {
@@ -201,26 +222,37 @@ fn extract_package_source(
     use crate::ast::Expression;
 
     match expr {
-        Expression::FunctionCall { name, args, .. } => {
-            // Handle @builtin.import_std() → Stdlib
-            if name == "builtin.import_std" || name == "import_std" {
-                return Some(PackageSource::Stdlib);
+        Expression::FunctionCall {
+            module, name, args, ..
+        } => {
+            // With structured fields, module is Some("@builtin") and name is the function
+            let is_intrinsic = module
+                .as_ref()
+                .map(|m| crate::intrinsics::is_intrinsic_module(m))
+                .unwrap_or(false);
+
+            if !is_intrinsic {
+                return None;
             }
 
-            // Handle @builtin.import("url") → Remote or Local
-            if name == "builtin.import" || name == "import" {
-                if let Some(Expression::String(url)) = args.first() {
-                    if url.starts_with("./") || url.starts_with("../") {
-                        return Some(PackageSource::Local(project_root.join(url)));
+            match name.as_str() {
+                "import_std" => Some(PackageSource::Stdlib),
+                "import" => {
+                    if let Some(Expression::String(url)) = args.first() {
+                        if url.starts_with("./") || url.starts_with("../") {
+                            Some(PackageSource::Local(project_root.join(url)))
+                        } else {
+                            Some(PackageSource::Remote {
+                                url: url.clone(),
+                                version: None,
+                            })
+                        }
+                    } else {
+                        None
                     }
-                    return Some(PackageSource::Remote {
-                        url: url.clone(),
-                        version: None,
-                    });
                 }
+                _ => None,
             }
-
-            None
         }
         // Handle member access: @builtin.import_std() parsed as MemberAccess + call
         Expression::MemberAccess { .. } => {
@@ -230,6 +262,64 @@ fn extract_package_source(
         }
         _ => None,
     }
+}
+
+/// Extract a PackageMap from a comptime interpreter's environment after executing build.zen.
+///
+/// Looks for variables whose values are `ComptimeValue::Struct { name: "__package", .. }`
+/// (the marker structs produced by @builtin.import_std() and @builtin.import()).
+fn extract_packages_from_interpreter(
+    interp: &crate::comptime::ComptimeInterpreter,
+    project_root: &Path,
+) -> Result<BuildConfig, CompileError> {
+    use crate::comptime::ComptimeValue;
+
+    let mut packages = HashMap::new();
+
+    let vars = interp.env.variables.borrow();
+    for (var_name, (value, _)) in vars.iter() {
+        if let ComptimeValue::Struct { name, fields } = value {
+            if name == "__package" {
+                if let Some(ComptimeValue::String(kind)) = fields.get("kind") {
+                    let source = match kind.as_str() {
+                        "stdlib" => PackageSource::Stdlib,
+                        "local" => {
+                            if let Some(ComptimeValue::String(url)) = fields.get("url") {
+                                PackageSource::Local(project_root.join(url))
+                            } else {
+                                continue;
+                            }
+                        }
+                        "remote" => {
+                            if let Some(ComptimeValue::String(url)) = fields.get("url") {
+                                PackageSource::Remote {
+                                    url: url.clone(),
+                                    version: None,
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                        _ => continue,
+                    };
+                    packages.insert(var_name.clone(), source);
+                }
+            }
+        }
+    }
+
+    if packages.is_empty() {
+        return Err(CompileError::BuildError(
+            "Comptime execution produced no package declarations".to_string(),
+            None,
+        ));
+    }
+
+    Ok(BuildConfig {
+        packages: PackageMap { packages },
+        project_root: project_root.to_path_buf(),
+        executables: Vec::new(),
+    })
 }
 
 /// Scan function body statements for executable target declarations.
@@ -257,7 +347,7 @@ fn scan_expr_for_executables(
     if let Expression::FunctionCall { name, args, .. } = expr {
         // Look for b.add_executable({ name: "myapp", root: "src/main.zen" })
         // or add_executable(b, { name: ..., root: ... })
-        if name.contains("add_executable") {
+        if name == "add_executable" {
             for arg in args {
                 if let Expression::StructLiteral { fields, .. } = arg {
                     let mut exe_name = None;
@@ -347,5 +437,82 @@ mod tests {
         assert!(map.resolve("http.server").is_some());
         assert!(map.resolve("utils.helpers").is_some());
         assert!(map.resolve("unknown.thing").is_none());
+    }
+
+    #[test]
+    fn test_comptime_execute_build_file_stdlib() {
+        let source = format!("std = {}.import_std()", crate::intrinsics::INTRINSIC_PREFIX);
+        let lexer = crate::lexer::Lexer::new(&source);
+        let mut parser = crate::parser::Parser::new(lexer);
+        let program = parser.parse_program().unwrap();
+
+        let project_root = PathBuf::from("/tmp/test_project");
+        let config = BuildConfig::execute_build_file(&program, &project_root).unwrap();
+
+        assert_eq!(
+            config.packages.packages.get("std"),
+            Some(&PackageSource::Stdlib)
+        );
+    }
+
+    #[test]
+    fn test_comptime_execute_build_file_multiple() {
+        let source = format!(
+            "std = {p}.import_std()\nhttp = {p}.import(\"github.com/someone/zen-http\")\nutils = {p}.import(\"./lib\")",
+            p = crate::intrinsics::INTRINSIC_PREFIX
+        );
+        let lexer = crate::lexer::Lexer::new(&source);
+        let mut parser = crate::parser::Parser::new(lexer);
+        let program = parser.parse_program().unwrap();
+
+        let project_root = PathBuf::from("/tmp/test_project");
+        let config = BuildConfig::execute_build_file(&program, &project_root).unwrap();
+
+        assert_eq!(
+            config.packages.packages.get("std"),
+            Some(&PackageSource::Stdlib)
+        );
+        assert_eq!(
+            config.packages.packages.get("http"),
+            Some(&PackageSource::Remote {
+                url: "github.com/someone/zen-http".to_string(),
+                version: None,
+            })
+        );
+        assert_eq!(
+            config.packages.packages.get("utils"),
+            Some(&PackageSource::Local(project_root.join("./lib")))
+        );
+    }
+
+    #[test]
+    fn test_comptime_build_resolves_packages() {
+        let source = format!(
+            "std = {p}.import_std()\nhttp = {p}.import(\"github.com/someone/zen-http\")",
+            p = crate::intrinsics::INTRINSIC_PREFIX
+        );
+        let lexer = crate::lexer::Lexer::new(&source);
+        let mut parser = crate::parser::Parser::new(lexer);
+        let program = parser.parse_program().unwrap();
+
+        let project_root = PathBuf::from("/tmp/test_project");
+        let config = BuildConfig::execute_build_file(&program, &project_root).unwrap();
+
+        // Test resolution
+        let (name, source, rest) = config.packages.resolve("std.io").unwrap();
+        assert_eq!(name, "std");
+        assert_eq!(source, &PackageSource::Stdlib);
+        assert_eq!(rest, "io");
+
+        let (name, source, rest) = config.packages.resolve("http.server").unwrap();
+        assert_eq!(name, "http");
+        assert_eq!(
+            source,
+            &PackageSource::Remote {
+                url: "github.com/someone/zen-http".to_string(),
+                version: None,
+            }
+        );
+        assert_eq!(rest, "server");
     }
 }

@@ -3,15 +3,15 @@
 use crate::ast::{self, AstType};
 use crate::comptime;
 use crate::error::{CompileError, Span};
+use crate::intrinsics::WellKnownTypes;
 use crate::stdlib_types::stdlib_types;
 use crate::type_context::TypeContext;
-use crate::well_known::WellKnownTypes;
 use inkwell::{
     basic_block::BasicBlock,
     builder::Builder,
     context::Context,
     module::Module,
-    types::{BasicType, BasicTypeEnum, FunctionType, StructType},
+    types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, StructType},
     values::{BasicValueEnum, FunctionValue, PointerValue},
 };
 use std::collections::HashMap;
@@ -53,13 +53,28 @@ impl<'ctx> Type<'ctx> {
             }),
         }
     }
+
+    /// Create a function type from this return type and the given parameter types.
+    pub fn into_fn_type(
+        self,
+        context: &'ctx Context,
+        params: &[BasicMetadataTypeEnum<'ctx>],
+        is_varargs: bool,
+    ) -> Result<FunctionType<'ctx>, CompileError> {
+        match self {
+            Type::Basic(b) => Ok(b.fn_type(params, is_varargs)),
+            Type::Function(f) => Ok(f),
+            Type::Void => Ok(context.void_type().fn_type(params, is_varargs)),
+            Type::Struct(st) => Ok(st.fn_type(params, is_varargs)),
+            Type::Pointer(_) => Err(CompileError::UnsupportedFeature(
+                "Cannot use pointer type as function return type".to_string(),
+                None,
+            )),
+        }
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct StructTypeInfo<'ctx> {
-    pub llvm_type: StructType<'ctx>,
-    pub fields: HashMap<String, (usize, AstType)>,
-}
+pub use structs::StructTypeInfo;
 
 // Variable information with mutability tracking
 #[derive(Debug, Clone)]
@@ -301,10 +316,10 @@ impl<'ctx> LLVMCompiler<'ctx> {
             type_ctx,
         };
 
-        // Auto-inject built-in modules (always available without explicit import)
-        for (name, id) in crate::intrinsics::BUILTIN_MODULES {
-            compiler.module_imports.insert(name.to_string(), *id);
-        }
+        // The compiler/intrinsics module is always available (dispatches to LLVM intrinsics)
+        compiler
+            .module_imports
+            .insert(crate::intrinsics::COMPILER_MODULE.to_string(), 6);
 
         // Declare standard library functions
         compiler.declare_stdlib_functions();

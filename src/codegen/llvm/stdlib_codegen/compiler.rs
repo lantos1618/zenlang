@@ -207,23 +207,6 @@ fn ptr_type<'ctx>(compiler: &LLVMCompiler<'ctx>) -> inkwell::types::PointerType<
     compiler.context.ptr_type(AddressSpace::default())
 }
 
-#[allow(dead_code)]
-fn require_args(
-    args: &[ast::Expression],
-    expected: usize,
-    name: &str,
-    span: Option<crate::error::Span>,
-) -> Result<(), CompileError> {
-    if args.len() != expected {
-        Err(CompileError::TypeError(
-            format!("{} expects {} args, got {}", name, expected, args.len()),
-            span,
-        ))
-    } else {
-        Ok(())
-    }
-}
-
 // =============================================================================
 // Memory Allocation (libc wrappers)
 // =============================================================================

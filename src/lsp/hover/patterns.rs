@@ -4,11 +4,11 @@ use lsp_types::Position;
 use std::collections::HashMap;
 
 use crate::ast::{AstType, Declaration, Expression, Statement};
+use crate::intrinsics::well_known;
 use crate::lsp::type_query::TypeQuery;
 use crate::lsp::types::*;
 use crate::lsp::utils::{find_pattern_match_question, format_type, is_pattern_arm_line};
 use crate::name_utils;
-use crate::well_known::well_known;
 
 /// Extract the first two generic type arguments from a Result<T, E> or Option<T> AstType.
 /// Returns (ok_or_inner, err) where err is None for Option.
@@ -98,6 +98,11 @@ fn find_function_call_in_statements(stmts: &[Statement], var_name: &str) -> Opti
 /// Extract the function name from a function call expression.
 fn extract_function_name_from_expr(expr: &Expression) -> Option<String> {
     match expr {
+        Expression::FunctionCall {
+            module: Some(m),
+            name,
+            ..
+        } => Some(format!("{}.{}", m, name)),
         Expression::FunctionCall { name, .. } => Some(name.clone()),
         _ => None,
     }

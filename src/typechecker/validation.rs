@@ -1,7 +1,7 @@
 use crate::ast::{AstType, Expression, Pattern as AstPattern, PatternArm, Statement};
+use crate::intrinsics::well_known;
 use crate::name_utils;
 use crate::stdlib_types::{stdlib_types, StdlibTypeRegistry};
-use crate::well_known::well_known;
 use std::collections::{HashMap, HashSet};
 
 pub(crate) fn is_type_parameter_name(name: &str) -> bool {
@@ -21,35 +21,20 @@ pub(crate) fn is_type_parameter_name(name: &str) -> bool {
     false
 }
 
-/// Check if two types are compatible (for assignment, parameter passing, etc.)
-pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
-    // Exact match is always compatible
-    if std::mem::discriminant(expected) == std::mem::discriminant(actual) {
-        return true;
+/// Check if a type is an unresolved generic type parameter (e.g., T, U, V, Self)
+fn is_generic_type_param(ty: &AstType) -> bool {
+    if let AstType::Generic { name, type_args } = ty {
+        type_args.is_empty() && is_type_parameter_name(name)
+    } else {
+        false
     }
+}
 
-    // Generic type parameters (like T, U, etc.) are compatible with any type
-    // This allows return type checking in generic functions before instantiation
-    if let AstType::Generic { name, type_args } = expected {
-        // A bare type parameter (no type_args) is compatible with any type
-        if type_args.is_empty() && is_type_parameter_name(name) {
-            return true;
-        }
-    }
-    // Also check if actual is a type parameter (for symmetry)
-    if let AstType::Generic { name, type_args } = actual {
-        if type_args.is_empty() && is_type_parameter_name(name) {
-            return true;
-        }
-    }
-
-    // Check for numeric compatibility with implicit conversions
+/// Check numeric widening compatibility (smaller to larger integer/float)
+fn numeric_compatible(expected: &AstType, actual: &AstType) -> bool {
     if expected.is_numeric() && actual.is_numeric() {
-        // Allow widening conversions (smaller to larger)
         if let (Some(expected_size), Some(actual_size)) = (expected.bit_size(), actual.bit_size()) {
-            // Allow if actual fits in expected
             if actual_size <= expected_size {
-                // Check sign compatibility
                 if expected.is_signed_integer() && actual.is_unsigned_integer() {
                     // Unsigned to signed is OK if there's room
                     return actual_size < expected_size;
@@ -58,43 +43,49 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
             }
         }
     }
+    false
+}
 
-    // Check for string type compatibility
-    // StaticLiteral is internal only
-    // StaticString can be coerced to String (requires allocator at runtime)
-    // But String cannot be coerced back to StaticString
+/// Check string type coercion compatibility.
+/// Returns `Some(true)` for compatible string coercions, `Some(false)` for
+/// incompatible ones (e.g., String -> StaticString), and `None` if this
+/// function doesn't handle the given type pair.
+fn string_compatible(expected: &AstType, actual: &AstType) -> Option<bool> {
     match (expected, actual) {
         // StaticLiteral is internal - it should be compatible with StaticString
-        (AstType::StaticString, AstType::StaticLiteral) => return true,
-        (AstType::StaticLiteral, AstType::StaticString) => return true,
+        (AstType::StaticString, AstType::StaticLiteral) => Some(true),
+        (AstType::StaticLiteral, AstType::StaticString) => Some(true),
 
         // StaticString -> String struct is ok (will need allocator at runtime)
         (AstType::Struct { name, .. }, AstType::StaticString)
             if StdlibTypeRegistry::is_string_type(name) =>
         {
-            return true
+            Some(true)
         }
+        // Internal literal -> dynamic is ok
         (AstType::Struct { name, .. }, AstType::StaticLiteral)
             if StdlibTypeRegistry::is_string_type(name) =>
         {
-            return true
-        } // Internal literal -> dynamic is ok
+            Some(true)
+        }
 
         // String struct -> StaticString is NOT ok (would lose allocator)
         (AstType::StaticString, AstType::Struct { name, .. })
             if StdlibTypeRegistry::is_string_type(name) =>
         {
-            return false
+            Some(false)
         }
         (AstType::StaticLiteral, AstType::Struct { name, .. })
             if StdlibTypeRegistry::is_string_type(name) =>
         {
-            return false
+            Some(false)
         }
-        _ => {}
+        _ => None,
     }
+}
 
-    // Check for pointer compatibility
+/// Check pointer compatibility and array/slice-to-pointer decay
+fn pointer_compatible(expected: &AstType, actual: &AstType) -> bool {
     if expected.is_ptr_type() && actual.is_ptr_type() {
         if let (Some(expected_inner), Some(actual_inner)) =
             (expected.ptr_inner(), actual.ptr_inner())
@@ -113,6 +104,11 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
             }
         }
     }
+    false
+}
+
+/// Check named type compatibility (struct, enum, generic name matching, Option/Result/Range)
+fn named_type_compatible(expected: &AstType, actual: &AstType) -> bool {
     match (expected, actual) {
         // Check struct compatibility
         (
@@ -182,7 +178,6 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
                 name: struct_name, ..
             },
         ) => variants.iter().any(|v| v.name == *struct_name),
-        // Option and Result are now Generic types - handled in Generic match below
         // Check Option<T> compatibility using generic syntax
         (
             AstType::Generic {
@@ -233,6 +228,13 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
             types_compatible(expected_start, actual_start)
                 && types_compatible(expected_end, actual_end)
         }
+        _ => false,
+    }
+}
+
+/// Check function type interop (Function <-> FunctionPointer) and array compatibility
+fn function_type_compatible(expected: &AstType, actual: &AstType) -> bool {
+    match (expected, actual) {
         // Function and FunctionPointer compatibility
         (
             AstType::Function {
@@ -291,6 +293,30 @@ pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
         (AstType::Void, AstType::Void) => true,
         _ => false,
     }
+}
+
+/// Check if two types are compatible (for assignment, parameter passing, etc.)
+pub fn types_compatible(expected: &AstType, actual: &AstType) -> bool {
+    // Exact match is always compatible
+    if std::mem::discriminant(expected) == std::mem::discriminant(actual) {
+        return true;
+    }
+
+    // Generic type parameters (like T, U, etc.) are compatible with any type
+    if is_generic_type_param(expected) || is_generic_type_param(actual) {
+        return true;
+    }
+
+    // String compatibility needs special handling (can return false to reject)
+    if let Some(result) = string_compatible(expected, actual) {
+        return result;
+    }
+
+    // Category-specific checks
+    numeric_compatible(expected, actual)
+        || pointer_compatible(expected, actual)
+        || named_type_compatible(expected, actual)
+        || function_type_compatible(expected, actual)
 }
 
 /// Validate that imports are not inside comptime blocks
@@ -392,16 +418,21 @@ fn collect_allocator_violations_in_expr(
     violations: &mut Vec<AllocatorViolation>,
 ) {
     match expr {
-        Expression::FunctionCall { name, args, .. } => {
-            let base_name = name_utils::strip_generics(name);
+        Expression::FunctionCall {
+            module, name, args, ..
+        } => {
+            // The type requiring an allocator is in the module field (e.g., module="Vec<i32>", name="new")
+            if let Some(mod_name) = module {
+                let base_name = name_utils::strip_generics(mod_name);
+                let requires_alloc = stdlib_types().requires_allocator(base_name);
 
-            let requires_alloc = stdlib_types().requires_allocator(base_name);
-
-            if requires_alloc && (args.is_empty() || !has_allocator_arg(args)) {
-                violations.push(AllocatorViolation {
-                    call_name: name.clone(),
-                    type_name: base_name.to_string(),
-                });
+                if requires_alloc && (args.is_empty() || !has_allocator_arg(args)) {
+                    let call_name = format!("{}.{}", mod_name, name);
+                    violations.push(AllocatorViolation {
+                        call_name,
+                        type_name: base_name.to_string(),
+                    });
+                }
             }
             for arg in args {
                 collect_allocator_violations_in_expr(arg, violations);
@@ -437,7 +468,7 @@ fn has_allocator_arg(args: &[Expression]) -> bool {
     for arg in args {
         match arg {
             Expression::FunctionCall { name, .. } => {
-                if name.contains("allocator") || name == "get_default_allocator" {
+                if name.contains("allocator") || name.contains("default_allocator") {
                     return true;
                 }
             }

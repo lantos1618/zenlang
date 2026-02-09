@@ -227,11 +227,13 @@ impl<'a, 'prog> TypeInstantiator<'a, 'prog> {
     ) -> Expression {
         match expr {
             Expression::FunctionCall {
+                module,
                 name,
                 type_args,
                 args,
                 span,
             } => Expression::FunctionCall {
+                module: module.clone(),
                 name: name.clone(),
                 type_args: type_args.clone(),
                 args: args

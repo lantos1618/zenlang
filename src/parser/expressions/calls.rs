@@ -12,8 +12,16 @@ pub fn parse_call_expression_with_type_args(
 ) -> Result<Expression> {
     let arguments = parse_argument_list(parser)?;
 
+    // Split "module.func" into structured fields if present
+    let (module, name) = if let Some((m, f)) = function_name.split_once('.') {
+        (Some(m.to_string()), f.to_string())
+    } else {
+        (None, function_name)
+    };
+
     let expr = Expression::FunctionCall {
-        name: function_name,
+        module,
+        name,
         type_args,
         args: arguments,
         span: Some(parser.current_span.clone()),
@@ -34,7 +42,7 @@ pub fn parse_call_expression(parser: &mut Parser, function_name: String) -> Resu
 /// Returns (base_name, type_args)
 fn extract_type_args_from_name(name: &str) -> Result<(String, Vec<AstType>)> {
     if let Some(angle_pos) = name.find('<') {
-        let base_name = crate::ast::strip_generic_params(name).to_string();
+        let base_name = crate::name_utils::strip_generics(name).to_string();
         let type_args_str = &name[angle_pos + 1..name.len() - 1];
         let type_args = crate::parser::parse_type_args_from_string(type_args_str)?;
         Ok((base_name, type_args))
@@ -203,13 +211,20 @@ fn build_builtin_call(
             member,
         } => match base.as_ref() {
             Expression::StdReference => Ok(Expression::FunctionCall {
-                name: format!("{}.{}", member, method_name),
+                module: Some(member.clone()),
+                name: method_name.to_string(),
                 type_args,
                 args,
                 span: None,
             }),
             Expression::BuiltinReference => Ok(Expression::FunctionCall {
-                name: format!("builtin.{}.{}", member, method_name),
+                // @builtin.module.method → module = "@builtin.module", name = "method"
+                module: Some(format!(
+                    "{}.{}",
+                    crate::intrinsics::INTRINSIC_PREFIX,
+                    member
+                )),
+                name: method_name.to_string(),
                 type_args,
                 args,
                 span: None,
@@ -223,7 +238,8 @@ fn build_builtin_call(
             )),
         },
         Expression::BuiltinReference => Ok(Expression::FunctionCall {
-            name: format!("builtin.{}", method_name),
+            module: Some(crate::intrinsics::INTRINSIC_PREFIX.to_string()),
+            name: method_name.to_string(),
             type_args,
             args,
             span: None,

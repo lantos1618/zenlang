@@ -99,7 +99,8 @@ fn parse_binary_expression_impl(
             let target_type = parser.parse_type()?;
             let type_name = target_type.to_string();
             left = Expression::FunctionCall {
-                name: "builtin.cast".to_string(),
+                module: Some(crate::intrinsics::INTRINSIC_PREFIX.to_string()),
+                name: "cast".to_string(),
                 type_args: vec![],
                 args: vec![left, Expression::Identifier(type_name)],
                 span: Some(parser.current_span.clone()),
@@ -129,6 +130,7 @@ fn parse_unary_expression(parser: &mut Parser) -> Result<Expression> {
             let expr = parse_unary_expression(parser)?;
             // For now, represent logical not as a function call
             Ok(Expression::FunctionCall {
+                module: None,
                 name: "not".to_string(),
                 type_args: vec![],
                 args: vec![expr],

@@ -227,6 +227,7 @@ impl Monomorphizer {
         }
         match expr {
             Expression::FunctionCall {
+                module,
                 name,
                 type_args,
                 args,
@@ -237,10 +238,12 @@ impl Monomorphizer {
                     let base_name = extract_base_name(name);
                     self.queue_instantiation(base_name, type_args.clone())?;
                 }
-                // Also check if name contains embedded type args like "Vec<i32>"
-                else if name.contains('<') {
-                    if let Some((base, args)) = parse_embedded_type_args(name) {
-                        self.queue_instantiation(base, args)?;
+                // Also check if module qualifier contains embedded type args like "Vec<i32>"
+                else if let Some(m) = module {
+                    if m.contains('<') {
+                        if let Some((base, args)) = parse_embedded_type_args(m) {
+                            self.queue_instantiation(base, args)?;
+                        }
                     }
                 }
                 // Recurse into arguments
@@ -434,13 +437,13 @@ impl Monomorphizer {
 
 /// Extract base name from a potentially generic name like "Vec<i32>" -> "Vec"
 fn extract_base_name(name: &str) -> String {
-    crate::ast::strip_generic_params(name).to_string()
+    crate::name_utils::strip_generics(name).to_string()
 }
 
 /// Parse embedded type arguments from a string like "Vec<i32>" -> Some(("Vec", [I32]))
 fn parse_embedded_type_args(name: &str) -> Option<(String, Vec<AstType>)> {
     let pos = name.find('<')?;
-    let base_name = crate::ast::strip_generic_params(name).to_string();
+    let base_name = crate::name_utils::strip_generics(name).to_string();
     let type_args_str = &name[pos + 1..name.len() - 1]; // Remove < and >
 
     let type_args = match crate::parser::parse_type_args_from_string(type_args_str) {

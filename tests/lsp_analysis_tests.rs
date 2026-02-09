@@ -587,7 +587,8 @@ mod allocator_validation_tests {
         // Vec<i32>.new() without allocator → error
         let stmt = Statement::Expression {
             expr: Expression::FunctionCall {
-                name: "Vec<i32>.new".to_string(),
+                module: Some("Vec<i32>".to_string()),
+                name: "new".to_string(),
                 type_args: vec![],
                 args: vec![],
                 span: None,
@@ -624,7 +625,8 @@ mod allocator_validation_tests {
         // Vec<i32>.new(allocator) → no error regardless
         let stmt = Statement::Expression {
             expr: Expression::FunctionCall {
-                name: "Vec<i32>.new".to_string(),
+                module: Some("Vec<i32>".to_string()),
+                name: "new".to_string(),
                 type_args: vec![],
                 args: vec![Expression::Identifier("allocator".to_string())],
                 span: None,
@@ -649,9 +651,11 @@ mod allocator_validation_tests {
         // Vec<i32>.new(get_default_allocator()) → no error
         let stmt = Statement::Expression {
             expr: Expression::FunctionCall {
-                name: "Vec<i32>.new".to_string(),
+                module: Some("Vec<i32>".to_string()),
+                name: "new".to_string(),
                 type_args: vec![],
                 args: vec![Expression::FunctionCall {
+                    module: None,
                     name: "get_default_allocator".to_string(),
                     type_args: vec![],
                     args: vec![],
@@ -679,7 +683,8 @@ mod allocator_validation_tests {
         // has_allocator_arg recognizes identifiers containing "alloc"
         let stmt = Statement::Expression {
             expr: Expression::FunctionCall {
-                name: "Vec<i32>.new".to_string(),
+                module: Some("Vec<i32>".to_string()),
+                name: "new".to_string(),
                 type_args: vec![],
                 args: vec![Expression::Identifier("my_alloc".to_string())],
                 span: None,
@@ -704,6 +709,7 @@ mod allocator_validation_tests {
         // A function call to something that doesn't require an allocator
         let stmt = Statement::Expression {
             expr: Expression::FunctionCall {
+                module: None,
                 name: "print".to_string(),
                 type_args: vec![],
                 args: vec![Expression::String("hello".to_string())],
@@ -731,7 +737,8 @@ mod allocator_validation_tests {
             name: "v".to_string(),
             type_: None,
             initializer: Some(Expression::FunctionCall {
-                name: "Vec<i32>.new".to_string(),
+                module: Some("Vec<i32>".to_string()),
+                name: "new".to_string(),
                 type_args: vec![],
                 args: vec![Expression::Identifier("allocator".to_string())],
                 span: None,
@@ -759,6 +766,7 @@ mod allocator_validation_tests {
         let stmt = Statement::Expression {
             expr: Expression::Block(vec![Statement::Expression {
                 expr: Expression::FunctionCall {
+                    module: None,
                     name: "print".to_string(),
                     type_args: vec![],
                     args: vec![],
@@ -786,6 +794,7 @@ mod allocator_validation_tests {
         // Allocator check in return statement
         let stmt = Statement::Return {
             expr: Expression::FunctionCall {
+                module: None,
                 name: "print".to_string(),
                 type_args: vec![],
                 args: vec![],
@@ -811,9 +820,11 @@ mod allocator_validation_tests {
         // Allocator check recurses into function arguments
         let stmt = Statement::Expression {
             expr: Expression::FunctionCall {
+                module: None,
                 name: "process".to_string(),
                 type_args: vec![],
                 args: vec![Expression::FunctionCall {
+                    module: None,
                     name: "print".to_string(),
                     type_args: vec![],
                     args: vec![],
@@ -867,7 +878,8 @@ mod allocator_validation_tests {
         // has_allocator_arg recognizes method calls with allocator-related names
         let stmt = Statement::Expression {
             expr: Expression::FunctionCall {
-                name: "Vec<i32>.new".to_string(),
+                module: Some("Vec<i32>".to_string()),
+                name: "new".to_string(),
                 type_args: vec![],
                 args: vec![Expression::MethodCall {
                     object: Box::new(Expression::Identifier("ctx".to_string())),
@@ -899,6 +911,7 @@ mod allocator_validation_tests {
         let stmt = Statement::Expression {
             expr: Expression::BinaryOp {
                 left: Box::new(Expression::FunctionCall {
+                    module: None,
                     name: "print".to_string(),
                     type_args: vec![],
                     args: vec![],

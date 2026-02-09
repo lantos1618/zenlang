@@ -1,11 +1,11 @@
 // UFC (Uniform Function Call) method resolution helpers
 
+use crate::intrinsics::well_known;
 use crate::lsp::document_store::DocumentStore;
 use crate::lsp::type_query::TypeQuery;
 use crate::lsp::types::UfcMethodInfo;
 use crate::name_utils;
 use crate::stdlib_types::stdlib_types;
-use crate::well_known::well_known;
 use lsp_types::*;
 
 /// Find UFC method call at the given position (e.g., receiver.method())

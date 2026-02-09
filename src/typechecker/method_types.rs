@@ -7,7 +7,7 @@
 //! See calls.rs for detailed explanation and Phase 5 fix plan.
 
 use crate::ast::AstType;
-use crate::well_known::well_known;
+use crate::intrinsics::well_known;
 
 pub fn infer_string_method_type(method: &str, is_string_struct: bool) -> Option<AstType> {
     let wk = well_known();

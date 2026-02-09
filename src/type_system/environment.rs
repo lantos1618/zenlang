@@ -1,4 +1,3 @@
-use super::GenericInstance;
 use crate::ast::{
     AstType, Declaration, EnumDefinition, Function, Program, StructDefinition, TypeParameter,
 };
@@ -13,8 +12,6 @@ pub struct TypeEnvironment<'prog> {
     program: &'prog Program,
     /// Index mapping: type name -> index in program.declarations for fast lookup
     generic_indices: HashMap<String, usize>,
-    #[allow(dead_code)] // instantiated_types reserved for future use
-    instantiated_types: HashMap<String, Vec<GenericInstance>>,
 }
 
 impl<'prog> TypeEnvironment<'prog> {
@@ -42,7 +39,6 @@ impl<'prog> TypeEnvironment<'prog> {
         Self {
             program,
             generic_indices,
-            instantiated_types: HashMap::new(),
         }
     }
 

@@ -43,6 +43,7 @@ fn test_fields_binary_op() {
 #[test]
 fn test_fields_function_call() {
     let expr = Expression::FunctionCall {
+        module: None,
         name: "add".to_string(),
         type_args: vec![],
         args: vec![Expression::Integer32(1), Expression::Integer32(2)],

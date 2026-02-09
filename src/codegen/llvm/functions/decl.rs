@@ -1,9 +1,8 @@
 use crate::ast::{self, AstType};
 use crate::codegen::llvm::LLVMCompiler;
-use crate::codegen::llvm::Type;
 use crate::error::CompileError;
 use inkwell::module::Linkage;
-use inkwell::types::{BasicMetadataTypeEnum, BasicTypeEnum};
+use inkwell::types::BasicTypeEnum;
 use inkwell::values::FunctionValue;
 
 pub fn declare_external_function<'ctx>(
@@ -36,47 +35,12 @@ pub fn declare_external_function<'ctx>(
         .collect();
 
     // Convert basic types to metadata types for the function signature
-    let param_metadata: Result<Vec<BasicMetadataTypeEnum>, CompileError> = param_basic_types?
-        .into_iter()
-        .map(|ty| {
-            Ok(match ty {
-                BasicTypeEnum::ArrayType(t) => t.into(),
-                BasicTypeEnum::FloatType(t) => t.into(),
-                BasicTypeEnum::IntType(t) => t.into(),
-                BasicTypeEnum::PointerType(t) => t.into(),
-                BasicTypeEnum::StructType(t) => t.into(),
-                BasicTypeEnum::VectorType(t) => t.into(),
-                BasicTypeEnum::ScalableVectorType(t) => t.into(),
-            })
-        })
-        .collect();
-
-    let param_metadata = param_metadata?;
+    let param_metadata: Vec<_> = param_basic_types?.into_iter().map(Into::into).collect();
 
     // Create the function type with the metadata types
-    let function_type = match ret_type {
-        Type::Basic(b) => match b {
-            BasicTypeEnum::ArrayType(t) => t.fn_type(&param_metadata, ext_func.is_varargs),
-            BasicTypeEnum::FloatType(t) => t.fn_type(&param_metadata, ext_func.is_varargs),
-            BasicTypeEnum::IntType(t) => t.fn_type(&param_metadata, ext_func.is_varargs),
-            BasicTypeEnum::PointerType(t) => t.fn_type(&param_metadata, ext_func.is_varargs),
-            BasicTypeEnum::StructType(t) => t.fn_type(&param_metadata, ext_func.is_varargs),
-            BasicTypeEnum::VectorType(t) => t.fn_type(&param_metadata, ext_func.is_varargs),
-            BasicTypeEnum::ScalableVectorType(t) => t.fn_type(&param_metadata, ext_func.is_varargs),
-        },
-        Type::Function(f) => f,
-        Type::Void => compiler
-            .context
-            .void_type()
-            .fn_type(&param_metadata, ext_func.is_varargs),
-        Type::Pointer(_) => {
-            return Err(CompileError::UnsupportedFeature(
-                "Cannot use pointer type as function return type".to_string(),
-                compiler.get_current_span(),
-            ));
-        }
-        Type::Struct(st) => st.fn_type(&param_metadata, false),
-    };
+    let function_type = ret_type
+        .into_fn_type(compiler.context, &param_metadata, ext_func.is_varargs)
+        .map_err(|e| compiler.error_with_span(e))?;
 
     // Only declare if not already declared
     if compiler.module.get_function(&ext_func.name).is_none() {
@@ -126,44 +90,12 @@ pub fn declare_function<'ctx>(
         .collect();
 
     // Convert basic types to metadata types for the function signature
-    let param_metadata: Result<Vec<BasicMetadataTypeEnum>, CompileError> = param_basic_types?
-        .into_iter()
-        .map(|ty| {
-            Ok(match ty {
-                BasicTypeEnum::ArrayType(t) => t.into(),
-                BasicTypeEnum::FloatType(t) => t.into(),
-                BasicTypeEnum::IntType(t) => t.into(),
-                BasicTypeEnum::PointerType(t) => t.into(),
-                BasicTypeEnum::StructType(t) => t.into(),
-                BasicTypeEnum::VectorType(t) => t.into(),
-                BasicTypeEnum::ScalableVectorType(t) => t.into(),
-            })
-        })
-        .collect();
-
-    let param_metadata = param_metadata?;
+    let param_metadata: Vec<_> = param_basic_types?.into_iter().map(Into::into).collect();
 
     // Create the function type with the metadata types
-    let function_type = match return_type {
-        Type::Basic(b) => match b {
-            BasicTypeEnum::ArrayType(t) => t.fn_type(&param_metadata, false),
-            BasicTypeEnum::FloatType(t) => t.fn_type(&param_metadata, false),
-            BasicTypeEnum::IntType(t) => t.fn_type(&param_metadata, false),
-            BasicTypeEnum::PointerType(t) => t.fn_type(&param_metadata, false),
-            BasicTypeEnum::StructType(t) => t.fn_type(&param_metadata, false),
-            BasicTypeEnum::VectorType(t) => t.fn_type(&param_metadata, false),
-            BasicTypeEnum::ScalableVectorType(t) => t.fn_type(&param_metadata, false),
-        },
-        Type::Function(f) => f,
-        Type::Void => compiler.context.void_type().fn_type(&param_metadata, false),
-        Type::Pointer(_) => {
-            return Err(CompileError::UnsupportedFeature(
-                "Cannot use pointer type as function return type".to_string(),
-                compiler.get_current_span(),
-            ));
-        }
-        Type::Struct(st) => st.fn_type(&param_metadata, false),
-    };
+    let function_type = return_type
+        .into_fn_type(compiler.context, &param_metadata, false)
+        .map_err(|e| compiler.error_with_span(e))?;
 
     // Check if function already declared
     if let Some(func) = compiler.module.get_function(&function.name) {

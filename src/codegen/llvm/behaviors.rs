@@ -429,8 +429,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 if matches!(var_info.ast_type, AstType::StdModule) {
                     let method_with_generics =
                         Self::format_method_with_type_args(method_name, type_args);
-                    let qualified = format!("{}.{}", name, method_with_generics);
-                    return super::functions::calls::compile_function_call(self, &qualified, args);
+                    return super::functions::calls::compile_function_call(
+                        self,
+                        Some(name),
+                        &method_with_generics,
+                        args,
+                    );
                 }
             }
         }
@@ -468,8 +472,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
         if let Expression::Identifier(name) = object {
             if let Some(var_info) = self.variables.get(name) {
                 if matches!(var_info.ast_type, AstType::StdModule) {
-                    let qualified = format!("{}.{}", name, method_name);
-                    return super::functions::calls::compile_function_call(self, &qualified, args);
+                    return super::functions::calls::compile_function_call(
+                        self,
+                        Some(name),
+                        method_name,
+                        args,
+                    );
                 }
             }
         }
@@ -506,12 +514,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
         method_name: &str,
         args: &[Expression],
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        if let Ok(result) = super::functions::calls::compile_function_call(self, method_name, args)
+        if let Ok(result) =
+            super::functions::calls::compile_function_call(self, None, method_name, args)
         {
             return Ok(result);
         }
-        let qualified = format!("Std.{}", method_name);
-        super::functions::calls::compile_function_call(self, &qualified, args)
+        super::functions::calls::compile_function_call(self, Some("Std"), method_name, args)
     }
 
     // NOTE: HashMap and Range methods now use stdlib Zen implementations
@@ -614,7 +622,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             None
         };
 
-        if let Some(name) = method_to_use {
+        if method_to_use.is_some() {
             // Check if object is a type name (not a variable) - for static method calls
             let is_static_call = if let Expression::Identifier(id) = object {
                 // It's static if the identifier is a type name, not a variable
@@ -636,9 +644,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ufc_args
             };
 
-            if let Ok(result) =
-                super::functions::calls::compile_function_call(self, &name, &call_args)
-            {
+            if let Ok(result) = super::functions::calls::compile_function_call(
+                self,
+                Some(type_name),
+                method_name,
+                &call_args,
+            ) {
                 return Ok(Some(result));
             }
         }
@@ -655,7 +666,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
             let mut ufc_args = vec![object.clone()];
             ufc_args.extend_from_slice(args);
             if let Ok(result) =
-                super::functions::calls::compile_function_call(self, method_name, &ufc_args)
+                super::functions::calls::compile_function_call(self, None, method_name, &ufc_args)
             {
                 return Ok(Some(result));
             }
@@ -693,7 +704,7 @@ impl<'ctx> LLVMCompiler<'ctx> {
                         }
                     }
                 }
-                if crate::well_known::well_known().get_type(name).is_some() {
+                if crate::intrinsics::well_known().get_type(name).is_some() {
                     return Ok(name.clone());
                 }
                 // Check if this is a known struct type (for static method calls like MyType.new())

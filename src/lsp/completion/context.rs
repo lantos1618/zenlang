@@ -433,7 +433,7 @@ pub fn get_pattern_match_completions(
         }
 
         // Also check well-known types like Option and Result
-        let wk = crate::well_known::well_known();
+        let wk = crate::intrinsics::well_known();
         if wk.is_option(&type_name) {
             if completions.is_empty() {
                 completions.push(CompletionItem {

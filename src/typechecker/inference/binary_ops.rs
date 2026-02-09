@@ -15,13 +15,16 @@ pub fn infer_binary_op_type(
     let mut left_type = checker.infer_expression_type(left)?;
     let mut right_type = checker.infer_expression_type(right)?;
 
-    // Handle unresolved generic types by defaulting to appropriate concrete types
-    // This happens when Option.None creates Option<T> or Result.Ok/Err creates Result<T,E>
+    // DESIGN: Unresolved generic T defaults to i32 for binary op type inference.
+    // This handles cases like `Option.None + 1` where the T type parameter hasn't been
+    // resolved yet. The monomorphizer will resolve actual types later.
     if let AstType::Generic { name, type_args } = &left_type {
         if name == "T" && type_args.is_empty() {
             left_type = AstType::I32;
         } else if name == "E" && type_args.is_empty() {
-            // Error types default to String (dynamic with allocator)
+            // DESIGN: Unresolved generic E defaults to String for binary op type inference.
+            // Error types default to String (dynamic with allocator) to allow binary operations
+            // on Result values before monomorphization resolves the actual error type.
             left_type = crate::ast::resolve_string_struct_type();
         }
     }
@@ -29,7 +32,9 @@ pub fn infer_binary_op_type(
         if name == "T" && type_args.is_empty() {
             right_type = AstType::I32;
         } else if name == "E" && type_args.is_empty() {
-            // Error types default to String (dynamic with allocator)
+            // DESIGN: Unresolved generic E defaults to String for binary op type inference.
+            // Error types default to String (dynamic with allocator) to allow binary operations
+            // on Result values before monomorphization resolves the actual error type.
             right_type = crate::ast::resolve_string_struct_type();
         }
     }
@@ -156,9 +161,10 @@ pub fn promote_numeric_types(
         let right_size = right.bit_size().unwrap_or(32);
         let max_size = left_size.max(right_size);
 
-        // If either is unsigned and the other is signed, need special handling
+        // DESIGN: Mixed signed/unsigned promotion prefers signed integer of the max size.
+        // This prevents silent truncation of negative values when mixing i32 and u32.
+        // The trade-off is that large unsigned values may not fit in the signed type.
         if left.is_unsigned_integer() != right.is_unsigned_integer() {
-            // For now, promote to signed of the appropriate size
             Ok(int_from_bit_size(max_size, true).unwrap_or(AstType::I32))
         } else if left.is_unsigned_integer() {
             // Both unsigned

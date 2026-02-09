@@ -16,10 +16,11 @@
 //! Only Layer 1 primitives (i32, bool, intrinsics) and Layer 2 well-known types
 //! (Option, Result, Ptr via compiler.well_known) should have special handling.
 
-use crate::ast::{strip_generic_params, AstType, Expression};
+use crate::ast::{AstType, Expression};
 use crate::codegen::llvm::{symbols, LLVMCompiler};
 use crate::error::CompileError;
 use crate::intrinsics as compiler_intrinsics;
+use crate::name_utils;
 
 // ============================================================================
 // HELPER FUNCTIONS - Shared logic for type inference
@@ -99,36 +100,37 @@ pub fn infer_expression_type(
             payload,
         } => infer_enum_variant_type(compiler, enum_name, variant, payload),
         Expression::FunctionCall {
-            name, type_args, ..
+            module,
+            name,
+            type_args,
+            ..
         } => {
-            // Check TypeContext for function return type (includes Type.method style)
-            if let Some(return_type) = compiler.type_ctx.get_function_return_type(name) {
+            // Build qualified name for lookups that still use dotted keys
+            let qualified = match module {
+                Some(m) => format!("{}.{}", m, name),
+                None => name.clone(),
+            };
+
+            // Check TypeContext for function return type
+            if let Some(return_type) = compiler.type_ctx.get_function_return_type(&qualified) {
                 return Ok(return_type);
             }
             // Check function_types map
-            if let Some(return_type) = compiler.function_types.get(name) {
+            if let Some(return_type) = compiler.function_types.get(&qualified as &str) {
                 return Ok(return_type.clone());
             }
             // Check StdlibTypeRegistry for Type.method calls
-            if let Some(dot_pos) = name.find('.') {
-                let type_name = &name[..dot_pos];
-                let method_name = &name[dot_pos + 1..];
+            if let Some(module) = module {
                 let registry = crate::stdlib_types::stdlib_types();
-                if let Some(return_type) = registry.get_method_return_type(type_name, method_name) {
+                if let Some(return_type) = registry.get_method_return_type(module, name) {
                     return Ok(return_type.clone());
                 }
-            }
-
-            // Handle both "compiler." and "builtin." prefixes for intrinsics
-            if name.starts_with("compiler.") || name.starts_with("builtin.") {
-                let prefix_len = if name.starts_with("compiler.") {
-                    9
-                } else {
-                    8
-                };
-                let method = &name[prefix_len..];
-                if let Some(return_type) = compiler_intrinsics::get_intrinsic_return_type(method) {
-                    return Ok(return_type);
+                // Handle intrinsic modules
+                if compiler_intrinsics::is_compiler_intrinsic_module(module) {
+                    if let Some(return_type) = compiler_intrinsics::get_intrinsic_return_type(name)
+                    {
+                        return Ok(return_type);
+                    }
                 }
             }
 
@@ -498,10 +500,13 @@ pub fn infer_closure_return_type(
             }
             Ok(AstType::Void)
         }
-        Expression::FunctionCall { name, args, .. } => {
-            // Check if this is a Result or Option variant constructor using well_known
-            // Parse "Type.Variant" pattern
-            if let Some((type_name, variant_name)) = name.split_once('.') {
+        Expression::FunctionCall {
+            module, name, args, ..
+        } => {
+            // Check if this is a Result or Option variant constructor
+            // module = type name, name = variant name
+            if let Some(type_name) = module {
+                let variant_name = name.as_str();
                 let wk = &compiler.well_known;
 
                 // Check for Result.Ok or Result.Err
@@ -763,8 +768,8 @@ fn infer_method_call_type_with_args(
 ) -> Result<AstType, CompileError> {
     // Check for compiler intrinsics
     if let Expression::Identifier(name) = object {
-        if name == "compiler" || name == "builtin" || name == "@builtin" {
-            let base_method = strip_generic_params(method);
+        if compiler_intrinsics::is_compiler_intrinsic_module(name) {
+            let base_method = name_utils::strip_generics(method);
             if let Some(return_type) = compiler_intrinsics::get_intrinsic_return_type(base_method) {
                 // Handle generic intrinsics: if return type is Generic<T> and type_args provided, substitute
                 if !type_args.is_empty() {
@@ -797,8 +802,8 @@ fn infer_method_call_type(
 ) -> Result<AstType, CompileError> {
     // Check for compiler intrinsics
     if let Expression::Identifier(name) = object {
-        if name == "compiler" {
-            let base_method = strip_generic_params(method);
+        if compiler_intrinsics::is_compiler_intrinsic_module(name) {
+            let base_method = name_utils::strip_generics(method);
             if let Some(return_type) = compiler_intrinsics::get_intrinsic_return_type(base_method) {
                 return Ok(return_type);
             }

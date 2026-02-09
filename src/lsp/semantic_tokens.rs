@@ -6,9 +6,9 @@ use lsp_types::*;
 
 use super::document_store::DocumentStore;
 use crate::ast::primitives;
+use crate::intrinsics::well_known;
 use crate::lexer::{Lexer, Token};
 use crate::stdlib_types::StdlibTypeRegistry;
-use crate::well_known::well_known;
 
 // Token type indices (must match server capabilities legend)
 const TYPE_NAMESPACE: u32 = 0;

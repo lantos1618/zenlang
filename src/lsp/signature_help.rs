@@ -785,6 +785,11 @@ fn find_function_call_from_text(content: &str, position: Position) -> Option<(St
     let function_name = if let Ok(expr) = parser.parse_expression() {
         match expr {
             Expression::Identifier(name) => name,
+            Expression::FunctionCall {
+                module: Some(m),
+                name,
+                ..
+            } => format!("{}.{}", m, name),
             Expression::FunctionCall { name, .. } => name,
             Expression::MethodCall { method, .. } => method,
             Expression::MemberAccess { member, .. } => member,

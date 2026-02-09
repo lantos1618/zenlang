@@ -1,8 +1,8 @@
 use super::core::Parser;
 use crate::ast::{primitive_from_str, AstType};
 use crate::error::Result;
+use crate::intrinsics::well_known;
 use crate::lexer::Token;
-use crate::well_known::well_known;
 
 impl<'a> Parser<'a> {
     pub fn parse_type(&mut self) -> Result<AstType> {

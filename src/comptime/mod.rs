@@ -157,6 +157,51 @@ impl ComptimeInterpreter {
         }
     }
 
+    /// Execute a full Zen program (all declarations and statements).
+    /// Used for build.zen execution — processes constants and statements,
+    /// and registers function definitions in the environment.
+    pub fn execute_program(&mut self, program: &crate::ast::Program) -> crate::error::Result<()> {
+        // First pass: register all function declarations and constants
+        for decl in &program.declarations {
+            match decl {
+                Declaration::Function(func) => {
+                    let params: Vec<String> = func.args.iter().map(|a| a.0.clone()).collect();
+                    let value = ComptimeValue::Function {
+                        name: func.name.clone(),
+                        params,
+                        body: func.body.clone(),
+                        closure: self.env.clone(),
+                    };
+                    self.env.define(func.name.clone(), value, false);
+                }
+                Declaration::Constant { name, value, .. } => {
+                    let val = self.evaluate_expression(value, None)?;
+                    self.env.define(name.clone(), val, false);
+                }
+                _ => {
+                    // Other declarations (structs, enums, etc.) are not needed
+                    // for build.zen execution — skip silently.
+                }
+            }
+        }
+
+        // Second pass: execute top-level statements
+        for stmt in &program.statements {
+            match self.execute_statement(stmt) {
+                Ok(_) => {}
+                Err(ComptimeSignal::Error(e)) => return Err(e),
+                Err(ComptimeSignal::Flow(cf)) => {
+                    return Err(crate::error::CompileError::ComptimeError(
+                        format!("Unexpected {} at top level", cf),
+                        None,
+                    ));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn get_generated_declarations(&mut self) -> Vec<Declaration> {
         std::mem::take(&mut self.generated_declarations)
     }
@@ -897,5 +942,194 @@ mod integration_tests {
             )
             .unwrap();
         assert!(matches!(none_fn, ComptimeValue::Null));
+    }
+
+    #[test]
+    fn test_struct_literal_evaluation() {
+        let mut interp = ComptimeInterpreter::new();
+        let expr = Expression::StructLiteral {
+            name: "Point".to_string(),
+            fields: vec![
+                ("x".to_string(), Expression::Integer32(10)),
+                ("y".to_string(), Expression::Integer32(20)),
+            ],
+        };
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        if let ComptimeValue::Struct { name, fields } = result {
+            assert_eq!(name, "Point");
+            assert_eq!(fields.get("x"), Some(&ComptimeValue::I32(10)));
+            assert_eq!(fields.get("y"), Some(&ComptimeValue::I32(20)));
+        } else {
+            panic!("Expected Struct value");
+        }
+    }
+
+    #[test]
+    fn test_struct_literal_member_access() {
+        let mut interp = ComptimeInterpreter::new();
+        let struct_expr = Expression::StructLiteral {
+            name: "Config".to_string(),
+            fields: vec![
+                ("name".to_string(), Expression::String("myapp".to_string())),
+                ("debug".to_string(), Expression::Boolean(true)),
+            ],
+        };
+        let val = interp.evaluate_expression(&struct_expr, None).unwrap();
+        let name = interp
+            .evaluate_member_access(val.clone(), "name", None)
+            .unwrap();
+        assert_eq!(name, ComptimeValue::String("myapp".to_string()));
+        let debug = interp.evaluate_member_access(val, "debug", None).unwrap();
+        assert_eq!(debug, ComptimeValue::Bool(true));
+    }
+
+    #[test]
+    fn test_builtin_import_std() {
+        let mut interp = ComptimeInterpreter::new();
+        let expr = Expression::FunctionCall {
+            module: Some(crate::intrinsics::INTRINSIC_PREFIX.to_string()),
+            name: "import_std".to_string(),
+            args: vec![],
+            type_args: vec![],
+            span: None,
+        };
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        if let ComptimeValue::Struct { name, fields } = result {
+            assert_eq!(name, "__package");
+            assert_eq!(
+                fields.get("kind"),
+                Some(&ComptimeValue::String("stdlib".to_string()))
+            );
+        } else {
+            panic!("Expected __package struct");
+        }
+    }
+
+    #[test]
+    fn test_builtin_import_remote() {
+        let mut interp = ComptimeInterpreter::new();
+        let expr = Expression::FunctionCall {
+            module: Some(crate::intrinsics::INTRINSIC_PREFIX.to_string()),
+            name: "import".to_string(),
+            args: vec![Expression::String(
+                "github.com/someone/zen-http".to_string(),
+            )],
+            type_args: vec![],
+            span: None,
+        };
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        if let ComptimeValue::Struct { name, fields } = result {
+            assert_eq!(name, "__package");
+            assert_eq!(
+                fields.get("kind"),
+                Some(&ComptimeValue::String("remote".to_string()))
+            );
+            assert_eq!(
+                fields.get("url"),
+                Some(&ComptimeValue::String(
+                    "github.com/someone/zen-http".to_string()
+                ))
+            );
+        } else {
+            panic!("Expected __package struct");
+        }
+    }
+
+    #[test]
+    fn test_builtin_import_local() {
+        let mut interp = ComptimeInterpreter::new();
+        let expr = Expression::FunctionCall {
+            module: Some(crate::intrinsics::INTRINSIC_PREFIX.to_string()),
+            name: "import".to_string(),
+            args: vec![Expression::String("./lib".to_string())],
+            type_args: vec![],
+            span: None,
+        };
+        let result = interp.evaluate_expression(&expr, None).unwrap();
+        if let ComptimeValue::Struct { name, fields } = result {
+            assert_eq!(name, "__package");
+            assert_eq!(
+                fields.get("kind"),
+                Some(&ComptimeValue::String("local".to_string()))
+            );
+            assert_eq!(
+                fields.get("url"),
+                Some(&ComptimeValue::String("./lib".to_string()))
+            );
+        } else {
+            panic!("Expected __package struct");
+        }
+    }
+
+    #[test]
+    fn test_execute_program_simple_build_zen() {
+        // Simulate: std = @builtin.import_std()
+        let source = format!("std = {}.import_std()", crate::intrinsics::INTRINSIC_PREFIX);
+        let program = parse_and_get_program(&source);
+        let mut interp = ComptimeInterpreter::new();
+        interp.execute_program(&program).unwrap();
+
+        // The "std" variable should be a __package struct with kind "stdlib"
+        let std_val = interp.env.get("std").unwrap();
+        if let ComptimeValue::Struct { name, fields } = std_val {
+            assert_eq!(name, "__package");
+            assert_eq!(
+                fields.get("kind"),
+                Some(&ComptimeValue::String("stdlib".to_string()))
+            );
+        } else {
+            panic!("Expected __package struct for std");
+        }
+    }
+
+    #[test]
+    fn test_execute_program_multiple_packages() {
+        let source = format!(
+            "std = {p}.import_std()\nhttp = {p}.import(\"github.com/someone/zen-http\")\nutils = {p}.import(\"./lib\")",
+            p = crate::intrinsics::INTRINSIC_PREFIX
+        );
+        let program = parse_and_get_program(&source);
+        let mut interp = ComptimeInterpreter::new();
+        interp.execute_program(&program).unwrap();
+
+        // Check std
+        if let Some(ComptimeValue::Struct { fields, .. }) = interp.env.get("std").as_ref() {
+            assert_eq!(
+                fields.get("kind"),
+                Some(&ComptimeValue::String("stdlib".to_string()))
+            );
+        } else {
+            panic!("Expected __package struct for std");
+        }
+
+        // Check http
+        if let Some(ComptimeValue::Struct { fields, .. }) = interp.env.get("http").as_ref() {
+            assert_eq!(
+                fields.get("kind"),
+                Some(&ComptimeValue::String("remote".to_string()))
+            );
+            assert_eq!(
+                fields.get("url"),
+                Some(&ComptimeValue::String(
+                    "github.com/someone/zen-http".to_string()
+                ))
+            );
+        } else {
+            panic!("Expected __package struct for http");
+        }
+
+        // Check utils
+        if let Some(ComptimeValue::Struct { fields, .. }) = interp.env.get("utils").as_ref() {
+            assert_eq!(
+                fields.get("kind"),
+                Some(&ComptimeValue::String("local".to_string()))
+            );
+            assert_eq!(
+                fields.get("url"),
+                Some(&ComptimeValue::String("./lib".to_string()))
+            );
+        } else {
+            panic!("Expected __package struct for utils");
+        }
     }
 }

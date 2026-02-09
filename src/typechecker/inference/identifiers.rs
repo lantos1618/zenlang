@@ -10,11 +10,6 @@ pub fn infer_identifier_type(checker: &mut TypeChecker, name: &str) -> Result<As
         return Ok(var_type);
     }
 
-    // Built-in modules are always available without explicit import
-    if crate::intrinsics::is_builtin_module(name) {
-        return Ok(AstType::StdModule);
-    }
-
     if let Some(sig) = checker.get_function_signatures().get(name) {
         return Ok(AstType::FunctionPointer {
             param_types: sig.params.iter().map(|(_, t)| t.clone()).collect(),

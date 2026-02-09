@@ -114,7 +114,7 @@ pub fn parse_special_identifier_with_ufc(parser: &mut Parser, name: &str) -> Res
     // Use the appropriate reference type based on the identifier
     let mut expr = match name {
         "@std" => Expression::StdReference,
-        "@builtin" => Expression::BuiltinReference,
+        name if name == crate::intrinsics::INTRINSIC_PREFIX => Expression::BuiltinReference,
         _ => Expression::Identifier(name.to_string()),
     };
 

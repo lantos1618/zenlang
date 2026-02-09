@@ -621,17 +621,22 @@ impl<'ctx> LLVMCompiler<'ctx> {
                 ))
             }
             Expression::StructLiteral { name, .. } => Ok(name.clone()),
-            Expression::FunctionCall { name, .. } => {
+            Expression::FunctionCall { module, name, .. } => {
                 // Check TypeContext first, then local cache
+                let lookup_name = match module {
+                    Some(m) => format!("{}.{}", m, name),
+                    None => name.clone(),
+                };
                 let return_type = self
                     .type_ctx
-                    .get_function_return_type(name)
-                    .or_else(|| self.function_types.get(name).cloned());
+                    .get_function_return_type(&lookup_name)
+                    .or_else(|| self.function_types.get(&lookup_name).cloned())
+                    .or_else(|| self.function_types.get(name.as_str()).cloned());
                 if let Some(AstType::Struct { name: sn, .. }) = return_type {
                     return Ok(sn.clone());
                 }
                 Err(CompileError::TypeError(
-                    format!("Function '{}' does not return a struct", name),
+                    format!("Function '{}' does not return a struct", lookup_name),
                     self.get_current_span(),
                 ))
             }

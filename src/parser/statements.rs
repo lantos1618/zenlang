@@ -1234,9 +1234,7 @@ impl<'a> Parser<'a> {
                             false
                         }
                     }
-                    Expression::FunctionCall { name, .. } => {
-                        name.contains("import") || name == "build.import"
-                    }
+                    Expression::FunctionCall { name, .. } => name.contains("import"),
                     Expression::Identifier(id) => id.starts_with("@std"),
                     _ => false,
                 };

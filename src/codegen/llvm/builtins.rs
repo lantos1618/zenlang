@@ -1,6 +1,6 @@
 use super::{symbols, LLVMCompiler};
 use crate::ast::{self, AstType};
-use crate::well_known::well_known;
+use crate::intrinsics::well_known;
 use std::collections::HashMap;
 
 impl<'ctx> LLVMCompiler<'ctx> {

@@ -121,8 +121,7 @@ pub fn collect_declaration_types(
             }
             checker
                 .behavior_resolver
-                .inherent_methods
-                .insert(impl_block.type_name.clone(), methods);
+                .register_inherent_methods(impl_block.type_name.clone(), methods);
         }
         Declaration::TraitRequirement(trait_req) => {
             checker

@@ -2,7 +2,10 @@ use super::super::LLVMCompiler;
 use crate::ast::{AstType, Expression};
 use crate::error::CompileError;
 use crate::stdlib_types::StdlibTypeRegistry;
-use inkwell::{types::BasicTypeEnum, values::BasicValueEnum};
+use inkwell::{
+    types::BasicTypeEnum,
+    values::{BasicValueEnum, PointerValue},
+};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 // ============================================================================
@@ -92,6 +95,158 @@ pub fn compile_comptime_expression<'ctx>(
         )),
     }
 }
+/// Propagate an Err variant by repacking it into a new Result struct and returning it.
+///
+/// This handles the common pattern in raise's err_bb when the enclosing function
+/// returns Result<T, E>: extract the err payload from `source_alloca`, build a new
+/// Result with tag=1 (Err), and emit a `ret`.
+fn build_err_propagate_result<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    struct_type: inkwell::types::StructType<'ctx>,
+    source_alloca: PointerValue<'ctx>,
+) -> Result<(), CompileError> {
+    let err_payload_ptr =
+        compiler
+            .builder
+            .build_struct_gep(struct_type, source_alloca, 1, "err_payload_ptr")?;
+
+    let payload_field_type = struct_type.get_field_type_at_index(1).ok_or_else(|| {
+        CompileError::InternalError(
+            "Result payload field not found".to_string(),
+            compiler.get_current_span(),
+        )
+    })?;
+
+    let err_value =
+        compiler
+            .builder
+            .build_load(payload_field_type, err_payload_ptr, "err_value")?;
+
+    let return_result_alloca = compiler
+        .builder
+        .build_alloca(struct_type, "return_result")?;
+
+    // Set tag to 1 (Err) using the actual discriminant type
+    let return_tag_ptr = compiler.builder.build_struct_gep(
+        struct_type,
+        return_result_alloca,
+        0,
+        "return_tag_ptr",
+    )?;
+    let return_discriminant_type = struct_type
+        .get_field_type_at_index(0)
+        .ok_or_else(|| {
+            CompileError::InternalError(
+                "Result type missing discriminant field".to_string(),
+                compiler.get_current_span(),
+            )
+        })?
+        .into_int_type();
+    compiler
+        .builder
+        .build_store(return_tag_ptr, return_discriminant_type.const_int(1, false))?;
+
+    // Store the error value
+    let return_payload_ptr = compiler.builder.build_struct_gep(
+        struct_type,
+        return_result_alloca,
+        1,
+        "return_payload_ptr",
+    )?;
+    compiler
+        .builder
+        .build_store(return_payload_ptr, err_value)?;
+
+    // Load and return the complete Result
+    let return_result =
+        compiler
+            .builder
+            .build_load(struct_type, return_result_alloca, "return_result")?;
+    compiler.builder.build_return(Some(&return_result))?;
+    Ok(())
+}
+
+/// Build the err-branch return logic for raise expressions.
+///
+/// Handles the three cases based on the enclosing function's return type:
+/// - `returns_result`: propagate the error by repacking into a new Result and returning
+/// - `!is_void_function`: return a default error value (i32 1)
+/// - void function: return without a value
+fn build_err_return<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    struct_type: inkwell::types::StructType<'ctx>,
+    source_alloca: PointerValue<'ctx>,
+    returns_result: bool,
+    is_void_function: bool,
+) -> Result<(), CompileError> {
+    if returns_result {
+        build_err_propagate_result(compiler, struct_type, source_alloca)?;
+    } else if !is_void_function {
+        let error_value = compiler.context.i32_type().const_int(1, false);
+        compiler.builder.build_return(Some(&error_value))?;
+    } else {
+        compiler.builder.build_return(None)?;
+    }
+    Ok(())
+}
+
+/// Determine the LLVM type to load from an Ok payload pointer, based on tracked generic info.
+///
+/// Returns the BasicTypeEnum to use when loading the Ok value from its heap pointer.
+/// This centralizes the type-resolution logic shared by branches 1 and 3 of raise.
+fn resolve_ok_load_type<'ctx>(compiler: &LLVMCompiler<'ctx>) -> BasicTypeEnum<'ctx> {
+    if let Some(ast_type) = compiler.generic_type_context.get("Result_Ok_Type") {
+        if let Some(basic_type) = ast_type_to_basic_type(compiler, ast_type) {
+            basic_type
+        } else {
+            match ast_type {
+                AstType::Generic { name, .. }
+                    if compiler.well_known.is_result(name)
+                        || compiler.well_known.is_option(name) =>
+                {
+                    generic_enum_struct_type(compiler).into()
+                }
+                _ => compiler.context.i32_type().into(),
+            }
+        }
+    } else {
+        compiler.context.i32_type().into()
+    }
+}
+
+/// Load the enum tag from a pointer to a struct and compare it against Ok (tag == 0).
+///
+/// Returns an `i1` boolean value (`true` if Ok, `false` if Err).
+/// Used by the PointerValue and result-like branches of `compile_raise_expression`.
+fn build_tag_check_from_ptr<'ctx>(
+    compiler: &mut LLVMCompiler<'ctx>,
+    struct_type: inkwell::types::StructType<'ctx>,
+    alloca: PointerValue<'ctx>,
+) -> Result<inkwell::values::IntValue<'ctx>, CompileError> {
+    let tag_ptr = compiler
+        .builder
+        .build_struct_gep(struct_type, alloca, 0, "tag_ptr")?;
+    let discriminant_type = struct_type
+        .get_field_type_at_index(0)
+        .ok_or_else(|| {
+            CompileError::InternalError(
+                "Enum struct type missing discriminant field".to_string(),
+                compiler.get_current_span(),
+            )
+        })?
+        .into_int_type();
+    let tag_value = compiler
+        .builder
+        .build_load(discriminant_type, tag_ptr, "tag")?;
+    let is_ok = compiler.builder.build_int_compare(
+        inkwell::IntPredicate::EQ,
+        tag_value.into_int_value(),
+        discriminant_type.const_int(0, false),
+        "is_ok",
+    )?;
+    Ok(is_ok)
+}
+
 /// Thread-safe counter for generating unique raise block IDs
 static RAISE_ID: AtomicU32 = AtomicU32::new(0);
 
@@ -137,12 +292,17 @@ pub fn compile_raise_expression<'ctx>(
 
     // Track the Result's generic types based on the expression type
     match expr {
-        Expression::FunctionCall { name, .. } => {
+        Expression::FunctionCall { module, name, .. } => {
             // Check TypeContext first, then local cache
+            let lookup_name = match module {
+                Some(m) => format!("{}.{}", m, name),
+                None => name.clone(),
+            };
             let return_type = compiler
                 .type_ctx
-                .get_function_return_type(name)
-                .or_else(|| compiler.function_types.get(name).cloned());
+                .get_function_return_type(&lookup_name)
+                .or_else(|| compiler.function_types.get(&lookup_name).cloned())
+                .or_else(|| compiler.function_types.get(name.as_str()).cloned());
             if let Some(return_type) = return_type {
                 compiler.track_complex_generic(&return_type, compiler.well_known.result_name());
                 if let AstType::Generic {
@@ -455,91 +615,16 @@ pub fn compile_raise_expression<'ctx>(
 
             // Handle Err case - propagate the error by returning early
             compiler.builder.position_at_end(err_bb);
-
-            if returns_result {
-                // Function returns Result<T,E> - propagate the entire Result with Err variant
-                let err_payload_ptr = compiler.builder.build_struct_gep(
-                    struct_type,
-                    temp_alloca,
-                    1,
-                    "err_payload_ptr",
-                )?;
-
-                // Get the actual payload type from the struct
-                let payload_field_type =
-                    struct_type.get_field_type_at_index(1).ok_or_else(|| {
-                        CompileError::InternalError(
-                            "Result payload field not found".to_string(),
-                            compiler.get_current_span(),
-                        )
-                    })?;
-
-                // Load the error payload with the correct type
-                let err_value = compiler.builder.build_load(
-                    payload_field_type,
-                    err_payload_ptr,
-                    "err_value",
-                )?;
-
-                // Create a new Result<T,E> with Err variant for early return
-                let return_result_alloca = compiler
-                    .builder
-                    .build_alloca(struct_type, "return_result")?;
-
-                // Set tag to 1 (Err) using the actual discriminant type
-                let return_tag_ptr = compiler.builder.build_struct_gep(
-                    struct_type,
-                    return_result_alloca,
-                    0,
-                    "return_tag_ptr",
-                )?;
-                let return_discriminant_type = struct_type
-                    .get_field_type_at_index(0)
-                    .ok_or_else(|| {
-                        CompileError::InternalError(
-                            "Result type missing discriminant field".to_string(),
-                            compiler.get_current_span(),
-                        )
-                    })?
-                    .into_int_type();
-                compiler
-                    .builder
-                    .build_store(return_tag_ptr, return_discriminant_type.const_int(1, false))?;
-
-                // Store the error value
-                let return_payload_ptr = compiler.builder.build_struct_gep(
-                    struct_type,
-                    return_result_alloca,
-                    1,
-                    "return_payload_ptr",
-                )?;
-                compiler
-                    .builder
-                    .build_store(return_payload_ptr, err_value)?;
-
-                // Load and return the complete Result
-                let return_result = compiler.builder.build_load(
-                    struct_type,
-                    return_result_alloca,
-                    "return_result",
-                )?;
-                compiler.builder.build_return(Some(&return_result))?;
-            } else if !is_void_function {
-                // Function returns a plain type (like i32) - this is an error case
-                // For now, we'll return a default error value (1 for i32, indicating error)
-                // In a proper implementation, this would need better error handling
-                let error_value = compiler.context.i32_type().const_int(1, false);
-                compiler.builder.build_return(Some(&error_value))?;
-            } else {
-                // Void function - just return without a value
-                compiler.builder.build_return(None)?;
-            }
+            build_err_return(
+                compiler,
+                struct_type,
+                temp_alloca,
+                returns_result,
+                is_void_function,
+            )?;
 
             // Continue with Ok value
             compiler.builder.position_at_end(continue_bb);
-
-            // Context has already been updated before the branch, no need to update again
-
             Ok(ok_value)
         } else {
             // Unit Result (no payload)
@@ -568,33 +653,8 @@ pub fn compile_raise_expression<'ctx>(
         // Use the centralized well-known enum type for Result
         let struct_type = compiler.well_known_enum_type();
 
-        // Extract the tag from the first field
-        let tag_ptr = compiler
-            .builder
-            .build_struct_gep(struct_type, result_ptr, 0, "tag_ptr")?;
-        // Get the actual discriminant type from the struct's first field
-        let discriminant_type = struct_type
-            .get_field_type_at_index(0)
-            .ok_or_else(|| {
-                CompileError::InternalError(
-                    "Enum struct type missing discriminant field".to_string(),
-                    compiler.get_current_span(),
-                )
-            })?
-            .into_int_type();
-        let tag_value = compiler
-            .builder
-            .build_load(discriminant_type, tag_ptr, "tag")?;
-
-        // Check if tag == 0 (Ok variant) using the same type
-        let is_ok = compiler.builder.build_int_compare(
-            inkwell::IntPredicate::EQ,
-            tag_value.into_int_value(),
-            discriminant_type.const_int(0, false),
-            "is_ok",
-        )?;
-
-        // Branch based on the tag
+        // Check tag == 0 (Ok) and branch
+        let is_ok = build_tag_check_from_ptr(compiler, struct_type, result_ptr)?;
         compiler
             .builder
             .build_conditional_branch(is_ok, ok_bb, err_bb)?;
@@ -712,53 +772,12 @@ pub fn compile_raise_expression<'ctx>(
                 compiler.well_known_enum_type()
             };
 
-            // If the value is already a struct, use it directly; otherwise store it first
-            let temp_alloca = if result_value.is_struct_value() {
-                let alloca = compiler
-                    .builder
-                    .build_alloca(struct_type, "result_struct_temp")?;
-                compiler.builder.build_store(alloca, result_value)?;
-                alloca
-            } else {
-                // Try to treat the value as something we can work with
-                // This handles cases where the nested Result was loaded as an aggregate
-                let alloca = compiler
-                    .builder
-                    .build_alloca(struct_type, "result_aggregate_temp")?;
+            // Store the value (struct or aggregate) into a temp alloca so we can GEP into it
+            let temp_alloca = compiler.builder.build_alloca(struct_type, "result_temp")?;
+            compiler.builder.build_store(temp_alloca, result_value)?;
 
-                // Try to store the value - if it's compatible, this will work
-                compiler.builder.build_store(alloca, result_value)?;
-                alloca
-            };
-
-            // Extract the tag (discriminant) from the first field
-            let tag_ptr =
-                compiler
-                    .builder
-                    .build_struct_gep(struct_type, temp_alloca, 0, "tag_ptr")?;
-            // Get the actual discriminant type from the struct's first field
-            let discriminant_type = struct_type
-                .get_field_type_at_index(0)
-                .ok_or_else(|| {
-                    CompileError::InternalError(
-                        "Enum struct type missing discriminant field".to_string(),
-                        compiler.get_current_span(),
-                    )
-                })?
-                .into_int_type();
-            let tag_value = compiler
-                .builder
-                .build_load(discriminant_type, tag_ptr, "tag")?;
-
-            // Check if tag == 0 (Ok variant) using the same type
-            let is_ok = compiler.builder.build_int_compare(
-                inkwell::IntPredicate::EQ,
-                tag_value.into_int_value(),
-                discriminant_type.const_int(0, false),
-                "is_ok",
-            )?;
-
-            // Branch based on the tag
+            // Check tag == 0 (Ok) and branch
+            let is_ok = build_tag_check_from_ptr(compiler, struct_type, temp_alloca)?;
             compiler
                 .builder
                 .build_conditional_branch(is_ok, ok_bb, err_bb)?;
@@ -791,51 +810,17 @@ pub fn compile_raise_expression<'ctx>(
                 // We need to dereference it to get the actual value
                 let ok_value_computed = if ok_value_ptr.is_pointer_value() {
                     let ptr_val = ok_value_ptr.into_pointer_value();
-
-                    // Use the tracked generic type information to determine the correct type to load
-                    let ast_type_opt = compiler.generic_type_context.get("Result_Ok_Type");
-                    let load_type: inkwell::types::BasicTypeEnum =
-                        if let Some(ast_type) = ast_type_opt {
-                            // Try basic types first using helper
-                            if let Some(basic_type) = ast_type_to_basic_type(compiler, ast_type) {
-                                basic_type
-                            } else {
-                                // Handle complex types
-                                match ast_type {
-                                    AstType::Generic { name, .. }
-                                        if compiler.well_known.is_result(name)
-                                            || compiler.well_known.is_option(name) =>
-                                    {
-                                        // For nested generics, load the struct from heap pointer
-                                        generic_enum_struct_type(compiler).into()
-                                    }
-                                    _ => compiler.context.i32_type().into(), // Default fallback
-                                }
-                            }
-                        } else {
-                            // Default to i32 for backward compatibility
-                            compiler.context.i32_type().into()
-                        };
-                    // Debug: Check what type we're loading
-
-                    let loaded_value =
-                        compiler
-                            .builder
-                            .build_load(load_type, ptr_val, "ok_value_deref")?;
-
-                    // The loaded value should be the correct type
-                    // For nested Result/Option types, this will be a struct value that can be raised again
-                    loaded_value
+                    let load_type = resolve_ok_load_type(compiler);
+                    compiler
+                        .builder
+                        .build_load(load_type, ptr_val, "ok_value_deref")?
                 } else {
-                    // If it's not a pointer, it might be an integer that looks like a pointer address
-                    // This can happen if the payload is stored incorrectly
                     ok_value_ptr
                 };
 
                 // For void functions, we can directly return the ok value
                 // since err_bb returns early without branching to continue_bb
                 if is_void_function {
-                    // We're done - return the extracted value
                     return Ok(ok_value_computed);
                 }
 
@@ -844,89 +829,16 @@ pub fn compile_raise_expression<'ctx>(
 
                 // Handle Err case - propagate the error by returning early
                 compiler.builder.position_at_end(err_bb);
-
-                if returns_result {
-                    // Function returns Result<T,E> - propagate the entire Result with Err variant
-                    let err_payload_ptr = compiler.builder.build_struct_gep(
-                        struct_type,
-                        temp_alloca,
-                        1,
-                        "err_payload_ptr",
-                    )?;
-
-                    // Get the actual payload type from the struct
-                    let payload_field_type =
-                        struct_type.get_field_type_at_index(1).ok_or_else(|| {
-                            CompileError::InternalError(
-                                "Result payload field not found".to_string(),
-                                compiler.get_current_span(),
-                            )
-                        })?;
-
-                    // Load the error payload with the correct type
-                    let err_value = compiler.builder.build_load(
-                        payload_field_type,
-                        err_payload_ptr,
-                        "err_value",
-                    )?;
-
-                    // Create a new Result<T,E> with Err variant for early return
-                    let return_result_alloca = compiler
-                        .builder
-                        .build_alloca(struct_type, "return_result")?;
-
-                    // Set tag to 1 (Err) using the actual discriminant type
-                    let return_tag_ptr = compiler.builder.build_struct_gep(
-                        struct_type,
-                        return_result_alloca,
-                        0,
-                        "return_tag_ptr",
-                    )?;
-                    let err_discriminant_type = struct_type
-                        .get_field_type_at_index(0)
-                        .ok_or_else(|| {
-                            CompileError::InternalError(
-                                "Result type missing discriminant field".to_string(),
-                                compiler.get_current_span(),
-                            )
-                        })?
-                        .into_int_type();
-                    compiler
-                        .builder
-                        .build_store(return_tag_ptr, err_discriminant_type.const_int(1, false))?;
-
-                    // Store the error value
-                    let return_payload_ptr = compiler.builder.build_struct_gep(
-                        struct_type,
-                        return_result_alloca,
-                        1,
-                        "return_payload_ptr",
-                    )?;
-                    compiler
-                        .builder
-                        .build_store(return_payload_ptr, err_value)?;
-
-                    // Load and return the complete Result
-                    let return_result = compiler.builder.build_load(
-                        struct_type,
-                        return_result_alloca,
-                        "return_result",
-                    )?;
-                    compiler.builder.build_return(Some(&return_result))?;
-                } else if !is_void_function {
-                    // Function returns a plain type - return error value
-                    let error_value = compiler.context.i32_type().const_int(1, false);
-                    compiler.builder.build_return(Some(&error_value))?;
-                } else {
-                    // Void function - just return without a value
-                    compiler.builder.build_return(None)?;
-                }
+                build_err_return(
+                    compiler,
+                    struct_type,
+                    temp_alloca,
+                    returns_result,
+                    is_void_function,
+                )?;
 
                 // Continue with Ok value - only reached for non-void functions
                 compiler.builder.position_at_end(continue_bb);
-                // For non-void functions, we need to return the ok value
-                // This is a bit tricky because ok_value_computed is not in scope
-                // We should use a PHI node, but for now return a placeholder
                 Ok(compiler.context.i32_type().const_int(0, false).into())
             } else {
                 // Unit Result (no payload)

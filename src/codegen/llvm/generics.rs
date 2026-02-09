@@ -1,5 +1,5 @@
 use crate::ast::AstType;
-use crate::well_known::well_known;
+use crate::intrinsics::well_known;
 use std::collections::HashMap;
 
 /// Tracks generic type instantiations at different scopes
@@ -104,7 +104,7 @@ impl GenericTypeTracker {
 mod tests {
     use crate::ast::AstType;
     use crate::codegen::llvm::generics::GenericTypeTracker;
-    use crate::well_known::well_known;
+    use crate::intrinsics::well_known;
 
     #[test]
     fn test_nested_generic_tracking() {

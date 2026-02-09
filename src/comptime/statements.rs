@@ -194,11 +194,19 @@ impl ComptimeInterpreter {
     /// Evaluate function calls — builtins via enum dispatch, user functions via env lookup
     pub(super) fn evaluate_function_call(
         &mut self,
+        module: Option<&str>,
         name: &str,
         args: &[crate::ast::Expression],
         span: Option<crate::error::Span>,
     ) -> Result<ComptimeValue> {
         use crate::ast::builtins::BuiltinFn;
+
+        // Handle @builtin.* intrinsic calls (used in build.zen)
+        if let Some(module) = module {
+            if crate::intrinsics::is_intrinsic_module(module) {
+                return self.call_build_intrinsic(name, args, span);
+            }
+        }
 
         if let Some(builtin) = BuiltinFn::from_name(name) {
             return self.call_builtin(builtin, args, span);
@@ -206,6 +214,80 @@ impl ComptimeInterpreter {
 
         // User-defined function
         self.call_user_function(name, args, span)
+    }
+
+    /// Handle @builtin.* intrinsic calls in comptime (e.g., @builtin.import_std())
+    fn call_build_intrinsic(
+        &mut self,
+        func: &str,
+        args: &[crate::ast::Expression],
+        span: Option<crate::error::Span>,
+    ) -> Result<ComptimeValue> {
+        match func {
+            "import_std" => {
+                // @builtin.import_std() → a marker struct representing stdlib
+                Ok(ComptimeValue::Struct {
+                    name: "__package".to_string(),
+                    fields: {
+                        let mut f = std::collections::HashMap::new();
+                        f.insert(
+                            "kind".to_string(),
+                            ComptimeValue::String("stdlib".to_string()),
+                        );
+                        f
+                    },
+                })
+            }
+            "import" => {
+                // @builtin.import("url_or_path") → marker struct for remote/local package
+                if args.is_empty() {
+                    return Err(CompileError::ComptimeError(
+                        format!(
+                            "{}.import() requires a string argument",
+                            crate::intrinsics::INTRINSIC_PREFIX
+                        ),
+                        span,
+                    ));
+                }
+                let val = self.evaluate_expression(&args[0], span.clone())?;
+                match val {
+                    ComptimeValue::String(url) => {
+                        let kind = if url.starts_with("./") || url.starts_with("../") {
+                            "local"
+                        } else {
+                            "remote"
+                        };
+                        Ok(ComptimeValue::Struct {
+                            name: "__package".to_string(),
+                            fields: {
+                                let mut f = std::collections::HashMap::new();
+                                f.insert(
+                                    "kind".to_string(),
+                                    ComptimeValue::String(kind.to_string()),
+                                );
+                                f.insert("url".to_string(), ComptimeValue::String(url));
+                                f
+                            },
+                        })
+                    }
+                    _ => Err(CompileError::ComptimeError(
+                        format!(
+                            "{}.import() expects a string argument",
+                            crate::intrinsics::INTRINSIC_PREFIX
+                        ),
+                        span,
+                    )),
+                }
+            }
+            _ => Err(CompileError::ComptimeError(
+                format!(
+                    "Unknown {} intrinsic: {}",
+                    crate::intrinsics::INTRINSIC_PREFIX,
+                    func
+                ),
+                span,
+            )),
+        }
     }
 
     fn call_builtin(

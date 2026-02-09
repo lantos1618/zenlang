@@ -16,7 +16,7 @@ pub fn exit_scope(checker: &mut TypeChecker) {
     checker.scopes.pop();
 }
 
-/// Declare a variable in the current scope
+/// Declare a variable in the current scope (uninitialized)
 pub fn declare_variable(
     checker: &mut TypeChecker,
     name: &str,
@@ -24,39 +24,7 @@ pub fn declare_variable(
     is_mutable: bool,
     span: Option<Span>,
 ) -> Result<()> {
-    // Only check current scope for duplicates - shadowing from outer scopes is allowed
-    if variable_exists_in_current_scope(checker, name) {
-        let existing_type = checker
-            .scopes
-            .last()
-            .and_then(|s| s.get(name))
-            .map(|v| format!("{:?}", v.type_))
-            .unwrap_or_else(|| "unknown".to_string());
-        return Err(CompileError::TypeError(
-            format!(
-                "Variable '{}' already declared in this scope (existing: {}, new: {:?})",
-                name, existing_type, type_
-            ),
-            span,
-        ));
-    }
-
-    let info = VariableInfo {
-        type_,
-        is_mutable,
-        is_initialized: false,
-    };
-
-    if let Some(scope) = checker.scopes.last_mut() {
-        scope.insert(name.to_string(), info);
-    } else {
-        return Err(CompileError::InternalError(
-            "No active scope".to_string(),
-            span,
-        ));
-    }
-
-    Ok(())
+    declare_variable_with_init(checker, name, type_, is_mutable, false, span)
 }
 
 /// Declare a variable with initialization

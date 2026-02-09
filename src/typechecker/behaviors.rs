@@ -11,7 +11,7 @@ pub struct BehaviorResolver {
     /// Maps (type_name, behavior_name) -> implementation
     implementations: HashMap<(String, String), ImplInfo>,
     /// Maps type_name -> inherent methods (impl blocks without behavior)
-    pub inherent_methods: HashMap<String, Vec<MethodInfo>>,
+    pub(super) inherent_methods: HashMap<String, Vec<MethodInfo>>,
 }
 
 #[derive(Clone, Debug)]
@@ -59,6 +59,11 @@ impl BehaviorResolver {
             implementations: HashMap::new(),
             inherent_methods: HashMap::new(),
         }
+    }
+
+    /// Register inherent methods for a type (from impl blocks without trait)
+    pub fn register_inherent_methods(&mut self, type_name: String, methods: Vec<MethodInfo>) {
+        self.inherent_methods.insert(type_name, methods);
     }
 
     /// Register a behavior definition
@@ -148,56 +153,13 @@ impl BehaviorResolver {
         Ok(())
     }
 
-    /// Replace Self type with concrete type in AST type
-    #[allow(clippy::only_used_in_recursion)]
+    /// Replace Self type with concrete Struct type for trait signature checking
     fn replace_self_type(&self, ast_type: &AstType, concrete_type: &str) -> AstType {
-        match ast_type {
-            AstType::Generic { name, type_args: _ } if name == "Self" => {
-                // Replace Self with the concrete type - use Struct with just name
-                AstType::Struct {
-                    name: concrete_type.to_string(),
-                    fields: vec![], // Empty fields - this is just a type reference
-                }
-            }
-            t if t.is_immutable_ptr() => {
-                if let Some(inner) = t.ptr_inner() {
-                    AstType::ptr(self.replace_self_type(inner, concrete_type))
-                } else {
-                    ast_type.clone()
-                }
-            }
-            t if t.is_mutable_ptr() => {
-                if let Some(inner) = t.ptr_inner() {
-                    AstType::mut_ptr(self.replace_self_type(inner, concrete_type))
-                } else {
-                    ast_type.clone()
-                }
-            }
-            t if t.is_raw_ptr() => {
-                if let Some(inner) = t.ptr_inner() {
-                    AstType::raw_ptr(self.replace_self_type(inner, concrete_type))
-                } else {
-                    ast_type.clone()
-                }
-            }
-            // Option and Result are now Generic types - handled in Generic match above
-            AstType::Slice(element) => {
-                AstType::Slice(Box::new(self.replace_self_type(element, concrete_type)))
-            }
-            AstType::FixedArray { element_type, size } => AstType::FixedArray {
-                element_type: Box::new(self.replace_self_type(element_type, concrete_type)),
-                size: *size,
-            },
-            AstType::Function { args, return_type } => AstType::Function {
-                args: args
-                    .iter()
-                    .map(|p| self.replace_self_type(p, concrete_type))
-                    .collect(),
-                return_type: Box::new(self.replace_self_type(return_type, concrete_type)),
-            },
-            // For other types, return as is
-            _ => ast_type.clone(),
-        }
+        let replacement = AstType::Struct {
+            name: concrete_type.to_string(),
+            fields: vec![],
+        };
+        crate::typechecker::self_resolution::replace_self_with(ast_type, &replacement)
     }
 
     /// Register an implementation block

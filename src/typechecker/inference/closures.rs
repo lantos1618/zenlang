@@ -16,7 +16,7 @@ pub fn infer_closure_type(
     return_type: &Option<AstType>,
     body: &Expression,
 ) -> Result<AstType> {
-    // Untyped params default to i32 (loop counter convention). See doc comment above.
+    // DESIGN: Default untyped closure params to i32 (see fn doc comment above for rationale)
     let param_types: Vec<AstType> = params
         .iter()
         .map(|(_, opt_type)| opt_type.clone().unwrap_or(AstType::I32))

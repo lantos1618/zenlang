@@ -210,20 +210,6 @@ impl TypeAliasRegistry {
     }
 }
 
-/// Common type aliases for the Zen language
-pub mod common_aliases {
-    use super::*;
-
-    /// Register standard Zen type aliases
-    pub fn register_standard_aliases(_registry: &mut TypeAliasRegistry) {
-        // String type (defined in stdlib)
-        // registry.register("String", AstType::Generic {
-        //     name: "String".to_string(),
-        //     type_args: vec![],
-        // });
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

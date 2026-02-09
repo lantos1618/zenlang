@@ -299,6 +299,14 @@ fn resolve_type_from_parsed_expr(
         }
 
         // Function call - get return type
+        Expression::FunctionCall {
+            module: Some(m),
+            name,
+            ..
+        } => {
+            let qualified = format!("{}.{}", m, name);
+            type_ctx.get_function_return_type(&qualified)
+        }
         Expression::FunctionCall { name, .. } => type_ctx.get_function_return_type(name),
 
         // Method call - resolve receiver type, then get method return type

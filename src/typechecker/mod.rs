@@ -17,10 +17,10 @@ pub mod validation;
 use crate::ast::primitives;
 use crate::ast::{AstType, Declaration, Function, Program, Statement};
 use crate::error::{Result, Span};
+use crate::intrinsics::WellKnownTypes;
 use crate::name_utils;
 use crate::type_context::{DefinitionLocation, TypeContext};
 use crate::type_system::{new_type_store, TypeStoreRef};
-use crate::well_known::WellKnownTypes;
 use behaviors::BehaviorResolver;
 use std::collections::HashMap;
 
@@ -159,6 +159,16 @@ impl From<&crate::ast::EnumDefinition> for EnumInfo {
     }
 }
 
+/// Controls how errors are handled during the 4-pass pipeline
+enum ErrorMode {
+    /// Fail immediately on first error (check_program)
+    FailFast,
+    /// Collect all errors (check_program_collect_errors)
+    CollectAll,
+    /// Ignore pass-1 errors, only check first N declarations in pass 4
+    CollectForMain(usize),
+}
+
 impl TypeChecker {
     /// Resolve Generic types to Struct types if they're known structs
     /// This handles the case where the parser represents struct types as Generic
@@ -273,9 +283,59 @@ impl TypeChecker {
     }
 
     pub fn check_program(&mut self, program: &Program) -> Result<TypeContext> {
+        let (ctx, errors) = self.run_pipeline(program, ErrorMode::FailFast);
+        if let Some(err) = errors.into_iter().next() {
+            Err(err)
+        } else {
+            Ok(ctx)
+        }
+    }
+
+    /// Check a program and collect ALL errors (for LSP diagnostics)
+    pub fn check_program_collect_errors(
+        &mut self,
+        program: &Program,
+    ) -> (TypeContext, Vec<crate::error::CompileError>) {
+        self.run_pipeline(program, ErrorMode::CollectAll)
+    }
+
+    /// Like `check_program_collect_errors`, but only reports errors from the first
+    /// `main_decl_count` declarations. Passes 1-3 still run on the full merged program
+    /// so imported types are available, but pass 4 skips imported declarations.
+    pub fn check_program_collect_errors_for_main(
+        &mut self,
+        program: &Program,
+        main_decl_count: usize,
+    ) -> (TypeContext, Vec<crate::error::CompileError>) {
+        self.run_pipeline(program, ErrorMode::CollectForMain(main_decl_count))
+    }
+
+    /// Shared 4-pass type-checking pipeline. Error handling varies by mode:
+    /// - FailFast: return on first error
+    /// - CollectAll: collect all errors
+    /// - CollectForMain(n): ignore pass-1 errors, only check first n declarations in pass 4
+    fn run_pipeline(
+        &mut self,
+        program: &Program,
+        mode: ErrorMode,
+    ) -> (TypeContext, Vec<crate::error::CompileError>) {
+        let mut errors: Vec<crate::error::CompileError> = Vec::new();
+
         // First pass: collect all type definitions and function signatures
         for declaration in program.declarations.iter() {
-            self.collect_declaration_types(declaration)?;
+            match self.collect_declaration_types(declaration) {
+                Ok(()) => {}
+                Err(e) => match &mode {
+                    ErrorMode::FailFast => {
+                        errors.push(e);
+                        return (self.build_type_context(), errors);
+                    }
+                    ErrorMode::CollectAll => {
+                        errors.push(e);
+                    }
+                    ErrorMode::CollectForMain(_) => { /* silently ignore */ }
+                },
+            }
         }
 
         // Second pass: resolve Generic types to Struct types in struct fields
@@ -325,13 +385,16 @@ impl TypeChecker {
             }
         }
         if iterations >= MAX_RESOLUTION_ITERATIONS && changed {
-            return Err(crate::error::CompileError::CyclicDependency(
+            errors.push(crate::error::CompileError::CyclicDependency(
                 format!(
                     "Circular type dependency detected in struct fields (resolution did not converge after {} iterations)",
                     MAX_RESOLUTION_ITERATIONS
                 ),
                 None,
             ));
+            if matches!(mode, ErrorMode::FailFast) {
+                return (self.build_type_context(), errors);
+            }
         }
 
         // Third pass: infer return types for functions with Void return type
@@ -353,198 +416,22 @@ impl TypeChecker {
         }
 
         // Fourth pass: type check function bodies
-        for declaration in &program.declarations {
-            self.check_declaration(declaration)?;
-        }
-
-        // Build TypeContext from collected type information
-        Ok(self.build_type_context())
-    }
-
-    /// Check a program and collect ALL errors (for LSP diagnostics)
-    pub fn check_program_collect_errors(
-        &mut self,
-        program: &Program,
-    ) -> (TypeContext, Vec<crate::error::CompileError>) {
-        let mut errors: Vec<crate::error::CompileError> = Vec::new();
-
-        // First pass: collect all type definitions and function signatures
-        // Continue past declaration errors to collect as much as possible
-        for declaration in program.declarations.iter() {
-            if let Err(e) = self.collect_declaration_types(declaration) {
-                errors.push(e);
-            }
-        }
-
-        // Second pass: resolve Generic types to Struct types in struct fields
-        let mut changed = true;
-        let mut iterations = 0;
-        const MAX_RESOLUTION_ITERATIONS: usize = 100;
-        while changed && iterations < MAX_RESOLUTION_ITERATIONS {
-            changed = false;
-            iterations += 1;
-
-            let struct_names: Vec<String> = self
-                .type_store
-                .borrow()
-                .get_all_structs()
-                .keys()
-                .cloned()
-                .collect();
-            for struct_name in struct_names {
-                let resolved_fields: Option<Vec<(String, AstType)>> = {
-                    let type_store = self.type_store.borrow();
-                    let struct_info = type_store.get_struct(&struct_name);
-                    struct_info.map(|info| {
-                        info.fields
-                            .iter()
-                            .map(|(name, field_type)| {
-                                let resolved = self.resolve_generic_to_struct(field_type);
-                                if &resolved != field_type {
-                                    changed = true;
-                                }
-                                (name.clone(), resolved)
-                            })
-                            .collect()
-                    })
-                };
-                if let Some(fields) = resolved_fields {
-                    let existing = self.type_store.borrow().get_struct(&struct_name).cloned();
-                    if let Some(mut info) = existing {
-                        info.fields = fields;
-                        info.rebuild_index();
-                        self.type_store
-                            .borrow_mut()
-                            .register_struct(&struct_name, info);
+        let decl_iter: Box<dyn Iterator<Item = &Declaration>> = match &mode {
+            ErrorMode::CollectForMain(n) => Box::new(program.declarations.iter().take(*n)),
+            _ => Box::new(program.declarations.iter()),
+        };
+        for declaration in decl_iter {
+            match self.check_declaration(declaration) {
+                Ok(()) => {}
+                Err(e) => match &mode {
+                    ErrorMode::FailFast => {
+                        errors.push(e);
+                        return (self.build_type_context(), errors);
                     }
-                }
-            }
-        }
-        if iterations >= MAX_RESOLUTION_ITERATIONS && changed {
-            errors.push(crate::error::CompileError::CyclicDependency(
-                format!(
-                    "Circular type dependency detected in struct fields (resolution did not converge after {} iterations)",
-                    MAX_RESOLUTION_ITERATIONS
-                ),
-                None,
-            ));
-        }
-
-        // Third pass: infer return types for functions with Void return type
-        for declaration in &program.declarations {
-            if let Declaration::Function(func) = declaration {
-                if func.return_type == AstType::Void && !func.body.is_empty() {
-                    if let Ok(inferred_type) = self.infer_function_return_type(func) {
-                        let existing_sig =
-                            self.type_store.borrow().get_function(&func.name).cloned();
-                        if let Some(mut sig) = existing_sig {
-                            sig.return_type = inferred_type;
-                            self.type_store
-                                .borrow_mut()
-                                .register_function(&func.name, sig);
-                        }
+                    _ => {
+                        errors.push(e);
                     }
-                }
-            }
-        }
-
-        // Fourth pass: type check function bodies — collect all errors
-        for declaration in &program.declarations {
-            if let Err(e) = self.check_declaration(declaration) {
-                errors.push(e);
-            }
-        }
-
-        (self.build_type_context(), errors)
-    }
-
-    /// Like `check_program_collect_errors`, but only reports errors from the first
-    /// `main_decl_count` declarations. Passes 1-3 still run on the full merged program
-    /// so imported types are available, but pass 4 skips imported declarations.
-    pub fn check_program_collect_errors_for_main(
-        &mut self,
-        program: &Program,
-        main_decl_count: usize,
-    ) -> (TypeContext, Vec<crate::error::CompileError>) {
-        let mut errors: Vec<crate::error::CompileError> = Vec::new();
-
-        for declaration in program.declarations.iter() {
-            let _ = self.collect_declaration_types(declaration);
-        }
-
-        let mut changed = true;
-        let mut iterations = 0;
-        const MAX_RESOLUTION_ITERATIONS: usize = 100;
-        while changed && iterations < MAX_RESOLUTION_ITERATIONS {
-            changed = false;
-            iterations += 1;
-
-            let struct_names: Vec<String> = self
-                .type_store
-                .borrow()
-                .get_all_structs()
-                .keys()
-                .cloned()
-                .collect();
-            for struct_name in struct_names {
-                let resolved_fields: Option<Vec<(String, AstType)>> = {
-                    let type_store = self.type_store.borrow();
-                    let struct_info = type_store.get_struct(&struct_name);
-                    struct_info.map(|info| {
-                        info.fields
-                            .iter()
-                            .map(|(name, field_type)| {
-                                let resolved = self.resolve_generic_to_struct(field_type);
-                                if &resolved != field_type {
-                                    changed = true;
-                                }
-                                (name.clone(), resolved)
-                            })
-                            .collect()
-                    })
-                };
-                if let Some(fields) = resolved_fields {
-                    let existing = self.type_store.borrow().get_struct(&struct_name).cloned();
-                    if let Some(mut info) = existing {
-                        info.fields = fields;
-                        info.rebuild_index();
-                        self.type_store
-                            .borrow_mut()
-                            .register_struct(&struct_name, info);
-                    }
-                }
-            }
-        }
-        if iterations >= MAX_RESOLUTION_ITERATIONS && changed {
-            errors.push(crate::error::CompileError::CyclicDependency(
-                format!(
-                    "Circular type dependency detected in struct fields (resolution did not converge after {} iterations)",
-                    MAX_RESOLUTION_ITERATIONS
-                ),
-                None,
-            ));
-        }
-
-        for declaration in &program.declarations {
-            if let Declaration::Function(func) = declaration {
-                if func.return_type == AstType::Void && !func.body.is_empty() {
-                    if let Ok(inferred_type) = self.infer_function_return_type(func) {
-                        let existing_sig =
-                            self.type_store.borrow().get_function(&func.name).cloned();
-                        if let Some(mut sig) = existing_sig {
-                            sig.return_type = inferred_type;
-                            self.type_store
-                                .borrow_mut()
-                                .register_function(&func.name, sig);
-                        }
-                    }
-                }
-            }
-        }
-
-        for declaration in program.declarations.iter().take(main_decl_count) {
-            if let Err(e) = self.check_declaration(declaration) {
-                errors.push(e);
+                },
             }
         }
 
@@ -1503,6 +1390,137 @@ mod tests {
         assert_ne!(
             point_loc.line, color_loc.line,
             "Point and Color should be on different lines"
+        );
+    }
+
+    // ========================================================================
+    // Cross-Module Forward Declaration Tests
+    // ========================================================================
+
+    #[test]
+    fn test_cross_module_struct_reference() {
+        // Simulate a module defining a struct and the main program using it.
+        // The struct from the "module" should be visible during type checking
+        // of the main program because forward declarations are extracted from
+        // all imported modules before the main type-checking passes run.
+        let module_code = "
+            Point: { x: i32, y: i32 }
+            make_point = (x: i32, y: i32) Point {
+                return Point { x: x, y: y }
+            }
+        ";
+        let main_code = "
+            main = () void {
+                p = Point { x: 10, y: 20 }
+                val: i32 = p.x
+            }
+        ";
+
+        // Parse both programs
+        let module_lexer = Lexer::new(module_code);
+        let mut module_parser = Parser::new(module_lexer);
+        let module_program = module_parser.parse_program().unwrap();
+
+        let main_lexer = Lexer::new(main_code);
+        let mut main_parser = Parser::new(main_lexer);
+        let main_program = main_parser.parse_program().unwrap();
+
+        // Pre-populate the typechecker with module types (simulates with_stdlib_modules)
+        let mut type_checker = TypeChecker::new();
+        let mut modules = std::collections::HashMap::new();
+        modules.insert("test_module".to_string(), module_program.clone());
+        type_checker.with_stdlib_modules(&modules);
+
+        // Merge: main program + module declarations
+        let mut merged = main_program;
+        for decl in module_program.declarations {
+            merged.declarations.push(decl);
+        }
+
+        // Type check should succeed because Point is known from the module
+        let result = type_checker.check_program(&merged);
+        assert!(
+            result.is_ok(),
+            "Cross-module struct reference should type-check. Error: {:?}",
+            result.err()
+        );
+    }
+
+    #[test]
+    fn test_cross_module_enum_reference() {
+        // Module defines an enum, main program uses it
+        let module_code = "
+            Status:
+                Active,
+                Inactive
+        ";
+        let main_code = "
+            main = () void {
+                s: Status = Status.Active
+            }
+        ";
+
+        let module_lexer = Lexer::new(module_code);
+        let mut module_parser = Parser::new(module_lexer);
+        let module_program = module_parser.parse_program().unwrap();
+
+        let main_lexer = Lexer::new(main_code);
+        let mut main_parser = Parser::new(main_lexer);
+        let main_program = main_parser.parse_program().unwrap();
+
+        let mut type_checker = TypeChecker::new();
+        let mut modules = std::collections::HashMap::new();
+        modules.insert("test_module".to_string(), module_program.clone());
+        type_checker.with_stdlib_modules(&modules);
+
+        let mut merged = main_program;
+        for decl in module_program.declarations {
+            merged.declarations.push(decl);
+        }
+
+        let result = type_checker.check_program(&merged);
+        assert!(
+            result.is_ok(),
+            "Cross-module enum reference should type-check. Error: {:?}",
+            result.err()
+        );
+    }
+
+    #[test]
+    fn test_cross_module_function_reference() {
+        // Module defines a function, main program calls it
+        let module_code = "
+            add = (a: i32, b: i32) i32 { return a + b }
+        ";
+        let main_code = "
+            main = () void {
+                result: i32 = add(1, 2)
+            }
+        ";
+
+        let module_lexer = Lexer::new(module_code);
+        let mut module_parser = Parser::new(module_lexer);
+        let module_program = module_parser.parse_program().unwrap();
+
+        let main_lexer = Lexer::new(main_code);
+        let mut main_parser = Parser::new(main_lexer);
+        let main_program = main_parser.parse_program().unwrap();
+
+        let mut type_checker = TypeChecker::new();
+        let mut modules = std::collections::HashMap::new();
+        modules.insert("test_module".to_string(), module_program.clone());
+        type_checker.with_stdlib_modules(&modules);
+
+        let mut merged = main_program;
+        for decl in module_program.declarations {
+            merged.declarations.push(decl);
+        }
+
+        let result = type_checker.check_program(&merged);
+        assert!(
+            result.is_ok(),
+            "Cross-module function call should type-check. Error: {:?}",
+            result.err()
         );
     }
 }

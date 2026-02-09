@@ -2,6 +2,7 @@
 
 use crate::ast::{self, Expression, Pattern};
 use crate::error::{CompileError, Result};
+use std::collections::HashMap;
 
 use super::values::*;
 use super::ComptimeInterpreter;
@@ -40,9 +41,9 @@ impl ComptimeInterpreter {
                 self.evaluate_binary_op(left_val, op, right_val, span)
             }
 
-            Expression::FunctionCall { name, args, .. } => {
-                self.evaluate_function_call(name, args, span)
-            }
+            Expression::FunctionCall {
+                module, name, args, ..
+            } => self.evaluate_function_call(module.as_deref(), name, args, span),
 
             Expression::ArrayLiteral(elements) => {
                 let values: Result<Vec<_>> = elements
@@ -138,6 +139,19 @@ impl ComptimeInterpreter {
                     }
                 }
                 Ok(ComptimeValue::String(result))
+            }
+
+            // Struct literal: MyStruct { field1: val1, field2: val2 }
+            Expression::StructLiteral { name, fields } => {
+                let mut field_values = HashMap::new();
+                for (field_name, field_expr) in fields {
+                    let val = self.evaluate_expression(field_expr, span.clone())?;
+                    field_values.insert(field_name.clone(), val);
+                }
+                Ok(ComptimeValue::Struct {
+                    name: name.clone(),
+                    fields: field_values,
+                })
             }
 
             Expression::Range {

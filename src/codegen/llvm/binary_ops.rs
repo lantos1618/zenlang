@@ -418,32 +418,50 @@ impl<'ctx> LLVMCompiler<'ctx> {
         Ok(result.into())
     }
 
+    /// Generic comparison operation on normalized numeric operands.
+    /// If `zext_result` is true, zero-extends the i1 result to i64.
+    fn compile_comparison(
+        &mut self,
+        left: BasicValueEnum<'ctx>,
+        right: BasicValueEnum<'ctx>,
+        int_pred: IntPredicate,
+        float_pred: FloatPredicate,
+        name: &str,
+        zext_result: bool,
+    ) -> Result<BasicValueEnum<'ctx>, CompileError> {
+        let result = match self.normalize_numeric_operands(left, right)? {
+            NumericOperands::Integers(l, r) => {
+                self.builder.build_int_compare(int_pred, l, r, name)?
+            }
+            NumericOperands::Floats(l, r) => {
+                self.builder.build_float_compare(float_pred, l, r, name)?
+            }
+        };
+        if zext_result {
+            let zext_name = format!("zext_{}", name.trim_end_matches("tmp"));
+            let zext =
+                self.builder
+                    .build_int_z_extend(result, self.context.i64_type(), &zext_name)?;
+            Ok(zext.into())
+        } else {
+            Ok(result.into())
+        }
+    }
+
     fn compile_less_than(
         &mut self,
         left: BasicValueEnum<'ctx>,
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        match self.normalize_numeric_operands(left, right)? {
-            NumericOperands::Integers(l, r) => {
-                let result = self
-                    .builder
-                    .build_int_compare(IntPredicate::SLT, l, r, "lttmp")?;
-                // Zero-extend i1 to i64 for test compatibility
-                let zext =
-                    self.builder
-                        .build_int_z_extend(result, self.context.i64_type(), "zext_lt")?;
-                Ok(zext.into())
-            }
-            NumericOperands::Floats(l, r) => {
-                let result =
-                    self.builder
-                        .build_float_compare(FloatPredicate::OLT, l, r, "lttmp")?;
-                let zext =
-                    self.builder
-                        .build_int_z_extend(result, self.context.i64_type(), "zext_lt")?;
-                Ok(zext.into())
-            }
-        }
+        // Zero-extend i1 to i64 for test compatibility
+        self.compile_comparison(
+            left,
+            right,
+            IntPredicate::SLT,
+            FloatPredicate::OLT,
+            "lttmp",
+            true,
+        )
     }
 
     fn compile_greater_than(
@@ -451,20 +469,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
         left: BasicValueEnum<'ctx>,
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        match self.normalize_numeric_operands(left, right)? {
-            NumericOperands::Integers(l, r) => {
-                let result = self
-                    .builder
-                    .build_int_compare(IntPredicate::SGT, l, r, "gttmp")?;
-                Ok(result.into())
-            }
-            NumericOperands::Floats(l, r) => {
-                let result =
-                    self.builder
-                        .build_float_compare(FloatPredicate::OGT, l, r, "gttmp")?;
-                Ok(result.into())
-            }
-        }
+        self.compile_comparison(
+            left,
+            right,
+            IntPredicate::SGT,
+            FloatPredicate::OGT,
+            "gttmp",
+            false,
+        )
     }
 
     fn compile_less_than_equals(
@@ -472,20 +484,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
         left: BasicValueEnum<'ctx>,
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        match self.normalize_numeric_operands(left, right)? {
-            NumericOperands::Integers(l, r) => {
-                let result = self
-                    .builder
-                    .build_int_compare(IntPredicate::SLE, l, r, "letmp")?;
-                Ok(result.into())
-            }
-            NumericOperands::Floats(l, r) => {
-                let result =
-                    self.builder
-                        .build_float_compare(FloatPredicate::OLE, l, r, "letmp")?;
-                Ok(result.into())
-            }
-        }
+        self.compile_comparison(
+            left,
+            right,
+            IntPredicate::SLE,
+            FloatPredicate::OLE,
+            "letmp",
+            false,
+        )
     }
 
     fn compile_greater_than_equals(
@@ -493,20 +499,14 @@ impl<'ctx> LLVMCompiler<'ctx> {
         left: BasicValueEnum<'ctx>,
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        match self.normalize_numeric_operands(left, right)? {
-            NumericOperands::Integers(l, r) => {
-                let result = self
-                    .builder
-                    .build_int_compare(IntPredicate::SGE, l, r, "getmp")?;
-                Ok(result.into())
-            }
-            NumericOperands::Floats(l, r) => {
-                let result =
-                    self.builder
-                        .build_float_compare(FloatPredicate::OGE, l, r, "getmp")?;
-                Ok(result.into())
-            }
-        }
+        self.compile_comparison(
+            left,
+            right,
+            IntPredicate::SGE,
+            FloatPredicate::OGE,
+            "getmp",
+            false,
+        )
     }
 
     fn compile_string_concat(
@@ -559,11 +559,21 @@ impl<'ctx> LLVMCompiler<'ctx> {
     }
 
     // Bitwise operations
-    fn compile_bitwise_and(
+    fn compile_bitwise_binop<F>(
         &mut self,
         left: BasicValueEnum<'ctx>,
         right: BasicValueEnum<'ctx>,
-    ) -> Result<BasicValueEnum<'ctx>, CompileError> {
+        op: F,
+        name: &str,
+    ) -> Result<BasicValueEnum<'ctx>, CompileError>
+    where
+        F: FnOnce(
+            &mut Self,
+            IntValue<'ctx>,
+            IntValue<'ctx>,
+            &str,
+        ) -> Result<IntValue<'ctx>, CompileError>,
+    {
         if !left.is_int_value() || !right.is_int_value() {
             return Err(CompileError::TypeMismatch {
                 expected: "int".to_string(),
@@ -573,8 +583,21 @@ impl<'ctx> LLVMCompiler<'ctx> {
         }
 
         let (l, r) = self.normalize_int_widths(left.into_int_value(), right.into_int_value())?;
-        let result = self.builder.build_and(l, r, "bitand")?;
+        let result = op(self, l, r, name)?;
         Ok(result.into())
+    }
+
+    fn compile_bitwise_and(
+        &mut self,
+        left: BasicValueEnum<'ctx>,
+        right: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, CompileError> {
+        self.compile_bitwise_binop(
+            left,
+            right,
+            |s, l, r, name| s.builder.build_and(l, r, name).map_err(CompileError::from),
+            "bitand",
+        )
     }
 
     fn compile_bitwise_or(
@@ -582,17 +605,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
         left: BasicValueEnum<'ctx>,
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        if !left.is_int_value() || !right.is_int_value() {
-            return Err(CompileError::TypeMismatch {
-                expected: "int".to_string(),
-                found: "non-integer types".to_string(),
-                span: self.current_span.clone(),
-            });
-        }
-
-        let (l, r) = self.normalize_int_widths(left.into_int_value(), right.into_int_value())?;
-        let result = self.builder.build_or(l, r, "bitor")?;
-        Ok(result.into())
+        self.compile_bitwise_binop(
+            left,
+            right,
+            |s, l, r, name| s.builder.build_or(l, r, name).map_err(CompileError::from),
+            "bitor",
+        )
     }
 
     fn compile_bitwise_xor(
@@ -600,17 +618,12 @@ impl<'ctx> LLVMCompiler<'ctx> {
         left: BasicValueEnum<'ctx>,
         right: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, CompileError> {
-        if !left.is_int_value() || !right.is_int_value() {
-            return Err(CompileError::TypeMismatch {
-                expected: "int".to_string(),
-                found: "non-integer types".to_string(),
-                span: self.current_span.clone(),
-            });
-        }
-
-        let (l, r) = self.normalize_int_widths(left.into_int_value(), right.into_int_value())?;
-        let result = self.builder.build_xor(l, r, "bitxor")?;
-        Ok(result.into())
+        self.compile_bitwise_binop(
+            left,
+            right,
+            |s, l, r, name| s.builder.build_xor(l, r, name).map_err(CompileError::from),
+            "bitxor",
+        )
     }
 
     fn compile_shift_left(

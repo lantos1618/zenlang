@@ -312,6 +312,7 @@ impl<'ctx> Compiler<'ctx> {
                 right: Box::new(self.process_expression_comptime(*right, interpreter)?),
             }),
             Expression::FunctionCall {
+                module,
                 name,
                 type_args,
                 args,
@@ -322,6 +323,7 @@ impl<'ctx> Compiler<'ctx> {
                     processed_args.push(self.process_expression_comptime(arg, interpreter)?);
                 }
                 Ok(Expression::FunctionCall {
+                    module: module.clone(),
                     name: name.clone(),
                     type_args: type_args.clone(),
                     args: processed_args,

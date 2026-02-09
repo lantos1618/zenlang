@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::well_known::well_known;
+use crate::intrinsics::well_known;
 
 use super::fields::{AstFields, FieldValue};
 
@@ -11,15 +11,6 @@ use super::fields::{AstFields, FieldValue};
 // TYPE NAME UTILITIES
 // Centralized helpers to avoid string parsing duplication across codebase
 // ============================================================================
-
-/// Strip generic type parameters from a type string.
-/// Examples: "HashMap<K, V>" -> "HashMap", "Vec<T>" -> "Vec", "i32" -> "i32"
-///
-/// This is used in 17+ places across the codebase to get base type names.
-#[inline]
-pub fn strip_generic_params(type_str: &str) -> &str {
-    type_str.split('<').next().unwrap_or(type_str)
-}
 
 /// Check if a string looks like a type name (starts with uppercase).
 /// Used for heuristic type detection in LSP and parsing.

@@ -2,8 +2,8 @@
 
 use crate::ast::{AstType, Expression};
 use crate::error::Result;
+use crate::intrinsics::well_known;
 use crate::typechecker::TypeChecker;
-use crate::well_known::well_known;
 
 /// Infer the type of an enum literal (e.g., .Some(x), .None)
 pub fn infer_enum_literal_type(
@@ -63,7 +63,13 @@ pub fn infer_enum_literal_type(
                     )
                 })?
                 .to_string(),
-            type_args: vec![ok_type, crate::ast::resolve_string_struct_type()],
+            type_args: vec![
+                ok_type,
+                AstType::Generic {
+                    name: "E".to_string(),
+                    type_args: vec![],
+                },
+            ],
         })
     } else if wk.is_err(variant) {
         let err_type = if let Some(p) = payload {
@@ -179,7 +185,13 @@ pub fn infer_enum_variant_type(
             };
             return Ok(AstType::Generic {
                 name: enum_type_name,
-                type_args: vec![ok_type, crate::ast::resolve_string_struct_type()],
+                type_args: vec![
+                    ok_type,
+                    AstType::Generic {
+                        name: "E".to_string(),
+                        type_args: vec![],
+                    },
+                ],
             });
         } else if wk.is_err(variant) {
             let err_type = if let Some(p) = payload {

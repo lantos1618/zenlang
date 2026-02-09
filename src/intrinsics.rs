@@ -12,24 +12,25 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 // ============================================================================
-// Built-in Modules (always available without explicit import)
+// Intrinsic Module Recognition
 // ============================================================================
 
-/// Modules that are always available without explicit import
-pub const BUILTIN_MODULES: &[(&str, u64)] = &[("io", 1), ("core", 3), ("compiler", 6)];
+/// The prefix used for raw intrinsic calls (e.g., `@builtin.raw_allocate`).
+pub const INTRINSIC_PREFIX: &str = "@builtin";
 
-/// Check if a name is a built-in module
-pub fn is_builtin_module(name: &str) -> bool {
-    BUILTIN_MODULES.iter().any(|(n, _)| *n == name)
+/// The stdlib module that wraps raw intrinsics (stdlib/compiler.zen).
+pub const COMPILER_MODULE: &str = "compiler";
+
+/// Check if a module name routes directly to raw compiler intrinsics.
+/// Only `@builtin` — the raw intrinsic prefix used in stdlib/compiler.zen.
+pub fn is_intrinsic_module(name: &str) -> bool {
+    name == INTRINSIC_PREFIX
 }
 
-/// Get module ID for codegen
-#[allow(dead_code)]
-pub fn module_id(name: &str) -> Option<u64> {
-    BUILTIN_MODULES
-        .iter()
-        .find(|(n, _)| *n == name)
-        .map(|(_, id)| *id)
+/// Check if a module dispatches to compiler intrinsics (either raw `@builtin`
+/// or the stdlib `compiler` bridge that wraps them).
+pub fn is_compiler_intrinsic_module(name: &str) -> bool {
+    name == INTRINSIC_PREFIX || name == COMPILER_MODULE
 }
 
 // ============================================================================
@@ -180,7 +181,6 @@ fn build_intrinsics() -> HashMap<&'static str, Intrinsic> {
 
     // -- Type conversions -------------------------------------------------
     intrinsic!(m, "cast",            ("value" => AstType::I64, "target_type" => AstType::I64) -> AstType::I64, "Cast a value to a numeric type: cast(value, i64)", "Convert");
-    intrinsic!(m, "builtin.cast",    ("value" => AstType::I64, "target_type" => AstType::I64) -> AstType::I64, "Cast a value to a numeric type (builtin form)", "Convert");
     intrinsic!(m, "trunc_f64_i64",  ("value" => AstType::F64) -> AstType::I64, "Truncate f64 to i64", "Convert");
     intrinsic!(m, "trunc_f32_i32",  ("value" => AstType::F32) -> AstType::I32, "Truncate f32 to i32", "Convert");
     intrinsic!(m, "sitofp_i64_f64", ("value" => AstType::I64) -> AstType::F64, "Convert signed i64 to f64", "Convert");
@@ -231,4 +231,283 @@ fn build_intrinsics() -> HashMap<&'static str, Intrinsic> {
     intrinsic!(m, "set_payload",      ("enum_ptr" => ptr.clone(), "payload" => ptr) -> AstType::Void, "Copies payload into enum", "Enum");
 
     m
+}
+
+// ============================================================================
+// Well-Known Types (types with special compiler semantics)
+// ============================================================================
+
+/// Well-known types that have special compiler semantics.
+///
+/// IMPORTANT: Only types that REQUIRE compiler support belong here:
+/// - Option/Result: Pattern exhaustiveness, ? operator, .raise()
+/// - Ptr types: Pointer codegen, dereference, null checks
+///
+/// Regular stdlib types (Vec, HashMap, String, Range, etc.) do NOT belong here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WellKnownType {
+    /// Option<T> - nullable type (pattern matching, ? operator)
+    Option,
+    /// Result<T, E> - error handling type (pattern matching, .raise())
+    Result,
+    /// Ptr<T> - immutable pointer (dereference codegen)
+    Ptr,
+    /// MutPtr<T> - mutable pointer (dereference codegen)
+    MutPtr,
+    /// RawPtr<T> - raw/unsafe pointer (FFI, unsafe codegen)
+    RawPtr,
+}
+
+/// Well-known enum variants
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WellKnownVariant {
+    /// Option::Some(T)
+    Some,
+    /// Option::None
+    None,
+    /// Result::Ok(T)
+    Ok,
+    /// Result::Err(E)
+    Err,
+}
+
+/// Registry of well-known types and their variants
+#[derive(Debug, Clone)]
+pub struct WellKnownTypes {
+    /// Map from type name to well-known type
+    types: HashMap<String, WellKnownType>,
+    /// Map from variant name to (parent type, variant)
+    variants: HashMap<String, (WellKnownType, WellKnownVariant)>,
+}
+
+impl WellKnownTypes {
+    /// Create a new registry with all well-known types registered.
+    pub fn new() -> Self {
+        let mut wkt = Self {
+            types: HashMap::with_capacity(5),
+            variants: HashMap::with_capacity(4),
+        };
+
+        wkt.types.insert("Option".into(), WellKnownType::Option);
+        wkt.types.insert("Result".into(), WellKnownType::Result);
+        wkt.types.insert("Ptr".into(), WellKnownType::Ptr);
+        wkt.types.insert("MutPtr".into(), WellKnownType::MutPtr);
+        wkt.types.insert("RawPtr".into(), WellKnownType::RawPtr);
+
+        wkt.variants.insert(
+            "Some".into(),
+            (WellKnownType::Option, WellKnownVariant::Some),
+        );
+        wkt.variants.insert(
+            "None".into(),
+            (WellKnownType::Option, WellKnownVariant::None),
+        );
+        wkt.variants
+            .insert("Ok".into(), (WellKnownType::Result, WellKnownVariant::Ok));
+        wkt.variants
+            .insert("Err".into(), (WellKnownType::Result, WellKnownVariant::Err));
+
+        wkt
+    }
+
+    // ========================================================================
+    // Type checks
+    // ========================================================================
+
+    /// Get the well-known type for a name, if any
+    #[inline]
+    pub fn get_type(&self, name: &str) -> Option<WellKnownType> {
+        self.types.get(name).copied()
+    }
+
+    /// Check if a type name is Option
+    #[inline]
+    pub fn is_option(&self, name: &str) -> bool {
+        self.get_type(name) == Some(WellKnownType::Option)
+    }
+
+    /// Check if a type name is Result
+    #[inline]
+    pub fn is_result(&self, name: &str) -> bool {
+        self.get_type(name) == Some(WellKnownType::Result)
+    }
+
+    /// Check if a type name is any pointer type (Ptr, MutPtr, RawPtr)
+    #[inline]
+    pub fn is_ptr(&self, name: &str) -> bool {
+        matches!(
+            self.get_type(name),
+            Some(WellKnownType::Ptr | WellKnownType::MutPtr | WellKnownType::RawPtr)
+        )
+    }
+
+    /// Check if a type name is an immutable pointer (Ptr)
+    #[inline]
+    pub fn is_immutable_ptr(&self, name: &str) -> bool {
+        self.get_type(name) == Some(WellKnownType::Ptr)
+    }
+
+    /// Check if a type name is a mutable pointer (MutPtr)
+    #[inline]
+    pub fn is_mutable_ptr(&self, name: &str) -> bool {
+        self.get_type(name) == Some(WellKnownType::MutPtr)
+    }
+
+    /// Check if a type name is a raw pointer (RawPtr)
+    #[inline]
+    pub fn is_raw_ptr(&self, name: &str) -> bool {
+        self.get_type(name) == Some(WellKnownType::RawPtr)
+    }
+
+    /// Check if a type name is Option or Result (types with success/failure variants)
+    #[inline]
+    #[allow(dead_code)]
+    pub fn is_option_or_result(&self, name: &str) -> bool {
+        matches!(
+            self.get_type(name),
+            Some(WellKnownType::Option | WellKnownType::Result)
+        )
+    }
+
+    // ========================================================================
+    // Variant checks
+    // ========================================================================
+
+    /// Get the well-known variant info for a name, if any
+    #[inline]
+    pub fn get_variant(&self, name: &str) -> Option<(WellKnownType, WellKnownVariant)> {
+        self.variants.get(name).copied()
+    }
+
+    /// Check if a variant name belongs to Option (Some or None)
+    #[inline]
+    pub fn is_option_variant(&self, name: &str) -> bool {
+        matches!(self.get_variant(name), Some((WellKnownType::Option, _)))
+    }
+
+    /// Check if a variant name belongs to Result (Ok or Err)
+    #[inline]
+    pub fn is_result_variant(&self, name: &str) -> bool {
+        matches!(self.get_variant(name), Some((WellKnownType::Result, _)))
+    }
+
+    /// Check if a variant name is Some
+    #[inline]
+    pub fn is_some(&self, name: &str) -> bool {
+        matches!(self.get_variant(name), Some((_, WellKnownVariant::Some)))
+    }
+
+    /// Check if a variant name is None
+    #[inline]
+    pub fn is_none(&self, name: &str) -> bool {
+        matches!(self.get_variant(name), Some((_, WellKnownVariant::None)))
+    }
+
+    /// Check if a variant name is Ok
+    #[inline]
+    pub fn is_ok(&self, name: &str) -> bool {
+        matches!(self.get_variant(name), Some((_, WellKnownVariant::Ok)))
+    }
+
+    /// Check if a variant name is Err
+    #[inline]
+    pub fn is_err(&self, name: &str) -> bool {
+        matches!(self.get_variant(name), Some((_, WellKnownVariant::Err)))
+    }
+
+    /// Get the parent type for a variant
+    #[inline]
+    pub fn get_variant_parent(&self, variant_name: &str) -> Option<WellKnownType> {
+        self.get_variant(variant_name).map(|(parent, _)| parent)
+    }
+
+    /// Get the canonical type name for a variant's parent
+    #[inline]
+    pub fn get_variant_parent_name(&self, variant_name: &str) -> Option<&'static str> {
+        self.get_variant_parent(variant_name).map(|t| match t {
+            WellKnownType::Option => "Option",
+            WellKnownType::Result => "Result",
+            WellKnownType::Ptr => "Ptr",
+            WellKnownType::MutPtr => "MutPtr",
+            WellKnownType::RawPtr => "RawPtr",
+        })
+    }
+
+    // ========================================================================
+    // Canonical name getters
+    // ========================================================================
+
+    #[inline]
+    pub fn option_name(&self) -> &'static str {
+        "Option"
+    }
+
+    #[inline]
+    pub fn result_name(&self) -> &'static str {
+        "Result"
+    }
+
+    #[inline]
+    pub fn ptr_name(&self) -> &'static str {
+        "Ptr"
+    }
+
+    #[inline]
+    pub fn mut_ptr_name(&self) -> &'static str {
+        "MutPtr"
+    }
+
+    #[inline]
+    pub fn raw_ptr_name(&self) -> &'static str {
+        "RawPtr"
+    }
+
+    // ========================================================================
+    // Variant name getters
+    // ========================================================================
+
+    #[inline]
+    pub fn some_name(&self) -> &'static str {
+        "Some"
+    }
+
+    #[inline]
+    pub fn none_name(&self) -> &'static str {
+        "None"
+    }
+
+    #[inline]
+    pub fn ok_name(&self) -> &'static str {
+        "Ok"
+    }
+
+    #[inline]
+    pub fn err_name(&self) -> &'static str {
+        "Err"
+    }
+
+    /// Get discriminant tag for a variant (for codegen)
+    #[inline]
+    #[allow(dead_code)]
+    pub fn get_variant_tag(&self, variant_name: &str) -> Option<u64> {
+        match self.get_variant(variant_name) {
+            Some((_, WellKnownVariant::Some)) => Some(0),
+            Some((_, WellKnownVariant::Ok)) => Some(0),
+            Some((_, WellKnownVariant::None)) => Some(1),
+            Some((_, WellKnownVariant::Err)) => Some(1),
+            None => None,
+        }
+    }
+}
+
+impl Default for WellKnownTypes {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Global static instance for use in parser and other contexts
+pub fn well_known() -> &'static WellKnownTypes {
+    static INSTANCE: OnceLock<WellKnownTypes> = OnceLock::new();
+    INSTANCE.get_or_init(WellKnownTypes::new)
 }
