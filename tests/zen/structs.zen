@@ -1,0 +1,16 @@
+{ io } = std
+
+Person: {
+    name: StaticString,
+    age: i32,
+}
+
+main = () i32 {
+    p = Person {
+        name: "Alice",
+        age: 30
+    }
+    io.println("${p.name}")
+    io.println("${p.age}")
+    return 0
+}

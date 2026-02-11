@@ -1,0 +1,17 @@
+{ io } = std
+
+double = (x: i32) i32 {
+    return x * 2
+}
+
+add_ten = (x: i32) i32 {
+    return x + 10
+}
+
+main = () i32 {
+    result = 5.double().add_ten()
+    io.println("${result}")
+    chained = 3.double().double().add_ten()
+    io.println("${chained}")
+    return 0
+}

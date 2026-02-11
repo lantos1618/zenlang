@@ -1,0 +1,15 @@
+{ io } = std
+
+square = (x: i32) i32 {
+    return x * x
+}
+
+sum_of_squares = (a: i32, b: i32) i32 {
+    return square(a) + square(b)
+}
+
+main = () i32 {
+    io.println("${square(5)}")
+    io.println("${sum_of_squares(3, 4)}")
+    return 0
+}

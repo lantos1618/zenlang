@@ -1,0 +1,12 @@
+{ io } = std
+
+main = () i32 {
+    i ::= 0
+    loop(() {
+        i >= 5 ? { break }
+        io.print("${i} ")
+        i = i + 1
+    })
+    io.println("")
+    return 0
+}

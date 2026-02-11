@@ -1,330 +1,145 @@
-//! Declaration nodes in the AST
-
-use std::collections::HashMap;
-
-use super::expressions::Expression;
-use super::fields::{
-    function_arg_field, methods_field, protocol_methods_field, type_params_fields, AstFields,
-    FieldValue,
-};
-use super::statements::Statement;
-use super::types::{AstType, EnumVariant, TypeParameter};
+use crate::ast::expressions::Expression;
+use crate::ast::types::{AstType, Param};
 use crate::error::Span;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Function {
-    pub name: String,
-    pub type_params: Vec<TypeParameter>,
-    pub args: Vec<(String, AstType)>,
-    pub return_type: AstType,
-    pub body: Vec<Statement>,
-    pub is_varargs: bool, // For variadic functions like printf
-    pub is_public: bool,  // true if marked with 'pub' keyword
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypeAlias {
-    pub name: String,
-    pub type_params: Vec<TypeParameter>,
-    pub target_type: AstType,
-    pub span: Option<Span>,
-}
-
-// For C FFI support
-#[derive(Debug, Clone, PartialEq)]
-pub struct ExternalFunction {
-    pub name: String,
-    pub args: Vec<AstType>, // Just types, no names for external functions
-    pub return_type: AstType,
-    pub is_varargs: bool, // For functions like printf
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct StructDefinition {
-    pub name: String,
-    pub type_params: Vec<TypeParameter>,
-    pub fields: Vec<StructField>,
-    pub methods: Vec<Function>,
-    pub span: Option<Span>,
-}
-
+/// A field in a struct definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub name: String,
-    pub type_: AstType,
-    pub is_mutable: bool,
-    pub default_value: Option<Expression>,
+    pub ty: AstType,
+    pub default: Option<Expression>,
+    pub mutable: bool,
+    pub span: Span,
 }
 
+/// A variant in an enum definition.
 #[derive(Debug, Clone, PartialEq)]
-pub struct EnumDefinition {
+pub struct EnumVariant {
     pub name: String,
-    pub type_params: Vec<TypeParameter>,
-    pub variants: Vec<EnumVariant>,
-    pub methods: Vec<Function>,
-    pub required_traits: Vec<String>, // Traits that all variants must implement (.requires())
-    pub span: Option<Span>,
+    pub payload: Option<AstType>,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Parameter {
-    pub name: String,
-    pub type_: AstType,
-    pub is_mutable: bool,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct BehaviorDefinition {
-    pub name: String,
-    pub type_params: Vec<TypeParameter>,
-    pub methods: Vec<BehaviorMethod>,
-}
-
+/// A method signature in a behavior (trait) definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorMethod {
     pub name: String,
-    pub params: Vec<Parameter>,
-    pub return_type: AstType,
+    pub params: Vec<Param>,
+    pub return_type: Option<AstType>,
+    pub default_body: Option<Expression>,
+    pub span: Span,
 }
 
+/// Generic type parameter, optionally constrained by a behavior.
+/// e.g. `T` or `T: Serializable`
 #[derive(Debug, Clone, PartialEq)]
-pub struct TraitDefinition {
+pub struct TypeParam {
     pub name: String,
-    pub type_params: Vec<TypeParameter>,
-    pub methods: Vec<TraitMethod>,
-    pub span: Option<Span>,
+    pub constraint: Option<String>,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TraitMethod {
-    pub name: String,
-    pub params: Vec<Parameter>,
-    pub return_type: AstType,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TraitImplementation {
-    pub type_name: String,
-    pub trait_name: String,
-    pub type_params: Vec<TypeParameter>,
-    pub methods: Vec<Function>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TraitRequirement {
-    pub type_name: String,
-    pub trait_name: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ImplBlock {
-    pub type_name: String,
-    pub type_params: Vec<TypeParameter>,
-    pub methods: Vec<Function>,
-}
-
+/// Declaration — top-level constructs in a Zen program.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Declaration {
-    Function(Function),
-    ExternalFunction(ExternalFunction),
-    Struct(StructDefinition),
-    Enum(EnumDefinition),
-    Behavior(BehaviorDefinition),
-    Trait(TraitDefinition),
-    TraitImplementation(TraitImplementation),
-    TraitRequirement(TraitRequirement),
-    ImplBlock(ImplBlock),
-    ComptimeBlock(Vec<Statement>),
-    Constant {
+    /// Named function: `add = (a: i32, b: i32) i32 { ... }`
+    /// Generic function: `identity<T> = (value: T) T { ... }`
+    Function {
         name: String,
-        value: Expression,
-        type_: Option<AstType>,
-        span: Option<Span>,
+        type_params: Vec<TypeParam>,
+        params: Vec<Param>,
+        return_type: Option<AstType>,
+        body: Expression,
+        public: bool,
+        span: Span,
     },
-    ModuleImport {
-        alias: String,
-        module_path: String,
-        span: Option<Span>,
+
+    /// Method: `Point.distance = (self: Ptr<Point>, other: Ptr<Point>) f64 { ... }`
+    Method {
+        type_name: String,
+        method_name: String,
+        type_params: Vec<TypeParam>,
+        params: Vec<Param>,
+        return_type: Option<AstType>,
+        body: Expression,
+        public: bool,
+        span: Span,
     },
-    Export {
-        symbols: Vec<String>,
+
+    /// Struct definition: `Point: { x: f64, y: f64 }`
+    Struct {
+        name: String,
+        type_params: Vec<TypeParam>,
+        fields: Vec<StructField>,
+        public: bool,
+        span: Span,
     },
-    TypeAlias(TypeAlias),
+
+    /// Enum definition: `Color: Red, Green, Blue`
+    Enum {
+        name: String,
+        type_params: Vec<TypeParam>,
+        variants: Vec<EnumVariant>,
+        public: bool,
+        span: Span,
+    },
+
+    /// Import: `{ io } = std`, `{ Channel } = std.sync.channel`
+    Import {
+        names: Vec<String>,
+        module_path: Vec<String>,
+        span: Span,
+    },
+
+    /// Behavior (trait) definition: `Serializable: behavior { ... }`
+    Behavior {
+        name: String,
+        type_params: Vec<TypeParam>,
+        methods: Vec<BehaviorMethod>,
+        span: Span,
+    },
+
+    /// Impl block: `Point.impl = { ... }` or `Collector.implements(ActorBehavior, { ... })`
+    ImplBlock {
+        type_name: String,
+        behavior: Option<String>,
+        type_args: Vec<AstType>,
+        methods: Vec<Declaration>,
+        span: Span,
+    },
+
+    /// Top-level expression (e.g. `SensorReading.requires(Serializable)`)
+    TopLevelExpr { expr: Expression, span: Span },
+
+    /// Error recovery placeholder — allows parser to continue after errors.
+    Error { span: Span },
 }
 
 impl Declaration {
-    /// Returns the variant name of this declaration as a static string.
-    pub fn variant_name(&self) -> &'static str {
+    /// Returns the span of this declaration.
+    pub fn span(&self) -> Span {
         match self {
-            Declaration::Function(_) => "Function",
-            Declaration::ExternalFunction(_) => "ExternalFunction",
-            Declaration::Struct(_) => "Struct",
-            Declaration::Enum(_) => "Enum",
-            Declaration::Behavior(_) => "Behavior",
-            Declaration::Trait(_) => "Trait",
-            Declaration::TraitImplementation(_) => "TraitImplementation",
-            Declaration::TraitRequirement(_) => "TraitRequirement",
-            Declaration::ImplBlock(_) => "ImplBlock",
-            Declaration::ComptimeBlock(_) => "ComptimeBlock",
-            Declaration::Constant { .. } => "Constant",
-            Declaration::ModuleImport { .. } => "ModuleImport",
-            Declaration::Export { .. } => "Export",
-            Declaration::TypeAlias(_) => "TypeAlias",
+            Declaration::Function { span, .. }
+            | Declaration::Method { span, .. }
+            | Declaration::Struct { span, .. }
+            | Declaration::Enum { span, .. }
+            | Declaration::Import { span, .. }
+            | Declaration::Behavior { span, .. }
+            | Declaration::ImplBlock { span, .. }
+            | Declaration::TopLevelExpr { span, .. }
+            | Declaration::Error { span, .. } => *span,
         }
     }
-}
 
-impl AstFields for Declaration {
-    fn ast_fields(&self) -> Vec<(&'static str, FieldValue)> {
+    /// Returns the name of this declaration, if it has one.
+    pub fn name(&self) -> Option<&str> {
         match self {
-            Declaration::Function(f) => vec![
-                ("name", FieldValue::String(f.name.clone())),
-                ("type_params", type_params_fields(&f.type_params)),
-                (
-                    "args",
-                    FieldValue::Array(
-                        f.args
-                            .iter()
-                            .map(|(name, ty)| function_arg_field(name, ty))
-                            .collect(),
-                    ),
-                ),
-                ("return_type", FieldValue::ty(&f.return_type)),
-                ("body", FieldValue::stmt_array(&f.body)),
-                ("is_varargs", FieldValue::Bool(f.is_varargs)),
-                ("is_public", FieldValue::Bool(f.is_public)),
-            ],
-            Declaration::ExternalFunction(ef) => vec![
-                ("name", FieldValue::String(ef.name.clone())),
-                ("args", FieldValue::type_array(&ef.args)),
-                ("return_type", FieldValue::ty(&ef.return_type)),
-                ("is_varargs", FieldValue::Bool(ef.is_varargs)),
-            ],
-            Declaration::Struct(s) => vec![
-                ("name", FieldValue::String(s.name.clone())),
-                ("type_params", type_params_fields(&s.type_params)),
-                (
-                    "fields",
-                    FieldValue::Array(
-                        s.fields
-                            .iter()
-                            .map(|f| {
-                                let mut fields = HashMap::new();
-                                fields
-                                    .insert("name".to_string(), FieldValue::String(f.name.clone()));
-                                fields.insert("field_type".to_string(), FieldValue::ty(&f.type_));
-                                fields.insert(
-                                    "is_mutable".to_string(),
-                                    FieldValue::Bool(f.is_mutable),
-                                );
-                                fields.insert(
-                                    "default_value".to_string(),
-                                    match &f.default_value {
-                                        Some(e) => FieldValue::expr(e),
-                                        None => FieldValue::Null,
-                                    },
-                                );
-                                FieldValue::Struct {
-                                    name: "StructField".to_string(),
-                                    fields,
-                                }
-                            })
-                            .collect(),
-                    ),
-                ),
-                ("methods", methods_field(&s.methods)),
-            ],
-            Declaration::Enum(e) => vec![
-                ("name", FieldValue::String(e.name.clone())),
-                ("type_params", type_params_fields(&e.type_params)),
-                (
-                    "variants",
-                    FieldValue::Array(
-                        e.variants
-                            .iter()
-                            .map(|v| {
-                                let mut fields = HashMap::new();
-                                fields
-                                    .insert("name".to_string(), FieldValue::String(v.name.clone()));
-                                fields.insert(
-                                    "payload".to_string(),
-                                    match &v.payload {
-                                        Some(t) => FieldValue::ty(t),
-                                        None => FieldValue::Null,
-                                    },
-                                );
-                                FieldValue::Struct {
-                                    name: "EnumVariant".to_string(),
-                                    fields,
-                                }
-                            })
-                            .collect(),
-                    ),
-                ),
-                ("methods", methods_field(&e.methods)),
-                (
-                    "required_traits",
-                    FieldValue::string_array(&e.required_traits),
-                ),
-            ],
-            Declaration::Behavior(b) => vec![
-                ("name", FieldValue::String(b.name.clone())),
-                ("type_params", type_params_fields(&b.type_params)),
-                (
-                    "methods",
-                    protocol_methods_field("BehaviorMethod", &b.methods),
-                ),
-            ],
-            Declaration::Trait(t) => vec![
-                ("name", FieldValue::String(t.name.clone())),
-                ("type_params", type_params_fields(&t.type_params)),
-                ("methods", protocol_methods_field("TraitMethod", &t.methods)),
-            ],
-            Declaration::TraitImplementation(ti) => vec![
-                ("type_name", FieldValue::String(ti.type_name.clone())),
-                ("trait_name", FieldValue::String(ti.trait_name.clone())),
-                ("type_params", type_params_fields(&ti.type_params)),
-                ("methods", methods_field(&ti.methods)),
-            ],
-            Declaration::TraitRequirement(tr) => vec![
-                ("type_name", FieldValue::String(tr.type_name.clone())),
-                ("trait_name", FieldValue::String(tr.trait_name.clone())),
-            ],
-            Declaration::ImplBlock(imp) => vec![
-                ("type_name", FieldValue::String(imp.type_name.clone())),
-                ("type_params", type_params_fields(&imp.type_params)),
-                ("methods", methods_field(&imp.methods)),
-            ],
-            Declaration::ComptimeBlock(stmts) => {
-                vec![("statements", FieldValue::stmt_array(stmts))]
-            }
-            Declaration::Constant {
-                name, value, type_, ..
-            } => vec![
-                ("name", FieldValue::String(name.clone())),
-                ("value", FieldValue::expr(value)),
-                (
-                    "const_type",
-                    match type_ {
-                        Some(t) => FieldValue::ty(t),
-                        None => FieldValue::Null,
-                    },
-                ),
-            ],
-            Declaration::ModuleImport {
-                alias, module_path, ..
-            } => vec![
-                ("alias", FieldValue::String(alias.clone())),
-                ("module_path", FieldValue::String(module_path.clone())),
-            ],
-            Declaration::Export { symbols } => {
-                vec![("symbols", FieldValue::string_array(symbols))]
-            }
-            Declaration::TypeAlias(ta) => vec![
-                ("name", FieldValue::String(ta.name.clone())),
-                ("type_params", type_params_fields(&ta.type_params)),
-                ("target_type", FieldValue::ty(&ta.target_type)),
-            ],
+            Declaration::Function { name, .. }
+            | Declaration::Struct { name, .. }
+            | Declaration::Enum { name, .. }
+            | Declaration::Behavior { name, .. } => Some(name),
+            Declaration::Method { method_name, .. } => Some(method_name),
+            _ => None,
         }
     }
 }

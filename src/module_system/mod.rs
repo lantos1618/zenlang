@@ -1,52 +1,19 @@
-pub mod resolver;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
 
 use crate::ast::{Declaration, Program};
-use crate::build_system::{PackageMap, PackageSource};
-use crate::error::CompileError;
-use crate::parser::Parser;
-use std::collections::HashMap;
-use std::path::PathBuf;
+use crate::error::{CompileError, FileTable, Span};
+use crate::lexer;
+use crate::parser;
 
-/// Maximum number of cached modules before eviction
-const MAX_CACHED_MODULES: usize = 200;
-
-/// Cached module entry with content hash for invalidation
-#[derive(Clone)]
-struct CachedModule {
-    program: Program,
-    content_hash: u64,
-    /// Insertion order for oldest-first eviction
-    insertion_order: u64,
-}
-
-/// Fast hash for content comparison (FNV-1a)
-fn hash_content(content: &str) -> u64 {
-    const FNV_PRIME: u64 = 0x00000100000001B3;
-    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-
-    let mut hash = FNV_OFFSET;
-    for byte in content.bytes() {
-        hash ^= byte as u64;
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-    hash
-}
-
-/// Module system for Zen language
+/// Resolved modules by canonical path.
 pub struct ModuleSystem {
-    /// Map from module paths to their cached AST with content hash
-    modules: HashMap<String, CachedModule>,
-    /// Search paths for modules
-    search_paths: Vec<PathBuf>,
-    /// Current working directory
-    #[allow(dead_code)] // Stored for future use
-    cwd: PathBuf,
-    /// Monotonic counter for insertion ordering (used for eviction)
-    insertion_counter: u64,
-    /// Stack of modules currently being loaded (for circular import detection)
-    loading_stack: Vec<String>,
-    /// Package map from build.zen (maps package names to sources)
-    package_map: Option<PackageMap>,
+    /// All loaded modules keyed by canonical path.
+    modules: HashMap<String, Program>,
+    /// Stdlib root directory.
+    stdlib_root: Option<PathBuf>,
+    /// Files currently being loaded (for circular import detection).
+    loading: HashSet<PathBuf>,
 }
 
 impl Default for ModuleSystem {
@@ -57,572 +24,522 @@ impl Default for ModuleSystem {
 
 impl ModuleSystem {
     pub fn new() -> Self {
-        let cwd = std::env::current_dir().unwrap_or_else(|e| {
-            // current_dir() can fail if the directory was deleted or permissions changed
-            // Fallback to "." but warn the user as this may cause module resolution issues
-            eprintln!(
-                "Warning: Could not determine current directory ({}), using '.' as fallback",
-                e
-            );
-            PathBuf::from(".")
-        });
-
-        let mut search_paths = vec![cwd.clone(), cwd.join("lib"), cwd.join("modules")];
-
-        // Add standard library path - check multiple locations
-        // First check if we have a local stdlib directory
-        let stdlib_path = cwd.join("stdlib");
-        if stdlib_path.exists() {
-            search_paths.push(stdlib_path);
-        }
-
-        // Also check parent directory (for when running from target/debug)
-        let parent_stdlib = cwd.parent().and_then(|p| {
-            let path = p.join("stdlib");
-            if path.exists() {
-                Some(path)
-            } else {
-                None
-            }
-        });
-        if let Some(path) = parent_stdlib {
-            search_paths.push(path);
-        }
-
-        // Add standard library path if ZEN_HOME is set
-        if let Ok(zen_home) = std::env::var("ZEN_HOME") {
-            let zen_path = PathBuf::from(zen_home);
-            search_paths.push(zen_path.join("stdlib"));
-            search_paths.push(zen_path.join("std"));
-            search_paths.push(zen_path.join("lib"));
-        }
-
-        // Also check relative to the executable (important for LSP which may run from different cwd)
-        if let Ok(exe_path) = std::env::current_exe() {
-            if let Some(exe_dir) = exe_path.parent() {
-                // Check exe_dir/../../stdlib (for target/debug/zen -> zenlang/stdlib)
-                if let Some(exe_parent) = exe_dir.parent() {
-                    if let Some(project_root) = exe_parent.parent() {
-                        let exe_stdlib = project_root.join("stdlib");
-                        if exe_stdlib.exists() && !search_paths.contains(&exe_stdlib) {
-                            search_paths.push(exe_stdlib);
-                        }
-                    }
-                }
-            }
-        }
-
-        ModuleSystem {
+        Self {
             modules: HashMap::new(),
-            search_paths,
-            cwd,
-            insertion_counter: 0,
-            loading_stack: Vec::new(),
-            package_map: None,
+            stdlib_root: find_stdlib_root(),
+            loading: HashSet::new(),
         }
     }
 
-    /// Create a ModuleSystem with PackageMap discovered from build.zen.
-    /// If `workspace_path` is Some, looks for build.zen starting from that path.
-    /// Falls back to default PackageMap (std => Stdlib) on discovery failure or missing build.zen.
-    pub fn with_build_config(workspace_path: Option<&std::path::Path>) -> Self {
-        use crate::build_system::BuildConfig;
-
-        let mut ms = Self::new();
-        let packages = workspace_path
-            .and_then(|path| BuildConfig::discover(path).ok().flatten())
-            .map(|config| config.packages)
-            .unwrap_or_else(|| BuildConfig::default_config().packages);
-        ms.package_map = Some(packages);
-        ms
-    }
-
-    /// Set the package map (from build.zen discovery)
-    pub fn set_package_map(&mut self, package_map: PackageMap) {
-        self.package_map = Some(package_map);
-    }
-
-    /// Add a search path for modules
-    #[allow(dead_code)] // Used in tests, public API for future use
-    pub fn add_search_path(&mut self, path: PathBuf) {
-        self.search_paths.push(path);
-    }
-
-    /// Resolve and load a module, using cached version if content unchanged
-    pub fn load_module(&mut self, module_path: &str) -> Result<&Program, CompileError> {
-        // Check for circular imports: if this module is already being loaded
-        // up the call stack, we have a cycle
-        if self.loading_stack.contains(&module_path.to_string()) {
-            return Err(CompileError::CyclicDependency(
-                format!("circular import detected: {}", module_path),
-                None,
-            ));
-        }
-
-        // Check PackageMap: resolve package-prefixed paths like "std.io"
-        // This also handles paths like "http.server" from build.zen
-        if let Some(ref package_map) = self.package_map.clone() {
-            if let Some((_pkg_name, source, rest)) = package_map.resolve(module_path) {
-                match source {
-                    PackageSource::Stdlib => {
-                        // Rewrite to @std form for existing resolution logic
-                        let std_path = if rest.is_empty() {
-                            "@std".to_string()
-                        } else {
-                            format!("@std.{}", rest)
-                        };
-                        // Avoid infinite recursion: only redirect if the path actually changed
-                        if std_path != module_path {
-                            return self.load_module(&std_path);
-                        }
-                    }
-                    PackageSource::Local(base_path) => {
-                        // Resolve local package: rest becomes a path relative to base_path
-                        if !rest.is_empty() {
-                            let relative = rest.replace('.', "/") + ".zen";
-                            let file_path = base_path.join(&relative);
-                            if file_path.exists() {
-                                return self.load_file_module(module_path, &file_path);
-                            }
-                            // Try folder-name-as-index pattern
-                            let parts: Vec<&str> = rest.split('.').collect();
-                            if let Some(last) = parts.last() {
-                                let dir_path: PathBuf =
-                                    parts.iter().fold(base_path.clone(), |p, part| p.join(part));
-                                let index_path = dir_path.join(format!("{}.zen", last));
-                                if index_path.exists() {
-                                    return self.load_file_module(module_path, &index_path);
-                                }
-                            }
-                        }
-                    }
-                    PackageSource::Remote { .. } => {
-                        // Future: resolve remote packages
-                        // For now, return an error
-                        return Err(CompileError::ImportError(
-                            format!("Remote packages not yet supported: {}", module_path),
-                            None,
-                        ));
-                    }
-                }
-            }
-        }
-
-        // Handle @std and std. modules - try to load actual stdlib files
-        if module_path.starts_with("@std") || module_path.starts_with("std.") {
-            let path_str = module_path
-                .trim_start_matches("@std.")
-                .trim_start_matches("@std")
-                .trim_start_matches("std.");
-
-            if !path_str.is_empty()
-                && !path_str
-                    .chars()
-                    .all(|c| c.is_alphanumeric() || c == '.' || c == '_')
-            {
-                return Err(CompileError::FileNotFound(
-                    format!("Invalid module path: {}", module_path),
-                    Some("Module paths may only contain alphanumeric characters, dots, and underscores".to_string()),
-                ));
-            }
-
-            if path_str.contains("..") {
-                return Err(CompileError::FileNotFound(
-                    format!("Invalid module path: {}", module_path),
-                    Some("Module paths must not contain '..'".to_string()),
-                ));
-            }
-
-            let path_parts: Vec<&str> = if path_str.is_empty() {
-                vec![]
-            } else {
-                path_str.split('.').collect()
-            };
-
-            if path_parts.is_empty() {
-                // @std itself - load stdlib/std.zen (the prelude with re-exports)
-                if let Some(file_to_load) = self.find_stdlib_file(&["std"]) {
-                    let source = std::fs::read_to_string(&file_to_load).map_err(|e| {
-                        CompileError::FileNotFound(
-                            file_to_load.display().to_string(),
-                            Some(e.to_string()),
-                        )
-                    })?;
-
-                    let new_hash = hash_content(&source);
-                    let cache_valid = self
-                        .modules
-                        .get(module_path)
-                        .map(|c| c.content_hash == new_hash)
-                        .unwrap_or(false);
-
-                    if !cache_valid {
-                        let lexer = crate::lexer::Lexer::new(&source);
-                        let mut parser = Parser::new(lexer);
-                        let program = parser.parse_program().map_err(|e| {
-                            CompileError::ParseError(
-                                format!("Failed to parse stdlib module {}: {:?}", module_path, e),
-                                None,
-                            )
-                        })?;
-
-                        self.loading_stack.push(module_path.to_string());
-                        let result: Result<(), CompileError> = (|| {
-                            for decl in &program.declarations {
-                                if let Declaration::ModuleImport {
-                                    alias: _,
-                                    module_path: import_path,
-                                    ..
-                                } = decl
-                                {
-                                    self.load_module(import_path)?;
-                                }
-                            }
-                            Ok(())
-                        })();
-                        self.loading_stack.pop();
-                        result?;
-
-                        self.insert_cached(module_path.to_string(), program, new_hash);
-                    }
-                    return Ok(&self.modules[module_path].program);
-                }
-
-                // Fallback: no std.zen found, return empty program
-                if !self.modules.contains_key(module_path) {
-                    self.insert_cached(
-                        module_path.to_string(),
-                        Program {
-                            declarations: Vec::new(),
-                            statements: Vec::new(),
-                        },
-                        0,
-                    );
-                }
-                return Ok(&self.modules[module_path].program);
-            }
-
-            // @std.compiler is NOT loaded from disk — its functions are thin wrappers
-            // around @builtin.* intrinsics. The codegen dispatches compiler.* calls
-            // directly to intrinsic codegen (see is_compiler_intrinsic_module).
-            // Loading compiler.zen would produce invalid LLVM IR because generic
-            // functions like load<T>/store<T>/sizeof<T> can't be compiled standalone.
-            if path_parts.len() == 1 && path_parts[0] == crate::intrinsics::COMPILER_MODULE {
-                if !self.modules.contains_key(module_path) {
-                    self.insert_cached(
-                        module_path.to_string(),
-                        Program {
-                            declarations: Vec::new(),
-                            statements: Vec::new(),
-                        },
-                        0,
-                    );
-                }
-                return Ok(&self.modules[module_path].program);
-            }
-
-            if let Some(file_to_load) = self.find_stdlib_file(&path_parts) {
-                let source = std::fs::read_to_string(&file_to_load).map_err(|e| {
-                    CompileError::FileNotFound(
-                        file_to_load.display().to_string(),
-                        Some(e.to_string()),
-                    )
-                })?;
-
-                let new_hash = hash_content(&source);
-
-                let cache_valid = self
-                    .modules
-                    .get(module_path)
-                    .map(|c| c.content_hash == new_hash)
-                    .unwrap_or(false);
-
-                if !cache_valid {
-                    let lexer = crate::lexer::Lexer::new(&source);
-                    let mut parser = Parser::new(lexer);
-                    let program = parser.parse_program().map_err(|e| {
-                        CompileError::ParseError(
-                            format!("Failed to parse stdlib module {}: {:?}", module_path, e),
-                            None,
-                        )
-                    })?;
-
-                    self.loading_stack.push(module_path.to_string());
-                    let result: Result<(), CompileError> = (|| {
-                        for decl in &program.declarations {
-                            if let Declaration::ModuleImport {
-                                alias: _,
-                                module_path: import_path,
-                                ..
-                            } = decl
-                            {
-                                self.load_module(import_path)?;
-                            }
-                        }
-                        Ok(())
-                    })();
-                    self.loading_stack.pop();
-                    result?;
-
-                    self.insert_cached(module_path.to_string(), program, new_hash);
-                }
-                return Ok(&self.modules[module_path].program);
-            }
-
-            // Module file not found on disk - cache empty program
-            if !self.modules.contains_key(module_path) {
-                self.insert_cached(
-                    module_path.to_string(),
-                    Program {
-                        declarations: Vec::new(),
-                        statements: Vec::new(),
-                    },
-                    0,
-                );
-            }
-            return Ok(&self.modules[module_path].program);
-        }
-
-        // Try to find the module file
-        let file_path = self.resolve_module_path(module_path)?;
-
-        // Read and parse the module
-        let source = std::fs::read_to_string(&file_path).map_err(|e| {
-            CompileError::FileNotFound(file_path.display().to_string(), Some(e.to_string()))
-        })?;
-
-        let new_hash = hash_content(&source);
-
-        let cache_valid = self
-            .modules
-            .get(module_path)
-            .map(|c| c.content_hash == new_hash)
-            .unwrap_or(false);
-
-        if !cache_valid {
-            let lexer = crate::lexer::Lexer::new(&source);
-            let mut parser = Parser::new(lexer);
-            let program = parser.parse_program().map_err(|e| {
-                CompileError::ParseError(
-                    format!("Failed to parse module {}: {:?}", module_path, e),
-                    None,
-                )
-            })?;
-
-            let processed_program = program.clone();
-            self.loading_stack.push(module_path.to_string());
-            let result: Result<(), CompileError> = (|| {
-                for decl in &program.declarations {
-                    if let Declaration::ModuleImport {
-                        alias: _,
-                        module_path: import_path,
-                        ..
-                    } = decl
-                    {
-                        self.load_module(import_path)?;
-                    }
-                }
-                Ok(())
-            })();
-            self.loading_stack.pop();
-            result?;
-
-            self.insert_cached(module_path.to_string(), processed_program, new_hash);
-        }
-        Ok(&self.modules[module_path].program)
-    }
-
-    /// Load a module from a specific file path (used by PackageMap resolution)
-    fn load_file_module(
+    /// Load and parse a file, returning its Program.
+    pub fn load_file(
         &mut self,
-        module_path: &str,
-        file_path: &PathBuf,
-    ) -> Result<&Program, CompileError> {
-        let source = std::fs::read_to_string(file_path).map_err(|e| {
-            CompileError::FileNotFound(file_path.display().to_string(), Some(e.to_string()))
+        path: &Path,
+        files: &mut FileTable,
+    ) -> Result<Program, Vec<CompileError>> {
+        let source = std::fs::read_to_string(path).map_err(|e| {
+            vec![CompileError::Internal(format!(
+                "cannot read {}: {}",
+                path.display(),
+                e
+            ))]
         })?;
 
-        let new_hash = hash_content(&source);
-        let cache_valid = self
-            .modules
-            .get(module_path)
-            .map(|c| c.content_hash == new_hash)
-            .unwrap_or(false);
-
-        if !cache_valid {
-            let lexer = crate::lexer::Lexer::new(&source);
-            let mut parser = Parser::new(lexer);
-            let program = parser.parse_program().map_err(|e| {
-                CompileError::ParseError(
-                    format!("Failed to parse module {}: {:?}", module_path, e),
-                    None,
-                )
-            })?;
-
-            self.loading_stack.push(module_path.to_string());
-            let result: Result<(), CompileError> = (|| {
-                for decl in &program.declarations {
-                    if let Declaration::ModuleImport {
-                        alias: _,
-                        module_path: import_path,
-                        ..
-                    } = decl
-                    {
-                        self.load_module(import_path)?;
-                    }
-                }
-                Ok(())
-            })();
-            self.loading_stack.pop();
-            result?;
-
-            self.insert_cached(module_path.to_string(), program, new_hash);
-        }
-        Ok(&self.modules[module_path].program)
+        let file_id = files.add_file(path.display().to_string(), source.clone());
+        let tokens = lexer::tokenize(&source, file_id).map_err(|e| vec![e])?;
+        let program = parser::parse(tokens, file_id)?;
+        Ok(program)
     }
 
-    /// Resolve a module path to a file path
-    fn resolve_module_path(&self, module_path: &str) -> Result<PathBuf, CompileError> {
-        // Convert module path (e.g., "std.io") to file path (e.g., "std/io.zen")
-        let relative_path = module_path.replace('.', "/") + ".zen";
+    /// Load a file and recursively resolve all its imports.
+    ///
+    /// This is the main entry point for multi-file compilation. It:
+    /// 1. Loads and parses the entry file
+    /// 2. Walks its Import declarations
+    /// 3. Loads dependencies (relative file imports)
+    /// 4. Merges imported declarations into the program
+    /// 5. Detects circular imports
+    pub fn load_with_imports(
+        &mut self,
+        path: &Path,
+        files: &mut FileTable,
+    ) -> Result<Program, Vec<CompileError>> {
+        let canonical = path.canonicalize().map_err(|e| {
+            vec![CompileError::Internal(format!(
+                "cannot resolve path {}: {}",
+                path.display(),
+                e
+            ))]
+        })?;
 
-        // Try each search path
-        for search_path in &self.search_paths {
-            let full_path = search_path.join(&relative_path);
-            if full_path.exists() {
-                return Ok(full_path);
-            }
-
-            // Folder-name-as-index: foo.bar -> foo/bar/bar.zen
-            let parts: Vec<&str> = module_path.split('.').collect();
-            if let Some(last_part) = parts.last() {
-                let dir_path = search_path.join(module_path.replace('.', "/"));
-                let index_path = dir_path.join(format!("{}.zen", last_part));
-                if index_path.exists() {
-                    return Ok(index_path);
-                }
-            }
-
-            // Also try as a directory with mod.zen (legacy fallback)
-            let mod_path = search_path
-                .join(module_path.replace('.', "/"))
-                .join("mod.zen");
-            if mod_path.exists() {
-                return Ok(mod_path);
-            }
+        // Circular import detection
+        if self.loading.contains(&canonical) {
+            return Err(vec![CompileError::Resolution(
+                format!("circular import detected: {}", canonical.display()),
+                None,
+            )]);
         }
 
-        Err(CompileError::FileNotFound(
-            format!("Module '{}' not found in search paths", module_path),
-            None,
-        ))
+        // If already loaded, return cached version
+        let key = canonical.display().to_string();
+        if let Some(prog) = self.modules.get(&key) {
+            return Ok(prog.clone());
+        }
+
+        self.loading.insert(canonical.clone());
+
+        let mut program = self.load_file(path, files)?;
+        let base_dir = canonical
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf();
+
+        self.resolve_imports(&mut program, &base_dir, files)?;
+
+        self.loading.remove(&canonical);
+        self.modules.insert(key, program.clone());
+        Ok(program)
     }
 
-    pub fn get_modules(&self) -> HashMap<String, Program> {
-        self.modules
+    /// Walk Import declarations in `program` and load their dependencies.
+    ///
+    /// Import routing:
+    /// - `{ io } = std` or `{ io } = std.io` — stdlib, skip (handled by codegen)
+    /// - `{ cast } = @builtin` — intrinsic, skip
+    /// - `{ add } = math` — resolve `math.zen` relative to `base_dir`
+    /// - `{ Foo } = utils.math` — resolve `utils/math.zen` relative to `base_dir`
+    fn resolve_imports(
+        &mut self,
+        program: &mut Program,
+        base_dir: &Path,
+        files: &mut FileTable,
+    ) -> Result<(), Vec<CompileError>> {
+        // Collect imports first to avoid borrow conflict
+        let imports: Vec<(Vec<String>, Vec<String>, Span)> = program
+            .declarations
             .iter()
-            .map(|(k, v)| (k.clone(), v.program.clone()))
-            .collect()
-    }
+            .filter_map(|decl| match decl {
+                Declaration::Import {
+                    names,
+                    module_path,
+                    span,
+                } => Some((names.clone(), module_path.clone(), *span)),
+                _ => None,
+            })
+            .collect();
 
-    pub fn merge_programs(&self, main_program: Program) -> Program {
-        let mut merged = main_program;
+        let mut imported_decls: Vec<Declaration> = Vec::new();
 
-        for cached in self.modules.values() {
-            for decl in &cached.program.declarations {
-                if !matches!(decl, Declaration::ModuleImport { .. }) {
-                    merged.declarations.push(decl.clone());
-                }
+        for (names, module_path, span) in imports {
+            if module_path.is_empty() {
+                return Err(vec![CompileError::Resolution(
+                    "empty import path".into(),
+                    Some(span),
+                )]);
             }
-        }
 
-        merged
-    }
+            let first = &module_path[0];
 
-    fn insert_cached(&mut self, key: String, program: Program, content_hash: u64) {
-        self.evict_if_needed();
-        let order = self.insertion_counter;
-        self.insertion_counter += 1;
-        self.modules.insert(
-            key,
-            CachedModule {
-                program,
-                content_hash,
-                insertion_order: order,
-            },
-        );
-    }
-
-    fn evict_if_needed(&mut self) {
-        if self.modules.len() < MAX_CACHED_MODULES {
-            return;
-        }
-        // Evict oldest entry by insertion_order
-        if let Some(oldest_key) = self
-            .modules
-            .iter()
-            .min_by_key(|(_, v)| v.insertion_order)
-            .map(|(k, _)| k.clone())
-        {
-            self.modules.remove(&oldest_key);
-        }
-    }
-
-    pub fn clear_cache(&mut self) {
-        self.modules.clear();
-    }
-
-    fn find_stdlib_file(&self, path_parts: &[&str]) -> Option<PathBuf> {
-        for search_path in &self.search_paths {
-            let path_str = search_path.to_string_lossy();
-            if !path_str.ends_with("stdlib") && !path_str.contains("stdlib") {
+            if first == "std" || first == "@std" {
+                // Stdlib imports — handled by codegen/runtime, nothing to load
                 continue;
             }
 
-            let mut file_path = search_path.clone();
-            for part in path_parts {
-                file_path = file_path.join(part);
-            }
-            file_path.set_extension("zen");
-            if file_path.exists() {
-                return Some(file_path);
+            if first == "@builtin" {
+                // Builtin intrinsics — nothing to load
+                continue;
             }
 
-            // Folder-name-as-index pattern: concurrency/async/async.zen
-            // Works for any depth: @std.compiler -> compiler/compiler.zen
-            //                      @std.concurrency.async -> concurrency/async/async.zen
-            if let Some(last_part) = path_parts.last() {
-                let mut dir_path = search_path.clone();
-                for part in path_parts {
-                    dir_path = dir_path.join(part);
+            // Local file import: resolve module_path segments as a file path
+            // e.g. ["math"] → math.zen, ["utils", "math"] → utils/math.zen
+            let rel_path: PathBuf = module_path.iter().collect();
+            let mut file_path = base_dir.join(&rel_path);
+            if file_path.extension().is_none() {
+                file_path.set_extension("zen");
+            }
+
+            if !file_path.exists() {
+                return Err(vec![CompileError::Resolution(
+                    format!(
+                        "cannot find imported module '{}' (looked for {})",
+                        module_path.join("."),
+                        file_path.display()
+                    ),
+                    Some(span),
+                )]);
+            }
+
+            let dep_program = self.load_with_imports(&file_path, files)?;
+
+            // Merge only the named imports
+            let name_set: HashSet<&str> = names.iter().map(|n| n.as_str()).collect();
+            for decl in &dep_program.declarations {
+                if let Some(decl_name) = decl.name() {
+                    if name_set.contains(decl_name) {
+                        imported_decls.push(decl.clone());
+                    }
                 }
-                let index_path = dir_path.join(format!("{}.zen", last_part));
-                if index_path.exists() {
-                    return Some(index_path);
+                // Also include methods on imported types
+                if let Declaration::Method { type_name, .. } = decl {
+                    if name_set.contains(type_name.as_str()) {
+                        imported_decls.push(decl.clone());
+                    }
                 }
             }
         }
-        None
+
+        // Append imported declarations to the program
+        program.declarations.extend(imported_decls);
+        Ok(())
+    }
+
+    /// Resolve an import module path to a filesystem path and load it.
+    /// e.g. ["std"] or ["std", "io"] or ["@std", "io"]
+    pub fn resolve_import(
+        &mut self,
+        module_path: &[String],
+        files: &mut FileTable,
+    ) -> Result<Program, Vec<CompileError>> {
+        if module_path.is_empty() {
+            return Err(vec![CompileError::Resolution(
+                "empty module path".into(),
+                None,
+            )]);
+        }
+
+        let first = &module_path[0];
+
+        // @std or std prefix → look in stdlib
+        if first == "@std" || first == "std" {
+            return self.resolve_stdlib_import(&module_path[1..], files);
+        }
+
+        // @builtin → return empty program (intrinsics)
+        if first == "@builtin" {
+            return Ok(Program {
+                declarations: Vec::new(),
+                file_id: 0,
+            });
+        }
+
+        Err(vec![CompileError::Resolution(
+            format!("unknown module: {}", module_path.join(".")),
+            None,
+        )])
+    }
+
+    fn resolve_stdlib_import(
+        &mut self,
+        sub_path: &[String],
+        files: &mut FileTable,
+    ) -> Result<Program, Vec<CompileError>> {
+        let root = match &self.stdlib_root {
+            Some(r) => r.clone(),
+            None => {
+                return Err(vec![CompileError::Resolution(
+                    "stdlib not found".into(),
+                    None,
+                )]);
+            }
+        };
+
+        if sub_path.is_empty() {
+            // `{ io } = std` — load the stdlib prelude or nothing
+            return Ok(Program {
+                declarations: Vec::new(),
+                file_id: 0,
+            });
+        }
+
+        // Build path: stdlib/<sub>/<sub>.zen or stdlib/<sub>/mod.zen
+        let mut dir = root.clone();
+        for seg in sub_path {
+            dir.push(seg);
+        }
+
+        // Try <dir>/<last>.zen
+        let _last = sub_path.last().unwrap();
+        let file_path = dir.with_extension("zen");
+        if file_path.exists() {
+            return self.load_file(&file_path, files);
+        }
+
+        // Try <dir>/mod.zen
+        let mod_path = dir.join("mod.zen");
+        if mod_path.exists() {
+            return self.load_file(&mod_path, files);
+        }
+
+        // Try <dir>.zen (parent dir)
+        let parent_file = dir.with_extension("zen");
+        if parent_file.exists() {
+            return self.load_file(&parent_file, files);
+        }
+
+        // Return empty for now — many stdlib modules are stubs
+        Ok(Program {
+            declarations: Vec::new(),
+            file_id: 0,
+        })
+    }
+
+    pub fn modules(&self) -> &HashMap<String, Program> {
+        &self.modules
     }
 }
 
+/// Find the stdlib root by looking for a `stdlib/` directory.
+fn find_stdlib_root() -> Option<PathBuf> {
+    // Try relative to current exe
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            // Check alongside the binary
+            let stdlib = dir.join("stdlib");
+            if stdlib.is_dir() {
+                return Some(stdlib);
+            }
+            // Check one level up (target/debug -> project root)
+            if let Some(parent) = dir.parent() {
+                if let Some(grandparent) = parent.parent() {
+                    let stdlib = grandparent.join("stdlib");
+                    if stdlib.is_dir() {
+                        return Some(stdlib);
+                    }
+                }
+            }
+        }
+    }
+
+    // Try current working directory
+    let cwd = std::env::current_dir().ok()?;
+    let stdlib = cwd.join("stdlib");
+    if stdlib.is_dir() {
+        return Some(stdlib);
+    }
+
+    None
+}
+
+// ── Tests ─────────────────────────────────────────────────────────
+
 #[cfg(test)]
 mod tests {
-    use crate::module_system::ModuleSystem;
-    use std::path::PathBuf;
+    use super::*;
+    use std::fs;
 
-    #[test]
-    fn test_module_system_creation() {
-        let ms = ModuleSystem::new();
-        assert!(ms.search_paths.len() >= 3);
-        assert!(ms.modules.is_empty());
+    fn setup_temp_dir() -> tempfile::TempDir {
+        tempfile::tempdir().unwrap()
     }
 
     #[test]
-    fn test_add_search_path() {
+    fn load_file_with_relative_import() {
+        let tmp = setup_temp_dir();
+
+        // Create math.zen with an add function
+        let math_path = tmp.path().join("math.zen");
+        fs::write(
+            &math_path,
+            "add = (a: i32, b: i32) i32 {\n    return a + b\n}\n",
+        )
+        .unwrap();
+
+        // Create main.zen that imports from math (parser syntax: { add } = math)
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ add } = math\n\nmain = () i32 {\n    return add(1, 2)\n}\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
         let mut ms = ModuleSystem::new();
-        let initial_len = ms.search_paths.len();
-        ms.add_search_path(PathBuf::from("/custom/path"));
-        assert_eq!(ms.search_paths.len(), initial_len + 1);
+
+        let program = ms.load_with_imports(&main_path, &mut files).unwrap();
+
+        // Should have the import decl + main func + the merged add func
+        let func_names: Vec<&str> = program
+            .declarations
+            .iter()
+            .filter_map(|d| d.name())
+            .collect();
+        assert!(func_names.contains(&"main"), "should contain main");
+        assert!(func_names.contains(&"add"), "should contain imported add");
+    }
+
+    #[test]
+    fn circular_import_detected() {
+        let tmp = setup_temp_dir();
+
+        // a.zen imports from b
+        let a_path = tmp.path().join("a.zen");
+        fs::write(&a_path, "{ bar } = b\n\nfoo = () i32 { return 1 }\n").unwrap();
+
+        // b.zen imports from a (circular!)
+        let b_path = tmp.path().join("b.zen");
+        fs::write(&b_path, "{ foo } = a\n\nbar = () i32 { return 2 }\n").unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let result = ms.load_with_imports(&a_path, &mut files);
+        assert!(result.is_err(), "circular import should be an error");
+        let errs = result.unwrap_err();
+        let msg = format!("{}", errs[0]);
+        assert!(
+            msg.contains("circular import"),
+            "error should mention circular import, got: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn missing_import_file_error() {
+        let tmp = setup_temp_dir();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ Foo } = nonexistent\n\nmain = () i32 { return 0 }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let result = ms.load_with_imports(&main_path, &mut files);
+        assert!(result.is_err(), "missing import file should be an error");
+        let errs = result.unwrap_err();
+        let msg = format!("{}", errs[0]);
+        assert!(
+            msg.contains("cannot find imported module"),
+            "error should mention missing file, got: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn std_imports_are_skipped() {
+        let tmp = setup_temp_dir();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(&main_path, "{ io } = std\n\nmain = () i32 { return 0 }\n").unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        // std imports should not cause errors — they're handled by codegen
+        let program = ms.load_with_imports(&main_path, &mut files).unwrap();
+        assert!(program
+            .declarations
+            .iter()
+            .any(|d| d.name() == Some("main")));
+    }
+
+    #[test]
+    fn cached_module_not_reloaded() {
+        let tmp = setup_temp_dir();
+
+        let math_path = tmp.path().join("math.zen");
+        fs::write(&math_path, "add = (a: i32, b: i32) i32 { return a + b }\n").unwrap();
+
+        // Two files both import math
+        let a_path = tmp.path().join("a.zen");
+        fs::write(
+            &a_path,
+            "{ add } = math\n\nfoo = () i32 { return add(1, 2) }\n",
+        )
+        .unwrap();
+
+        let b_path = tmp.path().join("b.zen");
+        fs::write(
+            &b_path,
+            "{ add } = math\n\nbar = () i32 { return add(3, 4) }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        ms.load_with_imports(&a_path, &mut files).unwrap();
+        ms.load_with_imports(&b_path, &mut files).unwrap();
+
+        // math.zen canonical path should appear exactly once in modules cache
+        let math_canonical = math_path.canonicalize().unwrap();
+        let math_key = math_canonical.display().to_string();
+        assert!(
+            ms.modules().contains_key(&math_key),
+            "math.zen should be cached by canonical path"
+        );
+        // File table should only have math.zen registered once (not re-read)
+        // a.zen(id=0), math.zen(id=1), b.zen(id=2) — math not loaded twice
+        assert_eq!(files.file_count(), 3, "should have 3 files: a, math, b");
+    }
+
+    #[test]
+    fn transitive_imports() {
+        let tmp = setup_temp_dir();
+
+        // c.zen has a helper
+        let c_path = tmp.path().join("c.zen");
+        fs::write(&c_path, "helper = () i32 { return 42 }\n").unwrap();
+
+        // b.zen imports from c
+        let b_path = tmp.path().join("b.zen");
+        fs::write(
+            &b_path,
+            "{ helper } = c\n\nwrapper = () i32 { return helper() }\n",
+        )
+        .unwrap();
+
+        // a.zen imports from b
+        let a_path = tmp.path().join("a.zen");
+        fs::write(
+            &a_path,
+            "{ wrapper } = b\n\nmain = () i32 { return wrapper() }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let program = ms.load_with_imports(&a_path, &mut files).unwrap();
+        let func_names: Vec<&str> = program
+            .declarations
+            .iter()
+            .filter_map(|d| d.name())
+            .collect();
+        assert!(func_names.contains(&"main"));
+        assert!(func_names.contains(&"wrapper"));
+    }
+
+    #[test]
+    fn dotted_path_resolves_to_subdir() {
+        let tmp = setup_temp_dir();
+
+        // Create utils/math.zen
+        let utils_dir = tmp.path().join("utils");
+        fs::create_dir(&utils_dir).unwrap();
+        let math_path = utils_dir.join("math.zen");
+        fs::write(&math_path, "square = (x: i32) i32 { return x * x }\n").unwrap();
+
+        // Create main.zen that imports from utils.math
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ square } = utils.math\n\nmain = () i32 { return square(5) }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let program = ms.load_with_imports(&main_path, &mut files).unwrap();
+        let func_names: Vec<&str> = program
+            .declarations
+            .iter()
+            .filter_map(|d| d.name())
+            .collect();
+        assert!(func_names.contains(&"main"));
+        assert!(func_names.contains(&"square"));
     }
 }

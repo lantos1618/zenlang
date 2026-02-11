@@ -1,33 +1,18 @@
 [package]
 name = "zen"
-version = "0.7.1"
+version = "0.8.0"
 edition = "2021"
 
 [dependencies]
-# Pinned version: Critical for stable LLVM linking. Do not upgrade without extensive testing.
-inkwell = { version = "0.6.0", features = ["llvm18-1"] }
-nom = "7.1"
-thiserror = "1.0"
 ariadne = "0.4.1"
 colored = "2.0"
 rustyline = "14.0"
 glob = "0.3"
-clap = { version = "4.0", features = ["derive"] }
-libloading = "0.8"
 libc = "0.2"
 
-# LSP dependencies
-lsp-server = "0.7"
-lsp-types = "0.95"
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-log = "0.4"
-env_logger = "0.11"
-
-# Build system dependencies
-toml = "0.8"
-num_cpus = "1.16"
-regex = "1.10"
 
 [lib]
 name = "zen"
@@ -37,38 +22,15 @@ path = "src/lib.rs"
 name = "zen"
 path = "src/main.rs"
 
-[[bin]]
-name = "zen-lsp"
-path = "src/bin/zen-lsp.rs"
-
-[[bin]]
-name = "zen-check"
-path = "src/bin/zen-check.rs"
-
-[[bin]]
-name = "zen-format"
-path = "src/bin/zen-format.rs"
-
-
-
 [dev-dependencies]
 tempfile = "3.8"
-# regex is inherited from [dependencies]
 
-# Memory-optimized profiles to prevent OOM during compilation
 [profile.release]
-codegen-units = 1        # Single codegen unit = less parallel memory usage
-lto = "fat"              # Full LTO - safe now that MCJIT is explicitly linked
-opt-level = 3            # Full optimization
-incremental = false      # Disable incremental = less disk/memory for cache
+codegen-units = 1
+lto = "fat"
+opt-level = 3
+incremental = false
 
 [profile.dev]
-codegen-units = 16       # More parallelism for faster debug builds
-incremental = true       # Keep incremental for dev speed
-
-# Low-memory profile for constrained environments
-[profile.low-memory]
-inherits = "release"
-codegen-units = 1
-lto = false              # Disable LTO entirely - major memory savings
-opt-level = 2            # Slightly less optimization = less memory
+codegen-units = 16
+incremental = true
