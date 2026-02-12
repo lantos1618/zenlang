@@ -1,0 +1,25 @@
+{ io } = std
+
+Point: {
+    x: i32,
+    y: i32,
+}
+
+Rect: {
+    origin: Point,
+    width: i32,
+    height: i32,
+}
+
+area = (r: Rect) i32 {
+    return r.width * r.height
+}
+
+main = () i32 {
+    p = Point { x: 10, y: 20 }
+    r = Rect { origin: p, width: 30, height: 40 }
+    io.println("origin x: ${r.origin.x}")
+    io.println("origin y: ${r.origin.y}")
+    io.println("area: ${area(r)}")
+    return 0
+}

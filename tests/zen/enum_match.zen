@@ -1,0 +1,31 @@
+{ io } = std
+
+Direction:
+    North,
+    South,
+    East,
+    West
+
+opposite = (d: Direction) Direction {
+    d ?
+        | North { Direction.South }
+        | South { Direction.North }
+        | East { Direction.West }
+        | West { Direction.East }
+}
+
+name = (d: Direction) StaticString {
+    d ?
+        | North { "north" }
+        | South { "south" }
+        | East { "east" }
+        | West { "west" }
+}
+
+main = () i32 {
+    d = Direction.North
+    io.println(name(d))
+    io.println(name(opposite(d)))
+    io.println(name(opposite(Direction.East)))
+    return 0
+}

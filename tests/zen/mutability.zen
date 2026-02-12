@@ -1,0 +1,11 @@
+{ io } = std
+
+main = () i32 {
+    x ::= 1
+    io.println("x = ${x}")
+    x = x + 10
+    io.println("x = ${x}")
+    x = x * 2
+    io.println("x = ${x}")
+    return 0
+}
