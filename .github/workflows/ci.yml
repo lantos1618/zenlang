@@ -1,122 +1,61 @@
-name: Zen Language CI
+name: CI
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [master, rewrite]
   pull_request:
-    branches: [ master, main ]
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-  LLVM_VERSION: "18"
-  # Fix LLVM Polly linking issue by pointing to LLVM install
-  LLVM_SYS_181_PREFIX: /usr/lib/llvm-18
-  # Disable static linking to avoid Polly issues
-  LLVM_SYS_181_FFI_WORKAROUND: "1"
 
 jobs:
-  # Quick formatting and linting checks
-  lint:
-    name: Lint & Format
+  fmt:
+    name: Format
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: rustfmt, clippy
-    
-    - name: Run Comprehensive Linter
-      run: ./scripts/lint.sh
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --check
 
-  # Main build job
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    outputs:
-      cache-key: ${{ steps.cache.outputs.cache-hit }}
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Environment
-      uses: ./.github/actions/setup-environment
-    
-    - name: Cache Dependencies
-      id: cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-llvm${{ env.LLVM_VERSION }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
-    
-    - name: Build Compiler
-      run: cargo build --release --verbose
-    
-    - name: Upload Compiler Binary
-      uses: actions/upload-artifact@v4
-      with:
-        name: zen-compiler
-        path: target/release/zen
-
-
-  test-zen:
-    name: Zen Tests
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download Compiler Binary
-      uses: actions/download-artifact@v4
-      with:
-        name: zen-compiler
-        path: target/release/
-    
-    - name: Make Binary Executable
-      run: chmod +x target/release/zen
-    
-    - name: Run Zen Test Suite
-      run: python3 scripts/run_tests.py
-
-  # Project statistics (non-blocking)
-  stats:
-    name: Project Stats
+  clippy:
+    name: Clippy
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Project Statistics
-      run: |
-        echo "=== Project Statistics ==="
-        echo "Rust files: $(find src -name "*.rs" | wc -l)"
-        echo "Zen files: $(find . -name "*.zen" | wc -l)"
-        echo "Test files: $(find tests -name "*.rs" -o -name "*.zen" | wc -l)"
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - run: cargo clippy -- -D warnings
 
-  # Matrix testing for different Rust versions
-  test-matrix:
-    name: Test ${{ matrix.rust }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        rust: [stable, beta]
-        os: [ubuntu-latest]
-    continue-on-error: ${{ matrix.rust == 'beta' }}
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Environment
-      uses: ./.github/actions/setup-environment
-    
-    - name: Build
-      run: cargo build --verbose
-    
-    - name: Test
-      run: cargo test --verbose
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - name: Unit tests
+        run: cargo test --lib
+      - name: Integration tests
+        run: cargo test --tests
