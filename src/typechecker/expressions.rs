@@ -1,10 +1,12 @@
 //! Expression checking — check_function and check_expr.
+#![allow(clippy::result_large_err)]
 
 use crate::ast::expressions::StringPart;
 use crate::ast::typed::*;
 use crate::ast::{AstType, Expression, Param};
 use crate::error::{Diagnostic, Span};
 
+use super::closures::collect_captures;
 use super::TypeChecker;
 
 impl TypeChecker {
@@ -50,12 +52,16 @@ impl TypeChecker {
         self.pop_scope();
         self.current_return_type = None;
 
+        // Collect defers accumulated during this function's body (LIFO order)
+        let mut defers: Vec<TypedExpression> = self.pending_defers.drain(..).collect();
+        defers.reverse();
+
         Ok(TypedFunction {
             name: name.to_string(),
             params: typed_params,
             return_type: ret_type,
             body: body_block,
-            defers: Vec::new(),
+            defers,
             span: *_span,
         })
     }
@@ -110,8 +116,8 @@ impl TypeChecker {
                             && !self.functions.contains_key(name.as_str())
                             && !self.is_import(name)
                         {
-                            self.diagnostics.push(Diagnostic::warning(
-                                "W3040",
+                            self.diagnostics.push(Diagnostic::error(
+                                "E3040",
                                 format!("undefined variable `{}`", name),
                                 *span,
                             ));
@@ -165,26 +171,65 @@ impl TypeChecker {
                     name.clone()
                 };
 
-                let ret_type = if let Some(info) = self.functions.get(&full_name) {
-                    self.resolve_type(&info.return_type)
-                } else if name == "cast" && typed_args.len() == 1 && !type_args.is_empty() {
-                    // cast(expr, Type) — handled specially
-                    self.resolve_type(&type_args[0])
-                } else if module.is_some() {
-                    // Module-qualified calls are resolved at codegen time
-                    Type::Unknown
-                } else {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E3020",
-                        format!("undefined function `{}`", name),
-                        *span,
-                    ));
-                    Type::Unknown
-                };
+                let (resolved_name, ret_type) =
+                    if let Some(info) = self.functions.get(&full_name).cloned() {
+                        if !info.type_params.is_empty() {
+                            // Generic function: infer type args and substitute
+                            let arg_types: Vec<Type> =
+                                typed_args.iter().map(|a| a.ty.clone()).collect();
+                            let subs =
+                                self.infer_type_args(&info.type_params, &info.params, &arg_types);
+                            let ret = self.substitute_type(&info.return_type, &subs);
+                            // Mangle name with concrete types
+                            let suffix: Vec<String> = info
+                                .type_params
+                                .iter()
+                                .filter_map(|tp| subs.get(tp).map(|t| t.display_name()))
+                                .collect();
+                            let mangled = if suffix.is_empty() {
+                                full_name.clone()
+                            } else {
+                                format!("{}_{}", full_name, suffix.join("_"))
+                            };
+                            (mangled, ret)
+                        } else {
+                            (full_name.clone(), self.resolve_type(&info.return_type))
+                        }
+                    } else if name == "cast" && typed_args.len() == 1 && !type_args.is_empty() {
+                        // cast(expr, Type) — handled specially
+                        (full_name.clone(), self.resolve_type(&type_args[0]))
+                    } else if module.is_some() {
+                        // Try looking up module-qualified names in methods/functions maps
+                        let mangled = if let Some(m) = module {
+                            format!("{}_{}", m, name)
+                        } else {
+                            name.clone()
+                        };
+                        if let Some(info) = self.methods.get(&full_name).cloned() {
+                            (full_name.clone(), self.resolve_type(&info.return_type))
+                        } else if let Some(info) = self.functions.get(&mangled).cloned() {
+                            (full_name.clone(), self.resolve_type(&info.return_type))
+                        } else {
+                            let m = module.as_deref().unwrap_or("");
+                            self.diagnostics.push(Diagnostic::warning(
+                                "W3041",
+                                format!("unknown function `{}.{}`, assuming void return", m, name),
+                                *span,
+                            ));
+                            (full_name.clone(), Type::Void)
+                        }
+                    } else {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E3020",
+                            format!("undefined function `{}`", name),
+                            *span,
+                        ));
+                        (full_name.clone(), Type::Unknown)
+                    };
 
                 Ok(TypedExpression {
                     kind: TypedExprKind::FunctionCall {
-                        function: full_name,
+                        function: resolved_name,
                         args: typed_args,
                     },
                     ty: ret_type,
@@ -212,12 +257,28 @@ impl TypeChecker {
                             typed_args.push(self.check_expr(arg)?);
                         }
                         let mangled = format!("{}_{}", recv_name, method);
+                        // Try to look up the return type
+                        let ret_type = if let Some(info) = self.functions.get(&mangled) {
+                            self.resolve_type(&info.return_type)
+                        } else {
+                            let method_key = format!("{}.{}", recv_name, method);
+                            if let Some(info) = self.methods.get(&method_key) {
+                                self.resolve_type(&info.return_type)
+                            } else {
+                                self.diagnostics.push(Diagnostic::warning(
+                                    "W3042",
+                                    format!("unknown method `{}`, assuming void return", mangled),
+                                    *span,
+                                ));
+                                Type::Void
+                            }
+                        };
                         return Ok(TypedExpression {
                             kind: TypedExprKind::FunctionCall {
                                 function: mangled,
                                 args: typed_args,
                             },
-                            ty: Type::Void,
+                            ty: ret_type,
                             span: *span,
                         });
                     }
@@ -240,9 +301,17 @@ impl TypeChecker {
                 };
                 let method_key = format!("{}.{}", type_name, method);
 
-                if let Some(info) = self.methods.get(&method_key) {
-                    // Found as a type method
-                    let ret_type = self.resolve_type(&info.return_type);
+                if let Some(info) = self.methods.get(&method_key).cloned() {
+                    // Found as a type method — handle generics
+                    let ret_type = if !info.type_params.is_empty() {
+                        let arg_types: Vec<Type> =
+                            typed_args.iter().map(|a| a.ty.clone()).collect();
+                        let subs =
+                            self.infer_type_args(&info.type_params, &info.params, &arg_types);
+                        self.substitute_type(&info.return_type, &subs)
+                    } else {
+                        self.resolve_type(&info.return_type)
+                    };
                     let mangled = format!("{}_{}", type_name, method);
                     Ok(TypedExpression {
                         kind: TypedExprKind::FunctionCall {
@@ -252,9 +321,17 @@ impl TypeChecker {
                         ty: ret_type,
                         span: *span,
                     })
-                } else if let Some(info) = self.functions.get(method) {
-                    // UFC: x.f(args) → f(x, args)
-                    let ret_type = self.resolve_type(&info.return_type);
+                } else if let Some(info) = self.functions.get(method).cloned() {
+                    // UFC: x.f(args) → f(x, args) — handle generics
+                    let ret_type = if !info.type_params.is_empty() {
+                        let arg_types: Vec<Type> =
+                            typed_args.iter().map(|a| a.ty.clone()).collect();
+                        let subs =
+                            self.infer_type_args(&info.type_params, &info.params, &arg_types);
+                        self.substitute_type(&info.return_type, &subs)
+                    } else {
+                        self.resolve_type(&info.return_type)
+                    };
                     Ok(TypedExpression {
                         kind: TypedExprKind::FunctionCall {
                             function: method.clone(),
@@ -264,7 +341,14 @@ impl TypeChecker {
                         span: *span,
                     })
                 } else {
-                    // Unknown method — emit as method_key
+                    // Unknown method on type
+                    if !type_name.is_empty() {
+                        self.diagnostics.push(Diagnostic::warning(
+                            "W3043",
+                            format!("type `{}` has no method `{}`", type_name, method),
+                            *span,
+                        ));
+                    }
                     Ok(TypedExpression {
                         kind: TypedExprKind::FunctionCall {
                             function: format!("{}_{}", type_name, method),
@@ -282,15 +366,61 @@ impl TypeChecker {
                 span,
             } => {
                 let typed_obj = self.check_expr(object)?;
-                let field_type = self.lookup_field_type(&typed_obj.ty, field);
-                Ok(TypedExpression {
-                    kind: TypedExprKind::FieldAccess {
-                        object: Box::new(typed_obj),
-                        field: field.clone(),
-                    },
-                    ty: field_type,
-                    span: *span,
-                })
+                match field.as_str() {
+                    // x.addr → immutable pointer: Ptr<typeof(x)>
+                    "addr" => {
+                        let ptr_ty = Type::Ptr(Box::new(typed_obj.ty.clone()));
+                        Ok(TypedExpression {
+                            kind: TypedExprKind::Ref(Box::new(typed_obj)),
+                            ty: ptr_ty,
+                            span: *span,
+                        })
+                    }
+                    // x.ref → mutable pointer: MutPtr<typeof(x)>
+                    "ref" => {
+                        let ptr_ty = Type::MutPtr(Box::new(typed_obj.ty.clone()));
+                        Ok(TypedExpression {
+                            kind: TypedExprKind::MutRef(Box::new(typed_obj)),
+                            ty: ptr_ty,
+                            span: *span,
+                        })
+                    }
+                    // ptr.value → dereference: inner type of Ptr/MutPtr/RawPtr
+                    "value" => {
+                        let inner_ty = match &typed_obj.ty {
+                            Type::Ptr(inner) | Type::MutPtr(inner) | Type::RawPtr(inner) => {
+                                *inner.clone()
+                            }
+                            _ => {
+                                self.diagnostics.push(Diagnostic::error(
+                                    "E3050",
+                                    format!(
+                                        "cannot dereference non-pointer type `{}`",
+                                        typed_obj.ty.display_name()
+                                    ),
+                                    *span,
+                                ));
+                                Type::Unknown
+                            }
+                        };
+                        Ok(TypedExpression {
+                            kind: TypedExprKind::Deref(Box::new(typed_obj)),
+                            ty: inner_ty,
+                            span: *span,
+                        })
+                    }
+                    _ => {
+                        let field_type = self.lookup_field_type(&typed_obj.ty, field);
+                        Ok(TypedExpression {
+                            kind: TypedExprKind::FieldAccess {
+                                object: Box::new(typed_obj),
+                                field: field.clone(),
+                            },
+                            ty: field_type,
+                            span: *span,
+                        })
+                    }
+                }
             }
 
             Expression::StructLiteral {
@@ -344,6 +474,13 @@ impl TypeChecker {
                         elem_type = typed.ty.clone();
                     }
                     typed_elems.push(typed);
+                }
+                if elements.is_empty() {
+                    self.diagnostics.push(Diagnostic::warning(
+                        "W3045",
+                        "cannot infer element type for empty array".to_string(),
+                        *span,
+                    ));
                 }
                 Ok(TypedExpression {
                     kind: TypedExprKind::ArrayLiteral {
@@ -623,8 +760,11 @@ impl TypeChecker {
                 })
             }
 
-            Expression::Defer { expr: _expr, span } => {
-                // Defer is tracked but doesn't produce a value
+            Expression::Defer { expr, span } => {
+                // Type-check the deferred expression and collect it
+                let typed_expr = self.check_expr(expr)?;
+                self.pending_defers.push(typed_expr);
+                // Defer itself doesn't produce a value
                 Ok(TypedExpression {
                     kind: TypedExprKind::Block(TypedBlock {
                         statements: Vec::new(),
@@ -646,7 +786,17 @@ impl TypeChecker {
                 let typed_idx = self.check_expr(index)?;
                 let elem_ty = match &typed_obj.ty {
                     Type::Array { elem, .. } | Type::Slice(elem) => *elem.clone(),
-                    _ => Type::Unknown,
+                    _ => {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E3051",
+                            format!(
+                                "cannot index into non-array type `{}`",
+                                typed_obj.ty.display_name()
+                            ),
+                            *span,
+                        ));
+                        Type::Unknown
+                    }
                 };
                 Ok(TypedExpression {
                     kind: TypedExprKind::IndexAccess {
@@ -664,21 +814,63 @@ impl TypeChecker {
                 body,
                 span,
             } => {
-                // Simplified: just check the body
+                // Collect variables visible before entering closure scope
+                let outer_vars: std::collections::HashMap<String, Type> = self
+                    .scopes
+                    .iter()
+                    .flat_map(|s| s.vars.iter())
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
+
                 self.push_scope();
+                let mut param_types = Vec::new();
+                let mut param_names: std::collections::HashSet<String> =
+                    std::collections::HashSet::new();
                 for p in params {
                     let ty = self.resolve_type(&p.ty);
-                    self.define_var(&p.name, ty);
+                    self.define_var(&p.name, ty.clone());
+                    param_types.push(ty);
+                    param_names.insert(p.name.clone());
                 }
                 let typed_body = self.check_expr(body)?;
                 self.pop_scope();
-                let ret_type = typed_body.ty.clone();
+
+                let ret_type = if let Some(rt) = _return_type {
+                    self.resolve_type(rt)
+                } else {
+                    typed_body.ty.clone()
+                };
+
+                // Capture analysis: find variables in body that come from outer scopes
+                let mut captures = Vec::new();
+                let mut seen = std::collections::HashSet::new();
+                collect_captures(
+                    &typed_body,
+                    &param_names,
+                    &outer_vars,
+                    &mut captures,
+                    &mut seen,
+                );
+
+                let fn_name = format!("__closure_{}_{}", span.start, span.end);
+                let env_type = if captures.is_empty() {
+                    String::new()
+                } else {
+                    format!("__env_{}_{}", span.start, span.end)
+                };
+
+                let fn_type = Type::Function {
+                    params: param_types,
+                    ret: Box::new(ret_type),
+                };
+
                 Ok(TypedExpression {
-                    kind: TypedExprKind::FunctionCall {
-                        function: "<closure>".into(),
-                        args: Vec::new(),
+                    kind: TypedExprKind::Closure {
+                        fn_name,
+                        env_type,
+                        captures,
                     },
-                    ty: ret_type,
+                    ty: fn_type,
                     span: *span,
                 })
             }
@@ -696,6 +888,7 @@ impl TypeChecker {
                 })
             }
 
+            // TODO: implement Range type
             Expression::Range {
                 start, end, span, ..
             } => {
@@ -703,11 +896,12 @@ impl TypeChecker {
                 let _typed_end = self.check_expr(end)?;
                 Ok(TypedExpression {
                     kind: TypedExprKind::Error,
-                    ty: Type::Unknown, // Range type not yet modeled
+                    ty: Type::Unknown,
                     span: *span,
                 })
             }
 
+            // TODO: implement char literal type
             Expression::Error { span } | Expression::CharLiteral { span, .. } => {
                 Ok(TypedExpression {
                     kind: TypedExprKind::Error,

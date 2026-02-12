@@ -1,4 +1,6 @@
 mod emit;
+mod intrinsics;
+mod strings;
 mod types;
 
 use crate::ast::typed::*;
@@ -22,6 +24,8 @@ struct CEmitter {
     indent: usize,
     /// Counter for temporary variable names.
     tmp_counter: usize,
+    /// Collected closure definitions (env struct + function) to emit before main functions.
+    closure_defs: Vec<String>,
 }
 
 impl CEmitter {
@@ -30,6 +34,7 @@ impl CEmitter {
             output: String::with_capacity(4096),
             indent: 0,
             tmp_counter: 0,
+            closure_defs: Vec::new(),
         }
     }
 

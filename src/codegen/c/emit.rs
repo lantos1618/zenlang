@@ -221,7 +221,7 @@ impl CEmitter {
 
             TypedExprKind::StringInterpolation { parts } => self.emit_string_interpolation(parts),
 
-            TypedExprKind::Intrinsic { name, args } => self.emit_intrinsic(name, args),
+            TypedExprKind::Intrinsic { name, args } => self.emit_intrinsic(name, args, &expr.ty),
 
             TypedExprKind::Assign { target, value } => {
                 let t = self.emit_expr_inline(target);
@@ -460,126 +460,6 @@ impl CEmitter {
                     self.line(&s);
                 }
             }
-        }
-    }
-
-    // ── String interpolation ──────────────────────────────────
-
-    fn emit_string_interpolation(&mut self, parts: &[TypedStringPart]) -> String {
-        // Strategy: build a format string and args for snprintf, then use zen_str
-        // For simplicity, use stack buffer concatenation
-        if parts.len() == 1 {
-            match &parts[0] {
-                TypedStringPart::Literal(s) => {
-                    let escaped = c_escape_string(s);
-                    return format!("zen_str_from_literal(\"{}\")", escaped);
-                }
-                TypedStringPart::Expr(e) => {
-                    return self.emit_to_str(e);
-                }
-            }
-        }
-
-        // Multiple parts: build format string + args for snprintf
-        let mut format_parts = Vec::new();
-        let mut arg_exprs = Vec::new();
-
-        for part in parts {
-            match part {
-                TypedStringPart::Literal(s) => {
-                    format_parts.push(c_escape_string(s));
-                }
-                TypedStringPart::Expr(e) => {
-                    let (fmt, arg) = self.emit_printf_arg(e);
-                    format_parts.push(fmt);
-                    arg_exprs.push(arg);
-                }
-            }
-        }
-
-        let fmt_str = format_parts.join("");
-        let buf = self.fresh_tmp();
-        self.line(&format!("char {}[1024];", buf));
-        if arg_exprs.is_empty() {
-            self.line(&format!("snprintf({buf}, sizeof({buf}), \"{fmt_str}\");"));
-        } else {
-            self.line(&format!(
-                "snprintf({buf}, sizeof({buf}), \"{fmt_str}\", {});",
-                arg_exprs.join(", ")
-            ));
-        }
-        format!("zen_str_from_literal({})", buf)
-    }
-
-    fn emit_printf_arg(&mut self, expr: &TypedExpression) -> (String, String) {
-        let val = self.emit_expr_inline(expr);
-        match &expr.ty {
-            Type::I8 | Type::I16 | Type::I32 | Type::I64 => {
-                ("%lld".into(), format!("(long long)({})", val))
-            }
-            Type::U8 | Type::U16 | Type::U32 | Type::U64 | Type::Usize => {
-                ("%llu".into(), format!("(unsigned long long)({})", val))
-            }
-            Type::F32 | Type::F64 => ("%g".into(), format!("(double)({})", val)),
-            Type::Bool => ("%s".into(), format!("({}) ? \"true\" : \"false\"", val)),
-            Type::Str => ("%.*s".into(), format!("(int)({val}).len, ({val}).ptr")),
-            Type::String => ("%.*s".into(), format!("(int)({val}).len, ({val}).ptr")),
-            _ => ("%s".into(), format!("\"<{}>\"", expr.ty.display_name())),
-        }
-    }
-
-    fn emit_to_str(&mut self, expr: &TypedExpression) -> String {
-        let val = self.emit_expr_inline(expr);
-        match &expr.ty {
-            Type::Str | Type::String => val,
-            Type::I8 | Type::I16 | Type::I32 | Type::I64 => {
-                let buf = self.fresh_tmp();
-                self.line(&format!("char {}[32];", buf));
-                format!(
-                    "zen_i64_to_str((int64_t)({}), {}, sizeof({}))",
-                    val, buf, buf
-                )
-            }
-            Type::F32 | Type::F64 => {
-                let buf = self.fresh_tmp();
-                self.line(&format!("char {}[64];", buf));
-                format!(
-                    "zen_f64_to_str((double)({}), {}, sizeof({}))",
-                    val, buf, buf
-                )
-            }
-            Type::Bool => {
-                format!("zen_str_from_literal(({}) ? \"true\" : \"false\")", val)
-            }
-            _ => format!("zen_str_from_literal(\"<{}>\")", expr.ty.display_name()),
-        }
-    }
-
-    // ── Intrinsics ────────────────────────────────────────────
-
-    fn emit_intrinsic(&mut self, name: &str, args: &[TypedExpression]) -> String {
-        match name {
-            "raw_allocate" => {
-                let size = self.emit_expr_inline(&args[0]);
-                format!("malloc({})", size)
-            }
-            "raw_deallocate" => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                format!("free({})", ptr)
-            }
-            "raw_reallocate" => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let new_size = self.emit_expr_inline(&args[2]);
-                format!("realloc({}, {})", ptr, new_size)
-            }
-            "memcpy" => {
-                let dest = self.emit_expr_inline(&args[0]);
-                let src = self.emit_expr_inline(&args[1]);
-                let n = self.emit_expr_inline(&args[2]);
-                format!("memcpy({}, {}, {})", dest, src, n)
-            }
-            "trap" => "(__builtin_trap(), (void)0)".into(),
-            _ => format!("/* unknown intrinsic: {} */", name),
         }
     }
 }

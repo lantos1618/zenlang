@@ -71,7 +71,7 @@ impl Parser {
             "bool" => return Ok(AstType::Bool),
             "void" => return Ok(AstType::Void),
             "str" => return Ok(AstType::Str),
-            "String" | "StaticString" => return Ok(AstType::Str),
+            "StaticString" => return Ok(AstType::Str),
             "Self" => return Ok(AstType::SelfType),
             _ => name.to_string(),
         };
@@ -82,7 +82,7 @@ impl Parser {
             let mut type_args = Vec::new();
             loop {
                 self.skip_newlines();
-                if matches!(self.peek(), Token::Gt) {
+                if matches!(self.peek(), Token::Gt | Token::ShiftRight) {
                     break;
                 }
                 type_args.push(self.parse_type()?);
@@ -91,7 +91,7 @@ impl Parser {
                     self.advance();
                 }
             }
-            self.expect(&Token::Gt)?;
+            self.expect_gt()?;
 
             // Handle well-known generic types
             match base.as_str() {
@@ -101,6 +101,9 @@ impl Parser {
                 }
                 "RawPtr" if type_args.len() == 1 => {
                     Ok(AstType::RawPtr(Box::new(type_args.remove(0))))
+                }
+                "Slice" if type_args.len() == 1 => {
+                    Ok(AstType::Slice(Box::new(type_args.remove(0))))
                 }
                 _ => Ok(AstType::Generic {
                     name: base,

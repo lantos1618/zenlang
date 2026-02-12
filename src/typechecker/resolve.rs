@@ -1,4 +1,5 @@
 //! Type resolution — AstType → Type, field lookups, binary op checking.
+#![allow(clippy::result_large_err)]
 
 use crate::ast::expressions::BinaryOp;
 use crate::ast::typed::Type;
@@ -6,6 +7,23 @@ use crate::ast::AstType;
 use crate::error::{Diagnostic, Span};
 
 use super::TypeChecker;
+
+/// Produce a mangled name encoding generic type args, e.g. "DynVec_i32", "HashMap_str_i32".
+fn mangle_generic(name: &str, type_args: &[AstType]) -> String {
+    if type_args.is_empty() {
+        return name.to_string();
+    }
+    let args: Vec<String> = type_args
+        .iter()
+        .map(|a| {
+            a.display_name()
+                .replace('<', "_")
+                .replace('>', "")
+                .replace(", ", "_")
+        })
+        .collect();
+    format!("{}_{}", name, args.join("_"))
+}
 
 impl TypeChecker {
     /// Resolve an AstType to a concrete Type.
@@ -27,6 +45,9 @@ impl TypeChecker {
             AstType::Str => Type::Str,
             AstType::String => Type::String,
             AstType::Named(name) => {
+                if name == "String" {
+                    return Type::String;
+                }
                 if let Some(info) = self.structs.get(name) {
                     Type::Struct {
                         name: info.name.clone(),
@@ -36,14 +57,43 @@ impl TypeChecker {
                             .map(|(n, t)| (n.clone(), self.resolve_type(t)))
                             .collect(),
                     }
+                } else if let Some(info) = self.enums.get(name) {
+                    Type::Enum {
+                        name: info.name.clone(),
+                        variants: info
+                            .variants
+                            .iter()
+                            .map(|(n, t)| (n.clone(), t.as_ref().map(|ty| self.resolve_type(ty))))
+                            .collect(),
+                    }
                 } else {
-                    Type::Named(name.clone()) // enum, forward reference, or external type
+                    Type::Named(name.clone()) // forward reference or external type
                 }
             }
-            AstType::Generic { name, .. } => {
-                // For now, treat generic types as named types
-                // Full monomorphization comes later
-                Type::Named(name.clone())
+            AstType::Generic { name, type_args } => {
+                // Produce a mangled name encoding type args: "DynVec_i32", "HashMap_str_i32"
+                let mangled = mangle_generic(name, type_args);
+                if let Some(info) = self.structs.get(name) {
+                    Type::Struct {
+                        name: mangled,
+                        fields: info
+                            .fields
+                            .iter()
+                            .map(|(n, t)| (n.clone(), self.resolve_type(t)))
+                            .collect(),
+                    }
+                } else if let Some(info) = self.enums.get(name) {
+                    Type::Enum {
+                        name: mangled,
+                        variants: info
+                            .variants
+                            .iter()
+                            .map(|(n, t)| (n.clone(), t.as_ref().map(|ty| self.resolve_type(ty))))
+                            .collect(),
+                    }
+                } else {
+                    Type::Named(mangled)
+                }
             }
             AstType::Ptr(inner) => Type::Ptr(Box::new(self.resolve_type(inner))),
             AstType::MutPtr(inner) => Type::MutPtr(Box::new(self.resolve_type(inner))),
@@ -57,7 +107,7 @@ impl TypeChecker {
                 params: params.iter().map(|p| self.resolve_type(p)).collect(),
                 ret: Box::new(self.resolve_type(ret)),
             },
-            AstType::SelfType => Type::Unknown, // resolved in method context
+            AstType::SelfType => self.current_self_type.clone().unwrap_or(Type::Unknown),
             AstType::Inferred => Type::Unknown,
         }
     }
@@ -104,6 +154,17 @@ impl TypeChecker {
         // Named types might be aliases — be permissive
         if matches!(expected, Type::Named(_)) || matches!(actual, Type::Named(_)) {
             return true;
+        }
+        // Enum types: match by name
+        match (expected, actual) {
+            (Type::Enum { name: a, .. }, Type::Enum { name: b, .. }) if a == b => return true,
+            (Type::Enum { name, .. }, Type::Named(n))
+            | (Type::Named(n), Type::Enum { name, .. })
+                if name == n =>
+            {
+                return true;
+            }
+            _ => {}
         }
         // Never type is compatible with anything (diverging expression)
         if *expected == Type::Never || *actual == Type::Never {

@@ -254,3 +254,68 @@ fn parse_full_demo() {
         }
     }
 }
+
+#[test]
+fn parse_nested_generics() {
+    // Single-level generic
+    let prog = parse_ok("foo = (x: Vec<i32>) void { }");
+    assert_eq!(prog.declarations.len(), 1);
+
+    // Nested: Vec<Ptr<i32>> — the >> must not be parsed as ShiftRight
+    let prog = parse_ok("bar = (x: Vec<Ptr<i32>>) void { }");
+    assert_eq!(prog.declarations.len(), 1);
+
+    // Triple-nested: Map<str, Vec<Ptr<f64>>>
+    let prog = parse_ok("baz = (x: Map<str, Vec<Ptr<f64>>>) void { }");
+    assert_eq!(prog.declarations.len(), 1);
+
+    // Deeply nested: A<B<C<D<i32>>>>
+    let prog = parse_ok("deep = (x: A<B<C<D<i32>>>>) void { }");
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_slice_type() {
+    let prog = parse_ok("foo = (s: Slice<i32>) void { }");
+    assert_eq!(prog.declarations.len(), 1);
+    match &prog.declarations[0] {
+        Declaration::Function { params, .. } => {
+            assert!(
+                matches!(&params[0].ty, AstType::Slice(inner) if **inner == AstType::I32),
+                "expected Slice<I32>, got {:?}",
+                params[0].ty
+            );
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_string_type_is_named() {
+    // String should parse as AstType::Named("String"), NOT AstType::Str
+    let prog = parse_ok("foo = (s: String) void { }");
+    match &prog.declarations[0] {
+        Declaration::Function { params, .. } => match &params[0].ty {
+            AstType::Named(n) => assert_eq!(n, "String"),
+            AstType::Str => panic!("String should not parse as Str"),
+            other => panic!("expected Named(\"String\"), got {:?}", other),
+        },
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_static_string_is_str() {
+    // StaticString should still parse as AstType::Str
+    let prog = parse_ok("foo = (s: StaticString) void { }");
+    match &prog.declarations[0] {
+        Declaration::Function { params, .. } => {
+            assert!(
+                matches!(&params[0].ty, AstType::Str),
+                "expected Str, got {:?}",
+                params[0].ty
+            );
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}

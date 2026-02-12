@@ -131,6 +131,33 @@ impl Parser {
         }
     }
 
+    /// Expect a `>` token, splitting `>>` (ShiftRight) if needed for nested generics.
+    fn expect_gt(&mut self) -> Result<Span, CompileError> {
+        self.skip_newlines();
+        let (tok, span) = self
+            .tokens
+            .get(self.pos)
+            .cloned()
+            .unwrap_or((Token::EOF, Span::dummy()));
+        match tok {
+            Token::Gt => {
+                self.pos += 1;
+                Ok(span)
+            }
+            Token::ShiftRight => {
+                // Split `>>` into `>` + `>`: consume first `>`, leave second in stream
+                let first_span = Span::new(span.file_id, span.start, span.start + 1);
+                let second_span = Span::new(span.file_id, span.start + 1, span.end);
+                self.tokens[self.pos] = (Token::Gt, second_span);
+                Ok(first_span)
+            }
+            _ => Err(CompileError::Syntax(
+                format!("expected `>`, found {:?}", tok),
+                Some(span),
+            )),
+        }
+    }
+
     fn expect_identifier(&mut self) -> Result<(String, Span), CompileError> {
         self.skip_newlines();
         let (tok, span) = self.advance();

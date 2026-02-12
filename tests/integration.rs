@@ -161,6 +161,11 @@ fn test_functions() {
     run_test("functions");
 }
 
+#[test]
+fn test_defer() {
+    run_test("defer");
+}
+
 // ── Discovery test: all .zen files have matching .expected ──────────
 
 #[test]

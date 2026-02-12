@@ -8,7 +8,9 @@
 //! The typechecker NEVER defaults unknown types to I32. If a type can't be
 //! resolved, it's an error.
 
+mod closures;
 mod expressions;
+mod monomorphize;
 mod patterns;
 mod resolve;
 mod statements;
@@ -43,6 +45,7 @@ pub struct FuncInfo {
     pub name: String,
     pub params: Vec<(String, AstType)>,
     pub return_type: AstType,
+    pub type_params: Vec<String>,
 }
 
 /// Scope for variable types.
@@ -70,6 +73,8 @@ pub struct TypeChecker {
     scopes: Vec<Scope>,
     diagnostics: Vec<Diagnostic>,
     current_return_type: Option<Type>,
+    current_self_type: Option<Type>,
+    pending_defers: Vec<TypedExpression>,
 }
 
 impl Default for TypeChecker {
@@ -89,6 +94,8 @@ impl TypeChecker {
             scopes: vec![Scope::new()], // global scope
             diagnostics: Vec::new(),
             current_return_type: None,
+            current_self_type: None,
+            pending_defers: Vec::new(),
         }
     }
 
@@ -134,10 +141,14 @@ impl TypeChecker {
                     ..
                 } => {
                     let full_name = format!("{}.{}", type_name, method_name);
+                    // Set Self type for method body
+                    self.current_self_type =
+                        Some(self.resolve_type(&AstType::Named(type_name.clone())));
                     match self.check_function(&full_name, params, return_type, body, span) {
                         Ok(func) => functions.push(func),
                         Err(d) => self.diagnostics.push(d),
                     }
+                    self.current_self_type = None;
                 }
                 Declaration::Struct {
                     name, fields, span, ..
@@ -275,6 +286,7 @@ impl TypeChecker {
                 }
                 Declaration::Function {
                     name,
+                    type_params,
                     params,
                     return_type,
                     ..
@@ -289,12 +301,14 @@ impl TypeChecker {
                                 .map(|p| (p.name.clone(), p.ty.clone()))
                                 .collect(),
                             return_type: ret,
+                            type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
                         },
                     );
                 }
                 Declaration::Method {
                     type_name,
                     method_name,
+                    type_params,
                     params,
                     return_type,
                     ..
@@ -310,6 +324,7 @@ impl TypeChecker {
                                 .map(|p| (p.name.clone(), p.ty.clone()))
                                 .collect(),
                             return_type: ret,
+                            type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
                         },
                     );
                 }
@@ -587,5 +602,120 @@ mod tests {
             TypedStatementKind::VarDecl { ty, .. } => assert_eq!(*ty, Type::I64),
             _ => panic!("expected VarDecl"),
         }
+    }
+
+    #[test]
+    fn resolve_string_type() {
+        let tc = TypeChecker::new();
+        // "String" as a named type should resolve to Type::String
+        assert_eq!(
+            tc.resolve_type(&AstType::Named("String".into())),
+            Type::String
+        );
+    }
+
+    #[test]
+    fn resolve_slice_type() {
+        let tc = TypeChecker::new();
+        assert_eq!(
+            tc.resolve_type(&AstType::Slice(Box::new(AstType::I32))),
+            Type::Slice(Box::new(Type::I32))
+        );
+    }
+
+    #[test]
+    fn infer_type_args_basic() {
+        let tc = TypeChecker::new();
+        // Generic function: identity<T>(x: T) -> T
+        let type_params = vec!["T".to_string()];
+        let params = vec![("x".to_string(), AstType::Named("T".into()))];
+        let arg_types = vec![Type::I32];
+        let subs = tc.infer_type_args(&type_params, &params, &arg_types);
+        assert_eq!(subs.get("T"), Some(&Type::I32));
+    }
+
+    #[test]
+    fn substitute_type_basic() {
+        let tc = TypeChecker::new();
+        let mut subs = HashMap::new();
+        subs.insert("T".to_string(), Type::I32);
+        // T → I32
+        assert_eq!(
+            tc.substitute_type(&AstType::Named("T".into()), &subs),
+            Type::I32
+        );
+        // Ptr<T> → Ptr<I32>
+        assert_eq!(
+            tc.substitute_type(&AstType::Ptr(Box::new(AstType::Named("T".into()))), &subs),
+            Type::Ptr(Box::new(Type::I32))
+        );
+        // Non-generic type unchanged
+        assert_eq!(tc.substitute_type(&AstType::Bool, &subs), Type::Bool);
+    }
+
+    #[test]
+    fn generic_function_collection() {
+        use crate::ast::Expression;
+        let mut tc = TypeChecker::new();
+        let decls = vec![Declaration::Function {
+            name: "identity".into(),
+            type_params: vec![crate::ast::declarations::TypeParam {
+                name: "T".into(),
+                constraint: None,
+                span: Span::dummy(),
+            }],
+            params: vec![crate::ast::Param {
+                name: "x".into(),
+                ty: AstType::Named("T".into()),
+                mutable: false,
+                span: Span::dummy(),
+            }],
+            return_type: Some(AstType::Named("T".into())),
+            body: Expression::Block {
+                statements: Vec::new(),
+                expr: None,
+                span: Span::dummy(),
+            },
+            public: false,
+            span: Span::dummy(),
+        }];
+        tc.collect_declarations(&decls);
+        let info = tc.functions.get("identity").unwrap();
+        assert_eq!(info.type_params, vec!["T".to_string()]);
+    }
+
+    #[test]
+    fn func_info_non_generic_has_empty_type_params() {
+        use crate::ast::Expression;
+        let mut tc = TypeChecker::new();
+        let decls = vec![Declaration::Function {
+            name: "add".into(),
+            type_params: Vec::new(),
+            params: vec![
+                crate::ast::Param {
+                    name: "a".into(),
+                    ty: AstType::I32,
+                    mutable: false,
+                    span: Span::dummy(),
+                },
+                crate::ast::Param {
+                    name: "b".into(),
+                    ty: AstType::I32,
+                    mutable: false,
+                    span: Span::dummy(),
+                },
+            ],
+            return_type: Some(AstType::I32),
+            body: Expression::Block {
+                statements: Vec::new(),
+                expr: None,
+                span: Span::dummy(),
+            },
+            public: false,
+            span: Span::dummy(),
+        }];
+        tc.collect_declarations(&decls);
+        let info = tc.functions.get("add").unwrap();
+        assert!(info.type_params.is_empty());
     }
 }

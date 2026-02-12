@@ -1,15 +1,15 @@
 // Zen Standard Library: Set
 // Unordered collection of unique elements
-// Uses compile-time generics with Vec<T>
+// Uses compile-time generics with DynVec<T>
 
 { compiler } = @std
 { Ptr, Option } = @std.core
 { Allocator } = @std.memory.allocator
-{ Vec } = @std.collections.vec
+{ DynVec } = @std.collections.vec
 
-// Set<T> - implemented using Vec<T> (simplified: linear search)
+// Set<T> - implemented using DynVec<T> (simplified: linear search)
 Set<T>: {
-    data: Vec<T>,
+    data: DynVec<T>,
     allocator: Allocator
 }
 
@@ -20,7 +20,7 @@ Set<T>: {
 // Create new empty set
 Set<T>.new = (allocator: Allocator) Set<T> {
     return Set<T> {
-        data: Vec<T>.new(allocator),
+        data: DynVec<T>.new(allocator),
         allocator: allocator
     }
 }
@@ -28,7 +28,7 @@ Set<T>.new = (allocator: Allocator) Set<T> {
 // Create set with initial capacity
 Set<T>.with_capacity = (allocator: Allocator, capacity: usize) Set<T> {
     return Set<T> {
-        data: Vec<T>.with_capacity(allocator, capacity),
+        data: DynVec<T>.with_capacity(allocator, capacity),
         allocator: allocator
     }
 }
@@ -165,7 +165,7 @@ Set<T>.free = (self: MutPtr<Set<T>>) void {
 
 // SetIterator - Iterates over set elements
 SetIterator<T>: {
-    data: Vec<T>,
+    data: DynVec<T>,
     index: usize,
     len: usize
 }

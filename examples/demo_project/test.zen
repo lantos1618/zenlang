@@ -4,7 +4,7 @@
 { print, println } = std.io
 { Option, Result } = std
 { HashMap, HashSet } = std.collections
-{ Vec } = std
+{ DynVec } = std
 { memory } = std
 
 // Import the test framework from stdlib

@@ -557,7 +557,7 @@ impl Parser {
         let mut args = Vec::new();
         loop {
             self.skip_newlines();
-            if matches!(self.peek(), Token::Gt) {
+            if matches!(self.peek(), Token::Gt | Token::ShiftRight) {
                 break;
             }
             args.push(self.parse_type()?);
@@ -565,7 +565,7 @@ impl Parser {
                 self.advance();
             }
         }
-        self.expect(&Token::Gt)?;
+        self.expect_gt()?;
         Ok(args)
     }
 }

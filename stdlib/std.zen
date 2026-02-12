@@ -25,7 +25,7 @@
 // ============================================================================
 
 { String } = @std.collections.string
-{ Vec } = @std.collections.vec
+{ DynVec } = @std.collections.vec
 { Queue } = @std.collections.queue
 { Stack } = @std.collections.stack
 { Set } = @std.collections.set

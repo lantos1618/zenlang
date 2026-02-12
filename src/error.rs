@@ -162,6 +162,27 @@ impl Label {
     }
 }
 
+// ── Context Frames ────────────────────────────────────────────────
+
+/// What kind of context led to this diagnostic.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ContextKind {
+    InFunction,
+    InModule,
+    InGenericInstantiation,
+    InTraitImpl,
+    InImport,
+    InMacroExpansion,
+}
+
+/// A frame in the context stack showing how we reached the error.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ContextFrame {
+    pub span: Span,
+    pub kind: ContextKind,
+    pub message: String,
+}
+
 // ── Diagnostic ─────────────────────────────────────────────────────
 
 /// A single compiler diagnostic — shared across all phases.
@@ -173,6 +194,7 @@ pub struct Diagnostic {
     pub span: Option<Span>,
     pub labels: Vec<Label>,
     pub notes: Vec<String>,
+    pub context: Vec<ContextFrame>,
 }
 
 impl Diagnostic {
@@ -185,6 +207,7 @@ impl Diagnostic {
             span: Some(span),
             labels: Vec::new(),
             notes: Vec::new(),
+            context: Vec::new(),
         }
     }
 
@@ -197,6 +220,7 @@ impl Diagnostic {
             span: Some(span),
             labels: Vec::new(),
             notes: Vec::new(),
+            context: Vec::new(),
         }
     }
 
@@ -212,6 +236,12 @@ impl Diagnostic {
         self
     }
 
+    /// Add a context frame showing how we reached this diagnostic.
+    pub fn with_context(mut self, frame: ContextFrame) -> Self {
+        self.context.push(frame);
+        self
+    }
+
     pub fn is_error(&self) -> bool {
         self.severity == Severity::Error
     }
@@ -219,7 +249,11 @@ impl Diagnostic {
 
 impl fmt::Display for Diagnostic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}[{}]: {}", self.severity, self.code, self.message)
+        write!(f, "{}[{}]: {}", self.severity, self.code, self.message)?;
+        for frame in &self.context {
+            write!(f, "\n   = {}", frame.message)?;
+        }
+        Ok(())
     }
 }
 
@@ -258,6 +292,7 @@ impl From<CompileError> for Diagnostic {
                 span,
                 labels: Vec::new(),
                 notes: Vec::new(),
+                context: Vec::new(),
             },
             CompileError::Type(msg, span) => Diagnostic {
                 severity: Severity::Error,
@@ -266,6 +301,7 @@ impl From<CompileError> for Diagnostic {
                 span,
                 labels: Vec::new(),
                 notes: Vec::new(),
+                context: Vec::new(),
             },
             CompileError::Resolution(msg, span) => Diagnostic {
                 severity: Severity::Error,
@@ -274,6 +310,7 @@ impl From<CompileError> for Diagnostic {
                 span,
                 labels: Vec::new(),
                 notes: Vec::new(),
+                context: Vec::new(),
             },
             CompileError::Internal(msg) => Diagnostic {
                 severity: Severity::Error,
@@ -282,6 +319,7 @@ impl From<CompileError> for Diagnostic {
                 span: None,
                 labels: Vec::new(),
                 notes: Vec::new(),
+                context: Vec::new(),
             },
         }
     }

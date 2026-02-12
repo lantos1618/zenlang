@@ -52,6 +52,8 @@ impl CEmitter {
         self.line("#include <stdio.h>");
         self.line("#include <stdlib.h>");
         self.line("#include <string.h>");
+        self.line("#include <unistd.h>");
+        self.line("#include <sys/syscall.h>");
         self.blank();
 
         // Runtime types
@@ -93,6 +95,18 @@ impl CEmitter {
 
         // I/O helper functions (used by demo)
         self.emit_io_helpers();
+
+        // Scan all functions for closures and collect their definitions
+        self.collect_closure_defs(program);
+        // Emit closure env structs and functions
+        if !self.closure_defs.is_empty() {
+            self.line("/* Closure definitions */");
+            let defs = std::mem::take(&mut self.closure_defs);
+            for def in &defs {
+                self.output.push_str(def);
+                self.blank();
+            }
+        }
 
         // Function bodies
         for func in &program.functions {
@@ -292,33 +306,81 @@ impl CEmitter {
         // is returned (especially important for match expressions).
         if let Some(ref expr) = func.body.expr {
             if func.return_type != Type::Void && func.return_type != Type::Never {
-                match &expr.kind {
-                    TypedExprKind::Return(_) => {
-                        let s = self.emit_expr_to_stmt(expr);
+                if !func.defers.is_empty() {
+                    // With defers: save return value, run defers, then return
+                    let tmp = self.fresh_tmp();
+                    let ty = self.c_type(&func.return_type);
+                    match &expr.kind {
+                        TypedExprKind::Return(Some(v)) => {
+                            let val = self.emit_expr_inline(v);
+                            self.line(&format!("{} {} = {};", ty, tmp, val));
+                        }
+                        TypedExprKind::Match {
+                            scrutinee,
+                            arms,
+                            kind,
+                        } => {
+                            self.line(&format!("{} {};", ty, tmp));
+                            self.emit_match(scrutinee, arms, kind, Some(&tmp));
+                        }
+                        _ => {
+                            let val = self.emit_expr_inline(expr);
+                            self.line(&format!("{} {} = {};", ty, tmp, val));
+                        }
+                    }
+                    // Emit defers in LIFO order (already reversed by typechecker)
+                    for defer_expr in &func.defers {
+                        let s = self.emit_expr_to_stmt(defer_expr);
                         if !s.is_empty() {
                             self.line(&s);
                         }
                     }
-                    TypedExprKind::Match {
-                        scrutinee,
-                        arms,
-                        kind,
-                    } => {
-                        let tmp = self.fresh_tmp();
-                        let ty = self.c_type(&func.return_type);
-                        self.line(&format!("{} {};", ty, tmp));
-                        self.emit_match(scrutinee, arms, kind, Some(&tmp));
-                        self.line(&format!("return {};", tmp));
-                    }
-                    _ => {
-                        let val = self.emit_expr_inline(expr);
-                        if !val.is_empty() {
-                            self.line(&format!("return {};", val));
+                    self.line(&format!("return {};", tmp));
+                } else {
+                    // No defers: original behavior
+                    match &expr.kind {
+                        TypedExprKind::Return(_) => {
+                            let s = self.emit_expr_to_stmt(expr);
+                            if !s.is_empty() {
+                                self.line(&s);
+                            }
+                        }
+                        TypedExprKind::Match {
+                            scrutinee,
+                            arms,
+                            kind,
+                        } => {
+                            let tmp = self.fresh_tmp();
+                            let ty = self.c_type(&func.return_type);
+                            self.line(&format!("{} {};", ty, tmp));
+                            self.emit_match(scrutinee, arms, kind, Some(&tmp));
+                            self.line(&format!("return {};", tmp));
+                        }
+                        _ => {
+                            let val = self.emit_expr_inline(expr);
+                            if !val.is_empty() {
+                                self.line(&format!("return {};", val));
+                            }
                         }
                     }
                 }
             } else {
                 let s = self.emit_expr_to_stmt(expr);
+                if !s.is_empty() {
+                    self.line(&s);
+                }
+                // Emit defers for void functions too
+                for defer_expr in &func.defers {
+                    let s = self.emit_expr_to_stmt(defer_expr);
+                    if !s.is_empty() {
+                        self.line(&s);
+                    }
+                }
+            }
+        } else if !func.defers.is_empty() {
+            // No trailing expression but has defers
+            for defer_expr in &func.defers {
+                let s = self.emit_expr_to_stmt(defer_expr);
                 if !s.is_empty() {
                     self.line(&s);
                 }
@@ -350,6 +412,107 @@ impl CEmitter {
             self.line(&format!("{} {} = {};", ty, name, val));
         } else {
             self.line(&format!("const {} {} = {};", ty, name, val));
+        }
+    }
+
+    // ── Closure scanning ─────────────────────────────────────
+
+    /// Scan the program for closures and generate env struct + function definitions.
+    fn collect_closure_defs(&mut self, program: &TypedProgram) {
+        for func in &program.functions {
+            self.scan_block_for_closures(&func.body);
+        }
+    }
+
+    fn scan_block_for_closures(&mut self, block: &TypedBlock) {
+        for stmt in &block.statements {
+            match &stmt.kind {
+                TypedStatementKind::VarDecl { value, .. } => {
+                    self.scan_expr_for_closures(value);
+                }
+                TypedStatementKind::Expression(e) => {
+                    self.scan_expr_for_closures(e);
+                }
+            }
+        }
+        if let Some(ref e) = block.expr {
+            self.scan_expr_for_closures(e);
+        }
+    }
+
+    fn scan_expr_for_closures(&mut self, expr: &TypedExpression) {
+        match &expr.kind {
+            TypedExprKind::Closure {
+                fn_name,
+                env_type,
+                captures,
+            } => {
+                let mut def = String::new();
+                let fn_ident = c_ident(fn_name);
+
+                // Emit env struct if there are captures
+                if !captures.is_empty() && !env_type.is_empty() {
+                    let env_ident = c_ident(env_type);
+                    def.push_str(&format!("typedef struct {} {{\n", env_ident));
+                    for cap in captures {
+                        let ty = self.c_type(&cap.ty);
+                        def.push_str(&format!("    {} {};\n", ty, c_ident(&cap.name)));
+                    }
+                    def.push_str(&format!("}} {};\n\n", env_ident));
+                }
+
+                // Emit function definition
+                // For closures with captures, add env pointer as first param
+                if let Type::Function { params, ret } = &expr.ty {
+                    let ret_str = self.c_type(ret);
+                    let mut param_strs = Vec::new();
+                    if !captures.is_empty() && !env_type.is_empty() {
+                        param_strs.push(format!("{}* __env", c_ident(env_type)));
+                    }
+                    for (i, p) in params.iter().enumerate() {
+                        param_strs.push(format!("{} __arg{}", self.c_type(p), i));
+                    }
+                    let params_str = if param_strs.is_empty() {
+                        "void".to_string()
+                    } else {
+                        param_strs.join(", ")
+                    };
+
+                    def.push_str(&format!(
+                        "static {} {}({}) {{\n",
+                        ret_str, fn_ident, params_str
+                    ));
+                    def.push_str("    /* closure body emitted by caller */\n");
+                    def.push_str("}\n");
+                }
+
+                self.closure_defs.push(def);
+            }
+            TypedExprKind::Block(block) => {
+                self.scan_block_for_closures(block);
+            }
+            TypedExprKind::Match {
+                scrutinee, arms, ..
+            } => {
+                self.scan_expr_for_closures(scrutinee);
+                for arm in arms {
+                    self.scan_block_for_closures(&arm.body);
+                }
+            }
+            TypedExprKind::FunctionCall { args, .. } => {
+                for arg in args {
+                    self.scan_expr_for_closures(arg);
+                }
+            }
+            TypedExprKind::BinaryOp { left, right, .. } => {
+                self.scan_expr_for_closures(left);
+                self.scan_expr_for_closures(right);
+            }
+            TypedExprKind::Assign { target, value } => {
+                self.scan_expr_for_closures(target);
+                self.scan_expr_for_closures(value);
+            }
+            _ => {}
         }
     }
 }

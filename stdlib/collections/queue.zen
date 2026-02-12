@@ -1,16 +1,16 @@
 // Zen Standard Library: Queue
 // FIFO (First In First Out) data structure
-// Uses compile-time generics with Vec<T>
+// Uses compile-time generics with DynVec<T>
 
 { compiler } = @std
 { Ptr } = @std.core.ptr
 { Option } = @std.core.option
-{ Vec } = @std.collections.vec
+{ DynVec } = @std.collections.vec
 { Allocator } = @std.memory.allocator
 
-// Queue<T> - implemented using Vec<T> internally with head/tail indices
+// Queue<T> - implemented using DynVec<T> internally with head/tail indices
 Queue<T>: {
-    data: Vec<T>,
+    data: DynVec<T>,
     head: usize,
     tail: usize,
     allocator: Allocator
@@ -23,7 +23,7 @@ Queue<T>: {
 // Create new empty queue
 Queue<T>.new = (allocator: Allocator) Queue<T> {
     return Queue<T> {
-        data: Vec<T>.new(allocator),
+        data: DynVec<T>.new(allocator),
         head: 0,
         tail: 0,
         allocator: allocator
@@ -33,7 +33,7 @@ Queue<T>.new = (allocator: Allocator) Queue<T> {
 // Create queue with initial capacity
 Queue<T>.with_capacity = (allocator: Allocator, capacity: usize) Queue<T> {
     return Queue<T> {
-        data: Vec<T>.with_capacity(allocator, capacity),
+        data: DynVec<T>.with_capacity(allocator, capacity),
         head: 0,
         tail: 0,
         allocator: allocator
@@ -104,7 +104,7 @@ Queue<T>.free = (self: MutPtr<Queue<T>>) void {
 
 // QueueIterator - Iterates over queue elements from front to back
 QueueIterator<T>: {
-    data: Vec<T>,
+    data: DynVec<T>,
     index: usize,
     tail: usize
 }

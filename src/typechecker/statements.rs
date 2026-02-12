@@ -1,4 +1,5 @@
 //! Statement checking.
+#![allow(clippy::result_large_err)]
 
 use crate::ast::typed::*;
 use crate::ast::Statement;
