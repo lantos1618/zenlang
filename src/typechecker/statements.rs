@@ -42,15 +42,36 @@ impl TypeChecker {
                     typed_value
                 };
 
+                if !self.types_compatible(&var_type, &typed_value.ty) {
+                    self.diagnostics.push(Diagnostic::error(
+                        "E3072",
+                        format!(
+                            "variable `{}` expects `{}`, found `{}`",
+                            name,
+                            var_type.display_name(),
+                            typed_value.ty.display_name()
+                        ),
+                        *span,
+                    ));
+                }
+
                 // If `name = expr` form (not ::= or :=) and the variable already
                 // exists in scope, treat as reassignment instead of new binding.
-                if !*mutable && ty.is_none() && self.lookup_var(name).is_some() {
+                if !*mutable && ty.is_none() && self.lookup_var_info(name).is_some() {
+                    let target_info = self.lookup_var_info(name).cloned().expect("checked above");
+                    self.check_assignment_target(
+                        name,
+                        &target_info.ty,
+                        target_info.mutable,
+                        &typed_value,
+                        span,
+                    );
                     return Ok(TypedStatement {
                         kind: TypedStatementKind::Expression(TypedExpression {
                             kind: TypedExprKind::Assign {
                                 target: Box::new(TypedExpression {
                                     kind: TypedExprKind::Variable(name.clone()),
-                                    ty: var_type,
+                                    ty: target_info.ty,
                                     span: *span,
                                 }),
                                 value: Box::new(typed_value),
@@ -62,7 +83,7 @@ impl TypeChecker {
                     });
                 }
 
-                self.define_var(name, var_type.clone());
+                self.define_var_with_mutability(name, var_type.clone(), *mutable);
                 Ok(TypedStatement {
                     kind: TypedStatementKind::VarDecl {
                         name: name.clone(),
@@ -80,6 +101,30 @@ impl TypeChecker {
             } => {
                 let typed_target = self.check_expr(target)?;
                 let typed_value = self.check_expr(value)?;
+                if let TypedExprKind::Variable(name) = &typed_target.kind {
+                    if let Some(info) = self.lookup_var_info(name).cloned() {
+                        self.check_assignment_target(
+                            name,
+                            &info.ty,
+                            info.mutable,
+                            &typed_value,
+                            span,
+                        );
+                    }
+                } else if typed_target.ty != Type::Unknown
+                    && typed_value.ty != Type::Unknown
+                    && !self.types_compatible(&typed_target.ty, &typed_value.ty)
+                {
+                    self.diagnostics.push(Diagnostic::error(
+                        "E3071",
+                        format!(
+                            "assignment expects `{}`, found `{}`",
+                            typed_target.ty.display_name(),
+                            typed_value.ty.display_name()
+                        ),
+                        *span,
+                    ));
+                }
                 Ok(TypedStatement {
                     kind: TypedStatementKind::Expression(TypedExpression {
                         kind: TypedExprKind::Assign {
@@ -128,6 +173,39 @@ impl TypeChecker {
                     span: *span,
                 })
             }
+        }
+    }
+
+    fn check_assignment_target(
+        &mut self,
+        name: &str,
+        target_ty: &Type,
+        mutable: bool,
+        value: &TypedExpression,
+        span: &crate::error::Span,
+    ) {
+        if !mutable {
+            self.diagnostics.push(Diagnostic::error(
+                "E3070",
+                format!("cannot assign to immutable variable `{}`", name),
+                *span,
+            ));
+        }
+
+        if value.ty != Type::Unknown
+            && *target_ty != Type::Unknown
+            && !self.types_compatible(target_ty, &value.ty)
+        {
+            self.diagnostics.push(Diagnostic::error(
+                "E3071",
+                format!(
+                    "assignment to `{}` expects `{}`, found `{}`",
+                    name,
+                    target_ty.display_name(),
+                    value.ty.display_name()
+                ),
+                value.span,
+            ));
         }
     }
 }

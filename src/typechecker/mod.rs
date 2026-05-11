@@ -51,7 +51,13 @@ pub struct FuncInfo {
 /// Scope for variable types.
 #[derive(Debug, Clone)]
 struct Scope {
-    vars: HashMap<String, Type>,
+    vars: HashMap<String, VarInfo>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct VarInfo {
+    pub ty: Type,
+    pub mutable: bool,
 }
 
 impl Scope {
@@ -344,15 +350,23 @@ impl TypeChecker {
     }
 
     pub(crate) fn define_var(&mut self, name: &str, ty: Type) {
+        self.define_var_with_mutability(name, ty, false);
+    }
+
+    pub(crate) fn define_var_with_mutability(&mut self, name: &str, ty: Type, mutable: bool) {
         if let Some(scope) = self.scopes.last_mut() {
-            scope.vars.insert(name.to_string(), ty);
+            scope.vars.insert(name.to_string(), VarInfo { ty, mutable });
         }
     }
 
     pub(crate) fn lookup_var(&self, name: &str) -> Option<Type> {
+        self.lookup_var_info(name).map(|info| info.ty.clone())
+    }
+
+    pub(crate) fn lookup_var_info(&self, name: &str) -> Option<&VarInfo> {
         for scope in self.scopes.iter().rev() {
-            if let Some(ty) = scope.vars.get(name) {
-                return Some(ty.clone());
+            if let Some(info) = scope.vars.get(name) {
+                return Some(info);
             }
         }
         None
@@ -882,6 +896,77 @@ main = () void {
                 .message
                 .contains("payload for enum variant `Maybe.Some` expects `i32`, found `str`")),
             "expected payload type diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn assignment_to_immutable_binding_is_error() {
+        let program = parse_program(
+            r#"
+main = () void {
+    x = 1
+    x = 2
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("immutable assignment should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("cannot assign to immutable variable `x`")),
+            "expected immutable assignment diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn assignment_type_mismatch_is_error() {
+        let program = parse_program(
+            r#"
+main = () void {
+    x ::= 1
+    x = "bad"
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("assignment type mismatch should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("assignment to `x` expects `i32`, found `str`")),
+            "expected assignment type diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn invalid_field_access_is_error() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+main = () void {
+    p = Point { x: 1 }
+    y = p.y
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("invalid field access should fail");
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("type `Point` has no field `y`")),
+            "expected invalid field diagnostic, got {errors:?}"
         );
     }
 

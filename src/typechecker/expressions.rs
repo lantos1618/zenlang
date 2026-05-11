@@ -423,6 +423,15 @@ impl TypeChecker {
                     }
                     _ => {
                         let field_type = self.lookup_field_type(&typed_obj.ty, field);
+                        if field_type == Type::Unknown {
+                            if let Some(type_name) = self.field_access_type_name(&typed_obj.ty) {
+                                self.diagnostics.push(Diagnostic::error(
+                                    "E3052",
+                                    format!("type `{}` has no field `{}`", type_name, field),
+                                    *span,
+                                ));
+                            }
+                        }
                         Ok(TypedExpression {
                             kind: TypedExprKind::FieldAccess {
                                 object: Box::new(typed_obj),
@@ -944,7 +953,7 @@ impl TypeChecker {
                     .scopes
                     .iter()
                     .flat_map(|s| s.vars.iter())
-                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .map(|(k, v)| (k.clone(), v.ty.clone()))
                     .collect();
 
                 self.push_scope();
@@ -1077,6 +1086,15 @@ impl TypeChecker {
                     actual.span,
                 ));
             }
+        }
+    }
+
+    fn field_access_type_name(&self, ty: &Type) -> Option<String> {
+        match ty {
+            Type::Struct { name, .. } => Some(name.clone()),
+            Type::Named(name) if self.structs.contains_key(name) => Some(name.clone()),
+            Type::Ptr(inner) | Type::MutPtr(inner) => self.field_access_type_name(inner),
+            _ => None,
         }
     }
 }
