@@ -169,27 +169,85 @@ impl ModuleSystem {
                 )]);
             }
 
-            let dep_program = self.load_with_imports(&file_path, files)?;
-
-            // Merge only the named imports
-            let name_set: HashSet<&str> = names.iter().map(|n| n.as_str()).collect();
-            for decl in &dep_program.declarations {
-                if let Some(decl_name) = decl.name() {
-                    if name_set.contains(decl_name) {
-                        imported_decls.push(decl.clone());
-                    }
-                }
-                // Also include methods on imported types
-                if let Declaration::Method { type_name, .. } = decl {
-                    if name_set.contains(type_name.as_str()) {
-                        imported_decls.push(decl.clone());
-                    }
+            let mut requested_names = HashSet::new();
+            for name in &names {
+                if !requested_names.insert(name.as_str()) {
+                    return Err(vec![CompileError::Resolution(
+                        format!(
+                            "duplicate import '{}' from module '{}'",
+                            name,
+                            module_path.join(".")
+                        ),
+                        Some(span),
+                    )]);
                 }
             }
+
+            let dep_program = self.load_with_imports(&file_path, files)?;
+            self.collect_imported_declarations(
+                &dep_program,
+                &names,
+                &module_path.join("."),
+                span,
+                &mut imported_decls,
+            )?;
         }
 
         // Append imported declarations to the program
         program.declarations.extend(imported_decls);
+        Ok(())
+    }
+
+    fn collect_imported_declarations(
+        &self,
+        dep_program: &Program,
+        names: &[String],
+        module_name: &str,
+        import_span: Span,
+        imported_decls: &mut Vec<Declaration>,
+    ) -> Result<(), Vec<CompileError>> {
+        for name in names {
+            let mut found_private = false;
+            let mut found_public = false;
+
+            for decl in &dep_program.declarations {
+                if decl.name() == Some(name.as_str()) {
+                    if decl.is_public() {
+                        found_public = true;
+                        imported_decls.push(decl.clone());
+                    } else {
+                        found_private = true;
+                    }
+                }
+
+                // Importing a public type also brings its public methods into scope.
+                if let Declaration::Method {
+                    type_name, public, ..
+                } = decl
+                {
+                    if type_name == name && *public {
+                        imported_decls.push(decl.clone());
+                    }
+                }
+            }
+
+            if !found_public {
+                if found_private {
+                    return Err(vec![CompileError::Resolution(
+                        format!(
+                            "symbol '{}' in module '{}' is not exported",
+                            name, module_name
+                        ),
+                        Some(import_span),
+                    )]);
+                }
+                return Err(vec![CompileError::Resolution(
+                    format!("module '{}' does not export '{}'", module_name, name),
+                    Some(import_span),
+                )]);
+            }
+        }
+
         Ok(())
     }
 
@@ -339,7 +397,7 @@ mod tests {
         let math_path = tmp.path().join("math.zen");
         fs::write(
             &math_path,
-            "add = (a: i32, b: i32) i32 {\n    return a + b\n}\n",
+            "pub add = (a: i32, b: i32) i32 {\n    return a + b\n}\n",
         )
         .unwrap();
 
@@ -440,7 +498,11 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let math_path = tmp.path().join("math.zen");
-        fs::write(&math_path, "add = (a: i32, b: i32) i32 { return a + b }\n").unwrap();
+        fs::write(
+            &math_path,
+            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
+        )
+        .unwrap();
 
         // Two files both import math
         let a_path = tmp.path().join("a.zen");
@@ -481,13 +543,13 @@ mod tests {
 
         // c.zen has a helper
         let c_path = tmp.path().join("c.zen");
-        fs::write(&c_path, "helper = () i32 { return 42 }\n").unwrap();
+        fs::write(&c_path, "pub helper = () i32 { return 42 }\n").unwrap();
 
         // b.zen imports from c
         let b_path = tmp.path().join("b.zen");
         fs::write(
             &b_path,
-            "{ helper } = c\n\nwrapper = () i32 { return helper() }\n",
+            "{ helper } = c\n\npub wrapper = () i32 { return helper() }\n",
         )
         .unwrap();
 
@@ -520,7 +582,7 @@ mod tests {
         let utils_dir = tmp.path().join("utils");
         fs::create_dir(&utils_dir).unwrap();
         let math_path = utils_dir.join("math.zen");
-        fs::write(&math_path, "square = (x: i32) i32 { return x * x }\n").unwrap();
+        fs::write(&math_path, "pub square = (x: i32) i32 { return x * x }\n").unwrap();
 
         // Create main.zen that imports from utils.math
         let main_path = tmp.path().join("main.zen");
@@ -541,5 +603,94 @@ mod tests {
             .collect();
         assert!(func_names.contains(&"main"));
         assert!(func_names.contains(&"square"));
+    }
+
+    #[test]
+    fn private_import_is_rejected() {
+        let tmp = setup_temp_dir();
+
+        let math_path = tmp.path().join("math.zen");
+        fs::write(&math_path, "add = (a: i32, b: i32) i32 { return a + b }\n").unwrap();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ add } = math\n\nmain = () i32 { return add(1, 2) }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let result = ms.load_with_imports(&main_path, &mut files);
+        assert!(result.is_err(), "private import should be rejected");
+        let msg = format!("{}", result.unwrap_err()[0]);
+        assert!(
+            msg.contains("not exported"),
+            "error should mention export visibility, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn missing_imported_symbol_is_rejected() {
+        let tmp = setup_temp_dir();
+
+        let math_path = tmp.path().join("math.zen");
+        fs::write(
+            &math_path,
+            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
+        )
+        .unwrap();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ subtract } = math\n\nmain = () i32 { return 0 }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let result = ms.load_with_imports(&main_path, &mut files);
+        assert!(
+            result.is_err(),
+            "missing imported symbol should be rejected"
+        );
+        let msg = format!("{}", result.unwrap_err()[0]);
+        assert!(
+            msg.contains("does not export"),
+            "error should mention missing export, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn duplicate_imported_symbol_is_rejected() {
+        let tmp = setup_temp_dir();
+
+        let math_path = tmp.path().join("math.zen");
+        fs::write(
+            &math_path,
+            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
+        )
+        .unwrap();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ add, add } = math\n\nmain = () i32 { return 0 }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let result = ms.load_with_imports(&main_path, &mut files);
+        assert!(result.is_err(), "duplicate import should be rejected");
+        let msg = format!("{}", result.unwrap_err()[0]);
+        assert!(
+            msg.contains("duplicate import"),
+            "error should mention duplicate import, got: {msg}"
+        );
     }
 }

@@ -142,4 +142,15 @@ impl Declaration {
             _ => None,
         }
     }
+
+    /// Whether this declaration is exported from its module.
+    pub fn is_public(&self) -> bool {
+        match self {
+            Declaration::Function { public, .. }
+            | Declaration::Method { public, .. }
+            | Declaration::Struct { public, .. }
+            | Declaration::Enum { public, .. } => *public,
+            _ => false,
+        }
+    }
 }
