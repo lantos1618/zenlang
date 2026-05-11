@@ -239,8 +239,21 @@ impl TypeChecker {
             .map(|(variant, payload)| (variant.as_str(), payload.as_ref()))
             .collect();
         let mut seen = std::collections::HashSet::new();
+        let mut wildcard_seen = false;
 
         for arm in arms {
+            if let Pattern::Wildcard { span } = &arm.pattern {
+                if wildcard_seen || seen.len() == variant_payloads.len() {
+                    self.diagnostics.push(Diagnostic::error(
+                        "E4002",
+                        "redundant wildcard match arm",
+                        *span,
+                    ));
+                }
+                wildcard_seen = true;
+                continue;
+            }
+
             let Some((variant, has_payload)) =
                 self.explicit_enum_variant_pattern(&arm.pattern, &variant_payloads)
             else {
@@ -256,7 +269,13 @@ impl TypeChecker {
                 continue;
             };
 
-            if !seen.insert(variant.to_string()) {
+            if wildcard_seen {
+                self.diagnostics.push(Diagnostic::error(
+                    "E4002",
+                    format!("redundant match arm for `{enum_name}.{variant}`"),
+                    span,
+                ));
+            } else if !seen.insert(variant.to_string()) {
                 self.diagnostics.push(Diagnostic::error(
                     "E4002",
                     format!("duplicate match arm for `{enum_name}.{variant}`"),

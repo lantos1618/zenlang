@@ -1233,6 +1233,59 @@ describe = (m: Maybe) StaticString {
     }
 
     #[test]
+    fn enum_match_wildcard_after_all_variants_is_redundant() {
+        let program = parse_program(
+            r#"
+Color: Red, Green
+
+describe = (c: Color) StaticString {
+    c ?
+        | Red { "red" }
+        | Green { "green" }
+        | _ { "fallback" }
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("redundant enum wildcard arm should fail");
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("redundant wildcard match arm")),
+            "expected redundant wildcard diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn enum_match_variant_after_wildcard_is_redundant() {
+        let program = parse_program(
+            r#"
+Color: Red, Green
+
+describe = (c: Color) StaticString {
+    c ?
+        | _ { "fallback" }
+        | Red { "red" }
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("enum variant after wildcard should fail");
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("redundant match arm for `Color.Red`")),
+            "expected redundant enum arm diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
     fn bool_match_missing_arm_is_error_for_value_match() {
         let program = parse_program(
             r#"
