@@ -690,6 +690,147 @@ mod tests {
     }
 
     #[test]
+    fn struct_literal_missing_field_is_error() {
+        use crate::ast::declarations::StructField;
+        use crate::ast::{Expression, Program, Statement};
+        let mut tc = TypeChecker::new();
+        let program = Program {
+            declarations: vec![
+                Declaration::Struct {
+                    name: "Point".into(),
+                    type_params: Vec::new(),
+                    fields: vec![
+                        StructField {
+                            name: "x".into(),
+                            ty: AstType::I32,
+                            default: None,
+                            mutable: false,
+                            span: Span::dummy(),
+                        },
+                        StructField {
+                            name: "y".into(),
+                            ty: AstType::I32,
+                            default: None,
+                            mutable: false,
+                            span: Span::dummy(),
+                        },
+                    ],
+                    public: false,
+                    span: Span::dummy(),
+                },
+                Declaration::Function {
+                    name: "main".into(),
+                    type_params: Vec::new(),
+                    params: Vec::new(),
+                    return_type: Some(AstType::Void),
+                    body: Expression::Block {
+                        statements: vec![Statement::VarDecl {
+                            name: "p".into(),
+                            ty: None,
+                            value: Expression::StructLiteral {
+                                name: "Point".into(),
+                                type_args: Vec::new(),
+                                fields: vec![(
+                                    "x".into(),
+                                    Expression::IntLiteral {
+                                        value: 1,
+                                        span: Span::dummy(),
+                                    },
+                                )],
+                                span: Span::dummy(),
+                            },
+                            mutable: false,
+                            constant: false,
+                            span: Span::dummy(),
+                        }],
+                        expr: None,
+                        span: Span::dummy(),
+                    },
+                    public: false,
+                    span: Span::dummy(),
+                },
+            ],
+            file_id: 0,
+        };
+
+        let errors = tc
+            .check_program(&program)
+            .expect_err("missing struct field should fail");
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("missing field `y` for struct `Point`")),
+            "expected missing field diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn struct_literal_field_type_mismatch_is_error() {
+        use crate::ast::declarations::StructField;
+        use crate::ast::{Expression, Program, Statement};
+        let mut tc = TypeChecker::new();
+        let program = Program {
+            declarations: vec![
+                Declaration::Struct {
+                    name: "Point".into(),
+                    type_params: Vec::new(),
+                    fields: vec![StructField {
+                        name: "x".into(),
+                        ty: AstType::I32,
+                        default: None,
+                        mutable: false,
+                        span: Span::dummy(),
+                    }],
+                    public: false,
+                    span: Span::dummy(),
+                },
+                Declaration::Function {
+                    name: "main".into(),
+                    type_params: Vec::new(),
+                    params: Vec::new(),
+                    return_type: Some(AstType::Void),
+                    body: Expression::Block {
+                        statements: vec![Statement::VarDecl {
+                            name: "p".into(),
+                            ty: None,
+                            value: Expression::StructLiteral {
+                                name: "Point".into(),
+                                type_args: Vec::new(),
+                                fields: vec![(
+                                    "x".into(),
+                                    Expression::StringLiteral {
+                                        value: "bad".into(),
+                                        span: Span::dummy(),
+                                    },
+                                )],
+                                span: Span::dummy(),
+                            },
+                            mutable: false,
+                            constant: false,
+                            span: Span::dummy(),
+                        }],
+                        expr: None,
+                        span: Span::dummy(),
+                    },
+                    public: false,
+                    span: Span::dummy(),
+                },
+            ],
+            file_id: 0,
+        };
+
+        let errors = tc
+            .check_program(&program)
+            .expect_err("struct field type mismatch should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("field `x` for struct `Point` expects `i32`, found `str`")),
+            "expected field type diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
     fn types_compatible_basics() {
         let tc = TypeChecker::new();
         // Same types

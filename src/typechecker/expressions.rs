@@ -439,9 +439,63 @@ impl TypeChecker {
                 name, fields, span, ..
             } => {
                 let mut typed_fields = Vec::new();
+                let struct_info = self.structs.get(name).cloned();
+                let field_defs: std::collections::HashMap<String, AstType> = struct_info
+                    .as_ref()
+                    .map(|info| info.fields.iter().cloned().collect())
+                    .unwrap_or_default();
+                let mut provided = std::collections::HashSet::new();
+
                 for (field_name, field_expr) in fields {
                     let typed = self.check_expr(field_expr)?;
+
+                    if !provided.insert(field_name.as_str()) {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E3034",
+                            format!("duplicate field `{}` for struct `{}`", field_name, name),
+                            typed.span,
+                        ));
+                    }
+
+                    if let Some(expected_ast) = field_defs.get(field_name) {
+                        let expected = self.resolve_type(expected_ast);
+                        if expected != Type::Unknown
+                            && typed.ty != Type::Unknown
+                            && !self.types_compatible(&expected, &typed.ty)
+                        {
+                            self.diagnostics.push(Diagnostic::error(
+                                "E3036",
+                                format!(
+                                    "field `{}` for struct `{}` expects `{}`, found `{}`",
+                                    field_name,
+                                    name,
+                                    expected.display_name(),
+                                    typed.ty.display_name()
+                                ),
+                                typed.span,
+                            ));
+                        }
+                    } else if struct_info.is_some() {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E3035",
+                            format!("unknown field `{}` for struct `{}`", field_name, name),
+                            typed.span,
+                        ));
+                    }
+
                     typed_fields.push((field_name.clone(), typed));
+                }
+
+                if let Some(info) = &struct_info {
+                    for (field_name, _) in &info.fields {
+                        if !provided.contains(field_name.as_str()) {
+                            self.diagnostics.push(Diagnostic::error(
+                                "E3037",
+                                format!("missing field `{}` for struct `{}`", field_name, name),
+                                *span,
+                            ));
+                        }
+                    }
                 }
 
                 let ty = self.resolve_type(&AstType::Named(name.clone()));
