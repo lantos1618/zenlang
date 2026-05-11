@@ -1,191 +1,75 @@
 # Zen Programming Language
 
-**The World's First AI-Native Systems Programming Language**
+Zen is a work-in-progress systems language compiler. This worktree uses the
+`rewrite` branch as the baseline: a small Rust compiler pipeline that parses Zen
+source, typechecks it into a typed AST, emits C through the C backend, compiles
+the C with `cc`, and runs the result in integration tests.
 
-A revolutionary programming language with **ZERO KEYWORDS**. All control flow through pattern matching (`?`), UFC (Uniform Function Call), and powerful metaprogramming.
+The current repository is not a complete v1 language. Documentation and examples
+should describe only behavior covered by tests, or explicitly mark future work as
+gated or experimental.
 
-> *"No keywords. Pure expression. Allocator-driven concurrency."*
+## Current Baseline
 
----
+Implemented and tested today:
 
-## Project Status: Late Alpha (90% Core Complete)
+- Lexer, parser, module loading for local files, typechecker, typed AST, C backend.
+- Runtime integration tests for arithmetic, strings, structs, enums, pattern-style
+  matches, loops, recursion, mutability, `defer`, casts, and UFCS-style calls.
+- CI checks for formatting, clippy, library tests, and integration tests.
 
-The Zen compiler is functional with all core language features working. The project has a comprehensive test suite and full LSP support for IDE integration.
+Not implemented as stable v1 features yet:
 
-### What Works
+- Real `Sync/Async` effects, typed allocator effects, actor runtime, behavior
+  solver, comptime type matching, `build.zen` execution, JSON/YAML IR emission,
+  formatter, package manager, alternate backend, or stable ABI/layout contracts.
 
-- **Zero-keyword syntax** - Pattern matching with `?` replaces all conditionals
-- **All 6 variable forms** - Immutable/mutable, typed/inferred declarations
-- **Type system** - Structs, enums, generics, Option<T>, Result<T,E>
-- **UFC** - Uniform Function Call for method chaining
-- **Error handling** - `.raise()` for error propagation
-- **Collections** - Vec<T>, String with allocator support
-- **Behaviors** - Structural trait system
-- **I/O** - Syscall-based file and network I/O (Linux x86-64)
-- **LSP** - Full IDE support with semantic completion, hover, go-to-def, etc.
-- **25+ intrinsics** - Memory, pointers, syscalls, atomics
-
-### In Progress
-
-- Module system improvements for cross-boundary generics
-- Iterator combinators (map, filter, collect)
-- First-class closure support
-
-### Planned
-
-- Cross-platform (macOS, Windows)
-- Package manager
-- Self-hosting compiler
-
----
+See [docs/V1_SPEC.md](docs/V1_SPEC.md) for the draft v1 contract, feature matrix,
+and required positive/negative test backlog.
 
 ## Quick Start
 
 ```bash
 # Build the compiler
-cargo build --release
+cargo build
 
-# Run a Zen program
-./target/release/zen examples/showcase.zen
+# Run the tested integration suite
+cargo test --tests
 
-# Compile to executable
-./target/release/zen examples/hello.zen -o hello
-./hello
-
-# Run test suite
-cargo test --all
+# Run the current CI-equivalent local checks
+cargo fmt --check
+cargo clippy -- -D warnings
+cargo test --lib
+cargo test --tests
 ```
 
----
-
-## Language at a Glance
-
-### Variables (No Keywords)
-
-```zen
-x = 10              // Immutable, inferred
-x ::= 10            // Mutable, inferred
-x : i32 = 10         // Immutable, typed
-x :: i32 = 10        // Mutable, typed
-```
-
-### Pattern Matching (Replaces if/else/match)
-
-```zen
-value ?
-    | Some(x) { use(x) }
-    | None { handle_empty() }
-
-status ?
-    | .Active { process() }
-    | .Inactive { wait() }
-```
-
-### Functions and UFC
-
-```zen
-add = (a: i32, b: i32) i32 { return a + b }
-
-// Both work:
-result = add(5, 3)
-result = 5.add(3)
-```
-
-### Structs and Enums
-
-```zen
-Point: { x: f64, y: f64 }
-Color: Red, Green, Blue
-Option<T>: Some: T, None
-```
-
-### Error Handling
-
-```zen
-load = (path: string) Result<Data, Error> {
-    file = File.open(path).raise()  // Early return on error
-    return Ok(file.read())
-}
-```
-
-### Memory (Zig-Style Allocators)
-
-```zen
-allocator = GPA.new()
-vec = Vec<i32>.new(allocator)
-vec.mut_ref().push(42)
-vec.mut_ref().free()
-```
-
----
-
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| [docs/OVERVIEW.md](docs/OVERVIEW.md) | Complete language overview |
-| [docs/QUICK_START.md](docs/QUICK_START.md) | Getting started guide |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Compiler architecture |
-| [docs/INTRINSICS_REFERENCE.md](docs/INTRINSICS_REFERENCE.md) | Intrinsics reference |
-| [LANGUAGE_SPEC.zen](LANGUAGE_SPEC.zen) | Language specification |
-
-For contributors:
-- [docs/design/STDLIB_DESIGN.md](docs/design/STDLIB_DESIGN.md) - Standard library design
-- [docs/ROADMAP.md](docs/ROADMAP.md) - Current roadmap
-
----
-
-## Project Structure
-
-```
-zenlang/
-+-- src/                # Rust compiler source
-|   +-- parser/         # Syntax analysis
-|   +-- typechecker/    # Type inference
-|   +-- codegen/llvm/   # LLVM backend
-|   +-- lsp/            # Language server
-+-- stdlib/             # Standard library (Zen)
-+-- tests/              # Test suite
-+-- examples/           # Example programs
-+-- docs/               # Documentation
-+-- vscode-extension/   # VS Code integration
-```
-
----
-
-## Design Principles
-
-1. **Zero Keywords** - Pattern matching for all control flow
-2. **Explicit Over Implicit** - Allocators, pointers, errors all explicit
-3. **UFC Everywhere** - Any function callable as method
-4. **No Null** - Only Option<T> with Some/None
-5. **Syscall-First** - Direct syscalls, minimal runtime
-
----
-
-## Building
-
-### Prerequisites
-
-- Rust 1.75+
-- LLVM 18.1
-- Linux x86-64 (primary target)
-
-### Commands
+To run a currently tested program manually:
 
 ```bash
-cargo build --release          # Build compiler
-cargo test --all               # Run tests
-cargo build --bin zen-lsp      # Build LSP
+cargo run -- tests/zen/hello.zen
 ```
 
----
+## Repository Layout
 
-## Contributing
+```text
+src/
+  lexer/          tokenization
+  parser/         syntax parsing
+  module_system/  local file loading and imports
+  typechecker/    semantic checks and typed AST construction
+  codegen/c/      C backend
+tests/
+  zen/            executable integration fixtures and expected output
+stdlib/           aspirational and experimental Zen stdlib sources
+docs/
+  V1_SPEC.md      draft v1 contract and feature gates
+```
 
-This project implements the specification in [LANGUAGE_SPEC.zen](LANGUAGE_SPEC.zen). All contributions must align with this specification.
+## Development Rule
 
----
+Language work is TDD-first. Add the failing parser, semantic, effects, stdlib,
+codegen, tooling, or documentation assertion before changing implementation or
+public claims.
 
 ## License
 

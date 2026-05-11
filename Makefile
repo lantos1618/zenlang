@@ -1,6 +1,6 @@
 # Zen Language Makefile
 
-.PHONY: all build test clean install lsp format check lint help safe-build mem-watch
+.PHONY: all build test clean install format check lint help safe-build mem-watch
 
 all: build
 
@@ -23,11 +23,6 @@ install: build
 	@echo "Installing Zen compiler..."
 	@cargo install --path .
 	@echo "✓ Installed"
-
-lsp:
-	@echo "Building LSP server..."
-	@cargo build --release --bin zen-lsp
-	@echo "✓ LSP built"
 
 format:
 	@cargo fmt
@@ -66,7 +61,6 @@ help:
 	@echo "  make debug      - Build compiler (debug)"
 	@echo "  make test       - Run all tests"
 	@echo "  make install    - Install compiler"
-	@echo "  make lsp        - Build LSP server"
 	@echo "  make format     - Format code"
 	@echo "  make check      - Check without building"
 	@echo "  make lint       - Run clippy"

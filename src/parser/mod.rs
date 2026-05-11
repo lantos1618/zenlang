@@ -266,6 +266,17 @@ impl Parser {
         )
     }
 
+    fn colon_is_followed_by_identifier(&self, expected: &str) -> bool {
+        let mut i = self.pos + 1; // skip `:`
+        while matches!(self.tokens.get(i).map(|(t, _)| t), Some(Token::Newline)) {
+            i += 1;
+        }
+        matches!(
+            self.tokens.get(i).map(|(t, _)| t),
+            Some(Token::Identifier(name)) if name == expected
+        )
+    }
+
     /// Check if current `{` starts a struct destructuring pattern (not a block body).
     fn is_struct_pattern(&self) -> bool {
         let mut i = self.pos + 1; // skip `{`

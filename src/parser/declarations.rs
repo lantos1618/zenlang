@@ -25,6 +25,14 @@ impl Parser {
 
         self.skip_newlines();
 
+        if matches!(self.peek(), Token::Colon) && self.colon_is_followed_by_identifier("behavior") {
+            return Err(CompileError::Syntax(
+                "gated v1 feature 'behavior': behavior declarations are specified in docs/V1_SPEC.md but are not implemented by the rewrite parser"
+                    .to_string(),
+                Some(self.peek_span()),
+            ));
+        }
+
         match self.peek() {
             // Struct: `Name: { fields }`
             Token::Colon if self.is_struct_def() => self.parse_struct_def(name, public, name_span),
@@ -59,6 +67,15 @@ impl Parser {
                 self.advance(); // consume .
                 let (method_name, _method_span) = self.expect_identifier()?;
                 self.skip_newlines();
+
+                if matches!(method_name.as_str(), "implements" | "requires") {
+                    return Err(CompileError::Syntax(
+                        format!(
+                            "gated v1 feature '{method_name}': type association and behavior constraints are specified in docs/V1_SPEC.md but are not implemented"
+                        ),
+                        Some(self.peek_span()),
+                    ));
+                }
 
                 // Type.impl = { methods }
                 if method_name == "impl" {

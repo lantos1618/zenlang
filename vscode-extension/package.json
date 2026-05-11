@@ -1,7 +1,7 @@
 {
   "name": "zen-language",
   "displayName": "Zen Language",
-  "description": "Language support for Zen programming language",
+  "description": "Experimental syntax and command support for Zen rewrite",
   "version": "0.2.2",
   "publisher": "zen-lang",
   "engines": {
@@ -46,16 +46,11 @@
       "type": "object",
       "title": "Zen Language",
       "properties": {
-        "zen.serverPath": {
-          "type": "string",
-          "default": "zen-lsp",
-          "description": "Path to the Zen language server executable"
-        },
         "zen.trace.server": {
           "type": "string",
           "enum": ["off", "messages", "verbose"],
           "default": "off",
-          "description": "Traces the communication between VS Code and the Zen language server"
+          "description": "Reserved for a future tested Zen language server"
         }
       }
     }

@@ -1,186 +1,62 @@
 # Contributing to Zen
 
-Thank you for your interest in contributing to the Zen programming language!
+This repository currently follows the `rewrite` baseline: one Rust compiler binary
+that lowers checked Zen programs to C through the C backend. Keep changes aligned
+with that reality unless the change also adds the tests and implementation needed
+to make a broader claim true.
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+- Stable Rust
+- A C compiler available as `cc` or through the `CC` environment variable
 
-- Rust (stable, 1.75+)
-- LLVM 18 (for code generation)
-- Git
+## Local Checks
 
-### Building
-
-```bash
-# Clone the repository
-git clone https://github.com/anthropics/zenlang.git
-cd zenlang
-
-# Build the compiler
-cargo build --release
-
-# Run tests
-cargo test --all
-
-# Run clippy
-cargo clippy
-```
-
-### Project Structure
-
-```
-src/
-├── ast/              # Abstract Syntax Tree definitions
-├── parser/           # Lexer and parser (5,800+ LOC)
-├── typechecker/      # Type checking and inference (4,200+ LOC)
-├── codegen/llvm/     # LLVM code generation (11,700+ LOC)
-├── lsp/              # Language Server Protocol (12,000+ LOC)
-├── type_system/      # Generic type resolution
-├── module_system/    # Cross-module imports
-├── comptime/         # Compile-time evaluation
-├── error.rs          # Error types and handling
-└── compiler.rs       # Main compilation pipeline
-
-stdlib/               # Standard library (Zen source)
-tests/                # Integration tests
-examples/             # Example programs
-docs/                 # Documentation
-```
-
-## Development Workflow
-
-### 1. Find Something to Work On
-
-- Check `docs/reviews/` for current priorities
-- Look at `docs/ROADMAP.md` for planned features
-- Search for `TODO` comments in the codebase
-- Check open issues
-
-### 2. Create a Branch
+Run the same checks advertised by CI:
 
 ```bash
-git checkout -b feature/your-feature-name
-# or
-git checkout -b fix/your-bug-fix
+cargo fmt --check
+cargo clippy -- -D warnings
+cargo test --lib
+cargo test --tests
 ```
 
-### 3. Make Changes
+## TDD Rule
 
-- Follow existing code style
-- Add tests for new functionality
-- Update documentation if needed
-- Keep commits atomic and well-described
+Failing tests first are required for language work. Before implementing or
+documenting a parser, semantic, effects, stdlib, codegen, or tooling change, add
+the smallest failing check that proves the intended behavior or guards the public
+claim.
 
-### 4. Test Your Changes
+Use the narrowest test that covers the risk:
 
-```bash
-# Run all tests
-cargo test --all
+- Parser and lexer changes: unit tests or golden token/AST checks.
+- Semantic changes: positive and negative typechecker tests with stable
+  diagnostics where possible.
+- Effects work: positive and negative checks for legal and illegal `Sync/Async`
+  propagation.
+- Stdlib work: parse/typecheck/build tests for every adopted stdlib file.
+- Codegen work: generated C checks plus executable integration tests.
+- Tooling work: assertions that docs, CLI, formatter, or editor claims match
+  existing binaries and behavior.
 
-# Run clippy
-cargo clippy
+Only remove a failing test when the feature is explicitly removed from the v1
+contract and the docs are updated in the same change.
 
-# Format code
-cargo fmt
+## Architecture
 
-# Test a specific file
-./target/release/zen your_test.zen
+The active pipeline is:
+
+```text
+source -> lexer -> parser -> module loader -> typechecker -> typed AST -> C backend -> cc
 ```
 
-### 5. Submit a Pull Request
-
-- Describe what the PR does and why
-- Reference any related issues
-- Ensure CI passes
-
-## Code Style
-
-### Rust Code
-
-- Follow standard Rust conventions
-- Use `cargo fmt` for formatting
-- Address clippy warnings
-- Document public APIs
-
-### Zen Code (stdlib)
-
-- Use 4-space indentation
-- Document public functions
-- Follow existing patterns in stdlib/
-
-## Architecture Guidelines
-
-### Compiler Pipeline
-
-```
-Source → Lexer → Parser → AST → TypeChecker → TypedAST → Codegen → LLVM IR → Binary
-```
-
-### Key Principles
-
-1. **Single Source of Truth**: Type information lives in TypeChecker
-2. **AST-First**: Work with parsed AST, not string manipulation
-3. **Error Recovery**: Parser and typechecker should recover from errors
-4. **LSP Integration**: Features should work in both CLI and LSP
-
-### Adding a New Feature
-
-1. **AST**: Add types to `src/ast/`
-2. **Parser**: Add parsing in `src/parser/`
-3. **TypeChecker**: Add type checking in `src/typechecker/`
-4. **Codegen**: Add code generation in `src/codegen/llvm/`
-5. **LSP**: Update LSP support in `src/lsp/`
-6. **Tests**: Add tests in `tests/`
-7. **Docs**: Update documentation
-
-## Testing
-
-### Test Categories
-
-- **Unit Tests**: In-module `#[test]` functions
-- **Integration Tests**: `tests/*.rs` files
-- **Behavioral Tests**: `tests/behavioral_tests.rs` - compile and run Zen code
-- **LSP Tests**: `tests/lsp/` - protocol tests
-
-### Writing Tests
-
-```rust
-#[test]
-fn test_your_feature() {
-    // Test implementation
-}
-```
-
-For behavioral tests that compile and run Zen code:
-
-```rust
-#[test]
-fn test_zen_feature() {
-    let code = r#"
-        main = () {
-            // Your Zen code
-        }
-    "#;
-
-    let result = compile_and_run(code);
-    assert!(result.is_ok());
-}
-```
+The draft target architecture in [docs/V1_SPEC.md](docs/V1_SPEC.md) adds resolver,
+HIR, MIR, effects, monomorphization, ABI, stdlib, and tooling stages over time.
+Those are gated until tests and implementation exist.
 
 ## Documentation
 
-- `docs/OVERVIEW.md` - Language syntax and features
-- `docs/ARCHITECTURE.md` - Compiler internals
-- `docs/INTRINSICS_REFERENCE.md` - Compiler intrinsics
-- `docs/LSP_STATUS.md` - LSP capabilities
-
-## Getting Help
-
-- Read existing code for patterns
-- Check `docs/` for architecture information
-- Look at recent commits for examples
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the same license as the project.
+Public docs must be truthful. If a feature is not covered by tests, describe it as
+`gated`, `experimental`, or future work. Do not advertise missing binaries,
+unsupported targets, or unchecked stdlib APIs as complete.

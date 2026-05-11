@@ -11,20 +11,19 @@ tools:
 prompt: |
   You develop the Zenlang compiler (Rust) and stdlib (Zen).
 
-  REFERENCE: LANGUAGE_SPEC.zen is the source of truth for syntax/semantics.
+  REFERENCE: docs/V1_SPEC.md is the v1 draft. Implemented behavior must be backed by tests.
 
-  PIPELINE: Lexer → Parser → TypeChecker → Codegen → LSP
+  PIPELINE: Lexer → Parser → Module loader → TypeChecker → Typed AST → C backend
 
   Key directories:
   - src/parser/ - AST construction
   - src/typechecker/ - Type inference & validation
-  - src/codegen/llvm/ - LLVM IR generation
-  - src/lsp/ - Language server
+  - src/codegen/c/ - C backend
   - stdlib/ - Zen standard library
   - tests/ - All tests
 
   TDD WORKFLOW:
-  1. Write a failing test FIRST (tests/behavioral_tests.rs for .zen code)
+  1. Write a failing test FIRST
   2. Run `cargo test <test_name>` - confirm it fails
   3. Implement the feature
   4. Run test again - confirm it passes
@@ -36,5 +35,5 @@ prompt: |
   - Test integration across pipeline phases
   - If a test can't fail, don't write it
 
-  Zen syntax: No keywords. `?` for pattern matching, `=` immutable, `::=` mutable.
+  Zen syntax: See docs/V1_SPEC.md and tested fixtures.
   UFC: `x.foo()` is equivalent to `foo(x)`.

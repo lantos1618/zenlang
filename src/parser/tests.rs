@@ -340,6 +340,28 @@ fn parse_error_unexpected_token() {
     );
 }
 
+#[test]
+fn parse_rejects_gated_behavior_declaration_with_clear_error() {
+    let result = parse_str("Serializable: behavior { to_json: (Self) String }");
+    let errs = result.expect_err("expected gated behavior declaration to be rejected");
+    assert!(
+        errs.iter()
+            .any(|e| e.to_string().contains("gated v1 feature 'behavior'")),
+        "expected clear gated behavior diagnostic, got {errs:?}"
+    );
+}
+
+#[test]
+fn parse_rejects_gated_type_association_with_clear_error() {
+    let result = parse_str("Point.implements(Json) { }");
+    let errs = result.expect_err("expected gated type association syntax to be rejected");
+    assert!(
+        errs.iter()
+            .any(|e| e.to_string().contains("gated v1 feature 'implements'")),
+        "expected clear gated implements diagnostic, got {errs:?}"
+    );
+}
+
 // ── Additional feature tests ─────────────────────────────
 
 #[test]

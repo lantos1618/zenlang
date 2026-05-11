@@ -6,38 +6,20 @@ This extension provides language support for the Zen programming language in Vis
 
 - **Syntax Highlighting**: Full syntax highlighting for Zen code
 - **CodeLens Actions**: Inline buttons to run and build functions
-  - **▶ Run** button for all functions
-  - **🔨 Build** button for main and build entry points
+  - Run button for all functions
+  - Build button for main and build entry points
   - Automatic detection of `main` and `build` functions
   - Click to execute directly from your editor
-- **Language Server Protocol**: Advanced IDE features powered by `zen-lsp`
-  - Real-time error checking and diagnostics
-  - Code completion for types, functions, and keywords
-  - Hover information
-  - Go to definition
-  - Find references
-  - Document symbols
-  - Code formatting
 - **Code Snippets**: Common Zen code patterns
+
+Language-server features are not part of the rewrite baseline. They are gated
+until a tested server binary is added to the package.
 
 ## Requirements
 
 - The Zen compiler must be installed and available in your PATH
-- The `zen-lsp` language server must be built and available
 
 ## Installation
-
-### Building the Language Server
-
-1. Build the Zen LSP server:
-```bash
-cd /path/to/zen
-cargo build --release --bin zen-lsp
-```
-
-2. Add the binary to your PATH or configure the extension to use the full path.
-
-### Installing the Extension
 
 1. Install dependencies:
 ```bash
@@ -56,22 +38,20 @@ npm run compile
 
 This extension contributes the following settings:
 
-- `zen.serverPath`: Path to the Zen language server executable (default: `zen-lsp`)
-- `zen.trace.server`: Enable tracing of communication between VS Code and the language server
+- No stable language-server settings are exposed by the rewrite baseline.
 
 ## Usage
 
 1. Open any `.zen` file in VS Code
-2. The extension will automatically activate and start the language server
-3. You'll see syntax highlighting immediately
-4. Error checking and other language features will be available once the language server initializes
+2. You'll see syntax highlighting immediately
+3. CodeLens commands can call the local `zen` compiler where supported
 
 ### Using CodeLens Actions
 
 1. The extension automatically detects functions in your code
-2. Look for **▶ Run** and **🔨 Build** buttons above function definitions
-3. Click **▶ Run** to execute a function
-4. Click **🔨 Build** to compile a function (available for `main` and `build` functions)
+2. Look for Run and Build buttons above function definitions
+3. Click Run to execute a function
+4. Click Build to compile a function (available for `main` and `build` functions)
 5. Output appears in the "Zen Run" or "Zen Build" output channel at the bottom
 
 See [CODELENS_FEATURE.md](./CODELENS_FEATURE.md) for detailed information about the CodeLens feature.
@@ -87,7 +67,7 @@ To work on this extension:
 
 ## Known Issues
 
-- The language server is in early development and some features may not be fully implemented
+- Language-server features are gated and not shipped in this rewrite package
 - Performance may vary with large files
 
 ## Release Notes
@@ -96,6 +76,4 @@ To work on this extension:
 
 Initial release with basic language support:
 - Syntax highlighting
-- Language server integration
-- Basic code completion
-- Error diagnostics
+- CodeLens command integration

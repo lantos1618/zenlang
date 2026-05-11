@@ -1,0 +1,223 @@
+use std::path::{Path, PathBuf};
+
+fn repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+}
+
+fn read(path: impl AsRef<Path>) -> String {
+    let path = repo_root().join(path);
+    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {}", path.display(), e))
+}
+
+#[test]
+fn readme_only_advertises_rewrite_baseline() {
+    let readme = read("README.md");
+
+    for stale_claim in [
+        "Late Alpha",
+        "90% Core Complete",
+        "ZERO KEYWORDS",
+        "Full IDE support",
+        "LLVM 18",
+        "zen-lsp",
+        "examples/showcase.zen",
+        "codegen/llvm",
+    ] {
+        assert!(
+            !readme.contains(stale_claim),
+            "README still advertises unsupported rewrite-baseline claim: {stale_claim}"
+        );
+    }
+
+    for required in [
+        "rewrite",
+        "C backend",
+        "cargo fmt --check",
+        "cargo clippy -- -D warnings",
+        "cargo test --lib",
+        "cargo test --tests",
+        "docs/V1_SPEC.md",
+    ] {
+        assert!(
+            readme.contains(required),
+            "README is missing required truthful baseline text: {required}"
+        );
+    }
+}
+
+#[test]
+fn contributor_docs_require_tests_first_for_language_work() {
+    let contributing = read("CONTRIBUTING.md");
+
+    for required in [
+        "Failing tests first",
+        "parser",
+        "semantic",
+        "effects",
+        "stdlib",
+        "codegen",
+        "tooling",
+        "C backend",
+    ] {
+        assert!(
+            contributing.contains(required),
+            "CONTRIBUTING.md is missing TDD/baseline requirement: {required}"
+        );
+    }
+
+    for stale_claim in [
+        "LLVM code generation",
+        "src/lsp",
+        "cargo build --bin zen-lsp",
+    ] {
+        assert!(
+            !contributing.contains(stale_claim),
+            "CONTRIBUTING.md still documents unsupported rewrite-baseline workflow: {stale_claim}"
+        );
+    }
+}
+
+#[test]
+fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
+    let spec = read("docs/V1_SPEC.md");
+
+    for required in [
+        "Status: v1 draft",
+        "Feature Matrix",
+        "implemented",
+        "gated",
+        "experimental",
+        "removed",
+        "Sync/Async effects",
+        "Typed allocators",
+        "Type matching",
+        "Behavior association",
+        "AST traversal",
+        "Actors in std",
+        "JSON/YAML IR boundaries",
+        "build.zen",
+        "Accepted Syntax Forms",
+        "Test Evidence",
+        "Planned Positive Test",
+        "Planned Negative Test",
+    ] {
+        assert!(
+            spec.contains(required),
+            "docs/V1_SPEC.md is missing Phase 1 requirement: {required}"
+        );
+    }
+}
+
+#[test]
+fn v1_spec_is_single_source_of_truth_and_old_spec_is_quarantined() {
+    let old_spec = read("LANGUAGE_SPEC.zen");
+    let old_spec_header = old_spec.lines().take(20).collect::<Vec<_>>().join("\n");
+
+    assert!(
+        old_spec_header.contains("Archived aspirational notes"),
+        "LANGUAGE_SPEC.zen must be explicitly quarantined at the top"
+    );
+    assert!(
+        old_spec_header.contains("docs/V1_SPEC.md is the versioned v1 source of truth"),
+        "LANGUAGE_SPEC.zen must point to docs/V1_SPEC.md as the source of truth"
+    );
+}
+
+#[test]
+fn aspirational_stdlib_is_explicitly_experimental() {
+    let stdlib_readme = read("stdlib/README.md");
+
+    for required in [
+        "experimental",
+        "not part of the implemented v1 surface",
+        "must parse, typecheck, and build",
+        "docs/V1_SPEC.md",
+    ] {
+        assert!(
+            stdlib_readme.contains(required),
+            "stdlib/README.md is missing experimental gate text: {required}"
+        );
+    }
+}
+
+#[test]
+fn ci_and_release_only_advertise_existing_targets() {
+    let ci = read(".github/workflows/ci.yml");
+    let release = read(".github/workflows/release.yml");
+    let makefile = read("Makefile");
+    let vscode_settings = read(".vscode/settings.json");
+    let vscode_launch = read(".vscode/launch.json");
+    let agent = read(".claude/agents/zen-dev.yaml");
+    let extension_readme = read("vscode-extension/README.md");
+    let extension_package = read("vscode-extension/package.json");
+    let extension_source = read("vscode-extension/src/extension.ts");
+    let setup_lsp = read("setup_lsp.sh");
+
+    assert!(ci.contains("cargo fmt --check"));
+    assert!(ci.contains("cargo clippy -- -D warnings"));
+    assert!(ci.contains("cargo test --lib"));
+    assert!(ci.contains("cargo test --tests"));
+
+    for unsupported in ["LLVM", "zen-lsp", "aarch64-apple-darwin"] {
+        assert!(
+            !release.contains(unsupported),
+            "release workflow advertises unsupported target/artifact: {unsupported}"
+        );
+        assert!(
+            !makefile.contains(unsupported),
+            "Makefile advertises unsupported target/artifact: {unsupported}"
+        );
+        assert!(
+            !vscode_settings.contains(unsupported),
+            ".vscode/settings.json advertises unsupported target/artifact: {unsupported}"
+        );
+        assert!(
+            !vscode_launch.contains(unsupported),
+            ".vscode/launch.json advertises unsupported target/artifact: {unsupported}"
+        );
+        assert!(
+            !agent.contains(unsupported),
+            ".claude/agents/zen-dev.yaml advertises unsupported target/artifact: {unsupported}"
+        );
+        assert!(
+            !extension_readme.contains(unsupported),
+            "vscode-extension/README.md advertises unsupported target/artifact: {unsupported}"
+        );
+        assert!(
+            !extension_package.contains(unsupported),
+            "vscode-extension/package.json advertises unsupported target/artifact: {unsupported}"
+        );
+        assert!(
+            !extension_source.contains(unsupported),
+            "vscode-extension/src/extension.ts advertises unsupported target/artifact: {unsupported}"
+        );
+        assert!(
+            !setup_lsp.contains(unsupported),
+            "setup_lsp.sh advertises unsupported target/artifact: {unsupported}"
+        );
+    }
+}
+
+#[test]
+fn checked_in_configs_do_not_contain_secret_literals() {
+    let config_paths = [
+        ".github/copilot-mcp.json",
+        ".github/workflows/ci.yml",
+        ".github/workflows/release.yml",
+        ".vscode/settings.json",
+        ".vscode/launch.json",
+        ".vscode/zen-language-config.json",
+        ".claude/agents/zen-dev.yaml",
+        ".claude/agents/zen-reviewer.yaml",
+    ];
+
+    for path in config_paths {
+        let contents = read(path);
+        for marker in ["Bearer ", "sk-", "ghp_", "github_pat_", "nk_"] {
+            assert!(
+                !contents.contains(marker),
+                "{path} contains credential-looking marker {marker}"
+            );
+        }
+    }
+}
