@@ -174,14 +174,8 @@ impl TypeChecker {
         if *expected == Type::Never || *actual == Type::Never {
             return true;
         }
-        // Integer coercion: any integer type is compatible with any other
-        if expected.is_integer() && actual.is_integer() {
-            return true;
-        }
-        // Float coercion: any float type is compatible with any other
-        if expected.is_float() && actual.is_float() {
-            return true;
-        }
+        // Numeric width/sign conversions require explicit casts. Literal
+        // coercion is handled before this check at declaration sites.
         // Str and String are compatible
         if matches!(
             (expected, actual),
