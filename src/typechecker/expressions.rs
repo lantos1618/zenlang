@@ -747,6 +747,9 @@ impl TypeChecker {
 
                 // Determine match kind
                 let kind = self.determine_match_kind(&typed_scrutinee.ty, arms);
+                if matches!(kind, MatchKind::EnumMatch) {
+                    self.check_match_exhaustiveness(&typed_scrutinee.ty, arms, *span);
+                }
 
                 Ok(TypedExpression {
                     kind: TypedExprKind::Match {

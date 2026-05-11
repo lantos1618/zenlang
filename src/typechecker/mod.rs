@@ -1121,6 +1121,32 @@ missing = () i32 {
     }
 
     #[test]
+    fn enum_match_missing_variant_is_error() {
+        let program = parse_program(
+            r#"
+Color: Red, Green, Blue
+
+describe = (c: Color) StaticString {
+    c ?
+        | Red { "red" }
+        | Green { "green" }
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("non-exhaustive enum match should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("non-exhaustive match on `Color`: missing `Blue`")),
+            "expected non-exhaustive enum diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
     fn types_compatible_basics() {
         let tc = TypeChecker::new();
         // Same types

@@ -3,6 +3,7 @@
 use crate::ast::expressions::MatchArm;
 use crate::ast::typed::*;
 use crate::ast::Pattern;
+use crate::error::{Diagnostic, Span};
 
 use super::TypeChecker;
 
@@ -180,5 +181,86 @@ impl TypeChecker {
         }
 
         MatchKind::ValueMatch
+    }
+
+    pub(crate) fn check_match_exhaustiveness(
+        &mut self,
+        scrutinee_type: &Type,
+        arms: &[MatchArm],
+        span: Span,
+    ) {
+        let Some((enum_name, variants)) = self.enum_variants_for_match(scrutinee_type) else {
+            return;
+        };
+
+        if arms
+            .iter()
+            .any(|arm| matches!(arm.pattern, Pattern::Wildcard { .. }))
+        {
+            return;
+        }
+
+        let covered: std::collections::HashSet<&str> = arms
+            .iter()
+            .filter_map(|arm| self.enum_variant_name_from_pattern(scrutinee_type, &arm.pattern))
+            .collect();
+        let missing: Vec<&str> = variants
+            .iter()
+            .map(String::as_str)
+            .filter(|variant| !covered.contains(variant))
+            .collect();
+
+        if !missing.is_empty() {
+            self.diagnostics.push(Diagnostic::error(
+                "E4000",
+                format!(
+                    "non-exhaustive match on `{}`: missing {}",
+                    enum_name,
+                    missing
+                        .iter()
+                        .map(|variant| format!("`{variant}`"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn enum_variants_for_match(&self, ty: &Type) -> Option<(String, Vec<String>)> {
+        match ty {
+            Type::Enum { name, variants } => Some((
+                name.clone(),
+                variants.iter().map(|(name, _)| name.clone()).collect(),
+            )),
+            Type::Named(name) => self.enums.get(name).map(|info| {
+                (
+                    name.clone(),
+                    info.variants
+                        .iter()
+                        .map(|(variant, _)| variant.clone())
+                        .collect(),
+                )
+            }),
+            _ => None,
+        }
+    }
+
+    fn enum_variant_name_from_pattern<'a>(
+        &self,
+        scrutinee_type: &Type,
+        pattern: &'a Pattern,
+    ) -> Option<&'a str> {
+        match pattern {
+            Pattern::Identifier { name, .. } => {
+                let (_, variants) = self.enum_variants_for_match(scrutinee_type)?;
+                variants
+                    .iter()
+                    .any(|variant| variant == name)
+                    .then_some(name)
+            }
+            Pattern::Enum { variant, .. } => Some(variant),
+            _ => None,
+        }
     }
 }
