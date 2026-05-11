@@ -15,7 +15,7 @@ mod patterns;
 mod resolve;
 mod statements;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::ast::typed::*;
 use crate::ast::{self, AstType, Declaration};
@@ -75,7 +75,7 @@ pub struct TypeChecker {
     enums: HashMap<String, EnumInfo>,
     functions: HashMap<String, FuncInfo>,
     methods: HashMap<String, FuncInfo>, // key: "TypeName.method_name"
-    imports: HashSet<String>,           // imported module names (e.g. "io")
+    imports: HashMap<String, Vec<String>>, // imported name -> source module path
     scopes: Vec<Scope>,
     diagnostics: Vec<Diagnostic>,
     current_return_type: Option<Type>,
@@ -96,7 +96,7 @@ impl TypeChecker {
             enums: HashMap::new(),
             functions: HashMap::new(),
             methods: HashMap::new(),
-            imports: HashSet::new(),
+            imports: HashMap::new(),
             scopes: vec![Scope::new()], // global scope
             diagnostics: Vec::new(),
             current_return_type: None,
@@ -285,9 +285,11 @@ impl TypeChecker {
                         },
                     );
                 }
-                Declaration::Import { names, .. } => {
+                Declaration::Import {
+                    names, module_path, ..
+                } => {
                     for name in names {
-                        self.imports.insert(name.clone());
+                        self.imports.insert(name.clone(), module_path.clone());
                     }
                 }
                 Declaration::Function {
@@ -373,7 +375,13 @@ impl TypeChecker {
     }
 
     pub(crate) fn is_import(&self, name: &str) -> bool {
-        self.imports.contains(name)
+        self.imports.contains_key(name)
+    }
+
+    pub(crate) fn is_root_std_import(&self, name: &str) -> bool {
+        self.imports
+            .get(name)
+            .is_some_and(|path| path == &["std".to_string()] || path == &["@std".to_string()])
     }
 }
 
@@ -1046,6 +1054,48 @@ main = () void {
 
         let expected = tc.functions["take_f32"].params[0].1.clone();
         assert!(!tc.types_compatible(&tc.resolve_type(&expected), &Type::F64));
+    }
+
+    #[test]
+    fn unknown_root_std_module_call_is_error() {
+        let program = parse_program(
+            r#"
+{ io } = std
+
+main = () void {
+    io.nope("bad")
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("unknown std module function should fail");
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("undefined module function `io.nope`")),
+            "expected undefined module function diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn known_root_std_runtime_standins_remain_allowed() {
+        let program = parse_program(
+            r#"
+{ io } = std
+
+main = () void {
+    io.print("hello")
+    io.println("world")
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        tc.check_program(&program)
+            .expect("temporary root std io stand-ins should typecheck");
     }
 
     #[test]

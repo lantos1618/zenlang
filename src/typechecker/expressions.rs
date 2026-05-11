@@ -274,13 +274,15 @@ impl TypeChecker {
                                     span,
                                 );
                                 self.resolve_type(&info.return_type)
+                            } else if self.is_root_std_runtime_call(recv_name, method) {
+                                Type::Void
                             } else {
-                                self.diagnostics.push(Diagnostic::warning(
-                                    "W3042",
-                                    format!("unknown method `{}`, assuming void return", mangled),
+                                self.diagnostics.push(Diagnostic::error(
+                                    "E3023",
+                                    format!("undefined module function `{}.{}`", recv_name, method),
                                     *span,
                                 ));
-                                Type::Void
+                                Type::Unknown
                             }
                         };
                         return Ok(TypedExpression {
@@ -1096,5 +1098,10 @@ impl TypeChecker {
             Type::Ptr(inner) | Type::MutPtr(inner) => self.field_access_type_name(inner),
             _ => None,
         }
+    }
+
+    fn is_root_std_runtime_call(&self, module: &str, function: &str) -> bool {
+        self.is_root_std_import(module)
+            && matches!((module, function), ("io", "print") | ("io", "println"))
     }
 }
