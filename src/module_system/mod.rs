@@ -6,10 +6,27 @@ use crate::error::{CompileError, FileTable, Span};
 use crate::lexer;
 use crate::parser;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ModuleId(pub u32);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PackageId(pub u32);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModuleInfo {
+    pub id: ModuleId,
+    pub package_id: PackageId,
+    pub canonical_path: String,
+}
+
 /// Resolved modules by canonical path.
 pub struct ModuleSystem {
     /// All loaded modules keyed by canonical path.
     modules: HashMap<String, Program>,
+    /// Module graph records keyed by canonical path.
+    module_infos: HashMap<String, ModuleInfo>,
+    /// Next module ID to assign.
+    next_module_id: u32,
     /// Stdlib root directory.
     stdlib_root: Option<PathBuf>,
     /// Files currently being loaded (for circular import detection).
@@ -26,6 +43,8 @@ impl ModuleSystem {
     pub fn new() -> Self {
         Self {
             modules: HashMap::new(),
+            module_infos: HashMap::new(),
+            next_module_id: 0,
             stdlib_root: find_stdlib_root(),
             loading: HashSet::new(),
         }
@@ -34,6 +53,8 @@ impl ModuleSystem {
     pub fn with_stdlib_root(stdlib_root: PathBuf) -> Self {
         Self {
             modules: HashMap::new(),
+            module_infos: HashMap::new(),
+            next_module_id: 0,
             stdlib_root: Some(stdlib_root),
             loading: HashSet::new(),
         }
@@ -105,6 +126,7 @@ impl ModuleSystem {
         self.resolve_imports(&mut program, &base_dir, files)?;
 
         self.loading.remove(&canonical);
+        self.register_module_info(&key, &canonical);
         self.modules.insert(key, program.clone());
         Ok(program)
     }
@@ -381,6 +403,45 @@ impl ModuleSystem {
     pub fn modules(&self) -> &HashMap<String, Program> {
         &self.modules
     }
+
+    pub fn module_info(&self, canonical_path: &str) -> Option<&ModuleInfo> {
+        self.module_infos.get(canonical_path)
+    }
+
+    pub fn module_infos(&self) -> &HashMap<String, ModuleInfo> {
+        &self.module_infos
+    }
+
+    fn register_module_info(&mut self, key: &str, canonical: &Path) {
+        if self.module_infos.contains_key(key) {
+            return;
+        }
+
+        let id = ModuleId(self.next_module_id);
+        self.next_module_id += 1;
+        self.module_infos.insert(
+            key.to_string(),
+            ModuleInfo {
+                id,
+                package_id: self.package_id_for(canonical),
+                canonical_path: key.to_string(),
+            },
+        );
+    }
+
+    fn package_id_for(&self, canonical: &Path) -> PackageId {
+        let is_stdlib = self
+            .stdlib_root
+            .as_ref()
+            .and_then(|root| root.canonicalize().ok())
+            .is_some_and(|root| canonical.starts_with(root));
+
+        if is_stdlib {
+            PackageId(1)
+        } else {
+            PackageId(0)
+        }
+    }
 }
 
 /// Find the stdlib root by looking for a `stdlib/` directory.
@@ -549,7 +610,7 @@ mod tests {
         .unwrap();
 
         let mut files = FileTable::new();
-        let mut ms = ModuleSystem::with_stdlib_root(stdlib);
+        let mut ms = ModuleSystem::with_stdlib_root(stdlib.clone());
 
         let program = ms.load_with_imports(&main_path, &mut files).unwrap();
         let func_names: Vec<&str> = program
@@ -565,6 +626,15 @@ mod tests {
             2,
             "main and stdlib module should both be loaded"
         );
+
+        let std_key = stdlib
+            .join("math.zen")
+            .canonicalize()
+            .unwrap()
+            .display()
+            .to_string();
+        let std_info = ms.module_info(&std_key).expect("stdlib module info");
+        assert_eq!(std_info.package_id.0, 1, "stdlib modules use package 1");
     }
 
     #[test]
@@ -609,6 +679,39 @@ mod tests {
         // File table should only have math.zen registered once (not re-read)
         // a.zen(id=0), math.zen(id=1), b.zen(id=2) — math not loaded twice
         assert_eq!(files.file_count(), 3, "should have 3 files: a, math, b");
+    }
+
+    #[test]
+    fn loaded_modules_have_stable_ids_and_package_ids() {
+        let tmp = setup_temp_dir();
+
+        let math_path = tmp.path().join("math.zen");
+        fs::write(
+            &math_path,
+            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
+        )
+        .unwrap();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ add } = math\n\nmain = () i32 { return add(1, 2) }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+        ms.load_with_imports(&main_path, &mut files).unwrap();
+
+        let main_key = main_path.canonicalize().unwrap().display().to_string();
+        let math_key = math_path.canonicalize().unwrap().display().to_string();
+        let main_info = ms.module_info(&main_key).expect("main module info");
+        let math_info = ms.module_info(&math_key).expect("math module info");
+
+        assert_ne!(main_info.id, math_info.id);
+        assert_eq!(main_info.package_id, math_info.package_id);
+        assert_eq!(main_info.package_id.0, 0, "local modules use package 0");
+        assert_eq!(main_info.canonical_path, main_key);
     }
 
     #[test]
