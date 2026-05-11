@@ -723,13 +723,18 @@ impl TypeChecker {
                 let typed_scrutinee = self.check_expr(scrutinee)?;
                 let mut typed_arms = Vec::new();
                 let mut result_type = Type::Void;
+                let mut saw_value_arm = false;
+                let mut saw_never_arm = false;
 
                 for arm in arms {
                     self.push_scope();
                     self.bind_pattern(&arm.pattern, &typed_scrutinee.ty);
                     let typed_body = self.check_expr(&arm.body)?;
-                    if result_type == Type::Void && typed_body.ty != Type::Void {
+                    if typed_body.ty == Type::Never {
+                        saw_never_arm = true;
+                    } else if !saw_value_arm && typed_body.ty != Type::Void {
                         result_type = typed_body.ty.clone();
+                        saw_value_arm = true;
                     }
                     let pattern = self.lower_pattern(&arm.pattern, &typed_scrutinee.ty);
                     self.pop_scope();
@@ -743,6 +748,9 @@ impl TypeChecker {
                         },
                         span: arm.span,
                     });
+                }
+                if !saw_value_arm && saw_never_arm {
+                    result_type = Type::Never;
                 }
 
                 // Determine match kind
