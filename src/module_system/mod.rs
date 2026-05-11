@@ -19,6 +19,43 @@ pub struct ModuleInfo {
     pub canonical_path: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImportBinding {
+    pub local_name: String,
+    pub source_module: ModuleId,
+    pub source_symbol: String,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedModule {
+    pub info: ModuleInfo,
+    pub program: Program,
+    pub imports: Vec<ImportBinding>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedModuleGraph {
+    pub entry: ModuleId,
+    modules: HashMap<ModuleId, ResolvedModule>,
+    paths: HashMap<String, ModuleId>,
+}
+
+impl ResolvedModuleGraph {
+    pub fn module(&self, id: ModuleId) -> Option<&ResolvedModule> {
+        self.modules.get(&id)
+    }
+
+    pub fn module_by_path(&self, canonical_path: &str) -> Option<&ResolvedModule> {
+        let id = self.paths.get(canonical_path)?;
+        self.module(*id)
+    }
+
+    pub fn modules(&self) -> &HashMap<ModuleId, ResolvedModule> {
+        &self.modules
+    }
+}
+
 /// Resolved modules by canonical path.
 pub struct ModuleSystem {
     /// All loaded modules keyed by canonical path.
@@ -131,6 +168,27 @@ impl ModuleSystem {
         Ok(program)
     }
 
+    /// Load a module graph with validated import bindings.
+    ///
+    /// Unlike `load_with_imports`, this does not merge imported declarations
+    /// into the entry module AST. It records imports as bindings between module
+    /// IDs so resolver/typechecker integration can move away from AST cloning.
+    pub fn load_module_graph(
+        &mut self,
+        path: &Path,
+        files: &mut FileTable,
+    ) -> Result<ResolvedModuleGraph, Vec<CompileError>> {
+        let mut graph = ResolvedModuleGraph {
+            entry: ModuleId(0),
+            modules: HashMap::new(),
+            paths: HashMap::new(),
+        };
+        let mut loading = HashSet::new();
+        let entry = self.load_graph_module(path, files, &mut graph, &mut loading)?;
+        graph.entry = entry;
+        Ok(graph)
+    }
+
     /// Walk Import declarations in `program` and load their dependencies.
     ///
     /// Import routing:
@@ -199,38 +257,8 @@ impl ModuleSystem {
                 continue;
             }
 
-            // Local file import: resolve module_path segments as a file path
-            // e.g. ["math"] → math.zen, ["utils", "math"] → utils/math.zen
-            let rel_path: PathBuf = module_path.iter().collect();
-            let mut file_path = base_dir.join(&rel_path);
-            if file_path.extension().is_none() {
-                file_path.set_extension("zen");
-            }
-
-            if !file_path.exists() {
-                return Err(vec![CompileError::Resolution(
-                    format!(
-                        "cannot find imported module '{}' (looked for {})",
-                        module_path.join("."),
-                        file_path.display()
-                    ),
-                    Some(span),
-                )]);
-            }
-
-            let mut requested_names = HashSet::new();
-            for name in &names {
-                if !requested_names.insert(name.as_str()) {
-                    return Err(vec![CompileError::Resolution(
-                        format!(
-                            "duplicate import '{}' from module '{}'",
-                            name,
-                            module_path.join(".")
-                        ),
-                        Some(span),
-                    )]);
-                }
-            }
+            let file_path = self.local_import_file_path(base_dir, &module_path, span)?;
+            self.reject_duplicate_requested_imports(&names, &module_path, span)?;
 
             let dep_program = self.load_with_imports(&file_path, files)?;
             self.collect_imported_declarations(
@@ -244,6 +272,56 @@ impl ModuleSystem {
 
         // Append imported declarations to the program
         program.declarations.extend(imported_decls);
+        Ok(())
+    }
+
+    fn local_import_file_path(
+        &self,
+        base_dir: &Path,
+        module_path: &[String],
+        span: Span,
+    ) -> Result<PathBuf, Vec<CompileError>> {
+        // Local file import: resolve module_path segments as a file path
+        // e.g. ["math"] -> math.zen, ["utils", "math"] -> utils/math.zen
+        let rel_path: PathBuf = module_path.iter().collect();
+        let mut file_path = base_dir.join(&rel_path);
+        if file_path.extension().is_none() {
+            file_path.set_extension("zen");
+        }
+
+        if !file_path.exists() {
+            return Err(vec![CompileError::Resolution(
+                format!(
+                    "cannot find imported module '{}' (looked for {})",
+                    module_path.join("."),
+                    file_path.display()
+                ),
+                Some(span),
+            )]);
+        }
+
+        Ok(file_path)
+    }
+
+    fn reject_duplicate_requested_imports(
+        &self,
+        names: &[String],
+        module_path: &[String],
+        span: Span,
+    ) -> Result<(), Vec<CompileError>> {
+        let mut requested_names = HashSet::new();
+        for name in names {
+            if !requested_names.insert(name.as_str()) {
+                return Err(vec![CompileError::Resolution(
+                    format!(
+                        "duplicate import '{}' from module '{}'",
+                        name,
+                        module_path.join(".")
+                    ),
+                    Some(span),
+                )]);
+            }
+        }
         Ok(())
     }
 
@@ -295,6 +373,177 @@ impl ModuleSystem {
                     Some(import_span),
                 )]);
             }
+        }
+
+        Ok(())
+    }
+
+    fn load_graph_module(
+        &mut self,
+        path: &Path,
+        files: &mut FileTable,
+        graph: &mut ResolvedModuleGraph,
+        loading: &mut HashSet<PathBuf>,
+    ) -> Result<ModuleId, Vec<CompileError>> {
+        let canonical = path.canonicalize().map_err(|e| {
+            vec![CompileError::Internal(format!(
+                "cannot resolve path {}: {}",
+                path.display(),
+                e
+            ))]
+        })?;
+        let key = canonical.display().to_string();
+
+        if let Some(id) = graph.paths.get(&key) {
+            return Ok(*id);
+        }
+
+        if loading.contains(&canonical) {
+            return Err(vec![CompileError::Resolution(
+                format!("circular import detected: {}", canonical.display()),
+                None,
+            )]);
+        }
+
+        loading.insert(canonical.clone());
+
+        let program = self.load_file(path, files)?;
+        let info = self.register_module_info(&key, &canonical);
+        let id = info.id;
+        graph.paths.insert(key.clone(), id);
+
+        let base_dir = canonical
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf();
+        let imports = self.resolve_graph_imports(&program, &base_dir, files, graph, loading)?;
+
+        loading.remove(&canonical);
+        graph.modules.insert(
+            id,
+            ResolvedModule {
+                info,
+                program,
+                imports,
+            },
+        );
+        Ok(id)
+    }
+
+    fn resolve_graph_imports(
+        &mut self,
+        program: &Program,
+        base_dir: &Path,
+        files: &mut FileTable,
+        graph: &mut ResolvedModuleGraph,
+        loading: &mut HashSet<PathBuf>,
+    ) -> Result<Vec<ImportBinding>, Vec<CompileError>> {
+        let imports: Vec<(Vec<String>, Vec<String>, Span)> = program
+            .declarations
+            .iter()
+            .filter_map(|decl| match decl {
+                Declaration::Import {
+                    names,
+                    module_path,
+                    span,
+                } => Some((names.clone(), module_path.clone(), *span)),
+                _ => None,
+            })
+            .collect();
+
+        let mut bindings = Vec::new();
+
+        for (names, module_path, span) in imports {
+            if module_path.is_empty() {
+                return Err(vec![CompileError::Resolution(
+                    "empty import path".into(),
+                    Some(span),
+                )]);
+            }
+
+            self.reject_duplicate_requested_imports(&names, &module_path, span)?;
+
+            let first = &module_path[0];
+            if first == "@builtin"
+                || ((first == "std" || first == "@std") && module_path.len() == 1)
+            {
+                continue;
+            }
+
+            let file_path = if first == "std" || first == "@std" {
+                self.resolve_stdlib_file_path(&module_path[1..])?
+                    .ok_or_else(|| {
+                        vec![CompileError::Resolution(
+                            format!("cannot find stdlib module '{}'", module_path.join(".")),
+                            Some(span),
+                        )]
+                    })?
+            } else {
+                self.local_import_file_path(base_dir, &module_path, span)?
+            };
+
+            let dep_id = self.load_graph_module(&file_path, files, graph, loading)?;
+            let dep_module = graph
+                .module(dep_id)
+                .expect("graph module exists immediately after load");
+            self.collect_import_bindings(
+                dep_module,
+                &names,
+                &module_path.join("."),
+                span,
+                &mut bindings,
+            )?;
+        }
+
+        Ok(bindings)
+    }
+
+    fn collect_import_bindings(
+        &self,
+        dep_module: &ResolvedModule,
+        names: &[String],
+        module_name: &str,
+        import_span: Span,
+        bindings: &mut Vec<ImportBinding>,
+    ) -> Result<(), Vec<CompileError>> {
+        for name in names {
+            let mut found_private = false;
+            let mut found_public = false;
+
+            for decl in &dep_module.program.declarations {
+                if decl.name() == Some(name.as_str()) {
+                    if decl.is_public() {
+                        found_public = true;
+                    } else {
+                        found_private = true;
+                    }
+                }
+            }
+
+            if found_public {
+                bindings.push(ImportBinding {
+                    local_name: name.clone(),
+                    source_module: dep_module.info.id,
+                    source_symbol: name.clone(),
+                    span: import_span,
+                });
+                continue;
+            }
+
+            if found_private {
+                return Err(vec![CompileError::Resolution(
+                    format!(
+                        "symbol '{}' in module '{}' is not exported",
+                        name, module_name
+                    ),
+                    Some(import_span),
+                )]);
+            }
+
+            return Err(vec![CompileError::Resolution(
+                format!("module '{}' does not export '{}'", module_name, name),
+                Some(import_span),
+            )]);
         }
 
         Ok(())
@@ -412,21 +661,20 @@ impl ModuleSystem {
         &self.module_infos
     }
 
-    fn register_module_info(&mut self, key: &str, canonical: &Path) {
-        if self.module_infos.contains_key(key) {
-            return;
+    fn register_module_info(&mut self, key: &str, canonical: &Path) -> ModuleInfo {
+        if let Some(info) = self.module_infos.get(key) {
+            return info.clone();
         }
 
         let id = ModuleId(self.next_module_id);
         self.next_module_id += 1;
-        self.module_infos.insert(
-            key.to_string(),
-            ModuleInfo {
-                id,
-                package_id: self.package_id_for(canonical),
-                canonical_path: key.to_string(),
-            },
-        );
+        let info = ModuleInfo {
+            id,
+            package_id: self.package_id_for(canonical),
+            canonical_path: key.to_string(),
+        };
+        self.module_infos.insert(key.to_string(), info.clone());
+        info
     }
 
     fn package_id_for(&self, canonical: &Path) -> PackageId {
@@ -520,6 +768,85 @@ mod tests {
             .collect();
         assert!(func_names.contains(&"main"), "should contain main");
         assert!(func_names.contains(&"add"), "should contain imported add");
+    }
+
+    #[test]
+    fn module_graph_records_imports_without_merging_declarations() {
+        let tmp = setup_temp_dir();
+
+        let math_path = tmp.path().join("math.zen");
+        fs::write(
+            &math_path,
+            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
+        )
+        .unwrap();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ add } = math\n\nmain = () i32 {\n    return add(1, 2)\n}\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let graph = ms.load_module_graph(&main_path, &mut files).unwrap();
+        let entry = graph.module(graph.entry).expect("entry module");
+        let entry_names: Vec<&str> = entry
+            .program
+            .declarations
+            .iter()
+            .filter_map(|d| d.name())
+            .collect();
+
+        assert!(entry_names.contains(&"main"));
+        assert!(
+            !entry_names.contains(&"add"),
+            "module graph must not merge imported declarations into the entry AST"
+        );
+        assert_eq!(entry.imports.len(), 1);
+
+        let binding = &entry.imports[0];
+        assert_eq!(binding.local_name, "add");
+        assert_eq!(binding.source_symbol, "add");
+
+        let math_key = math_path.canonicalize().unwrap().display().to_string();
+        let math_module = graph
+            .module_by_path(&math_key)
+            .expect("imported module by canonical path");
+        assert_eq!(binding.source_module, math_module.info.id);
+        assert!(math_module
+            .program
+            .declarations
+            .iter()
+            .any(|d| d.name() == Some("add")));
+    }
+
+    #[test]
+    fn module_graph_reuses_export_visibility_errors() {
+        let tmp = setup_temp_dir();
+
+        let math_path = tmp.path().join("math.zen");
+        fs::write(&math_path, "add = (a: i32, b: i32) i32 { return a + b }\n").unwrap();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ add } = math\n\nmain = () i32 { return add(1, 2) }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let result = ms.load_module_graph(&main_path, &mut files);
+        assert!(result.is_err(), "private graph import should be rejected");
+        let msg = format!("{}", result.unwrap_err()[0]);
+        assert!(
+            msg.contains("not exported"),
+            "error should mention export visibility, got: {msg}"
+        );
     }
 
     #[test]

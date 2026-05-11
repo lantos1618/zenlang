@@ -173,6 +173,7 @@ impl TypeChecker {
 
                 let (resolved_name, ret_type) =
                     if let Some(info) = self.functions.get(&full_name).cloned() {
+                        self.check_call_signature(&full_name, &info.params, &typed_args, span);
                         if !info.type_params.is_empty() {
                             // Generic function: infer type args and substitute
                             let arg_types: Vec<Type> =
@@ -206,8 +207,10 @@ impl TypeChecker {
                             name.clone()
                         };
                         if let Some(info) = self.methods.get(&full_name).cloned() {
+                            self.check_call_signature(&full_name, &info.params, &typed_args, span);
                             (full_name.clone(), self.resolve_type(&info.return_type))
                         } else if let Some(info) = self.functions.get(&mangled).cloned() {
+                            self.check_call_signature(&mangled, &info.params, &typed_args, span);
                             (full_name.clone(), self.resolve_type(&info.return_type))
                         } else {
                             let m = module.as_deref().unwrap_or("");
@@ -258,11 +261,18 @@ impl TypeChecker {
                         }
                         let mangled = format!("{}_{}", recv_name, method);
                         // Try to look up the return type
-                        let ret_type = if let Some(info) = self.functions.get(&mangled) {
+                        let ret_type = if let Some(info) = self.functions.get(&mangled).cloned() {
+                            self.check_call_signature(&mangled, &info.params, &typed_args, span);
                             self.resolve_type(&info.return_type)
                         } else {
                             let method_key = format!("{}.{}", recv_name, method);
-                            if let Some(info) = self.methods.get(&method_key) {
+                            if let Some(info) = self.methods.get(&method_key).cloned() {
+                                self.check_call_signature(
+                                    &method_key,
+                                    &info.params,
+                                    &typed_args,
+                                    span,
+                                );
                                 self.resolve_type(&info.return_type)
                             } else {
                                 self.diagnostics.push(Diagnostic::warning(
@@ -302,6 +312,7 @@ impl TypeChecker {
                 let method_key = format!("{}.{}", type_name, method);
 
                 if let Some(info) = self.methods.get(&method_key).cloned() {
+                    self.check_call_signature(&method_key, &info.params, &typed_args, span);
                     // Found as a type method — handle generics
                     let ret_type = if !info.type_params.is_empty() {
                         let arg_types: Vec<Type> =
@@ -322,6 +333,7 @@ impl TypeChecker {
                         span: *span,
                     })
                 } else if let Some(info) = self.functions.get(method).cloned() {
+                    self.check_call_signature(method, &info.params, &typed_args, span);
                     // UFC: x.f(args) → f(x, args) — handle generics
                     let ret_type = if !info.type_params.is_empty() {
                         let arg_types: Vec<Type> =
@@ -908,6 +920,49 @@ impl TypeChecker {
                     ty: Type::Unknown,
                     span: *span,
                 })
+            }
+        }
+    }
+
+    fn check_call_signature(
+        &mut self,
+        callee: &str,
+        params: &[(String, AstType)],
+        args: &[TypedExpression],
+        span: &Span,
+    ) {
+        if params.len() != args.len() {
+            self.diagnostics.push(Diagnostic::error(
+                "E3021",
+                format!(
+                    "function `{}` expects {} arguments, found {}",
+                    callee,
+                    params.len(),
+                    args.len()
+                ),
+                *span,
+            ));
+            return;
+        }
+
+        for (idx, ((_, expected), actual)) in params.iter().zip(args.iter()).enumerate() {
+            let expected = self.resolve_type(expected);
+            if expected == Type::Unknown || actual.ty == Type::Unknown {
+                continue;
+            }
+
+            if !self.types_compatible(&expected, &actual.ty) {
+                self.diagnostics.push(Diagnostic::error(
+                    "E3022",
+                    format!(
+                        "argument {} for `{}` expects `{}`, found `{}`",
+                        idx + 1,
+                        callee,
+                        expected.display_name(),
+                        actual.ty.display_name()
+                    ),
+                    actual.span,
+                ));
             }
         }
     }
