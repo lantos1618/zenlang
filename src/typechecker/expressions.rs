@@ -52,6 +52,21 @@ impl TypeChecker {
         self.pop_scope();
         self.current_return_type = None;
 
+        if ret_type != Type::Void
+            && ret_type != Type::Never
+            && !self.block_satisfies_return(&body_block, &ret_type)
+        {
+            return Err(Diagnostic::error(
+                "E3031",
+                format!(
+                    "function `{}` must return `{}` on all non-error paths",
+                    name,
+                    ret_type.display_name()
+                ),
+                *_span,
+            ));
+        }
+
         // Collect defers accumulated during this function's body (LIFO order)
         let mut defers: Vec<TypedExpression> = self.pending_defers.drain(..).collect();
         defers.reverse();
@@ -1103,5 +1118,38 @@ impl TypeChecker {
     fn is_root_std_runtime_call(&self, module: &str, function: &str) -> bool {
         self.is_root_std_import(module)
             && matches!((module, function), ("io", "print") | ("io", "println"))
+    }
+
+    fn block_satisfies_return(&self, block: &TypedBlock, ret_type: &Type) -> bool {
+        if block.ty != Type::Void && self.types_compatible(ret_type, &block.ty) {
+            return true;
+        }
+
+        self.block_definitely_returns(block)
+    }
+
+    fn block_definitely_returns(&self, block: &TypedBlock) -> bool {
+        block
+            .expr
+            .as_ref()
+            .is_some_and(|expr| self.expr_definitely_returns(expr))
+            || block.statements.iter().any(|stmt| match &stmt.kind {
+                TypedStatementKind::Expression(expr) => self.expr_definitely_returns(expr),
+                TypedStatementKind::VarDecl { .. } => false,
+            })
+    }
+
+    fn expr_definitely_returns(&self, expr: &TypedExpression) -> bool {
+        match &expr.kind {
+            TypedExprKind::Return(_) => true,
+            TypedExprKind::Block(block) => self.block_definitely_returns(block),
+            TypedExprKind::Match { arms, .. } => {
+                !arms.is_empty()
+                    && arms
+                        .iter()
+                        .all(|arm| self.block_definitely_returns(&arm.body))
+            }
+            _ => false,
+        }
     }
 }
