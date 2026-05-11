@@ -31,6 +31,14 @@ impl ModuleSystem {
         }
     }
 
+    pub fn with_stdlib_root(stdlib_root: PathBuf) -> Self {
+        Self {
+            modules: HashMap::new(),
+            stdlib_root: Some(stdlib_root),
+            loading: HashSet::new(),
+        }
+    }
+
     /// Load and parse a file, returning its Program.
     pub fn load_file(
         &mut self,
@@ -141,7 +149,26 @@ impl ModuleSystem {
             let first = &module_path[0];
 
             if first == "std" || first == "@std" {
-                // Stdlib imports — handled by codegen/runtime, nothing to load
+                if module_path.len() == 1 {
+                    // Root prelude imports are still handled by codegen/runtime.
+                    continue;
+                }
+
+                let Some(file_path) = self.resolve_stdlib_file_path(&module_path[1..])? else {
+                    return Err(vec![CompileError::Resolution(
+                        format!("cannot find stdlib module '{}'", module_path.join(".")),
+                        Some(span),
+                    )]);
+                };
+
+                let dep_program = self.load_with_imports(&file_path, files)?;
+                self.collect_imported_declarations(
+                    &dep_program,
+                    &names,
+                    &module_path.join("."),
+                    span,
+                    &mut imported_decls,
+                )?;
                 continue;
             }
 
@@ -291,6 +318,29 @@ impl ModuleSystem {
         sub_path: &[String],
         files: &mut FileTable,
     ) -> Result<Program, Vec<CompileError>> {
+        if sub_path.is_empty() {
+            // `{ io } = std` — load the stdlib prelude or nothing
+            return Ok(Program {
+                declarations: Vec::new(),
+                file_id: 0,
+            });
+        }
+
+        if let Some(file_path) = self.resolve_stdlib_file_path(sub_path)? {
+            return self.load_file(&file_path, files);
+        }
+
+        // Return empty for now — many stdlib modules are stubs
+        Ok(Program {
+            declarations: Vec::new(),
+            file_id: 0,
+        })
+    }
+
+    fn resolve_stdlib_file_path(
+        &self,
+        sub_path: &[String],
+    ) -> Result<Option<PathBuf>, Vec<CompileError>> {
         let root = match &self.stdlib_root {
             Some(r) => r.clone(),
             None => {
@@ -302,43 +352,30 @@ impl ModuleSystem {
         };
 
         if sub_path.is_empty() {
-            // `{ io } = std` — load the stdlib prelude or nothing
-            return Ok(Program {
-                declarations: Vec::new(),
-                file_id: 0,
-            });
+            return Ok(None);
         }
 
-        // Build path: stdlib/<sub>/<sub>.zen or stdlib/<sub>/mod.zen
-        let mut dir = root.clone();
+        let mut dir = root;
         for seg in sub_path {
             dir.push(seg);
         }
 
-        // Try <dir>/<last>.zen
-        let _last = sub_path.last().unwrap();
         let file_path = dir.with_extension("zen");
         if file_path.exists() {
-            return self.load_file(&file_path, files);
+            return Ok(Some(file_path));
         }
 
-        // Try <dir>/mod.zen
         let mod_path = dir.join("mod.zen");
         if mod_path.exists() {
-            return self.load_file(&mod_path, files);
+            return Ok(Some(mod_path));
         }
 
-        // Try <dir>.zen (parent dir)
         let parent_file = dir.with_extension("zen");
         if parent_file.exists() {
-            return self.load_file(&parent_file, files);
+            return Ok(Some(parent_file));
         }
 
-        // Return empty for now — many stdlib modules are stubs
-        Ok(Program {
-            declarations: Vec::new(),
-            file_id: 0,
-        })
+        Ok(None)
     }
 
     pub fn modules(&self) -> &HashMap<String, Program> {
@@ -491,6 +528,43 @@ mod tests {
             .declarations
             .iter()
             .any(|d| d.name() == Some("main")));
+    }
+
+    #[test]
+    fn stdlib_submodule_import_loads_through_module_system() {
+        let tmp = setup_temp_dir();
+        let stdlib = tmp.path().join("stdlib");
+        fs::create_dir(&stdlib).unwrap();
+        fs::write(
+            &stdlib.join("math.zen"),
+            "pub answer = () i32 { return 42 }\n",
+        )
+        .unwrap();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ answer } = std.math\n\nmain = () i32 { return answer() }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::with_stdlib_root(stdlib);
+
+        let program = ms.load_with_imports(&main_path, &mut files).unwrap();
+        let func_names: Vec<&str> = program
+            .declarations
+            .iter()
+            .filter_map(|d| d.name())
+            .collect();
+
+        assert!(func_names.contains(&"main"));
+        assert!(func_names.contains(&"answer"));
+        assert_eq!(
+            files.file_count(),
+            2,
+            "main and stdlib module should both be loaded"
+        );
     }
 
     #[test]
