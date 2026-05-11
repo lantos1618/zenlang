@@ -218,6 +218,17 @@ impl TypeChecker {
                         *span,
                     ));
                 }
+                if left != right {
+                    return Err(Diagnostic::error(
+                        "E3013",
+                        format!(
+                            "arithmetic operands must have the same type, found `{}` and `{}`",
+                            left.display_name(),
+                            right.display_name()
+                        ),
+                        *span,
+                    ));
+                }
                 Ok(left.clone())
             }
             BinaryOp::Eq

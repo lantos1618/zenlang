@@ -498,6 +498,28 @@ mod tests {
     }
 
     #[test]
+    fn binary_op_mixed_numeric_width_requires_cast() {
+        let tc = TypeChecker::new();
+        let err = tc
+            .check_binary_op(BinaryOp::Add, &Type::I32, &Type::I64, &Span::dummy())
+            .expect_err("mixed integer arithmetic should fail");
+        assert!(
+            err.message
+                .contains("arithmetic operands must have the same type"),
+            "expected mixed numeric diagnostic, got {err:?}"
+        );
+
+        let err = tc
+            .check_binary_op(BinaryOp::Mul, &Type::F32, &Type::F64, &Span::dummy())
+            .expect_err("mixed float arithmetic should fail");
+        assert!(
+            err.message
+                .contains("arithmetic operands must have the same type"),
+            "expected mixed numeric diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn unknown_function_error() {
         use crate::ast::{Expression, Program};
         let mut tc = TypeChecker::new();
