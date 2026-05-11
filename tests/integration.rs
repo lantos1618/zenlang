@@ -23,10 +23,10 @@ fn compile_and_run(zen_path: &Path) -> String {
     let mut files = FileTable::new();
     let mut module_system = ModuleSystem::new();
     let program = module_system
-        .load_file(zen_path, &mut files)
+        .load_with_imports(zen_path, &mut files)
         .unwrap_or_else(|errs| {
             panic!(
-                "parse error in {}:\n  {}",
+                "load/parse error in {}:\n  {}",
                 zen_path.display(),
                 errs.iter()
                     .map(|e| format!("{}", e))
@@ -204,6 +204,13 @@ fn test_cast() {
 #[test]
 fn test_multiple_defer() {
     run_test("multiple_defer");
+}
+
+#[test]
+fn test_multi_file_imports() {
+    let zen_path = test_dir().join("multi_file/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "37\n");
 }
 
 // ── Discovery test: all .zen files have matching .expected ──────────

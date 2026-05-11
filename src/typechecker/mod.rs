@@ -372,6 +372,13 @@ mod tests {
     use crate::ast::expressions::BinaryOp;
     use crate::error::Span;
 
+    fn parse_program(src: &str) -> ast::Program {
+        let mut files = crate::error::FileTable::new();
+        let file_id = files.add_file("test.zen".to_string(), src.to_string());
+        let tokens = crate::lexer::tokenize(src, file_id).expect("tokenize");
+        crate::parser::parse(tokens, file_id).expect("parse")
+    }
+
     #[test]
     fn resolve_primitive_types() {
         let tc = TypeChecker::new();
@@ -827,6 +834,54 @@ mod tests {
                 .message
                 .contains("field `x` for struct `Point` expects `i32`, found `str`")),
             "expected field type diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn enum_variant_unknown_variant_is_error() {
+        let program = parse_program(
+            r#"
+Status: Ok, Err
+
+main = () void {
+    value = Status.Pending
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("unknown enum variant should fail");
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("enum `Status` has no variant `Pending`")),
+            "expected unknown variant diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn enum_variant_payload_type_mismatch_is_error() {
+        let program = parse_program(
+            r#"
+Maybe: Some(i32), None
+
+main = () void {
+    value = Maybe.Some("bad")
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("enum payload type mismatch should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("payload for enum variant `Maybe.Some` expects `i32`, found `str`")),
+            "expected payload type diagnostic, got {errors:?}"
         );
     }
 

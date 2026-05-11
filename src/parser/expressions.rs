@@ -212,6 +212,30 @@ impl Parser {
         // Handle enum variant: Name.Variant
         let (name, name_span) = self.expect_identifier()?;
 
+        if let Expression::Identifier {
+            name: ref enum_name,
+            span: id_span,
+        } = lhs
+        {
+            if first_char_is_upper(enum_name) && first_char_is_upper(&name) {
+                let payload = if matches!(self.peek(), Token::LParen) {
+                    self.advance();
+                    let expr = self.parse_expression()?;
+                    self.expect(&Token::RParen)?;
+                    Some(Box::new(expr))
+                } else {
+                    None
+                };
+                let span = id_span.merge(self.prev_span());
+                return Ok(Expression::EnumVariant {
+                    enum_name: enum_name.clone(),
+                    variant: name,
+                    payload,
+                    span,
+                });
+            }
+        }
+
         // Check for method call: expr.name(args)
         if matches!(self.peek(), Token::LParen) {
             self.advance();
@@ -241,32 +265,6 @@ impl Parser {
                 args,
                 span,
             });
-        }
-
-        // Check for struct literal: Name.Variant or just field access
-        if let Expression::Identifier {
-            name: ref enum_name,
-            span: id_span,
-        } = lhs
-        {
-            // Check if this looks like EnumName.Variant (both start uppercase)
-            if first_char_is_upper(enum_name) && first_char_is_upper(&name) {
-                let payload = if matches!(self.peek(), Token::LParen) {
-                    self.advance();
-                    let expr = self.parse_expression()?;
-                    self.expect(&Token::RParen)?;
-                    Some(Box::new(expr))
-                } else {
-                    None
-                };
-                let span = id_span.merge(self.prev_span());
-                return Ok(Expression::EnumVariant {
-                    enum_name: enum_name.clone(),
-                    variant: name,
-                    payload,
-                    span,
-                });
-            }
         }
 
         // Check if this is a struct literal: ident { field: val, ... }

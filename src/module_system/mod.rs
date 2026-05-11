@@ -394,15 +394,15 @@ impl ModuleSystem {
         })?;
         let key = canonical.display().to_string();
 
-        if let Some(id) = graph.paths.get(&key) {
-            return Ok(*id);
-        }
-
         if loading.contains(&canonical) {
             return Err(vec![CompileError::Resolution(
                 format!("circular import detected: {}", canonical.display()),
                 None,
             )]);
+        }
+
+        if let Some(id) = graph.paths.get(&key) {
+            return Ok(*id);
         }
 
         loading.insert(canonical.clone());
@@ -846,6 +846,28 @@ mod tests {
         assert!(
             msg.contains("not exported"),
             "error should mention export visibility, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn module_graph_detects_circular_imports() {
+        let tmp = setup_temp_dir();
+
+        let a_path = tmp.path().join("a.zen");
+        fs::write(&a_path, "{ bar } = b\n\npub foo = () i32 { return 1 }\n").unwrap();
+
+        let b_path = tmp.path().join("b.zen");
+        fs::write(&b_path, "{ foo } = a\n\npub bar = () i32 { return 2 }\n").unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let result = ms.load_module_graph(&a_path, &mut files);
+        assert!(result.is_err(), "circular graph import should be rejected");
+        let msg = format!("{}", result.unwrap_err()[0]);
+        assert!(
+            msg.contains("circular import"),
+            "error should mention circular import, got: {msg}"
         );
     }
 

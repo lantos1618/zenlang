@@ -519,6 +519,65 @@ impl TypeChecker {
                     Some(p) => Some(Box::new(self.check_expr(p)?)),
                     None => None,
                 };
+                if let Some(info) = self.enums.get(enum_name).cloned() {
+                    match info.variants.iter().find(|(name, _)| name == variant) {
+                        Some((_, expected_payload)) => match (expected_payload, &typed_payload) {
+                            (Some(expected_ast), Some(actual)) => {
+                                let expected = self.resolve_type(expected_ast);
+                                if expected != Type::Unknown
+                                    && actual.ty != Type::Unknown
+                                    && !self.types_compatible(&expected, &actual.ty)
+                                {
+                                    self.diagnostics.push(Diagnostic::error(
+                                        "E3062",
+                                        format!(
+                                            "payload for enum variant `{}.{}` expects `{}`, found `{}`",
+                                            enum_name,
+                                            variant,
+                                            expected.display_name(),
+                                            actual.ty.display_name()
+                                        ),
+                                        actual.span,
+                                    ));
+                                }
+                            }
+                            (Some(_), None) => {
+                                self.diagnostics.push(Diagnostic::error(
+                                    "E3061",
+                                    format!(
+                                        "enum variant `{}.{}` requires a payload",
+                                        enum_name, variant
+                                    ),
+                                    *span,
+                                ));
+                            }
+                            (None, Some(actual)) => {
+                                self.diagnostics.push(Diagnostic::error(
+                                    "E3063",
+                                    format!(
+                                        "enum variant `{}.{}` does not accept a payload",
+                                        enum_name, variant
+                                    ),
+                                    actual.span,
+                                ));
+                            }
+                            (None, None) => {}
+                        },
+                        None => {
+                            self.diagnostics.push(Diagnostic::error(
+                                "E3060",
+                                format!("enum `{}` has no variant `{}`", enum_name, variant),
+                                *span,
+                            ));
+                        }
+                    }
+                } else {
+                    self.diagnostics.push(Diagnostic::error(
+                        "E3064",
+                        format!("undefined enum `{}`", enum_name),
+                        *span,
+                    ));
+                }
                 let ty = Type::Named(enum_name.clone());
                 Ok(TypedExpression {
                     kind: TypedExprKind::EnumVariant {

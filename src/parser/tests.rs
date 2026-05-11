@@ -180,6 +180,12 @@ fn parse_enum_variant_expr() {
 }
 
 #[test]
+fn parse_enum_variant_payload_expr() {
+    let prog = parse_ok("f = () void {\n    s = Maybe.Some(42)\n}");
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
 fn parse_ufc_chain() {
     let prog = parse_ok("f = () void {\n    result = 5.double().add_ten()\n}");
     assert_eq!(prog.declarations.len(), 1);
