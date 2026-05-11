@@ -280,6 +280,66 @@ impl TypeChecker {
         }
     }
 
+    pub(crate) fn check_bool_match_patterns(
+        &mut self,
+        arms: &[MatchArm],
+        require_exhaustive: bool,
+        span: Span,
+    ) {
+        let mut true_seen = false;
+        let mut false_seen = false;
+        let mut wildcard_seen = false;
+
+        for arm in arms {
+            match &arm.pattern {
+                Pattern::BoolTrue { span } => {
+                    if true_seen || wildcard_seen {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E4005",
+                            "duplicate match arm for `true`",
+                            *span,
+                        ));
+                    }
+                    true_seen = true;
+                }
+                Pattern::BoolFalse { span } => {
+                    if false_seen || wildcard_seen {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E4005",
+                            "duplicate match arm for `false`",
+                            *span,
+                        ));
+                    }
+                    false_seen = true;
+                }
+                Pattern::Wildcard { span } => {
+                    if wildcard_seen || (true_seen && false_seen) {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E4005",
+                            "redundant wildcard match arm",
+                            *span,
+                        ));
+                    }
+                    wildcard_seen = true;
+                }
+                _ => {}
+            }
+        }
+
+        if require_exhaustive && !wildcard_seen && !(true_seen && false_seen) {
+            let missing = match (true_seen, false_seen) {
+                (true, false) => "`false`",
+                (false, true) => "`true`",
+                _ => "`true`, `false`",
+            };
+            self.diagnostics.push(Diagnostic::error(
+                "E4006",
+                format!("non-exhaustive bool match: missing {missing}"),
+                span,
+            ));
+        }
+    }
+
     fn enum_variants_for_match(&self, ty: &Type) -> Option<(String, Vec<String>)> {
         match ty {
             Type::Enum { name, variants } => Some((

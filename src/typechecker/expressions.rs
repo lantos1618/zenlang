@@ -750,6 +750,8 @@ impl TypeChecker {
                 if matches!(kind, MatchKind::EnumMatch) {
                     self.check_enum_match_patterns(&typed_scrutinee.ty, arms);
                     self.check_match_exhaustiveness(&typed_scrutinee.ty, arms, *span);
+                } else if matches!(kind, MatchKind::Conditional | MatchKind::ConditionalElse) {
+                    self.check_bool_match_patterns(arms, result_type != Type::Void, *span);
                 }
 
                 Ok(TypedExpression {
