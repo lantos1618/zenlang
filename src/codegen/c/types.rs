@@ -296,6 +296,7 @@ impl CEmitter {
         let params = self.format_params(&func.params);
         self.line(&format!("{} {}({}) {{", ret, name, params));
         self.indent();
+        let previous_defers = std::mem::replace(&mut self.current_defers, func.defers.clone());
 
         // Emit statements
         for stmt in &func.body.statements {
@@ -387,6 +388,7 @@ impl CEmitter {
             }
         }
 
+        self.current_defers = previous_defers;
         self.dedent();
         self.line("}");
     }

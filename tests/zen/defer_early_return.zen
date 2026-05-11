@@ -1,0 +1,19 @@
+{ io } = std
+
+cleanup = () void {
+    io.println("cleanup early")
+}
+
+process = (flag: bool) i32 {
+    @this.defer(cleanup())
+    flag ?
+        | true { return 7 }
+        | false { return 3 }
+}
+
+main = () i32 {
+    io.println("before")
+    result = process(true)
+    io.println("result: ${result}")
+    return 0
+}

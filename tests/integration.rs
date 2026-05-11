@@ -167,6 +167,11 @@ fn test_defer() {
 }
 
 #[test]
+fn test_defer_early_return() {
+    run_test("defer_early_return");
+}
+
+#[test]
 fn test_boolean_ops() {
     run_test("boolean_ops");
 }

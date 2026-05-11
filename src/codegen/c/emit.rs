@@ -13,7 +13,9 @@ impl CEmitter {
             // Block's trailing expression — if in a function context, this is a return value.
             // For now, emit it as a standalone expression (the caller wraps it as needed).
             let val = self.emit_expr_to_stmt(expr);
-            self.line(&val);
+            if !val.is_empty() {
+                self.line(&val);
+            }
         }
     }
 
@@ -37,7 +39,9 @@ impl CEmitter {
             }
             TypedStatementKind::Expression(expr) => {
                 let s = self.emit_expr_to_stmt(expr);
-                self.line(&s);
+                if !s.is_empty() {
+                    self.line(&s);
+                }
             }
         }
     }
@@ -61,8 +65,18 @@ impl CEmitter {
                 String::new()
             }
             TypedExprKind::Return(val) => match val {
-                Some(v) => format!("return {};", self.emit_expr_inline(v)),
-                None => "return;".into(),
+                Some(v) if self.current_defers.is_empty() => {
+                    format!("return {};", self.emit_expr_inline(v))
+                }
+                None if self.current_defers.is_empty() => "return;".into(),
+                Some(v) => {
+                    self.emit_return_with_current_defers(Some(v));
+                    String::new()
+                }
+                None => {
+                    self.emit_return_with_current_defers(None);
+                    String::new()
+                }
             },
             TypedExprKind::Break => "break;".into(),
             TypedExprKind::Continue => "continue;".into(),
@@ -78,6 +92,33 @@ impl CEmitter {
                 } else {
                     format!("{};", inline)
                 }
+            }
+        }
+    }
+
+    fn emit_return_with_current_defers(&mut self, value: Option<&TypedExpression>) {
+        match value {
+            Some(expr) => {
+                let tmp = self.fresh_tmp();
+                let ty = self.c_type(&expr.ty);
+                let value = self.emit_expr_inline(expr);
+                self.line(&format!("{} {} = {};", ty, tmp, value));
+                self.emit_current_defers();
+                self.line(&format!("return {};", tmp));
+            }
+            None => {
+                self.emit_current_defers();
+                self.line("return;");
+            }
+        }
+    }
+
+    fn emit_current_defers(&mut self) {
+        let defers = self.current_defers.clone();
+        for defer_expr in &defers {
+            let s = self.emit_expr_to_stmt(defer_expr);
+            if !s.is_empty() {
+                self.line(&s);
             }
         }
     }
@@ -451,13 +492,16 @@ impl CEmitter {
             self.emit_statement(stmt);
         }
         if let Some(ref expr) = block.expr {
-            if let Some(var) = result_var {
-                let val = self.emit_expr_inline(expr);
-                self.line(&format!("{} = {};", var, val));
-            } else {
-                let s = self.emit_expr_to_stmt(expr);
-                if !s.is_empty() {
-                    self.line(&s);
+            match result_var {
+                Some(var) if expr.ty != Type::Never => {
+                    let val = self.emit_expr_inline(expr);
+                    self.line(&format!("{} = {};", var, val));
+                }
+                _ => {
+                    let s = self.emit_expr_to_stmt(expr);
+                    if !s.is_empty() {
+                        self.line(&s);
+                    }
                 }
             }
         }

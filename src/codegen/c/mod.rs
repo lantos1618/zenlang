@@ -26,6 +26,8 @@ struct CEmitter {
     tmp_counter: usize,
     /// Collected closure definitions (env struct + function) to emit before main functions.
     closure_defs: Vec<String>,
+    /// Function-scope defers that must run before any return emitted in this body.
+    current_defers: Vec<TypedExpression>,
 }
 
 impl CEmitter {
@@ -35,6 +37,7 @@ impl CEmitter {
             indent: 0,
             tmp_counter: 0,
             closure_defs: Vec::new(),
+            current_defers: Vec::new(),
         }
     }
 
