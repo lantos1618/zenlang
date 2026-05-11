@@ -1147,6 +1147,92 @@ describe = (c: Color) StaticString {
     }
 
     #[test]
+    fn enum_match_duplicate_variant_is_error() {
+        let program = parse_program(
+            r#"
+Color: Red, Green
+
+describe = (c: Color) StaticString {
+    c ?
+        | Red { "red" }
+        | Red { "again" }
+        | Green { "green" }
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("duplicate enum match arm should fail");
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("duplicate match arm for `Color.Red`")),
+            "expected duplicate enum arm diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn enum_match_unknown_variant_is_error() {
+        let program = parse_program(
+            r#"
+Color: Red, Green
+
+describe = (c: Color) StaticString {
+    c ?
+        | Red { "red" }
+        | Blue { "blue" }
+        | Green { "green" }
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("unknown enum match arm should fail");
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("enum `Color` has no variant `Blue`")),
+            "expected unknown enum arm diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn enum_match_payload_shape_is_checked() {
+        let program = parse_program(
+            r#"
+Maybe: Some(i32), None
+
+describe = (m: Maybe) StaticString {
+    m ?
+        | Some { "some" }
+        | None(value) { "none" }
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("enum match payload shape should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("match arm `Maybe.Some` requires a payload")),
+            "expected missing payload diagnostic, got {errors:?}"
+        );
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("match arm `Maybe.None` does not accept a payload")),
+            "expected forbidden payload diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
     fn types_compatible_basics() {
         let tc = TypeChecker::new();
         // Same types

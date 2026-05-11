@@ -7,6 +7,8 @@ use crate::error::{Diagnostic, Span};
 
 use super::TypeChecker;
 
+type EnumVariantPayloads = Vec<(String, Option<Type>)>;
+
 impl TypeChecker {
     /// Look up the payload type for a specific enum variant.
     pub(crate) fn lookup_variant_payload(
@@ -227,6 +229,57 @@ impl TypeChecker {
         }
     }
 
+    pub(crate) fn check_enum_match_patterns(&mut self, scrutinee_type: &Type, arms: &[MatchArm]) {
+        let Some((enum_name, variants)) = self.enum_variant_payloads_for_match(scrutinee_type)
+        else {
+            return;
+        };
+        let variant_payloads: std::collections::HashMap<&str, Option<&Type>> = variants
+            .iter()
+            .map(|(variant, payload)| (variant.as_str(), payload.as_ref()))
+            .collect();
+        let mut seen = std::collections::HashSet::new();
+
+        for arm in arms {
+            let Some((variant, has_payload)) =
+                self.explicit_enum_variant_pattern(&arm.pattern, &variant_payloads)
+            else {
+                continue;
+            };
+            let span = arm.pattern.span();
+            let Some(expected_payload) = variant_payloads.get(variant) else {
+                self.diagnostics.push(Diagnostic::error(
+                    "E4001",
+                    format!("enum `{enum_name}` has no variant `{variant}`"),
+                    span,
+                ));
+                continue;
+            };
+
+            if !seen.insert(variant.to_string()) {
+                self.diagnostics.push(Diagnostic::error(
+                    "E4002",
+                    format!("duplicate match arm for `{enum_name}.{variant}`"),
+                    span,
+                ));
+            }
+
+            match (expected_payload.is_some(), has_payload) {
+                (true, false) => self.diagnostics.push(Diagnostic::error(
+                    "E4003",
+                    format!("match arm `{enum_name}.{variant}` requires a payload"),
+                    span,
+                )),
+                (false, true) => self.diagnostics.push(Diagnostic::error(
+                    "E4004",
+                    format!("match arm `{enum_name}.{variant}` does not accept a payload"),
+                    span,
+                )),
+                _ => {}
+            }
+        }
+    }
+
     fn enum_variants_for_match(&self, ty: &Type) -> Option<(String, Vec<String>)> {
         match ty {
             Type::Enum { name, variants } => Some((
@@ -239,6 +292,27 @@ impl TypeChecker {
                     info.variants
                         .iter()
                         .map(|(variant, _)| variant.clone())
+                        .collect(),
+                )
+            }),
+            _ => None,
+        }
+    }
+
+    fn enum_variant_payloads_for_match(&self, ty: &Type) -> Option<(String, EnumVariantPayloads)> {
+        match ty {
+            Type::Enum { name, variants } => Some((name.clone(), variants.clone())),
+            Type::Named(name) => self.enums.get(name).map(|info| {
+                (
+                    name.clone(),
+                    info.variants
+                        .iter()
+                        .map(|(variant, payload)| {
+                            (
+                                variant.clone(),
+                                payload.as_ref().map(|ty| self.resolve_type(ty)),
+                            )
+                        })
                         .collect(),
                 )
             }),
@@ -260,6 +334,25 @@ impl TypeChecker {
                     .then_some(name)
             }
             Pattern::Enum { variant, .. } => Some(variant),
+            _ => None,
+        }
+    }
+
+    fn explicit_enum_variant_pattern<'a>(
+        &self,
+        pattern: &'a Pattern,
+        variants: &std::collections::HashMap<&str, Option<&Type>>,
+    ) -> Option<(&'a str, bool)> {
+        match pattern {
+            Pattern::Identifier { name, .. } => (variants.contains_key(name.as_str())
+                || name
+                    .chars()
+                    .next()
+                    .is_some_and(|first| first.is_ascii_uppercase()))
+            .then_some((name.as_str(), false)),
+            Pattern::Enum {
+                variant, payload, ..
+            } => Some((variant, payload.is_some())),
             _ => None,
         }
     }
