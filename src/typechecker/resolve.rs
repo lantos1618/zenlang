@@ -151,12 +151,16 @@ impl TypeChecker {
         if *expected == Type::Unknown || *actual == Type::Unknown {
             return true;
         }
-        // Named types might be aliases — be permissive
-        if matches!(expected, Type::Named(_)) || matches!(actual, Type::Named(_)) {
-            return true;
-        }
-        // Enum types: match by name
+        // Named/nominal types match only by explicit identity.
         match (expected, actual) {
+            (Type::Named(a), Type::Named(b)) if a == b => return true,
+            (Type::Struct { name: a, .. }, Type::Struct { name: b, .. }) if a == b => return true,
+            (Type::Struct { name, .. }, Type::Named(n))
+            | (Type::Named(n), Type::Struct { name, .. })
+                if name == n =>
+            {
+                return true;
+            }
             (Type::Enum { name: a, .. }, Type::Enum { name: b, .. }) if a == b => return true,
             (Type::Enum { name, .. }, Type::Named(n))
             | (Type::Named(n), Type::Enum { name, .. })

@@ -558,8 +558,19 @@ mod tests {
         assert!(tc.types_compatible(&Type::F32, &Type::F64));
         // Unknown is permissive
         assert!(tc.types_compatible(&Type::I32, &Type::Unknown));
-        // Named types are permissive (might be aliases)
-        assert!(tc.types_compatible(&Type::Str, &Type::Named("StaticString".into())));
+        // Named types are nominal and do not match unrelated concrete types.
+        assert!(tc.types_compatible(
+            &Type::Named("UserId".into()),
+            &Type::Named("UserId".into())
+        ));
+        assert!(!tc.types_compatible(
+            &Type::Named("UserId".into()),
+            &Type::Named("OrderId".into())
+        ));
+        assert!(!tc.types_compatible(
+            &Type::Str,
+            &Type::Named("StaticString".into())
+        ));
         // Clear mismatch
         assert!(!tc.types_compatible(&Type::I32, &Type::Str));
         assert!(!tc.types_compatible(&Type::Bool, &Type::I32));
