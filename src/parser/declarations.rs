@@ -49,6 +49,44 @@ impl Parser {
                         // Generic function: `name<T> = (params) ret { body }`
                         self.parse_function_def(name, type_params, public, name_span)
                     }
+                    Token::Dot => {
+                        // Generic receiver method: `Type<T>.method = (self: Type<T>) ...`
+                        self.advance(); // consume .
+                        let (method_name, _method_span) = self.expect_identifier()?;
+                        self.skip_newlines();
+
+                        if matches!(method_name.as_str(), "implements" | "requires") {
+                            return Err(CompileError::Syntax(
+                                format!(
+                                    "gated v1 feature '{method_name}': type association and behavior constraints are specified in docs/V1_SPEC.md but are not implemented"
+                                ),
+                                Some(self.peek_span()),
+                            ));
+                        }
+
+                        let mut all_type_params = type_params;
+                        if matches!(self.peek(), Token::Lt) {
+                            all_type_params.extend(self.parse_type_params()?);
+                        }
+
+                        self.skip_newlines();
+                        self.expect(&Token::Assign)?;
+                        self.skip_newlines();
+
+                        let (params, return_type, body) =
+                            self.parse_function_signature_and_body()?;
+                        let span = name_span.merge(body.span());
+                        Ok(Declaration::Method {
+                            type_name: name,
+                            method_name,
+                            type_params: all_type_params,
+                            params,
+                            return_type,
+                            body,
+                            public,
+                            span,
+                        })
+                    }
                     Token::Colon if self.is_struct_def() => {
                         self.parse_struct_def_with_params(name, type_params, public, name_span)
                     }

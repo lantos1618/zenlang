@@ -192,12 +192,25 @@ fn test_generic_result_enum() {
 }
 
 #[test]
+fn test_generic_vec() {
+    run_test("generic_vec");
+}
+
+#[test]
 fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     let c_source = compile_to_c(&test_dir().join("generic_method.zen"));
     assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_get_i32(box)"));
     assert!(!c_source.contains("Box_T"));
     assert!(!c_source.contains("T Box_get"));
+
+    let c_source = compile_to_c(&test_dir().join("generic_vec.zen"));
+    assert!(c_source.contains("int32_t Vec_len_i32(Vec_i32 self)"));
+    assert!(c_source.contains("int32_t Vec_len_str(Vec_str self)"));
+    assert!(c_source.contains("Vec_len_i32(ints)"));
+    assert!(c_source.contains("Vec_len_str(words)"));
+    assert!(!c_source.contains("Vec_T"));
+    assert!(!c_source.contains("T Vec_len"));
 }
 
 #[test]

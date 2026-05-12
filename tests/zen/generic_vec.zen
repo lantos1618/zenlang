@@ -1,0 +1,18 @@
+{ io } = std
+
+Vec<T>: {
+    first: T,
+    len: i32
+}
+
+Vec<T>.len = (self: Vec<T>) i32 {
+    return self.len
+}
+
+main = () i32 {
+    ints = Vec<i32> { first: 4, len: 1 }
+    words = Vec<str> { first: "zen", len: 1 }
+    io.println("${ints.len()}")
+    io.println("${words.len()}")
+    return 0
+}
