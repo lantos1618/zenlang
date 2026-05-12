@@ -235,6 +235,38 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
 }
 
 #[test]
+fn check_command_runs_resolver_diagnostics() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("bad_resolver_ref.zen");
+    std::fs::write(
+        &zen_path,
+        r#"
+main = () i32 {
+    return missing_local
+}
+"#,
+    )
+    .expect("write test file");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["check", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen check");
+
+    assert!(
+        !output.status.success(),
+        "zen check unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("unknown value symbol 'missing_local'"),
+        "expected resolver diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn test_defer() {
     run_test("defer");
 }

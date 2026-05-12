@@ -5,6 +5,7 @@ use zen::codegen::c::CBackend;
 use zen::codegen::Backend;
 use zen::error::FileTable;
 use zen::module_system::ModuleSystem;
+use zen::resolver::Resolver;
 use zen::typechecker::TypeChecker;
 
 fn main() {
@@ -71,6 +72,18 @@ fn frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
             process::exit(1);
         }
     };
+
+    if let Err(diags) = Resolver::new().resolve_program(&program) {
+        for diag in &diags {
+            print_diagnostic(diag, &files);
+        }
+        let errors = diags
+            .iter()
+            .filter(|d| d.severity == zen::error::Severity::Error)
+            .count();
+        eprintln!("  {} error(s)", errors);
+        process::exit(1);
+    }
 
     let mut checker = TypeChecker::new();
     match checker.check_program(&program) {
