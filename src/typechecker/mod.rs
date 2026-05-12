@@ -970,6 +970,12 @@ impl TypeChecker {
                         expected_behavior_method_signatures(methods),
                         *span,
                     );
+                    for method in methods {
+                        if let Some(default_body) = &method.default_body {
+                            self.require_resolver_parameter_locals(symbols, &method.params);
+                            self.require_resolver_expr_locals(symbols, default_body);
+                        }
+                    }
                 }
                 Declaration::Import {
                     names,
@@ -2262,6 +2268,36 @@ Point: {
                 .message
                 .contains("resolver symbol table missing local symbol 'value'")),
             "expected missing resolver struct field default local diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_requires_resolver_behavior_default_locals() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    to_json: (Self) str {
+        value = "{}"
+        value
+    }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.remove_for_test(Namespace::Local, "value");
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("missing resolver behavior default local should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table missing local symbol 'value'")),
+            "expected missing resolver behavior default local diagnostic, got {err:?}"
         );
     }
 

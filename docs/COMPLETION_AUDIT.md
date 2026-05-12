@@ -53,6 +53,8 @@ and do not assume Phase 4 is ready without evidence.
   declarations before typed declaration collection.
 - Typechecker setup requires resolver local symbols inside struct field default
   expressions before collecting struct metadata.
+- Typechecker setup requires resolver parameter/local symbols inside behavior
+  default method bodies before collecting behavior metadata.
 - Typechecker imports can be seeded from resolver import binding symbols.
 - Typechecker setup rejects resolver import binding source mismatches before
   seeding imported module-call bindings.
