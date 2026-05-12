@@ -44,6 +44,7 @@ pub struct Symbol {
     pub return_type_name: Option<String>,
     pub type_parameter_count: Option<usize>,
     pub field_count: Option<usize>,
+    pub variant_payload_count: Option<usize>,
     pub scope_id: u32,
     pub definition_span: Span,
 }
@@ -55,6 +56,7 @@ struct SymbolMetadata {
     return_type_name: Option<String>,
     type_parameter_count: Option<usize>,
     field_count: Option<usize>,
+    variant_payload_count: Option<usize>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -198,6 +200,22 @@ impl SymbolTable {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn set_variant_payload_count_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        variant_payload_count: Option<usize>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.variant_payload_count = variant_payload_count;
+        }
+    }
+
     fn define(
         &mut self,
         namespace: Namespace,
@@ -216,6 +234,7 @@ impl SymbolTable {
                 return_type_name: None,
                 type_parameter_count: None,
                 field_count: None,
+                variant_payload_count: None,
             },
             0,
             definition_span,
@@ -240,6 +259,7 @@ impl SymbolTable {
                 return_type_name: Some(return_type_name),
                 type_parameter_count: None,
                 field_count: None,
+                variant_payload_count: None,
             },
             0,
             definition_span,
@@ -265,6 +285,31 @@ impl SymbolTable {
                 return_type_name: None,
                 type_parameter_count: Some(type_parameter_count),
                 field_count,
+                variant_payload_count: None,
+            },
+            0,
+            definition_span,
+        )
+    }
+
+    fn define_variant(
+        &mut self,
+        name: &str,
+        is_public: bool,
+        variant_payload_count: usize,
+        definition_span: Span,
+    ) -> Result<SymbolId, Box<Diagnostic>> {
+        self.define_in_scope(
+            Namespace::Variant,
+            name,
+            is_public,
+            SymbolMetadata {
+                import_source: None,
+                parameter_count: None,
+                return_type_name: None,
+                type_parameter_count: None,
+                field_count: None,
+                variant_payload_count: Some(variant_payload_count),
             },
             0,
             definition_span,
@@ -307,6 +352,7 @@ impl SymbolTable {
             return_type_name: metadata.return_type_name,
             type_parameter_count: metadata.type_parameter_count,
             field_count: metadata.field_count,
+            variant_payload_count: metadata.variant_payload_count,
             scope_id,
             definition_span,
         });
@@ -438,11 +484,10 @@ impl Resolver {
                     *span,
                 )?;
                 for variant in variants {
-                    table.define(
-                        Namespace::Variant,
+                    table.define_variant(
                         &variant.name,
                         *public,
-                        None,
+                        usize::from(variant.payload.is_some()),
                         variant.span,
                     )?;
                 }

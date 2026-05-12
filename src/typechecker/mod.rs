@@ -879,10 +879,19 @@ impl TypeChecker {
                         *span,
                     );
                     for variant in variants {
-                        self.require_resolver_symbol(
-                            symbols,
-                            Namespace::Variant,
+                        let Some(symbol) = symbols.lookup(Namespace::Variant, &variant.name) else {
+                            self.require_resolver_symbol(
+                                symbols,
+                                Namespace::Variant,
+                                &variant.name,
+                                variant.span,
+                            );
+                            continue;
+                        };
+                        self.validate_resolver_variant_payload_count(
+                            symbol,
                             &variant.name,
+                            usize::from(variant.payload.is_some()),
                             variant.span,
                         );
                     }
@@ -1040,6 +1049,28 @@ impl TypeChecker {
                 format!(
                     "resolver {} symbol '{name}' has field count {actual}, expected {expected_field_count}",
                     namespace.diagnostic_name()
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn validate_resolver_variant_payload_count(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_payload_count: usize,
+        span: Span,
+    ) {
+        if symbol.variant_payload_count != Some(expected_payload_count) {
+            let actual = symbol
+                .variant_payload_count
+                .map(|count| count.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0215",
+                format!(
+                    "resolver variant symbol '{name}' has payload count {actual}, expected {expected_payload_count}"
                 ),
                 span,
             ));
@@ -1382,6 +1413,31 @@ Point: { x: i32, y: i32 }
                 .message
                 .contains("resolver type symbol 'Point' has field count 1, expected 2")),
             "expected resolver struct field count diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_enum_variant_payload_counts() {
+        let program = parse_program(
+            r#"
+Option: Some(i32), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_variant_payload_count_for_test(Namespace::Variant, "Some", Some(0));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver enum variant payload count mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver variant symbol 'Some' has payload count 0, expected 1")),
+            "expected resolver enum variant payload count diagnostic, got {err:?}"
         );
     }
 

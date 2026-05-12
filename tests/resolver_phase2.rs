@@ -292,6 +292,32 @@ Empty: { }
 }
 
 #[test]
+fn resolver_records_enum_variant_payload_counts() {
+    let program = parse_program(
+        r#"
+Option: Some(i32), None
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Variant, "Some")
+            .expect("Some variant symbol")
+            .variant_payload_count,
+        Some(1)
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Variant, "None")
+            .expect("None variant symbol")
+            .variant_payload_count,
+        Some(0)
+    );
+}
+
+#[test]
 fn resolver_rejects_unknown_unqualified_function_calls() {
     let program = parse_program(
         r#"
