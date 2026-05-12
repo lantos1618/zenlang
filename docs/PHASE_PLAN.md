@@ -34,6 +34,8 @@ checked-in docs, tests, and commits only.
 - Resolver Phase 2 has started with symbol IDs, separate namespaces, duplicate
   same-namespace diagnostics, symbol visibility metadata, and unknown type
   reference diagnostics in `tests/resolver_phase2.rs`.
+- Resolver import declarations now produce explicit import binding symbols with
+  source module metadata instead of relying on ad hoc imported-name collection.
 
 ## Current Phase
 
@@ -46,9 +48,10 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Add import binding resolution to resolver-owned symbol data so imported names can
-be represented explicitly instead of being treated only as module paths.
+Add value reference diagnostics for simple function-call references so unresolved
+top-level calls can be reported by resolver-owned symbol data before later
+typechecker integration.
 
 After that, choose the next narrow Phase 2 resolver slice from the remaining
-gaps: scoped symbols, value reference diagnostics, or wiring resolver output into
-the typechecker/module pipeline.
+gaps: scoped symbols or wiring resolver output into the typechecker/module
+pipeline.
