@@ -49,6 +49,13 @@ pub struct FuncInfo {
 }
 
 #[derive(Debug, Clone)]
+pub struct BehaviorInfo {
+    pub name: String,
+    pub type_params: Vec<String>,
+    pub methods: Vec<ast::BehaviorMethod>,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct GenericFunctionTemplate {
     pub type_params: Vec<String>,
     pub params: Vec<Param>,
@@ -84,6 +91,7 @@ pub struct TypeChecker {
     enums: HashMap<String, EnumInfo>,
     functions: HashMap<String, FuncInfo>,
     methods: HashMap<String, FuncInfo>, // key: "TypeName.method_name"
+    behaviors: HashMap<String, BehaviorInfo>,
     generic_functions: HashMap<String, GenericFunctionTemplate>,
     generic_methods: HashMap<String, GenericFunctionTemplate>,
     specialized_functions: Vec<TypedFunction>,
@@ -112,6 +120,7 @@ impl TypeChecker {
             enums: HashMap::new(),
             functions: HashMap::new(),
             methods: HashMap::new(),
+            behaviors: HashMap::new(),
             generic_functions: HashMap::new(),
             generic_methods: HashMap::new(),
             specialized_functions: Vec::new(),
@@ -259,6 +268,7 @@ impl TypeChecker {
                 Declaration::Import { .. } => {
                     // Imports are handled by the module system, not the typechecker
                 }
+                Declaration::Behavior { .. } => {}
                 _ => {}
             }
         }
@@ -416,6 +426,22 @@ impl TypeChecker {
                             },
                         );
                     }
+                }
+                Declaration::Behavior {
+                    name,
+                    type_params,
+                    methods,
+                    ..
+                } => {
+                    self.reject_unsupported_generic_bounds(type_params);
+                    self.behaviors.insert(
+                        name.clone(),
+                        BehaviorInfo {
+                            name: name.clone(),
+                            type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
+                            methods: methods.clone(),
+                        },
+                    );
                 }
                 _ => {}
             }
@@ -1588,6 +1614,24 @@ describe = (flag: bool) StaticString {
         tc.collect_declarations(&decls);
         let info = tc.functions.get("identity").unwrap();
         assert_eq!(info.type_params, vec!["T".to_string()]);
+    }
+
+    #[test]
+    fn behavior_declaration_collection() {
+        let program = parse_program(
+            r#"
+Serializable: behavior {
+    to_json: (Self) String
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        tc.collect_declarations(&program.declarations);
+        let info = tc.behaviors.get("Serializable").unwrap();
+        assert_eq!(info.name, "Serializable");
+        assert_eq!(info.methods.len(), 1);
+        assert_eq!(info.methods[0].name, "to_json");
     }
 
     #[test]
