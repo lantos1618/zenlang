@@ -49,6 +49,8 @@ and do not assume Phase 4 is ready without evidence.
   in function or method bodies before typed body collection.
 - Typechecker setup requires resolver local symbols for pattern bindings before
   checking match arm bodies.
+- Typechecker setup requires resolver local symbols inside top-level expression
+  declarations before typed declaration collection.
 - Typechecker imports can be seeded from resolver import binding symbols.
 - Typechecker setup rejects resolver import binding source mismatches before
   seeding imported module-call bindings.

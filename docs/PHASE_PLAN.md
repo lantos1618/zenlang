@@ -51,6 +51,8 @@ checked-in docs, tests, and commits only.
   found in function or method bodies before typed body collection.
 - Typechecker setup now requires resolver local symbols for pattern bindings
   before checking match arm bodies.
+- Typechecker setup now requires resolver local symbols inside top-level
+  expression declarations before typed declaration collection.
 - The CLI `check` path now runs resolver diagnostics before typechecking, with
   integration coverage for resolver-owned diagnostics outside resolver-only
   tests.
