@@ -44,12 +44,13 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker setup accepts resolver `SymbolTable` through
   `check_program_with_symbols`.
 - Typechecker imports can be seeded from resolver import binding symbols.
+- The non-merging module graph records resolver `SymbolTable` data per module
+  and rejects resolver diagnostics from loaded dependency modules.
 
 ## Unresolved Gaps
 
 - Phase 2 is not complete: resolver/typechecker integration still has duplicate
   declaration collection for functions, methods, structs, enums, and behaviors.
-- Resolver output is not yet wired through the module graph API.
 - Phase 4 is not complete: deterministic `build.zen` graph tests and
   implementation are still absent.
 - Effect checking, typed allocator semantics, actors in std integration,

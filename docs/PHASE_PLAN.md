@@ -52,6 +52,9 @@ checked-in docs, tests, and commits only.
   integration-test frontend paths pass resolver symbols into typechecking.
 - Typechecker import setup now consumes resolver import binding symbols, reducing
   dependence on raw import declaration walks for module-call recognition.
+- The non-merging module graph now records resolver `SymbolTable` output for
+  each loaded module and rejects resolver diagnostics in dependencies before the
+  graph is returned.
 
 ## Current Phase
 
@@ -64,6 +67,7 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Perform a completion audit before considering any Phase 4 build-driver work. If
-the audit still finds Phase 2 gaps, choose the next smallest resolver/typechecker
-integration slice instead of promoting `build.zen`.
+Continue Phase 2 resolver/typechecker integration by choosing the next smallest
+handoff that reduces duplicate declaration collection or moves graph-owned
+module bindings into the compiler path. Do not promote `build.zen` until a
+dedicated deterministic graph test exists.

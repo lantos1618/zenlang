@@ -5,6 +5,7 @@ use crate::ast::{Declaration, Program};
 use crate::error::{CompileError, FileTable, Span};
 use crate::lexer;
 use crate::parser;
+use crate::resolver::{Resolver, SymbolTable};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ModuleId(pub u32);
@@ -32,6 +33,7 @@ pub struct ResolvedModule {
     pub info: ModuleInfo,
     pub program: Program,
     pub imports: Vec<ImportBinding>,
+    pub symbols: SymbolTable,
 }
 
 #[derive(Debug, Clone)]
@@ -408,6 +410,14 @@ impl ModuleSystem {
         loading.insert(canonical.clone());
 
         let program = self.load_file(path, files)?;
+        let symbols = Resolver::new()
+            .resolve_program(&program)
+            .map_err(|diagnostics| {
+                diagnostics
+                    .into_iter()
+                    .map(|diagnostic| CompileError::Resolution(diagnostic.message, diagnostic.span))
+                    .collect::<Vec<_>>()
+            })?;
         let info = self.register_module_info(&key, &canonical);
         let id = info.id;
         graph.paths.insert(key.clone(), id);
@@ -425,6 +435,7 @@ impl ModuleSystem {
                 info,
                 program,
                 imports,
+                symbols,
             },
         );
         Ok(id)
@@ -821,6 +832,85 @@ mod tests {
             .declarations
             .iter()
             .any(|d| d.name() == Some("add")));
+    }
+
+    #[test]
+    fn module_graph_records_resolver_symbols_per_module() {
+        let tmp = setup_temp_dir();
+
+        let math_path = tmp.path().join("math.zen");
+        fs::write(
+            &math_path,
+            "pub Point: { x: i32 }\npub add = (a: i32, b: i32) i32 { return a + b }\n",
+        )
+        .unwrap();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ add, Point } = math\n\nmain = () i32 { return add(1, 2) }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let graph = ms.load_module_graph(&main_path, &mut files).unwrap();
+        let entry = graph.module(graph.entry).expect("entry module");
+        assert!(entry
+            .symbols
+            .lookup(crate::resolver::Namespace::Value, "main")
+            .is_some());
+        assert!(entry
+            .symbols
+            .lookup(crate::resolver::Namespace::Import, "add")
+            .is_some());
+        assert!(entry
+            .symbols
+            .lookup(crate::resolver::Namespace::Import, "Point")
+            .is_some());
+
+        let math_key = math_path.canonicalize().unwrap().display().to_string();
+        let math_module = graph
+            .module_by_path(&math_key)
+            .expect("imported module by canonical path");
+        assert!(math_module
+            .symbols
+            .lookup(crate::resolver::Namespace::Value, "add")
+            .is_some());
+        assert!(math_module
+            .symbols
+            .lookup(crate::resolver::Namespace::Type, "Point")
+            .is_some());
+    }
+
+    #[test]
+    fn module_graph_rejects_resolver_errors_in_loaded_modules() {
+        let tmp = setup_temp_dir();
+
+        let math_path = tmp.path().join("math.zen");
+        fs::write(&math_path, "pub add = () Missing { return 0 }\n").unwrap();
+
+        let main_path = tmp.path().join("main.zen");
+        fs::write(
+            &main_path,
+            "{ add } = math\n\nmain = () i32 { return add() }\n",
+        )
+        .unwrap();
+
+        let mut files = FileTable::new();
+        let mut ms = ModuleSystem::new();
+
+        let result = ms.load_module_graph(&main_path, &mut files);
+        assert!(
+            result.is_err(),
+            "module graph should reject resolver diagnostics from dependency modules"
+        );
+        let msg = format!("{}", result.unwrap_err()[0]);
+        assert!(
+            msg.contains("unknown type symbol 'Missing'"),
+            "error should surface resolver diagnostic, got: {msg}"
+        );
     }
 
     #[test]
