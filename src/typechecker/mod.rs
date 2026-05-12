@@ -843,14 +843,24 @@ impl TypeChecker {
                 Declaration::Struct {
                     name,
                     type_params,
+                    fields,
                     span,
                     ..
                 } => {
-                    self.require_resolver_type_like_symbol(
+                    let Some(symbol) = self.require_resolver_type_like_symbol(
                         symbols,
                         Namespace::Type,
                         name,
                         type_params.len(),
+                        *span,
+                    ) else {
+                        continue;
+                    };
+                    self.validate_resolver_field_count(
+                        symbol,
+                        Namespace::Type,
+                        name,
+                        fields.len(),
                         *span,
                     );
                 }
@@ -981,17 +991,17 @@ impl TypeChecker {
         }
     }
 
-    fn require_resolver_type_like_symbol(
+    fn require_resolver_type_like_symbol<'a>(
         &mut self,
-        symbols: &SymbolTable,
+        symbols: &'a SymbolTable,
         namespace: Namespace,
         name: &str,
         expected_type_parameter_count: usize,
         span: Span,
-    ) {
+    ) -> Option<&'a crate::resolver::Symbol> {
         let Some(symbol) = symbols.lookup(namespace, name) else {
             self.require_resolver_symbol(symbols, namespace, name, span);
-            return;
+            return None;
         };
 
         if symbol.type_parameter_count != Some(expected_type_parameter_count) {
@@ -1003,6 +1013,32 @@ impl TypeChecker {
                 "E0213",
                 format!(
                     "resolver {} symbol '{name}' has type parameter count {actual}, expected {expected_type_parameter_count}",
+                    namespace.diagnostic_name()
+                ),
+                span,
+            ));
+        }
+
+        Some(symbol)
+    }
+
+    fn validate_resolver_field_count(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        namespace: Namespace,
+        name: &str,
+        expected_field_count: usize,
+        span: Span,
+    ) {
+        if symbol.field_count != Some(expected_field_count) {
+            let actual = symbol
+                .field_count
+                .map(|count| count.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0214",
+                format!(
+                    "resolver {} symbol '{name}' has field count {actual}, expected {expected_field_count}",
                     namespace.diagnostic_name()
                 ),
                 span,
@@ -1321,6 +1357,31 @@ Serializable<T>: behavior {
                 "resolver behavior symbol 'Serializable' has type parameter count 0, expected 1"
             )),
             "expected resolver behavior generic arity diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_struct_field_counts() {
+        let program = parse_program(
+            r#"
+Point: { x: i32, y: i32 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_field_count_for_test(Namespace::Type, "Point", Some(1));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver struct field count mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver type symbol 'Point' has field count 1, expected 2")),
+            "expected resolver struct field count diagnostic, got {err:?}"
         );
     }
 

@@ -265,6 +265,33 @@ Serializable<T>: behavior {
 }
 
 #[test]
+fn resolver_records_struct_field_counts() {
+    let program = parse_program(
+        r#"
+Point: { x: i32, y: i32 }
+Empty: { }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Point")
+            .expect("Point symbol")
+            .field_count,
+        Some(2)
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Empty")
+            .expect("Empty symbol")
+            .field_count,
+        Some(0)
+    );
+}
+
+#[test]
 fn resolver_rejects_unknown_unqualified_function_calls() {
     let program = parse_program(
         r#"

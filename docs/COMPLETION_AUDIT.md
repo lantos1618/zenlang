@@ -56,12 +56,14 @@ and do not assume Phase 4 is ready without evidence.
   rejects mismatches before declaration collection.
 - Resolver type and behavior symbols carry generic parameter-count metadata, and
   typechecker setup rejects mismatches before collecting declaration metadata.
+- Resolver struct symbols carry field-count metadata, and typechecker setup
+  rejects mismatches before collecting struct field metadata.
 
 ## Unresolved Gaps
 
 - Phase 2 is not complete: resolver/typechecker integration still has duplicate
-  declaration collection for full function types, struct fields, enum variant
-  payloads, and behavior method signatures.
+  declaration collection for full function types, struct field types, enum
+  variant payloads, and behavior method signatures.
 - Phase 4 is not complete: deterministic `build.zen` graph tests and
   implementation are still absent.
 - Effect checking, typed allocator semantics, actors in std integration,

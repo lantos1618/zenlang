@@ -43,6 +43,7 @@ pub struct Symbol {
     pub parameter_count: Option<usize>,
     pub return_type_name: Option<String>,
     pub type_parameter_count: Option<usize>,
+    pub field_count: Option<usize>,
     pub scope_id: u32,
     pub definition_span: Span,
 }
@@ -53,6 +54,7 @@ struct SymbolMetadata {
     parameter_count: Option<usize>,
     return_type_name: Option<String>,
     type_parameter_count: Option<usize>,
+    field_count: Option<usize>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -180,6 +182,22 @@ impl SymbolTable {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn set_field_count_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        field_count: Option<usize>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.field_count = field_count;
+        }
+    }
+
     fn define(
         &mut self,
         namespace: Namespace,
@@ -197,6 +215,7 @@ impl SymbolTable {
                 parameter_count: None,
                 return_type_name: None,
                 type_parameter_count: None,
+                field_count: None,
             },
             0,
             definition_span,
@@ -220,6 +239,7 @@ impl SymbolTable {
                 parameter_count: Some(parameter_count),
                 return_type_name: Some(return_type_name),
                 type_parameter_count: None,
+                field_count: None,
             },
             0,
             definition_span,
@@ -232,6 +252,7 @@ impl SymbolTable {
         name: &str,
         is_public: bool,
         type_parameter_count: usize,
+        field_count: Option<usize>,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
         self.define_in_scope(
@@ -243,6 +264,7 @@ impl SymbolTable {
                 parameter_count: None,
                 return_type_name: None,
                 type_parameter_count: Some(type_parameter_count),
+                field_count,
             },
             0,
             definition_span,
@@ -284,6 +306,7 @@ impl SymbolTable {
             parameter_count: metadata.parameter_count,
             return_type_name: metadata.return_type_name,
             type_parameter_count: metadata.type_parameter_count,
+            field_count: metadata.field_count,
             scope_id,
             definition_span,
         });
@@ -384,11 +407,19 @@ impl Resolver {
             Declaration::Struct {
                 name,
                 type_params,
+                fields,
                 public,
                 span,
                 ..
             } => {
-                table.define_type_like(Namespace::Type, name, *public, type_params.len(), *span)?;
+                table.define_type_like(
+                    Namespace::Type,
+                    name,
+                    *public,
+                    type_params.len(),
+                    Some(fields.len()),
+                    *span,
+                )?;
             }
             Declaration::Enum {
                 name,
@@ -398,7 +429,14 @@ impl Resolver {
                 span,
                 ..
             } => {
-                table.define_type_like(Namespace::Type, name, *public, type_params.len(), *span)?;
+                table.define_type_like(
+                    Namespace::Type,
+                    name,
+                    *public,
+                    type_params.len(),
+                    None,
+                    *span,
+                )?;
                 for variant in variants {
                     table.define(
                         Namespace::Variant,
@@ -420,6 +458,7 @@ impl Resolver {
                     name,
                     false,
                     type_params.len(),
+                    None,
                     *span,
                 )?;
             }
