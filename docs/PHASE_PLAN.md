@@ -38,6 +38,9 @@ checked-in docs, tests, and commits only.
   source module metadata instead of relying on ad hoc imported-name collection.
 - Resolver now walks declaration bodies enough to diagnose simple unresolved
   unqualified function calls using resolver-owned value/import symbols.
+- Resolver now records scoped local symbols for parameters and local bindings,
+  diagnoses duplicate same-scope local bindings, and rejects unresolved local
+  identifier references.
 
 ## Current Phase
 
@@ -50,9 +53,6 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Add scoped symbol data for function parameters and local bindings so resolver
-body validation can report shadowing and unresolved local identifier references
-without relying on typechecker-only scope state.
-
-After that, choose the next narrow Phase 2 resolver slice from the remaining
-gap: wiring resolver output into the typechecker/module pipeline.
+Wire resolver output into the checked compiler path in the smallest useful place
+so `Resolver::resolve_program` diagnostics are exercised outside resolver-only
+tests without changing module graph behavior yet.
