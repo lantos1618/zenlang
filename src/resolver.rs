@@ -20,7 +20,7 @@ pub enum Namespace {
 }
 
 impl Namespace {
-    fn diagnostic_name(self) -> &'static str {
+    pub(crate) fn diagnostic_name(self) -> &'static str {
         match self {
             Namespace::Value => "value",
             Namespace::Type => "type",

@@ -73,20 +73,23 @@ fn frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
         }
     };
 
-    if let Err(diags) = Resolver::new().resolve_program(&program) {
-        for diag in &diags {
-            print_diagnostic(diag, &files);
+    let resolver_symbols = match Resolver::new().resolve_program(&program) {
+        Ok(symbols) => symbols,
+        Err(diags) => {
+            for diag in &diags {
+                print_diagnostic(diag, &files);
+            }
+            let errors = diags
+                .iter()
+                .filter(|d| d.severity == zen::error::Severity::Error)
+                .count();
+            eprintln!("  {} error(s)", errors);
+            process::exit(1);
         }
-        let errors = diags
-            .iter()
-            .filter(|d| d.severity == zen::error::Severity::Error)
-            .count();
-        eprintln!("  {} error(s)", errors);
-        process::exit(1);
-    }
+    };
 
     let mut checker = TypeChecker::new();
-    match checker.check_program(&program) {
+    match checker.check_program_with_symbols(&program, &resolver_symbols) {
         Ok(typed) => {
             let diags = checker.diagnostics();
             for diag in diags {

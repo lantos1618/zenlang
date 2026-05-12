@@ -37,7 +37,7 @@ fn compile_to_c(zen_path: &Path) -> String {
         });
 
     // 2. Resolve
-    Resolver::new()
+    let resolver_symbols = Resolver::new()
         .resolve_program(&program)
         .unwrap_or_else(|diags| {
             panic!(
@@ -53,17 +53,19 @@ fn compile_to_c(zen_path: &Path) -> String {
 
     // 3. Typecheck
     let mut checker = TypeChecker::new();
-    let typed = checker.check_program(&program).unwrap_or_else(|diags| {
-        panic!(
-            "typecheck error in {}:\n  {}",
-            zen_path.display(),
-            diags
-                .iter()
-                .map(|d| d.message.clone())
-                .collect::<Vec<_>>()
-                .join("\n  ")
-        );
-    });
+    let typed = checker
+        .check_program_with_symbols(&program, &resolver_symbols)
+        .unwrap_or_else(|diags| {
+            panic!(
+                "typecheck error in {}:\n  {}",
+                zen_path.display(),
+                diags
+                    .iter()
+                    .map(|d| d.message.clone())
+                    .collect::<Vec<_>>()
+                    .join("\n  ")
+            );
+        });
 
     // 4. Codegen
     let backend = CBackend;

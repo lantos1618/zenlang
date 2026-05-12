@@ -20,6 +20,7 @@ use std::collections::{HashMap, HashSet};
 use crate::ast::typed::*;
 use crate::ast::{self, AstType, Declaration, Expression, Param};
 use crate::error::{Diagnostic, Span};
+use crate::resolver::{Namespace, SymbolTable};
 
 // ── Type Environment ──────────────────────────────────────────────
 
@@ -335,6 +336,23 @@ impl TypeChecker {
             globals,
             entry_point,
         })
+    }
+
+    pub fn check_program_with_symbols(
+        &mut self,
+        program: &ast::Program,
+        symbols: &SymbolTable,
+    ) -> Result<TypedProgram, Vec<Diagnostic>> {
+        self.validate_resolver_symbols(program, symbols);
+        if self.diagnostics.iter().any(|diag| diag.is_error()) {
+            return Err(self
+                .diagnostics
+                .iter()
+                .filter(|diag| diag.is_error())
+                .cloned()
+                .collect());
+        }
+        self.check_program(program)
     }
 
     /// Get all diagnostics (errors + warnings).
@@ -786,6 +804,73 @@ impl TypeChecker {
             .get(name)
             .is_some_and(|path| path == &["std".to_string()] || path == &["@std".to_string()])
     }
+
+    fn validate_resolver_symbols(&mut self, program: &ast::Program, symbols: &SymbolTable) {
+        for decl in &program.declarations {
+            match decl {
+                Declaration::Function { name, span, .. } => {
+                    self.require_resolver_symbol(symbols, Namespace::Value, name, *span);
+                }
+                Declaration::Method {
+                    type_name,
+                    method_name,
+                    span,
+                    ..
+                } => {
+                    self.require_resolver_symbol(
+                        symbols,
+                        Namespace::Value,
+                        &format!("{type_name}.{method_name}"),
+                        *span,
+                    );
+                }
+                Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. } => {
+                    self.require_resolver_symbol(symbols, Namespace::Type, name, *span);
+                }
+                Declaration::Behavior { name, span, .. } => {
+                    self.require_resolver_symbol(symbols, Namespace::Behavior, name, *span);
+                }
+                Declaration::Import {
+                    names,
+                    module_path,
+                    span,
+                } => {
+                    self.require_resolver_symbol(
+                        symbols,
+                        Namespace::Module,
+                        &module_path.join("."),
+                        *span,
+                    );
+                    for name in names {
+                        self.require_resolver_symbol(symbols, Namespace::Import, name, *span);
+                    }
+                }
+                Declaration::ImplBlock { .. }
+                | Declaration::TopLevelExpr { .. }
+                | Declaration::Error { .. } => {}
+            }
+        }
+    }
+
+    fn require_resolver_symbol(
+        &mut self,
+        symbols: &SymbolTable,
+        namespace: Namespace,
+        name: &str,
+        span: Span,
+    ) {
+        if symbols.lookup(namespace, name).is_none() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0210",
+                format!(
+                    "resolver symbol table missing {} symbol '{}'",
+                    namespace.diagnostic_name(),
+                    name
+                ),
+                span,
+            ));
+        }
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────
@@ -866,6 +951,28 @@ mod tests {
         tc.collect_declarations(&decls);
         assert!(tc.structs.contains_key("Point"));
         assert_eq!(tc.structs["Point"].fields.len(), 2);
+    }
+
+    #[test]
+    fn check_program_with_symbols_requires_resolver_declarations() {
+        let program = parse_program(
+            r#"
+main = () i32 { return 0 }
+"#,
+        );
+        let empty_symbols = SymbolTable::default();
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &empty_symbols)
+            .expect_err("missing resolver symbols should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table missing value symbol 'main'")),
+            "expected missing resolver symbol diagnostic, got {err:?}"
+        );
     }
 
     #[test]
