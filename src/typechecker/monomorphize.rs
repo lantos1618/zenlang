@@ -287,9 +287,79 @@ impl TypeChecker {
     ) -> HashMap<String, Type> {
         let mut map = HashMap::new();
         for ((_name, param_ty), arg_ty) in param_types.iter().zip(arg_types.iter()) {
-            match_type_param(param_ty, arg_ty, type_params, &mut map);
+            self.match_type_param(param_ty, arg_ty, type_params, &mut map);
         }
         map
+    }
+
+    fn match_type_param(
+        &self,
+        param: &AstType,
+        actual: &Type,
+        type_params: &[String],
+        map: &mut HashMap<String, Type>,
+    ) {
+        match param {
+            AstType::Named(name) if type_params.contains(name) => {
+                map.entry(name.clone()).or_insert_with(|| actual.clone());
+            }
+            AstType::Ptr(inner) => {
+                if let Type::Ptr(actual_inner) = actual {
+                    self.match_type_param(inner, actual_inner, type_params, map);
+                }
+            }
+            AstType::MutPtr(inner) => {
+                if let Type::MutPtr(actual_inner) = actual {
+                    self.match_type_param(inner, actual_inner, type_params, map);
+                }
+            }
+            AstType::Slice(inner) => {
+                if let Type::Slice(actual_inner) = actual {
+                    self.match_type_param(inner, actual_inner, type_params, map);
+                }
+            }
+            AstType::Generic { name, .. } => {
+                self.match_generic_type_params(name, actual, type_params, map);
+            }
+            _ => {}
+        }
+    }
+
+    fn match_generic_type_params(
+        &self,
+        generic_name: &str,
+        actual: &Type,
+        type_params: &[String],
+        map: &mut HashMap<String, Type>,
+    ) {
+        match actual {
+            Type::Struct {
+                name: actual_name,
+                fields: actual_fields,
+            } if concrete_name_matches_generic(actual_name, generic_name) => {
+                if let Some(info) = self.structs.get(generic_name) {
+                    for ((_, expected), (_, actual)) in info.fields.iter().zip(actual_fields.iter())
+                    {
+                        self.match_type_param(expected, actual, type_params, map);
+                    }
+                }
+            }
+            Type::Enum {
+                name: actual_name,
+                variants: actual_variants,
+            } if concrete_name_matches_generic(actual_name, generic_name) => {
+                if let Some(info) = self.enums.get(generic_name) {
+                    for ((_, expected_payload), (_, actual_payload)) in
+                        info.variants.iter().zip(actual_variants.iter())
+                    {
+                        if let (Some(expected), Some(actual)) = (expected_payload, actual_payload) {
+                            self.match_type_param(expected, actual, type_params, map);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 
     /// Substitute type parameters in an AstType, returning a resolved Type.
@@ -381,70 +451,8 @@ fn symbol_mangle_key(symbol: &str) -> String {
     out
 }
 
-/// Recursively match a parameter AstType against an actual Type to discover
-/// type parameter bindings.
-fn match_type_param(
-    param: &AstType,
-    actual: &Type,
-    type_params: &[String],
-    map: &mut HashMap<String, Type>,
-) {
-    match param {
-        AstType::Named(name) if type_params.contains(name) => {
-            map.entry(name.clone()).or_insert_with(|| actual.clone());
-        }
-        AstType::Ptr(inner) => {
-            if let Type::Ptr(actual_inner) = actual {
-                match_type_param(inner, actual_inner, type_params, map);
-            }
-        }
-        AstType::MutPtr(inner) => {
-            if let Type::MutPtr(actual_inner) = actual {
-                match_type_param(inner, actual_inner, type_params, map);
-            }
-        }
-        AstType::Slice(inner) => {
-            if let Type::Slice(actual_inner) = actual {
-                match_type_param(inner, actual_inner, type_params, map);
-            }
-        }
-        AstType::Generic { name: _, type_args } => {
-            let actual_args = generic_type_args_from_concrete_name(actual, type_args.len());
-            for (arg, actual_arg) in type_args.iter().zip(actual_args.iter()) {
-                match_type_param(arg, actual_arg, type_params, map);
-            }
-        }
-        _ => {}
-    }
-}
-
-fn generic_type_args_from_concrete_name(actual: &Type, expected_len: usize) -> Vec<Type> {
-    let concrete_name = match actual {
-        Type::Named(name) | Type::Struct { name, .. } | Type::Enum { name, .. } => name,
-        _ => return Vec::new(),
-    };
-    let Some(suffix) = concrete_name.rsplit_once('_').map(|(_, suffix)| suffix) else {
-        return Vec::new();
-    };
-    if expected_len != 1 {
-        return Vec::new();
-    }
-    match suffix {
-        "i8" => vec![Type::I8],
-        "i16" => vec![Type::I16],
-        "i32" => vec![Type::I32],
-        "i64" => vec![Type::I64],
-        "u8" => vec![Type::U8],
-        "u16" => vec![Type::U16],
-        "u32" => vec![Type::U32],
-        "u64" => vec![Type::U64],
-        "usize" => vec![Type::Usize],
-        "f32" => vec![Type::F32],
-        "f64" => vec![Type::F64],
-        "bool" => vec![Type::Bool],
-        "str" => vec![Type::Str],
-        other => vec![Type::Named(other.to_string())],
-    }
+fn concrete_name_matches_generic(concrete_name: &str, generic_name: &str) -> bool {
+    concrete_name == generic_name || concrete_name.starts_with(&format!("{generic_name}_"))
 }
 
 /// Substitute type parameters in an AstType, returning a new AstType.
