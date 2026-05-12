@@ -529,6 +529,9 @@ impl TypeChecker {
                 } if name == &required.name => Some((params, return_type, *span)),
                 _ => None,
             }) else {
+                if required.default_body.is_some() {
+                    continue;
+                }
                 self.diagnostics.push(Diagnostic::error(
                     "E6001",
                     format!(
@@ -1894,6 +1897,26 @@ Point.implements(Json) {
             )),
             "expected missing behavior method diagnostic, got {errors:?}"
         );
+    }
+
+    #[test]
+    fn behavior_impl_can_omit_default_method() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str { return "{}" }
+}
+
+Point.implements(Json) {
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        tc.check_program(&program)
+            .expect("behavior impl may omit a method with a default body");
     }
 
     #[test]
