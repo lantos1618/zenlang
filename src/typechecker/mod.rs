@@ -1159,6 +1159,7 @@ impl TypeChecker {
             } => {
                 self.require_resolver_expr_locals(symbols, scrutinee);
                 for arm in arms {
+                    self.require_resolver_pattern_locals(symbols, &arm.pattern);
                     self.require_resolver_expr_locals(symbols, &arm.body);
                     if let Some(guard) = &arm.guard {
                         self.require_resolver_expr_locals(symbols, guard);
@@ -1255,6 +1256,45 @@ impl TypeChecker {
                     self.require_resolver_statement_locals(symbols, statement);
                 }
             }
+        }
+    }
+
+    fn require_resolver_pattern_locals(&mut self, symbols: &SymbolTable, pattern: &ast::Pattern) {
+        match pattern {
+            ast::Pattern::Identifier { name, span } => {
+                self.require_resolver_local_symbol(symbols, name, *span);
+            }
+            ast::Pattern::Struct { fields, span, .. } => {
+                for (name, nested) in fields {
+                    if let Some(nested) = nested {
+                        self.require_resolver_pattern_locals(symbols, nested);
+                    } else {
+                        self.require_resolver_local_symbol(symbols, name, *span);
+                    }
+                }
+            }
+            ast::Pattern::Enum {
+                payload: Some(payload),
+                ..
+            } => {
+                self.require_resolver_pattern_locals(symbols, payload);
+            }
+            ast::Pattern::Or { patterns, .. } => {
+                for pattern in patterns {
+                    self.require_resolver_pattern_locals(symbols, pattern);
+                }
+            }
+            ast::Pattern::Literal { value, .. } => {
+                self.require_resolver_expr_locals(symbols, value);
+            }
+            ast::Pattern::Range { start, end, .. } => {
+                self.require_resolver_expr_locals(symbols, start);
+                self.require_resolver_expr_locals(symbols, end);
+            }
+            ast::Pattern::Wildcard { .. }
+            | ast::Pattern::Enum { payload: None, .. }
+            | ast::Pattern::BoolTrue { .. }
+            | ast::Pattern::BoolFalse { .. } => {}
         }
     }
 
@@ -2066,6 +2106,39 @@ main = () i32 {
                 .message
                 .contains("resolver symbol table missing local symbol 'value'")),
             "expected missing resolver var local diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_requires_resolver_pattern_locals() {
+        let program = parse_program(
+            r#"
+Option:
+    None,
+    Some(i32)
+
+main = (value: Option) i32 {
+    return value ?
+        | Some(inner) { inner }
+        | None { 0 }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.remove_for_test(Namespace::Local, "inner");
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("missing resolver pattern local should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table missing local symbol 'inner'")),
+            "expected missing resolver pattern local diagnostic, got {err:?}"
         );
     }
 
