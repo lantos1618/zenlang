@@ -43,6 +43,8 @@ checked-in docs, tests, and commits only.
 - Resolver now records scoped local symbols for parameters and local bindings,
   diagnoses duplicate same-scope local bindings, and rejects unresolved local
   identifier references.
+- Typechecker setup now requires resolver parameter local symbols before
+  collecting function or method bodies from the AST.
 - The CLI `check` path now runs resolver diagnostics before typechecking, with
   integration coverage for resolver-owned diagnostics outside resolver-only
   tests.

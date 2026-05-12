@@ -841,6 +841,7 @@ impl TypeChecker {
                         *public,
                         *span,
                     );
+                    self.require_resolver_parameter_locals(symbols, params);
                 }
                 Declaration::Method {
                     type_name,
@@ -859,6 +860,7 @@ impl TypeChecker {
                         *public,
                         *span,
                     );
+                    self.require_resolver_parameter_locals(symbols, params);
                 }
                 Declaration::Struct {
                     name,
@@ -1019,6 +1021,7 @@ impl TypeChecker {
                                 *public,
                                 *span,
                             );
+                            self.require_resolver_parameter_locals(symbols, params);
                         }
                     }
                 }
@@ -1082,6 +1085,24 @@ impl TypeChecker {
                 ),
                 span,
             ));
+        }
+    }
+
+    fn require_resolver_parameter_locals(&mut self, symbols: &SymbolTable, params: &[Param]) {
+        for param in params {
+            if symbols
+                .lookup_scoped(Namespace::Local, &param.name)
+                .is_none()
+            {
+                self.diagnostics.push(Diagnostic::error(
+                    "E0228",
+                    format!(
+                        "resolver symbol table missing local symbol '{}'",
+                        param.name
+                    ),
+                    param.span,
+                ));
+            }
         }
     }
 
@@ -1830,6 +1851,31 @@ add = (a: i32, b: f64) f64 { return b }
                 "resolver value symbol 'add' has parameter names '(a, other)', expected '(a, b)'"
             )),
             "expected resolver function parameter name diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_requires_resolver_parameter_locals() {
+        let program = parse_program(
+            r#"
+add = (a: i32, b: i32) i32 { return a + b }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.remove_for_test(Namespace::Local, "a");
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("missing resolver parameter local should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table missing local symbol 'a'")),
+            "expected missing resolver parameter local diagnostic, got {err:?}"
         );
     }
 
