@@ -41,6 +41,9 @@ checked-in docs, tests, and commits only.
 - Resolver now records scoped local symbols for parameters and local bindings,
   diagnoses duplicate same-scope local bindings, and rejects unresolved local
   identifier references.
+- The CLI `check` path now runs resolver diagnostics before typechecking, with
+  integration coverage for resolver-owned diagnostics outside resolver-only
+  tests.
 
 ## Current Phase
 
@@ -53,6 +56,7 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Wire resolver output into the checked compiler path in the smallest useful place
-so `Resolver::resolve_program` diagnostics are exercised outside resolver-only
-tests without changing module graph behavior yet.
+Keep Phase 2 focused on resolver/typechecker integration before Phase 4. The next
+small slice should either route resolver diagnostics through the reusable
+integration-test frontend helper or start consuming resolver symbols inside
+typechecker setup without changing module graph behavior.
