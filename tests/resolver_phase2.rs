@@ -55,3 +55,42 @@ Point: { y: i32 }
         "expected duplicate type diagnostic, got {err:?}"
     );
 }
+
+#[test]
+fn resolver_records_public_visibility_for_exported_declarations() {
+    let program = parse_program(
+        r#"
+pub PublicPoint: { x: i32 }
+PrivatePoint: { x: i32 }
+pub exported = () i32 { return 1 }
+internal = () i32 { return 2 }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert!(
+        table
+            .lookup(Namespace::Type, "PublicPoint")
+            .expect("public type")
+            .is_public
+    );
+    assert!(
+        !table
+            .lookup(Namespace::Type, "PrivatePoint")
+            .expect("private type")
+            .is_public
+    );
+    assert!(
+        table
+            .lookup(Namespace::Value, "exported")
+            .expect("public function")
+            .is_public
+    );
+    assert!(
+        !table
+            .lookup(Namespace::Value, "internal")
+            .expect("private function")
+            .is_public
+    );
+}

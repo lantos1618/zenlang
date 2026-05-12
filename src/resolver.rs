@@ -32,6 +32,7 @@ pub struct Symbol {
     pub id: SymbolId,
     pub namespace: Namespace,
     pub name: String,
+    pub is_public: bool,
     pub definition_span: Span,
 }
 
@@ -55,6 +56,7 @@ impl SymbolTable {
         &mut self,
         namespace: Namespace,
         name: &str,
+        is_public: bool,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
         let key = (namespace, name.to_string());
@@ -75,6 +77,7 @@ impl SymbolTable {
             id,
             namespace,
             name: name.to_string(),
+            is_public,
             definition_span,
         });
         self.by_name.insert(key, id);
@@ -113,42 +116,49 @@ impl Resolver {
         decl: &Declaration,
     ) -> Result<(), Box<Diagnostic>> {
         match decl {
-            Declaration::Function { name, span, .. } => {
-                table.define(Namespace::Value, name, *span)?;
+            Declaration::Function {
+                name, public, span, ..
+            } => {
+                table.define(Namespace::Value, name, *public, *span)?;
             }
             Declaration::Method {
                 type_name,
                 method_name,
+                public,
                 span,
                 ..
             } => {
                 table.define(
                     Namespace::Value,
                     &format!("{type_name}.{method_name}"),
+                    *public,
                     *span,
                 )?;
             }
-            Declaration::Struct { name, span, .. } => {
-                table.define(Namespace::Type, name, *span)?;
+            Declaration::Struct {
+                name, public, span, ..
+            } => {
+                table.define(Namespace::Type, name, *public, *span)?;
             }
             Declaration::Enum {
                 name,
                 variants,
+                public,
                 span,
                 ..
             } => {
-                table.define(Namespace::Type, name, *span)?;
+                table.define(Namespace::Type, name, *public, *span)?;
                 for variant in variants {
-                    table.define(Namespace::Variant, &variant.name, variant.span)?;
+                    table.define(Namespace::Variant, &variant.name, *public, variant.span)?;
                 }
             }
             Declaration::Behavior { name, span, .. } => {
-                table.define(Namespace::Behavior, name, *span)?;
+                table.define(Namespace::Behavior, name, false, *span)?;
             }
             Declaration::Import {
                 module_path, span, ..
             } => {
-                table.define(Namespace::Module, &module_path.join("."), *span)?;
+                table.define(Namespace::Module, &module_path.join("."), false, *span)?;
             }
             Declaration::ImplBlock { .. }
             | Declaration::TopLevelExpr { .. }

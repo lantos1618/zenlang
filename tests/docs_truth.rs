@@ -109,6 +109,32 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
 }
 
 #[test]
+fn phase_plan_records_recovered_progress_and_next_slice() {
+    let plan = read("docs/PHASE_PLAN.md");
+
+    for required in [
+        "Recovery Point",
+        "183d140c",
+        "Completed Evidence",
+        "Current Phase",
+        "Next Small Slice",
+        "Sync/Async are real effects",
+        "typed allocators",
+        "actors live in std first",
+        "AST/HIR traversal is tooling/metaprogramming",
+        "type matching and behavior association are separate",
+        "JSON is compiler-owned IR output",
+        "YAML is human-authored config/spec input",
+        "build.zen is deterministic comptime build graph",
+    ] {
+        assert!(
+            plan.contains(required),
+            "docs/PHASE_PLAN.md is missing durable plan text: {required}"
+        );
+    }
+}
+
+#[test]
 fn v1_spec_is_single_source_of_truth_and_old_spec_is_quarantined() {
     let old_spec = read("LANGUAGE_SPEC.zen");
     let old_spec_header = old_spec.lines().take(20).collect::<Vec<_>>().join("\n");
