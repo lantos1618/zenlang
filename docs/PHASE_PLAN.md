@@ -45,6 +45,8 @@ checked-in docs, tests, and commits only.
   identifier references.
 - Typechecker setup now requires resolver parameter local symbols before
   collecting function or method bodies from the AST.
+- Typechecker setup now requires resolver local symbols for `VarDecl` bindings
+  found in function or method bodies before typed body collection.
 - The CLI `check` path now runs resolver diagnostics before typechecking, with
   integration coverage for resolver-owned diagnostics outside resolver-only
   tests.
