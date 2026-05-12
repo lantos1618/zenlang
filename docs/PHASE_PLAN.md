@@ -53,6 +53,8 @@ checked-in docs, tests, and commits only.
   before checking match arm bodies.
 - Typechecker setup now requires resolver local symbols inside top-level
   expression declarations before typed declaration collection.
+- Typechecker setup now requires resolver local symbols inside struct field
+  default expressions before collecting struct metadata.
 - The CLI `check` path now runs resolver diagnostics before typechecking, with
   integration coverage for resolver-owned diagnostics outside resolver-only
   tests.
