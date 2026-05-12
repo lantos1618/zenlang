@@ -71,6 +71,8 @@ checked-in docs, tests, and commits only.
 - Resolver type and behavior symbols now carry generic type-parameter counts,
   and typechecker setup rejects mismatches before collecting struct, enum, or
   behavior metadata from the AST.
+- Resolver behavior symbols now carry method signature metadata, and typechecker
+  setup rejects mismatches before collecting behavior metadata from the AST.
 - Resolver struct symbols now carry field-count metadata, and typechecker setup
   rejects mismatches before collecting struct field metadata from the AST.
 - Resolver struct symbols now carry field-name/type metadata, and typechecker

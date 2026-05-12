@@ -20,7 +20,7 @@ use std::collections::{HashMap, HashSet};
 use crate::ast::typed::*;
 use crate::ast::{self, AstType, Declaration, Expression, Param, StructField};
 use crate::error::{Diagnostic, Span};
-use crate::resolver::{Namespace, SymbolTable};
+use crate::resolver::{MethodSignatureMetadata, Namespace, SymbolTable};
 
 // ── Type Environment ──────────────────────────────────────────────
 
@@ -914,14 +914,23 @@ impl TypeChecker {
                 Declaration::Behavior {
                     name,
                     type_params,
+                    methods,
                     span,
                     ..
                 } => {
-                    self.require_resolver_type_like_symbol(
+                    let Some(symbol) = self.require_resolver_type_like_symbol(
                         symbols,
                         Namespace::Behavior,
                         name,
                         type_params.len(),
+                        *span,
+                    ) else {
+                        continue;
+                    };
+                    self.validate_resolver_behavior_method_signatures(
+                        symbol,
+                        name,
+                        expected_behavior_method_signatures(methods),
                         *span,
                     );
                 }
@@ -1138,6 +1147,29 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_behavior_method_signatures(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_method_signatures: Vec<MethodSignatureMetadata>,
+        span: Span,
+    ) {
+        if symbol.behavior_method_signatures.as_deref()
+            != Some(expected_method_signatures.as_slice())
+        {
+            let actual =
+                format_behavior_method_signatures(symbol.behavior_method_signatures.as_deref());
+            let expected = format_behavior_method_signatures(Some(&expected_method_signatures));
+            self.diagnostics.push(Diagnostic::error(
+                "E0219",
+                format!(
+                    "resolver behavior symbol '{name}' has methods '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
+    }
+
     fn require_resolver_value_symbol(
         &mut self,
         symbols: &SymbolTable,
@@ -1233,6 +1265,37 @@ fn format_field_type_names(fields: Option<&[(String, String)]>) -> String {
 
 fn expected_variant_payload_type_name(payload: &Option<AstType>) -> Option<String> {
     payload.as_ref().map(AstType::display_name)
+}
+
+fn expected_behavior_method_signatures(
+    methods: &[ast::BehaviorMethod],
+) -> Vec<MethodSignatureMetadata> {
+    methods
+        .iter()
+        .map(|method| {
+            (
+                method.name.clone(),
+                expected_parameter_type_names(&method.params),
+                expected_return_type_name(&method.return_type),
+            )
+        })
+        .collect()
+}
+
+fn format_behavior_method_signatures(methods: Option<&[MethodSignatureMetadata]>) -> String {
+    match methods {
+        Some(methods) => format!(
+            "({})",
+            methods
+                .iter()
+                .map(|(name, params, return_type)| {
+                    format!("{name}({}) {return_type}", params.join(", "))
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        None => "unknown".to_string(),
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────
@@ -1528,6 +1591,41 @@ Serializable<T>: behavior {
                 "resolver behavior symbol 'Serializable' has type parameter count 0, expected 1"
             )),
             "expected resolver behavior generic arity diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_behavior_method_signatures() {
+        let program = parse_program(
+            r#"
+Serializable: behavior {
+    encode: (Self, i32) str
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_method_signatures_for_test(
+            Namespace::Behavior,
+            "Serializable",
+            Some(vec![(
+                "encode".to_string(),
+                vec!["Self".to_string(), "bool".to_string()],
+                "str".to_string(),
+            )]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver behavior method signature mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver behavior symbol 'Serializable' has methods '(encode(Self, bool) str)', expected '(encode(Self, i32) str)'"
+            )),
+            "expected resolver behavior method signature diagnostic, got {err:?}"
         );
     }
 

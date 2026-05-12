@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    AstType, Declaration, Expression, Param, Pattern, Program, Statement, StringPart, StructField,
-    TypeParam,
+    AstType, BehaviorMethod, Declaration, Expression, Param, Pattern, Program, Statement,
+    StringPart, StructField, TypeParam,
 };
 use crate::error::{Diagnostic, Span};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SymbolId(pub u32);
+
+pub type MethodSignatureMetadata = (String, Vec<String>, String);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Namespace {
@@ -49,6 +51,7 @@ pub struct Symbol {
     pub field_type_names: Option<Vec<(String, String)>>,
     pub variant_payload_count: Option<usize>,
     pub variant_payload_type_name: Option<String>,
+    pub behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
     pub scope_id: u32,
     pub definition_span: Span,
 }
@@ -64,6 +67,7 @@ struct SymbolMetadata {
     field_type_names: Option<Vec<(String, String)>>,
     variant_payload_count: Option<usize>,
     variant_payload_type_name: Option<String>,
+    behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -208,6 +212,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_behavior_method_signatures_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.behavior_method_signatures = behavior_method_signatures;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_field_count_for_test(
         &mut self,
         namespace: Namespace,
@@ -293,6 +313,7 @@ impl SymbolTable {
                 field_type_names: None,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
+                behavior_method_signatures: None,
             },
             0,
             definition_span,
@@ -322,6 +343,7 @@ impl SymbolTable {
                 field_type_names: None,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
+                behavior_method_signatures: None,
             },
             0,
             definition_span,
@@ -352,6 +374,7 @@ impl SymbolTable {
                 field_type_names,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
+                behavior_method_signatures: None,
             },
             0,
             definition_span,
@@ -380,6 +403,35 @@ impl SymbolTable {
                 field_type_names: None,
                 variant_payload_count: Some(variant_payload_count),
                 variant_payload_type_name,
+                behavior_method_signatures: None,
+            },
+            0,
+            definition_span,
+        )
+    }
+
+    fn define_behavior(
+        &mut self,
+        name: &str,
+        type_parameter_count: usize,
+        behavior_method_signatures: Vec<MethodSignatureMetadata>,
+        definition_span: Span,
+    ) -> Result<SymbolId, Box<Diagnostic>> {
+        self.define_in_scope(
+            Namespace::Behavior,
+            name,
+            false,
+            SymbolMetadata {
+                import_source: None,
+                parameter_count: None,
+                parameter_type_names: None,
+                return_type_name: None,
+                type_parameter_count: Some(type_parameter_count),
+                field_count: None,
+                field_type_names: None,
+                variant_payload_count: None,
+                variant_payload_type_name: None,
+                behavior_method_signatures: Some(behavior_method_signatures),
             },
             0,
             definition_span,
@@ -426,6 +478,7 @@ impl SymbolTable {
             field_type_names: metadata.field_type_names,
             variant_payload_count: metadata.variant_payload_count,
             variant_payload_type_name: metadata.variant_payload_type_name,
+            behavior_method_signatures: metadata.behavior_method_signatures,
             scope_id,
             definition_span,
         });
@@ -570,15 +623,14 @@ impl Resolver {
             Declaration::Behavior {
                 name,
                 type_params,
+                methods,
                 span,
                 ..
             } => {
-                table.define_type_like(
-                    Namespace::Behavior,
+                table.define_behavior(
                     name,
-                    false,
                     type_params.len(),
-                    None,
+                    resolver_behavior_method_signatures(methods),
                     *span,
                 )?;
             }
@@ -1292,4 +1344,17 @@ fn resolver_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {
 
 fn resolver_variant_payload_type_name(payload: &Option<AstType>) -> Option<String> {
     payload.as_ref().map(AstType::display_name)
+}
+
+fn resolver_behavior_method_signatures(methods: &[BehaviorMethod]) -> Vec<MethodSignatureMetadata> {
+    methods
+        .iter()
+        .map(|method| {
+            (
+                method.name.clone(),
+                resolver_param_type_names(&method.params),
+                resolver_return_type_name(&method.return_type),
+            )
+        })
+        .collect()
 }
