@@ -69,6 +69,7 @@ pub(crate) struct GenericFunctionTemplate {
 }
 
 struct ExpectedValueSignature {
+    parameter_names: Vec<String>,
     parameter_type_names: Vec<String>,
     return_type_name: String,
     type_parameter_count: usize,
@@ -1223,6 +1224,19 @@ impl TypeChecker {
             ));
         }
 
+        if symbol.parameter_names.as_deref() != Some(expected_signature.parameter_names.as_slice())
+        {
+            let actual = format_parameter_names(symbol.parameter_names.as_deref());
+            let expected = format_parameter_names(Some(&expected_signature.parameter_names));
+            self.diagnostics.push(Diagnostic::error(
+                "E0223",
+                format!(
+                    "resolver value symbol '{name}' has parameter names '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
+
         if symbol.parameter_type_names.as_deref()
             != Some(expected_signature.parameter_type_names.as_slice())
         {
@@ -1294,12 +1308,17 @@ fn expected_parameter_type_names(params: &[Param]) -> Vec<String> {
     params.iter().map(|param| param.ty.display_name()).collect()
 }
 
+fn expected_parameter_names(params: &[Param]) -> Vec<String> {
+    params.iter().map(|param| param.name.clone()).collect()
+}
+
 fn expected_value_signature(
     params: &[Param],
     return_type: &Option<AstType>,
     type_params: &[ast::TypeParam],
 ) -> ExpectedValueSignature {
     ExpectedValueSignature {
+        parameter_names: expected_parameter_names(params),
         parameter_type_names: expected_parameter_type_names(params),
         return_type_name: expected_return_type_name(return_type),
         type_parameter_count: type_params.len(),
@@ -1336,6 +1355,13 @@ fn format_type_parameter_bounds(bounds: Option<&[TypeParameterBoundMetadata]>) -
 }
 
 fn format_parameter_type_names(names: Option<&[String]>) -> String {
+    match names {
+        Some(names) => format!("({})", names.join(", ")),
+        None => "unknown".to_string(),
+    }
+}
+
+fn format_parameter_names(names: Option<&[String]>) -> String {
     match names {
         Some(names) => format!("({})", names.join(", ")),
         None => "unknown".to_string(),
@@ -1631,6 +1657,35 @@ add = (a: i32, b: f64) f64 { return b }
                 "resolver value symbol 'add' has parameter types '(i32, i32)', expected '(i32, f64)'"
             )),
             "expected resolver function parameter type diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_parameter_names() {
+        let program = parse_program(
+            r#"
+add = (a: i32, b: f64) f64 { return b }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_names_for_test(
+            Namespace::Value,
+            "add",
+            Some(vec!["a".to_string(), "other".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function parameter name mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'add' has parameter names '(a, other)', expected '(a, b)'"
+            )),
+            "expected resolver function parameter name diagnostic, got {err:?}"
         );
     }
 

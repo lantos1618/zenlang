@@ -229,6 +229,36 @@ Point.shift = (self: Point, dx: i32) Point { return self }
 }
 
 #[test]
+fn resolver_records_value_symbol_parameter_names() {
+    let program = parse_program(
+        r#"
+add = (a: i32, b: f64) f64 { return b }
+Point: { x: i32 }
+Point.shift = (self: Point, dx: i32) Point { return self }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "add")
+            .expect("function symbol")
+            .parameter_names
+            .as_deref(),
+        Some(&["a".to_string(), "b".to_string()][..])
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "Point.shift")
+            .expect("method symbol")
+            .parameter_names
+            .as_deref(),
+        Some(&["self".to_string(), "dx".to_string()][..])
+    );
+}
+
+#[test]
 fn resolver_records_value_symbol_return_types() {
     let program = parse_program(
         r#"
