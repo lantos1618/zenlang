@@ -8,23 +8,6 @@ use crate::error::{Diagnostic, Span};
 
 use super::TypeChecker;
 
-/// Produce a mangled name encoding generic type args, e.g. "DynVec_i32", "HashMap_str_i32".
-fn mangle_generic(name: &str, type_args: &[AstType]) -> String {
-    if type_args.is_empty() {
-        return name.to_string();
-    }
-    let args: Vec<String> = type_args
-        .iter()
-        .map(|a| {
-            a.display_name()
-                .replace('<', "_")
-                .replace('>', "")
-                .replace(", ", "_")
-        })
-        .collect();
-    format!("{}_{}", name, args.join("_"))
-}
-
 impl TypeChecker {
     /// Resolve an AstType to a concrete Type.
     pub(crate) fn resolve_type(&self, ast_ty: &AstType) -> Type {
@@ -45,6 +28,14 @@ impl TypeChecker {
             AstType::Str => Type::Str,
             AstType::String => Type::String,
             AstType::Named(name) => {
+                if let Some(concrete) = self
+                    .type_substitutions
+                    .iter()
+                    .rev()
+                    .find_map(|subs| subs.get(name))
+                {
+                    return concrete.clone();
+                }
                 if name == "String" {
                     return Type::String;
                 }
@@ -71,8 +62,7 @@ impl TypeChecker {
                 }
             }
             AstType::Generic { name, type_args } => {
-                // Produce a mangled name encoding type args: "DynVec_i32", "HashMap_str_i32"
-                let mangled = mangle_generic(name, type_args);
+                let mangled = self.mangle_generic_type_name(name, type_args);
                 if let Some(info) = self.structs.get(name) {
                     Type::Struct {
                         name: mangled,

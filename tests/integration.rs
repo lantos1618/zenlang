@@ -162,6 +162,11 @@ fn test_functions() {
 }
 
 #[test]
+fn test_generic_identity() {
+    run_test("generic_identity");
+}
+
+#[test]
 fn test_defer() {
     run_test("defer");
 }

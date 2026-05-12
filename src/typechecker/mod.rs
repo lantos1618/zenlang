@@ -15,11 +15,11 @@ mod patterns;
 mod resolve;
 mod statements;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::typed::*;
-use crate::ast::{self, AstType, Declaration};
-use crate::error::Diagnostic;
+use crate::ast::{self, AstType, Declaration, Expression, Param};
+use crate::error::{Diagnostic, Span};
 
 // ── Type Environment ──────────────────────────────────────────────
 
@@ -46,6 +46,15 @@ pub struct FuncInfo {
     pub params: Vec<(String, AstType)>,
     pub return_type: AstType,
     pub type_params: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct GenericFunctionTemplate {
+    pub type_params: Vec<String>,
+    pub params: Vec<Param>,
+    pub return_type: Option<AstType>,
+    pub body: Expression,
+    pub span: Span,
 }
 
 /// Scope for variable types.
@@ -75,6 +84,10 @@ pub struct TypeChecker {
     enums: HashMap<String, EnumInfo>,
     functions: HashMap<String, FuncInfo>,
     methods: HashMap<String, FuncInfo>, // key: "TypeName.method_name"
+    generic_functions: HashMap<String, GenericFunctionTemplate>,
+    specialized_functions: Vec<TypedFunction>,
+    specializations_seen: HashSet<String>,
+    type_substitutions: Vec<HashMap<String, Type>>,
     imports: HashMap<String, Vec<String>>, // imported name -> source module path
     scopes: Vec<Scope>,
     diagnostics: Vec<Diagnostic>,
@@ -96,6 +109,10 @@ impl TypeChecker {
             enums: HashMap::new(),
             functions: HashMap::new(),
             methods: HashMap::new(),
+            generic_functions: HashMap::new(),
+            specialized_functions: Vec::new(),
+            specializations_seen: HashSet::new(),
+            type_substitutions: Vec::new(),
             imports: HashMap::new(),
             scopes: vec![Scope::new()], // global scope
             diagnostics: Vec::new(),
@@ -123,12 +140,16 @@ impl TypeChecker {
             match decl {
                 Declaration::Function {
                     name,
+                    type_params,
                     params,
                     return_type,
                     body,
                     span,
                     ..
                 } => {
+                    if !type_params.is_empty() {
+                        continue;
+                    }
                     if name == "main" {
                         entry_point = Some(name.clone());
                     }
@@ -231,6 +252,8 @@ impl TypeChecker {
             return Err(errors);
         }
 
+        functions.append(&mut self.specialized_functions);
+
         Ok(TypedProgram {
             functions,
             types,
@@ -297,9 +320,13 @@ impl TypeChecker {
                     type_params,
                     params,
                     return_type,
+                    body,
+                    span,
                     ..
                 } => {
                     let ret = return_type.clone().unwrap_or(AstType::Void);
+                    let collected_type_params: Vec<String> =
+                        type_params.iter().map(|tp| tp.name.clone()).collect();
                     self.functions.insert(
                         name.clone(),
                         FuncInfo {
@@ -309,9 +336,21 @@ impl TypeChecker {
                                 .map(|p| (p.name.clone(), p.ty.clone()))
                                 .collect(),
                             return_type: ret,
-                            type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
+                            type_params: collected_type_params.clone(),
                         },
                     );
+                    if !collected_type_params.is_empty() {
+                        self.generic_functions.insert(
+                            name.clone(),
+                            GenericFunctionTemplate {
+                                type_params: collected_type_params,
+                                params: params.clone(),
+                                return_type: return_type.clone(),
+                                body: body.clone(),
+                                span: *span,
+                            },
+                        );
+                    }
                 }
                 Declaration::Method {
                     type_name,

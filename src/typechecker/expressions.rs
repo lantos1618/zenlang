@@ -188,27 +188,32 @@ impl TypeChecker {
 
                 let (resolved_name, ret_type) =
                     if let Some(info) = self.functions.get(&full_name).cloned() {
-                        self.check_call_signature(&full_name, &info.params, &typed_args, span);
                         if !info.type_params.is_empty() {
                             // Generic function: infer type args and substitute
                             let arg_types: Vec<Type> =
                                 typed_args.iter().map(|a| a.ty.clone()).collect();
                             let subs =
                                 self.infer_type_args(&info.type_params, &info.params, &arg_types);
+                            self.check_call_signature_with_substitutions(
+                                &full_name,
+                                &info.params,
+                                &typed_args,
+                                &subs,
+                                span,
+                            );
                             let ret = self.substitute_type(&info.return_type, &subs);
-                            // Mangle name with concrete types
-                            let suffix: Vec<String> = info
-                                .type_params
-                                .iter()
-                                .filter_map(|tp| subs.get(tp).map(|t| t.display_name()))
-                                .collect();
-                            let mangled = if suffix.is_empty() {
-                                full_name.clone()
-                            } else {
-                                format!("{}_{}", full_name, suffix.join("_"))
-                            };
+                            let mangled = self
+                                .specialize_generic_function(&full_name, &subs, *span)
+                                .unwrap_or_else(|| {
+                                    self.generic_function_mangled_name(
+                                        &full_name,
+                                        &info.type_params,
+                                        &subs,
+                                    )
+                                });
                             (mangled, ret)
                         } else {
+                            self.check_call_signature(&full_name, &info.params, &typed_args, span);
                             (full_name.clone(), self.resolve_type(&info.return_type))
                         }
                     } else if name == "cast" && typed_args.len() == 1 && !type_args.is_empty() {
@@ -1100,6 +1105,50 @@ impl TypeChecker {
 
         for (idx, ((_, expected), actual)) in params.iter().zip(args.iter()).enumerate() {
             let expected = self.resolve_type(expected);
+            if expected == Type::Unknown || actual.ty == Type::Unknown {
+                continue;
+            }
+
+            if !self.types_compatible(&expected, &actual.ty) {
+                self.diagnostics.push(Diagnostic::error(
+                    "E3022",
+                    format!(
+                        "argument {} for `{}` expects `{}`, found `{}`",
+                        idx + 1,
+                        callee,
+                        expected.display_name(),
+                        actual.ty.display_name()
+                    ),
+                    actual.span,
+                ));
+            }
+        }
+    }
+
+    fn check_call_signature_with_substitutions(
+        &mut self,
+        callee: &str,
+        params: &[(String, AstType)],
+        args: &[TypedExpression],
+        substitutions: &std::collections::HashMap<String, Type>,
+        span: &Span,
+    ) {
+        if params.len() != args.len() {
+            self.diagnostics.push(Diagnostic::error(
+                "E3021",
+                format!(
+                    "function `{}` expects {} arguments, found {}",
+                    callee,
+                    params.len(),
+                    args.len()
+                ),
+                *span,
+            ));
+            return;
+        }
+
+        for (idx, ((_, expected), actual)) in params.iter().zip(args.iter()).enumerate() {
+            let expected = self.substitute_type(expected, substitutions);
             if expected == Type::Unknown || actual.ty == Type::Unknown {
                 continue;
             }

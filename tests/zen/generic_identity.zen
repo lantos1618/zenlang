@@ -1,0 +1,14 @@
+{ io } = std
+
+identity<T> = (value: T) T {
+    return value
+}
+
+main = () i32 {
+    x = identity(42)
+    y = identity(7)
+    io.println("${x}")
+    io.println("${y}")
+    io.println(identity("ok"))
+    return 0
+}
