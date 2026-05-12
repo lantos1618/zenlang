@@ -31,8 +31,9 @@ checked-in docs, tests, and commits only.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.
-- Resolver Phase 2 has started with symbol IDs, separate namespaces, and duplicate
-  same-namespace diagnostics in `tests/resolver_phase2.rs`.
+- Resolver Phase 2 has started with symbol IDs, separate namespaces, duplicate
+  same-namespace diagnostics, symbol visibility metadata, and unknown type
+  reference diagnostics in `tests/resolver_phase2.rs`.
 
 ## Current Phase
 
@@ -45,10 +46,9 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Extend resolver symbols with visibility metadata so later module privacy checks
-can consume resolver-owned symbol data instead of re-deriving export status from
-raw declarations.
+Add import binding resolution to resolver-owned symbol data so imported names can
+be represented explicitly instead of being treated only as module paths.
 
-After that, choose the next narrow Phase 2 resolver slice from the current gaps:
-unknown symbol diagnostics, scoped symbols, import binding resolution, or wiring
-resolver output into the typechecker/module pipeline.
+After that, choose the next narrow Phase 2 resolver slice from the remaining
+gaps: scoped symbols, value reference diagnostics, or wiring resolver output into
+the typechecker/module pipeline.
