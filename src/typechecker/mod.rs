@@ -18,7 +18,7 @@ mod statements;
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::typed::*;
-use crate::ast::{self, AstType, Declaration, Expression, Param};
+use crate::ast::{self, AstType, Declaration, Expression, Param, StructField};
 use crate::error::{Diagnostic, Span};
 use crate::resolver::{Namespace, SymbolTable};
 
@@ -865,6 +865,13 @@ impl TypeChecker {
                         fields.len(),
                         *span,
                     );
+                    self.validate_resolver_field_types(
+                        symbol,
+                        Namespace::Type,
+                        name,
+                        expected_field_type_names(fields),
+                        *span,
+                    );
                 }
                 Declaration::Enum {
                     name,
@@ -1058,6 +1065,28 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_field_types(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        namespace: Namespace,
+        name: &str,
+        expected_field_type_names: Vec<(String, String)>,
+        span: Span,
+    ) {
+        if symbol.field_type_names.as_deref() != Some(expected_field_type_names.as_slice()) {
+            let actual = format_field_type_names(symbol.field_type_names.as_deref());
+            let expected = format_field_type_names(Some(&expected_field_type_names));
+            self.diagnostics.push(Diagnostic::error(
+                "E0217",
+                format!(
+                    "resolver {} symbol '{name}' has fields '{actual}', expected '{expected}'",
+                    namespace.diagnostic_name()
+                ),
+                span,
+            ));
+        }
+    }
+
     fn validate_resolver_variant_payload_count(
         &mut self,
         symbol: &crate::resolver::Symbol,
@@ -1148,6 +1177,27 @@ fn expected_parameter_type_names(params: &[Param]) -> Vec<String> {
 fn format_parameter_type_names(names: Option<&[String]>) -> String {
     match names {
         Some(names) => format!("({})", names.join(", ")),
+        None => "unknown".to_string(),
+    }
+}
+
+fn expected_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {
+    fields
+        .iter()
+        .map(|field| (field.name.clone(), field.ty.display_name()))
+        .collect()
+}
+
+fn format_field_type_names(fields: Option<&[(String, String)]>) -> String {
+    match fields {
+        Some(fields) => format!(
+            "({})",
+            fields
+                .iter()
+                .map(|(name, ty)| format!("{name}: {ty}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
         None => "unknown".to_string(),
     }
 }
@@ -1470,6 +1520,38 @@ Point: { x: i32, y: i32 }
                 .message
                 .contains("resolver type symbol 'Point' has field count 1, expected 2")),
             "expected resolver struct field count diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_struct_field_types() {
+        let program = parse_program(
+            r#"
+Point: { x: i32, y: f64 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_field_type_names_for_test(
+            Namespace::Type,
+            "Point",
+            Some(vec![
+                ("x".to_string(), "i32".to_string()),
+                ("y".to_string(), "i32".to_string()),
+            ]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver struct field type mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver type symbol 'Point' has fields '(x: i32, y: i32)', expected '(x: i32, y: f64)'"
+            )),
+            "expected resolver struct field type diagnostic, got {err:?}"
         );
     }
 

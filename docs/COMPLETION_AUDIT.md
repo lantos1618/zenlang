@@ -60,14 +60,16 @@ and do not assume Phase 4 is ready without evidence.
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Resolver struct symbols carry field-count metadata, and typechecker setup
   rejects mismatches before collecting struct field metadata.
+- Resolver struct symbols carry field-name/type metadata, and typechecker setup
+  rejects mismatches before collecting struct field metadata.
 - Resolver enum variant symbols carry payload-count metadata, and typechecker
   setup rejects mismatches before collecting enum variant metadata.
 
 ## Unresolved Gaps
 
 - Phase 2 is not complete: resolver/typechecker integration still has duplicate
-  declaration collection for richer function type metadata, struct field types,
-  enum variant payload types, and behavior method signatures.
+  declaration collection for richer function type metadata, enum variant payload
+  types, and behavior method signatures.
 - Phase 4 is not complete: deterministic `build.zen` graph tests and
   implementation are still absent.
 - Effect checking, typed allocator semantics, actors in std integration,

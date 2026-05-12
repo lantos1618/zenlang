@@ -322,6 +322,32 @@ Empty: { }
 }
 
 #[test]
+fn resolver_records_struct_field_types() {
+    let program = parse_program(
+        r#"
+Point: { x: i32, y: f64 }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Point")
+            .expect("Point symbol")
+            .field_type_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(
+            &[
+                ("x".to_string(), "i32".to_string()),
+                ("y".to_string(), "f64".to_string())
+            ][..]
+        )
+    );
+}
+
+#[test]
 fn resolver_records_enum_variant_payload_counts() {
     let program = parse_program(
         r#"

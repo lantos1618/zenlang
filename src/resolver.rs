@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    AstType, Declaration, Expression, Param, Pattern, Program, Statement, StringPart, TypeParam,
+    AstType, Declaration, Expression, Param, Pattern, Program, Statement, StringPart, StructField,
+    TypeParam,
 };
 use crate::error::{Diagnostic, Span};
 
@@ -45,6 +46,7 @@ pub struct Symbol {
     pub return_type_name: Option<String>,
     pub type_parameter_count: Option<usize>,
     pub field_count: Option<usize>,
+    pub field_type_names: Option<Vec<(String, String)>>,
     pub variant_payload_count: Option<usize>,
     pub scope_id: u32,
     pub definition_span: Span,
@@ -58,6 +60,7 @@ struct SymbolMetadata {
     return_type_name: Option<String>,
     type_parameter_count: Option<usize>,
     field_count: Option<usize>,
+    field_type_names: Option<Vec<(String, String)>>,
     variant_payload_count: Option<usize>,
 }
 
@@ -219,6 +222,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_field_type_names_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        field_type_names: Option<Vec<(String, String)>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.field_type_names = field_type_names;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_variant_payload_count_for_test(
         &mut self,
         namespace: Namespace,
@@ -253,6 +272,7 @@ impl SymbolTable {
                 return_type_name: None,
                 type_parameter_count: None,
                 field_count: None,
+                field_type_names: None,
                 variant_payload_count: None,
             },
             0,
@@ -280,6 +300,7 @@ impl SymbolTable {
                 return_type_name: Some(return_type_name),
                 type_parameter_count: None,
                 field_count: None,
+                field_type_names: None,
                 variant_payload_count: None,
             },
             0,
@@ -293,9 +314,10 @@ impl SymbolTable {
         name: &str,
         is_public: bool,
         type_parameter_count: usize,
-        field_count: Option<usize>,
+        field_type_names: Option<Vec<(String, String)>>,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
+        let field_count = field_type_names.as_ref().map(Vec::len);
         self.define_in_scope(
             namespace,
             name,
@@ -307,6 +329,7 @@ impl SymbolTable {
                 return_type_name: None,
                 type_parameter_count: Some(type_parameter_count),
                 field_count,
+                field_type_names,
                 variant_payload_count: None,
             },
             0,
@@ -332,6 +355,7 @@ impl SymbolTable {
                 return_type_name: None,
                 type_parameter_count: None,
                 field_count: None,
+                field_type_names: None,
                 variant_payload_count: Some(variant_payload_count),
             },
             0,
@@ -376,6 +400,7 @@ impl SymbolTable {
             return_type_name: metadata.return_type_name,
             type_parameter_count: metadata.type_parameter_count,
             field_count: metadata.field_count,
+            field_type_names: metadata.field_type_names,
             variant_payload_count: metadata.variant_payload_count,
             scope_id,
             definition_span,
@@ -489,7 +514,7 @@ impl Resolver {
                     name,
                     *public,
                     type_params.len(),
-                    Some(fields.len()),
+                    Some(resolver_field_type_names(fields)),
                     *span,
                 )?;
             }
@@ -1232,4 +1257,11 @@ fn resolver_return_type_name(return_type: &Option<AstType>) -> String {
 
 fn resolver_param_type_names(params: &[Param]) -> Vec<String> {
     params.iter().map(|param| param.ty.display_name()).collect()
+}
+
+fn resolver_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {
+    fields
+        .iter()
+        .map(|field| (field.name.clone(), field.ty.display_name()))
+        .collect()
 }

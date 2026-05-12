@@ -73,6 +73,8 @@ checked-in docs, tests, and commits only.
   behavior metadata from the AST.
 - Resolver struct symbols now carry field-count metadata, and typechecker setup
   rejects mismatches before collecting struct field metadata from the AST.
+- Resolver struct symbols now carry field-name/type metadata, and typechecker
+  setup rejects mismatches before collecting struct field metadata from the AST.
 - Resolver enum variant symbols now carry payload-count metadata, and
   typechecker setup rejects mismatches before collecting enum variant metadata
   from the AST.
