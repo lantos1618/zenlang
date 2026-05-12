@@ -1534,6 +1534,32 @@ describe = (flag: bool) StaticString {
     }
 
     #[test]
+    fn generic_function_explicit_type_arg_arity_is_error() {
+        let program = parse_program(
+            r#"
+identity<T> = (value: T) T {
+    return value
+}
+
+main = () i32 {
+    return identity<i32, str>(1)
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("wrong generic type-argument arity should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("generic function `identity` expects 1 type arguments, found 2")),
+            "expected generic arity diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
     fn func_info_non_generic_has_empty_type_params() {
         use crate::ast::Expression;
         let mut tc = TypeChecker::new();
