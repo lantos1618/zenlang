@@ -55,6 +55,7 @@ pub struct Symbol {
     pub variant_payload_count: Option<usize>,
     pub variant_payload_type_name: Option<String>,
     pub behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
+    pub is_mutable: Option<bool>,
     pub scope_id: u32,
     pub definition_span: Span,
 }
@@ -73,6 +74,7 @@ struct SymbolMetadata {
     variant_payload_count: Option<usize>,
     variant_payload_type_name: Option<String>,
     behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
+    is_mutable: Option<bool>,
 }
 
 struct ValueSignatureMetadata {
@@ -189,6 +191,17 @@ impl SymbolTable {
             .find(|symbol| symbol.namespace == namespace && symbol.name == name)
         {
             symbol.import_source = import_source;
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_local_mutability_for_test(&mut self, name: &str, is_mutable: Option<bool>) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == Namespace::Local && symbol.name == name)
+        {
+            symbol.is_mutable = is_mutable;
         }
     }
 
@@ -393,6 +406,7 @@ impl SymbolTable {
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
+                is_mutable: None,
             },
             0,
             definition_span,
@@ -424,6 +438,7 @@ impl SymbolTable {
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
+                is_mutable: None,
             },
             0,
             definition_span,
@@ -458,6 +473,7 @@ impl SymbolTable {
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
+                is_mutable: None,
             },
             0,
             definition_span,
@@ -489,6 +505,7 @@ impl SymbolTable {
                 variant_payload_count: Some(variant_payload_count),
                 variant_payload_type_name,
                 behavior_method_signatures: None,
+                is_mutable: None,
             },
             0,
             definition_span,
@@ -520,6 +537,7 @@ impl SymbolTable {
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: Some(behavior_method_signatures),
+                is_mutable: None,
             },
             0,
             definition_span,
@@ -569,6 +587,7 @@ impl SymbolTable {
             variant_payload_count: metadata.variant_payload_count,
             variant_payload_type_name: metadata.variant_payload_type_name,
             behavior_method_signatures: metadata.behavior_method_signatures,
+            is_mutable: metadata.is_mutable,
             scope_id,
             definition_span,
         });
@@ -579,6 +598,7 @@ impl SymbolTable {
     fn define_local(
         &mut self,
         name: &str,
+        mutable: bool,
         scope_id: u32,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
@@ -586,7 +606,10 @@ impl SymbolTable {
             Namespace::Local,
             name,
             false,
-            SymbolMetadata::default(),
+            SymbolMetadata {
+                is_mutable: Some(mutable),
+                ..SymbolMetadata::default()
+            },
             scope_id,
             definition_span,
         )
@@ -1332,7 +1355,7 @@ impl Resolver {
             self.define_local_symbol(
                 table,
                 &param.name,
-                false,
+                param.mutable,
                 param.span,
                 &mut locals,
                 diagnostics,
@@ -1350,7 +1373,7 @@ impl Resolver {
         locals: &mut ScopeStack,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
-        match table.define_local(name, locals.current_scope_id, span) {
+        match table.define_local(name, mutable, locals.current_scope_id, span) {
             Ok(_) => locals.insert(name.to_string(), mutable),
             Err(diagnostic) => diagnostics.push(*diagnostic),
         }

@@ -1135,19 +1135,7 @@ impl TypeChecker {
 
     fn require_resolver_parameter_locals(&mut self, symbols: &SymbolTable, params: &[Param]) {
         for param in params {
-            if symbols
-                .lookup_scoped(Namespace::Local, &param.name)
-                .is_none()
-            {
-                self.diagnostics.push(Diagnostic::error(
-                    "E0228",
-                    format!(
-                        "resolver symbol table missing local symbol '{}'",
-                        param.name
-                    ),
-                    param.span,
-                ));
-            }
+            self.require_resolver_local_symbol(symbols, &param.name, param.mutable, param.span);
         }
     }
 
@@ -1278,9 +1266,23 @@ impl TypeChecker {
     ) {
         match statement {
             ast::Statement::VarDecl {
-                name, value, span, ..
+                name,
+                ty,
+                value,
+                mutable,
+                span,
+                ..
             } => {
-                self.require_resolver_local_symbol(symbols, name, *span);
+                let reassignment_form = !*mutable
+                    && ty.is_none()
+                    && symbols.symbols().iter().any(|symbol| {
+                        symbol.namespace == Namespace::Local
+                            && symbol.name == *name
+                            && symbol.is_mutable == Some(true)
+                    });
+                if !reassignment_form {
+                    self.require_resolver_local_symbol(symbols, name, *mutable, *span);
+                }
                 self.require_resolver_expr_locals(symbols, value);
             }
             ast::Statement::Assignment { target, value, .. } => {
@@ -1301,14 +1303,14 @@ impl TypeChecker {
     fn require_resolver_pattern_locals(&mut self, symbols: &SymbolTable, pattern: &ast::Pattern) {
         match pattern {
             ast::Pattern::Identifier { name, span } => {
-                self.require_resolver_local_symbol(symbols, name, *span);
+                self.require_resolver_local_symbol(symbols, name, false, *span);
             }
             ast::Pattern::Struct { fields, span, .. } => {
                 for (name, nested) in fields {
                     if let Some(nested) = nested {
                         self.require_resolver_pattern_locals(symbols, nested);
                     } else {
-                        self.require_resolver_local_symbol(symbols, name, *span);
+                        self.require_resolver_local_symbol(symbols, name, false, *span);
                     }
                 }
             }
@@ -1337,11 +1339,47 @@ impl TypeChecker {
         }
     }
 
-    fn require_resolver_local_symbol(&mut self, symbols: &SymbolTable, name: &str, span: Span) {
-        if symbols.lookup_scoped(Namespace::Local, name).is_none() {
+    fn require_resolver_local_symbol(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        expected_mutable: bool,
+        span: Span,
+    ) {
+        let matching_symbols: Vec<_> = symbols
+            .symbols()
+            .iter()
+            .filter(|symbol| symbol.namespace == Namespace::Local && symbol.name == name)
+            .collect();
+
+        if matching_symbols.is_empty() {
             self.diagnostics.push(Diagnostic::error(
                 "E0228",
                 format!("resolver symbol table missing local symbol '{name}'"),
+                span,
+            ));
+            return;
+        };
+
+        if !matching_symbols
+            .iter()
+            .any(|symbol| symbol.is_mutable == Some(expected_mutable))
+        {
+            let actual = match matching_symbols[0].is_mutable {
+                Some(true) => "mutable",
+                Some(false) => "immutable",
+                None => "unknown",
+            };
+            let expected = if expected_mutable {
+                "mutable"
+            } else {
+                "immutable"
+            };
+            self.diagnostics.push(Diagnostic::error(
+                "E0231",
+                format!(
+                    "resolver local symbol '{name}' has mutability {actual}, expected {expected}"
+                ),
                 span,
             ));
         }
@@ -2156,6 +2194,31 @@ add = (a: i32, b: i32) i32 { return a + b }
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_parameter_local_mutability() {
+        let program = parse_program(
+            r#"
+add = (mut a: i32, b: i32) i32 { return a + b }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_local_mutability_for_test("a", Some(false));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver parameter local mutability mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver local symbol 'a' has mutability immutable, expected mutable")),
+            "expected resolver parameter local mutability diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_requires_resolver_var_decl_locals() {
         let program = parse_program(
             r#"
@@ -2180,6 +2243,34 @@ main = () i32 {
                 .message
                 .contains("resolver symbol table missing local symbol 'value'")),
             "expected missing resolver var local diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_var_decl_local_mutability() {
+        let program = parse_program(
+            r#"
+main = () i32 {
+    value ::= 1
+    return value
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_local_mutability_for_test("value", Some(false));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver var local mutability mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver local symbol 'value' has mutability immutable, expected mutable"
+            )),
+            "expected resolver var local mutability diagnostic, got {err:?}"
         );
     }
 

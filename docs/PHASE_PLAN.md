@@ -45,6 +45,8 @@ checked-in docs, tests, and commits only.
 - Resolver now records scoped local symbols for parameters and local bindings,
   diagnoses duplicate same-scope local bindings, and rejects unresolved local
   identifier references.
+- Resolver local symbols now carry mutability metadata for mutable parameters
+  and local bindings.
 - Typechecker setup now requires resolver parameter local symbols before
   collecting function or method bodies from the AST.
 - Typechecker setup now requires resolver local symbols for `VarDecl` bindings
@@ -57,6 +59,8 @@ checked-in docs, tests, and commits only.
   default expressions before collecting struct metadata.
 - Typechecker setup now requires resolver parameter/local symbols inside
   behavior default method bodies before collecting behavior metadata.
+- Typechecker setup now rejects resolver local mutability mismatches before
+  collecting typed bodies from the AST.
 - The CLI `check` path now runs resolver diagnostics before typechecking, with
   integration coverage for resolver-owned diagnostics outside resolver-only
   tests.

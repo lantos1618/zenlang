@@ -586,9 +586,10 @@ main = () i32 { return missing() }
 fn resolver_records_parameter_and_local_symbols() {
     let program = parse_program(
         r#"
-main = (input: i32) i32 {
-    value = input
-    return value
+main = (mut input: i32) i32 {
+    value ::= input
+    frozen = value
+    return frozen
 }
 "#,
     );
@@ -600,9 +601,15 @@ main = (input: i32) i32 {
     let value = table
         .lookup_scoped(Namespace::Local, "value")
         .expect("local symbol");
+    let frozen = table
+        .lookup_scoped(Namespace::Local, "frozen")
+        .expect("immutable local symbol");
 
     assert_ne!(input.id, value.id);
     assert_ne!(input.scope_id, value.scope_id);
+    assert_eq!(input.is_mutable, Some(true));
+    assert_eq!(value.is_mutable, Some(true));
+    assert_eq!(frozen.is_mutable, Some(false));
 }
 
 #[test]
