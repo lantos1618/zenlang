@@ -352,6 +352,7 @@ impl TypeChecker {
                 .cloned()
                 .collect());
         }
+        self.collect_resolver_imports(symbols);
         self.check_program(program)
     }
 
@@ -852,6 +853,20 @@ impl TypeChecker {
         }
     }
 
+    fn collect_resolver_imports(&mut self, symbols: &SymbolTable) {
+        for symbol in symbols.symbols() {
+            if symbol.namespace != Namespace::Import {
+                continue;
+            }
+            let Some(source) = &symbol.import_source else {
+                continue;
+            };
+            self.imports
+                .entry(symbol.name.clone())
+                .or_insert_with(|| source.split('.').map(str::to_string).collect());
+        }
+    }
+
     fn require_resolver_symbol(
         &mut self,
         symbols: &SymbolTable,
@@ -973,6 +988,31 @@ main = () i32 { return 0 }
                 .contains("resolver symbol table missing value symbol 'main'")),
             "expected missing resolver symbol diagnostic, got {err:?}"
         );
+    }
+
+    #[test]
+    fn check_program_with_symbols_uses_resolver_import_bindings() {
+        let mut program = parse_program(
+            r#"
+{ io } = std
+main = () i32 {
+    io.println("ok")
+    return 0
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        program
+            .declarations
+            .retain(|decl| !matches!(decl, Declaration::Import { .. }));
+
+        let mut tc = TypeChecker::new();
+        tc.check_program_with_symbols(&program, &symbols)
+            .expect("resolver import symbols should seed typechecker imports");
+
+        assert!(tc.is_root_std_import("io"));
     }
 
     #[test]
