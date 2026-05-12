@@ -284,6 +284,34 @@ impl TypeChecker {
                     // Imports are handled by the module system, not the typechecker
                 }
                 Declaration::Behavior { .. } => {}
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior: Some(_),
+                    methods,
+                    ..
+                } => {
+                    for method in methods {
+                        if let Declaration::Function {
+                            name,
+                            type_params,
+                            params,
+                            return_type,
+                            body,
+                            span,
+                            ..
+                        } = method
+                        {
+                            if !type_params.is_empty() {
+                                continue;
+                            }
+                            let full_name = format!("{}.{}", type_name, name);
+                            match self.check_function(&full_name, params, return_type, body, span) {
+                                Ok(func) => functions.push(func),
+                                Err(d) => self.diagnostics.push(d),
+                            }
+                        }
+                    }
+                }
                 _ => {}
             }
         }
@@ -468,6 +496,42 @@ impl TypeChecker {
                 }
                 Declaration::Behavior { type_params, .. } => {
                     self.validate_generic_bounds(type_params);
+                }
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior: Some(_),
+                    methods,
+                    ..
+                } => {
+                    for method in methods {
+                        if let Declaration::Function {
+                            name,
+                            type_params,
+                            params,
+                            return_type,
+                            ..
+                        } = method
+                        {
+                            self.validate_generic_bounds(type_params);
+                            let key = format!("{}.{}", type_name, name);
+                            self.methods.insert(
+                                key.clone(),
+                                FuncInfo {
+                                    name: key,
+                                    params: params
+                                        .iter()
+                                        .map(|p| (p.name.clone(), p.ty.clone()))
+                                        .collect(),
+                                    return_type: return_type.clone().unwrap_or(AstType::Void),
+                                    type_params: type_params
+                                        .iter()
+                                        .map(|tp| tp.name.clone())
+                                        .collect(),
+                                    type_param_bounds: type_param_bounds(type_params),
+                                },
+                            );
+                        }
+                    }
                 }
                 _ => {}
             }

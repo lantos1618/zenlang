@@ -48,7 +48,7 @@ advertised as implemented.
 | Pointer and slice type syntax accepted by parser | implemented | `parser::tests::parse_pointer_types`, `parser::tests::parse_slice_type` |
 | Generic syntax and explicit behavior bounds | experimental | `parser::tests::parse_nested_generics`, `typechecker::tests::generic_function_collection`, `typechecker::tests::generic_behavior_bound_accepts_type_with_impl`, `typechecker::tests::generic_behavior_bound_rejects_type_without_impl` |
 | Behavior declarations `Name: behavior { method: (Self) Return }` | experimental | `parser::tests::parse_behavior_declaration`, `typechecker::tests::behavior_declaration_collection` |
-| Explicit behavior impl blocks `Type.implements(Behavior) { ... }` | experimental | `parser::tests::parse_behavior_impl_block`, `typechecker::tests::behavior_impl_with_required_method_passes`, `typechecker::tests::behavior_impl_missing_required_method_is_error`, `typechecker::tests::behavior_impl_can_omit_default_method` |
+| Explicit behavior impl blocks `Type.implements(Behavior) { ... }` | experimental | `parser::tests::parse_behavior_impl_block`, `typechecker::tests::behavior_impl_with_required_method_passes`, `typechecker::tests::behavior_impl_missing_required_method_is_error`, `typechecker::tests::behavior_impl_can_omit_default_method`, `tests/zen/behavior_json_explicit_impl.zen` |
 | Type association assertions `.requires` | gated | `parser::tests::parse_rejects_gated_type_association_with_clear_error` |
 
 ## Type, Module, ABI, Error, Effect, And Comptime Decisions
