@@ -44,6 +44,9 @@ checked-in docs, tests, and commits only.
 - The CLI `check` path now runs resolver diagnostics before typechecking, with
   integration coverage for resolver-owned diagnostics outside resolver-only
   tests.
+- The reusable integration-test frontend helper now runs resolver diagnostics
+  before typechecking. Existing fixtures also cover resolver treatment of enum
+  pattern payload bindings and mutable reassignment syntax.
 
 ## Current Phase
 
@@ -57,6 +60,5 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 ## Next Small Slice
 
 Keep Phase 2 focused on resolver/typechecker integration before Phase 4. The next
-small slice should either route resolver diagnostics through the reusable
-integration-test frontend helper or start consuming resolver symbols inside
-typechecker setup without changing module graph behavior.
+small slice should start consuming resolver symbols inside typechecker setup
+without changing module graph behavior.
