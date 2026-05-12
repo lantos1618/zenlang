@@ -1,0 +1,15 @@
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+Box.get<T> = (self: Box<T>) T {
+    return self.value
+}
+
+main = () i32 {
+    box = Box<i32> { value: 99 }
+    io.println("${box.get()}")
+    return 0
+}

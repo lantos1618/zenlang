@@ -85,6 +85,7 @@ pub struct TypeChecker {
     functions: HashMap<String, FuncInfo>,
     methods: HashMap<String, FuncInfo>, // key: "TypeName.method_name"
     generic_functions: HashMap<String, GenericFunctionTemplate>,
+    generic_methods: HashMap<String, GenericFunctionTemplate>,
     specialized_functions: Vec<TypedFunction>,
     specializations_seen: HashSet<String>,
     specialized_types: Vec<TypedTypeDef>,
@@ -112,6 +113,7 @@ impl TypeChecker {
             functions: HashMap::new(),
             methods: HashMap::new(),
             generic_functions: HashMap::new(),
+            generic_methods: HashMap::new(),
             specialized_functions: Vec::new(),
             specializations_seen: HashSet::new(),
             specialized_types: Vec::new(),
@@ -165,12 +167,16 @@ impl TypeChecker {
                 Declaration::Method {
                     type_name,
                     method_name,
+                    type_params,
                     params,
                     return_type,
                     body,
                     span,
                     ..
                 } => {
+                    if !type_params.is_empty() {
+                        continue;
+                    }
                     let full_name = format!("{}.{}", type_name, method_name);
                     // Set Self type for method body
                     self.current_self_type =
@@ -294,6 +300,7 @@ impl TypeChecker {
                     fields,
                     ..
                 } => {
+                    self.reject_unsupported_generic_bounds(type_params);
                     self.structs.insert(
                         name.clone(),
                         StructInfo {
@@ -312,6 +319,7 @@ impl TypeChecker {
                     variants,
                     ..
                 } => {
+                    self.reject_unsupported_generic_bounds(type_params);
                     self.enums.insert(
                         name.clone(),
                         EnumInfo {
@@ -340,6 +348,7 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
+                    self.reject_unsupported_generic_bounds(type_params);
                     let ret = return_type.clone().unwrap_or(AstType::Void);
                     let collected_type_params: Vec<String> =
                         type_params.iter().map(|tp| tp.name.clone()).collect();
@@ -374,10 +383,15 @@ impl TypeChecker {
                     type_params,
                     params,
                     return_type,
+                    body,
+                    span,
                     ..
                 } => {
+                    self.reject_unsupported_generic_bounds(type_params);
                     let key = format!("{}.{}", type_name, method_name);
                     let ret = return_type.clone().unwrap_or(AstType::Void);
+                    let collected_type_params: Vec<String> =
+                        type_params.iter().map(|tp| tp.name.clone()).collect();
                     self.methods.insert(
                         key.clone(),
                         FuncInfo {
@@ -387,11 +401,38 @@ impl TypeChecker {
                                 .map(|p| (p.name.clone(), p.ty.clone()))
                                 .collect(),
                             return_type: ret,
-                            type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
+                            type_params: collected_type_params.clone(),
                         },
                     );
+                    if !collected_type_params.is_empty() {
+                        self.generic_methods.insert(
+                            format!("{}.{}", type_name, method_name),
+                            GenericFunctionTemplate {
+                                type_params: collected_type_params,
+                                params: params.clone(),
+                                return_type: return_type.clone(),
+                                body: body.clone(),
+                                span: *span,
+                            },
+                        );
+                    }
                 }
                 _ => {}
+            }
+        }
+    }
+
+    fn reject_unsupported_generic_bounds(&mut self, type_params: &[ast::TypeParam]) {
+        for param in type_params {
+            if let Some(bound) = &param.constraint {
+                self.diagnostics.push(Diagnostic::error(
+                    "E5002",
+                    format!(
+                        "generic bound `{}` on type parameter `{}` cannot be satisfied before behavior constraints are implemented",
+                        bound, param.name
+                    ),
+                    param.span,
+                ));
             }
         }
     }
@@ -1572,6 +1613,58 @@ main = () i32 {
                 .message
                 .contains("generic function `identity` expects 1 type arguments, found 2")),
             "expected generic arity diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn generic_function_inference_failure_is_error() {
+        let program = parse_program(
+            r#"
+make_default<T> = () T {
+    return 0
+}
+
+main = () i32 {
+    return make_default()
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("uninferred generic type argument should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("cannot infer type argument `T` for generic function `make_default`")),
+            "expected generic inference diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn generic_bound_is_hard_diagnostic_until_behavior_solver_exists() {
+        let program = parse_program(
+            r#"
+show<T: Display> = (value: T) T {
+    return value
+}
+
+main = () i32 {
+    return show(1)
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("unsupported generic bounds should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("generic bound `Display` on type parameter `T` cannot be satisfied")),
+            "expected generic bound diagnostic, got {errors:?}"
         );
     }
 

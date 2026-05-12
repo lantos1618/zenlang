@@ -1,0 +1,19 @@
+{ io } = std
+
+Result<T, E>:
+    Ok(T),
+    Err(E)
+
+unwrap_or<T, E> = (value: Result<T, E>, fallback: T) T {
+    value ?
+        | Ok(inner) { inner }
+        | Err(_) { fallback }
+}
+
+main = () i32 {
+    ok = Result<i32, str>.Ok(5)
+    err = Result<i32, str>.Err("bad")
+    io.println("${unwrap_or<i32, str>(ok, 0)}")
+    io.println("${unwrap_or<i32, str>(err, 9)}")
+    return 0
+}

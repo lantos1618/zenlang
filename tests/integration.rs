@@ -18,7 +18,7 @@ fn test_dir() -> PathBuf {
 }
 
 /// Run the full pipeline for a `.zen` file and return stdout of the compiled binary.
-fn compile_and_run(zen_path: &Path) -> String {
+fn compile_to_c(zen_path: &Path) -> String {
     // 1. Load & parse
     let mut files = FileTable::new();
     let mut module_system = ModuleSystem::new();
@@ -51,9 +51,14 @@ fn compile_and_run(zen_path: &Path) -> String {
 
     // 3. Codegen
     let backend = CBackend;
-    let c_source = backend.generate(&typed).unwrap_or_else(|e| {
-        panic!("codegen error in {}: {}", zen_path.display(), e);
-    });
+    backend
+        .generate(&typed)
+        .unwrap_or_else(|e| panic!("codegen error in {}: {}", zen_path.display(), e))
+}
+
+/// Run the full pipeline for a `.zen` file and return stdout of the compiled binary.
+fn compile_and_run(zen_path: &Path) -> String {
+    let c_source = compile_to_c(zen_path);
 
     // 4. Compile C → binary in a temp dir
     let tmp = tempfile::tempdir().expect("create temp dir");
@@ -169,6 +174,30 @@ fn test_generic_identity() {
 #[test]
 fn test_generic_struct() {
     run_test("generic_struct");
+}
+
+#[test]
+fn test_generic_enum_option() {
+    run_test("generic_enum_option");
+}
+
+#[test]
+fn test_generic_method() {
+    run_test("generic_method");
+}
+
+#[test]
+fn test_generic_result_enum() {
+    run_test("generic_result_enum");
+}
+
+#[test]
+fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
+    let c_source = compile_to_c(&test_dir().join("generic_method.zen"));
+    assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));
+    assert!(c_source.contains("Box_get_i32(box)"));
+    assert!(!c_source.contains("Box_T"));
+    assert!(!c_source.contains("T Box_get"));
 }
 
 #[test]

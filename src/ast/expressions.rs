@@ -185,6 +185,7 @@ pub enum Expression {
     },
     EnumVariant {
         enum_name: String,
+        type_args: Vec<AstType>,
         variant: String,
         payload: Option<Box<Expression>>,
         span: Span,

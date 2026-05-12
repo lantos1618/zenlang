@@ -120,6 +120,12 @@ impl Parser {
                                 };
                                 continue;
                             }
+                            if matches!(self.peek(), Token::Dot) && first_char_is_upper(name) {
+                                let enum_name = name.clone();
+                                lhs =
+                                    self.parse_generic_enum_variant(enum_name, type_args, id_span)?;
+                                continue;
+                            }
                             if matches!(self.peek(), Token::LBrace) && first_char_is_upper(name) {
                                 let name = name.clone();
                                 lhs = self.parse_struct_literal(name, type_args, id_span)?;
@@ -268,6 +274,7 @@ impl Parser {
                 let span = id_span.merge(self.prev_span());
                 return Ok(Expression::EnumVariant {
                     enum_name: enum_name.clone(),
+                    type_args: Vec::new(),
                     variant: name,
                     payload,
                     span,
@@ -350,6 +357,32 @@ impl Parser {
             type_args,
             fields,
             span: start_span.merge(end),
+        })
+    }
+
+    fn parse_generic_enum_variant(
+        &mut self,
+        enum_name: String,
+        type_args: Vec<AstType>,
+        start_span: Span,
+    ) -> Result<Expression, CompileError> {
+        self.expect(&Token::Dot)?;
+        let (variant, _) = self.expect_identifier()?;
+        let payload = if matches!(self.peek(), Token::LParen) {
+            self.advance();
+            let expr = self.parse_expression()?;
+            self.expect(&Token::RParen)?;
+            Some(Box::new(expr))
+        } else {
+            None
+        };
+        let span = start_span.merge(self.prev_span());
+        Ok(Expression::EnumVariant {
+            enum_name,
+            type_args,
+            variant,
+            payload,
+            span,
         })
     }
 }

@@ -101,6 +101,70 @@ impl TypeChecker {
         Some(mangled)
     }
 
+    pub(crate) fn specialize_generic_method(
+        &mut self,
+        name: &str,
+        substitutions: &HashMap<String, Type>,
+        span: Span,
+    ) -> Option<String> {
+        let template = self.generic_methods.get(name).cloned()?;
+        let missing: Vec<&str> = template
+            .type_params
+            .iter()
+            .map(String::as_str)
+            .filter(|param| !substitutions.contains_key(*param))
+            .collect();
+        if !missing.is_empty() {
+            self.diagnostics.push(Diagnostic::error(
+                "E5000",
+                format!(
+                    "cannot infer type argument{} {} for generic method `{}`",
+                    if missing.len() == 1 {
+                        ""
+                    } else {
+                        "s"
+                    },
+                    missing
+                        .iter()
+                        .map(|name| format!("`{name}`"))
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    name
+                ),
+                span,
+            ));
+            return None;
+        }
+
+        let mangled =
+            self.generic_function_mangled_name(name, &template.type_params, substitutions);
+        if self.specializations_seen.contains(&mangled) {
+            return Some(mangled);
+        }
+
+        self.specializations_seen.insert(mangled.clone());
+        let saved_return_type = self.current_return_type.clone();
+        let saved_self_type = self.current_self_type.clone();
+        let saved_defers = std::mem::take(&mut self.pending_defers);
+        self.type_substitutions.push(substitutions.clone());
+        match self.check_function(
+            &mangled,
+            &template.params,
+            &template.return_type,
+            &template.body,
+            &template.span,
+        ) {
+            Ok(function) => self.specialized_functions.push(function),
+            Err(diagnostic) => self.diagnostics.push(diagnostic),
+        }
+        self.type_substitutions.pop();
+        self.pending_defers = saved_defers;
+        self.current_return_type = saved_return_type;
+        self.current_self_type = saved_self_type;
+
+        Some(mangled)
+    }
+
     pub(crate) fn specialize_generic_struct(
         &mut self,
         name: &str,
@@ -133,6 +197,55 @@ impl TypeChecker {
             });
         }
         field_map
+    }
+
+    pub(crate) fn specialize_generic_enum(
+        &mut self,
+        name: &str,
+        type_args: &[AstType],
+        span: Span,
+    ) -> HashMap<String, Option<Type>> {
+        let Some(info) = self.enums.get(name).cloned() else {
+            return HashMap::new();
+        };
+        let substitutions =
+            self.type_param_substitutions(&info.type_params, type_args, "enum", name, span);
+        let variants: Vec<(String, Option<Type>)> = info
+            .variants
+            .iter()
+            .map(|(variant_name, payload)| {
+                (
+                    variant_name.clone(),
+                    payload
+                        .as_ref()
+                        .map(|payload| self.substitute_type(payload, &substitutions)),
+                )
+            })
+            .collect();
+        let variant_map = variants.iter().cloned().collect();
+        let mangled = self.mangle_generic_type_name(name, type_args);
+        if self.specialized_types_seen.insert(mangled.clone()) {
+            let typed_variants = variants
+                .into_iter()
+                .enumerate()
+                .map(
+                    |(tag, (variant_name, payload))| crate::ast::typed::TypedVariant {
+                        name: variant_name,
+                        tag: tag as u32,
+                        payload: payload.map(|ty| vec![("payload".to_string(), ty)]),
+                    },
+                )
+                .collect();
+            self.specialized_types.push(TypedTypeDef {
+                name: mangled,
+                kind: TypeDefKind::Enum {
+                    variants: typed_variants,
+                },
+                methods: Vec::new(),
+                span,
+            });
+        }
+        variant_map
     }
 
     pub(crate) fn type_param_substitutions(
@@ -296,15 +409,41 @@ fn match_type_param(
             }
         }
         AstType::Generic { name: _, type_args } => {
-            for arg in type_args {
-                if let AstType::Named(n) = arg {
-                    if type_params.contains(n) && !map.contains_key(n) {
-                        map.entry(n.clone()).or_insert_with(|| actual.clone());
-                    }
-                }
+            let actual_args = generic_type_args_from_concrete_name(actual, type_args.len());
+            for (arg, actual_arg) in type_args.iter().zip(actual_args.iter()) {
+                match_type_param(arg, actual_arg, type_params, map);
             }
         }
         _ => {}
+    }
+}
+
+fn generic_type_args_from_concrete_name(actual: &Type, expected_len: usize) -> Vec<Type> {
+    let concrete_name = match actual {
+        Type::Named(name) | Type::Struct { name, .. } | Type::Enum { name, .. } => name,
+        _ => return Vec::new(),
+    };
+    let Some(suffix) = concrete_name.rsplit_once('_').map(|(_, suffix)| suffix) else {
+        return Vec::new();
+    };
+    if expected_len != 1 {
+        return Vec::new();
+    }
+    match suffix {
+        "i8" => vec![Type::I8],
+        "i16" => vec![Type::I16],
+        "i32" => vec![Type::I32],
+        "i64" => vec![Type::I64],
+        "u8" => vec![Type::U8],
+        "u16" => vec![Type::U16],
+        "u32" => vec![Type::U32],
+        "u64" => vec![Type::U64],
+        "usize" => vec![Type::Usize],
+        "f32" => vec![Type::F32],
+        "f64" => vec![Type::F64],
+        "bool" => vec![Type::Bool],
+        "str" => vec![Type::Str],
+        other => vec![Type::Named(other.to_string())],
     }
 }
 

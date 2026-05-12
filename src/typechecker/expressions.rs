@@ -270,7 +270,7 @@ impl TypeChecker {
             Expression::MethodCall {
                 receiver,
                 method,
-                type_args: _,
+                type_args,
                 args,
                 span,
             } => {
@@ -341,26 +341,115 @@ impl TypeChecker {
                 let method_key = format!("{}.{}", type_name, method);
 
                 if let Some(info) = self.methods.get(&method_key).cloned() {
-                    self.check_call_signature(&method_key, &info.params, &typed_args, span);
                     // Found as a type method — handle generics
-                    let ret_type = if !info.type_params.is_empty() {
-                        let arg_types: Vec<Type> =
-                            typed_args.iter().map(|a| a.ty.clone()).collect();
-                        let subs =
-                            self.infer_type_args(&info.type_params, &info.params, &arg_types);
-                        self.substitute_type(&info.return_type, &subs)
+                    let (resolved_method, ret_type) = if !info.type_params.is_empty() {
+                        let subs = if type_args.is_empty() {
+                            let arg_types: Vec<Type> =
+                                typed_args.iter().map(|a| a.ty.clone()).collect();
+                            self.infer_type_args(&info.type_params, &info.params, &arg_types)
+                        } else {
+                            self.type_param_substitutions(
+                                &info.type_params,
+                                type_args,
+                                "method",
+                                &method_key,
+                                *span,
+                            )
+                        };
+                        self.check_call_signature_with_substitutions(
+                            &method_key,
+                            &info.params,
+                            &typed_args,
+                            &subs,
+                            span,
+                        );
+                        let ret = self.substitute_type(&info.return_type, &subs);
+                        let mangled = self
+                            .specialize_generic_method(&method_key, &subs, *span)
+                            .unwrap_or_else(|| {
+                                self.generic_function_mangled_name(
+                                    &method_key,
+                                    &info.type_params,
+                                    &subs,
+                                )
+                            });
+                        (mangled, ret)
                     } else {
-                        self.resolve_type(&info.return_type)
+                        self.check_call_signature(&method_key, &info.params, &typed_args, span);
+                        (
+                            format!("{}_{}", type_name, method),
+                            self.resolve_type(&info.return_type),
+                        )
                     };
-                    let mangled = format!("{}_{}", type_name, method);
                     Ok(TypedExpression {
                         kind: TypedExprKind::FunctionCall {
-                            function: mangled,
+                            function: resolved_method,
                             args: typed_args,
                         },
                         ty: ret_type,
                         span: *span,
                     })
+                } else if let Some(generic_base) = self.generic_base_type_name(&type_name) {
+                    let generic_method_key = format!("{}.{}", generic_base, method);
+                    if let Some(info) = self.methods.get(&generic_method_key).cloned() {
+                        if !info.type_params.is_empty() {
+                            let subs = if type_args.is_empty() {
+                                let arg_types: Vec<Type> =
+                                    typed_args.iter().map(|a| a.ty.clone()).collect();
+                                self.infer_type_args(&info.type_params, &info.params, &arg_types)
+                            } else {
+                                self.type_param_substitutions(
+                                    &info.type_params,
+                                    type_args,
+                                    "method",
+                                    &generic_method_key,
+                                    *span,
+                                )
+                            };
+                            self.check_call_signature_with_substitutions(
+                                &generic_method_key,
+                                &info.params,
+                                &typed_args,
+                                &subs,
+                                span,
+                            );
+                            let ret_type = self.substitute_type(&info.return_type, &subs);
+                            let mangled = self
+                                .specialize_generic_method(&generic_method_key, &subs, *span)
+                                .unwrap_or_else(|| {
+                                    self.generic_function_mangled_name(
+                                        &generic_method_key,
+                                        &info.type_params,
+                                        &subs,
+                                    )
+                                });
+                            Ok(TypedExpression {
+                                kind: TypedExprKind::FunctionCall {
+                                    function: mangled,
+                                    args: typed_args,
+                                },
+                                ty: ret_type,
+                                span: *span,
+                            })
+                        } else {
+                            self.check_call_signature(
+                                &generic_method_key,
+                                &info.params,
+                                &typed_args,
+                                span,
+                            );
+                            Ok(TypedExpression {
+                                kind: TypedExprKind::FunctionCall {
+                                    function: format!("{}_{}", generic_base, method),
+                                    args: typed_args,
+                                },
+                                ty: self.resolve_type(&info.return_type),
+                                span: *span,
+                            })
+                        }
+                    } else {
+                        self.unknown_method_expr(&type_name, method, typed_args, *span)
+                    }
                 } else if let Some(info) = self.functions.get(method).cloned() {
                     self.check_call_signature(method, &info.params, &typed_args, span);
                     // UFC: x.f(args) → f(x, args) — handle generics
@@ -382,22 +471,7 @@ impl TypeChecker {
                         span: *span,
                     })
                 } else {
-                    // Unknown method on type
-                    if !type_name.is_empty() {
-                        self.diagnostics.push(Diagnostic::warning(
-                            "W3043",
-                            format!("type `{}` has no method `{}`", type_name, method),
-                            *span,
-                        ));
-                    }
-                    Ok(TypedExpression {
-                        kind: TypedExprKind::FunctionCall {
-                            function: format!("{}_{}", type_name, method),
-                            args: typed_args,
-                        },
-                        ty: Type::Unknown,
-                        span: *span,
-                    })
+                    self.unknown_method_expr(&type_name, method, typed_args, *span)
                 }
             }
 
@@ -564,6 +638,7 @@ impl TypeChecker {
 
             Expression::EnumVariant {
                 enum_name,
+                type_args,
                 variant,
                 payload,
                 span,
@@ -572,11 +647,38 @@ impl TypeChecker {
                     Some(p) => Some(Box::new(self.check_expr(p)?)),
                     None => None,
                 };
-                if let Some(info) = self.enums.get(enum_name).cloned() {
-                    match info.variants.iter().find(|(name, _)| name == variant) {
-                        Some((_, expected_payload)) => match (expected_payload, &typed_payload) {
+                let (type_name, ty, variant_defs) = if type_args.is_empty() {
+                    let ty = self.resolve_type(&AstType::Named(enum_name.clone()));
+                    let variant_defs = self
+                        .enums
+                        .get(enum_name)
+                        .map(|info| {
+                            info.variants
+                                .iter()
+                                .map(|(variant_name, payload)| {
+                                    (
+                                        variant_name.clone(),
+                                        payload.as_ref().map(|ty| self.resolve_type(ty)),
+                                    )
+                                })
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    (enum_name.clone(), ty, variant_defs)
+                } else {
+                    let type_name = self.mangle_generic_type_name(enum_name, type_args);
+                    let ty = self.resolve_type(&AstType::Generic {
+                        name: enum_name.clone(),
+                        type_args: type_args.clone(),
+                    });
+                    let variant_defs = self.specialize_generic_enum(enum_name, type_args, *span);
+                    (type_name, ty, variant_defs)
+                };
+                if self.enums.contains_key(enum_name) {
+                    match variant_defs.get(variant) {
+                        Some(expected_payload) => match (expected_payload, &typed_payload) {
                             (Some(expected_ast), Some(actual)) => {
-                                let expected = self.resolve_type(expected_ast);
+                                let expected = expected_ast.clone();
                                 if expected != Type::Unknown
                                     && actual.ty != Type::Unknown
                                     && !self.types_compatible(&expected, &actual.ty)
@@ -631,10 +733,9 @@ impl TypeChecker {
                         *span,
                     ));
                 }
-                let ty = Type::Named(enum_name.clone());
                 Ok(TypedExpression {
                     kind: TypedExprKind::EnumVariant {
-                        type_name: enum_name.clone(),
+                        type_name,
                         variant: variant.clone(),
                         payload: typed_payload,
                     },
@@ -1208,6 +1309,38 @@ impl TypeChecker {
             Type::Ptr(inner) | Type::MutPtr(inner) => self.field_access_type_name(inner),
             _ => None,
         }
+    }
+
+    fn generic_base_type_name(&self, concrete_name: &str) -> Option<String> {
+        self.structs
+            .values()
+            .filter(|info| !info.type_params.is_empty())
+            .find(|info| concrete_name.starts_with(&format!("{}_", info.name)))
+            .map(|info| info.name.clone())
+    }
+
+    fn unknown_method_expr(
+        &mut self,
+        type_name: &str,
+        method: &str,
+        typed_args: Vec<TypedExpression>,
+        span: Span,
+    ) -> Result<TypedExpression, Diagnostic> {
+        if !type_name.is_empty() {
+            self.diagnostics.push(Diagnostic::warning(
+                "W3043",
+                format!("type `{}` has no method `{}`", type_name, method),
+                span,
+            ));
+        }
+        Ok(TypedExpression {
+            kind: TypedExprKind::FunctionCall {
+                function: format!("{}_{}", type_name, method),
+                args: typed_args,
+            },
+            ty: Type::Unknown,
+            span,
+        })
     }
 
     fn is_root_std_runtime_call(&self, module: &str, function: &str) -> bool {

@@ -291,7 +291,7 @@ impl Parser {
                 }
                 matches!(
                     self.tokens.get(i).map(|(t, _)| t),
-                    Some(Token::Comma) | Some(Token::RBrace)
+                    Some(Token::Comma) | Some(Token::Colon)
                 )
             }
             _ => false,
