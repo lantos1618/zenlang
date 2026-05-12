@@ -14,6 +14,7 @@ pub enum Namespace {
     Type,
     Module,
     Import,
+    Local,
     Behavior,
     Variant,
 }
@@ -25,6 +26,7 @@ impl Namespace {
             Namespace::Type => "type",
             Namespace::Module => "module",
             Namespace::Import => "import",
+            Namespace::Local => "local",
             Namespace::Behavior => "behavior",
             Namespace::Variant => "variant",
         }
@@ -38,6 +40,7 @@ pub struct Symbol {
     pub name: String,
     pub is_public: bool,
     pub import_source: Option<String>,
+    pub scope_id: u32,
     pub definition_span: Span,
 }
 
@@ -45,12 +48,50 @@ pub struct Symbol {
 pub struct SymbolTable {
     symbols: Vec<Symbol>,
     by_name: HashMap<(Namespace, String), SymbolId>,
+    by_scoped_name: HashMap<(Namespace, String, u32), SymbolId>,
+    next_scope_id: u32,
+}
+
+#[derive(Debug, Clone)]
+struct ScopeStack {
+    current_scope_id: u32,
+    visible_names: HashSet<String>,
+}
+
+impl ScopeStack {
+    fn new(current_scope_id: u32) -> Self {
+        Self {
+            current_scope_id,
+            visible_names: HashSet::new(),
+        }
+    }
+
+    fn with_parent(current_scope_id: u32, parent: &ScopeStack) -> Self {
+        Self {
+            current_scope_id,
+            visible_names: parent.visible_names.clone(),
+        }
+    }
+
+    fn contains(&self, name: &str) -> bool {
+        self.visible_names.contains(name)
+    }
+
+    fn insert(&mut self, name: String) {
+        self.visible_names.insert(name);
+    }
 }
 
 impl SymbolTable {
     pub fn lookup(&self, namespace: Namespace, name: &str) -> Option<&Symbol> {
         let id = self.by_name.get(&(namespace, name.to_string()))?;
         self.symbols.get(id.0 as usize)
+    }
+
+    pub fn lookup_scoped(&self, namespace: Namespace, name: &str) -> Option<&Symbol> {
+        self.symbols
+            .iter()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
     }
 
     pub fn symbols(&self) -> &[Symbol] {
@@ -65,8 +106,27 @@ impl SymbolTable {
         import_source: Option<String>,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
-        let key = (namespace, name.to_string());
-        if self.by_name.contains_key(&key) {
+        self.define_in_scope(
+            namespace,
+            name,
+            is_public,
+            import_source,
+            0,
+            definition_span,
+        )
+    }
+
+    fn define_in_scope(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        is_public: bool,
+        import_source: Option<String>,
+        scope_id: u32,
+        definition_span: Span,
+    ) -> Result<SymbolId, Box<Diagnostic>> {
+        let scoped_key = (namespace, name.to_string(), scope_id);
+        if self.by_scoped_name.contains_key(&scoped_key) {
             return Err(Box::new(Diagnostic::error(
                 "E0200",
                 format!(
@@ -79,16 +139,41 @@ impl SymbolTable {
         }
 
         let id = SymbolId(self.symbols.len() as u32);
+        if namespace != Namespace::Local {
+            self.by_name.insert((namespace, name.to_string()), id);
+        }
         self.symbols.push(Symbol {
             id,
             namespace,
             name: name.to_string(),
             is_public,
             import_source,
+            scope_id,
             definition_span,
         });
-        self.by_name.insert(key, id);
+        self.by_scoped_name.insert(scoped_key, id);
         Ok(id)
+    }
+
+    fn define_local(
+        &mut self,
+        name: &str,
+        scope_id: u32,
+        definition_span: Span,
+    ) -> Result<SymbolId, Box<Diagnostic>> {
+        self.define_in_scope(
+            Namespace::Local,
+            name,
+            false,
+            None,
+            scope_id,
+            definition_span,
+        )
+    }
+
+    fn new_scope(&mut self) -> u32 {
+        self.next_scope_id += 1;
+        self.next_scope_id
     }
 }
 
@@ -111,7 +196,7 @@ impl Resolver {
         }
 
         for decl in &program.declarations {
-            self.validate_declaration_types(&table, decl, &mut diagnostics);
+            self.validate_declaration_types(&mut table, decl, &mut diagnostics);
         }
 
         if diagnostics.is_empty() {
@@ -194,7 +279,7 @@ impl Resolver {
 
     fn validate_declaration_types(
         &self,
-        table: &SymbolTable,
+        table: &mut SymbolTable,
         decl: &Declaration,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
@@ -212,7 +297,8 @@ impl Resolver {
                 if let Some(return_type) = return_type {
                     self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
                 }
-                let mut locals = self.param_locals(params);
+                let scope_id = table.new_scope();
+                let mut locals = self.param_locals(table, params, scope_id, diagnostics);
                 self.validate_expr_refs(table, type_params, body, &mut locals, diagnostics);
             }
             Declaration::Method {
@@ -228,7 +314,8 @@ impl Resolver {
                 if let Some(return_type) = return_type {
                     self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
                 }
-                let mut locals = self.param_locals(params);
+                let scope_id = table.new_scope();
+                let mut locals = self.param_locals(table, params, scope_id, diagnostics);
                 self.validate_expr_refs(table, type_params, body, &mut locals, diagnostics);
             }
             Declaration::Struct {
@@ -240,11 +327,13 @@ impl Resolver {
                 for field in fields {
                     self.validate_type_ref(table, type_params, &field.ty, field.span, diagnostics);
                     if let Some(default) = &field.default {
+                        let scope_id = table.new_scope();
+                        let mut locals = ScopeStack::new(scope_id);
                         self.validate_expr_refs(
                             table,
                             type_params,
                             default,
-                            &mut HashSet::new(),
+                            &mut locals,
                             diagnostics,
                         );
                     }
@@ -286,7 +375,9 @@ impl Resolver {
                         );
                     }
                     if let Some(default_body) = &method.default_body {
-                        let mut locals = self.param_locals(&method.params);
+                        let scope_id = table.new_scope();
+                        let mut locals =
+                            self.param_locals(table, &method.params, scope_id, diagnostics);
                         self.validate_expr_refs(
                             table,
                             type_params,
@@ -304,7 +395,14 @@ impl Resolver {
             }
             Declaration::Import { .. } | Declaration::Error { .. } => {}
             Declaration::TopLevelExpr { expr, .. } => {
-                self.validate_expr_refs(table, &[], expr, &mut HashSet::new(), diagnostics);
+                let scope_id = table.new_scope();
+                self.validate_expr_refs(
+                    table,
+                    &[],
+                    expr,
+                    &mut ScopeStack::new(scope_id),
+                    diagnostics,
+                );
             }
         }
     }
@@ -416,10 +514,10 @@ impl Resolver {
 
     fn validate_expr_refs(
         &self,
-        table: &SymbolTable,
+        table: &mut SymbolTable,
         type_params: &[TypeParam],
         expr: &Expression,
-        locals: &mut HashSet<String>,
+        locals: &mut ScopeStack,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         match expr {
@@ -442,6 +540,15 @@ impl Resolver {
                 }
                 for arg in args {
                     self.validate_expr_refs(table, type_params, arg, locals, diagnostics);
+                }
+            }
+            Expression::Identifier { name, span } => {
+                if !self.is_known_value_name(table, locals, name) {
+                    diagnostics.push(Diagnostic::error(
+                        "E0203",
+                        format!("unknown value symbol '{name}'"),
+                        *span,
+                    ));
                 }
             }
             Expression::MethodCall {
@@ -510,7 +617,8 @@ impl Resolver {
                 self.validate_expr_refs(table, type_params, scrutinee, locals, diagnostics);
                 for arm in arms {
                     if let Some(guard) = &arm.guard {
-                        let mut arm_locals = locals.clone();
+                        let arm_scope_id = table.new_scope();
+                        let mut arm_locals = ScopeStack::with_parent(arm_scope_id, locals);
                         self.validate_expr_refs(
                             table,
                             type_params,
@@ -519,7 +627,8 @@ impl Resolver {
                             diagnostics,
                         );
                     }
-                    let mut arm_locals = locals.clone();
+                    let arm_scope_id = table.new_scope();
+                    let mut arm_locals = ScopeStack::with_parent(arm_scope_id, locals);
                     self.validate_expr_refs(
                         table,
                         type_params,
@@ -538,14 +647,16 @@ impl Resolver {
                 ..
             } => {
                 self.validate_expr_refs(table, type_params, condition, locals, diagnostics);
-                let mut body_locals = locals.clone();
+                let body_scope_id = table.new_scope();
+                let mut body_locals = ScopeStack::with_parent(body_scope_id, locals);
                 self.validate_expr_refs(table, type_params, body, &mut body_locals, diagnostics);
                 if let Expression::If {
                     else_body: Some(else_body),
                     ..
                 } = expr
                 {
-                    let mut else_locals = locals.clone();
+                    let else_scope_id = table.new_scope();
+                    let mut else_locals = ScopeStack::with_parent(else_scope_id, locals);
                     self.validate_expr_refs(
                         table,
                         type_params,
@@ -556,13 +667,15 @@ impl Resolver {
                 }
             }
             Expression::Loop { body, .. } => {
-                let mut body_locals = locals.clone();
+                let body_scope_id = table.new_scope();
+                let mut body_locals = ScopeStack::with_parent(body_scope_id, locals);
                 self.validate_expr_refs(table, type_params, body, &mut body_locals, diagnostics);
             }
             Expression::Block {
                 statements, expr, ..
             } => {
-                let mut block_locals = locals.clone();
+                let block_scope_id = table.new_scope();
+                let mut block_locals = ScopeStack::with_parent(block_scope_id, locals);
                 for statement in statements {
                     self.validate_statement_refs(
                         table,
@@ -593,10 +706,17 @@ impl Resolver {
                 body,
                 span,
             } => {
-                let mut closure_locals = locals.clone();
+                let closure_scope_id = table.new_scope();
+                let mut closure_locals = ScopeStack::with_parent(closure_scope_id, locals);
                 for param in params {
                     self.validate_type_ref(table, type_params, &param.ty, param.span, diagnostics);
-                    closure_locals.insert(param.name.clone());
+                    self.define_local_symbol(
+                        table,
+                        &param.name,
+                        param.span,
+                        &mut closure_locals,
+                        diagnostics,
+                    );
                 }
                 if let Some(return_type) = return_type {
                     self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
@@ -630,7 +750,6 @@ impl Resolver {
             | Expression::StringLiteral { .. }
             | Expression::BoolLiteral { .. }
             | Expression::CharLiteral { .. }
-            | Expression::Identifier { .. }
             | Expression::Break { .. }
             | Expression::Continue { .. }
             | Expression::Error { .. } => {}
@@ -639,10 +758,10 @@ impl Resolver {
 
     fn validate_statement_refs(
         &self,
-        table: &SymbolTable,
+        table: &mut SymbolTable,
         type_params: &[TypeParam],
         statement: &Statement,
-        locals: &mut HashSet<String>,
+        locals: &mut ScopeStack,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         match statement {
@@ -653,7 +772,7 @@ impl Resolver {
                     self.validate_type_ref(table, type_params, ty, statement.span(), diagnostics);
                 }
                 self.validate_expr_refs(table, type_params, value, locals, diagnostics);
-                locals.insert(name.clone());
+                self.define_local_symbol(table, name, statement.span(), locals, diagnostics);
             }
             Statement::Assignment { target, value, .. } => {
                 self.validate_expr_refs(table, type_params, target, locals, diagnostics);
@@ -663,7 +782,8 @@ impl Resolver {
                 self.validate_expr_refs(table, type_params, expr, locals, diagnostics);
             }
             Statement::Block { stmts, .. } => {
-                let mut block_locals = locals.clone();
+                let block_scope_id = table.new_scope();
+                let mut block_locals = ScopeStack::with_parent(block_scope_id, locals);
                 for statement in stmts {
                     self.validate_statement_refs(
                         table,
@@ -677,18 +797,37 @@ impl Resolver {
         }
     }
 
-    fn is_known_value_name(
-        &self,
-        table: &SymbolTable,
-        locals: &HashSet<String>,
-        name: &str,
-    ) -> bool {
+    fn is_known_value_name(&self, table: &SymbolTable, locals: &ScopeStack, name: &str) -> bool {
         table.lookup(Namespace::Value, name).is_some()
             || table.lookup(Namespace::Import, name).is_some()
             || locals.contains(name)
     }
 
-    fn param_locals(&self, params: &[Param]) -> HashSet<String> {
-        params.iter().map(|param| param.name.clone()).collect()
+    fn param_locals(
+        &self,
+        table: &mut SymbolTable,
+        params: &[Param],
+        scope_id: u32,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) -> ScopeStack {
+        let mut locals = ScopeStack::new(scope_id);
+        for param in params {
+            self.define_local_symbol(table, &param.name, param.span, &mut locals, diagnostics);
+        }
+        locals
+    }
+
+    fn define_local_symbol(
+        &self,
+        table: &mut SymbolTable,
+        name: &str,
+        span: Span,
+        locals: &mut ScopeStack,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+        match table.define_local(name, locals.current_scope_id, span) {
+            Ok(_) => locals.insert(name.to_string()),
+            Err(diagnostic) => diagnostics.push(*diagnostic),
+        }
     }
 }
