@@ -145,3 +145,23 @@ distance = (point: ExternalPoint) i32 { return helper() }
     assert_eq!(imported_type.import_source.as_deref(), Some("geometry"));
     assert_eq!(imported_value.import_source.as_deref(), Some("geometry"));
 }
+
+#[test]
+fn resolver_rejects_unknown_unqualified_function_calls() {
+    let program = parse_program(
+        r#"
+known = () i32 { return 1 }
+main = () i32 { return missing() }
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("unknown function call should fail");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("unknown value symbol 'missing'")),
+        "expected missing function diagnostic, got {err:?}"
+    );
+}

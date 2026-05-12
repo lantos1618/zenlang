@@ -1,6 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use crate::ast::{AstType, Declaration, Param, Program, TypeParam};
+use crate::ast::{
+    AstType, Declaration, Expression, Param, Program, Statement, StringPart, TypeParam,
+};
 use crate::error::{Diagnostic, Span};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -201,6 +203,7 @@ impl Resolver {
                 type_params,
                 params,
                 return_type,
+                body,
                 span,
                 ..
             } => {
@@ -209,11 +212,14 @@ impl Resolver {
                 if let Some(return_type) = return_type {
                     self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
                 }
+                let mut locals = self.param_locals(params);
+                self.validate_expr_refs(table, type_params, body, &mut locals, diagnostics);
             }
             Declaration::Method {
                 type_params,
                 params,
                 return_type,
+                body,
                 span,
                 ..
             } => {
@@ -222,6 +228,8 @@ impl Resolver {
                 if let Some(return_type) = return_type {
                     self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
                 }
+                let mut locals = self.param_locals(params);
+                self.validate_expr_refs(table, type_params, body, &mut locals, diagnostics);
             }
             Declaration::Struct {
                 type_params,
@@ -231,6 +239,15 @@ impl Resolver {
                 self.validate_type_param_constraints(table, type_params, diagnostics);
                 for field in fields {
                     self.validate_type_ref(table, type_params, &field.ty, field.span, diagnostics);
+                    if let Some(default) = &field.default {
+                        self.validate_expr_refs(
+                            table,
+                            type_params,
+                            default,
+                            &mut HashSet::new(),
+                            diagnostics,
+                        );
+                    }
                 }
             }
             Declaration::Enum {
@@ -268,6 +285,16 @@ impl Resolver {
                             diagnostics,
                         );
                     }
+                    if let Some(default_body) = &method.default_body {
+                        let mut locals = self.param_locals(&method.params);
+                        self.validate_expr_refs(
+                            table,
+                            type_params,
+                            default_body,
+                            &mut locals,
+                            diagnostics,
+                        );
+                    }
                 }
             }
             Declaration::ImplBlock { methods, .. } => {
@@ -275,9 +302,10 @@ impl Resolver {
                     self.validate_declaration_types(table, method, diagnostics);
                 }
             }
-            Declaration::Import { .. }
-            | Declaration::TopLevelExpr { .. }
-            | Declaration::Error { .. } => {}
+            Declaration::Import { .. } | Declaration::Error { .. } => {}
+            Declaration::TopLevelExpr { expr, .. } => {
+                self.validate_expr_refs(table, &[], expr, &mut HashSet::new(), diagnostics);
+            }
         }
     }
 
@@ -384,5 +412,283 @@ impl Resolver {
         table.lookup(Namespace::Type, name).is_some()
             || table.lookup(Namespace::Import, name).is_some()
             || type_params.iter().any(|type_param| type_param.name == name)
+    }
+
+    fn validate_expr_refs(
+        &self,
+        table: &SymbolTable,
+        type_params: &[TypeParam],
+        expr: &Expression,
+        locals: &mut HashSet<String>,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+        match expr {
+            Expression::FunctionCall {
+                name,
+                module,
+                type_args,
+                args,
+                span,
+            } => {
+                for type_arg in type_args {
+                    self.validate_type_ref(table, type_params, type_arg, *span, diagnostics);
+                }
+                if module.is_none() && !self.is_known_value_name(table, locals, name) {
+                    diagnostics.push(Diagnostic::error(
+                        "E0203",
+                        format!("unknown value symbol '{name}'"),
+                        *span,
+                    ));
+                }
+                for arg in args {
+                    self.validate_expr_refs(table, type_params, arg, locals, diagnostics);
+                }
+            }
+            Expression::MethodCall {
+                receiver,
+                type_args,
+                args,
+                span,
+                ..
+            } => {
+                self.validate_expr_refs(table, type_params, receiver, locals, diagnostics);
+                for type_arg in type_args {
+                    self.validate_type_ref(table, type_params, type_arg, *span, diagnostics);
+                }
+                for arg in args {
+                    self.validate_expr_refs(table, type_params, arg, locals, diagnostics);
+                }
+            }
+            Expression::BinaryOp { left, right, .. } => {
+                self.validate_expr_refs(table, type_params, left, locals, diagnostics);
+                self.validate_expr_refs(table, type_params, right, locals, diagnostics);
+            }
+            Expression::UnaryOp { operand, .. } => {
+                self.validate_expr_refs(table, type_params, operand, locals, diagnostics);
+            }
+            Expression::MemberAccess { object, .. } => {
+                self.validate_expr_refs(table, type_params, object, locals, diagnostics);
+            }
+            Expression::IndexAccess { object, index, .. } => {
+                self.validate_expr_refs(table, type_params, object, locals, diagnostics);
+                self.validate_expr_refs(table, type_params, index, locals, diagnostics);
+            }
+            Expression::StructLiteral {
+                type_args,
+                fields,
+                span,
+                ..
+            } => {
+                for type_arg in type_args {
+                    self.validate_type_ref(table, type_params, type_arg, *span, diagnostics);
+                }
+                for (_, value) in fields {
+                    self.validate_expr_refs(table, type_params, value, locals, diagnostics);
+                }
+            }
+            Expression::EnumVariant {
+                type_args,
+                payload,
+                span,
+                ..
+            } => {
+                for type_arg in type_args {
+                    self.validate_type_ref(table, type_params, type_arg, *span, diagnostics);
+                }
+                if let Some(payload) = payload {
+                    self.validate_expr_refs(table, type_params, payload, locals, diagnostics);
+                }
+            }
+            Expression::ArrayLiteral { elements, .. } => {
+                for element in elements {
+                    self.validate_expr_refs(table, type_params, element, locals, diagnostics);
+                }
+            }
+            Expression::Match {
+                scrutinee, arms, ..
+            } => {
+                self.validate_expr_refs(table, type_params, scrutinee, locals, diagnostics);
+                for arm in arms {
+                    if let Some(guard) = &arm.guard {
+                        let mut arm_locals = locals.clone();
+                        self.validate_expr_refs(
+                            table,
+                            type_params,
+                            guard,
+                            &mut arm_locals,
+                            diagnostics,
+                        );
+                    }
+                    let mut arm_locals = locals.clone();
+                    self.validate_expr_refs(
+                        table,
+                        type_params,
+                        &arm.body,
+                        &mut arm_locals,
+                        diagnostics,
+                    );
+                }
+            }
+            Expression::WhileLoop {
+                condition, body, ..
+            }
+            | Expression::If {
+                condition,
+                then_body: body,
+                ..
+            } => {
+                self.validate_expr_refs(table, type_params, condition, locals, diagnostics);
+                let mut body_locals = locals.clone();
+                self.validate_expr_refs(table, type_params, body, &mut body_locals, diagnostics);
+                if let Expression::If {
+                    else_body: Some(else_body),
+                    ..
+                } = expr
+                {
+                    let mut else_locals = locals.clone();
+                    self.validate_expr_refs(
+                        table,
+                        type_params,
+                        else_body,
+                        &mut else_locals,
+                        diagnostics,
+                    );
+                }
+            }
+            Expression::Loop { body, .. } => {
+                let mut body_locals = locals.clone();
+                self.validate_expr_refs(table, type_params, body, &mut body_locals, diagnostics);
+            }
+            Expression::Block {
+                statements, expr, ..
+            } => {
+                let mut block_locals = locals.clone();
+                for statement in statements {
+                    self.validate_statement_refs(
+                        table,
+                        type_params,
+                        statement,
+                        &mut block_locals,
+                        diagnostics,
+                    );
+                }
+                if let Some(expr) = expr {
+                    self.validate_expr_refs(
+                        table,
+                        type_params,
+                        expr,
+                        &mut block_locals,
+                        diagnostics,
+                    );
+                }
+            }
+            Expression::Return { value, .. } => {
+                if let Some(value) = value {
+                    self.validate_expr_refs(table, type_params, value, locals, diagnostics);
+                }
+            }
+            Expression::Closure {
+                params,
+                return_type,
+                body,
+                span,
+            } => {
+                let mut closure_locals = locals.clone();
+                for param in params {
+                    self.validate_type_ref(table, type_params, &param.ty, param.span, diagnostics);
+                    closure_locals.insert(param.name.clone());
+                }
+                if let Some(return_type) = return_type {
+                    self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
+                }
+                self.validate_expr_refs(table, type_params, body, &mut closure_locals, diagnostics);
+            }
+            Expression::Cast {
+                expr,
+                target_type,
+                span,
+            } => {
+                self.validate_expr_refs(table, type_params, expr, locals, diagnostics);
+                self.validate_type_ref(table, type_params, target_type, *span, diagnostics);
+            }
+            Expression::StringInterpolation { parts, .. } => {
+                for part in parts {
+                    if let StringPart::Expr(expr) = part {
+                        self.validate_expr_refs(table, type_params, expr, locals, diagnostics);
+                    }
+                }
+            }
+            Expression::Range { start, end, .. } => {
+                self.validate_expr_refs(table, type_params, start, locals, diagnostics);
+                self.validate_expr_refs(table, type_params, end, locals, diagnostics);
+            }
+            Expression::Defer { expr, .. } => {
+                self.validate_expr_refs(table, type_params, expr, locals, diagnostics);
+            }
+            Expression::IntLiteral { .. }
+            | Expression::FloatLiteral { .. }
+            | Expression::StringLiteral { .. }
+            | Expression::BoolLiteral { .. }
+            | Expression::CharLiteral { .. }
+            | Expression::Identifier { .. }
+            | Expression::Break { .. }
+            | Expression::Continue { .. }
+            | Expression::Error { .. } => {}
+        }
+    }
+
+    fn validate_statement_refs(
+        &self,
+        table: &SymbolTable,
+        type_params: &[TypeParam],
+        statement: &Statement,
+        locals: &mut HashSet<String>,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+        match statement {
+            Statement::VarDecl {
+                name, ty, value, ..
+            } => {
+                if let Some(ty) = ty {
+                    self.validate_type_ref(table, type_params, ty, statement.span(), diagnostics);
+                }
+                self.validate_expr_refs(table, type_params, value, locals, diagnostics);
+                locals.insert(name.clone());
+            }
+            Statement::Assignment { target, value, .. } => {
+                self.validate_expr_refs(table, type_params, target, locals, diagnostics);
+                self.validate_expr_refs(table, type_params, value, locals, diagnostics);
+            }
+            Statement::Expression { expr, .. } => {
+                self.validate_expr_refs(table, type_params, expr, locals, diagnostics);
+            }
+            Statement::Block { stmts, .. } => {
+                let mut block_locals = locals.clone();
+                for statement in stmts {
+                    self.validate_statement_refs(
+                        table,
+                        type_params,
+                        statement,
+                        &mut block_locals,
+                        diagnostics,
+                    );
+                }
+            }
+        }
+    }
+
+    fn is_known_value_name(
+        &self,
+        table: &SymbolTable,
+        locals: &HashSet<String>,
+        name: &str,
+    ) -> bool {
+        table.lookup(Namespace::Value, name).is_some()
+            || table.lookup(Namespace::Import, name).is_some()
+            || locals.contains(name)
+    }
+
+    fn param_locals(&self, params: &[Param]) -> HashSet<String> {
+        params.iter().map(|param| param.name.clone()).collect()
     }
 }
