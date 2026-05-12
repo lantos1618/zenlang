@@ -903,6 +903,12 @@ impl TypeChecker {
                             usize::from(variant.payload.is_some()),
                             variant.span,
                         );
+                        self.validate_resolver_variant_payload_type(
+                            symbol,
+                            &variant.name,
+                            expected_variant_payload_type_name(&variant.payload),
+                            variant.span,
+                        );
                     }
                 }
                 Declaration::Behavior {
@@ -1109,6 +1115,29 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_variant_payload_type(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_payload_type_name: Option<String>,
+        span: Span,
+    ) {
+        if symbol.variant_payload_type_name != expected_payload_type_name {
+            let actual = symbol
+                .variant_payload_type_name
+                .as_deref()
+                .unwrap_or("unknown");
+            let expected = expected_payload_type_name.as_deref().unwrap_or("none");
+            self.diagnostics.push(Diagnostic::error(
+                "E0218",
+                format!(
+                    "resolver variant symbol '{name}' has payload type '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
+    }
+
     fn require_resolver_value_symbol(
         &mut self,
         symbols: &SymbolTable,
@@ -1200,6 +1229,10 @@ fn format_field_type_names(fields: Option<&[(String, String)]>) -> String {
         ),
         None => "unknown".to_string(),
     }
+}
+
+fn expected_variant_payload_type_name(payload: &Option<AstType>) -> Option<String> {
+    payload.as_ref().map(AstType::display_name)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────
@@ -1577,6 +1610,35 @@ Option: Some(i32), None
                 .message
                 .contains("resolver variant symbol 'Some' has payload count 0, expected 1")),
             "expected resolver enum variant payload count diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_enum_variant_payload_types() {
+        let program = parse_program(
+            r#"
+Option: Some(i32), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_variant_payload_type_name_for_test(
+            Namespace::Variant,
+            "Some",
+            Some("bool".to_string()),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver enum variant payload type mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver variant symbol 'Some' has payload type 'bool', expected 'i32'"
+            )),
+            "expected resolver enum variant payload type diagnostic, got {err:?}"
         );
     }
 

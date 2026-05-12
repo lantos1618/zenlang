@@ -78,6 +78,8 @@ checked-in docs, tests, and commits only.
 - Resolver enum variant symbols now carry payload-count metadata, and
   typechecker setup rejects mismatches before collecting enum variant metadata
   from the AST.
+- Resolver enum variant symbols now carry payload-type metadata, and typechecker
+  setup rejects mismatches before collecting enum variant metadata from the AST.
 
 ## Current Phase
 
