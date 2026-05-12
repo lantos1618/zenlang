@@ -65,6 +65,9 @@ checked-in docs, tests, and commits only.
 - Resolver value symbols now also carry return-type metadata, and typechecker
   setup rejects return-type mismatches before collecting declarations from the
   AST.
+- Resolver type and behavior symbols now carry generic type-parameter counts,
+  and typechecker setup rejects mismatches before collecting struct, enum, or
+  behavior metadata from the AST.
 
 ## Current Phase
 

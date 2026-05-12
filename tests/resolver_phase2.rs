@@ -228,6 +228,43 @@ log = () { return }
 }
 
 #[test]
+fn resolver_records_type_and_behavior_generic_parameter_counts() {
+    let program = parse_program(
+        r#"
+Box<T>: { value: T }
+Option<T>: Some(T), None
+Serializable<T>: behavior {
+    encode: (T) str
+}
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Box")
+            .expect("struct symbol")
+            .type_parameter_count,
+        Some(1)
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Option")
+            .expect("enum symbol")
+            .type_parameter_count,
+        Some(1)
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Behavior, "Serializable")
+            .expect("behavior symbol")
+            .type_parameter_count,
+        Some(1)
+    );
+}
+
+#[test]
 fn resolver_rejects_unknown_unqualified_function_calls() {
     let program = parse_program(
         r#"

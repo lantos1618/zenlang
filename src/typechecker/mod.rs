@@ -840,16 +840,34 @@ impl TypeChecker {
                         *span,
                     );
                 }
-                Declaration::Struct { name, span, .. } => {
-                    self.require_resolver_symbol(symbols, Namespace::Type, name, *span);
+                Declaration::Struct {
+                    name,
+                    type_params,
+                    span,
+                    ..
+                } => {
+                    self.require_resolver_type_like_symbol(
+                        symbols,
+                        Namespace::Type,
+                        name,
+                        type_params.len(),
+                        *span,
+                    );
                 }
                 Declaration::Enum {
                     name,
+                    type_params,
                     variants,
                     span,
                     ..
                 } => {
-                    self.require_resolver_symbol(symbols, Namespace::Type, name, *span);
+                    self.require_resolver_type_like_symbol(
+                        symbols,
+                        Namespace::Type,
+                        name,
+                        type_params.len(),
+                        *span,
+                    );
                     for variant in variants {
                         self.require_resolver_symbol(
                             symbols,
@@ -859,8 +877,19 @@ impl TypeChecker {
                         );
                     }
                 }
-                Declaration::Behavior { name, span, .. } => {
-                    self.require_resolver_symbol(symbols, Namespace::Behavior, name, *span);
+                Declaration::Behavior {
+                    name,
+                    type_params,
+                    span,
+                    ..
+                } => {
+                    self.require_resolver_type_like_symbol(
+                        symbols,
+                        Namespace::Behavior,
+                        name,
+                        type_params.len(),
+                        *span,
+                    );
                 }
                 Declaration::Import {
                     names,
@@ -884,7 +913,13 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
+                    self.require_resolver_type_like_symbol(
+                        symbols,
+                        Namespace::Type,
+                        type_name,
+                        0,
+                        *span,
+                    );
                     if let Some(behavior) = behavior {
                         self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
                     }
@@ -940,6 +975,35 @@ impl TypeChecker {
                     "resolver symbol table missing {} symbol '{}'",
                     namespace.diagnostic_name(),
                     name
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn require_resolver_type_like_symbol(
+        &mut self,
+        symbols: &SymbolTable,
+        namespace: Namespace,
+        name: &str,
+        expected_type_parameter_count: usize,
+        span: Span,
+    ) {
+        let Some(symbol) = symbols.lookup(namespace, name) else {
+            self.require_resolver_symbol(symbols, namespace, name, span);
+            return;
+        };
+
+        if symbol.type_parameter_count != Some(expected_type_parameter_count) {
+            let actual = symbol
+                .type_parameter_count
+                .map(|count| count.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0213",
+                format!(
+                    "resolver {} symbol '{name}' has type parameter count {actual}, expected {expected_type_parameter_count}",
+                    namespace.diagnostic_name()
                 ),
                 span,
             ));
@@ -1222,6 +1286,41 @@ main = () i32 { return 0 }
                 .message
                 .contains("resolver value symbol 'main' has return type 'bool', expected 'i32'")),
             "expected resolver function return diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_type_parameter_counts() {
+        let program = parse_program(
+            r#"
+Box<T>: { value: T }
+Serializable<T>: behavior {
+    encode: (T) str
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_count_for_test(Namespace::Type, "Box", Some(0));
+        symbols.set_type_parameter_count_for_test(Namespace::Behavior, "Serializable", Some(0));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver generic arity mismatches should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver type symbol 'Box' has type parameter count 0, expected 1")),
+            "expected resolver type generic arity diagnostic, got {err:?}"
+        );
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver behavior symbol 'Serializable' has type parameter count 0, expected 1"
+            )),
+            "expected resolver behavior generic arity diagnostic, got {err:?}"
         );
     }
 

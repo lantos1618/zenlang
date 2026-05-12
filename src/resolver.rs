@@ -42,6 +42,7 @@ pub struct Symbol {
     pub import_source: Option<String>,
     pub parameter_count: Option<usize>,
     pub return_type_name: Option<String>,
+    pub type_parameter_count: Option<usize>,
     pub scope_id: u32,
     pub definition_span: Span,
 }
@@ -51,6 +52,7 @@ struct SymbolMetadata {
     import_source: Option<String>,
     parameter_count: Option<usize>,
     return_type_name: Option<String>,
+    type_parameter_count: Option<usize>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -162,6 +164,22 @@ impl SymbolTable {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn set_type_parameter_count_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        type_parameter_count: Option<usize>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.type_parameter_count = type_parameter_count;
+        }
+    }
+
     fn define(
         &mut self,
         namespace: Namespace,
@@ -178,6 +196,7 @@ impl SymbolTable {
                 import_source,
                 parameter_count: None,
                 return_type_name: None,
+                type_parameter_count: None,
             },
             0,
             definition_span,
@@ -200,6 +219,30 @@ impl SymbolTable {
                 import_source: None,
                 parameter_count: Some(parameter_count),
                 return_type_name: Some(return_type_name),
+                type_parameter_count: None,
+            },
+            0,
+            definition_span,
+        )
+    }
+
+    fn define_type_like(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        is_public: bool,
+        type_parameter_count: usize,
+        definition_span: Span,
+    ) -> Result<SymbolId, Box<Diagnostic>> {
+        self.define_in_scope(
+            namespace,
+            name,
+            is_public,
+            SymbolMetadata {
+                import_source: None,
+                parameter_count: None,
+                return_type_name: None,
+                type_parameter_count: Some(type_parameter_count),
             },
             0,
             definition_span,
@@ -240,6 +283,7 @@ impl SymbolTable {
             import_source: metadata.import_source,
             parameter_count: metadata.parameter_count,
             return_type_name: metadata.return_type_name,
+            type_parameter_count: metadata.type_parameter_count,
             scope_id,
             definition_span,
         });
@@ -338,18 +382,23 @@ impl Resolver {
                 )?;
             }
             Declaration::Struct {
-                name, public, span, ..
+                name,
+                type_params,
+                public,
+                span,
+                ..
             } => {
-                table.define(Namespace::Type, name, *public, None, *span)?;
+                table.define_type_like(Namespace::Type, name, *public, type_params.len(), *span)?;
             }
             Declaration::Enum {
                 name,
+                type_params,
                 variants,
                 public,
                 span,
                 ..
             } => {
-                table.define(Namespace::Type, name, *public, None, *span)?;
+                table.define_type_like(Namespace::Type, name, *public, type_params.len(), *span)?;
                 for variant in variants {
                     table.define(
                         Namespace::Variant,
@@ -360,8 +409,19 @@ impl Resolver {
                     )?;
                 }
             }
-            Declaration::Behavior { name, span, .. } => {
-                table.define(Namespace::Behavior, name, false, None, *span)?;
+            Declaration::Behavior {
+                name,
+                type_params,
+                span,
+                ..
+            } => {
+                table.define_type_like(
+                    Namespace::Behavior,
+                    name,
+                    false,
+                    type_params.len(),
+                    *span,
+                )?;
             }
             Declaration::Import {
                 names,
