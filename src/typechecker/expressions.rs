@@ -189,11 +189,18 @@ impl TypeChecker {
                 let (resolved_name, ret_type) =
                     if let Some(info) = self.functions.get(&full_name).cloned() {
                         if !info.type_params.is_empty() {
-                            // Generic function: infer type args and substitute
-                            let arg_types: Vec<Type> =
-                                typed_args.iter().map(|a| a.ty.clone()).collect();
-                            let subs =
-                                self.infer_type_args(&info.type_params, &info.params, &arg_types);
+                            let subs = if type_args.is_empty() {
+                                let arg_types: Vec<Type> =
+                                    typed_args.iter().map(|a| a.ty.clone()).collect();
+                                self.infer_type_args(&info.type_params, &info.params, &arg_types)
+                            } else {
+                                self.explicit_type_arg_substitutions(
+                                    &full_name,
+                                    &info.type_params,
+                                    type_args,
+                                    *span,
+                                )
+                            };
                             self.check_call_signature_with_substitutions(
                                 &full_name,
                                 &info.params,
@@ -1167,6 +1174,33 @@ impl TypeChecker {
                 ));
             }
         }
+    }
+
+    fn explicit_type_arg_substitutions(
+        &mut self,
+        callee: &str,
+        type_params: &[String],
+        type_args: &[AstType],
+        span: Span,
+    ) -> std::collections::HashMap<String, Type> {
+        if type_params.len() != type_args.len() {
+            self.diagnostics.push(Diagnostic::error(
+                "E5001",
+                format!(
+                    "generic function `{}` expects {} type arguments, found {}",
+                    callee,
+                    type_params.len(),
+                    type_args.len()
+                ),
+                span,
+            ));
+        }
+
+        type_params
+            .iter()
+            .zip(type_args.iter())
+            .map(|(param, arg)| (param.clone(), self.resolve_type(arg)))
+            .collect()
     }
 
     fn field_access_type_name(&self, ty: &Type) -> Option<String> {

@@ -9,6 +9,6 @@ main = () i32 {
     y = identity(7)
     io.println("${x}")
     io.println("${y}")
-    io.println(identity("ok"))
+    io.println(identity<str>("ok"))
     return 0
 }

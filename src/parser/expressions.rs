@@ -91,6 +91,40 @@ impl Parser {
                     }
                 }
 
+                // Generic function call: name<T, U>(args)
+                Token::Lt => {
+                    if let Expression::Identifier {
+                        ref name,
+                        span: id_span,
+                    } = lhs
+                    {
+                        let (l_bp, _) = postfix_bp();
+                        if l_bp < min_bp {
+                            break;
+                        }
+
+                        let saved = self.pos;
+                        if let Ok(type_args) = self.parse_type_arg_list() {
+                            if matches!(self.peek(), Token::LParen) {
+                                let name = name.clone();
+                                self.advance(); // consume (
+                                let args = self.parse_arg_list()?;
+                                let end = self.expect(&Token::RParen)?;
+                                let span = id_span.merge(end);
+                                lhs = Expression::FunctionCall {
+                                    name,
+                                    module: None,
+                                    type_args,
+                                    args,
+                                    span,
+                                };
+                                continue;
+                            }
+                        }
+                        self.pos = saved;
+                    }
+                }
+
                 // Match/conditional: expr ?
                 Token::Question => {
                     let (l_bp, _) = (2, 1);
