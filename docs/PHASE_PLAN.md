@@ -36,6 +36,8 @@ checked-in docs, tests, and commits only.
   reference diagnostics in `tests/resolver_phase2.rs`.
 - Resolver import declarations now produce explicit import binding symbols with
   source module metadata instead of relying on ad hoc imported-name collection.
+- Resolver now walks declaration bodies enough to diagnose simple unresolved
+  unqualified function calls using resolver-owned value/import symbols.
 
 ## Current Phase
 
@@ -48,10 +50,9 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Add value reference diagnostics for simple function-call references so unresolved
-top-level calls can be reported by resolver-owned symbol data before later
-typechecker integration.
+Add scoped symbol data for function parameters and local bindings so resolver
+body validation can report shadowing and unresolved local identifier references
+without relying on typechecker-only scope state.
 
 After that, choose the next narrow Phase 2 resolver slice from the remaining
-gaps: scoped symbols or wiring resolver output into the typechecker/module
-pipeline.
+gap: wiring resolver output into the typechecker/module pipeline.
