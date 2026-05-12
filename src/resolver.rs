@@ -177,6 +177,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_import_source_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        import_source: Option<String>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.import_source = import_source;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_parameter_count_for_test(
         &mut self,
         namespace: Namespace,

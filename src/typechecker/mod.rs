@@ -972,7 +972,12 @@ impl TypeChecker {
                         *span,
                     );
                     for name in names {
-                        self.require_resolver_symbol(symbols, Namespace::Import, name, *span);
+                        self.require_resolver_import_symbol(
+                            symbols,
+                            name,
+                            &module_path.join("."),
+                            *span,
+                        );
                     }
                 }
                 Declaration::ImplBlock {
@@ -1050,6 +1055,30 @@ impl TypeChecker {
                     "resolver symbol table missing {} symbol '{}'",
                     namespace.diagnostic_name(),
                     name
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn require_resolver_import_symbol(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        expected_source: &str,
+        span: Span,
+    ) {
+        let Some(symbol) = symbols.lookup(Namespace::Import, name) else {
+            self.require_resolver_symbol(symbols, Namespace::Import, name, span);
+            return;
+        };
+
+        if symbol.import_source.as_deref() != Some(expected_source) {
+            let actual = symbol.import_source.as_deref().unwrap_or("unknown");
+            self.diagnostics.push(Diagnostic::error(
+                "E0227",
+                format!(
+                    "resolver import symbol '{name}' has source '{actual}', expected '{expected_source}'"
                 ),
                 span,
             ));
@@ -1636,6 +1665,34 @@ main = () i32 {
             .expect("resolver import symbols should seed typechecker imports");
 
         assert!(tc.is_root_std_import("io"));
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_import_sources() {
+        let program = parse_program(
+            r#"
+{ io } = std
+main = () i32 {
+    return 0
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_import_source_for_test(Namespace::Import, "io", Some("other".to_string()));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver import source mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver import symbol 'io' has source 'other', expected 'std'")),
+            "expected resolver import source diagnostic, got {err:?}"
+        );
     }
 
     #[test]

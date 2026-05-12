@@ -44,6 +44,8 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker setup accepts resolver `SymbolTable` through
   `check_program_with_symbols`.
 - Typechecker imports can be seeded from resolver import binding symbols.
+- Typechecker setup rejects resolver import binding source mismatches before
+  seeding imported module-call bindings.
 - The non-merging module graph records resolver `SymbolTable` data per module
   and rejects resolver diagnostics from loaded dependency modules.
 - Behavior impl methods are recorded and validated through resolver
