@@ -102,6 +102,25 @@ impl SymbolTable {
         &self.symbols
     }
 
+    #[cfg(test)]
+    pub(crate) fn remove_for_test(&mut self, namespace: Namespace, name: &str) {
+        self.symbols
+            .retain(|symbol| symbol.namespace != namespace || symbol.name != name);
+        self.by_name.clear();
+        self.by_scoped_name.clear();
+        for (idx, symbol) in self.symbols.iter_mut().enumerate() {
+            symbol.id = SymbolId(idx as u32);
+            if symbol.namespace != Namespace::Local {
+                self.by_name
+                    .insert((symbol.namespace, symbol.name.clone()), symbol.id);
+            }
+            self.by_scoped_name.insert(
+                (symbol.namespace, symbol.name.clone(), symbol.scope_id),
+                symbol.id,
+            );
+        }
+    }
+
     fn define(
         &mut self,
         namespace: Namespace,

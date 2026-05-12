@@ -48,11 +48,13 @@ and do not assume Phase 4 is ready without evidence.
   and rejects resolver diagnostics from loaded dependency modules.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
+- Enum variants are validated through resolver `Variant` symbols during
+  typechecker setup.
 
 ## Unresolved Gaps
 
 - Phase 2 is not complete: resolver/typechecker integration still has duplicate
-  declaration collection for functions, structs, enums, and behaviors.
+  declaration collection for functions, structs, enum metadata, and behaviors.
 - Phase 4 is not complete: deterministic `build.zen` graph tests and
   implementation are still absent.
 - Effect checking, typed allocator semantics, actors in std integration,

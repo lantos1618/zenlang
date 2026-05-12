@@ -57,6 +57,8 @@ checked-in docs, tests, and commits only.
   graph is returned.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
+- Typechecker resolver-symbol validation now checks enum variant symbols from
+  resolver output instead of treating enum type presence as sufficient.
 
 ## Current Phase
 
