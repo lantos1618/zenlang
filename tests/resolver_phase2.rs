@@ -347,6 +347,52 @@ Serializable<T>: behavior {
 }
 
 #[test]
+fn resolver_records_type_and_behavior_generic_bounds() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+Box<T: Json>: { value: T }
+Option<T: Json>: Some(T), None
+Serializable<T: Json>: behavior {
+    encode: (T) str
+}
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Box")
+            .expect("struct symbol")
+            .type_parameter_bounds
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&[("T".to_string(), "Json".to_string())][..])
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Option")
+            .expect("enum symbol")
+            .type_parameter_bounds
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&[("T".to_string(), "Json".to_string())][..])
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Behavior, "Serializable")
+            .expect("behavior symbol")
+            .type_parameter_bounds
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&[("T".to_string(), "Json".to_string())][..])
+    );
+}
+
+#[test]
 fn resolver_records_behavior_method_signatures() {
     let program = parse_program(
         r#"

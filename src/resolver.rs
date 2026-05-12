@@ -382,11 +382,12 @@ impl SymbolTable {
         namespace: Namespace,
         name: &str,
         is_public: bool,
-        type_parameter_count: usize,
+        type_params: &[TypeParam],
         field_type_names: Option<Vec<(String, String)>>,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
         let field_count = field_type_names.as_ref().map(Vec::len);
+        let type_parameter_count = type_params.len();
         self.define_in_scope(
             namespace,
             name,
@@ -397,7 +398,7 @@ impl SymbolTable {
                 parameter_type_names: None,
                 return_type_name: None,
                 type_parameter_count: Some(type_parameter_count),
-                type_parameter_bounds: None,
+                type_parameter_bounds: Some(resolver_type_parameter_bounds(type_params)),
                 field_count,
                 field_type_names,
                 variant_payload_count: None,
@@ -442,10 +443,11 @@ impl SymbolTable {
     fn define_behavior(
         &mut self,
         name: &str,
-        type_parameter_count: usize,
+        type_params: &[TypeParam],
         behavior_method_signatures: Vec<MethodSignatureMetadata>,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
+        let type_parameter_count = type_params.len();
         self.define_in_scope(
             Namespace::Behavior,
             name,
@@ -456,7 +458,7 @@ impl SymbolTable {
                 parameter_type_names: None,
                 return_type_name: None,
                 type_parameter_count: Some(type_parameter_count),
-                type_parameter_bounds: None,
+                type_parameter_bounds: Some(resolver_type_parameter_bounds(type_params)),
                 field_count: None,
                 field_type_names: None,
                 variant_payload_count: None,
@@ -619,7 +621,7 @@ impl Resolver {
                     Namespace::Type,
                     name,
                     *public,
-                    type_params.len(),
+                    type_params,
                     Some(resolver_field_type_names(fields)),
                     *span,
                 )?;
@@ -632,14 +634,7 @@ impl Resolver {
                 span,
                 ..
             } => {
-                table.define_type_like(
-                    Namespace::Type,
-                    name,
-                    *public,
-                    type_params.len(),
-                    None,
-                    *span,
-                )?;
+                table.define_type_like(Namespace::Type, name, *public, type_params, None, *span)?;
                 for variant in variants {
                     table.define_variant(
                         &variant.name,
@@ -658,7 +653,7 @@ impl Resolver {
             } => {
                 table.define_behavior(
                     name,
-                    type_params.len(),
+                    type_params,
                     resolver_behavior_method_signatures(methods),
                     *span,
                 )?;

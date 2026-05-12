@@ -62,6 +62,8 @@ and do not assume Phase 4 is ready without evidence.
   setup rejects mismatches before collecting function or method metadata.
 - Resolver type and behavior symbols carry generic parameter-count metadata, and
   typechecker setup rejects mismatches before collecting declaration metadata.
+- Resolver type and behavior symbols carry generic type-parameter bounds, and
+  typechecker setup rejects mismatches before collecting declaration metadata.
 - Resolver behavior symbols carry method signature metadata, and typechecker
   setup rejects mismatches before collecting behavior metadata.
 - Resolver struct symbols carry field-count metadata, and typechecker setup

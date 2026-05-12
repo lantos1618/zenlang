@@ -861,6 +861,7 @@ impl TypeChecker {
                         Namespace::Type,
                         name,
                         type_params.len(),
+                        expected_type_parameter_bounds(type_params),
                         *span,
                     ) else {
                         continue;
@@ -892,6 +893,7 @@ impl TypeChecker {
                         Namespace::Type,
                         name,
                         type_params.len(),
+                        expected_type_parameter_bounds(type_params),
                         *span,
                     );
                     for variant in variants {
@@ -930,6 +932,7 @@ impl TypeChecker {
                         Namespace::Behavior,
                         name,
                         type_params.len(),
+                        expected_type_parameter_bounds(type_params),
                         *span,
                     ) else {
                         continue;
@@ -968,6 +971,7 @@ impl TypeChecker {
                         Namespace::Type,
                         type_name,
                         0,
+                        Vec::new(),
                         *span,
                     );
                     if let Some(behavior) = behavior {
@@ -1037,6 +1041,7 @@ impl TypeChecker {
         namespace: Namespace,
         name: &str,
         expected_type_parameter_count: usize,
+        expected_type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
         span: Span,
     ) -> Option<&'a crate::resolver::Symbol> {
         let Some(symbol) = symbols.lookup(namespace, name) else {
@@ -1053,6 +1058,21 @@ impl TypeChecker {
                 "E0213",
                 format!(
                     "resolver {} symbol '{name}' has type parameter count {actual}, expected {expected_type_parameter_count}",
+                    namespace.diagnostic_name()
+                ),
+                span,
+            ));
+        }
+
+        if symbol.type_parameter_bounds.as_deref()
+            != Some(expected_type_parameter_bounds.as_slice())
+        {
+            let actual = format_type_parameter_bounds(symbol.type_parameter_bounds.as_deref());
+            let expected = format_type_parameter_bounds(Some(&expected_type_parameter_bounds));
+            self.diagnostics.push(Diagnostic::error(
+                "E0222",
+                format!(
+                    "resolver {} symbol '{name}' has type parameter bounds '{actual}', expected '{expected}'",
                     namespace.diagnostic_name()
                 ),
                 span,
@@ -1728,6 +1748,38 @@ Serializable<T>: behavior {
                 "resolver behavior symbol 'Serializable' has type parameter count 0, expected 1"
             )),
             "expected resolver behavior generic arity diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_type_parameter_bounds() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+Box<T: Json>: { value: T }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_bounds_for_test(
+            Namespace::Type,
+            "Box",
+            Some(vec![("T".to_string(), "Other".to_string())]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver type generic bound mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver type symbol 'Box' has type parameter bounds '(T: Other)', expected '(T: Json)'"
+            )),
+            "expected resolver type generic bound diagnostic, got {err:?}"
         );
     }
 
