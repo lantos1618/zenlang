@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::ast::{
-    AstType, Declaration, Expression, Param, Program, Statement, StringPart, TypeParam,
+    AstType, Declaration, Expression, Param, Pattern, Program, Statement, StringPart, TypeParam,
 };
 use crate::error::{Diagnostic, Span};
 
@@ -55,14 +55,14 @@ pub struct SymbolTable {
 #[derive(Debug, Clone)]
 struct ScopeStack {
     current_scope_id: u32,
-    visible_names: HashSet<String>,
+    visible_names: HashMap<String, bool>,
 }
 
 impl ScopeStack {
     fn new(current_scope_id: u32) -> Self {
         Self {
             current_scope_id,
-            visible_names: HashSet::new(),
+            visible_names: HashMap::new(),
         }
     }
 
@@ -74,11 +74,15 @@ impl ScopeStack {
     }
 
     fn contains(&self, name: &str) -> bool {
-        self.visible_names.contains(name)
+        self.visible_names.contains_key(name)
     }
 
-    fn insert(&mut self, name: String) {
-        self.visible_names.insert(name);
+    fn is_mutable(&self, name: &str) -> bool {
+        self.visible_names.get(name).copied().unwrap_or(false)
+    }
+
+    fn insert(&mut self, name: String, mutable: bool) {
+        self.visible_names.insert(name, mutable);
     }
 }
 
@@ -619,6 +623,7 @@ impl Resolver {
                     if let Some(guard) = &arm.guard {
                         let arm_scope_id = table.new_scope();
                         let mut arm_locals = ScopeStack::with_parent(arm_scope_id, locals);
+                        self.bind_pattern_locals(table, &arm.pattern, &mut arm_locals, diagnostics);
                         self.validate_expr_refs(
                             table,
                             type_params,
@@ -629,6 +634,7 @@ impl Resolver {
                     }
                     let arm_scope_id = table.new_scope();
                     let mut arm_locals = ScopeStack::with_parent(arm_scope_id, locals);
+                    self.bind_pattern_locals(table, &arm.pattern, &mut arm_locals, diagnostics);
                     self.validate_expr_refs(
                         table,
                         type_params,
@@ -713,6 +719,7 @@ impl Resolver {
                     self.define_local_symbol(
                         table,
                         &param.name,
+                        false,
                         param.span,
                         &mut closure_locals,
                         diagnostics,
@@ -766,13 +773,27 @@ impl Resolver {
     ) {
         match statement {
             Statement::VarDecl {
-                name, ty, value, ..
+                name,
+                ty,
+                value,
+                mutable,
+                constant,
+                ..
             } => {
                 if let Some(ty) = ty {
                     self.validate_type_ref(table, type_params, ty, statement.span(), diagnostics);
                 }
                 self.validate_expr_refs(table, type_params, value, locals, diagnostics);
-                self.define_local_symbol(table, name, statement.span(), locals, diagnostics);
+                if *constant || *mutable || !locals.is_mutable(name) {
+                    self.define_local_symbol(
+                        table,
+                        name,
+                        *mutable,
+                        statement.span(),
+                        locals,
+                        diagnostics,
+                    );
+                }
             }
             Statement::Assignment { target, value, .. } => {
                 self.validate_expr_refs(table, type_params, target, locals, diagnostics);
@@ -812,7 +833,14 @@ impl Resolver {
     ) -> ScopeStack {
         let mut locals = ScopeStack::new(scope_id);
         for param in params {
-            self.define_local_symbol(table, &param.name, param.span, &mut locals, diagnostics);
+            self.define_local_symbol(
+                table,
+                &param.name,
+                false,
+                param.span,
+                &mut locals,
+                diagnostics,
+            );
         }
         locals
     }
@@ -821,13 +849,61 @@ impl Resolver {
         &self,
         table: &mut SymbolTable,
         name: &str,
+        mutable: bool,
         span: Span,
         locals: &mut ScopeStack,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         match table.define_local(name, locals.current_scope_id, span) {
-            Ok(_) => locals.insert(name.to_string()),
+            Ok(_) => locals.insert(name.to_string(), mutable),
             Err(diagnostic) => diagnostics.push(*diagnostic),
+        }
+    }
+
+    fn bind_pattern_locals(
+        &self,
+        table: &mut SymbolTable,
+        pattern: &Pattern,
+        locals: &mut ScopeStack,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+        match pattern {
+            Pattern::Identifier { name, span } => {
+                self.define_local_symbol(table, name, false, *span, locals, diagnostics);
+            }
+            Pattern::Struct { fields, .. } => {
+                for (name, nested) in fields {
+                    if let Some(nested) = nested {
+                        self.bind_pattern_locals(table, nested, locals, diagnostics);
+                    } else {
+                        self.define_local_symbol(
+                            table,
+                            name,
+                            false,
+                            pattern.span(),
+                            locals,
+                            diagnostics,
+                        );
+                    }
+                }
+            }
+            Pattern::Enum {
+                payload: Some(payload),
+                ..
+            } => {
+                self.bind_pattern_locals(table, payload, locals, diagnostics);
+            }
+            Pattern::Or { patterns, .. } => {
+                for pattern in patterns {
+                    self.bind_pattern_locals(table, pattern, locals, diagnostics);
+                }
+            }
+            Pattern::Wildcard { .. }
+            | Pattern::Literal { .. }
+            | Pattern::Enum { payload: None, .. }
+            | Pattern::Range { .. }
+            | Pattern::BoolTrue { .. }
+            | Pattern::BoolFalse { .. } => {}
         }
     }
 }

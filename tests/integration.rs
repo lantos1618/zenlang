@@ -10,6 +10,7 @@ use zen::codegen::c::CBackend;
 use zen::codegen::Backend;
 use zen::error::FileTable;
 use zen::module_system::ModuleSystem;
+use zen::resolver::Resolver;
 use zen::typechecker::TypeChecker;
 
 /// Root of the test fixtures.
@@ -35,7 +36,22 @@ fn compile_to_c(zen_path: &Path) -> String {
             );
         });
 
-    // 2. Typecheck
+    // 2. Resolve
+    Resolver::new()
+        .resolve_program(&program)
+        .unwrap_or_else(|diags| {
+            panic!(
+                "resolver error in {}:\n  {}",
+                zen_path.display(),
+                diags
+                    .iter()
+                    .map(|d| d.message.clone())
+                    .collect::<Vec<_>>()
+                    .join("\n  ")
+            );
+        });
+
+    // 3. Typecheck
     let mut checker = TypeChecker::new();
     let typed = checker.check_program(&program).unwrap_or_else(|diags| {
         panic!(
@@ -49,7 +65,7 @@ fn compile_to_c(zen_path: &Path) -> String {
         );
     });
 
-    // 3. Codegen
+    // 4. Codegen
     let backend = CBackend;
     backend
         .generate(&typed)
@@ -263,6 +279,34 @@ main = () i32 {
         String::from_utf8_lossy(&output.stderr).contains("unknown value symbol 'missing_local'"),
         "expected resolver diagnostic, stderr={}",
         String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn integration_frontend_helper_runs_resolver_diagnostics() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("bad_resolver_ref.zen");
+    std::fs::write(
+        &zen_path,
+        r#"
+main = () i32 {
+    return missing_local
+}
+"#,
+    )
+    .expect("write test file");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&zen_path))
+        .expect_err("compile_to_c should reject resolver errors");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("unknown value symbol 'missing_local'"),
+        "expected resolver diagnostic, panic={message}"
     );
 }
 
