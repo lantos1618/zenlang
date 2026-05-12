@@ -70,6 +70,12 @@ struct SymbolMetadata {
     behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
 }
 
+struct ValueSignatureMetadata {
+    parameter_type_names: Vec<String>,
+    return_type_name: String,
+    type_parameter_count: usize,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct SymbolTable {
     symbols: Vec<Symbol>,
@@ -324,11 +330,10 @@ impl SymbolTable {
         &mut self,
         name: &str,
         is_public: bool,
-        parameter_count: usize,
-        parameter_type_names: Vec<String>,
-        return_type_name: String,
+        signature: ValueSignatureMetadata,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
+        let parameter_count = signature.parameter_type_names.len();
         self.define_in_scope(
             Namespace::Value,
             name,
@@ -336,9 +341,9 @@ impl SymbolTable {
             SymbolMetadata {
                 import_source: None,
                 parameter_count: Some(parameter_count),
-                parameter_type_names: Some(parameter_type_names),
-                return_type_name: Some(return_type_name),
-                type_parameter_count: None,
+                parameter_type_names: Some(signature.parameter_type_names),
+                return_type_name: Some(signature.return_type_name),
+                type_parameter_count: Some(signature.type_parameter_count),
                 field_count: None,
                 field_type_names: None,
                 variant_payload_count: None,
@@ -545,6 +550,7 @@ impl Resolver {
         match decl {
             Declaration::Function {
                 name,
+                type_params,
                 params,
                 return_type,
                 public,
@@ -554,15 +560,14 @@ impl Resolver {
                 table.define_value(
                     name,
                     *public,
-                    params.len(),
-                    resolver_param_type_names(params),
-                    resolver_return_type_name(return_type),
+                    resolver_value_signature(params, return_type, type_params),
                     *span,
                 )?;
             }
             Declaration::Method {
                 type_name,
                 method_name,
+                type_params,
                 params,
                 return_type,
                 public,
@@ -572,9 +577,7 @@ impl Resolver {
                 table.define_value(
                     &format!("{type_name}.{method_name}"),
                     *public,
-                    params.len(),
-                    resolver_param_type_names(params),
-                    resolver_return_type_name(return_type),
+                    resolver_value_signature(params, return_type, type_params),
                     *span,
                 )?;
             }
@@ -652,6 +655,7 @@ impl Resolver {
                 for method in methods {
                     if let Declaration::Function {
                         name,
+                        type_params,
                         params,
                         return_type,
                         public,
@@ -662,9 +666,7 @@ impl Resolver {
                         table.define_value(
                             &format!("{type_name}.{name}"),
                             *public,
-                            params.len(),
-                            resolver_param_type_names(params),
-                            resolver_return_type_name(return_type),
+                            resolver_value_signature(params, return_type, type_params),
                             *span,
                         )?;
                     }
@@ -1333,6 +1335,18 @@ fn resolver_return_type_name(return_type: &Option<AstType>) -> String {
 
 fn resolver_param_type_names(params: &[Param]) -> Vec<String> {
     params.iter().map(|param| param.ty.display_name()).collect()
+}
+
+fn resolver_value_signature(
+    params: &[Param],
+    return_type: &Option<AstType>,
+    type_params: &[TypeParam],
+) -> ValueSignatureMetadata {
+    ValueSignatureMetadata {
+        parameter_type_names: resolver_param_type_names(params),
+        return_type_name: resolver_return_type_name(return_type),
+        type_parameter_count: type_params.len(),
+    }
 }
 
 fn resolver_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {

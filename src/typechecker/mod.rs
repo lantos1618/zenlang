@@ -66,6 +66,12 @@ pub(crate) struct GenericFunctionTemplate {
     pub span: Span,
 }
 
+struct ExpectedValueSignature {
+    parameter_type_names: Vec<String>,
+    return_type_name: String,
+    type_parameter_count: usize,
+}
+
 /// Scope for variable types.
 #[derive(Debug, Clone)]
 struct Scope {
@@ -813,15 +819,14 @@ impl TypeChecker {
                     name,
                     params,
                     return_type,
+                    type_params,
                     span,
                     ..
                 } => {
                     self.require_resolver_value_symbol(
                         symbols,
                         name,
-                        params.len(),
-                        expected_parameter_type_names(params),
-                        expected_return_type_name(return_type),
+                        expected_value_signature(params, return_type, type_params),
                         *span,
                     );
                 }
@@ -830,15 +835,14 @@ impl TypeChecker {
                     method_name,
                     params,
                     return_type,
+                    type_params,
                     span,
                     ..
                 } => {
                     self.require_resolver_value_symbol(
                         symbols,
                         &format!("{type_name}.{method_name}"),
-                        params.len(),
-                        expected_parameter_type_names(params),
-                        expected_return_type_name(return_type),
+                        expected_value_signature(params, return_type, type_params),
                         *span,
                     );
                 }
@@ -971,6 +975,7 @@ impl TypeChecker {
                             name,
                             params,
                             return_type,
+                            type_params,
                             span,
                             ..
                         } = method
@@ -978,9 +983,7 @@ impl TypeChecker {
                             self.require_resolver_value_symbol(
                                 symbols,
                                 &format!("{type_name}.{name}"),
-                                params.len(),
-                                expected_parameter_type_names(params),
-                                expected_return_type_name(return_type),
+                                expected_value_signature(params, return_type, type_params),
                                 *span,
                             );
                         }
@@ -1174,9 +1177,7 @@ impl TypeChecker {
         &mut self,
         symbols: &SymbolTable,
         name: &str,
-        expected_parameter_count: usize,
-        expected_parameter_type_names: Vec<String>,
-        expected_return_type_name: String,
+        expected_signature: ExpectedValueSignature,
         span: Span,
     ) {
         let Some(symbol) = symbols.lookup(Namespace::Value, name) else {
@@ -1184,6 +1185,7 @@ impl TypeChecker {
             return;
         };
 
+        let expected_parameter_count = expected_signature.parameter_type_names.len();
         if symbol.parameter_count != Some(expected_parameter_count) {
             let actual = symbol
                 .parameter_count
@@ -1198,10 +1200,12 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.parameter_type_names.as_deref() != Some(expected_parameter_type_names.as_slice())
+        if symbol.parameter_type_names.as_deref()
+            != Some(expected_signature.parameter_type_names.as_slice())
         {
             let actual = format_parameter_type_names(symbol.parameter_type_names.as_deref());
-            let expected = format_parameter_type_names(Some(&expected_parameter_type_names));
+            let expected =
+                format_parameter_type_names(Some(&expected_signature.parameter_type_names));
             self.diagnostics.push(Diagnostic::error(
                 "E0216",
                 format!(
@@ -1211,12 +1215,29 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.return_type_name.as_deref() != Some(expected_return_type_name.as_str()) {
+        if symbol.return_type_name.as_deref() != Some(expected_signature.return_type_name.as_str())
+        {
             let actual = symbol.return_type_name.as_deref().unwrap_or("unknown");
             self.diagnostics.push(Diagnostic::error(
                 "E0212",
                 format!(
-                    "resolver value symbol '{name}' has return type '{actual}', expected '{expected_return_type_name}'"
+                    "resolver value symbol '{name}' has return type '{actual}', expected '{}'",
+                    expected_signature.return_type_name
+                ),
+                span,
+            ));
+        }
+
+        if symbol.type_parameter_count != Some(expected_signature.type_parameter_count) {
+            let actual = symbol
+                .type_parameter_count
+                .map(|count| count.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0220",
+                format!(
+                    "resolver value symbol '{name}' has type parameter count {actual}, expected {}",
+                    expected_signature.type_parameter_count
                 ),
                 span,
             ));
@@ -1233,6 +1254,18 @@ fn expected_return_type_name(return_type: &Option<AstType>) -> String {
 
 fn expected_parameter_type_names(params: &[Param]) -> Vec<String> {
     params.iter().map(|param| param.ty.display_name()).collect()
+}
+
+fn expected_value_signature(
+    params: &[Param],
+    return_type: &Option<AstType>,
+    type_params: &[ast::TypeParam],
+) -> ExpectedValueSignature {
+    ExpectedValueSignature {
+        parameter_type_names: expected_parameter_type_names(params),
+        return_type_name: expected_return_type_name(return_type),
+        type_parameter_count: type_params.len(),
+    }
 }
 
 fn format_parameter_type_names(names: Option<&[String]>) -> String {
@@ -1556,6 +1589,31 @@ main = () i32 { return 0 }
                 .message
                 .contains("resolver value symbol 'main' has return type 'bool', expected 'i32'")),
             "expected resolver function return diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_type_parameter_counts() {
+        let program = parse_program(
+            r#"
+identity<T> = (value: T) T { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_count_for_test(Namespace::Value, "identity", Some(0));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function generic arity mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'identity' has type parameter count 0, expected 1"
+            )),
+            "expected resolver function generic arity diagnostic, got {err:?}"
         );
     }
 

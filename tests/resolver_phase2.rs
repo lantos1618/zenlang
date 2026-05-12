@@ -258,6 +258,34 @@ log = () { return }
 }
 
 #[test]
+fn resolver_records_value_symbol_generic_parameter_counts() {
+    let program = parse_program(
+        r#"
+identity<T> = (value: T) T { return value }
+Point: { x: i32 }
+Point.wrap<T> = (self: Point, value: T) Point { return self }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "identity")
+            .expect("function symbol")
+            .type_parameter_count,
+        Some(1)
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "Point.wrap")
+            .expect("method symbol")
+            .type_parameter_count,
+        Some(1)
+    );
+}
+
+#[test]
 fn resolver_records_type_and_behavior_generic_parameter_counts() {
     let program = parse_program(
         r#"
