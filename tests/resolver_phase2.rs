@@ -199,6 +199,35 @@ Point.shift = (self: Point, dx: i32) Point { return self }
 }
 
 #[test]
+fn resolver_records_value_symbol_return_types() {
+    let program = parse_program(
+        r#"
+main = () i32 { return 0 }
+log = () { return }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "main")
+            .expect("main symbol")
+            .return_type_name
+            .as_deref(),
+        Some("i32")
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "log")
+            .expect("log symbol")
+            .return_type_name
+            .as_deref(),
+        Some("void")
+    );
+}
+
+#[test]
 fn resolver_rejects_unknown_unqualified_function_calls() {
     let program = parse_program(
         r#"

@@ -41,6 +41,7 @@ pub struct Symbol {
     pub is_public: bool,
     pub import_source: Option<String>,
     pub parameter_count: Option<usize>,
+    pub return_type_name: Option<String>,
     pub scope_id: u32,
     pub definition_span: Span,
 }
@@ -49,6 +50,7 @@ pub struct Symbol {
 struct SymbolMetadata {
     import_source: Option<String>,
     parameter_count: Option<usize>,
+    return_type_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -144,6 +146,22 @@ impl SymbolTable {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn set_return_type_name_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        return_type_name: Option<String>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.return_type_name = return_type_name;
+        }
+    }
+
     fn define(
         &mut self,
         namespace: Namespace,
@@ -159,6 +177,7 @@ impl SymbolTable {
             SymbolMetadata {
                 import_source,
                 parameter_count: None,
+                return_type_name: None,
             },
             0,
             definition_span,
@@ -170,6 +189,7 @@ impl SymbolTable {
         name: &str,
         is_public: bool,
         parameter_count: usize,
+        return_type_name: String,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
         self.define_in_scope(
@@ -179,6 +199,7 @@ impl SymbolTable {
             SymbolMetadata {
                 import_source: None,
                 parameter_count: Some(parameter_count),
+                return_type_name: Some(return_type_name),
             },
             0,
             definition_span,
@@ -218,6 +239,7 @@ impl SymbolTable {
             is_public,
             import_source: metadata.import_source,
             parameter_count: metadata.parameter_count,
+            return_type_name: metadata.return_type_name,
             scope_id,
             definition_span,
         });
@@ -285,16 +307,24 @@ impl Resolver {
             Declaration::Function {
                 name,
                 params,
+                return_type,
                 public,
                 span,
                 ..
             } => {
-                table.define_value(name, *public, params.len(), *span)?;
+                table.define_value(
+                    name,
+                    *public,
+                    params.len(),
+                    resolver_return_type_name(return_type),
+                    *span,
+                )?;
             }
             Declaration::Method {
                 type_name,
                 method_name,
                 params,
+                return_type,
                 public,
                 span,
                 ..
@@ -303,6 +333,7 @@ impl Resolver {
                     &format!("{type_name}.{method_name}"),
                     *public,
                     params.len(),
+                    resolver_return_type_name(return_type),
                     *span,
                 )?;
             }
@@ -351,6 +382,7 @@ impl Resolver {
                     if let Declaration::Function {
                         name,
                         params,
+                        return_type,
                         public,
                         span,
                         ..
@@ -360,6 +392,7 @@ impl Resolver {
                             &format!("{type_name}.{name}"),
                             *public,
                             params.len(),
+                            resolver_return_type_name(return_type),
                             *span,
                         )?;
                     }
@@ -1017,4 +1050,11 @@ impl Resolver {
             | Pattern::BoolFalse { .. } => {}
         }
     }
+}
+
+fn resolver_return_type_name(return_type: &Option<AstType>) -> String {
+    return_type
+        .as_ref()
+        .unwrap_or(&AstType::Void)
+        .display_name()
 }

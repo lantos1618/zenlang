@@ -810,14 +810,25 @@ impl TypeChecker {
         for decl in &program.declarations {
             match decl {
                 Declaration::Function {
-                    name, params, span, ..
+                    name,
+                    params,
+                    return_type,
+                    span,
+                    ..
                 } => {
-                    self.require_resolver_value_symbol(symbols, name, params.len(), *span);
+                    self.require_resolver_value_symbol(
+                        symbols,
+                        name,
+                        params.len(),
+                        expected_return_type_name(return_type),
+                        *span,
+                    );
                 }
                 Declaration::Method {
                     type_name,
                     method_name,
                     params,
+                    return_type,
                     span,
                     ..
                 } => {
@@ -825,6 +836,7 @@ impl TypeChecker {
                         symbols,
                         &format!("{type_name}.{method_name}"),
                         params.len(),
+                        expected_return_type_name(return_type),
                         *span,
                     );
                 }
@@ -878,13 +890,18 @@ impl TypeChecker {
                     }
                     for method in methods {
                         if let Declaration::Function {
-                            name, params, span, ..
+                            name,
+                            params,
+                            return_type,
+                            span,
+                            ..
                         } = method
                         {
                             self.require_resolver_value_symbol(
                                 symbols,
                                 &format!("{type_name}.{name}"),
                                 params.len(),
+                                expected_return_type_name(return_type),
                                 *span,
                             );
                         }
@@ -934,6 +951,7 @@ impl TypeChecker {
         symbols: &SymbolTable,
         name: &str,
         expected_parameter_count: usize,
+        expected_return_type_name: String,
         span: Span,
     ) {
         let Some(symbol) = symbols.lookup(Namespace::Value, name) else {
@@ -954,7 +972,25 @@ impl TypeChecker {
                 span,
             ));
         }
+
+        if symbol.return_type_name.as_deref() != Some(expected_return_type_name.as_str()) {
+            let actual = symbol.return_type_name.as_deref().unwrap_or("unknown");
+            self.diagnostics.push(Diagnostic::error(
+                "E0212",
+                format!(
+                    "resolver value symbol '{name}' has return type '{actual}', expected '{expected_return_type_name}'"
+                ),
+                span,
+            ));
+        }
     }
+}
+
+fn expected_return_type_name(return_type: &Option<AstType>) -> String {
+    return_type
+        .as_ref()
+        .unwrap_or(&AstType::Void)
+        .display_name()
 }
 
 // ── Tests ─────────────────────────────────────────────────────────
@@ -1161,6 +1197,31 @@ add = (a: i32, b: i32) i32 { return a + b }
                 .message
                 .contains("resolver value symbol 'add' has parameter count 1, expected 2")),
             "expected resolver function arity diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_return_type() {
+        let program = parse_program(
+            r#"
+main = () i32 { return 0 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_name_for_test(Namespace::Value, "main", Some("bool".to_string()));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function return mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver value symbol 'main' has return type 'bool', expected 'i32'")),
+            "expected resolver function return diagnostic, got {err:?}"
         );
     }
 
