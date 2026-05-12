@@ -161,6 +161,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_public_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        is_public: bool,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.is_public = is_public;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_parameter_count_for_test(
         &mut self,
         namespace: Namespace,

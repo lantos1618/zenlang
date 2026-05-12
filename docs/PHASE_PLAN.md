@@ -65,6 +65,9 @@ checked-in docs, tests, and commits only.
 - Resolver value symbols now carry parameter-name metadata for functions and
   methods, and typechecker setup rejects mismatches before collecting function
   signatures from the AST.
+- Resolver value symbols now carry visibility metadata for functions and
+  methods, and typechecker setup rejects mismatches before collecting function
+  signatures from the AST.
 - Resolver value symbols now carry parameter-type metadata for functions and
   methods, and typechecker setup rejects mismatches before collecting function
   signatures from the AST.

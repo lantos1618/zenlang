@@ -824,6 +824,7 @@ impl TypeChecker {
                     params,
                     return_type,
                     type_params,
+                    public,
                     span,
                     ..
                 } => {
@@ -831,6 +832,7 @@ impl TypeChecker {
                         symbols,
                         name,
                         expected_value_signature(params, return_type, type_params),
+                        *public,
                         *span,
                     );
                 }
@@ -840,6 +842,7 @@ impl TypeChecker {
                     params,
                     return_type,
                     type_params,
+                    public,
                     span,
                     ..
                 } => {
@@ -847,6 +850,7 @@ impl TypeChecker {
                         symbols,
                         &format!("{type_name}.{method_name}"),
                         expected_value_signature(params, return_type, type_params),
+                        *public,
                         *span,
                     );
                 }
@@ -984,6 +988,7 @@ impl TypeChecker {
                             params,
                             return_type,
                             type_params,
+                            public,
                             span,
                             ..
                         } = method
@@ -992,6 +997,7 @@ impl TypeChecker {
                                 symbols,
                                 &format!("{type_name}.{name}"),
                                 expected_value_signature(params, return_type, type_params),
+                                *public,
                                 *span,
                             );
                         }
@@ -1202,12 +1208,25 @@ impl TypeChecker {
         symbols: &SymbolTable,
         name: &str,
         expected_signature: ExpectedValueSignature,
+        expected_is_public: bool,
         span: Span,
     ) {
         let Some(symbol) = symbols.lookup(Namespace::Value, name) else {
             self.require_resolver_symbol(symbols, Namespace::Value, name, span);
             return;
         };
+
+        if symbol.is_public != expected_is_public {
+            self.diagnostics.push(Diagnostic::error(
+                "E0224",
+                format!(
+                    "resolver value symbol '{name}' has visibility {}, expected {}",
+                    visibility_name(symbol.is_public),
+                    visibility_name(expected_is_public)
+                ),
+                span,
+            ));
+        }
 
         let expected_parameter_count = expected_signature.parameter_type_names.len();
         if symbol.parameter_count != Some(expected_parameter_count) {
@@ -1302,6 +1321,14 @@ fn expected_return_type_name(return_type: &Option<AstType>) -> String {
         .as_ref()
         .unwrap_or(&AstType::Void)
         .display_name()
+}
+
+fn visibility_name(is_public: bool) -> &'static str {
+    if is_public {
+        "public"
+    } else {
+        "private"
+    }
 }
 
 fn expected_parameter_type_names(params: &[Param]) -> Vec<String> {
@@ -1686,6 +1713,31 @@ add = (a: i32, b: f64) f64 { return b }
                 "resolver value symbol 'add' has parameter names '(a, other)', expected '(a, b)'"
             )),
             "expected resolver function parameter name diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_visibility() {
+        let program = parse_program(
+            r#"
+pub exported = () i32 { return 1 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_public_for_test(Namespace::Value, "exported", false);
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function visibility mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'exported' has visibility private, expected public"
+            )),
+            "expected resolver function visibility diagnostic, got {err:?}"
         );
     }
 

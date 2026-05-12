@@ -54,6 +54,8 @@ and do not assume Phase 4 is ready without evidence.
   rejects mismatches for functions and methods.
 - Resolver value symbols carry parameter-name metadata, and typechecker setup
   rejects mismatches before collecting function or method metadata.
+- Resolver value symbols carry visibility metadata, and typechecker setup
+  rejects mismatches before collecting function or method metadata.
 - Resolver value symbols carry parameter-type metadata, and typechecker setup
   rejects mismatches before collecting function signatures.
 - Resolver value symbols carry return-type metadata, and typechecker setup
