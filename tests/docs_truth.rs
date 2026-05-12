@@ -135,6 +135,31 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
 }
 
 #[test]
+fn completion_audit_records_recovery_objective_evidence_and_gaps() {
+    let audit = read("docs/COMPLETION_AUDIT.md");
+
+    for required in [
+        "Objective Restatement",
+        "Prompt-To-Artifact Checklist",
+        "183d140c",
+        "docs/PHASE_PLAN.md",
+        "cargo fmt --check",
+        "cargo clippy -- -D warnings",
+        "cargo test --lib",
+        "cargo test --tests",
+        "Design Decisions Preserved",
+        "Unresolved Gaps",
+        "Phase 4 is not complete",
+        "Do not mark the objective complete",
+    ] {
+        assert!(
+            audit.contains(required),
+            "docs/COMPLETION_AUDIT.md is missing audit evidence text: {required}"
+        );
+    }
+}
+
+#[test]
 fn v1_spec_is_single_source_of_truth_and_old_spec_is_quarantined() {
     let old_spec = read("LANGUAGE_SPEC.zen");
     let old_spec_header = old_spec.lines().take(20).collect::<Vec<_>>().join("\n");
