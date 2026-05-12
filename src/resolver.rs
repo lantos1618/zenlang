@@ -139,6 +139,18 @@ impl SymbolTable {
             .find(|symbol| symbol.namespace == namespace && symbol.name == name)
     }
 
+    pub fn lookup_in_scope(
+        &self,
+        namespace: Namespace,
+        name: &str,
+        scope_id: u32,
+    ) -> Option<&Symbol> {
+        let id = self
+            .by_scoped_name
+            .get(&(namespace, name.to_string(), scope_id))?;
+        self.symbols.get(id.0 as usize)
+    }
+
     pub fn symbols(&self) -> &[Symbol] {
         &self.symbols
     }
@@ -201,6 +213,22 @@ impl SymbolTable {
             .iter_mut()
             .find(|symbol| symbol.namespace == Namespace::Local && symbol.name == name)
         {
+            symbol.is_mutable = is_mutable;
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_local_mutability_in_scope_for_test(
+        &mut self,
+        name: &str,
+        scope_id: u32,
+        is_mutable: Option<bool>,
+    ) {
+        if let Some(symbol) = self.symbols.iter_mut().find(|symbol| {
+            symbol.namespace == Namespace::Local
+                && symbol.name == name
+                && symbol.scope_id == scope_id
+        }) {
             symbol.is_mutable = is_mutable;
         }
     }

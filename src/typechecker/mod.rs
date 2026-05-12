@@ -82,6 +82,53 @@ struct ExpectedTypeLikeSymbol {
     is_public: Option<bool>,
 }
 
+#[derive(Default)]
+struct ResolverScopeCursor {
+    next_scope_id: u32,
+}
+
+impl ResolverScopeCursor {
+    fn new_scope(&mut self) -> ResolverLocalScope {
+        self.next_scope_id += 1;
+        ResolverLocalScope::new(self.next_scope_id)
+    }
+
+    fn child_scope(&mut self, parent: &ResolverLocalScope) -> ResolverLocalScope {
+        self.next_scope_id += 1;
+        ResolverLocalScope::with_parent(self.next_scope_id, parent)
+    }
+}
+
+#[derive(Clone)]
+struct ResolverLocalScope {
+    current_scope_id: u32,
+    visible_names: HashMap<String, bool>,
+}
+
+impl ResolverLocalScope {
+    fn new(current_scope_id: u32) -> Self {
+        Self {
+            current_scope_id,
+            visible_names: HashMap::new(),
+        }
+    }
+
+    fn with_parent(current_scope_id: u32, parent: &ResolverLocalScope) -> Self {
+        Self {
+            current_scope_id,
+            visible_names: parent.visible_names.clone(),
+        }
+    }
+
+    fn is_mutable(&self, name: &str) -> bool {
+        self.visible_names.get(name).copied().unwrap_or(false)
+    }
+
+    fn insert(&mut self, name: String, mutable: bool) {
+        self.visible_names.insert(name, mutable);
+    }
+}
+
 /// Scope for variable types.
 #[derive(Debug, Clone)]
 struct Scope {
@@ -823,6 +870,7 @@ impl TypeChecker {
     }
 
     fn validate_resolver_symbols(&mut self, program: &ast::Program, symbols: &SymbolTable) {
+        let mut scope_cursor = ResolverScopeCursor::default();
         for decl in &program.declarations {
             match decl {
                 Declaration::Function {
@@ -842,8 +890,14 @@ impl TypeChecker {
                         *public,
                         *span,
                     );
-                    self.require_resolver_parameter_locals(symbols, params);
-                    self.require_resolver_expr_locals(symbols, body);
+                    let mut locals = scope_cursor.new_scope();
+                    self.require_resolver_parameter_locals(symbols, params, &mut locals);
+                    self.require_resolver_expr_locals(
+                        symbols,
+                        body,
+                        &mut scope_cursor,
+                        &mut locals,
+                    );
                 }
                 Declaration::Method {
                     type_name,
@@ -863,8 +917,14 @@ impl TypeChecker {
                         *public,
                         *span,
                     );
-                    self.require_resolver_parameter_locals(symbols, params);
-                    self.require_resolver_expr_locals(symbols, body);
+                    let mut locals = scope_cursor.new_scope();
+                    self.require_resolver_parameter_locals(symbols, params, &mut locals);
+                    self.require_resolver_expr_locals(
+                        symbols,
+                        body,
+                        &mut scope_cursor,
+                        &mut locals,
+                    );
                 }
                 Declaration::Struct {
                     name,
@@ -899,7 +959,13 @@ impl TypeChecker {
                     );
                     for field in fields {
                         if let Some(default) = &field.default {
-                            self.require_resolver_expr_locals(symbols, default);
+                            let mut locals = scope_cursor.new_scope();
+                            self.require_resolver_expr_locals(
+                                symbols,
+                                default,
+                                &mut scope_cursor,
+                                &mut locals,
+                            );
                         }
                     }
                 }
@@ -972,8 +1038,18 @@ impl TypeChecker {
                     );
                     for method in methods {
                         if let Some(default_body) = &method.default_body {
-                            self.require_resolver_parameter_locals(symbols, &method.params);
-                            self.require_resolver_expr_locals(symbols, default_body);
+                            let mut locals = scope_cursor.new_scope();
+                            self.require_resolver_parameter_locals(
+                                symbols,
+                                &method.params,
+                                &mut locals,
+                            );
+                            self.require_resolver_expr_locals(
+                                symbols,
+                                default_body,
+                                &mut scope_cursor,
+                                &mut locals,
+                            );
                         }
                     }
                 }
@@ -1032,13 +1108,25 @@ impl TypeChecker {
                                 *public,
                                 *span,
                             );
-                            self.require_resolver_parameter_locals(symbols, params);
-                            self.require_resolver_expr_locals(symbols, body);
+                            let mut locals = scope_cursor.new_scope();
+                            self.require_resolver_parameter_locals(symbols, params, &mut locals);
+                            self.require_resolver_expr_locals(
+                                symbols,
+                                body,
+                                &mut scope_cursor,
+                                &mut locals,
+                            );
                         }
                     }
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
-                    self.require_resolver_expr_locals(symbols, expr);
+                    let mut locals = scope_cursor.new_scope();
+                    self.require_resolver_expr_locals(
+                        symbols,
+                        expr,
+                        &mut scope_cursor,
+                        &mut locals,
+                    );
                 }
                 Declaration::Error { .. } => {}
             }
@@ -1133,74 +1221,117 @@ impl TypeChecker {
         }
     }
 
-    fn require_resolver_parameter_locals(&mut self, symbols: &SymbolTable, params: &[Param]) {
+    fn require_resolver_parameter_locals(
+        &mut self,
+        symbols: &SymbolTable,
+        params: &[Param],
+        locals: &mut ResolverLocalScope,
+    ) {
         for param in params {
-            self.require_resolver_local_symbol(symbols, &param.name, param.mutable, param.span);
+            self.require_resolver_local_symbol(
+                symbols,
+                &param.name,
+                param.mutable,
+                locals.current_scope_id,
+                param.span,
+            );
+            locals.insert(param.name.clone(), param.mutable);
         }
     }
 
-    fn require_resolver_expr_locals(&mut self, symbols: &SymbolTable, expr: &Expression) {
+    fn require_resolver_expr_locals(
+        &mut self,
+        symbols: &SymbolTable,
+        expr: &Expression,
+        scope_cursor: &mut ResolverScopeCursor,
+        locals: &mut ResolverLocalScope,
+    ) {
         match expr {
             Expression::BinaryOp { left, right, .. } => {
-                self.require_resolver_expr_locals(symbols, left);
-                self.require_resolver_expr_locals(symbols, right);
+                self.require_resolver_expr_locals(symbols, left, scope_cursor, locals);
+                self.require_resolver_expr_locals(symbols, right, scope_cursor, locals);
             }
             Expression::UnaryOp { operand, .. } => {
-                self.require_resolver_expr_locals(symbols, operand);
+                self.require_resolver_expr_locals(symbols, operand, scope_cursor, locals);
             }
             Expression::FunctionCall { args, .. } => {
                 for arg in args {
-                    self.require_resolver_expr_locals(symbols, arg);
+                    self.require_resolver_expr_locals(symbols, arg, scope_cursor, locals);
                 }
             }
             Expression::MethodCall { receiver, args, .. } => {
-                self.require_resolver_expr_locals(symbols, receiver);
+                self.require_resolver_expr_locals(symbols, receiver, scope_cursor, locals);
                 for arg in args {
-                    self.require_resolver_expr_locals(symbols, arg);
+                    self.require_resolver_expr_locals(symbols, arg, scope_cursor, locals);
                 }
             }
             Expression::MemberAccess { object, .. } => {
-                self.require_resolver_expr_locals(symbols, object);
+                self.require_resolver_expr_locals(symbols, object, scope_cursor, locals);
             }
             Expression::IndexAccess { object, index, .. } => {
-                self.require_resolver_expr_locals(symbols, object);
-                self.require_resolver_expr_locals(symbols, index);
+                self.require_resolver_expr_locals(symbols, object, scope_cursor, locals);
+                self.require_resolver_expr_locals(symbols, index, scope_cursor, locals);
             }
             Expression::StructLiteral { fields, .. } => {
                 for (_, value) in fields {
-                    self.require_resolver_expr_locals(symbols, value);
+                    self.require_resolver_expr_locals(symbols, value, scope_cursor, locals);
                 }
             }
             Expression::EnumVariant { payload, .. } => {
                 if let Some(payload) = payload {
-                    self.require_resolver_expr_locals(symbols, payload);
+                    self.require_resolver_expr_locals(symbols, payload, scope_cursor, locals);
                 }
             }
             Expression::ArrayLiteral { elements, .. } => {
                 for element in elements {
-                    self.require_resolver_expr_locals(symbols, element);
+                    self.require_resolver_expr_locals(symbols, element, scope_cursor, locals);
                 }
             }
             Expression::Match {
                 scrutinee, arms, ..
             } => {
-                self.require_resolver_expr_locals(symbols, scrutinee);
+                self.require_resolver_expr_locals(symbols, scrutinee, scope_cursor, locals);
                 for arm in arms {
-                    self.require_resolver_pattern_locals(symbols, &arm.pattern);
-                    self.require_resolver_expr_locals(symbols, &arm.body);
                     if let Some(guard) = &arm.guard {
-                        self.require_resolver_expr_locals(symbols, guard);
+                        let mut guard_locals = scope_cursor.child_scope(locals);
+                        self.require_resolver_pattern_locals(
+                            symbols,
+                            &arm.pattern,
+                            scope_cursor,
+                            &mut guard_locals,
+                        );
+                        self.require_resolver_expr_locals(
+                            symbols,
+                            guard,
+                            scope_cursor,
+                            &mut guard_locals,
+                        );
                     }
+                    let mut arm_locals = scope_cursor.child_scope(locals);
+                    self.require_resolver_pattern_locals(
+                        symbols,
+                        &arm.pattern,
+                        scope_cursor,
+                        &mut arm_locals,
+                    );
+                    self.require_resolver_expr_locals(
+                        symbols,
+                        &arm.body,
+                        scope_cursor,
+                        &mut arm_locals,
+                    );
                 }
             }
             Expression::WhileLoop {
                 condition, body, ..
             } => {
-                self.require_resolver_expr_locals(symbols, condition);
-                self.require_resolver_expr_locals(symbols, body);
+                self.require_resolver_expr_locals(symbols, condition, scope_cursor, locals);
+                let mut body_locals = scope_cursor.child_scope(locals);
+                self.require_resolver_expr_locals(symbols, body, scope_cursor, &mut body_locals);
             }
             Expression::Loop { body, .. } => {
-                self.require_resolver_expr_locals(symbols, body);
+                let mut body_locals = scope_cursor.child_scope(locals);
+                self.require_resolver_expr_locals(symbols, body, scope_cursor, &mut body_locals);
             }
             Expression::If {
                 condition,
@@ -1208,44 +1339,77 @@ impl TypeChecker {
                 else_body,
                 ..
             } => {
-                self.require_resolver_expr_locals(symbols, condition);
-                self.require_resolver_expr_locals(symbols, then_body);
+                self.require_resolver_expr_locals(symbols, condition, scope_cursor, locals);
+                let mut then_locals = scope_cursor.child_scope(locals);
+                self.require_resolver_expr_locals(
+                    symbols,
+                    then_body,
+                    scope_cursor,
+                    &mut then_locals,
+                );
                 if let Some(else_body) = else_body {
-                    self.require_resolver_expr_locals(symbols, else_body);
+                    let mut else_locals = scope_cursor.child_scope(locals);
+                    self.require_resolver_expr_locals(
+                        symbols,
+                        else_body,
+                        scope_cursor,
+                        &mut else_locals,
+                    );
                 }
             }
             Expression::Block {
                 statements, expr, ..
             } => {
+                let mut block_locals = scope_cursor.child_scope(locals);
                 for statement in statements {
-                    self.require_resolver_statement_locals(symbols, statement);
+                    self.require_resolver_statement_locals(
+                        symbols,
+                        statement,
+                        scope_cursor,
+                        &mut block_locals,
+                    );
                 }
                 if let Some(expr) = expr {
-                    self.require_resolver_expr_locals(symbols, expr);
+                    self.require_resolver_expr_locals(
+                        symbols,
+                        expr,
+                        scope_cursor,
+                        &mut block_locals,
+                    );
                 }
             }
             Expression::Return { value, .. } => {
                 if let Some(value) = value {
-                    self.require_resolver_expr_locals(symbols, value);
+                    self.require_resolver_expr_locals(symbols, value, scope_cursor, locals);
                 }
             }
             Expression::Closure { params, body, .. } => {
-                self.require_resolver_parameter_locals(symbols, params);
-                self.require_resolver_expr_locals(symbols, body);
+                let mut closure_locals = scope_cursor.child_scope(locals);
+                for param in params {
+                    self.require_resolver_local_symbol(
+                        symbols,
+                        &param.name,
+                        false,
+                        closure_locals.current_scope_id,
+                        param.span,
+                    );
+                    closure_locals.insert(param.name.clone(), false);
+                }
+                self.require_resolver_expr_locals(symbols, body, scope_cursor, &mut closure_locals);
             }
             Expression::Cast { expr, .. } | Expression::Defer { expr, .. } => {
-                self.require_resolver_expr_locals(symbols, expr);
+                self.require_resolver_expr_locals(symbols, expr, scope_cursor, locals);
             }
             Expression::StringInterpolation { parts, .. } => {
                 for part in parts {
                     if let ast::StringPart::Expr(expr) = part {
-                        self.require_resolver_expr_locals(symbols, expr);
+                        self.require_resolver_expr_locals(symbols, expr, scope_cursor, locals);
                     }
                 }
             }
             Expression::Range { start, end, .. } => {
-                self.require_resolver_expr_locals(symbols, start);
-                self.require_resolver_expr_locals(symbols, end);
+                self.require_resolver_expr_locals(symbols, start, scope_cursor, locals);
+                self.require_resolver_expr_locals(symbols, end, scope_cursor, locals);
             }
             Expression::Identifier { .. }
             | Expression::IntLiteral { .. }
@@ -1263,54 +1427,82 @@ impl TypeChecker {
         &mut self,
         symbols: &SymbolTable,
         statement: &ast::Statement,
+        scope_cursor: &mut ResolverScopeCursor,
+        locals: &mut ResolverLocalScope,
     ) {
         match statement {
             ast::Statement::VarDecl {
                 name,
-                ty,
                 value,
                 mutable,
                 span,
+                constant,
                 ..
             } => {
-                let reassignment_form = !*mutable
-                    && ty.is_none()
-                    && symbols.symbols().iter().any(|symbol| {
-                        symbol.namespace == Namespace::Local
-                            && symbol.name == *name
-                            && symbol.is_mutable == Some(true)
-                    });
-                if !reassignment_form {
-                    self.require_resolver_local_symbol(symbols, name, *mutable, *span);
+                self.require_resolver_expr_locals(symbols, value, scope_cursor, locals);
+                if *constant || *mutable || !locals.is_mutable(name) {
+                    self.require_resolver_local_symbol(
+                        symbols,
+                        name,
+                        *mutable,
+                        locals.current_scope_id,
+                        *span,
+                    );
+                    locals.insert(name.clone(), *mutable);
                 }
-                self.require_resolver_expr_locals(symbols, value);
             }
             ast::Statement::Assignment { target, value, .. } => {
-                self.require_resolver_expr_locals(symbols, target);
-                self.require_resolver_expr_locals(symbols, value);
+                self.require_resolver_expr_locals(symbols, target, scope_cursor, locals);
+                self.require_resolver_expr_locals(symbols, value, scope_cursor, locals);
             }
             ast::Statement::Expression { expr, .. } => {
-                self.require_resolver_expr_locals(symbols, expr);
+                self.require_resolver_expr_locals(symbols, expr, scope_cursor, locals);
             }
             ast::Statement::Block { stmts, .. } => {
+                let mut block_locals = scope_cursor.child_scope(locals);
                 for statement in stmts {
-                    self.require_resolver_statement_locals(symbols, statement);
+                    self.require_resolver_statement_locals(
+                        symbols,
+                        statement,
+                        scope_cursor,
+                        &mut block_locals,
+                    );
                 }
             }
         }
     }
 
-    fn require_resolver_pattern_locals(&mut self, symbols: &SymbolTable, pattern: &ast::Pattern) {
+    fn require_resolver_pattern_locals(
+        &mut self,
+        symbols: &SymbolTable,
+        pattern: &ast::Pattern,
+        scope_cursor: &mut ResolverScopeCursor,
+        locals: &mut ResolverLocalScope,
+    ) {
         match pattern {
             ast::Pattern::Identifier { name, span } => {
-                self.require_resolver_local_symbol(symbols, name, false, *span);
+                self.require_resolver_local_symbol(
+                    symbols,
+                    name,
+                    false,
+                    locals.current_scope_id,
+                    *span,
+                );
+                locals.insert(name.clone(), false);
             }
             ast::Pattern::Struct { fields, span, .. } => {
                 for (name, nested) in fields {
                     if let Some(nested) = nested {
-                        self.require_resolver_pattern_locals(symbols, nested);
+                        self.require_resolver_pattern_locals(symbols, nested, scope_cursor, locals);
                     } else {
-                        self.require_resolver_local_symbol(symbols, name, false, *span);
+                        self.require_resolver_local_symbol(
+                            symbols,
+                            name,
+                            false,
+                            locals.current_scope_id,
+                            *span,
+                        );
+                        locals.insert(name.clone(), false);
                     }
                 }
             }
@@ -1318,19 +1510,19 @@ impl TypeChecker {
                 payload: Some(payload),
                 ..
             } => {
-                self.require_resolver_pattern_locals(symbols, payload);
+                self.require_resolver_pattern_locals(symbols, payload, scope_cursor, locals);
             }
             ast::Pattern::Or { patterns, .. } => {
                 for pattern in patterns {
-                    self.require_resolver_pattern_locals(symbols, pattern);
+                    self.require_resolver_pattern_locals(symbols, pattern, scope_cursor, locals);
                 }
             }
             ast::Pattern::Literal { value, .. } => {
-                self.require_resolver_expr_locals(symbols, value);
+                self.require_resolver_expr_locals(symbols, value, scope_cursor, locals);
             }
             ast::Pattern::Range { start, end, .. } => {
-                self.require_resolver_expr_locals(symbols, start);
-                self.require_resolver_expr_locals(symbols, end);
+                self.require_resolver_expr_locals(symbols, start, scope_cursor, locals);
+                self.require_resolver_expr_locals(symbols, end, scope_cursor, locals);
             }
             ast::Pattern::Wildcard { .. }
             | ast::Pattern::Enum { payload: None, .. }
@@ -1344,15 +1536,10 @@ impl TypeChecker {
         symbols: &SymbolTable,
         name: &str,
         expected_mutable: bool,
+        scope_id: u32,
         span: Span,
     ) {
-        let matching_symbols: Vec<_> = symbols
-            .symbols()
-            .iter()
-            .filter(|symbol| symbol.namespace == Namespace::Local && symbol.name == name)
-            .collect();
-
-        if matching_symbols.is_empty() {
+        let Some(symbol) = symbols.lookup_in_scope(Namespace::Local, name, scope_id) else {
             self.diagnostics.push(Diagnostic::error(
                 "E0228",
                 format!("resolver symbol table missing local symbol '{name}'"),
@@ -1361,11 +1548,8 @@ impl TypeChecker {
             return;
         };
 
-        if !matching_symbols
-            .iter()
-            .any(|symbol| symbol.is_mutable == Some(expected_mutable))
-        {
-            let actual = match matching_symbols[0].is_mutable {
+        if symbol.is_mutable != Some(expected_mutable) {
+            let actual = match symbol.is_mutable {
                 Some(true) => "mutable",
                 Some(false) => "immutable",
                 None => "unknown",
@@ -2271,6 +2455,45 @@ main = () i32 {
                 "resolver local symbol 'value' has mutability immutable, expected mutable"
             )),
             "expected resolver var local mutability diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_local_mutability_by_scope() {
+        let program = parse_program(
+            r#"
+main = () i32 {
+    value := 1
+    {
+        value := 2
+        value
+    }
+    return value
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let inner_scope = symbols
+            .symbols()
+            .iter()
+            .filter(|symbol| symbol.namespace == Namespace::Local && symbol.name == "value")
+            .map(|symbol| symbol.scope_id)
+            .max()
+            .expect("inner value local");
+        symbols.set_local_mutability_in_scope_for_test("value", inner_scope, Some(true));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver scoped local mutability mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver local symbol 'value' has mutability mutable, expected immutable"
+            )),
+            "expected scoped resolver local mutability diagnostic, got {err:?}"
         );
     }
 

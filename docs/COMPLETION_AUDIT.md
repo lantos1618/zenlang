@@ -59,6 +59,9 @@ and do not assume Phase 4 is ready without evidence.
   default method bodies before collecting behavior metadata.
 - Typechecker setup rejects resolver local mutability mismatches before
   collecting typed bodies from the AST.
+- Typechecker setup mirrors resolver scope allocation for local-symbol
+  validation, so same-name locals in different scopes are checked against the
+  exact resolver scope.
 - Typechecker imports can be seeded from resolver import binding symbols.
 - Typechecker setup rejects resolver import binding source mismatches before
   seeding imported module-call bindings.
