@@ -46,11 +46,13 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker imports can be seeded from resolver import binding symbols.
 - The non-merging module graph records resolver `SymbolTable` data per module
   and rejects resolver diagnostics from loaded dependency modules.
+- Behavior impl methods are recorded and validated through resolver
+  `Type.method` value symbols.
 
 ## Unresolved Gaps
 
 - Phase 2 is not complete: resolver/typechecker integration still has duplicate
-  declaration collection for functions, methods, structs, enums, and behaviors.
+  declaration collection for functions, structs, enums, and behaviors.
 - Phase 4 is not complete: deterministic `build.zen` graph tests and
   implementation are still absent.
 - Effect checking, typed allocator semantics, actors in std integration,

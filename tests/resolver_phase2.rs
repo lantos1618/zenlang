@@ -147,6 +147,30 @@ distance = (point: ExternalPoint) i32 { return helper() }
 }
 
 #[test]
+fn resolver_records_behavior_impl_methods_as_value_symbols() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    stringify: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.implements(Json) {
+    stringify = (value: Point) str { return "point" }
+}
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+    let method = table
+        .lookup(Namespace::Value, "Point.stringify")
+        .expect("impl method symbol");
+
+    assert_eq!(method.name, "Point.stringify");
+}
+
+#[test]
 fn resolver_rejects_unknown_unqualified_function_calls() {
     let program = parse_program(
         r#"

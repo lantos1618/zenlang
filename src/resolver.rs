@@ -274,9 +274,25 @@ impl Resolver {
                     table.define(Namespace::Import, name, false, Some(source.clone()), *span)?;
                 }
             }
-            Declaration::ImplBlock { .. }
-            | Declaration::TopLevelExpr { .. }
-            | Declaration::Error { .. } => {}
+            Declaration::ImplBlock {
+                type_name, methods, ..
+            } => {
+                for method in methods {
+                    if let Declaration::Function {
+                        name, public, span, ..
+                    } = method
+                    {
+                        table.define(
+                            Namespace::Value,
+                            &format!("{type_name}.{name}"),
+                            *public,
+                            None,
+                            *span,
+                        )?;
+                    }
+                }
+            }
+            Declaration::TopLevelExpr { .. } | Declaration::Error { .. } => {}
         }
         Ok(())
     }
@@ -392,7 +408,29 @@ impl Resolver {
                     }
                 }
             }
-            Declaration::ImplBlock { methods, .. } => {
+            Declaration::ImplBlock {
+                type_name,
+                behavior,
+                methods,
+                span,
+                ..
+            } => {
+                if !self.is_known_type_name(table, &[], type_name) {
+                    diagnostics.push(Diagnostic::error(
+                        "E0201",
+                        format!("unknown type symbol '{type_name}'"),
+                        *span,
+                    ));
+                }
+                if let Some(behavior) = behavior {
+                    if table.lookup(Namespace::Behavior, behavior).is_none() {
+                        diagnostics.push(Diagnostic::error(
+                            "E0202",
+                            format!("unknown behavior symbol '{behavior}'"),
+                            *span,
+                        ));
+                    }
+                }
                 for method in methods {
                     self.validate_declaration_types(table, method, diagnostics);
                 }

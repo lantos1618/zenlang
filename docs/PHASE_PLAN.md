@@ -55,6 +55,8 @@ checked-in docs, tests, and commits only.
 - The non-merging module graph now records resolver `SymbolTable` output for
   each loaded module and rejects resolver diagnostics in dependencies before the
   graph is returned.
+- Resolver and typechecker symbol validation now cover behavior impl methods as
+  `Type.method` value symbols, closing another declaration handoff gap.
 
 ## Current Phase
 

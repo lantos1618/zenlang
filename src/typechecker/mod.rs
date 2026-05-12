@@ -846,9 +846,29 @@ impl TypeChecker {
                         self.require_resolver_symbol(symbols, Namespace::Import, name, *span);
                     }
                 }
-                Declaration::ImplBlock { .. }
-                | Declaration::TopLevelExpr { .. }
-                | Declaration::Error { .. } => {}
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior,
+                    methods,
+                    span,
+                    ..
+                } => {
+                    self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
+                    if let Some(behavior) = behavior {
+                        self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
+                    }
+                    for method in methods {
+                        if let Declaration::Function { name, span, .. } = method {
+                            self.require_resolver_symbol(
+                                symbols,
+                                Namespace::Value,
+                                &format!("{type_name}.{name}"),
+                                *span,
+                            );
+                        }
+                    }
+                }
+                Declaration::TopLevelExpr { .. } | Declaration::Error { .. } => {}
             }
         }
     }
@@ -1013,6 +1033,36 @@ main = () i32 {
             .expect("resolver import symbols should seed typechecker imports");
 
         assert!(tc.is_root_std_import("io"));
+    }
+
+    #[test]
+    fn check_program_with_symbols_requires_resolver_impl_methods() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    stringify: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.implements(Json) {
+    stringify = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = SymbolTable::default();
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("missing impl method resolver symbols should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table missing value symbol 'Point.stringify'")),
+            "expected missing impl method symbol diagnostic, got {err:?}"
+        );
     }
 
     #[test]
