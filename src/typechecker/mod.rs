@@ -46,6 +46,7 @@ pub struct FuncInfo {
     pub params: Vec<(String, AstType)>,
     pub return_type: AstType,
     pub type_params: Vec<String>,
+    pub type_param_bounds: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone)]
@@ -82,6 +83,18 @@ impl Scope {
             vars: HashMap::new(),
         }
     }
+}
+
+fn type_param_bounds(type_params: &[ast::TypeParam]) -> HashMap<String, String> {
+    type_params
+        .iter()
+        .filter_map(|param| {
+            param
+                .constraint
+                .as_ref()
+                .map(|bound| (param.name.clone(), bound.clone()))
+        })
+        .collect()
 }
 
 // ── TypeChecker ───────────────────────────────────────────────────
@@ -305,6 +318,26 @@ impl TypeChecker {
 
     fn collect_declarations(&mut self, decls: &[Declaration]) {
         for decl in decls {
+            if let Declaration::Behavior {
+                name,
+                type_params,
+                methods,
+                ..
+            } = decl
+            {
+                self.validate_generic_bounds(type_params);
+                self.behaviors.insert(
+                    name.clone(),
+                    BehaviorInfo {
+                        name: name.clone(),
+                        type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
+                        methods: methods.clone(),
+                    },
+                );
+            }
+        }
+
+        for decl in decls {
             match decl {
                 Declaration::Struct {
                     name,
@@ -312,7 +345,7 @@ impl TypeChecker {
                     fields,
                     ..
                 } => {
-                    self.reject_unsupported_generic_bounds(type_params);
+                    self.validate_generic_bounds(type_params);
                     self.structs.insert(
                         name.clone(),
                         StructInfo {
@@ -331,7 +364,7 @@ impl TypeChecker {
                     variants,
                     ..
                 } => {
-                    self.reject_unsupported_generic_bounds(type_params);
+                    self.validate_generic_bounds(type_params);
                     self.enums.insert(
                         name.clone(),
                         EnumInfo {
@@ -360,10 +393,11 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.reject_unsupported_generic_bounds(type_params);
+                    self.validate_generic_bounds(type_params);
                     let ret = return_type.clone().unwrap_or(AstType::Void);
                     let collected_type_params: Vec<String> =
                         type_params.iter().map(|tp| tp.name.clone()).collect();
+                    let type_param_bounds = type_param_bounds(type_params);
                     self.functions.insert(
                         name.clone(),
                         FuncInfo {
@@ -374,6 +408,7 @@ impl TypeChecker {
                                 .collect(),
                             return_type: ret,
                             type_params: collected_type_params.clone(),
+                            type_param_bounds: type_param_bounds.clone(),
                         },
                     );
                     if !collected_type_params.is_empty() {
@@ -399,11 +434,12 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.reject_unsupported_generic_bounds(type_params);
+                    self.validate_generic_bounds(type_params);
                     let key = format!("{}.{}", type_name, method_name);
                     let ret = return_type.clone().unwrap_or(AstType::Void);
                     let collected_type_params: Vec<String> =
                         type_params.iter().map(|tp| tp.name.clone()).collect();
+                    let type_param_bounds = type_param_bounds(type_params);
                     self.methods.insert(
                         key.clone(),
                         FuncInfo {
@@ -414,6 +450,7 @@ impl TypeChecker {
                                 .collect(),
                             return_type: ret,
                             type_params: collected_type_params.clone(),
+                            type_param_bounds: type_param_bounds.clone(),
                         },
                     );
                     if !collected_type_params.is_empty() {
@@ -429,21 +466,8 @@ impl TypeChecker {
                         );
                     }
                 }
-                Declaration::Behavior {
-                    name,
-                    type_params,
-                    methods,
-                    ..
-                } => {
-                    self.reject_unsupported_generic_bounds(type_params);
-                    self.behaviors.insert(
-                        name.clone(),
-                        BehaviorInfo {
-                            name: name.clone(),
-                            type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
-                            methods: methods.clone(),
-                        },
-                    );
+                Declaration::Behavior { type_params, .. } => {
+                    self.validate_generic_bounds(type_params);
                 }
                 _ => {}
             }
@@ -588,18 +612,68 @@ impl TypeChecker {
         }
     }
 
-    fn reject_unsupported_generic_bounds(&mut self, type_params: &[ast::TypeParam]) {
+    fn validate_generic_bounds(&mut self, type_params: &[ast::TypeParam]) {
         for param in type_params {
             if let Some(bound) = &param.constraint {
+                if !self.behaviors.contains_key(bound) {
+                    self.diagnostics.push(Diagnostic::error(
+                        "E5002",
+                        format!(
+                            "generic bound `{}` on type parameter `{}` references undefined behavior",
+                            bound, param.name
+                        ),
+                        param.span,
+                    ));
+                }
+            }
+        }
+    }
+
+    pub(crate) fn check_generic_bounds(
+        &mut self,
+        bounds: &HashMap<String, String>,
+        substitutions: &HashMap<String, Type>,
+        span: Span,
+    ) {
+        for (param, behavior) in bounds {
+            let Some(concrete) = substitutions.get(param) else {
+                continue;
+            };
+            let Some(type_name) = self.behavior_bound_type_name(concrete) else {
                 self.diagnostics.push(Diagnostic::error(
-                    "E5002",
+                    "E6004",
                     format!(
-                        "generic bound `{}` on type parameter `{}` cannot be satisfied before behavior constraints are implemented",
-                        bound, param.name
+                        "type `{}` does not implement behavior `{}` required by `{}`",
+                        concrete.display_name(),
+                        behavior,
+                        param
                     ),
-                    param.span,
+                    span,
+                ));
+                continue;
+            };
+            if !self
+                .behavior_impls
+                .contains(&(type_name.clone(), behavior.clone()))
+            {
+                self.diagnostics.push(Diagnostic::error(
+                    "E6004",
+                    format!(
+                        "type `{}` does not implement behavior `{}` required by `{}`",
+                        type_name, behavior, param
+                    ),
+                    span,
                 ));
             }
+        }
+    }
+
+    fn behavior_bound_type_name(&self, ty: &Type) -> Option<String> {
+        match ty {
+            Type::Named(name) | Type::Struct { name, .. } | Type::Enum { name, .. } => {
+                Some(name.clone())
+            }
+            _ => None,
         }
     }
 
@@ -1941,7 +2015,7 @@ main = () i32 {
     }
 
     #[test]
-    fn generic_bound_is_hard_diagnostic_until_behavior_solver_exists() {
+    fn generic_bound_references_unknown_behavior_is_error() {
         let program = parse_program(
             r#"
 show<T: Display> = (value: T) T {
@@ -1957,12 +2031,77 @@ main = () i32 {
         let mut tc = TypeChecker::new();
         let errors = tc
             .check_program(&program)
-            .expect_err("unsupported generic bounds should fail");
+            .expect_err("unknown generic behavior bounds should fail");
+        assert!(
+            errors.iter().any(|d| d.message.contains(
+                "generic bound `Display` on type parameter `T` references undefined behavior"
+            )),
+            "expected generic bound diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn generic_behavior_bound_accepts_type_with_impl() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Point.implements(Json) {
+    to_json = (value: Point) str { return "point" }
+}
+
+encode<T: Json> = (value: T) str {
+    return "encoded"
+}
+
+main = () i32 {
+    p = Point { x: 1 }
+    encoded = encode(p)
+    return 0
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        tc.check_program(&program)
+            .expect("type with behavior impl should satisfy generic bound");
+    }
+
+    #[test]
+    fn generic_behavior_bound_rejects_type_without_impl() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+encode<T: Json> = (value: T) str {
+    return "encoded"
+}
+
+main = () i32 {
+    p = Point { x: 1 }
+    encoded = encode(p)
+    return 0
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("type without behavior impl should not satisfy generic bound");
         assert!(
             errors.iter().any(|d| d
                 .message
-                .contains("generic bound `Display` on type parameter `T` cannot be satisfied")),
-            "expected generic bound diagnostic, got {errors:?}"
+                .contains("type `Point` does not implement behavior `Json`")),
+            "expected missing generic bound impl diagnostic, got {errors:?}"
         );
     }
 

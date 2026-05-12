@@ -208,6 +208,7 @@ impl TypeChecker {
                                 &subs,
                                 span,
                             );
+                            self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
                             let ret = self.substitute_type(&info.return_type, &subs);
                             let mangled = self
                                 .specialize_generic_function(&full_name, &subs, *span)
@@ -363,6 +364,7 @@ impl TypeChecker {
                             &subs,
                             span,
                         );
+                        self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
                         let ret = self.substitute_type(&info.return_type, &subs);
                         let mangled = self
                             .specialize_generic_method(&method_key, &subs, *span)
@@ -413,6 +415,7 @@ impl TypeChecker {
                                 &subs,
                                 span,
                             );
+                            self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
                             let ret_type = self.substitute_type(&info.return_type, &subs);
                             let mangled = self
                                 .specialize_generic_method(&generic_method_key, &subs, *span)
