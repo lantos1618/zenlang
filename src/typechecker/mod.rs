@@ -76,6 +76,12 @@ struct ExpectedValueSignature {
     type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
 }
 
+struct ExpectedTypeLikeSymbol {
+    type_parameter_count: usize,
+    type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
+    is_public: Option<bool>,
+}
+
 /// Scope for variable types.
 #[derive(Debug, Clone)]
 struct Scope {
@@ -858,6 +864,7 @@ impl TypeChecker {
                     name,
                     type_params,
                     fields,
+                    public,
                     span,
                     ..
                 } => {
@@ -865,8 +872,7 @@ impl TypeChecker {
                         symbols,
                         Namespace::Type,
                         name,
-                        type_params.len(),
-                        expected_type_parameter_bounds(type_params),
+                        expected_type_like_symbol(type_params, Some(*public)),
                         *span,
                     ) else {
                         continue;
@@ -890,6 +896,7 @@ impl TypeChecker {
                     name,
                     type_params,
                     variants,
+                    public,
                     span,
                     ..
                 } => {
@@ -897,8 +904,7 @@ impl TypeChecker {
                         symbols,
                         Namespace::Type,
                         name,
-                        type_params.len(),
-                        expected_type_parameter_bounds(type_params),
+                        expected_type_like_symbol(type_params, Some(*public)),
                         *span,
                     );
                     for variant in variants {
@@ -936,8 +942,7 @@ impl TypeChecker {
                         symbols,
                         Namespace::Behavior,
                         name,
-                        type_params.len(),
-                        expected_type_parameter_bounds(type_params),
+                        expected_type_like_symbol(type_params, None),
                         *span,
                     ) else {
                         continue;
@@ -975,8 +980,11 @@ impl TypeChecker {
                         symbols,
                         Namespace::Type,
                         type_name,
-                        0,
-                        Vec::new(),
+                        ExpectedTypeLikeSymbol {
+                            type_parameter_count: 0,
+                            type_parameter_bounds: Vec::new(),
+                            is_public: None,
+                        },
                         *span,
                     );
                     if let Some(behavior) = behavior {
@@ -1047,8 +1055,7 @@ impl TypeChecker {
         symbols: &'a SymbolTable,
         namespace: Namespace,
         name: &str,
-        expected_type_parameter_count: usize,
-        expected_type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
+        expected: ExpectedTypeLikeSymbol,
         span: Span,
     ) -> Option<&'a crate::resolver::Symbol> {
         let Some(symbol) = symbols.lookup(namespace, name) else {
@@ -1056,7 +1063,22 @@ impl TypeChecker {
             return None;
         };
 
-        if symbol.type_parameter_count != Some(expected_type_parameter_count) {
+        if let Some(expected_is_public) = expected.is_public {
+            if symbol.is_public != expected_is_public {
+                self.diagnostics.push(Diagnostic::error(
+                    "E0225",
+                    format!(
+                        "resolver {} symbol '{name}' has visibility {}, expected {}",
+                        namespace.diagnostic_name(),
+                        visibility_name(symbol.is_public),
+                        visibility_name(expected_is_public)
+                    ),
+                    span,
+                ));
+            }
+        }
+
+        if symbol.type_parameter_count != Some(expected.type_parameter_count) {
             let actual = symbol
                 .type_parameter_count
                 .map(|count| count.to_string())
@@ -1065,17 +1087,18 @@ impl TypeChecker {
                 "E0213",
                 format!(
                     "resolver {} symbol '{name}' has type parameter count {actual}, expected {expected_type_parameter_count}",
-                    namespace.diagnostic_name()
+                    namespace.diagnostic_name(),
+                    expected_type_parameter_count = expected.type_parameter_count
                 ),
                 span,
             ));
         }
 
         if symbol.type_parameter_bounds.as_deref()
-            != Some(expected_type_parameter_bounds.as_slice())
+            != Some(expected.type_parameter_bounds.as_slice())
         {
             let actual = format_type_parameter_bounds(symbol.type_parameter_bounds.as_deref());
-            let expected = format_type_parameter_bounds(Some(&expected_type_parameter_bounds));
+            let expected = format_type_parameter_bounds(Some(&expected.type_parameter_bounds));
             self.diagnostics.push(Diagnostic::error(
                 "E0222",
                 format!(
@@ -1365,6 +1388,17 @@ fn expected_type_parameter_bounds(
                 .map(|constraint| (type_param.name.clone(), constraint.clone()))
         })
         .collect()
+}
+
+fn expected_type_like_symbol(
+    type_params: &[ast::TypeParam],
+    is_public: Option<bool>,
+) -> ExpectedTypeLikeSymbol {
+    ExpectedTypeLikeSymbol {
+        type_parameter_count: type_params.len(),
+        type_parameter_bounds: expected_type_parameter_bounds(type_params),
+        is_public,
+    }
 }
 
 fn format_type_parameter_bounds(bounds: Option<&[TypeParameterBoundMetadata]>) -> String {
@@ -1855,6 +1889,31 @@ Serializable<T>: behavior {
                 "resolver behavior symbol 'Serializable' has type parameter count 0, expected 1"
             )),
             "expected resolver behavior generic arity diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_type_visibility() {
+        let program = parse_program(
+            r#"
+pub Box<T>: { value: T }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_public_for_test(Namespace::Type, "Box", false);
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver type visibility mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver type symbol 'Box' has visibility private, expected public")),
+            "expected resolver type visibility diagnostic, got {err:?}"
         );
     }
 
