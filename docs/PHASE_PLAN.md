@@ -98,6 +98,8 @@ checked-in docs, tests, and commits only.
 - Resolver enum variant symbols now carry payload-count metadata, and
   typechecker setup rejects mismatches before collecting enum variant metadata
   from the AST.
+- Resolver enum variant symbols now carry visibility metadata, and typechecker
+  setup rejects mismatches before collecting enum variant metadata from the AST.
 - Resolver enum variant symbols now carry payload-type metadata, and typechecker
   setup rejects mismatches before collecting enum variant metadata from the AST.
 - The CLI `build` path now rejects `build.zen` explicitly until deterministic

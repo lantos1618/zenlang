@@ -923,6 +923,12 @@ impl TypeChecker {
                             usize::from(variant.payload.is_some()),
                             variant.span,
                         );
+                        self.validate_resolver_variant_visibility(
+                            symbol,
+                            &variant.name,
+                            *public,
+                            variant.span,
+                        );
                         self.validate_resolver_variant_payload_type(
                             symbol,
                             &variant.name,
@@ -1174,6 +1180,26 @@ impl TypeChecker {
                 "E0215",
                 format!(
                     "resolver variant symbol '{name}' has payload count {actual}, expected {expected_payload_count}"
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn validate_resolver_variant_visibility(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_is_public: bool,
+        span: Span,
+    ) {
+        if symbol.is_public != expected_is_public {
+            self.diagnostics.push(Diagnostic::error(
+                "E0226",
+                format!(
+                    "resolver variant symbol '{name}' has visibility {}, expected {}",
+                    visibility_name(symbol.is_public),
+                    visibility_name(expected_is_public)
                 ),
                 span,
             ));
@@ -2063,6 +2089,31 @@ Option: Some(i32), None
                 .message
                 .contains("resolver variant symbol 'Some' has payload count 0, expected 1")),
             "expected resolver enum variant payload count diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_enum_variant_visibility() {
+        let program = parse_program(
+            r#"
+pub Option<T>: Some(T), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_public_for_test(Namespace::Variant, "Some", false);
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver enum variant visibility mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver variant symbol 'Some' has visibility private, expected public"
+            )),
+            "expected resolver enum variant visibility diagnostic, got {err:?}"
         );
     }
 
