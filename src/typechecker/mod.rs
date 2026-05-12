@@ -92,6 +92,7 @@ pub struct TypeChecker {
     functions: HashMap<String, FuncInfo>,
     methods: HashMap<String, FuncInfo>, // key: "TypeName.method_name"
     behaviors: HashMap<String, BehaviorInfo>,
+    behavior_impls: HashSet<(String, String)>,
     generic_functions: HashMap<String, GenericFunctionTemplate>,
     generic_methods: HashMap<String, GenericFunctionTemplate>,
     specialized_functions: Vec<TypedFunction>,
@@ -121,6 +122,7 @@ impl TypeChecker {
             functions: HashMap::new(),
             methods: HashMap::new(),
             behaviors: HashMap::new(),
+            behavior_impls: HashSet::new(),
             generic_functions: HashMap::new(),
             generic_methods: HashMap::new(),
             specialized_functions: Vec::new(),
@@ -445,6 +447,144 @@ impl TypeChecker {
                 }
                 _ => {}
             }
+        }
+
+        for decl in decls {
+            if let Declaration::ImplBlock {
+                type_name,
+                behavior: Some(behavior),
+                methods,
+                span,
+                ..
+            } = decl
+            {
+                self.check_behavior_impl(type_name, behavior, methods, *span);
+            }
+        }
+    }
+
+    fn check_behavior_impl(
+        &mut self,
+        type_name: &str,
+        behavior: &str,
+        methods: &[Declaration],
+        span: Span,
+    ) {
+        if !self
+            .behavior_impls
+            .insert((type_name.to_string(), behavior.to_string()))
+        {
+            self.diagnostics.push(Diagnostic::error(
+                "E6003",
+                format!(
+                    "duplicate implementation of behavior `{}` for type `{}`",
+                    behavior, type_name
+                ),
+                span,
+            ));
+            return;
+        }
+
+        let Some(info) = self.behaviors.get(behavior).cloned() else {
+            self.diagnostics.push(Diagnostic::error(
+                "E6000",
+                format!("undefined behavior `{}`", behavior),
+                span,
+            ));
+            return;
+        };
+
+        for required in &info.methods {
+            let Some(actual) = methods.iter().find_map(|decl| match decl {
+                Declaration::Function {
+                    name,
+                    params,
+                    return_type,
+                    span,
+                    ..
+                } if name == &required.name => Some((params, return_type, *span)),
+                _ => None,
+            }) else {
+                self.diagnostics.push(Diagnostic::error(
+                    "E6001",
+                    format!(
+                        "type `{}` implementation of `{}` is missing required method `{}`",
+                        type_name, behavior, required.name
+                    ),
+                    span,
+                ));
+                continue;
+            };
+
+            let (actual_params, actual_return_type, actual_span) = actual;
+            if actual_params.len() != required.params.len() {
+                self.diagnostics.push(Diagnostic::error(
+                    "E6002",
+                    format!(
+                        "method `{}` for behavior `{}` expects {} parameters, found {}",
+                        required.name,
+                        behavior,
+                        required.params.len(),
+                        actual_params.len()
+                    ),
+                    actual_span,
+                ));
+                continue;
+            }
+
+            for (idx, (expected, actual)) in
+                required.params.iter().zip(actual_params.iter()).enumerate()
+            {
+                if !self.impl_ast_types_compatible(&expected.ty, &actual.ty, type_name) {
+                    self.diagnostics.push(Diagnostic::error(
+                        "E6002",
+                        format!(
+                            "parameter {} for method `{}` in behavior `{}` expects `{}`, found `{}`",
+                            idx + 1,
+                            required.name,
+                            behavior,
+                            self.impl_type_display(&expected.ty, type_name),
+                            actual.ty.display_name()
+                        ),
+                        actual.span,
+                    ));
+                }
+            }
+
+            let expected_return = required.return_type.as_ref().unwrap_or(&AstType::Void);
+            let actual_return = actual_return_type.as_ref().unwrap_or(&AstType::Void);
+            if !self.impl_ast_types_compatible(expected_return, actual_return, type_name) {
+                self.diagnostics.push(Diagnostic::error(
+                    "E6002",
+                    format!(
+                        "method `{}` for behavior `{}` expects return `{}`, found `{}`",
+                        required.name,
+                        behavior,
+                        self.impl_type_display(expected_return, type_name),
+                        actual_return.display_name()
+                    ),
+                    actual_span,
+                ));
+            }
+        }
+    }
+
+    fn impl_ast_types_compatible(
+        &self,
+        expected: &AstType,
+        actual: &AstType,
+        self_type_name: &str,
+    ) -> bool {
+        match expected {
+            AstType::SelfType => matches!(actual, AstType::Named(name) if name == self_type_name),
+            _ => expected == actual,
+        }
+    }
+
+    fn impl_type_display(&self, ty: &AstType, self_type_name: &str) -> String {
+        match ty {
+            AstType::SelfType => self_type_name.to_string(),
+            _ => ty.display_name(),
         }
     }
 
@@ -1632,6 +1772,120 @@ Serializable: behavior {
         assert_eq!(info.name, "Serializable");
         assert_eq!(info.methods.len(), 1);
         assert_eq!(info.methods[0].name, "to_json");
+    }
+
+    #[test]
+    fn behavior_impl_with_required_method_passes() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Point.implements(Json) {
+    to_json = (value: Point) str { return "point" }
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        tc.check_program(&program)
+            .expect("valid behavior impl should typecheck");
+    }
+
+    #[test]
+    fn behavior_impl_missing_required_method_is_error() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Point.implements(Json) {
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("missing behavior method should fail");
+        assert!(
+            errors.iter().any(|d| d.message.contains(
+                "type `Point` implementation of `Json` is missing required method `to_json`"
+            )),
+            "expected missing behavior method diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_impl_duplicate_is_error() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Point.implements(Json) {
+    to_json = (value: Point) str { return "point" }
+}
+
+Point.implements(Json) {
+    to_json = (value: Point) str { return "point" }
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("duplicate behavior impl should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("duplicate implementation of behavior `Json` for type `Point`")),
+            "expected duplicate behavior impl diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_impl_signature_mismatch_is_error() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Point.implements(Json) {
+    to_json = (value: i32) i32 { return value }
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("behavior impl signature mismatch should fail");
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("parameter 1 for method `to_json`")),
+            "expected behavior parameter mismatch diagnostic, got {errors:?}"
+        );
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("expects return `str`, found `i32`")),
+            "expected behavior return mismatch diagnostic, got {errors:?}"
+        );
     }
 
     #[test]

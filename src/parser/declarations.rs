@@ -109,7 +109,11 @@ impl Parser {
                 let (method_name, _method_span) = self.expect_identifier()?;
                 self.skip_newlines();
 
-                if matches!(method_name.as_str(), "implements" | "requires") {
+                if method_name == "implements" {
+                    return self.parse_behavior_impl_block(name, name_span);
+                }
+
+                if method_name == "requires" {
                     return Err(CompileError::Syntax(
                         format!(
                             "gated v1 feature '{method_name}': type association and behavior constraints are specified in docs/V1_SPEC.md but are not implemented"
@@ -638,6 +642,39 @@ impl Parser {
         Ok(Declaration::ImplBlock {
             type_name,
             behavior: None,
+            type_args: Vec::new(),
+            methods,
+            span: name_span.merge(end),
+        })
+    }
+
+    fn parse_behavior_impl_block(
+        &mut self,
+        type_name: String,
+        name_span: Span,
+    ) -> Result<Declaration, CompileError> {
+        self.skip_newlines();
+        self.expect(&Token::LParen)?;
+        self.skip_newlines();
+        let (behavior, _) = self.expect_identifier()?;
+        self.skip_newlines();
+        self.expect(&Token::RParen)?;
+        self.skip_newlines();
+        self.expect(&Token::LBrace)?;
+
+        let mut methods = Vec::new();
+        loop {
+            self.skip_newlines();
+            if matches!(self.peek(), Token::RBrace) {
+                break;
+            }
+            methods.push(self.parse_declaration()?);
+        }
+
+        let end = self.expect(&Token::RBrace)?;
+        Ok(Declaration::ImplBlock {
+            type_name,
+            behavior: Some(behavior),
             type_args: Vec::new(),
             methods,
             span: name_span.merge(end),

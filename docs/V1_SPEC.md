@@ -23,9 +23,8 @@ access, method-style calls, loops, `return`, `defer`, casts, string interpolatio
 and pattern-style `?` arms supported by the parser and C backend.
 
 Unsupported spec-like constructs must stay gated until parser and semantic tests
-exist. This includes `.implements`, `.requires`, comptime execution, type
-matching, async operations, actor syntax, package manifests, and `build.zen`
-execution.
+exist. This includes `.requires`, comptime execution, type matching, async
+operations, actor syntax, package manifests, and `build.zen` execution.
 
 ## Accepted Syntax Forms
 
@@ -49,7 +48,8 @@ advertised as implemented.
 | Pointer and slice type syntax accepted by parser | implemented | `parser::tests::parse_pointer_types`, `parser::tests::parse_slice_type` |
 | Generic syntax accepted by parser/typechecker skeleton | experimental | `parser::tests::parse_nested_generics`, `typechecker::tests::generic_function_collection` |
 | Behavior declarations `Name: behavior { method: (Self) Return }` | experimental | `parser::tests::parse_behavior_declaration`, `typechecker::tests::behavior_declaration_collection` |
-| Type association syntax `.implements` / `.requires` | gated | `parser::tests::parse_rejects_gated_type_association_with_clear_error` |
+| Explicit behavior impl blocks `Type.implements(Behavior) { ... }` | experimental | `parser::tests::parse_behavior_impl_block`, `typechecker::tests::behavior_impl_with_required_method_passes`, `typechecker::tests::behavior_impl_missing_required_method_is_error` |
+| Type association assertions `.requires` | gated | `parser::tests::parse_rejects_gated_type_association_with_clear_error` |
 
 ## Type, Module, ABI, Error, Effect, And Comptime Decisions
 

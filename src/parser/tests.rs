@@ -370,12 +370,12 @@ fn parse_error_unexpected_token() {
 
 #[test]
 fn parse_rejects_gated_type_association_with_clear_error() {
-    let result = parse_str("Point.implements(Json) { }");
+    let result = parse_str("Point.requires(Json)");
     let errs = result.expect_err("expected gated type association syntax to be rejected");
     assert!(
         errs.iter()
-            .any(|e| e.to_string().contains("gated v1 feature 'implements'")),
-        "expected clear gated implements diagnostic, got {errs:?}"
+            .any(|e| e.to_string().contains("gated v1 feature 'requires'")),
+        "expected clear gated requires diagnostic, got {errs:?}"
     );
 }
 
@@ -397,6 +397,26 @@ fn parse_behavior_declaration() {
             assert_eq!(methods[1].params[1].name, "right");
         }
         other => panic!("expected Behavior, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_behavior_impl_block() {
+    let prog =
+        parse_ok("Point.implements(Json) {\n    to_json = (value: Point) str { return \"{}\" }\n}");
+    match &prog.declarations[0] {
+        Declaration::ImplBlock {
+            type_name,
+            behavior,
+            methods,
+            ..
+        } => {
+            assert_eq!(type_name, "Point");
+            assert_eq!(behavior.as_deref(), Some("Json"));
+            assert_eq!(methods.len(), 1);
+            assert_eq!(methods[0].name(), Some("to_json"));
+        }
+        other => panic!("expected ImplBlock, got {:?}", other),
     }
 }
 
