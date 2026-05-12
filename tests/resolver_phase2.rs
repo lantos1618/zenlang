@@ -171,6 +171,34 @@ Point.implements(Json) {
 }
 
 #[test]
+fn resolver_records_value_symbol_parameter_counts() {
+    let program = parse_program(
+        r#"
+add = (a: i32, b: i32) i32 { return a + b }
+Point: { x: i32 }
+Point.shift = (self: Point, dx: i32) Point { return self }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "add")
+            .expect("function symbol")
+            .parameter_count,
+        Some(2)
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "Point.shift")
+            .expect("method symbol")
+            .parameter_count,
+        Some(2)
+    );
+}
+
+#[test]
 fn resolver_rejects_unknown_unqualified_function_calls() {
     let program = parse_program(
         r#"

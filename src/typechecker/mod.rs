@@ -809,19 +809,22 @@ impl TypeChecker {
     fn validate_resolver_symbols(&mut self, program: &ast::Program, symbols: &SymbolTable) {
         for decl in &program.declarations {
             match decl {
-                Declaration::Function { name, span, .. } => {
-                    self.require_resolver_symbol(symbols, Namespace::Value, name, *span);
+                Declaration::Function {
+                    name, params, span, ..
+                } => {
+                    self.require_resolver_value_symbol(symbols, name, params.len(), *span);
                 }
                 Declaration::Method {
                     type_name,
                     method_name,
+                    params,
                     span,
                     ..
                 } => {
-                    self.require_resolver_symbol(
+                    self.require_resolver_value_symbol(
                         symbols,
-                        Namespace::Value,
                         &format!("{type_name}.{method_name}"),
+                        params.len(),
                         *span,
                     );
                 }
@@ -874,11 +877,14 @@ impl TypeChecker {
                         self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
                     }
                     for method in methods {
-                        if let Declaration::Function { name, span, .. } = method {
-                            self.require_resolver_symbol(
+                        if let Declaration::Function {
+                            name, params, span, ..
+                        } = method
+                        {
+                            self.require_resolver_value_symbol(
                                 symbols,
-                                Namespace::Value,
                                 &format!("{type_name}.{name}"),
+                                params.len(),
                                 *span,
                             );
                         }
@@ -917,6 +923,33 @@ impl TypeChecker {
                     "resolver symbol table missing {} symbol '{}'",
                     namespace.diagnostic_name(),
                     name
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn require_resolver_value_symbol(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        expected_parameter_count: usize,
+        span: Span,
+    ) {
+        let Some(symbol) = symbols.lookup(Namespace::Value, name) else {
+            self.require_resolver_symbol(symbols, Namespace::Value, name, span);
+            return;
+        };
+
+        if symbol.parameter_count != Some(expected_parameter_count) {
+            let actual = symbol
+                .parameter_count
+                .map(|count| count.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0211",
+                format!(
+                    "resolver value symbol '{name}' has parameter count {actual}, expected {expected_parameter_count}"
                 ),
                 span,
             ));
@@ -1103,6 +1136,31 @@ Option: Some(i32), None
                 .message
                 .contains("resolver symbol table missing variant symbol 'Some'")),
             "expected missing enum variant symbol diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_arity() {
+        let program = parse_program(
+            r#"
+add = (a: i32, b: i32) i32 { return a + b }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_count_for_test(Namespace::Value, "add", Some(1));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function arity mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver value symbol 'add' has parameter count 1, expected 2")),
+            "expected resolver function arity diagnostic, got {err:?}"
         );
     }
 

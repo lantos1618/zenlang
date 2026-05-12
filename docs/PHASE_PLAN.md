@@ -59,6 +59,9 @@ checked-in docs, tests, and commits only.
   `Type.method` value symbols, closing another declaration handoff gap.
 - Typechecker resolver-symbol validation now checks enum variant symbols from
   resolver output instead of treating enum type presence as sufficient.
+- Resolver value symbols now carry parameter-count metadata for functions and
+  methods, and typechecker setup rejects mismatches against that resolver-owned
+  signature data.
 
 ## Current Phase
 

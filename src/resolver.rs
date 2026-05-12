@@ -40,8 +40,15 @@ pub struct Symbol {
     pub name: String,
     pub is_public: bool,
     pub import_source: Option<String>,
+    pub parameter_count: Option<usize>,
     pub scope_id: u32,
     pub definition_span: Span,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct SymbolMetadata {
+    import_source: Option<String>,
+    parameter_count: Option<usize>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -121,6 +128,22 @@ impl SymbolTable {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn set_parameter_count_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        parameter_count: Option<usize>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.parameter_count = parameter_count;
+        }
+    }
+
     fn define(
         &mut self,
         namespace: Namespace,
@@ -133,7 +156,30 @@ impl SymbolTable {
             namespace,
             name,
             is_public,
-            import_source,
+            SymbolMetadata {
+                import_source,
+                parameter_count: None,
+            },
+            0,
+            definition_span,
+        )
+    }
+
+    fn define_value(
+        &mut self,
+        name: &str,
+        is_public: bool,
+        parameter_count: usize,
+        definition_span: Span,
+    ) -> Result<SymbolId, Box<Diagnostic>> {
+        self.define_in_scope(
+            Namespace::Value,
+            name,
+            is_public,
+            SymbolMetadata {
+                import_source: None,
+                parameter_count: Some(parameter_count),
+            },
             0,
             definition_span,
         )
@@ -144,7 +190,7 @@ impl SymbolTable {
         namespace: Namespace,
         name: &str,
         is_public: bool,
-        import_source: Option<String>,
+        metadata: SymbolMetadata,
         scope_id: u32,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
@@ -170,7 +216,8 @@ impl SymbolTable {
             namespace,
             name: name.to_string(),
             is_public,
-            import_source,
+            import_source: metadata.import_source,
+            parameter_count: metadata.parameter_count,
             scope_id,
             definition_span,
         });
@@ -188,7 +235,7 @@ impl SymbolTable {
             Namespace::Local,
             name,
             false,
-            None,
+            SymbolMetadata::default(),
             scope_id,
             definition_span,
         )
@@ -236,22 +283,26 @@ impl Resolver {
     ) -> Result<(), Box<Diagnostic>> {
         match decl {
             Declaration::Function {
-                name, public, span, ..
-            } => {
-                table.define(Namespace::Value, name, *public, None, *span)?;
-            }
-            Declaration::Method {
-                type_name,
-                method_name,
+                name,
+                params,
                 public,
                 span,
                 ..
             } => {
-                table.define(
-                    Namespace::Value,
+                table.define_value(name, *public, params.len(), *span)?;
+            }
+            Declaration::Method {
+                type_name,
+                method_name,
+                params,
+                public,
+                span,
+                ..
+            } => {
+                table.define_value(
                     &format!("{type_name}.{method_name}"),
                     *public,
-                    None,
+                    params.len(),
                     *span,
                 )?;
             }
@@ -298,14 +349,17 @@ impl Resolver {
             } => {
                 for method in methods {
                     if let Declaration::Function {
-                        name, public, span, ..
+                        name,
+                        params,
+                        public,
+                        span,
+                        ..
                     } = method
                     {
-                        table.define(
-                            Namespace::Value,
+                        table.define_value(
                             &format!("{type_name}.{name}"),
                             *public,
-                            None,
+                            params.len(),
                             *span,
                         )?;
                     }

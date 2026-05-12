@@ -50,11 +50,14 @@ and do not assume Phase 4 is ready without evidence.
   `Type.method` value symbols.
 - Enum variants are validated through resolver `Variant` symbols during
   typechecker setup.
+- Resolver value symbols carry parameter-count metadata, and typechecker setup
+  rejects mismatches for functions and methods.
 
 ## Unresolved Gaps
 
 - Phase 2 is not complete: resolver/typechecker integration still has duplicate
-  declaration collection for functions, structs, enum metadata, and behaviors.
+  declaration collection for function types, structs, enum metadata, and
+  behaviors.
 - Phase 4 is not complete: deterministic `build.zen` graph tests and
   implementation are still absent.
 - Effect checking, typed allocator semantics, actors in std integration,
