@@ -50,6 +50,8 @@ checked-in docs, tests, and commits only.
 - Typechecker setup now accepts resolver `SymbolTable` data through
   `check_program_with_symbols`, validates declaration coverage, and both CLI and
   integration-test frontend paths pass resolver symbols into typechecking.
+- Typechecker import setup now consumes resolver import binding symbols, reducing
+  dependence on raw import declaration walks for module-call recognition.
 
 ## Current Phase
 
@@ -62,7 +64,6 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Keep Phase 2 focused on resolver/typechecker integration before Phase 4. The next
-small slice should reduce duplicate import/declaration collection between
-resolver and typechecker without changing module graph behavior, or add a
-completion audit before considering any Phase 4 build-driver work.
+Perform a completion audit before considering any Phase 4 build-driver work. If
+the audit still finds Phase 2 gaps, choose the next smallest resolver/typechecker
+integration slice instead of promoting `build.zen`.
