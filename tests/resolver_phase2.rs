@@ -94,3 +94,28 @@ internal = () i32 { return 2 }
             .is_public
     );
 }
+
+#[test]
+fn resolver_rejects_unknown_type_references_in_declarations() {
+    let program = parse_program(
+        r#"
+Point: { next: MissingPoint }
+distance = (point: Point) UnknownReturn { return 0 }
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("unknown type references should fail");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("unknown type symbol 'MissingPoint'")),
+        "expected missing field type diagnostic, got {err:?}"
+    );
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("unknown type symbol 'UnknownReturn'")),
+        "expected missing return type diagnostic, got {err:?}"
+    );
+}
