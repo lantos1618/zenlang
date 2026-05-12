@@ -11,6 +11,7 @@ pub enum Namespace {
     Value,
     Type,
     Module,
+    Import,
     Behavior,
     Variant,
 }
@@ -21,6 +22,7 @@ impl Namespace {
             Namespace::Value => "value",
             Namespace::Type => "type",
             Namespace::Module => "module",
+            Namespace::Import => "import",
             Namespace::Behavior => "behavior",
             Namespace::Variant => "variant",
         }
@@ -33,6 +35,7 @@ pub struct Symbol {
     pub namespace: Namespace,
     pub name: String,
     pub is_public: bool,
+    pub import_source: Option<String>,
     pub definition_span: Span,
 }
 
@@ -57,6 +60,7 @@ impl SymbolTable {
         namespace: Namespace,
         name: &str,
         is_public: bool,
+        import_source: Option<String>,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
         let key = (namespace, name.to_string());
@@ -78,6 +82,7 @@ impl SymbolTable {
             namespace,
             name: name.to_string(),
             is_public,
+            import_source,
             definition_span,
         });
         self.by_name.insert(key, id);
@@ -103,9 +108,8 @@ impl Resolver {
             }
         }
 
-        let imported_names = self.collect_imported_names(program);
         for decl in &program.declarations {
-            self.validate_declaration_types(&table, &imported_names, decl, &mut diagnostics);
+            self.validate_declaration_types(&table, decl, &mut diagnostics);
         }
 
         if diagnostics.is_empty() {
@@ -124,7 +128,7 @@ impl Resolver {
             Declaration::Function {
                 name, public, span, ..
             } => {
-                table.define(Namespace::Value, name, *public, *span)?;
+                table.define(Namespace::Value, name, *public, None, *span)?;
             }
             Declaration::Method {
                 type_name,
@@ -137,13 +141,14 @@ impl Resolver {
                     Namespace::Value,
                     &format!("{type_name}.{method_name}"),
                     *public,
+                    None,
                     *span,
                 )?;
             }
             Declaration::Struct {
                 name, public, span, ..
             } => {
-                table.define(Namespace::Type, name, *public, *span)?;
+                table.define(Namespace::Type, name, *public, None, *span)?;
             }
             Declaration::Enum {
                 name,
@@ -152,18 +157,31 @@ impl Resolver {
                 span,
                 ..
             } => {
-                table.define(Namespace::Type, name, *public, *span)?;
+                table.define(Namespace::Type, name, *public, None, *span)?;
                 for variant in variants {
-                    table.define(Namespace::Variant, &variant.name, *public, variant.span)?;
+                    table.define(
+                        Namespace::Variant,
+                        &variant.name,
+                        *public,
+                        None,
+                        variant.span,
+                    )?;
                 }
             }
             Declaration::Behavior { name, span, .. } => {
-                table.define(Namespace::Behavior, name, false, *span)?;
+                table.define(Namespace::Behavior, name, false, None, *span)?;
             }
             Declaration::Import {
-                module_path, span, ..
+                names,
+                module_path,
+                span,
+                ..
             } => {
-                table.define(Namespace::Module, &module_path.join("."), false, *span)?;
+                let source = module_path.join(".");
+                table.define(Namespace::Module, &source, false, None, *span)?;
+                for name in names {
+                    table.define(Namespace::Import, name, false, Some(source.clone()), *span)?;
+                }
             }
             Declaration::ImplBlock { .. }
             | Declaration::TopLevelExpr { .. }
@@ -175,7 +193,6 @@ impl Resolver {
     fn validate_declaration_types(
         &self,
         table: &SymbolTable,
-        imported_names: &[String],
         decl: &Declaration,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
@@ -188,16 +205,9 @@ impl Resolver {
                 ..
             } => {
                 self.validate_type_param_constraints(table, type_params, diagnostics);
-                self.validate_params(table, imported_names, type_params, params, diagnostics);
+                self.validate_params(table, type_params, params, diagnostics);
                 if let Some(return_type) = return_type {
-                    self.validate_type_ref(
-                        table,
-                        imported_names,
-                        type_params,
-                        return_type,
-                        *span,
-                        diagnostics,
-                    );
+                    self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
                 }
             }
             Declaration::Method {
@@ -208,16 +218,9 @@ impl Resolver {
                 ..
             } => {
                 self.validate_type_param_constraints(table, type_params, diagnostics);
-                self.validate_params(table, imported_names, type_params, params, diagnostics);
+                self.validate_params(table, type_params, params, diagnostics);
                 if let Some(return_type) = return_type {
-                    self.validate_type_ref(
-                        table,
-                        imported_names,
-                        type_params,
-                        return_type,
-                        *span,
-                        diagnostics,
-                    );
+                    self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
                 }
             }
             Declaration::Struct {
@@ -227,14 +230,7 @@ impl Resolver {
             } => {
                 self.validate_type_param_constraints(table, type_params, diagnostics);
                 for field in fields {
-                    self.validate_type_ref(
-                        table,
-                        imported_names,
-                        type_params,
-                        &field.ty,
-                        field.span,
-                        diagnostics,
-                    );
+                    self.validate_type_ref(table, type_params, &field.ty, field.span, diagnostics);
                 }
             }
             Declaration::Enum {
@@ -247,7 +243,6 @@ impl Resolver {
                     if let Some(payload) = &variant.payload {
                         self.validate_type_ref(
                             table,
-                            imported_names,
                             type_params,
                             payload,
                             variant.span,
@@ -263,17 +258,10 @@ impl Resolver {
             } => {
                 self.validate_type_param_constraints(table, type_params, diagnostics);
                 for method in methods {
-                    self.validate_params(
-                        table,
-                        imported_names,
-                        type_params,
-                        &method.params,
-                        diagnostics,
-                    );
+                    self.validate_params(table, type_params, &method.params, diagnostics);
                     if let Some(return_type) = &method.return_type {
                         self.validate_type_ref(
                             table,
-                            imported_names,
                             type_params,
                             return_type,
                             method.span,
@@ -284,7 +272,7 @@ impl Resolver {
             }
             Declaration::ImplBlock { methods, .. } => {
                 for method in methods {
-                    self.validate_declaration_types(table, imported_names, method, diagnostics);
+                    self.validate_declaration_types(table, method, diagnostics);
                 }
             }
             Declaration::Import { .. }
@@ -296,20 +284,12 @@ impl Resolver {
     fn validate_params(
         &self,
         table: &SymbolTable,
-        imported_names: &[String],
         type_params: &[TypeParam],
         params: &[Param],
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         for param in params {
-            self.validate_type_ref(
-                table,
-                imported_names,
-                type_params,
-                &param.ty,
-                param.span,
-                diagnostics,
-            );
+            self.validate_type_ref(table, type_params, &param.ty, param.span, diagnostics);
         }
     }
 
@@ -335,7 +315,6 @@ impl Resolver {
     fn validate_type_ref(
         &self,
         table: &SymbolTable,
-        imported_names: &[String],
         type_params: &[TypeParam],
         ast_type: &AstType,
         span: Span,
@@ -343,7 +322,7 @@ impl Resolver {
     ) {
         match ast_type {
             AstType::Named(name) => {
-                if !self.is_known_type_name(table, imported_names, type_params, name) {
+                if !self.is_known_type_name(table, type_params, name) {
                     diagnostics.push(Diagnostic::error(
                         "E0201",
                         format!("unknown type symbol '{name}'"),
@@ -352,7 +331,7 @@ impl Resolver {
                 }
             }
             AstType::Generic { name, type_args } => {
-                if !self.is_known_type_name(table, imported_names, type_params, name) {
+                if !self.is_known_type_name(table, type_params, name) {
                     diagnostics.push(Diagnostic::error(
                         "E0201",
                         format!("unknown type symbol '{name}'"),
@@ -360,14 +339,7 @@ impl Resolver {
                     ));
                 }
                 for type_arg in type_args {
-                    self.validate_type_ref(
-                        table,
-                        imported_names,
-                        type_params,
-                        type_arg,
-                        span,
-                        diagnostics,
-                    );
+                    self.validate_type_ref(table, type_params, type_arg, span, diagnostics);
                 }
             }
             AstType::Array { elem, .. }
@@ -375,20 +347,13 @@ impl Resolver {
             | AstType::Ptr(elem)
             | AstType::MutPtr(elem)
             | AstType::RawPtr(elem) => {
-                self.validate_type_ref(table, imported_names, type_params, elem, span, diagnostics);
+                self.validate_type_ref(table, type_params, elem, span, diagnostics);
             }
             AstType::Function { params, ret } => {
                 for param in params {
-                    self.validate_type_ref(
-                        table,
-                        imported_names,
-                        type_params,
-                        param,
-                        span,
-                        diagnostics,
-                    );
+                    self.validate_type_ref(table, type_params, param, span, diagnostics);
                 }
-                self.validate_type_ref(table, imported_names, type_params, ret, span, diagnostics);
+                self.validate_type_ref(table, type_params, ret, span, diagnostics);
             }
             AstType::I8
             | AstType::I16
@@ -413,25 +378,11 @@ impl Resolver {
     fn is_known_type_name(
         &self,
         table: &SymbolTable,
-        imported_names: &[String],
         type_params: &[TypeParam],
         name: &str,
     ) -> bool {
         table.lookup(Namespace::Type, name).is_some()
-            || imported_names.iter().any(|imported| imported == name)
+            || table.lookup(Namespace::Import, name).is_some()
             || type_params.iter().any(|type_param| type_param.name == name)
-    }
-
-    fn collect_imported_names(&self, program: &Program) -> Vec<String> {
-        program
-            .declarations
-            .iter()
-            .filter_map(|decl| match decl {
-                Declaration::Import { names, .. } => Some(names),
-                _ => None,
-            })
-            .flatten()
-            .cloned()
-            .collect()
     }
 }
