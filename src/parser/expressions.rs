@@ -58,7 +58,7 @@ impl Parser {
                                 break;
                             }
                             let name = name.clone();
-                            lhs = self.parse_struct_literal(name, id_span)?;
+                            lhs = self.parse_struct_literal(name, Vec::new(), id_span)?;
                             continue;
                         }
                     }
@@ -118,6 +118,11 @@ impl Parser {
                                     args,
                                     span,
                                 };
+                                continue;
+                            }
+                            if matches!(self.peek(), Token::LBrace) && first_char_is_upper(name) {
+                                let name = name.clone();
+                                lhs = self.parse_struct_literal(name, type_args, id_span)?;
                                 continue;
                             }
                         }
@@ -303,7 +308,7 @@ impl Parser {
 
         // Check if this is a struct literal: ident { field: val, ... }
         if matches!(self.peek(), Token::LBrace) && first_char_is_upper(&name) {
-            return self.parse_struct_literal(name, lhs.span().merge(name_span));
+            return self.parse_struct_literal(name, Vec::new(), lhs.span().merge(name_span));
         }
 
         // Plain field access
@@ -320,6 +325,7 @@ impl Parser {
     fn parse_struct_literal(
         &mut self,
         name: String,
+        type_args: Vec<AstType>,
         start_span: Span,
     ) -> Result<Expression, CompileError> {
         self.expect(&Token::LBrace)?;
@@ -341,7 +347,7 @@ impl Parser {
         let end = self.expect(&Token::RBrace)?;
         Ok(Expression::StructLiteral {
             name,
-            type_args: Vec::new(),
+            type_args,
             fields,
             span: start_span.merge(end),
         })

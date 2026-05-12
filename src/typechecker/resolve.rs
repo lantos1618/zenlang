@@ -64,21 +64,39 @@ impl TypeChecker {
             AstType::Generic { name, type_args } => {
                 let mangled = self.mangle_generic_type_name(name, type_args);
                 if let Some(info) = self.structs.get(name) {
+                    let substitutions: std::collections::HashMap<String, Type> = info
+                        .type_params
+                        .iter()
+                        .zip(type_args.iter())
+                        .map(|(param, arg)| (param.clone(), self.resolve_type(arg)))
+                        .collect();
                     Type::Struct {
                         name: mangled,
                         fields: info
                             .fields
                             .iter()
-                            .map(|(n, t)| (n.clone(), self.resolve_type(t)))
+                            .map(|(n, t)| (n.clone(), self.substitute_type(t, &substitutions)))
                             .collect(),
                     }
                 } else if let Some(info) = self.enums.get(name) {
+                    let substitutions: std::collections::HashMap<String, Type> = info
+                        .type_params
+                        .iter()
+                        .zip(type_args.iter())
+                        .map(|(param, arg)| (param.clone(), self.resolve_type(arg)))
+                        .collect();
                     Type::Enum {
                         name: mangled,
                         variants: info
                             .variants
                             .iter()
-                            .map(|(n, t)| (n.clone(), t.as_ref().map(|ty| self.resolve_type(ty))))
+                            .map(|(n, t)| {
+                                (
+                                    n.clone(),
+                                    t.as_ref()
+                                        .map(|ty| self.substitute_type(ty, &substitutions)),
+                                )
+                            })
                             .collect(),
                     }
                 } else {

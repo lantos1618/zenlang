@@ -407,6 +407,25 @@ impl TypeChecker {
                 span,
             } => {
                 let typed_obj = self.check_expr(object)?;
+                if field == "value"
+                    && matches!(
+                        typed_obj.ty,
+                        Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_)
+                    )
+                {
+                    let inner_ty = match &typed_obj.ty {
+                        Type::Ptr(inner) | Type::MutPtr(inner) | Type::RawPtr(inner) => {
+                            *inner.clone()
+                        }
+                        _ => Type::Unknown,
+                    };
+                    return Ok(TypedExpression {
+                        kind: TypedExprKind::Deref(Box::new(typed_obj)),
+                        ty: inner_ty,
+                        span: *span,
+                    });
+                }
+
                 match field.as_str() {
                     // x.addr → immutable pointer: Ptr<typeof(x)>
                     "addr" => {
@@ -423,30 +442,6 @@ impl TypeChecker {
                         Ok(TypedExpression {
                             kind: TypedExprKind::MutRef(Box::new(typed_obj)),
                             ty: ptr_ty,
-                            span: *span,
-                        })
-                    }
-                    // ptr.value → dereference: inner type of Ptr/MutPtr/RawPtr
-                    "value" => {
-                        let inner_ty = match &typed_obj.ty {
-                            Type::Ptr(inner) | Type::MutPtr(inner) | Type::RawPtr(inner) => {
-                                *inner.clone()
-                            }
-                            _ => {
-                                self.diagnostics.push(Diagnostic::error(
-                                    "E3050",
-                                    format!(
-                                        "cannot dereference non-pointer type `{}`",
-                                        typed_obj.ty.display_name()
-                                    ),
-                                    *span,
-                                ));
-                                Type::Unknown
-                            }
-                        };
-                        Ok(TypedExpression {
-                            kind: TypedExprKind::Deref(Box::new(typed_obj)),
-                            ty: inner_ty,
                             span: *span,
                         })
                     }
@@ -474,14 +469,36 @@ impl TypeChecker {
             }
 
             Expression::StructLiteral {
-                name, fields, span, ..
+                name,
+                type_args,
+                fields,
+                span,
             } => {
-                let mut typed_fields = Vec::new();
                 let struct_info = self.structs.get(name).cloned();
-                let field_defs: std::collections::HashMap<String, AstType> = struct_info
-                    .as_ref()
-                    .map(|info| info.fields.iter().cloned().collect())
-                    .unwrap_or_default();
+                let (type_name, ty, field_defs) = if type_args.is_empty() {
+                    let ty = self.resolve_type(&AstType::Named(name.clone()));
+                    let field_defs = struct_info
+                        .as_ref()
+                        .map(|info| {
+                            info.fields
+                                .iter()
+                                .map(|(field_name, field_type)| {
+                                    (field_name.clone(), self.resolve_type(field_type))
+                                })
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    (name.clone(), ty, field_defs)
+                } else {
+                    let type_name = self.mangle_generic_type_name(name, type_args);
+                    let ty = self.resolve_type(&AstType::Generic {
+                        name: name.clone(),
+                        type_args: type_args.clone(),
+                    });
+                    let field_defs = self.specialize_generic_struct(name, type_args, *span);
+                    (type_name, ty, field_defs)
+                };
+                let mut typed_fields = Vec::new();
                 let mut provided = std::collections::HashSet::new();
 
                 for (field_name, field_expr) in fields {
@@ -495,11 +512,10 @@ impl TypeChecker {
                         ));
                     }
 
-                    if let Some(expected_ast) = field_defs.get(field_name) {
-                        let expected = self.resolve_type(expected_ast);
-                        if expected != Type::Unknown
+                    if let Some(expected) = field_defs.get(field_name) {
+                        if *expected != Type::Unknown
                             && typed.ty != Type::Unknown
-                            && !self.types_compatible(&expected, &typed.ty)
+                            && !self.types_compatible(expected, &typed.ty)
                         {
                             self.diagnostics.push(Diagnostic::error(
                                 "E3036",
@@ -536,10 +552,9 @@ impl TypeChecker {
                     }
                 }
 
-                let ty = self.resolve_type(&AstType::Named(name.clone()));
                 Ok(TypedExpression {
                     kind: TypedExprKind::StructLiteral {
-                        type_name: name.clone(),
+                        type_name,
                         fields: typed_fields,
                     },
                     ty,
@@ -1183,24 +1198,7 @@ impl TypeChecker {
         type_args: &[AstType],
         span: Span,
     ) -> std::collections::HashMap<String, Type> {
-        if type_params.len() != type_args.len() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic function `{}` expects {} type arguments, found {}",
-                    callee,
-                    type_params.len(),
-                    type_args.len()
-                ),
-                span,
-            ));
-        }
-
-        type_params
-            .iter()
-            .zip(type_args.iter())
-            .map(|(param, arg)| (param.clone(), self.resolve_type(arg)))
-            .collect()
+        self.type_param_substitutions(type_params, type_args, "function", callee, span)
     }
 
     fn field_access_type_name(&self, ty: &Type) -> Option<String> {

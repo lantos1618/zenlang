@@ -87,6 +87,8 @@ pub struct TypeChecker {
     generic_functions: HashMap<String, GenericFunctionTemplate>,
     specialized_functions: Vec<TypedFunction>,
     specializations_seen: HashSet<String>,
+    specialized_types: Vec<TypedTypeDef>,
+    specialized_types_seen: HashSet<String>,
     type_substitutions: Vec<HashMap<String, Type>>,
     imports: HashMap<String, Vec<String>>, // imported name -> source module path
     scopes: Vec<Scope>,
@@ -112,6 +114,8 @@ impl TypeChecker {
             generic_functions: HashMap::new(),
             specialized_functions: Vec::new(),
             specializations_seen: HashSet::new(),
+            specialized_types: Vec::new(),
+            specialized_types_seen: HashSet::new(),
             type_substitutions: Vec::new(),
             imports: HashMap::new(),
             scopes: vec![Scope::new()], // global scope
@@ -178,8 +182,15 @@ impl TypeChecker {
                     self.current_self_type = None;
                 }
                 Declaration::Struct {
-                    name, fields, span, ..
+                    name,
+                    type_params,
+                    fields,
+                    span,
+                    ..
                 } => {
+                    if !type_params.is_empty() {
+                        continue;
+                    }
                     let resolved_fields: Vec<(String, Type)> = fields
                         .iter()
                         .map(|f| (f.name.clone(), self.resolve_type(&f.ty)))
@@ -195,10 +206,14 @@ impl TypeChecker {
                 }
                 Declaration::Enum {
                     name,
+                    type_params,
                     variants,
                     span,
                     ..
                 } => {
+                    if !type_params.is_empty() {
+                        continue;
+                    }
                     let typed_variants: Vec<TypedVariant> = variants
                         .iter()
                         .enumerate()
@@ -253,6 +268,7 @@ impl TypeChecker {
         }
 
         functions.append(&mut self.specialized_functions);
+        types.append(&mut self.specialized_types);
 
         Ok(TypedProgram {
             functions,

@@ -1,0 +1,15 @@
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+make_box = () Box<i32> {
+    return Box<i32> { value: 42 }
+}
+
+main = () i32 {
+    box = make_box()
+    io.println("${box.value}")
+    return 0
+}

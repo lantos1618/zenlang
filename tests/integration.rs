@@ -167,6 +167,11 @@ fn test_generic_identity() {
 }
 
 #[test]
+fn test_generic_struct() {
+    run_test("generic_struct");
+}
+
+#[test]
 fn test_defer() {
     run_test("defer");
 }

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::ast::typed::Type;
+use crate::ast::typed::{Type, TypeDefKind, TypedTypeDef};
 use crate::ast::AstType;
 use crate::error::{Diagnostic, Span};
 
@@ -99,6 +99,69 @@ impl TypeChecker {
         self.current_self_type = saved_self_type;
 
         Some(mangled)
+    }
+
+    pub(crate) fn specialize_generic_struct(
+        &mut self,
+        name: &str,
+        type_args: &[AstType],
+        span: Span,
+    ) -> HashMap<String, Type> {
+        let Some(info) = self.structs.get(name).cloned() else {
+            return HashMap::new();
+        };
+        let substitutions =
+            self.type_param_substitutions(&info.type_params, type_args, "struct", name, span);
+        let fields: Vec<(String, Type)> = info
+            .fields
+            .iter()
+            .map(|(field_name, field_type)| {
+                (
+                    field_name.clone(),
+                    self.substitute_type(field_type, &substitutions),
+                )
+            })
+            .collect();
+        let field_map = fields.iter().cloned().collect();
+        let mangled = self.mangle_generic_type_name(name, type_args);
+        if self.specialized_types_seen.insert(mangled.clone()) {
+            self.specialized_types.push(TypedTypeDef {
+                name: mangled,
+                kind: TypeDefKind::Struct { fields },
+                methods: Vec::new(),
+                span,
+            });
+        }
+        field_map
+    }
+
+    pub(crate) fn type_param_substitutions(
+        &mut self,
+        type_params: &[String],
+        type_args: &[AstType],
+        kind: &str,
+        name: &str,
+        span: Span,
+    ) -> HashMap<String, Type> {
+        if type_params.len() != type_args.len() {
+            self.diagnostics.push(Diagnostic::error(
+                "E5001",
+                format!(
+                    "generic {} `{}` expects {} type arguments, found {}",
+                    kind,
+                    name,
+                    type_params.len(),
+                    type_args.len()
+                ),
+                span,
+            ));
+        }
+
+        type_params
+            .iter()
+            .zip(type_args.iter())
+            .map(|(param, arg)| (param.clone(), self.resolve_type(arg)))
+            .collect()
     }
 
     /// Infer type arguments for a generic function by matching actual arg types
