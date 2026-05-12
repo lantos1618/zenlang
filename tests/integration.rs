@@ -285,6 +285,40 @@ main = () i32 {
 }
 
 #[test]
+fn build_command_rejects_build_zen_until_deterministic_graph_exists() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let build_path = tmp.path().join("build.zen");
+    std::fs::write(
+        &build_path,
+        r#"
+main = () i32 {
+    return 0
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["build", build_path.to_str().unwrap()])
+        .output()
+        .expect("run zen build");
+
+    assert!(
+        !output.status.success(),
+        "zen build build.zen unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains(
+            "build.zen execution is gated until deterministic build graph support exists"
+        ),
+        "expected build.zen gated diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn integration_frontend_helper_runs_resolver_diagnostics() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let zen_path = tmp.path().join("bad_resolver_ref.zen");

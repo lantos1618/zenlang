@@ -74,6 +74,8 @@ and do not assume Phase 4 is ready without evidence.
   setup rejects mismatches before collecting enum variant metadata.
 - Resolver enum variant symbols carry payload-type metadata, and typechecker
   setup rejects mismatches before collecting enum variant metadata.
+- CLI `build` rejects `build.zen` explicitly until deterministic build graph
+  support exists, with integration coverage for the gated Phase 4 entrypoint.
 
 ## Unresolved Gaps
 

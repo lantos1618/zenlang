@@ -138,6 +138,13 @@ fn cmd_emit(path_str: &str) {
 }
 
 fn cmd_build(path_str: &str) {
+    if is_build_zen_path(path_str) {
+        eprintln!(
+            "error: build.zen execution is gated until deterministic build graph support exists"
+        );
+        process::exit(1);
+    }
+
     let typed = frontend(path_str);
     let backend = CBackend;
     let c_source = match backend.generate(&typed) {
@@ -183,6 +190,13 @@ fn cmd_build(path_str: &str) {
             process::exit(1);
         }
     }
+}
+
+fn is_build_zen_path(path_str: &str) -> bool {
+    Path::new(path_str)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name == "build.zen")
 }
 
 fn print_errors(errs: &[zen::error::CompileError], files: &FileTable) {

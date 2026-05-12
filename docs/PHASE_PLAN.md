@@ -91,6 +91,9 @@ checked-in docs, tests, and commits only.
   from the AST.
 - Resolver enum variant symbols now carry payload-type metadata, and typechecker
   setup rejects mismatches before collecting enum variant metadata from the AST.
+- The CLI `build` path now rejects `build.zen` explicitly until deterministic
+  build graph support exists, with integration coverage for the gated Phase 4
+  entrypoint.
 
 ## Current Phase
 
