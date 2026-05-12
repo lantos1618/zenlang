@@ -20,7 +20,9 @@ use std::collections::{HashMap, HashSet};
 use crate::ast::typed::*;
 use crate::ast::{self, AstType, Declaration, Expression, Param, StructField};
 use crate::error::{Diagnostic, Span};
-use crate::resolver::{MethodSignatureMetadata, Namespace, SymbolTable};
+use crate::resolver::{
+    MethodSignatureMetadata, Namespace, SymbolTable, TypeParameterBoundMetadata,
+};
 
 // ── Type Environment ──────────────────────────────────────────────
 
@@ -70,6 +72,7 @@ struct ExpectedValueSignature {
     parameter_type_names: Vec<String>,
     return_type_name: String,
     type_parameter_count: usize,
+    type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
 }
 
 /// Scope for variable types.
@@ -1242,6 +1245,21 @@ impl TypeChecker {
                 span,
             ));
         }
+
+        if symbol.type_parameter_bounds.as_deref()
+            != Some(expected_signature.type_parameter_bounds.as_slice())
+        {
+            let actual = format_type_parameter_bounds(symbol.type_parameter_bounds.as_deref());
+            let expected =
+                format_type_parameter_bounds(Some(&expected_signature.type_parameter_bounds));
+            self.diagnostics.push(Diagnostic::error(
+                "E0221",
+                format!(
+                    "resolver value symbol '{name}' has type parameter bounds '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
     }
 }
 
@@ -1265,6 +1283,35 @@ fn expected_value_signature(
         parameter_type_names: expected_parameter_type_names(params),
         return_type_name: expected_return_type_name(return_type),
         type_parameter_count: type_params.len(),
+        type_parameter_bounds: expected_type_parameter_bounds(type_params),
+    }
+}
+
+fn expected_type_parameter_bounds(
+    type_params: &[ast::TypeParam],
+) -> Vec<TypeParameterBoundMetadata> {
+    type_params
+        .iter()
+        .filter_map(|type_param| {
+            type_param
+                .constraint
+                .as_ref()
+                .map(|constraint| (type_param.name.clone(), constraint.clone()))
+        })
+        .collect()
+}
+
+fn format_type_parameter_bounds(bounds: Option<&[TypeParameterBoundMetadata]>) -> String {
+    match bounds {
+        Some(bounds) => format!(
+            "({})",
+            bounds
+                .iter()
+                .map(|(name, behavior)| format!("{name}: {behavior}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        None => "unknown".to_string(),
     }
 }
 
@@ -1614,6 +1661,38 @@ identity<T> = (value: T) T { return value }
                 "resolver value symbol 'identity' has type parameter count 0, expected 1"
             )),
             "expected resolver function generic arity diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_type_parameter_bounds() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+encode<T: Json> = (value: T) str { return "encoded" }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_bounds_for_test(
+            Namespace::Value,
+            "encode",
+            Some(vec![("T".to_string(), "Other".to_string())]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function generic bound mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'encode' has type parameter bounds '(T: Other)', expected '(T: Json)'"
+            )),
+            "expected resolver function generic bound diagnostic, got {err:?}"
         );
     }
 

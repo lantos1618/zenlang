@@ -10,6 +10,7 @@ use crate::error::{Diagnostic, Span};
 pub struct SymbolId(pub u32);
 
 pub type MethodSignatureMetadata = (String, Vec<String>, String);
+pub type TypeParameterBoundMetadata = (String, String);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Namespace {
@@ -47,6 +48,7 @@ pub struct Symbol {
     pub parameter_type_names: Option<Vec<String>>,
     pub return_type_name: Option<String>,
     pub type_parameter_count: Option<usize>,
+    pub type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
     pub field_count: Option<usize>,
     pub field_type_names: Option<Vec<(String, String)>>,
     pub variant_payload_count: Option<usize>,
@@ -63,6 +65,7 @@ struct SymbolMetadata {
     parameter_type_names: Option<Vec<String>>,
     return_type_name: Option<String>,
     type_parameter_count: Option<usize>,
+    type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
     field_count: Option<usize>,
     field_type_names: Option<Vec<(String, String)>>,
     variant_payload_count: Option<usize>,
@@ -74,6 +77,7 @@ struct ValueSignatureMetadata {
     parameter_type_names: Vec<String>,
     return_type_name: String,
     type_parameter_count: usize,
+    type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -218,6 +222,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_type_parameter_bounds_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.type_parameter_bounds = type_parameter_bounds;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_behavior_method_signatures_for_test(
         &mut self,
         namespace: Namespace,
@@ -315,6 +335,7 @@ impl SymbolTable {
                 parameter_type_names: None,
                 return_type_name: None,
                 type_parameter_count: None,
+                type_parameter_bounds: None,
                 field_count: None,
                 field_type_names: None,
                 variant_payload_count: None,
@@ -344,6 +365,7 @@ impl SymbolTable {
                 parameter_type_names: Some(signature.parameter_type_names),
                 return_type_name: Some(signature.return_type_name),
                 type_parameter_count: Some(signature.type_parameter_count),
+                type_parameter_bounds: Some(signature.type_parameter_bounds),
                 field_count: None,
                 field_type_names: None,
                 variant_payload_count: None,
@@ -375,6 +397,7 @@ impl SymbolTable {
                 parameter_type_names: None,
                 return_type_name: None,
                 type_parameter_count: Some(type_parameter_count),
+                type_parameter_bounds: None,
                 field_count,
                 field_type_names,
                 variant_payload_count: None,
@@ -404,6 +427,7 @@ impl SymbolTable {
                 parameter_type_names: None,
                 return_type_name: None,
                 type_parameter_count: None,
+                type_parameter_bounds: None,
                 field_count: None,
                 field_type_names: None,
                 variant_payload_count: Some(variant_payload_count),
@@ -432,6 +456,7 @@ impl SymbolTable {
                 parameter_type_names: None,
                 return_type_name: None,
                 type_parameter_count: Some(type_parameter_count),
+                type_parameter_bounds: None,
                 field_count: None,
                 field_type_names: None,
                 variant_payload_count: None,
@@ -479,6 +504,7 @@ impl SymbolTable {
             parameter_type_names: metadata.parameter_type_names,
             return_type_name: metadata.return_type_name,
             type_parameter_count: metadata.type_parameter_count,
+            type_parameter_bounds: metadata.type_parameter_bounds,
             field_count: metadata.field_count,
             field_type_names: metadata.field_type_names,
             variant_payload_count: metadata.variant_payload_count,
@@ -1346,7 +1372,20 @@ fn resolver_value_signature(
         parameter_type_names: resolver_param_type_names(params),
         return_type_name: resolver_return_type_name(return_type),
         type_parameter_count: type_params.len(),
+        type_parameter_bounds: resolver_type_parameter_bounds(type_params),
     }
+}
+
+fn resolver_type_parameter_bounds(type_params: &[TypeParam]) -> Vec<TypeParameterBoundMetadata> {
+    type_params
+        .iter()
+        .filter_map(|type_param| {
+            type_param
+                .constraint
+                .as_ref()
+                .map(|constraint| (type_param.name.clone(), constraint.clone()))
+        })
+        .collect()
 }
 
 fn resolver_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {

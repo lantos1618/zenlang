@@ -286,6 +286,30 @@ Point.wrap<T> = (self: Point, value: T) Point { return self }
 }
 
 #[test]
+fn resolver_records_value_symbol_generic_bounds() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+encode<T: Json> = (value: T) str { return "encoded" }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "encode")
+            .expect("function symbol")
+            .type_parameter_bounds
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&[("T".to_string(), "Json".to_string())][..])
+    );
+}
+
+#[test]
 fn resolver_records_type_and_behavior_generic_parameter_counts() {
     let program = parse_program(
         r#"
