@@ -62,6 +62,9 @@ checked-in docs, tests, and commits only.
 - Resolver value symbols now carry parameter-count metadata for functions and
   methods, and typechecker setup rejects mismatches against that resolver-owned
   signature data.
+- Resolver value symbols now carry parameter-type metadata for functions and
+  methods, and typechecker setup rejects mismatches before collecting function
+  signatures from the AST.
 - Resolver value symbols now also carry return-type metadata, and typechecker
   setup rejects return-type mismatches before collecting declarations from the
   AST.

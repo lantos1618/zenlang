@@ -41,6 +41,7 @@ pub struct Symbol {
     pub is_public: bool,
     pub import_source: Option<String>,
     pub parameter_count: Option<usize>,
+    pub parameter_type_names: Option<Vec<String>>,
     pub return_type_name: Option<String>,
     pub type_parameter_count: Option<usize>,
     pub field_count: Option<usize>,
@@ -53,6 +54,7 @@ pub struct Symbol {
 struct SymbolMetadata {
     import_source: Option<String>,
     parameter_count: Option<usize>,
+    parameter_type_names: Option<Vec<String>>,
     return_type_name: Option<String>,
     type_parameter_count: Option<usize>,
     field_count: Option<usize>,
@@ -153,6 +155,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_parameter_type_names_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        parameter_type_names: Option<Vec<String>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.parameter_type_names = parameter_type_names;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_return_type_name_for_test(
         &mut self,
         namespace: Namespace,
@@ -231,6 +249,7 @@ impl SymbolTable {
             SymbolMetadata {
                 import_source,
                 parameter_count: None,
+                parameter_type_names: None,
                 return_type_name: None,
                 type_parameter_count: None,
                 field_count: None,
@@ -246,6 +265,7 @@ impl SymbolTable {
         name: &str,
         is_public: bool,
         parameter_count: usize,
+        parameter_type_names: Vec<String>,
         return_type_name: String,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
@@ -256,6 +276,7 @@ impl SymbolTable {
             SymbolMetadata {
                 import_source: None,
                 parameter_count: Some(parameter_count),
+                parameter_type_names: Some(parameter_type_names),
                 return_type_name: Some(return_type_name),
                 type_parameter_count: None,
                 field_count: None,
@@ -282,6 +303,7 @@ impl SymbolTable {
             SymbolMetadata {
                 import_source: None,
                 parameter_count: None,
+                parameter_type_names: None,
                 return_type_name: None,
                 type_parameter_count: Some(type_parameter_count),
                 field_count,
@@ -306,6 +328,7 @@ impl SymbolTable {
             SymbolMetadata {
                 import_source: None,
                 parameter_count: None,
+                parameter_type_names: None,
                 return_type_name: None,
                 type_parameter_count: None,
                 field_count: None,
@@ -349,6 +372,7 @@ impl SymbolTable {
             is_public,
             import_source: metadata.import_source,
             parameter_count: metadata.parameter_count,
+            parameter_type_names: metadata.parameter_type_names,
             return_type_name: metadata.return_type_name,
             type_parameter_count: metadata.type_parameter_count,
             field_count: metadata.field_count,
@@ -429,6 +453,7 @@ impl Resolver {
                     name,
                     *public,
                     params.len(),
+                    resolver_param_type_names(params),
                     resolver_return_type_name(return_type),
                     *span,
                 )?;
@@ -446,6 +471,7 @@ impl Resolver {
                     &format!("{type_name}.{method_name}"),
                     *public,
                     params.len(),
+                    resolver_param_type_names(params),
                     resolver_return_type_name(return_type),
                     *span,
                 )?;
@@ -536,6 +562,7 @@ impl Resolver {
                             &format!("{type_name}.{name}"),
                             *public,
                             params.len(),
+                            resolver_param_type_names(params),
                             resolver_return_type_name(return_type),
                             *span,
                         )?;
@@ -1201,4 +1228,8 @@ fn resolver_return_type_name(return_type: &Option<AstType>) -> String {
         .as_ref()
         .unwrap_or(&AstType::Void)
         .display_name()
+}
+
+fn resolver_param_type_names(params: &[Param]) -> Vec<String> {
+    params.iter().map(|param| param.ty.display_name()).collect()
 }

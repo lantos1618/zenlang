@@ -820,6 +820,7 @@ impl TypeChecker {
                         symbols,
                         name,
                         params.len(),
+                        expected_parameter_type_names(params),
                         expected_return_type_name(return_type),
                         *span,
                     );
@@ -836,6 +837,7 @@ impl TypeChecker {
                         symbols,
                         &format!("{type_name}.{method_name}"),
                         params.len(),
+                        expected_parameter_type_names(params),
                         expected_return_type_name(return_type),
                         *span,
                     );
@@ -955,6 +957,7 @@ impl TypeChecker {
                                 symbols,
                                 &format!("{type_name}.{name}"),
                                 params.len(),
+                                expected_parameter_type_names(params),
                                 expected_return_type_name(return_type),
                                 *span,
                             );
@@ -1082,6 +1085,7 @@ impl TypeChecker {
         symbols: &SymbolTable,
         name: &str,
         expected_parameter_count: usize,
+        expected_parameter_type_names: Vec<String>,
         expected_return_type_name: String,
         span: Span,
     ) {
@@ -1099,6 +1103,19 @@ impl TypeChecker {
                 "E0211",
                 format!(
                     "resolver value symbol '{name}' has parameter count {actual}, expected {expected_parameter_count}"
+                ),
+                span,
+            ));
+        }
+
+        if symbol.parameter_type_names.as_deref() != Some(expected_parameter_type_names.as_slice())
+        {
+            let actual = format_parameter_type_names(symbol.parameter_type_names.as_deref());
+            let expected = format_parameter_type_names(Some(&expected_parameter_type_names));
+            self.diagnostics.push(Diagnostic::error(
+                "E0216",
+                format!(
+                    "resolver value symbol '{name}' has parameter types '{actual}', expected '{expected}'"
                 ),
                 span,
             ));
@@ -1122,6 +1139,17 @@ fn expected_return_type_name(return_type: &Option<AstType>) -> String {
         .as_ref()
         .unwrap_or(&AstType::Void)
         .display_name()
+}
+
+fn expected_parameter_type_names(params: &[Param]) -> Vec<String> {
+    params.iter().map(|param| param.ty.display_name()).collect()
+}
+
+fn format_parameter_type_names(names: Option<&[String]>) -> String {
+    match names {
+        Some(names) => format!("({})", names.join(", ")),
+        None => "unknown".to_string(),
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────
@@ -1328,6 +1356,35 @@ add = (a: i32, b: i32) i32 { return a + b }
                 .message
                 .contains("resolver value symbol 'add' has parameter count 1, expected 2")),
             "expected resolver function arity diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_parameter_types() {
+        let program = parse_program(
+            r#"
+add = (a: i32, b: f64) f64 { return b }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_type_names_for_test(
+            Namespace::Value,
+            "add",
+            Some(vec!["i32".to_string(), "i32".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function parameter type mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'add' has parameter types '(i32, i32)', expected '(i32, f64)'"
+            )),
+            "expected resolver function parameter type diagnostic, got {err:?}"
         );
     }
 
