@@ -141,3 +141,67 @@ main = () i32 {
         "expected generic enum arity diagnostic, got {errors:?}"
     );
 }
+
+#[test]
+fn generic_struct_behavior_bound_failure_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: {
+    x: i32
+}
+
+Box<T: Json>: {
+    value: T
+}
+
+main = () i32 {
+    point = Point { x: 1 }
+    box = Box<Point> { value: point }
+    return box.value.x
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("type `Point` does not implement behavior `Json` required by `T`")),
+        "expected generic struct bound diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_enum_behavior_bound_failure_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: {
+    x: i32
+}
+
+Option<T: Json>:
+    None,
+    Some(T)
+
+main = () i32 {
+    point = Point { x: 1 }
+    value = Option<Point>.Some(point)
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("type `Point` does not implement behavior `Json` required by `T`")),
+        "expected generic enum bound diagnostic, got {errors:?}"
+    );
+}

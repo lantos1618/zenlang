@@ -176,6 +176,7 @@ impl TypeChecker {
         };
         let substitutions =
             self.type_param_substitutions(&info.type_params, type_args, "struct", name, span);
+        self.check_generic_bounds(&info.type_param_bounds, &substitutions, span);
         let fields: Vec<(String, Type)> = info
             .fields
             .iter()
@@ -210,6 +211,7 @@ impl TypeChecker {
         };
         let substitutions =
             self.type_param_substitutions(&info.type_params, type_args, "enum", name, span);
+        self.check_generic_bounds(&info.type_param_bounds, &substitutions, span);
         let variants: Vec<(String, Option<Type>)> = info
             .variants
             .iter()

@@ -32,6 +32,7 @@ pub struct StructInfo {
     pub name: String,
     pub fields: Vec<(String, AstType)>,
     pub type_params: Vec<String>,
+    pub type_param_bounds: HashMap<String, String>,
 }
 
 /// Information about an enum type.
@@ -40,6 +41,7 @@ pub struct EnumInfo {
     pub name: String,
     pub variants: Vec<(String, Option<AstType>)>,
     pub type_params: Vec<String>,
+    pub type_param_bounds: HashMap<String, String>,
 }
 
 /// Information about a function signature.
@@ -465,6 +467,7 @@ impl TypeChecker {
                                 .map(|f| (f.name.clone(), f.ty.clone()))
                                 .collect(),
                             type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
+                            type_param_bounds: type_param_bounds(type_params),
                         },
                     );
                 }
@@ -484,6 +487,7 @@ impl TypeChecker {
                                 .map(|v| (v.name.clone(), v.payload.clone()))
                                 .collect(),
                             type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
+                            type_param_bounds: type_param_bounds(type_params),
                         },
                     );
                 }
