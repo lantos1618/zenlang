@@ -88,6 +88,8 @@ checked-in docs, tests, and commits only.
 - The module-graph typechecker entrypoint now returns typed dependency
   definitions with the entry module so graph-based codegen paths can resolve
   imported calls without AST declaration merging.
+- The CLI `emit` path now uses the module-graph frontend, so emitted C is based
+  on graph-owned import bindings and reports imported-module type errors.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
 - Typechecker resolver-symbol validation now checks enum variant symbols from
@@ -152,5 +154,5 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 Continue Phase 2 resolver/typechecker integration by choosing the next smallest
 handoff that reduces duplicate declaration collection or moves the module-graph
-entrypoint deeper into advertised compiler paths. Do not promote `build.zen` until a
-dedicated deterministic graph test exists.
+entrypoint deeper into advertised compiler paths. Do not promote `build.zen`
+until a dedicated deterministic graph test exists.

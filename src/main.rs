@@ -112,7 +112,7 @@ fn frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
 }
 
 fn cmd_check(path_str: &str) {
-    let typed = check_frontend(path_str);
+    let typed = graph_frontend(path_str);
     println!(
         "  {} functions, {} types — ok",
         typed.functions.len(),
@@ -120,7 +120,7 @@ fn cmd_check(path_str: &str) {
     );
 }
 
-fn check_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
+fn graph_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
     let path = Path::new(path_str);
     if !path.exists() {
         eprintln!("error: file not found: {}", path_str);
@@ -164,7 +164,7 @@ fn check_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
 }
 
 fn cmd_emit(path_str: &str) {
-    let typed = frontend(path_str);
+    let typed = graph_frontend(path_str);
     let backend = CBackend;
     match backend.generate(&typed) {
         Ok(c_source) => {
