@@ -10,6 +10,6 @@ Box.get<T> = (self: Box<T>) T {
 
 main = () i32 {
     box = Box<i32> { value: 99 }
-    io.println("${box.get()}")
+    io.println("${box.get<i32>()}")
     return 0
 }

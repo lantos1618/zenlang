@@ -1,0 +1,10 @@
+{ io } = std
+
+id<T> = (value: T) T {
+    return value
+}
+
+main = () i32 {
+    io.println("${12.id()}")
+    return 0
+}

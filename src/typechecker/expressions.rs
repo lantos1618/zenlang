@@ -221,6 +221,16 @@ impl TypeChecker {
                                 });
                             (mangled, ret)
                         } else {
+                            if !type_args.is_empty() {
+                                self.diagnostics.push(Diagnostic::error(
+                                    "E5001",
+                                    format!(
+                                        "non-generic function `{}` does not accept type arguments",
+                                        full_name
+                                    ),
+                                    *span,
+                                ));
+                            }
                             self.check_call_signature(&full_name, &info.params, &typed_args, span);
                             (full_name.clone(), self.resolve_type(&info.return_type))
                         }
@@ -454,20 +464,34 @@ impl TypeChecker {
                         self.unknown_method_expr(&type_name, method, typed_args, *span)
                     }
                 } else if let Some(info) = self.functions.get(method).cloned() {
-                    self.check_call_signature(method, &info.params, &typed_args, span);
-                    // UFC: x.f(args) → f(x, args) — handle generics
-                    let ret_type = if !info.type_params.is_empty() {
+                    // UFC: x.f(args) -> f(x, args)
+                    let (resolved_function, ret_type) = if !info.type_params.is_empty() {
                         let arg_types: Vec<Type> =
                             typed_args.iter().map(|a| a.ty.clone()).collect();
                         let subs =
                             self.infer_type_args(&info.type_params, &info.params, &arg_types);
-                        self.substitute_type(&info.return_type, &subs)
+                        self.check_call_signature_with_substitutions(
+                            method,
+                            &info.params,
+                            &typed_args,
+                            &subs,
+                            span,
+                        );
+                        self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
+                        let ret = self.substitute_type(&info.return_type, &subs);
+                        let mangled = self
+                            .specialize_generic_function(method, &subs, *span)
+                            .unwrap_or_else(|| {
+                                self.generic_function_mangled_name(method, &info.type_params, &subs)
+                            });
+                        (mangled, ret)
                     } else {
-                        self.resolve_type(&info.return_type)
+                        self.check_call_signature(method, &info.params, &typed_args, span);
+                        (method.clone(), self.resolve_type(&info.return_type))
                     };
                     Ok(TypedExpression {
                         kind: TypedExprKind::FunctionCall {
-                            function: method.clone(),
+                            function: resolved_function,
                             args: typed_args,
                         },
                         ty: ret_type,

@@ -220,6 +220,11 @@ fn test_generic_worklist() {
 }
 
 #[test]
+fn test_generic_ufc_function() {
+    run_test("generic_ufc_function");
+}
+
+#[test]
 fn test_behavior_json_explicit_impl() {
     run_test("behavior_json_explicit_impl");
 }
@@ -250,6 +255,30 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     );
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
+
+    let c_source = compile_to_c(&test_dir().join("generic_enum_option.zen"));
+    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
+    assert!(c_source.contains("int32_t unwrap_or_i32(Option_i32 value, int32_t fallback)"));
+    assert!(c_source.contains("Option_i32_Some"));
+    assert!(c_source.contains("unwrap_or_i32(x, 0LL)"));
+    assert!(!c_source.contains("Option_T"));
+    assert!(!c_source.contains("T unwrap_or"));
+    assert!(!c_source.contains("unwrap_or(x"));
+
+    let c_source = compile_to_c(&test_dir().join("generic_result_enum.zen"));
+    assert!(c_source.contains("typedef struct Result_i32_str Result_i32_str;"));
+    assert!(c_source.contains("int32_t unwrap_or_i32_str(Result_i32_str value, int32_t fallback)"));
+    assert!(c_source.contains("Result_i32_str_Err"));
+    assert!(c_source.contains("unwrap_or_i32_str(err, 9LL)"));
+    assert!(!c_source.contains("Result_T"));
+    assert!(!c_source.contains("T unwrap_or"));
+    assert!(!c_source.contains("unwrap_or(err"));
+
+    let c_source = compile_to_c(&test_dir().join("generic_ufc_function.zen"));
+    assert!(c_source.contains("int32_t id_i32(int32_t value)"));
+    assert!(c_source.contains("id_i32(12LL)"));
+    assert!(!c_source.contains("id(12LL)"));
+    assert!(!c_source.contains("T id"));
 }
 
 #[test]

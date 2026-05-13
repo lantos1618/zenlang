@@ -51,6 +51,28 @@ fn parse_generic_function_call_type_args() {
 }
 
 #[test]
+fn parse_generic_method_call_type_args() {
+    let prog = parse_ok("f = (box: Box<i32>) i32 { box.get<i32>() }");
+    match &prog.declarations[0] {
+        Declaration::Function { body, .. } => match body {
+            Expression::Block {
+                expr: Some(expr), ..
+            } => match expr.as_ref() {
+                Expression::MethodCall {
+                    method, type_args, ..
+                } => {
+                    assert_eq!(method, "get");
+                    assert_eq!(type_args, &vec![AstType::I32]);
+                }
+                other => panic!("expected generic method call, got {:?}", other),
+            },
+            other => panic!("expected block body, got {:?}", other),
+        },
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
 fn parse_struct_def() {
     let prog = parse_ok("Point: {\n    x: f64,\n    y: f64\n}");
     assert_eq!(prog.declarations.len(), 1);

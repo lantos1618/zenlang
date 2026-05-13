@@ -282,7 +282,20 @@ impl Parser {
             }
         }
 
-        // Check for method call: expr.name(args)
+        // Check for method call: expr.name(args) or expr.name<T>(args)
+        let type_args = if matches!(self.peek(), Token::Lt) {
+            let saved = self.pos;
+            match self.parse_type_arg_list() {
+                Ok(type_args) if matches!(self.peek(), Token::LParen) => type_args,
+                _ => {
+                    self.pos = saved;
+                    Vec::new()
+                }
+            }
+        } else {
+            Vec::new()
+        };
+
         if matches!(self.peek(), Token::LParen) {
             self.advance();
             let args = self.parse_arg_list()?;
@@ -298,7 +311,7 @@ impl Parser {
                 return Ok(Expression::MethodCall {
                     receiver: Box::new(lhs),
                     method: name,
-                    type_args: Vec::new(),
+                    type_args,
                     args,
                     span,
                 });
@@ -307,7 +320,7 @@ impl Parser {
             return Ok(Expression::MethodCall {
                 receiver: Box::new(lhs),
                 method: name,
-                type_args: Vec::new(),
+                type_args,
                 args,
                 span,
             });
