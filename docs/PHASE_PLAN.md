@@ -41,6 +41,8 @@ checked-in docs, tests, and commits only.
 - Unspecialized generic behaviors in `.implements`, `.requires`, and `.extends`
   now produce hard arity diagnostics instead of silently acting like
   nongeneric behaviors.
+- Generic behavior bounds such as `T: Json<T>` are explicitly gated with parser
+  diagnostics until generic behavior association is implemented.
 - Compile-time `.requires` behavior assertions now have parser, resolver, and
   typechecker coverage for satisfied and missing behavior implementations.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker

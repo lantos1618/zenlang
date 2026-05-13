@@ -745,6 +745,13 @@ impl Parser {
             let constraint = if matches!(self.peek(), Token::Colon) {
                 self.advance();
                 let (c, _) = self.expect_identifier()?;
+                if matches!(self.peek(), Token::Lt) {
+                    return Err(CompileError::Syntax(
+                        "gated v1 feature 'generic behavior bound': generic behavior constraints are specified in docs/V1_SPEC.md but are not implemented"
+                            .to_string(),
+                        Some(self.peek_span()),
+                    ));
+                }
                 Some(c)
             } else {
                 None

@@ -99,6 +99,8 @@ and do not assume Phase 4 is ready without evidence.
 - Unspecialized generic behaviors in `.implements`, `.requires`, and `.extends`
   produce hard arity diagnostics instead of silently acting like nongeneric
   behaviors.
+- Generic behavior bounds such as `T: Json<T>` are explicitly gated with parser
+  diagnostics until generic behavior association is implemented.
 - Behavior inheritance `.extends` is parsed, resolved against known behaviors,
   and typechecked so child behavior impls must satisfy inherited parent methods
   while duplicate edges, cyclic inheritance, and conflicting inherited method
