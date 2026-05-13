@@ -69,6 +69,9 @@ and do not assume Phase 4 is ready without evidence.
   before validating imported binding symbols.
 - The non-merging module graph records resolver `SymbolTable` data per module
   and rejects resolver diagnostics from loaded dependency modules.
+- Typechecker setup has an opt-in module-graph entrypoint that validates entry
+  resolver symbols and seeds imported signatures from graph-owned
+  `ImportBinding`s without merging imported declarations into the entry AST.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
 - Enum variants are validated through resolver `Variant` symbols during

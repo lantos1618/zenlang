@@ -20,6 +20,7 @@ use std::collections::{HashMap, HashSet};
 use crate::ast::typed::*;
 use crate::ast::{self, AstType, Declaration, Expression, Param, StructField};
 use crate::error::{Diagnostic, Span};
+use crate::module_system::{ResolvedModule, ResolvedModuleGraph};
 use crate::resolver::{
     MethodSignatureMetadata, Namespace, SymbolTable, TypeParameterBoundMetadata,
 };
@@ -513,6 +514,47 @@ impl TypeChecker {
         }
         self.collect_resolver_imports(symbols);
         self.check_program(program)
+    }
+
+    pub fn check_module_graph_entry(
+        &mut self,
+        graph: &ResolvedModuleGraph,
+    ) -> Result<TypedProgram, Vec<Diagnostic>> {
+        let Some(entry) = graph.module(graph.entry) else {
+            self.diagnostics.push(Diagnostic::error(
+                "E0232",
+                format!("module graph missing entry module {:?}", graph.entry),
+                Span::dummy(),
+            ));
+            return Err(self
+                .diagnostics
+                .iter()
+                .filter(|diag| diag.is_error())
+                .cloned()
+                .collect());
+        };
+
+        self.validate_resolver_symbols(&entry.program, &entry.symbols);
+        if self.diagnostics.iter().any(|diag| diag.is_error()) {
+            return Err(self
+                .diagnostics
+                .iter()
+                .filter(|diag| diag.is_error())
+                .cloned()
+                .collect());
+        }
+
+        self.collect_module_graph_imports(graph, entry);
+        if self.diagnostics.iter().any(|diag| diag.is_error()) {
+            return Err(self
+                .diagnostics
+                .iter()
+                .filter(|diag| diag.is_error())
+                .cloned()
+                .collect());
+        }
+
+        self.check_program(&entry.program)
     }
 
     /// Get all diagnostics (errors + warnings).
@@ -1501,6 +1543,48 @@ impl TypeChecker {
         }
     }
 
+    fn collect_module_graph_imports(
+        &mut self,
+        graph: &ResolvedModuleGraph,
+        entry: &ResolvedModule,
+    ) {
+        let mut imported_decls = Vec::new();
+        for binding in &entry.imports {
+            let Some(source_module) = graph.module(binding.source_module) else {
+                self.diagnostics.push(Diagnostic::error(
+                    "E0233",
+                    format!(
+                        "module graph import '{}' points at missing module {:?}",
+                        binding.local_name, binding.source_module
+                    ),
+                    binding.span,
+                ));
+                continue;
+            };
+
+            let Some(decl) = source_module
+                .program
+                .declarations
+                .iter()
+                .find(|decl| decl.name() == Some(binding.source_symbol.as_str()))
+            else {
+                self.diagnostics.push(Diagnostic::error(
+                    "E0234",
+                    format!(
+                        "module graph import '{}' points at missing symbol '{}'",
+                        binding.local_name, binding.source_symbol
+                    ),
+                    binding.span,
+                ));
+                continue;
+            };
+
+            imported_decls.push(decl.clone());
+        }
+
+        self.collect_declarations(&imported_decls);
+    }
+
     fn require_resolver_symbol(
         &mut self,
         symbols: &SymbolTable,
@@ -2473,6 +2557,49 @@ main = () i32 {
             .expect("resolver import symbols should seed typechecker imports");
 
         assert!(tc.is_root_std_import("io"));
+    }
+
+    #[test]
+    fn check_module_graph_entry_uses_graph_import_bindings() {
+        let tmp = tempfile::tempdir().expect("temp dir");
+        let math_path = tmp.path().join("math.zen");
+        std::fs::write(
+            &math_path,
+            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
+        )
+        .expect("write imported module");
+
+        let main_path = tmp.path().join("main.zen");
+        std::fs::write(
+            &main_path,
+            "{ add } = math\n\nmain = () i32 { return add(1, 2) }\n",
+        )
+        .expect("write entry module");
+
+        let mut files = crate::error::FileTable::new();
+        let mut modules = crate::module_system::ModuleSystem::new();
+        let graph = modules
+            .load_module_graph(&main_path, &mut files)
+            .expect("module graph");
+        let entry = graph.module(graph.entry).expect("entry module");
+        assert!(
+            !entry
+                .program
+                .declarations
+                .iter()
+                .any(|decl| decl.name() == Some("add")),
+            "graph entry should not merge imported declarations"
+        );
+
+        let mut tc = TypeChecker::new();
+        let typed = tc
+            .check_module_graph_entry(&graph)
+            .expect("graph import bindings should seed imported signatures");
+
+        assert!(typed
+            .functions
+            .iter()
+            .any(|function| function.name == "main"));
     }
 
     #[test]
