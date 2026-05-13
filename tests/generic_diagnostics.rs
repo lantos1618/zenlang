@@ -333,3 +333,35 @@ Point.implements(Json) {
         "expected extra behavior impl method diagnostic, got {errors:?}"
     );
 }
+
+#[test]
+fn behavior_impl_duplicate_method_is_error() {
+    let errors = frontend_errors(
+        r#"
+Point: {
+    x: i32
+}
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Point.implements(Json) {
+    to_json = (value: Point) str {
+        return "point"
+    }
+
+    to_json = (value: Point) str {
+        return "point again"
+    }
+}
+"#,
+    );
+
+    assert!(
+        errors
+            .iter()
+            .any(|d| { d.message.contains("duplicate value symbol 'Point.to_json'") }),
+        "expected duplicate behavior impl method diagnostic, got {errors:?}"
+    );
+}

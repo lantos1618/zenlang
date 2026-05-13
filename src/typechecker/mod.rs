@@ -70,6 +70,14 @@ pub(crate) struct GenericFunctionTemplate {
     pub span: Span,
 }
 
+struct DefaultBehaviorMethod {
+    name: String,
+    params: Vec<Param>,
+    return_type: Option<AstType>,
+    body: Expression,
+    span: Span,
+}
+
 struct ExpectedValueSignature {
     parameter_names: Vec<String>,
     parameter_type_names: Vec<String>,
@@ -190,6 +198,43 @@ fn ast_type_references_type_param(
                 || ast_type_references_type_param(ret, scoped_type_params)
         }
         _ => false,
+    }
+}
+
+fn concrete_self_ast_type(ast_type: &AstType, self_type_name: &str) -> AstType {
+    match ast_type {
+        AstType::SelfType => AstType::Named(self_type_name.to_string()),
+        AstType::Ptr(inner) => {
+            AstType::Ptr(Box::new(concrete_self_ast_type(inner, self_type_name)))
+        }
+        AstType::MutPtr(inner) => {
+            AstType::MutPtr(Box::new(concrete_self_ast_type(inner, self_type_name)))
+        }
+        AstType::RawPtr(inner) => {
+            AstType::RawPtr(Box::new(concrete_self_ast_type(inner, self_type_name)))
+        }
+        AstType::Slice(inner) => {
+            AstType::Slice(Box::new(concrete_self_ast_type(inner, self_type_name)))
+        }
+        AstType::Array { elem, size } => AstType::Array {
+            elem: Box::new(concrete_self_ast_type(elem, self_type_name)),
+            size: *size,
+        },
+        AstType::Function { params, ret } => AstType::Function {
+            params: params
+                .iter()
+                .map(|param| concrete_self_ast_type(param, self_type_name))
+                .collect(),
+            ret: Box::new(concrete_self_ast_type(ret, self_type_name)),
+        },
+        AstType::Generic { name, type_args } => AstType::Generic {
+            name: name.clone(),
+            type_args: type_args
+                .iter()
+                .map(|arg| concrete_self_ast_type(arg, self_type_name))
+                .collect(),
+        },
+        _ => ast_type.clone(),
     }
 }
 
@@ -382,7 +427,7 @@ impl TypeChecker {
                 Declaration::Behavior { .. } => {}
                 Declaration::ImplBlock {
                     type_name,
-                    behavior: Some(_),
+                    behavior: Some(behavior),
                     methods,
                     ..
                 } => {
@@ -406,6 +451,25 @@ impl TypeChecker {
                                 Err(d) => self.diagnostics.push(d),
                             }
                         }
+                    }
+
+                    for default in
+                        self.behavior_default_methods_for_impl(type_name, behavior, methods)
+                    {
+                        let full_name = format!("{}.{}", type_name, default.name);
+                        self.current_self_type =
+                            Some(self.resolve_type(&AstType::Named(type_name.clone())));
+                        match self.check_function(
+                            &full_name,
+                            &default.params,
+                            &default.return_type,
+                            &default.body,
+                            &default.span,
+                        ) {
+                            Ok(func) => functions.push(func),
+                            Err(d) => self.diagnostics.push(d),
+                        }
+                        self.current_self_type = None;
                     }
                 }
                 _ => {}
@@ -615,7 +679,7 @@ impl TypeChecker {
                 }
                 Declaration::ImplBlock {
                     type_name,
-                    behavior: Some(_),
+                    behavior: Some(behavior),
                     methods,
                     ..
                 } => {
@@ -647,6 +711,26 @@ impl TypeChecker {
                                 },
                             );
                         }
+                    }
+
+                    for default in
+                        self.behavior_default_methods_for_impl(type_name, behavior, methods)
+                    {
+                        let key = format!("{}.{}", type_name, default.name);
+                        self.methods.insert(
+                            key.clone(),
+                            FuncInfo {
+                                name: key,
+                                params: default
+                                    .params
+                                    .iter()
+                                    .map(|p| (p.name.clone(), p.ty.clone()))
+                                    .collect(),
+                                return_type: default.return_type.unwrap_or(AstType::Void),
+                                type_params: Vec::new(),
+                                type_param_bounds: HashMap::new(),
+                            },
+                        );
                     }
                 }
                 _ => {}
@@ -791,6 +875,49 @@ impl TypeChecker {
                 ));
             }
         }
+    }
+
+    fn behavior_default_methods_for_impl(
+        &self,
+        type_name: &str,
+        behavior: &str,
+        methods: &[Declaration],
+    ) -> Vec<DefaultBehaviorMethod> {
+        let Some(info) = self.behaviors.get(behavior) else {
+            return Vec::new();
+        };
+
+        info.methods
+            .iter()
+            .filter(|required| {
+                required.default_body.is_some()
+                    && !methods.iter().any(|decl| {
+                        matches!(decl, Declaration::Function { name, .. } if name == &required.name)
+                    })
+            })
+            .filter_map(|required| {
+                let body = required.default_body.clone()?;
+                Some(DefaultBehaviorMethod {
+                    name: required.name.clone(),
+                    params: required
+                        .params
+                        .iter()
+                        .map(|param| Param {
+                            name: param.name.clone(),
+                            ty: concrete_self_ast_type(&param.ty, type_name),
+                            mutable: param.mutable,
+                            span: param.span,
+                        })
+                        .collect(),
+                    return_type: required
+                        .return_type
+                        .as_ref()
+                        .map(|ty| concrete_self_ast_type(ty, type_name)),
+                    body,
+                    span: required.span,
+                })
+            })
+            .collect()
     }
 
     fn impl_ast_types_compatible(

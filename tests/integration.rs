@@ -235,6 +235,11 @@ fn test_behavior_json_explicit_impl() {
 }
 
 #[test]
+fn test_behavior_default_method_dispatch() {
+    run_test("behavior_default_method_dispatch");
+}
+
+#[test]
 fn test_behavior_json_generic_dispatch() {
     run_test("behavior_json_generic_dispatch");
 }
