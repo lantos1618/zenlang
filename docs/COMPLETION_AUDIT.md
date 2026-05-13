@@ -77,6 +77,9 @@ and do not assume Phase 4 is ready without evidence.
   declarations.
 - The module-graph typechecker entrypoint now checks imported modules before the
   entry module, so `zen check` reports imported-module type errors as well.
+- Graph typechecking now returns typed dependency definitions with the entry
+  module, preserving imported function bodies for future graph-based codegen
+  paths without reintroducing AST declaration merging.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
 - Enum variants are validated through resolver `Variant` symbols during

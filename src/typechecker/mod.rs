@@ -537,14 +537,16 @@ impl TypeChecker {
         let mut modules = graph.modules().values().collect::<Vec<_>>();
         modules.sort_by_key(|module| module.info.id.0);
 
+        let mut dependency_programs = Vec::new();
         for module in modules {
             if module.info.id == graph.entry {
                 continue;
             }
 
             let mut checker = TypeChecker::new();
-            if let Err(diags) = checker.check_module_graph_module(graph, module) {
-                self.diagnostics.extend(diags);
+            match checker.check_module_graph_module(graph, module) {
+                Ok(typed) => dependency_programs.push(typed),
+                Err(diags) => self.diagnostics.extend(diags),
             }
         }
 
@@ -557,7 +559,13 @@ impl TypeChecker {
                 .collect());
         }
 
-        self.check_module_graph_module(graph, entry)
+        let mut typed = self.check_module_graph_module(graph, entry)?;
+        for mut dependency in dependency_programs {
+            typed.functions.append(&mut dependency.functions);
+            typed.types.append(&mut dependency.types);
+            typed.globals.append(&mut dependency.globals);
+        }
+        Ok(typed)
     }
 
     fn check_module_graph_module(
@@ -2631,6 +2639,10 @@ main = () i32 {
             .functions
             .iter()
             .any(|function| function.name == "main"));
+        assert!(typed
+            .functions
+            .iter()
+            .any(|function| function.name == "add"));
     }
 
     #[test]

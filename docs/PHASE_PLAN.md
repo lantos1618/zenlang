@@ -85,6 +85,9 @@ checked-in docs, tests, and commits only.
   diagnostics from imported modules before typechecking the entry module.
 - The module-graph typechecker entrypoint now typechecks imported modules before
   the entry module, and `zen check` reports imported-module type errors.
+- The module-graph typechecker entrypoint now returns typed dependency
+  definitions with the entry module so graph-based codegen paths can resolve
+  imported calls without AST declaration merging.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
 - Typechecker resolver-symbol validation now checks enum variant symbols from
