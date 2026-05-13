@@ -89,6 +89,8 @@ and do not assume Phase 4 is ready without evidence.
   validation.
 - Compile-time `.requires` behavior assertions are parsed, resolved against
   known type/behavior symbols, and typechecked against explicit behavior impls.
+- Generic behavior bounds use the same inheritance-aware behavior satisfaction
+  check as `.requires`.
 - Behavior inheritance `.extends` is parsed, resolved against known behaviors,
   and typechecked so child behavior impls must satisfy inherited parent methods
   while cyclic inheritance and conflicting inherited method signatures are

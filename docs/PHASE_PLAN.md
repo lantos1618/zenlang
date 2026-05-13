@@ -31,6 +31,8 @@ checked-in docs, tests, and commits only.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.
+- Generic behavior bounds share the behavior inheritance solver, so an impl of a
+  child behavior can satisfy a parent behavior bound.
 - Compile-time `.requires` behavior assertions now have parser, resolver, and
   typechecker coverage for satisfied and missing behavior implementations.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker

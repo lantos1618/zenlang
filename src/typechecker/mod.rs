@@ -1470,10 +1470,7 @@ impl TypeChecker {
                 ));
                 continue;
             };
-            if !self
-                .behavior_impls
-                .contains(&(type_name.clone(), behavior.clone()))
-            {
+            if !self.type_implements_behavior(&type_name, behavior) {
                 self.diagnostics.push(Diagnostic::error(
                     "E6004",
                     format!(
@@ -5250,6 +5247,44 @@ main = () i32 {
         let mut tc = TypeChecker::new();
         tc.check_program(&program)
             .expect("type with behavior impl should satisfy generic bound");
+    }
+
+    #[test]
+    fn generic_behavior_bound_accepts_inherited_behavior_impl() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+
+Point.implements(PrettyJson) {
+    to_json = (value: Point) str { return "point" }
+    pretty = (value: Point) str { return "pretty" }
+}
+
+encode<T: Json> = (value: T) str {
+    return "encoded"
+}
+
+main = () i32 {
+    p = Point { x: 1 }
+    encoded = encode(p)
+    return 0
+}
+"#,
+        );
+
+        TypeChecker::new()
+            .check_program(&program)
+            .expect("child behavior impl should satisfy inherited generic bound");
     }
 
     #[test]
