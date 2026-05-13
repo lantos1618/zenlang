@@ -205,3 +205,63 @@ main = () i32 {
         "expected generic enum bound diagnostic, got {errors:?}"
     );
 }
+
+#[test]
+fn generic_struct_annotation_bound_failure_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: {
+    x: i32
+}
+
+Box<T: Json>: {
+    value: T
+}
+
+read = (box: Box<Point>) i32 {
+    return box.value.x
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("type `Point` does not implement behavior `Json` required by `T`")),
+        "expected generic struct annotation bound diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_enum_annotation_bound_failure_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: {
+    x: i32
+}
+
+Option<T: Json>:
+    None,
+    Some(T)
+
+read = (value: Option<Point>) i32 {
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("type `Point` does not implement behavior `Json` required by `T`")),
+        "expected generic enum annotation bound diagnostic, got {errors:?}"
+    );
+}

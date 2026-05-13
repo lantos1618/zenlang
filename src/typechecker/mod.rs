@@ -163,6 +163,36 @@ fn type_param_bounds(type_params: &[ast::TypeParam]) -> HashMap<String, String> 
         .collect()
 }
 
+fn type_param_name_set(type_params: &[ast::TypeParam]) -> HashSet<String> {
+    type_params.iter().map(|param| param.name.clone()).collect()
+}
+
+fn ast_type_references_type_param(
+    ast_type: &AstType,
+    scoped_type_params: &HashSet<String>,
+) -> bool {
+    match ast_type {
+        AstType::Named(name) => scoped_type_params.contains(name),
+        AstType::Generic { type_args, .. } => type_args
+            .iter()
+            .any(|arg| ast_type_references_type_param(arg, scoped_type_params)),
+        AstType::Ptr(inner)
+        | AstType::MutPtr(inner)
+        | AstType::RawPtr(inner)
+        | AstType::Slice(inner)
+        | AstType::Array { elem: inner, .. } => {
+            ast_type_references_type_param(inner, scoped_type_params)
+        }
+        AstType::Function { params, ret } => {
+            params
+                .iter()
+                .any(|param| ast_type_references_type_param(param, scoped_type_params))
+                || ast_type_references_type_param(ret, scoped_type_params)
+        }
+        _ => false,
+    }
+}
+
 // ── TypeChecker ───────────────────────────────────────────────────
 
 pub struct TypeChecker {
@@ -635,6 +665,8 @@ impl TypeChecker {
                 self.check_behavior_impl(type_name, behavior, methods, *span);
             }
         }
+
+        self.validate_generic_type_references(decls);
     }
 
     fn check_behavior_impl(
@@ -779,6 +811,152 @@ impl TypeChecker {
                     ));
                 }
             }
+        }
+    }
+
+    fn validate_generic_type_references(&mut self, decls: &[Declaration]) {
+        for decl in decls {
+            match decl {
+                Declaration::Struct {
+                    type_params,
+                    fields,
+                    ..
+                } => {
+                    let scoped = type_param_name_set(type_params);
+                    for field in fields {
+                        self.validate_generic_type_ref_bounds(&field.ty, &scoped, field.span);
+                    }
+                }
+                Declaration::Enum {
+                    type_params,
+                    variants,
+                    ..
+                } => {
+                    let scoped = type_param_name_set(type_params);
+                    for variant in variants {
+                        if let Some(payload) = &variant.payload {
+                            self.validate_generic_type_ref_bounds(payload, &scoped, variant.span);
+                        }
+                    }
+                }
+                Declaration::Function {
+                    type_params,
+                    params,
+                    return_type,
+                    ..
+                }
+                | Declaration::Method {
+                    type_params,
+                    params,
+                    return_type,
+                    ..
+                } => {
+                    let scoped = type_param_name_set(type_params);
+                    for param in params {
+                        self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
+                    }
+                    if let Some(return_type) = return_type {
+                        self.validate_generic_type_ref_bounds(return_type, &scoped, Span::dummy());
+                    }
+                }
+                Declaration::Behavior {
+                    type_params,
+                    methods,
+                    ..
+                } => {
+                    let scoped = type_param_name_set(type_params);
+                    for method in methods {
+                        for param in &method.params {
+                            self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
+                        }
+                        if let Some(return_type) = &method.return_type {
+                            self.validate_generic_type_ref_bounds(
+                                return_type,
+                                &scoped,
+                                method.span,
+                            );
+                        }
+                    }
+                }
+                Declaration::ImplBlock { methods, .. } => {
+                    for method in methods {
+                        if let Declaration::Function {
+                            type_params,
+                            params,
+                            return_type,
+                            ..
+                        } = method
+                        {
+                            let scoped = type_param_name_set(type_params);
+                            for param in params {
+                                self.validate_generic_type_ref_bounds(
+                                    &param.ty, &scoped, param.span,
+                                );
+                            }
+                            if let Some(return_type) = return_type {
+                                self.validate_generic_type_ref_bounds(
+                                    return_type,
+                                    &scoped,
+                                    method.span(),
+                                );
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn validate_generic_type_ref_bounds(
+        &mut self,
+        ast_type: &AstType,
+        scoped_type_params: &HashSet<String>,
+        span: Span,
+    ) {
+        match ast_type {
+            AstType::Generic { name, type_args } => {
+                for type_arg in type_args {
+                    self.validate_generic_type_ref_bounds(type_arg, scoped_type_params, span);
+                }
+
+                let (type_params, type_param_bounds) = if let Some(info) = self.structs.get(name) {
+                    (info.type_params.clone(), info.type_param_bounds.clone())
+                } else if let Some(info) = self.enums.get(name) {
+                    (info.type_params.clone(), info.type_param_bounds.clone())
+                } else {
+                    return;
+                };
+
+                let substitutions: HashMap<String, Type> = type_params
+                    .iter()
+                    .zip(type_args.iter())
+                    .filter_map(|(param, arg)| {
+                        if ast_type_references_type_param(arg, scoped_type_params) {
+                            None
+                        } else {
+                            Some((param.clone(), self.resolve_type(arg)))
+                        }
+                    })
+                    .collect();
+                self.check_generic_bounds(&type_param_bounds, &substitutions, span);
+            }
+            AstType::Ptr(inner)
+            | AstType::MutPtr(inner)
+            | AstType::RawPtr(inner)
+            | AstType::Slice(inner) => {
+                self.validate_generic_type_ref_bounds(inner, scoped_type_params, span);
+            }
+            AstType::Array { elem, .. } => {
+                self.validate_generic_type_ref_bounds(elem, scoped_type_params, span);
+            }
+            AstType::Function { params, ret } => {
+                for param in params {
+                    self.validate_generic_type_ref_bounds(param, scoped_type_params, span);
+                }
+                self.validate_generic_type_ref_bounds(ret, scoped_type_params, span);
+            }
+            _ => {}
         }
     }
 
