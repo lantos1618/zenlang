@@ -4517,6 +4517,32 @@ main = () i32 {
     }
 
     #[test]
+    fn nongeneric_function_explicit_type_args_are_error() {
+        let program = parse_program(
+            r#"
+id = (value: i32) i32 {
+    return value
+}
+
+main = () i32 {
+    return id<i32>(1)
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("non-generic function type arguments should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("non-generic function `id` does not accept type arguments")),
+            "expected non-generic type-argument diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
     fn generic_function_inference_failure_is_error() {
         let program = parse_program(
             r#"
