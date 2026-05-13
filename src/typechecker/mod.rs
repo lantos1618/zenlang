@@ -1084,9 +1084,18 @@ impl TypeChecker {
         methods: &[Declaration],
         span: Span,
     ) {
-        if !self
+        if !self.behaviors.contains_key(behavior) {
+            self.diagnostics.push(Diagnostic::error(
+                "E6000",
+                format!("undefined behavior `{}`", behavior),
+                span,
+            ));
+            return;
+        }
+
+        if self
             .behavior_impls
-            .insert((type_name.to_string(), behavior.to_string()))
+            .contains(&(type_name.to_string(), behavior.to_string()))
         {
             self.diagnostics.push(Diagnostic::error(
                 "E6003",
@@ -1099,14 +1108,20 @@ impl TypeChecker {
             return;
         }
 
-        if !self.behaviors.contains_key(behavior) {
+        if let Some(existing) = self.find_overlapping_behavior_impl(type_name, behavior) {
             self.diagnostics.push(Diagnostic::error(
-                "E6000",
-                format!("undefined behavior `{}`", behavior),
+                "E6010",
+                format!(
+                    "overlapping implementations of behaviors `{}` and `{}` for type `{}`",
+                    existing, behavior, type_name
+                ),
                 span,
             ));
             return;
         }
+
+        self.behavior_impls
+            .insert((type_name.to_string(), behavior.to_string()));
         let required_methods = self.behavior_methods_with_inherited(behavior, &mut HashSet::new());
 
         for method in methods {
@@ -1203,6 +1218,18 @@ impl TypeChecker {
                 ));
             }
         }
+    }
+
+    fn find_overlapping_behavior_impl(&self, type_name: &str, behavior: &str) -> Option<String> {
+        self.behavior_impls
+            .iter()
+            .filter(|(implemented_type, _)| implemented_type == type_name)
+            .map(|(_, implemented_behavior)| implemented_behavior)
+            .find(|implemented_behavior| {
+                self.behavior_inherits_from(implemented_behavior, behavior)
+                    || self.behavior_inherits_from(behavior, implemented_behavior)
+            })
+            .cloned()
     }
 
     fn behavior_default_methods_for_impl(
@@ -4910,6 +4937,46 @@ Point.implements(Json) {
                 .message
                 .contains("duplicate implementation of behavior `Json` for type `Point`")),
             "expected duplicate behavior impl diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_impl_overlapping_inherited_behavior_is_error() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+
+Point.implements(Json) {
+    to_json = (value: Point) str { return "point" }
+}
+
+Point.implements(PrettyJson) {
+    to_json = (value: Point) str { return "point" }
+    pretty = (value: Point) str { return "pretty" }
+}
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("overlapping inherited behavior impl should fail");
+        assert!(
+            errors.iter().any(|d| {
+                d.message.contains(
+                    "overlapping implementations of behaviors `Json` and `PrettyJson` for type `Point`",
+                )
+            }),
+            "expected overlapping behavior impl diagnostic, got {errors:?}"
         );
     }
 
