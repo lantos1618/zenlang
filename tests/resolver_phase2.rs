@@ -534,6 +534,35 @@ Serializable: behavior {
 }
 
 #[test]
+fn resolver_records_behavior_parent_names() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Behavior, "PrettyJson")
+            .expect("behavior symbol")
+            .behavior_parent_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&["Json".to_string()][..])
+    );
+}
+
+#[test]
 fn resolver_records_struct_field_counts() {
     let program = parse_program(
         r#"

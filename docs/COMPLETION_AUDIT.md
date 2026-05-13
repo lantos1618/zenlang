@@ -97,6 +97,8 @@ and do not assume Phase 4 is ready without evidence.
   and typechecked so child behavior impls must satisfy inherited parent methods
   while duplicate edges, cyclic inheritance, and conflicting inherited method
   signatures are rejected.
+- Resolver behavior symbols carry parent behavior metadata, and typechecker
+  setup rejects missing resolver parent-edge metadata.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.
 - Inherited behavior default methods are emitted and callable in the executable

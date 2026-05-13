@@ -1847,6 +1847,11 @@ impl TypeChecker {
                 } => {
                     self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
                     self.require_resolver_symbol(symbols, Namespace::Behavior, parent, *span);
+                    if let Some(symbol) = symbols.lookup(Namespace::Behavior, behavior) {
+                        self.validate_resolver_behavior_parent_names(
+                            symbol, behavior, parent, *span,
+                        );
+                    }
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
                     let mut locals = scope_cursor.new_scope();
@@ -2536,6 +2541,29 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_behavior_parent_names(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_parent: &str,
+        span: Span,
+    ) {
+        if !symbol
+            .behavior_parent_names
+            .as_deref()
+            .is_some_and(|parents| parents.iter().any(|parent| parent == expected_parent))
+        {
+            let actual = format_behavior_parent_names(symbol.behavior_parent_names.as_deref());
+            self.diagnostics.push(Diagnostic::error(
+                "E0235",
+                format!(
+                    "resolver behavior symbol '{name}' has parents '{actual}', expected to include '{expected_parent}'"
+                ),
+                span,
+            ));
+        }
+    }
+
     fn require_resolver_value_symbol(
         &mut self,
         symbols: &SymbolTable,
@@ -2792,6 +2820,13 @@ fn format_behavior_method_signatures(methods: Option<&[MethodSignatureMetadata]>
                 .join(", ")
         ),
         None => "unknown".to_string(),
+    }
+}
+
+fn format_behavior_parent_names(parents: Option<&[String]>) -> String {
+    match parents {
+        Some(parents) if !parents.is_empty() => parents.join(", "),
+        _ => "none".to_string(),
     }
 }
 
@@ -3664,6 +3699,39 @@ Serializable: behavior {
                 "resolver behavior symbol 'Serializable' has methods '(encode(Self, bool) str)', expected '(encode(Self, i32) str)'"
             )),
             "expected resolver behavior method signature diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_behavior_parent_names() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_parent_names_for_test(Namespace::Behavior, "PrettyJson", None);
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver behavior parent metadata mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver behavior symbol 'PrettyJson' has parents 'none', expected to include 'Json'"
+            )),
+            "expected resolver behavior parent metadata diagnostic, got {err:?}"
         );
     }
 

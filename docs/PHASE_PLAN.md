@@ -41,6 +41,8 @@ checked-in docs, tests, and commits only.
   coverage for inherited required methods, parent behavior satisfaction, and
   coherence diagnostics for duplicate edges, cycles, and conflicting inherited
   method signatures.
+- Resolver behavior symbols now carry parent behavior metadata, and typechecker
+  setup rejects missing resolver parent-edge metadata.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.
 - Inherited behavior default methods have executable coverage through

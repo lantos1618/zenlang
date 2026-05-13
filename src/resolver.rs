@@ -55,6 +55,7 @@ pub struct Symbol {
     pub variant_payload_count: Option<usize>,
     pub variant_payload_type_name: Option<String>,
     pub behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
+    pub behavior_parent_names: Option<Vec<String>>,
     pub is_mutable: Option<bool>,
     pub scope_id: u32,
     pub definition_span: Span,
@@ -74,6 +75,7 @@ struct SymbolMetadata {
     variant_payload_count: Option<usize>,
     variant_payload_type_name: Option<String>,
     behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
+    behavior_parent_names: Option<Vec<String>>,
     is_mutable: Option<bool>,
 }
 
@@ -346,6 +348,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_behavior_parent_names_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        behavior_parent_names: Option<Vec<String>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.behavior_parent_names = behavior_parent_names;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_field_count_for_test(
         &mut self,
         namespace: Namespace,
@@ -434,6 +452,7 @@ impl SymbolTable {
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
+                behavior_parent_names: None,
                 is_mutable: None,
             },
             0,
@@ -466,6 +485,7 @@ impl SymbolTable {
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
+                behavior_parent_names: None,
                 is_mutable: None,
             },
             0,
@@ -501,6 +521,7 @@ impl SymbolTable {
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
+                behavior_parent_names: None,
                 is_mutable: None,
             },
             0,
@@ -533,6 +554,7 @@ impl SymbolTable {
                 variant_payload_count: Some(variant_payload_count),
                 variant_payload_type_name,
                 behavior_method_signatures: None,
+                behavior_parent_names: None,
                 is_mutable: None,
             },
             0,
@@ -565,6 +587,7 @@ impl SymbolTable {
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: Some(behavior_method_signatures),
+                behavior_parent_names: None,
                 is_mutable: None,
             },
             0,
@@ -615,6 +638,7 @@ impl SymbolTable {
             variant_payload_count: metadata.variant_payload_count,
             variant_payload_type_name: metadata.variant_payload_type_name,
             behavior_method_signatures: metadata.behavior_method_signatures,
+            behavior_parent_names: metadata.behavior_parent_names,
             is_mutable: metadata.is_mutable,
             scope_id,
             definition_span,
@@ -646,6 +670,19 @@ impl SymbolTable {
     fn new_scope(&mut self) -> u32 {
         self.next_scope_id += 1;
         self.next_scope_id
+    }
+
+    fn record_behavior_parent(&mut self, behavior: &str, parent: &str) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == Namespace::Behavior && symbol.name == behavior)
+        {
+            symbol
+                .behavior_parent_names
+                .get_or_insert_with(Vec::new)
+                .push(parent.to_string());
+        }
     }
 }
 
@@ -973,19 +1010,24 @@ impl Resolver {
                 parent,
                 span,
             } => {
-                if table.lookup(Namespace::Behavior, behavior).is_none() {
+                let behavior_known = table.lookup(Namespace::Behavior, behavior).is_some();
+                let parent_known = table.lookup(Namespace::Behavior, parent).is_some();
+                if !behavior_known {
                     diagnostics.push(Diagnostic::error(
                         "E0202",
                         format!("unknown behavior symbol '{behavior}'"),
                         *span,
                     ));
                 }
-                if table.lookup(Namespace::Behavior, parent).is_none() {
+                if !parent_known {
                     diagnostics.push(Diagnostic::error(
                         "E0202",
                         format!("unknown behavior symbol '{parent}'"),
                         *span,
                     ));
+                }
+                if behavior_known && parent_known {
+                    table.record_behavior_parent(behavior, parent);
                 }
             }
             Declaration::TopLevelExpr { expr, .. } => {
