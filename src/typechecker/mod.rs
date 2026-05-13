@@ -534,7 +534,20 @@ impl TypeChecker {
                 .collect());
         };
 
-        self.validate_resolver_symbols(&entry.program, &entry.symbols);
+        let mut modules = graph.modules().values().collect::<Vec<_>>();
+        modules.sort_by_key(|module| module.info.id.0);
+
+        for module in modules {
+            if module.info.id == graph.entry {
+                continue;
+            }
+
+            let mut checker = TypeChecker::new();
+            if let Err(diags) = checker.check_module_graph_module(graph, module) {
+                self.diagnostics.extend(diags);
+            }
+        }
+
         if self.diagnostics.iter().any(|diag| diag.is_error()) {
             return Err(self
                 .diagnostics
@@ -544,7 +557,15 @@ impl TypeChecker {
                 .collect());
         }
 
-        self.collect_module_graph_imports(graph, entry);
+        self.check_module_graph_module(graph, entry)
+    }
+
+    fn check_module_graph_module(
+        &mut self,
+        graph: &ResolvedModuleGraph,
+        module: &ResolvedModule,
+    ) -> Result<TypedProgram, Vec<Diagnostic>> {
+        self.validate_resolver_symbols(&module.program, &module.symbols);
         if self.diagnostics.iter().any(|diag| diag.is_error()) {
             return Err(self
                 .diagnostics
@@ -554,7 +575,17 @@ impl TypeChecker {
                 .collect());
         }
 
-        self.check_program(&entry.program)
+        self.collect_module_graph_imports(graph, module);
+        if self.diagnostics.iter().any(|diag| diag.is_error()) {
+            return Err(self
+                .diagnostics
+                .iter()
+                .filter(|diag| diag.is_error())
+                .cloned()
+                .collect());
+        }
+
+        self.check_program(&module.program)
     }
 
     /// Get all diagnostics (errors + warnings).

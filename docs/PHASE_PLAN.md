@@ -83,6 +83,8 @@ checked-in docs, tests, and commits only.
   `ImportBinding`s without merging imported declarations into the entry AST.
 - The CLI `check` path now loads the module graph and reports resolver
   diagnostics from imported modules before typechecking the entry module.
+- The module-graph typechecker entrypoint now typechecks imported modules before
+  the entry module, and `zen check` reports imported-module type errors.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
 - Typechecker resolver-symbol validation now checks enum variant symbols from

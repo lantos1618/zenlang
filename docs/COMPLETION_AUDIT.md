@@ -75,6 +75,8 @@ and do not assume Phase 4 is ready without evidence.
 - The CLI `check` path now uses the module graph and reports resolver
   diagnostics from imported modules instead of checking only merged imported
   declarations.
+- The module-graph typechecker entrypoint now checks imported modules before the
+  entry module, so `zen check` reports imported-module type errors as well.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
 - Enum variants are validated through resolver `Variant` symbols during

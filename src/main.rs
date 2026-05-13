@@ -101,9 +101,6 @@ fn frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
             for diag in &diags {
                 print_diagnostic(diag, &files);
             }
-            for diag in checker.diagnostics() {
-                print_diagnostic(diag, &files);
-            }
             let errors = diags
                 .iter()
                 .filter(|d| d.severity == zen::error::Severity::Error)
