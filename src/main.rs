@@ -5,7 +5,6 @@ use zen::codegen::c::CBackend;
 use zen::codegen::Backend;
 use zen::error::FileTable;
 use zen::module_system::ModuleSystem;
-use zen::resolver::Resolver;
 use zen::typechecker::TypeChecker;
 
 fn main() {
@@ -49,63 +48,6 @@ fn main() {
         }
         other => {
             eprintln!("unknown command: {}", other);
-            process::exit(1);
-        }
-    }
-}
-
-/// Parse and typecheck a .zen file, returning the typed program on success.
-fn frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
-    let path = Path::new(path_str);
-    if !path.exists() {
-        eprintln!("error: file not found: {}", path_str);
-        process::exit(1);
-    }
-
-    let mut files = FileTable::new();
-    let mut module_system = ModuleSystem::new();
-
-    let program = match module_system.load_with_imports(path, &mut files) {
-        Ok(p) => p,
-        Err(errs) => {
-            print_errors(&errs, &files);
-            process::exit(1);
-        }
-    };
-
-    let resolver_symbols = match Resolver::new().resolve_program(&program) {
-        Ok(symbols) => symbols,
-        Err(diags) => {
-            for diag in &diags {
-                print_diagnostic(diag, &files);
-            }
-            let errors = diags
-                .iter()
-                .filter(|d| d.severity == zen::error::Severity::Error)
-                .count();
-            eprintln!("  {} error(s)", errors);
-            process::exit(1);
-        }
-    };
-
-    let mut checker = TypeChecker::new();
-    match checker.check_program_with_symbols(&program, &resolver_symbols) {
-        Ok(typed) => {
-            let diags = checker.diagnostics();
-            for diag in diags {
-                print_diagnostic(diag, &files);
-            }
-            typed
-        }
-        Err(diags) => {
-            for diag in &diags {
-                print_diagnostic(diag, &files);
-            }
-            let errors = diags
-                .iter()
-                .filter(|d| d.severity == zen::error::Severity::Error)
-                .count();
-            eprintln!("  {} error(s)", errors);
             process::exit(1);
         }
     }
@@ -185,7 +127,7 @@ fn cmd_build(path_str: &str) {
         process::exit(1);
     }
 
-    let typed = frontend(path_str);
+    let typed = graph_frontend(path_str);
     let backend = CBackend;
     let c_source = match backend.generate(&typed) {
         Ok(s) => s,

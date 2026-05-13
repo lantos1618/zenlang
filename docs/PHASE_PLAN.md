@@ -90,6 +90,8 @@ checked-in docs, tests, and commits only.
   imported calls without AST declaration merging.
 - The CLI `emit` path now uses the module-graph frontend, so emitted C is based
   on graph-owned import bindings and reports imported-module type errors.
+- The normal CLI `build` and direct `.zen` paths now use the module-graph
+  frontend while preserving the explicit `build.zen` gate.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
 - Typechecker resolver-symbol validation now checks enum variant symbols from
