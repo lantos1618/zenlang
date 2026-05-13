@@ -234,6 +234,11 @@ fn test_behavior_json_generic_dispatch() {
 }
 
 #[test]
+fn test_behavior_inherited_generic_dispatch() {
+    run_test("behavior_inherited_generic_dispatch");
+}
+
+#[test]
 fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     let c_source = compile_to_c(&test_dir().join("generic_method.zen"));
     assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));

@@ -91,6 +91,8 @@ and do not assume Phase 4 is ready without evidence.
   known type/behavior symbols, and typechecked against explicit behavior impls.
 - Generic behavior bounds use the same inheritance-aware behavior satisfaction
   check as `.requires`.
+- Inherited generic behavior dispatch is covered by the executable fixture
+  `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Behavior inheritance `.extends` is parsed, resolved against known behaviors,
   and typechecked so child behavior impls must satisfy inherited parent methods
   while cyclic inheritance and conflicting inherited method signatures are
