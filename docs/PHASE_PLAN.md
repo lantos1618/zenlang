@@ -33,6 +33,8 @@ checked-in docs, tests, and commits only.
   and executable coverage.
 - Compile-time `.requires` behavior assertions now have parser, resolver, and
   typechecker coverage for satisfied and missing behavior implementations.
+- Behavior inheritance `.extends` remains gated with a parser test that emits a
+  dedicated diagnostic instead of a generic syntax error.
 - Resolver Phase 2 has started with symbol IDs, separate namespaces, duplicate
   same-namespace diagnostics, symbol visibility metadata, and unknown type
   reference diagnostics in `tests/resolver_phase2.rs`.

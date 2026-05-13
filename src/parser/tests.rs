@@ -406,6 +406,17 @@ fn parse_behavior_requires_assertion() {
     }
 }
 
+#[test]
+fn parse_rejects_gated_behavior_extends_with_clear_error() {
+    let result = parse_str("PrettyPrint.extends(Json)");
+    let errs = result.expect_err("expected gated behavior extends syntax to be rejected");
+    assert!(
+        errs.iter()
+            .any(|e| e.to_string().contains("gated v1 feature 'extends'")),
+        "expected clear gated extends diagnostic, got {errs:?}"
+    );
+}
+
 // ── Additional feature tests ─────────────────────────────
 
 #[test]

@@ -55,7 +55,7 @@ impl Parser {
                         let (method_name, _method_span) = self.expect_identifier()?;
                         self.skip_newlines();
 
-                        if matches!(method_name.as_str(), "implements" | "requires") {
+                        if matches!(method_name.as_str(), "implements" | "requires" | "extends") {
                             return Err(CompileError::Syntax(
                                 format!(
                                     "gated v1 feature '{method_name}': type association and behavior constraints are specified in docs/V1_SPEC.md but are not implemented"
@@ -115,6 +115,15 @@ impl Parser {
 
                 if method_name == "requires" {
                     return self.parse_behavior_requires(name, name_span);
+                }
+
+                if method_name == "extends" {
+                    return Err(CompileError::Syntax(
+                        format!(
+                            "gated v1 feature '{method_name}': behavior inheritance is specified in docs/V1_SPEC.md but is not implemented"
+                        ),
+                        Some(self.peek_span()),
+                    ));
                 }
 
                 // Type.impl = { methods }
