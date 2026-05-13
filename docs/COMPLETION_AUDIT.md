@@ -93,6 +93,9 @@ and do not assume Phase 4 is ready without evidence.
   check as `.requires`.
 - Inherited generic behavior dispatch is covered by the executable fixture
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
+- Generic behavior association syntax in `.implements`, `.requires`, and
+  `.extends` is explicitly gated with parser diagnostics until `Json<T>`-style
+  behavior association is implemented.
 - Behavior inheritance `.extends` is parsed, resolved against known behaviors,
   and typechecked so child behavior impls must satisfy inherited parent methods
   while duplicate edges, cyclic inheritance, and conflicting inherited method

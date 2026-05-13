@@ -462,6 +462,42 @@ fn parse_behavior_impl_block() {
 }
 
 #[test]
+fn parse_rejects_generic_behavior_impl_with_clear_error() {
+    let result = parse_str("Point.implements(Json<i32>) { }");
+    let errs = result.expect_err("generic behavior impl syntax should be gated");
+    assert!(
+        errs.iter().any(|e| e
+            .to_string()
+            .contains("gated v1 feature 'implements': generic behavior association")),
+        "expected clear generic behavior impl diagnostic, got {errs:?}"
+    );
+}
+
+#[test]
+fn parse_rejects_generic_behavior_requires_with_clear_error() {
+    let result = parse_str("Point.requires(Json<i32>)");
+    let errs = result.expect_err("generic behavior requires syntax should be gated");
+    assert!(
+        errs.iter().any(|e| e
+            .to_string()
+            .contains("gated v1 feature 'requires': generic behavior association")),
+        "expected clear generic behavior requires diagnostic, got {errs:?}"
+    );
+}
+
+#[test]
+fn parse_rejects_generic_behavior_extends_with_clear_error() {
+    let result = parse_str("PrettyJson.extends(Json<i32>)");
+    let errs = result.expect_err("generic behavior extends syntax should be gated");
+    assert!(
+        errs.iter().any(|e| e
+            .to_string()
+            .contains("gated v1 feature 'extends': generic behavior association")),
+        "expected clear generic behavior extends diagnostic, got {errs:?}"
+    );
+}
+
+#[test]
 fn parse_pointer_types() {
     let prog = parse_ok("foo = (p: Ptr<i32>, q: MutPtr<u8>) void { }");
     match &prog.declarations[0] {

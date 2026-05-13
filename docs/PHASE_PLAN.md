@@ -35,6 +35,9 @@ checked-in docs, tests, and commits only.
   child behavior can satisfy a parent behavior bound.
 - Inherited generic behavior dispatch has executable coverage through
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
+- Generic behavior association syntax in `.implements`, `.requires`, and
+  `.extends` is explicitly gated with parser diagnostics until `Json<T>`-style
+  behavior association is implemented.
 - Compile-time `.requires` behavior assertions now have parser, resolver, and
   typechecker coverage for satisfied and missing behavior implementations.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker
