@@ -1,0 +1,20 @@
+{ io } = std
+
+inner<T> = (value: T) T {
+    return value
+}
+
+left<T> = (value: T) T {
+    return inner(value)
+}
+
+right<T> = (value: T) T {
+    return inner(value)
+}
+
+main = () i32 {
+    a = left(12)
+    b = right(30)
+    io.println("${a + b}")
+    return 0
+}

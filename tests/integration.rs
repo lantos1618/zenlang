@@ -220,6 +220,11 @@ fn test_generic_worklist() {
 }
 
 #[test]
+fn test_generic_worklist_dedup() {
+    run_test("generic_worklist_dedup");
+}
+
+#[test]
 fn test_generic_ufc_function() {
     run_test("generic_ufc_function");
 }
@@ -248,6 +253,17 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     let c_source = compile_to_c(&test_dir().join("generic_worklist.zen"));
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
     assert!(c_source.contains("int32_t outer_i32(int32_t value)"));
+    assert!(c_source.contains("inner_i32(value)"));
+    assert_eq!(
+        c_source.matches("int32_t inner_i32(int32_t value)").count(),
+        2
+    );
+    assert!(!c_source.contains("T inner"));
+    assert!(!c_source.contains("inner_T"));
+
+    let c_source = compile_to_c(&test_dir().join("generic_worklist_dedup.zen"));
+    assert!(c_source.contains("int32_t left_i32(int32_t value)"));
+    assert!(c_source.contains("int32_t right_i32(int32_t value)"));
     assert!(c_source.contains("inner_i32(value)"));
     assert_eq!(
         c_source.matches("int32_t inner_i32(int32_t value)").count(),
