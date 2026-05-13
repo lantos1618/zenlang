@@ -10,7 +10,6 @@ use zen::codegen::c::CBackend;
 use zen::codegen::Backend;
 use zen::error::FileTable;
 use zen::module_system::ModuleSystem;
-use zen::resolver::Resolver;
 use zen::typechecker::TypeChecker;
 
 /// Root of the test fixtures.
@@ -23,8 +22,8 @@ fn compile_to_c(zen_path: &Path) -> String {
     // 1. Load & parse
     let mut files = FileTable::new();
     let mut module_system = ModuleSystem::new();
-    let program = module_system
-        .load_with_imports(zen_path, &mut files)
+    let graph = module_system
+        .load_module_graph(zen_path, &mut files)
         .unwrap_or_else(|errs| {
             panic!(
                 "load/parse error in {}:\n  {}",
@@ -36,25 +35,10 @@ fn compile_to_c(zen_path: &Path) -> String {
             );
         });
 
-    // 2. Resolve
-    let resolver_symbols = Resolver::new()
-        .resolve_program(&program)
-        .unwrap_or_else(|diags| {
-            panic!(
-                "resolver error in {}:\n  {}",
-                zen_path.display(),
-                diags
-                    .iter()
-                    .map(|d| d.message.clone())
-                    .collect::<Vec<_>>()
-                    .join("\n  ")
-            );
-        });
-
-    // 3. Typecheck
+    // 2. Resolve and typecheck the graph.
     let mut checker = TypeChecker::new();
     let typed = checker
-        .check_program_with_symbols(&program, &resolver_symbols)
+        .check_module_graph_entry(&graph)
         .unwrap_or_else(|diags| {
             panic!(
                 "typecheck error in {}:\n  {}",
@@ -599,6 +583,51 @@ main = () i32 {
     assert!(
         message.contains("unknown value symbol 'missing_local'"),
         "expected resolver diagnostic, panic={message}"
+    );
+}
+
+#[test]
+fn integration_frontend_helper_reports_imported_module_type_diagnostics() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let math_path = tmp.path().join("math.zen");
+    std::fs::write(
+        &math_path,
+        r#"
+pub add = (a: i32, b: i32) i32 {
+    return a + b
+}
+
+pub broken = () i32 {
+    return true
+}
+"#,
+    )
+    .expect("write imported module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ add } = math
+
+main = () i32 {
+    return add(1, 2)
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject imported module type errors");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("return type mismatch: expected `i32`, found `bool`"),
+        "expected imported module type diagnostic, panic={message}"
     );
 }
 

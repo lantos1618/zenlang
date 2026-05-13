@@ -92,6 +92,9 @@ checked-in docs, tests, and commits only.
   on graph-owned import bindings and reports imported-module type errors.
 - The normal CLI `build` and direct `.zen` paths now use the module-graph
   frontend while preserving the explicit `build.zen` gate.
+- The reusable integration-test frontend helper now uses the module graph, so
+  fixture compilation and generated-C assertions exercise the same graph-owned
+  import validation as the CLI paths.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
 - Typechecker resolver-symbol validation now checks enum variant symbols from

@@ -84,6 +84,9 @@ and do not assume Phase 4 is ready without evidence.
   errors, and still receives typed dependency definitions for C generation.
 - The normal CLI `build` path and direct `.zen` invocation now use the module
   graph while preserving the dedicated `build.zen` rejection path.
+- The reusable integration-test frontend helper now uses the module graph,
+  keeping fixture compilation and generated-C checks aligned with CLI import
+  validation.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
 - Enum variants are validated through resolver `Variant` symbols during
