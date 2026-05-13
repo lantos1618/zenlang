@@ -700,6 +700,21 @@ impl TypeChecker {
             return;
         };
 
+        for method in methods {
+            if let Declaration::Function { name, span, .. } = method {
+                if !info.methods.iter().any(|required| required.name == *name) {
+                    self.diagnostics.push(Diagnostic::error(
+                        "E6005",
+                        format!(
+                            "method `{}` is not declared by behavior `{}`",
+                            name, behavior
+                        ),
+                        *span,
+                    ));
+                }
+            }
+        }
+
         for required in &info.methods {
             let Some(actual) = methods.iter().find_map(|decl| match decl {
                 Declaration::Function {

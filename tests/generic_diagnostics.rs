@@ -15,6 +15,17 @@ fn typecheck_errors(source: &str) -> Vec<Diagnostic> {
         .expect_err("typecheck should fail")
 }
 
+fn frontend_errors(source: &str) -> Vec<Diagnostic> {
+    let tokens = lexer::tokenize(source, 0).expect("lex source");
+    let program = parser::parse(tokens, 0).expect("parse source");
+    match Resolver::new().resolve_program(&program) {
+        Ok(symbols) => TypeChecker::new()
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("typecheck should fail"),
+        Err(errors) => errors,
+    }
+}
+
 #[test]
 fn nongeneric_method_explicit_type_args_are_error() {
     let errors = typecheck_errors(
@@ -263,5 +274,62 @@ read = (value: Option<Point>) i32 {
             .message
             .contains("type `Point` does not implement behavior `Json` required by `T`")),
         "expected generic enum annotation bound diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn behavior_impl_for_unknown_type_is_error() {
+    let errors = frontend_errors(
+        r#"
+Json: behavior {
+    to_json: (Self) str
+}
+
+Missing.implements(Json) {
+    to_json = (value: Missing) str {
+        return "missing"
+    }
+}
+"#,
+    );
+
+    assert!(
+        errors
+            .iter()
+            .any(|d| d.message.contains("unknown type symbol 'Missing'")),
+        "expected unknown behavior impl target diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn behavior_impl_extra_method_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Point: {
+    x: i32
+}
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Point.implements(Json) {
+    to_json = (value: Point) str {
+        return "point"
+    }
+
+    extra = (value: Point) str {
+        return "extra"
+    }
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| {
+            d.message
+                .contains("method `extra` is not declared by behavior `Json`")
+        }),
+        "expected extra behavior impl method diagnostic, got {errors:?}"
     );
 }
