@@ -248,6 +248,7 @@ pub struct TypeChecker {
     methods: HashMap<String, FuncInfo>, // key: "TypeName.method_name"
     behaviors: HashMap<String, BehaviorInfo>,
     behavior_extends: HashMap<String, Vec<String>>,
+    behavior_extends_spans: HashMap<String, Span>,
     behavior_impls: HashSet<(String, String)>,
     generic_functions: HashMap<String, GenericFunctionTemplate>,
     generic_methods: HashMap<String, GenericFunctionTemplate>,
@@ -279,6 +280,7 @@ impl TypeChecker {
             methods: HashMap::new(),
             behaviors: HashMap::new(),
             behavior_extends: HashMap::new(),
+            behavior_extends_spans: HashMap::new(),
             behavior_impls: HashSet::new(),
             generic_functions: HashMap::new(),
             generic_methods: HashMap::new(),
@@ -636,6 +638,7 @@ impl TypeChecker {
                 self.check_behavior_extends(behavior, parent, *span);
             }
         }
+        self.validate_behavior_extends_cycles();
 
         for decl in decls {
             match decl {
@@ -912,6 +915,52 @@ impl TypeChecker {
             .entry(behavior.to_string())
             .or_default()
             .push(parent.to_string());
+        self.behavior_extends_spans
+            .entry(behavior.to_string())
+            .or_insert(span);
+    }
+
+    fn validate_behavior_extends_cycles(&mut self) {
+        let behaviors: Vec<String> = self.behavior_extends.keys().cloned().collect();
+        for behavior in behaviors {
+            let mut visiting = HashSet::new();
+            let mut visited = HashSet::new();
+            if self.behavior_extends_has_cycle(&behavior, &mut visiting, &mut visited) {
+                let span = self
+                    .behavior_extends_spans
+                    .get(&behavior)
+                    .copied()
+                    .unwrap_or_else(Span::dummy);
+                self.diagnostics.push(Diagnostic::error(
+                    "E6008",
+                    format!("behavior inheritance cycle involving `{}`", behavior),
+                    span,
+                ));
+            }
+        }
+    }
+
+    fn behavior_extends_has_cycle(
+        &self,
+        behavior: &str,
+        visiting: &mut HashSet<String>,
+        visited: &mut HashSet<String>,
+    ) -> bool {
+        if visiting.contains(behavior) {
+            return true;
+        }
+        if !visited.insert(behavior.to_string()) {
+            return false;
+        }
+
+        visiting.insert(behavior.to_string());
+        let has_cycle = self.behavior_extends.get(behavior).is_some_and(|parents| {
+            parents
+                .iter()
+                .any(|parent| self.behavior_extends_has_cycle(parent, visiting, visited))
+        });
+        visiting.remove(behavior);
+        has_cycle
     }
 
     fn type_implements_behavior(&self, type_name: &str, behavior: &str) -> bool {
@@ -4899,6 +4948,34 @@ Point.requires(Json)
         TypeChecker::new()
             .check_program(&program)
             .expect("implementation of child behavior should satisfy parent requires");
+    }
+
+    #[test]
+    fn behavior_extends_cycle_is_error() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    to_json: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+Json.extends(PrettyJson)
+PrettyJson.extends(Json)
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("cyclic behavior inheritance should fail");
+        assert!(
+            errors
+                .iter()
+                .any(|d| d.message.contains("behavior inheritance cycle")),
+            "expected behavior inheritance cycle diagnostic, got {errors:?}"
+        );
     }
 
     #[test]

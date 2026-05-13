@@ -34,7 +34,8 @@ checked-in docs, tests, and commits only.
 - Compile-time `.requires` behavior assertions now have parser, resolver, and
   typechecker coverage for satisfied and missing behavior implementations.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker
-  coverage for inherited required methods and parent behavior satisfaction.
+  coverage for inherited required methods, parent behavior satisfaction, and
+  cycle rejection.
 - Resolver Phase 2 has started with symbol IDs, separate namespaces, duplicate
   same-namespace diagnostics, symbol visibility metadata, and unknown type
   reference diagnostics in `tests/resolver_phase2.rs`.
