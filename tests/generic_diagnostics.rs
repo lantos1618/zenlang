@@ -95,3 +95,49 @@ main = () i32 {
         "expected generic method inference diagnostic, got {errors:?}"
     );
 }
+
+#[test]
+fn generic_struct_type_arg_arity_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+main = () i32 {
+    box = Box<i32, str> { value: 1 }
+    return box.value
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic struct `Box` expects 1 type arguments, found 2")),
+        "expected generic struct arity diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_enum_type_arg_arity_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Option<T>:
+    None,
+    Some(T)
+
+main = () i32 {
+    value = Option<i32, str>.Some(1)
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic enum `Option` expects 1 type arguments, found 2")),
+        "expected generic enum arity diagnostic, got {errors:?}"
+    );
+}
