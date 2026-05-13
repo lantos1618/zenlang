@@ -115,12 +115,55 @@ fn frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
 }
 
 fn cmd_check(path_str: &str) {
-    let typed = frontend(path_str);
+    let typed = check_frontend(path_str);
     println!(
         "  {} functions, {} types — ok",
         typed.functions.len(),
         typed.types.len()
     );
+}
+
+fn check_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
+    let path = Path::new(path_str);
+    if !path.exists() {
+        eprintln!("error: file not found: {}", path_str);
+        process::exit(1);
+    }
+
+    let mut files = FileTable::new();
+    let mut module_system = ModuleSystem::new();
+
+    let graph = match module_system.load_module_graph(path, &mut files) {
+        Ok(graph) => graph,
+        Err(errs) => {
+            print_errors(&errs, &files);
+            process::exit(1);
+        }
+    };
+
+    let mut checker = TypeChecker::new();
+    match checker.check_module_graph_entry(&graph) {
+        Ok(typed) => {
+            for diag in checker.diagnostics() {
+                print_diagnostic(diag, &files);
+            }
+            typed
+        }
+        Err(diags) => {
+            for diag in &diags {
+                print_diagnostic(diag, &files);
+            }
+            for diag in checker.diagnostics() {
+                print_diagnostic(diag, &files);
+            }
+            let errors = diags
+                .iter()
+                .filter(|d| d.severity == zen::error::Severity::Error)
+                .count();
+            eprintln!("  {} error(s)", errors);
+            process::exit(1);
+        }
+    }
 }
 
 fn cmd_emit(path_str: &str) {

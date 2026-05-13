@@ -72,6 +72,9 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker setup has an opt-in module-graph entrypoint that validates entry
   resolver symbols and seeds imported signatures from graph-owned
   `ImportBinding`s without merging imported declarations into the entry AST.
+- The CLI `check` path now uses the module graph and reports resolver
+  diagnostics from imported modules instead of checking only merged imported
+  declarations.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
 - Enum variants are validated through resolver `Variant` symbols during

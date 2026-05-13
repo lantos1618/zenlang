@@ -81,6 +81,8 @@ checked-in docs, tests, and commits only.
 - Typechecker setup now has an opt-in module-graph entrypoint that validates
   the entry resolver symbols and seeds imported signatures from graph-owned
   `ImportBinding`s without merging imported declarations into the entry AST.
+- The CLI `check` path now loads the module graph and reports resolver
+  diagnostics from imported modules before typechecking the entry module.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
 - Typechecker resolver-symbol validation now checks enum variant symbols from
@@ -145,5 +147,5 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 Continue Phase 2 resolver/typechecker integration by choosing the next smallest
 handoff that reduces duplicate declaration collection or moves the module-graph
-entrypoint into an advertised compiler path. Do not promote `build.zen` until a
+entrypoint deeper into advertised compiler paths. Do not promote `build.zen` until a
 dedicated deterministic graph test exists.
