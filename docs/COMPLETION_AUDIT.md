@@ -95,6 +95,8 @@ and do not assume Phase 4 is ready without evidence.
   and typechecked so child behavior impls must satisfy inherited parent methods
   while cyclic inheritance and conflicting inherited method signatures are
   rejected.
+- Inherited behavior default methods are emitted and callable in the executable
+  fixture `tests/zen/behavior_inherited_default_method.zen`.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
 - Enum variants are validated through resolver `Variant` symbols during
