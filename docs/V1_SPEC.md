@@ -23,8 +23,8 @@ access, method-style calls, loops, `return`, `defer`, casts, string interpolatio
 and pattern-style `?` arms supported by the parser and C backend.
 
 Unsupported spec-like constructs must stay gated until parser and semantic tests
-exist. This includes `.extends`, comptime execution, type matching, async
-operations, actor syntax, package manifests, and `build.zen` execution.
+exist. This includes comptime execution, type matching, async operations, actor
+syntax, package manifests, and `build.zen` execution.
 
 ## Accepted Syntax Forms
 
@@ -50,7 +50,7 @@ advertised as implemented.
 | Behavior declarations `Name: behavior { method: (Self) Return }` | experimental | `parser::tests::parse_behavior_declaration`, `typechecker::tests::behavior_declaration_collection` |
 | Explicit behavior impl blocks `Type.implements(Behavior) { ... }` | experimental | `parser::tests::parse_behavior_impl_block`, `typechecker::tests::behavior_impl_with_required_method_passes`, `typechecker::tests::behavior_impl_missing_required_method_is_error`, `typechecker::tests::behavior_impl_can_omit_default_method`, `tests/zen/behavior_json_explicit_impl.zen` |
 | Type association assertions `.requires` | experimental | `parser::tests::parse_behavior_requires_assertion`, `resolver_phase2::resolver_accepts_behavior_requires_known_type_and_behavior`, `typechecker::tests::behavior_requires_rejects_missing_impl` |
-| Behavior inheritance `.extends` | gated | `parser::tests::parse_rejects_gated_behavior_extends_with_clear_error` |
+| Behavior inheritance `.extends` | experimental | `parser::tests::parse_behavior_extends_declaration`, `resolver_phase2::resolver_accepts_behavior_extends_known_behaviors`, `typechecker::tests::behavior_extends_requires_parent_methods` |
 
 ## Type, Module, ABI, Error, Effect, And Comptime Decisions
 

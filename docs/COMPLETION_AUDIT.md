@@ -89,8 +89,8 @@ and do not assume Phase 4 is ready without evidence.
   validation.
 - Compile-time `.requires` behavior assertions are parsed, resolved against
   known type/behavior symbols, and typechecked against explicit behavior impls.
-- Behavior inheritance `.extends` remains gated with explicit parser diagnostic
-  coverage until semantic inheritance tests and implementation exist.
+- Behavior inheritance `.extends` is parsed, resolved against known behaviors,
+  and typechecked so child behavior impls must satisfy inherited parent methods.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
 - Enum variants are validated through resolver `Variant` symbols during

@@ -247,6 +247,7 @@ pub struct TypeChecker {
     functions: HashMap<String, FuncInfo>,
     methods: HashMap<String, FuncInfo>, // key: "TypeName.method_name"
     behaviors: HashMap<String, BehaviorInfo>,
+    behavior_extends: HashMap<String, Vec<String>>,
     behavior_impls: HashSet<(String, String)>,
     generic_functions: HashMap<String, GenericFunctionTemplate>,
     generic_methods: HashMap<String, GenericFunctionTemplate>,
@@ -277,6 +278,7 @@ impl TypeChecker {
             functions: HashMap::new(),
             methods: HashMap::new(),
             behaviors: HashMap::new(),
+            behavior_extends: HashMap::new(),
             behavior_impls: HashSet::new(),
             generic_functions: HashMap::new(),
             generic_methods: HashMap::new(),
@@ -625,6 +627,17 @@ impl TypeChecker {
         }
 
         for decl in decls {
+            if let Declaration::BehaviorExtends {
+                behavior,
+                parent,
+                span,
+            } = decl
+            {
+                self.check_behavior_extends(behavior, parent, *span);
+            }
+        }
+
+        for decl in decls {
             match decl {
                 Declaration::Struct {
                     name,
@@ -864,10 +877,7 @@ impl TypeChecker {
             return;
         }
 
-        if !self
-            .behavior_impls
-            .contains(&(type_name.to_string(), behavior.to_string()))
-        {
+        if !self.type_implements_behavior(type_name, behavior) {
             self.diagnostics.push(Diagnostic::error(
                 "E6007",
                 format!(
@@ -877,6 +887,68 @@ impl TypeChecker {
                 span,
             ));
         }
+    }
+
+    fn check_behavior_extends(&mut self, behavior: &str, parent: &str, span: Span) {
+        if !self.behaviors.contains_key(behavior) {
+            self.diagnostics.push(Diagnostic::error(
+                "E6006",
+                format!("undefined behavior `{}`", behavior),
+                span,
+            ));
+            return;
+        }
+
+        if !self.behaviors.contains_key(parent) {
+            self.diagnostics.push(Diagnostic::error(
+                "E6006",
+                format!("undefined behavior `{}`", parent),
+                span,
+            ));
+            return;
+        }
+
+        self.behavior_extends
+            .entry(behavior.to_string())
+            .or_default()
+            .push(parent.to_string());
+    }
+
+    fn type_implements_behavior(&self, type_name: &str, behavior: &str) -> bool {
+        if self
+            .behavior_impls
+            .contains(&(type_name.to_string(), behavior.to_string()))
+        {
+            return true;
+        }
+
+        self.behavior_impls
+            .iter()
+            .any(|(implemented_type, implemented_behavior)| {
+                implemented_type == type_name
+                    && self.behavior_inherits_from(implemented_behavior, behavior)
+            })
+    }
+
+    fn behavior_inherits_from(&self, behavior: &str, parent: &str) -> bool {
+        self.behavior_inherits_from_inner(behavior, parent, &mut HashSet::new())
+    }
+
+    fn behavior_inherits_from_inner(
+        &self,
+        behavior: &str,
+        parent: &str,
+        seen: &mut HashSet<String>,
+    ) -> bool {
+        if !seen.insert(behavior.to_string()) {
+            return false;
+        }
+
+        self.behavior_extends.get(behavior).is_some_and(|parents| {
+            parents.iter().any(|candidate| {
+                candidate == parent || self.behavior_inherits_from_inner(candidate, parent, seen)
+            })
+        })
     }
 
     fn check_behavior_impl(
@@ -901,18 +973,22 @@ impl TypeChecker {
             return;
         }
 
-        let Some(info) = self.behaviors.get(behavior).cloned() else {
+        if !self.behaviors.contains_key(behavior) {
             self.diagnostics.push(Diagnostic::error(
                 "E6000",
                 format!("undefined behavior `{}`", behavior),
                 span,
             ));
             return;
-        };
+        }
+        let required_methods = self.behavior_methods_with_inherited(behavior, &mut HashSet::new());
 
         for method in methods {
             if let Declaration::Function { name, span, .. } = method {
-                if !info.methods.iter().any(|required| required.name == *name) {
+                if !required_methods
+                    .iter()
+                    .any(|required| required.name == *name)
+                {
                     self.diagnostics.push(Diagnostic::error(
                         "E6005",
                         format!(
@@ -925,7 +1001,7 @@ impl TypeChecker {
             }
         }
 
-        for required in &info.methods {
+        for required in &required_methods {
             let Some(actual) = methods.iter().find_map(|decl| match decl {
                 Declaration::Function {
                     name,
@@ -1009,11 +1085,7 @@ impl TypeChecker {
         behavior: &str,
         methods: &[Declaration],
     ) -> Vec<DefaultBehaviorMethod> {
-        let Some(info) = self.behaviors.get(behavior) else {
-            return Vec::new();
-        };
-
-        info.methods
+        self.behavior_methods_with_inherited(behavior, &mut HashSet::new())
             .iter()
             .filter(|required| {
                 required.default_body.is_some()
@@ -1044,6 +1116,27 @@ impl TypeChecker {
                 })
             })
             .collect()
+    }
+
+    fn behavior_methods_with_inherited(
+        &self,
+        behavior: &str,
+        seen: &mut HashSet<String>,
+    ) -> Vec<ast::BehaviorMethod> {
+        if !seen.insert(behavior.to_string()) {
+            return Vec::new();
+        }
+
+        let mut methods = Vec::new();
+        if let Some(parents) = self.behavior_extends.get(behavior) {
+            for parent in parents {
+                methods.extend(self.behavior_methods_with_inherited(parent, seen));
+            }
+        }
+        if let Some(info) = self.behaviors.get(behavior) {
+            methods.extend(info.methods.clone());
+        }
+        methods
     }
 
     fn impl_ast_types_compatible(
@@ -1586,6 +1679,14 @@ impl TypeChecker {
                         *span,
                     );
                     self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
+                }
+                Declaration::BehaviorExtends {
+                    behavior,
+                    parent,
+                    span,
+                } => {
+                    self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
+                    self.require_resolver_symbol(symbols, Namespace::Behavior, parent, *span);
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
                     let mut locals = scope_cursor.new_scope();
@@ -4735,6 +4836,69 @@ Point.requires(Json)
                 .contains("type `Point` does not implement required behavior `Json`")),
             "expected requires missing impl diagnostic, got {errors:?}"
         );
+    }
+
+    #[test]
+    fn behavior_extends_requires_parent_methods() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+
+Point.implements(PrettyJson) {
+    pretty = (value: Point) str { return "pretty" }
+}
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("extended behavior should require parent methods");
+        assert!(
+            errors.iter().any(|d| d.message.contains(
+                "type `Point` implementation of `PrettyJson` is missing required method `to_json`"
+            )),
+            "expected inherited missing method diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_extends_impl_satisfies_parent_requires() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+
+Point.implements(PrettyJson) {
+    to_json = (value: Point) str { return "point" }
+    pretty = (value: Point) str { return "pretty" }
+}
+
+Point.requires(Json)
+"#,
+        );
+
+        TypeChecker::new()
+            .check_program(&program)
+            .expect("implementation of child behavior should satisfy parent requires");
     }
 
     #[test]

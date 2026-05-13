@@ -802,6 +802,7 @@ impl Resolver {
                 }
             }
             Declaration::Requires { .. }
+            | Declaration::BehaviorExtends { .. }
             | Declaration::TopLevelExpr { .. }
             | Declaration::Error { .. } => {}
         }
@@ -963,6 +964,26 @@ impl Resolver {
                     diagnostics.push(Diagnostic::error(
                         "E0202",
                         format!("unknown behavior symbol '{behavior}'"),
+                        *span,
+                    ));
+                }
+            }
+            Declaration::BehaviorExtends {
+                behavior,
+                parent,
+                span,
+            } => {
+                if table.lookup(Namespace::Behavior, behavior).is_none() {
+                    diagnostics.push(Diagnostic::error(
+                        "E0202",
+                        format!("unknown behavior symbol '{behavior}'"),
+                        *span,
+                    ));
+                }
+                if table.lookup(Namespace::Behavior, parent).is_none() {
+                    diagnostics.push(Diagnostic::error(
+                        "E0202",
+                        format!("unknown behavior symbol '{parent}'"),
                         *span,
                     ));
                 }

@@ -115,6 +115,13 @@ pub enum Declaration {
         span: Span,
     },
 
+    /// Behavior inheritance: `PrettyPrint.extends(Serializable)`
+    BehaviorExtends {
+        behavior: String,
+        parent: String,
+        span: Span,
+    },
+
     /// Top-level expression.
     TopLevelExpr { expr: Expression, span: Span },
 
@@ -134,6 +141,7 @@ impl Declaration {
             | Declaration::Behavior { span, .. }
             | Declaration::ImplBlock { span, .. }
             | Declaration::Requires { span, .. }
+            | Declaration::BehaviorExtends { span, .. }
             | Declaration::TopLevelExpr { span, .. }
             | Declaration::Error { span, .. } => *span,
         }

@@ -118,12 +118,7 @@ impl Parser {
                 }
 
                 if method_name == "extends" {
-                    return Err(CompileError::Syntax(
-                        format!(
-                            "gated v1 feature '{method_name}': behavior inheritance is specified in docs/V1_SPEC.md but is not implemented"
-                        ),
-                        Some(self.peek_span()),
-                    ));
+                    return self.parse_behavior_extends(name, name_span);
                 }
 
                 // Type.impl = { methods }
@@ -700,6 +695,24 @@ impl Parser {
             type_name,
             behavior,
             span: name_span.merge(behavior_span).merge(end),
+        })
+    }
+
+    fn parse_behavior_extends(
+        &mut self,
+        behavior: String,
+        name_span: Span,
+    ) -> Result<Declaration, CompileError> {
+        self.skip_newlines();
+        self.expect(&Token::LParen)?;
+        self.skip_newlines();
+        let (parent, parent_span) = self.expect_identifier()?;
+        self.skip_newlines();
+        let end = self.expect(&Token::RParen)?;
+        Ok(Declaration::BehaviorExtends {
+            behavior,
+            parent,
+            span: name_span.merge(parent_span).merge(end),
         })
     }
 
