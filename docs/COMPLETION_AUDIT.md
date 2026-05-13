@@ -91,7 +91,8 @@ and do not assume Phase 4 is ready without evidence.
   known type/behavior symbols, and typechecked against explicit behavior impls.
 - Behavior inheritance `.extends` is parsed, resolved against known behaviors,
   and typechecked so child behavior impls must satisfy inherited parent methods
-  while cyclic behavior inheritance is rejected.
+  while cyclic inheritance and conflicting inherited method signatures are
+  rejected.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
 - Enum variants are validated through resolver `Variant` symbols during

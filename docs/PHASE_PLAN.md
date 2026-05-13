@@ -35,7 +35,7 @@ checked-in docs, tests, and commits only.
   typechecker coverage for satisfied and missing behavior implementations.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker
   coverage for inherited required methods, parent behavior satisfaction, and
-  cycle rejection.
+  coherence diagnostics for cycles and conflicting inherited method signatures.
 - Resolver Phase 2 has started with symbol IDs, separate namespaces, duplicate
   same-namespace diagnostics, symbol visibility metadata, and unknown type
   reference diagnostics in `tests/resolver_phase2.rs`.

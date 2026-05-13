@@ -239,6 +239,19 @@ fn concrete_self_ast_type(ast_type: &AstType, self_type_name: &str) -> AstType {
     }
 }
 
+fn behavior_method_signatures_match(
+    left: &ast::BehaviorMethod,
+    right: &ast::BehaviorMethod,
+) -> bool {
+    left.return_type == right.return_type
+        && left.params.len() == right.params.len()
+        && left
+            .params
+            .iter()
+            .zip(&right.params)
+            .all(|(left, right)| left.mutable == right.mutable && left.ty == right.ty)
+}
+
 // ── TypeChecker ───────────────────────────────────────────────────
 
 pub struct TypeChecker {
@@ -639,6 +652,7 @@ impl TypeChecker {
             }
         }
         self.validate_behavior_extends_cycles();
+        self.validate_behavior_method_coherence();
 
         for decl in decls {
             match decl {
@@ -961,6 +975,69 @@ impl TypeChecker {
         });
         visiting.remove(behavior);
         has_cycle
+    }
+
+    fn validate_behavior_method_coherence(&mut self) {
+        let behaviors: Vec<String> = self.behavior_extends.keys().cloned().collect();
+        let mut diagnostics = Vec::new();
+
+        for behavior in behaviors {
+            let mut seen_behaviors = HashSet::new();
+            let mut seen_methods = HashMap::new();
+            self.collect_behavior_method_coherence_errors(
+                &behavior,
+                &behavior,
+                &mut seen_behaviors,
+                &mut seen_methods,
+                &mut diagnostics,
+            );
+        }
+
+        self.diagnostics.extend(diagnostics);
+    }
+
+    fn collect_behavior_method_coherence_errors(
+        &self,
+        behavior: &str,
+        root_behavior: &str,
+        seen_behaviors: &mut HashSet<String>,
+        seen_methods: &mut HashMap<String, ast::BehaviorMethod>,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+        if !seen_behaviors.insert(behavior.to_string()) {
+            return;
+        }
+
+        if let Some(parents) = self.behavior_extends.get(behavior) {
+            for parent in parents {
+                self.collect_behavior_method_coherence_errors(
+                    parent,
+                    root_behavior,
+                    seen_behaviors,
+                    seen_methods,
+                    diagnostics,
+                );
+            }
+        }
+
+        if let Some(info) = self.behaviors.get(behavior) {
+            for method in &info.methods {
+                if let Some(previous) = seen_methods.get(&method.name) {
+                    if !behavior_method_signatures_match(previous, method) {
+                        diagnostics.push(Diagnostic::error(
+                            "E6009",
+                            format!(
+                                "conflicting behavior method `{}` inherited by `{}`",
+                                method.name, root_behavior
+                            ),
+                            method.span,
+                        ));
+                    }
+                } else {
+                    seen_methods.insert(method.name.clone(), method.clone());
+                }
+            }
+        }
     }
 
     fn type_implements_behavior(&self, type_name: &str, behavior: &str) -> bool {
@@ -4975,6 +5052,34 @@ PrettyJson.extends(Json)
                 .iter()
                 .any(|d| d.message.contains("behavior inheritance cycle")),
             "expected behavior inheritance cycle diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_extends_conflicting_method_signature_is_error() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    to_json: (Self) str
+}
+
+PrettyJson: behavior {
+    to_json: (Self) i32
+}
+
+PrettyJson.extends(Json)
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("conflicting inherited behavior method should fail");
+        assert!(
+            errors.iter().any(|d| {
+                d.message
+                    .contains("conflicting behavior method `to_json` inherited by `PrettyJson`")
+            }),
+            "expected conflicting inherited behavior method diagnostic, got {errors:?}"
         );
     }
 
