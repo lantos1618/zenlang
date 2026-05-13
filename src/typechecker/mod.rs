@@ -894,6 +894,10 @@ impl TypeChecker {
             return;
         }
 
+        if self.reject_unspecialized_generic_behavior(behavior, span) {
+            return;
+        }
+
         if !self.type_implements_behavior(type_name, behavior) {
             self.diagnostics.push(Diagnostic::error(
                 "E6007",
@@ -922,6 +926,12 @@ impl TypeChecker {
                 format!("undefined behavior `{}`", parent),
                 span,
             ));
+            return;
+        }
+
+        if self.reject_unspecialized_generic_behavior(behavior, span)
+            || self.reject_unspecialized_generic_behavior(parent, span)
+        {
             return;
         }
 
@@ -1103,6 +1113,10 @@ impl TypeChecker {
             return;
         }
 
+        if self.reject_unspecialized_generic_behavior(behavior, span) {
+            return;
+        }
+
         if self
             .behavior_impls
             .contains(&(type_name.to_string(), behavior.to_string()))
@@ -1240,6 +1254,27 @@ impl TypeChecker {
                     || self.behavior_inherits_from(behavior, implemented_behavior)
             })
             .cloned()
+    }
+
+    fn reject_unspecialized_generic_behavior(&mut self, behavior: &str, span: Span) -> bool {
+        let behavior_type_param_count = self
+            .behaviors
+            .get(behavior)
+            .map(|info| info.type_params.len())
+            .unwrap_or(0);
+        if behavior_type_param_count == 0 {
+            return false;
+        }
+
+        self.diagnostics.push(Diagnostic::error(
+            "E6012",
+            format!(
+                "generic behavior `{}` expects {} type arguments, found 0",
+                behavior, behavior_type_param_count
+            ),
+            span,
+        ));
+        true
     }
 
     fn behavior_default_methods_for_impl(
@@ -5019,6 +5054,33 @@ Point.implements(Json) {
     }
 
     #[test]
+    fn behavior_impl_generic_behavior_without_type_args_is_error() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("generic behavior impl without type arguments should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("generic behavior `Json` expects 1 type arguments, found 0")),
+            "expected generic behavior impl arity diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
     fn behavior_impl_overlapping_inherited_behavior_is_error() {
         let program = parse_program(
             r#"
@@ -5103,6 +5165,31 @@ Point.requires(Json)
                 .message
                 .contains("type `Point` does not implement required behavior `Json`")),
             "expected requires missing impl diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_requires_generic_behavior_without_type_args_is_error() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) str
+}
+
+Point.requires(Json)
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("generic behavior requires without type arguments should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("generic behavior `Json` expects 1 type arguments, found 0")),
+            "expected generic behavior requires arity diagnostic, got {errors:?}"
         );
     }
 
@@ -5223,6 +5310,33 @@ PrettyJson.extends(Json)
                     .contains("duplicate behavior inheritance `PrettyJson.extends(Json)`")
             }),
             "expected duplicate behavior inheritance diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_extends_generic_parent_without_type_args_is_error() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("generic behavior extends parent without type arguments should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("generic behavior `Json` expects 1 type arguments, found 0")),
+            "expected generic behavior extends parent arity diagnostic, got {errors:?}"
         );
     }
 
