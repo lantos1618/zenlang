@@ -5,6 +5,6 @@ id<T> = (value: T) T {
 }
 
 main = () i32 {
-    io.println("${12.id()}")
+    io.println("${12.id<i32>()}")
     return 0
 }

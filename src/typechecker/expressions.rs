@@ -387,6 +387,16 @@ impl TypeChecker {
                             });
                         (mangled, ret)
                     } else {
+                        if !type_args.is_empty() {
+                            self.diagnostics.push(Diagnostic::error(
+                                "E5001",
+                                format!(
+                                    "non-generic method `{}` does not accept type arguments",
+                                    method_key
+                                ),
+                                *span,
+                            ));
+                        }
                         self.check_call_signature(&method_key, &info.params, &typed_args, span);
                         (
                             format!("{}_{}", type_name, method),
@@ -445,6 +455,16 @@ impl TypeChecker {
                                 span: *span,
                             })
                         } else {
+                            if !type_args.is_empty() {
+                                self.diagnostics.push(Diagnostic::error(
+                                    "E5001",
+                                    format!(
+                                        "non-generic method `{}` does not accept type arguments",
+                                        generic_method_key
+                                    ),
+                                    *span,
+                                ));
+                            }
                             self.check_call_signature(
                                 &generic_method_key,
                                 &info.params,
@@ -466,10 +486,18 @@ impl TypeChecker {
                 } else if let Some(info) = self.functions.get(method).cloned() {
                     // UFC: x.f(args) -> f(x, args)
                     let (resolved_function, ret_type) = if !info.type_params.is_empty() {
-                        let arg_types: Vec<Type> =
-                            typed_args.iter().map(|a| a.ty.clone()).collect();
-                        let subs =
-                            self.infer_type_args(&info.type_params, &info.params, &arg_types);
+                        let subs = if type_args.is_empty() {
+                            let arg_types: Vec<Type> =
+                                typed_args.iter().map(|a| a.ty.clone()).collect();
+                            self.infer_type_args(&info.type_params, &info.params, &arg_types)
+                        } else {
+                            self.explicit_type_arg_substitutions(
+                                method,
+                                &info.type_params,
+                                type_args,
+                                *span,
+                            )
+                        };
                         self.check_call_signature_with_substitutions(
                             method,
                             &info.params,
@@ -486,6 +514,16 @@ impl TypeChecker {
                             });
                         (mangled, ret)
                     } else {
+                        if !type_args.is_empty() {
+                            self.diagnostics.push(Diagnostic::error(
+                                "E5001",
+                                format!(
+                                    "non-generic function `{}` does not accept type arguments",
+                                    method
+                                ),
+                                *span,
+                            ));
+                        }
                         self.check_call_signature(method, &info.params, &typed_args, span);
                         (method.clone(), self.resolve_type(&info.return_type))
                     };
