@@ -171,6 +171,44 @@ Point.implements(Json) {
 }
 
 #[test]
+fn resolver_accepts_behavior_requires_known_type_and_behavior() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    stringify: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.requires(Json)
+"#,
+    );
+
+    Resolver::new()
+        .resolve_program(&program)
+        .expect("known requires assertion should resolve");
+}
+
+#[test]
+fn resolver_rejects_behavior_requires_unknown_symbols() {
+    let program = parse_program("Missing.requires(Json)");
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("unknown requires symbols should fail");
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("unknown type symbol 'Missing'")),
+        "expected unknown type diagnostic, got {err:?}"
+    );
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("unknown behavior symbol 'Json'")),
+        "expected unknown behavior diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_value_symbol_parameter_counts() {
     let program = parse_program(
         r#"

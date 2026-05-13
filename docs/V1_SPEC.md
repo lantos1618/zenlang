@@ -49,7 +49,7 @@ advertised as implemented.
 | Generic syntax and explicit behavior bounds | experimental | `parser::tests::parse_nested_generics`, `typechecker::tests::generic_function_collection`, `typechecker::tests::generic_behavior_bound_accepts_type_with_impl`, `typechecker::tests::generic_behavior_bound_rejects_type_without_impl` |
 | Behavior declarations `Name: behavior { method: (Self) Return }` | experimental | `parser::tests::parse_behavior_declaration`, `typechecker::tests::behavior_declaration_collection` |
 | Explicit behavior impl blocks `Type.implements(Behavior) { ... }` | experimental | `parser::tests::parse_behavior_impl_block`, `typechecker::tests::behavior_impl_with_required_method_passes`, `typechecker::tests::behavior_impl_missing_required_method_is_error`, `typechecker::tests::behavior_impl_can_omit_default_method`, `tests/zen/behavior_json_explicit_impl.zen` |
-| Type association assertions `.requires` | gated | `parser::tests::parse_rejects_gated_type_association_with_clear_error` |
+| Type association assertions `.requires` | experimental | `parser::tests::parse_behavior_requires_assertion`, `resolver_phase2::resolver_accepts_behavior_requires_known_type_and_behavior`, `typechecker::tests::behavior_requires_rejects_missing_impl` |
 
 ## Type, Module, ABI, Error, Effect, And Comptime Decisions
 

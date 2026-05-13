@@ -801,7 +801,9 @@ impl Resolver {
                     }
                 }
             }
-            Declaration::TopLevelExpr { .. } | Declaration::Error { .. } => {}
+            Declaration::Requires { .. }
+            | Declaration::TopLevelExpr { .. }
+            | Declaration::Error { .. } => {}
         }
         Ok(())
     }
@@ -945,6 +947,26 @@ impl Resolver {
                 }
             }
             Declaration::Import { .. } | Declaration::Error { .. } => {}
+            Declaration::Requires {
+                type_name,
+                behavior,
+                span,
+            } => {
+                if !self.is_known_type_name(table, &[], type_name) {
+                    diagnostics.push(Diagnostic::error(
+                        "E0201",
+                        format!("unknown type symbol '{type_name}'"),
+                        *span,
+                    ));
+                }
+                if table.lookup(Namespace::Behavior, behavior).is_none() {
+                    diagnostics.push(Diagnostic::error(
+                        "E0202",
+                        format!("unknown behavior symbol '{behavior}'"),
+                        *span,
+                    ));
+                }
+            }
             Declaration::TopLevelExpr { expr, .. } => {
                 let scope_id = table.new_scope();
                 self.validate_expr_refs(

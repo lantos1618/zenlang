@@ -31,6 +31,8 @@ checked-in docs, tests, and commits only.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.
+- Compile-time `.requires` behavior assertions now have parser, resolver, and
+  typechecker coverage for satisfied and missing behavior implementations.
 - Resolver Phase 2 has started with symbol IDs, separate namespaces, duplicate
   same-namespace diagnostics, symbol visibility metadata, and unknown type
   reference diagnostics in `tests/resolver_phase2.rs`.

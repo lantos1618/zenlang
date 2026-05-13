@@ -391,14 +391,19 @@ fn parse_error_unexpected_token() {
 }
 
 #[test]
-fn parse_rejects_gated_type_association_with_clear_error() {
-    let result = parse_str("Point.requires(Json)");
-    let errs = result.expect_err("expected gated type association syntax to be rejected");
-    assert!(
-        errs.iter()
-            .any(|e| e.to_string().contains("gated v1 feature 'requires'")),
-        "expected clear gated requires diagnostic, got {errs:?}"
-    );
+fn parse_behavior_requires_assertion() {
+    let prog = parse_ok("Point.requires(Json)");
+    match &prog.declarations[0] {
+        Declaration::Requires {
+            type_name,
+            behavior,
+            ..
+        } => {
+            assert_eq!(type_name, "Point");
+            assert_eq!(behavior, "Json");
+        }
+        other => panic!("expected Requires, got {:?}", other),
+    }
 }
 
 // ── Additional feature tests ─────────────────────────────

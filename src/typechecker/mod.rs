@@ -831,7 +831,52 @@ impl TypeChecker {
             }
         }
 
+        for decl in decls {
+            if let Declaration::Requires {
+                type_name,
+                behavior,
+                span,
+            } = decl
+            {
+                self.check_behavior_requires(type_name, behavior, *span);
+            }
+        }
+
         self.validate_generic_type_references(decls);
+    }
+
+    fn check_behavior_requires(&mut self, type_name: &str, behavior: &str, span: Span) {
+        if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
+            self.diagnostics.push(Diagnostic::error(
+                "E6005",
+                format!("undefined type `{}`", type_name),
+                span,
+            ));
+            return;
+        }
+
+        if !self.behaviors.contains_key(behavior) {
+            self.diagnostics.push(Diagnostic::error(
+                "E6006",
+                format!("undefined behavior `{}`", behavior),
+                span,
+            ));
+            return;
+        }
+
+        if !self
+            .behavior_impls
+            .contains(&(type_name.to_string(), behavior.to_string()))
+        {
+            self.diagnostics.push(Diagnostic::error(
+                "E6007",
+                format!(
+                    "type `{}` does not implement required behavior `{}`",
+                    type_name, behavior
+                ),
+                span,
+            ));
+        }
     }
 
     fn check_behavior_impl(
@@ -1523,6 +1568,24 @@ impl TypeChecker {
                             );
                         }
                     }
+                }
+                Declaration::Requires {
+                    type_name,
+                    behavior,
+                    span,
+                } => {
+                    self.require_resolver_type_like_symbol(
+                        symbols,
+                        Namespace::Type,
+                        type_name,
+                        ExpectedTypeLikeSymbol {
+                            type_parameter_count: 0,
+                            type_parameter_bounds: Vec::new(),
+                            is_public: None,
+                        },
+                        *span,
+                    );
+                    self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
                     let mut locals = scope_cursor.new_scope();
@@ -4623,6 +4686,54 @@ Point.implements(Json) {
                 .message
                 .contains("duplicate implementation of behavior `Json` for type `Point`")),
             "expected duplicate behavior impl diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_requires_passes_when_impl_exists() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Point.implements(Json) {
+    to_json = (value: Point) str { return "point" }
+}
+
+Point.requires(Json)
+"#,
+        );
+
+        TypeChecker::new()
+            .check_program(&program)
+            .expect("requires should pass when behavior impl exists");
+    }
+
+    #[test]
+    fn behavior_requires_rejects_missing_impl() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Point.requires(Json)
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("requires should fail without behavior impl");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("type `Point` does not implement required behavior `Json`")),
+            "expected requires missing impl diagnostic, got {errors:?}"
         );
     }
 

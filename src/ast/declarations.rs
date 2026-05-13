@@ -108,7 +108,14 @@ pub enum Declaration {
         span: Span,
     },
 
-    /// Top-level expression (e.g. `SensorReading.requires(Serializable)`)
+    /// Compile-time behavior assertion: `SensorReading.requires(Serializable)`
+    Requires {
+        type_name: String,
+        behavior: String,
+        span: Span,
+    },
+
+    /// Top-level expression.
     TopLevelExpr { expr: Expression, span: Span },
 
     /// Error recovery placeholder — allows parser to continue after errors.
@@ -126,6 +133,7 @@ impl Declaration {
             | Declaration::Import { span, .. }
             | Declaration::Behavior { span, .. }
             | Declaration::ImplBlock { span, .. }
+            | Declaration::Requires { span, .. }
             | Declaration::TopLevelExpr { span, .. }
             | Declaration::Error { span, .. } => *span,
         }

@@ -87,6 +87,8 @@ and do not assume Phase 4 is ready without evidence.
 - The reusable integration-test frontend helper now uses the module graph,
   keeping fixture compilation and generated-C checks aligned with CLI import
   validation.
+- Compile-time `.requires` behavior assertions are parsed, resolved against
+  known type/behavior symbols, and typechecked against explicit behavior impls.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
 - Enum variants are validated through resolver `Variant` symbols during

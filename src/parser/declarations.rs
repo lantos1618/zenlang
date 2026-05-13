@@ -114,12 +114,7 @@ impl Parser {
                 }
 
                 if method_name == "requires" {
-                    return Err(CompileError::Syntax(
-                        format!(
-                            "gated v1 feature '{method_name}': type association and behavior constraints are specified in docs/V1_SPEC.md but are not implemented"
-                        ),
-                        Some(self.peek_span()),
-                    ));
+                    return self.parse_behavior_requires(name, name_span);
                 }
 
                 // Type.impl = { methods }
@@ -678,6 +673,24 @@ impl Parser {
             type_args: Vec::new(),
             methods,
             span: name_span.merge(end),
+        })
+    }
+
+    fn parse_behavior_requires(
+        &mut self,
+        type_name: String,
+        name_span: Span,
+    ) -> Result<Declaration, CompileError> {
+        self.skip_newlines();
+        self.expect(&Token::LParen)?;
+        self.skip_newlines();
+        let (behavior, behavior_span) = self.expect_identifier()?;
+        self.skip_newlines();
+        let end = self.expect(&Token::RParen)?;
+        Ok(Declaration::Requires {
+            type_name,
+            behavior,
+            span: name_span.merge(behavior_span).merge(end),
         })
     }
 
