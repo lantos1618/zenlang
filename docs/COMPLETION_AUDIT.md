@@ -95,8 +95,8 @@ and do not assume Phase 4 is ready without evidence.
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Behavior inheritance `.extends` is parsed, resolved against known behaviors,
   and typechecked so child behavior impls must satisfy inherited parent methods
-  while cyclic inheritance and conflicting inherited method signatures are
-  rejected.
+  while duplicate edges, cyclic inheritance, and conflicting inherited method
+  signatures are rejected.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.
 - Inherited behavior default methods are emitted and callable in the executable

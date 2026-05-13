@@ -925,10 +925,20 @@ impl TypeChecker {
             return;
         }
 
-        self.behavior_extends
+        let parents = self
+            .behavior_extends
             .entry(behavior.to_string())
-            .or_default()
-            .push(parent.to_string());
+            .or_default();
+        if parents.iter().any(|existing| existing == parent) {
+            self.diagnostics.push(Diagnostic::error(
+                "E6011",
+                format!("duplicate behavior inheritance `{behavior}.extends({parent})`"),
+                span,
+            ));
+            return;
+        }
+
+        parents.push(parent.to_string());
         self.behavior_extends_spans
             .entry(behavior.to_string())
             .or_insert(span);
@@ -5116,6 +5126,35 @@ PrettyJson.extends(Json)
                 .iter()
                 .any(|d| d.message.contains("behavior inheritance cycle")),
             "expected behavior inheritance cycle diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_extends_duplicate_parent_is_error() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    to_json: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+PrettyJson.extends(Json)
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("duplicate behavior inheritance edge should fail");
+        assert!(
+            errors.iter().any(|d| {
+                d.message
+                    .contains("duplicate behavior inheritance `PrettyJson.extends(Json)`")
+            }),
+            "expected duplicate behavior inheritance diagnostic, got {errors:?}"
         );
     }
 

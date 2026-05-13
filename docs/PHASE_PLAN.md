@@ -39,7 +39,8 @@ checked-in docs, tests, and commits only.
   typechecker coverage for satisfied and missing behavior implementations.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker
   coverage for inherited required methods, parent behavior satisfaction, and
-  coherence diagnostics for cycles and conflicting inherited method signatures.
+  coherence diagnostics for duplicate edges, cycles, and conflicting inherited
+  method signatures.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.
 - Inherited behavior default methods have executable coverage through
