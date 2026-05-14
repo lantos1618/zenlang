@@ -162,8 +162,9 @@ and do not assume Phase 4 is ready without evidence.
   seeding imported module-call bindings.
 - Typechecker setup rejects resolver import binding parameter-count and
   return-type metadata before seeding imported module-call bindings.
-- Typechecker setup rejects resolver import binding type, field, variant, and
-  behavior metadata before seeding imported module-call bindings.
+- Typechecker setup rejects resolver import binding display and typed type,
+  field, variant, and behavior metadata before seeding imported module-call
+  bindings.
 - Typechecker setup rejects resolver import binding mutability metadata before
   seeding imported module-call bindings.
 - Typechecker setup validates resolver import binding source and visibility
