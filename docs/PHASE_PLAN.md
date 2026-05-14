@@ -232,6 +232,9 @@ checked-in docs, tests, and commits only.
   enum field metadata before collecting declaration metadata from the AST.
 - Typechecker setup now rejects resolver behavior field, variant, impl, and
   required-behavior metadata before collecting behavior metadata from the AST.
+- Typechecker setup now rejects resolver variant import, value, generic, field,
+  enum-type, behavior, and mutability metadata before collecting enum variant
+  metadata from the AST.
 - Resolver type and behavior symbols now carry generic type-parameter counts,
   and typechecker setup rejects mismatches before collecting struct, enum, or
   behavior metadata from the AST.

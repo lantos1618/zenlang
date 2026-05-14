@@ -2878,6 +2878,11 @@ impl TypeChecker {
                             expected_variant_payload_type_name(&variant.payload),
                             variant.span,
                         );
+                        self.validate_resolver_variant_absent_other_metadata(
+                            symbol,
+                            &variant.name,
+                            variant.span,
+                        );
                     }
                 }
                 Declaration::Behavior {
@@ -4322,6 +4327,90 @@ impl TypeChecker {
                 ),
                 span,
             ));
+        }
+    }
+
+    fn validate_resolver_variant_absent_other_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        span: Span,
+    ) {
+        if let Some(actual) = symbol.import_source.as_deref() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0329",
+                format!("resolver variant symbol '{name}' has source '{actual}', expected none"),
+                span,
+            ));
+        }
+
+        if symbol.parameter_count.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0330",
+                format!(
+                    "resolver variant symbol '{name}' has parameter count metadata, expected none"
+                ),
+                span,
+            ));
+        }
+
+        if symbol.return_type_name.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0331",
+                format!("resolver variant symbol '{name}' has return type metadata, expected none"),
+                span,
+            ));
+        }
+
+        for (present, code, label) in [
+            (symbol.parameter_names.is_some(), "E0332", "parameter names"),
+            (
+                symbol.parameter_type_names.is_some(),
+                "E0333",
+                "parameter types",
+            ),
+            (
+                symbol.type_parameter_count.is_some(),
+                "E0334",
+                "type parameter count",
+            ),
+            (
+                symbol.type_parameter_bounds.is_some(),
+                "E0335",
+                "type parameter bounds",
+            ),
+            (symbol.field_count.is_some(), "E0336", "field count"),
+            (symbol.field_type_names.is_some(), "E0337", "field types"),
+            (symbol.variant_names.is_some(), "E0338", "variant names"),
+            (
+                symbol.behavior_method_signatures.is_some(),
+                "E0339",
+                "behavior methods",
+            ),
+            (
+                symbol.behavior_parent_names.is_some(),
+                "E0340",
+                "behavior parents",
+            ),
+            (
+                symbol.behavior_impl_names.is_some(),
+                "E0341",
+                "behavior impls",
+            ),
+            (
+                symbol.behavior_required_names.is_some(),
+                "E0342",
+                "behavior requires",
+            ),
+            (symbol.is_mutable.is_some(), "E0343", "mutability"),
+        ] {
+            if present {
+                self.diagnostics.push(Diagnostic::error(
+                    code,
+                    format!("resolver variant symbol '{name}' has {label} metadata, expected none"),
+                    span,
+                ));
+            }
         }
     }
 
@@ -7484,6 +7573,45 @@ Option: Some(i32), None
             )),
             "expected resolver enum variant payload type diagnostic, got {err:?}"
         );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_variant_absent_other_metadata() {
+        let program = parse_program(
+            r#"
+Option: Some(i32), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_import_source_for_test(Namespace::Variant, "Some", Some("std".to_string()));
+        symbols.set_parameter_count_for_test(Namespace::Variant, "Some", Some(1));
+        symbols.set_type_parameter_count_for_test(Namespace::Variant, "Some", Some(1));
+        symbols.set_field_count_for_test(Namespace::Variant, "Some", Some(1));
+        symbols.set_behavior_impl_names_for_test(
+            Namespace::Variant,
+            "Some",
+            Some(vec!["Json".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver variant non-variant metadata should fail");
+
+        for expected in [
+            "resolver variant symbol 'Some' has source 'std', expected none",
+            "resolver variant symbol 'Some' has parameter count metadata, expected none",
+            "resolver variant symbol 'Some' has type parameter count metadata, expected none",
+            "resolver variant symbol 'Some' has field count metadata, expected none",
+            "resolver variant symbol 'Some' has behavior impls metadata, expected none",
+        ] {
+            assert!(
+                err.iter().any(|d| d.message.contains(expected)),
+                "expected resolver variant metadata diagnostic '{expected}', got {err:?}"
+            );
+        }
     }
 
     #[test]
