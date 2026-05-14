@@ -3337,6 +3337,11 @@ impl TypeChecker {
             } else if let Some(source) = symbol.import_source.as_deref() {
                 self.require_resolver_module_symbol(symbols, source, symbol.definition_span);
             }
+            self.validate_resolver_import_absent_declaration_metadata(
+                symbol,
+                &symbol.name,
+                symbol.definition_span,
+            );
         }
     }
 
@@ -3443,6 +3448,33 @@ impl TypeChecker {
                 format!(
                     "resolver import symbol '{name}' has source '{actual}', expected '{expected_source}'"
                 ),
+                span,
+            ));
+        }
+
+        self.validate_resolver_import_absent_declaration_metadata(symbol, name, span);
+    }
+
+    fn validate_resolver_import_absent_declaration_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        span: Span,
+    ) {
+        if symbol.parameter_count.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0281",
+                format!(
+                    "resolver import symbol '{name}' has parameter count metadata, expected none"
+                ),
+                span,
+            ));
+        }
+
+        if symbol.return_type_name.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0282",
+                format!("resolver import symbol '{name}' has return type metadata, expected none"),
                 span,
             ));
         }
@@ -5466,6 +5498,41 @@ main = () i32 {
                 .message
                 .contains("resolver import symbol 'io' has visibility public, expected private")),
             "expected resolver import visibility diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_import_absent_declaration_metadata() {
+        let program = parse_program(
+            r#"
+{ io } = std
+main = () i32 {
+    return 0
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_count_for_test(Namespace::Import, "io", Some(1));
+        symbols.set_return_type_name_for_test(Namespace::Import, "io", Some("i32".to_string()));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver import declaration metadata should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver import symbol 'io' has parameter count metadata, expected none"
+            )),
+            "expected resolver import parameter metadata diagnostic, got {err:?}"
+        );
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver import symbol 'io' has return type metadata, expected none")),
+            "expected resolver import return metadata diagnostic, got {err:?}"
         );
     }
 

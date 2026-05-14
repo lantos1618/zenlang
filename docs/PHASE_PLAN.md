@@ -102,6 +102,8 @@ checked-in docs, tests, and commits only.
   seeding imported module-call bindings.
 - Typechecker setup now rejects resolver import binding visibility mismatches
   before seeding imported module-call bindings.
+- Typechecker setup now rejects resolver import binding parameter-count and
+  return-type metadata before seeding imported module-call bindings.
 - Typechecker setup now validates resolver import binding source and visibility
   invariants even when AST import declarations have already been stripped and
   imports are seeded from resolver symbols only, including the referenced
