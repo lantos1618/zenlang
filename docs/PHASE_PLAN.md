@@ -168,6 +168,9 @@ checked-in docs, tests, and commits only.
 - Typechecker setup now rejects extra resolver-owned local symbols by mirroring
   resolver scope allocation for parameters, block locals, pattern bindings,
   closures, field defaults, behavior defaults, and top-level expressions.
+- Resolver now rejects `Self` type references outside method, impl-method, or
+  behavior contexts instead of letting plain functions carry unresolved `Self`
+  into typechecking.
 - Typechecker resolver-symbol validation now checks enum variant symbols from
   resolver output instead of treating enum type presence as sufficient.
 - Resolver value symbols now carry parameter-count metadata for functions and

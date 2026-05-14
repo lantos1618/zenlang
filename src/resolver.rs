@@ -1001,14 +1001,21 @@ impl Resolver {
                 span,
                 ..
             } => {
-                self.validate_type_param_constraints(table, type_params, diagnostics);
-                self.validate_params(table, type_params, params, diagnostics);
+                self.validate_type_param_constraints(table, type_params, false, diagnostics);
+                self.validate_params(table, type_params, params, false, diagnostics);
                 if let Some(return_type) = return_type {
-                    self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        return_type,
+                        *span,
+                        false,
+                        diagnostics,
+                    );
                 }
                 let scope_id = table.new_scope();
                 let mut locals = self.param_locals(table, params, scope_id, diagnostics);
-                self.validate_expr_refs(table, type_params, body, &mut locals, diagnostics);
+                self.validate_expr_refs(table, type_params, body, &mut locals, false, diagnostics);
             }
             Declaration::Method {
                 type_name,
@@ -1026,23 +1033,37 @@ impl Resolver {
                         *span,
                     ));
                 }
-                self.validate_type_param_constraints(table, type_params, diagnostics);
-                self.validate_params(table, type_params, params, diagnostics);
+                self.validate_type_param_constraints(table, type_params, true, diagnostics);
+                self.validate_params(table, type_params, params, true, diagnostics);
                 if let Some(return_type) = return_type {
-                    self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        return_type,
+                        *span,
+                        true,
+                        diagnostics,
+                    );
                 }
                 let scope_id = table.new_scope();
                 let mut locals = self.param_locals(table, params, scope_id, diagnostics);
-                self.validate_expr_refs(table, type_params, body, &mut locals, diagnostics);
+                self.validate_expr_refs(table, type_params, body, &mut locals, true, diagnostics);
             }
             Declaration::Struct {
                 type_params,
                 fields,
                 ..
             } => {
-                self.validate_type_param_constraints(table, type_params, diagnostics);
+                self.validate_type_param_constraints(table, type_params, false, diagnostics);
                 for field in fields {
-                    self.validate_type_ref(table, type_params, &field.ty, field.span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        &field.ty,
+                        field.span,
+                        false,
+                        diagnostics,
+                    );
                     if let Some(default) = &field.default {
                         let scope_id = table.new_scope();
                         let mut locals = ScopeStack::new(scope_id);
@@ -1051,6 +1072,7 @@ impl Resolver {
                             type_params,
                             default,
                             &mut locals,
+                            false,
                             diagnostics,
                         );
                     }
@@ -1061,7 +1083,7 @@ impl Resolver {
                 variants,
                 ..
             } => {
-                self.validate_type_param_constraints(table, type_params, diagnostics);
+                self.validate_type_param_constraints(table, type_params, false, diagnostics);
                 for variant in variants {
                     if let Some(payload) = &variant.payload {
                         self.validate_type_ref(
@@ -1069,6 +1091,7 @@ impl Resolver {
                             type_params,
                             payload,
                             variant.span,
+                            false,
                             diagnostics,
                         );
                     }
@@ -1079,15 +1102,16 @@ impl Resolver {
                 methods,
                 ..
             } => {
-                self.validate_type_param_constraints(table, type_params, diagnostics);
+                self.validate_type_param_constraints(table, type_params, true, diagnostics);
                 for method in methods {
-                    self.validate_params(table, type_params, &method.params, diagnostics);
+                    self.validate_params(table, type_params, &method.params, true, diagnostics);
                     if let Some(return_type) = &method.return_type {
                         self.validate_type_ref(
                             table,
                             type_params,
                             return_type,
                             method.span,
+                            true,
                             diagnostics,
                         );
                     }
@@ -1100,6 +1124,7 @@ impl Resolver {
                             type_params,
                             default_body,
                             &mut locals,
+                            true,
                             diagnostics,
                         );
                     }
@@ -1137,10 +1162,41 @@ impl Resolver {
                     }
                 }
                 for type_arg in behavior_type_args {
-                    self.validate_type_ref(table, &[], type_arg, *span, diagnostics);
+                    self.validate_type_ref(table, &[], type_arg, *span, false, diagnostics);
                 }
                 for method in methods {
-                    self.validate_declaration_types(table, method, diagnostics);
+                    if let Declaration::Function {
+                        type_params,
+                        params,
+                        return_type,
+                        body,
+                        span,
+                        ..
+                    } = method
+                    {
+                        self.validate_type_param_constraints(table, type_params, true, diagnostics);
+                        self.validate_params(table, type_params, params, true, diagnostics);
+                        if let Some(return_type) = return_type {
+                            self.validate_type_ref(
+                                table,
+                                type_params,
+                                return_type,
+                                *span,
+                                true,
+                                diagnostics,
+                            );
+                        }
+                        let scope_id = table.new_scope();
+                        let mut locals = self.param_locals(table, params, scope_id, diagnostics);
+                        self.validate_expr_refs(
+                            table,
+                            type_params,
+                            body,
+                            &mut locals,
+                            true,
+                            diagnostics,
+                        );
+                    }
                 }
             }
             Declaration::Import { .. } | Declaration::Error { .. } => {}
@@ -1170,7 +1226,7 @@ impl Resolver {
                     );
                 }
                 for type_arg in behavior_type_args {
-                    self.validate_type_ref(table, &[], type_arg, *span, diagnostics);
+                    self.validate_type_ref(table, &[], type_arg, *span, false, diagnostics);
                 }
             }
             Declaration::BehaviorExtends {
@@ -1196,7 +1252,7 @@ impl Resolver {
                     ));
                 }
                 for type_arg in parent_type_args {
-                    self.validate_type_ref(table, &[], type_arg, *span, diagnostics);
+                    self.validate_type_ref(table, &[], type_arg, *span, false, diagnostics);
                 }
                 if behavior_known && parent_known {
                     table.record_behavior_parent(
@@ -1212,6 +1268,7 @@ impl Resolver {
                     &[],
                     expr,
                     &mut ScopeStack::new(scope_id),
+                    false,
                     diagnostics,
                 );
             }
@@ -1223,10 +1280,18 @@ impl Resolver {
         table: &SymbolTable,
         type_params: &[TypeParam],
         params: &[Param],
+        allow_self_type: bool,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         for param in params {
-            self.validate_type_ref(table, type_params, &param.ty, param.span, diagnostics);
+            self.validate_type_ref(
+                table,
+                type_params,
+                &param.ty,
+                param.span,
+                allow_self_type,
+                diagnostics,
+            );
         }
     }
 
@@ -1234,6 +1299,7 @@ impl Resolver {
         &self,
         table: &SymbolTable,
         type_params: &[TypeParam],
+        allow_self_type: bool,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         for type_param in type_params {
@@ -1251,6 +1317,7 @@ impl Resolver {
                         type_params,
                         type_arg,
                         type_param.span,
+                        allow_self_type,
                         diagnostics,
                     );
                 }
@@ -1264,6 +1331,7 @@ impl Resolver {
         type_params: &[TypeParam],
         ast_type: &AstType,
         span: Span,
+        allow_self_type: bool,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         match ast_type {
@@ -1285,7 +1353,14 @@ impl Resolver {
                     ));
                 }
                 for type_arg in type_args {
-                    self.validate_type_ref(table, type_params, type_arg, span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        type_arg,
+                        span,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
             }
             AstType::Array { elem, .. }
@@ -1293,13 +1368,36 @@ impl Resolver {
             | AstType::Ptr(elem)
             | AstType::MutPtr(elem)
             | AstType::RawPtr(elem) => {
-                self.validate_type_ref(table, type_params, elem, span, diagnostics);
+                self.validate_type_ref(
+                    table,
+                    type_params,
+                    elem,
+                    span,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             AstType::Function { params, ret } => {
                 for param in params {
-                    self.validate_type_ref(table, type_params, param, span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        param,
+                        span,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
-                self.validate_type_ref(table, type_params, ret, span, diagnostics);
+                self.validate_type_ref(table, type_params, ret, span, allow_self_type, diagnostics);
+            }
+            AstType::SelfType => {
+                if !allow_self_type {
+                    diagnostics.push(Diagnostic::error(
+                        "E0204",
+                        "Self type is only valid in method or behavior contexts",
+                        span,
+                    ));
+                }
             }
             AstType::I8
             | AstType::I16
@@ -1316,7 +1414,6 @@ impl Resolver {
             | AstType::Void
             | AstType::Str
             | AstType::String
-            | AstType::SelfType
             | AstType::Inferred => {}
         }
     }
@@ -1338,6 +1435,7 @@ impl Resolver {
         type_params: &[TypeParam],
         expr: &Expression,
         locals: &mut ScopeStack,
+        allow_self_type: bool,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         match expr {
@@ -1349,7 +1447,14 @@ impl Resolver {
                 span,
             } => {
                 for type_arg in type_args {
-                    self.validate_type_ref(table, type_params, type_arg, *span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        type_arg,
+                        *span,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
                 if module.is_none() && !self.is_known_value_name(table, locals, name) {
                     diagnostics.push(Diagnostic::error(
@@ -1359,7 +1464,14 @@ impl Resolver {
                     ));
                 }
                 for arg in args {
-                    self.validate_expr_refs(table, type_params, arg, locals, diagnostics);
+                    self.validate_expr_refs(
+                        table,
+                        type_params,
+                        arg,
+                        locals,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
             }
             Expression::Identifier { name, span } => {
@@ -1378,27 +1490,90 @@ impl Resolver {
                 span,
                 ..
             } => {
-                self.validate_expr_refs(table, type_params, receiver, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    receiver,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
                 for type_arg in type_args {
-                    self.validate_type_ref(table, type_params, type_arg, *span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        type_arg,
+                        *span,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
                 for arg in args {
-                    self.validate_expr_refs(table, type_params, arg, locals, diagnostics);
+                    self.validate_expr_refs(
+                        table,
+                        type_params,
+                        arg,
+                        locals,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
             }
             Expression::BinaryOp { left, right, .. } => {
-                self.validate_expr_refs(table, type_params, left, locals, diagnostics);
-                self.validate_expr_refs(table, type_params, right, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    left,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    right,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Expression::UnaryOp { operand, .. } => {
-                self.validate_expr_refs(table, type_params, operand, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    operand,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Expression::MemberAccess { object, .. } => {
-                self.validate_expr_refs(table, type_params, object, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    object,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Expression::IndexAccess { object, index, .. } => {
-                self.validate_expr_refs(table, type_params, object, locals, diagnostics);
-                self.validate_expr_refs(table, type_params, index, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    object,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    index,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Expression::StructLiteral {
                 type_args,
@@ -1407,10 +1582,24 @@ impl Resolver {
                 ..
             } => {
                 for type_arg in type_args {
-                    self.validate_type_ref(table, type_params, type_arg, *span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        type_arg,
+                        *span,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
                 for (_, value) in fields {
-                    self.validate_expr_refs(table, type_params, value, locals, diagnostics);
+                    self.validate_expr_refs(
+                        table,
+                        type_params,
+                        value,
+                        locals,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
             }
             Expression::EnumVariant {
@@ -1420,21 +1609,49 @@ impl Resolver {
                 ..
             } => {
                 for type_arg in type_args {
-                    self.validate_type_ref(table, type_params, type_arg, *span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        type_arg,
+                        *span,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
                 if let Some(payload) = payload {
-                    self.validate_expr_refs(table, type_params, payload, locals, diagnostics);
+                    self.validate_expr_refs(
+                        table,
+                        type_params,
+                        payload,
+                        locals,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
             }
             Expression::ArrayLiteral { elements, .. } => {
                 for element in elements {
-                    self.validate_expr_refs(table, type_params, element, locals, diagnostics);
+                    self.validate_expr_refs(
+                        table,
+                        type_params,
+                        element,
+                        locals,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
             }
             Expression::Match {
                 scrutinee, arms, ..
             } => {
-                self.validate_expr_refs(table, type_params, scrutinee, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    scrutinee,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
                 for arm in arms {
                     if let Some(guard) = &arm.guard {
                         let arm_scope_id = table.new_scope();
@@ -1445,6 +1662,7 @@ impl Resolver {
                             type_params,
                             guard,
                             &mut arm_locals,
+                            allow_self_type,
                             diagnostics,
                         );
                     }
@@ -1456,6 +1674,7 @@ impl Resolver {
                         type_params,
                         &arm.body,
                         &mut arm_locals,
+                        allow_self_type,
                         diagnostics,
                     );
                 }
@@ -1468,10 +1687,24 @@ impl Resolver {
                 then_body: body,
                 ..
             } => {
-                self.validate_expr_refs(table, type_params, condition, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    condition,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
                 let body_scope_id = table.new_scope();
                 let mut body_locals = ScopeStack::with_parent(body_scope_id, locals);
-                self.validate_expr_refs(table, type_params, body, &mut body_locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    body,
+                    &mut body_locals,
+                    allow_self_type,
+                    diagnostics,
+                );
                 if let Expression::If {
                     else_body: Some(else_body),
                     ..
@@ -1484,6 +1717,7 @@ impl Resolver {
                         type_params,
                         else_body,
                         &mut else_locals,
+                        allow_self_type,
                         diagnostics,
                     );
                 }
@@ -1491,7 +1725,14 @@ impl Resolver {
             Expression::Loop { body, .. } => {
                 let body_scope_id = table.new_scope();
                 let mut body_locals = ScopeStack::with_parent(body_scope_id, locals);
-                self.validate_expr_refs(table, type_params, body, &mut body_locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    body,
+                    &mut body_locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Expression::Block {
                 statements, expr, ..
@@ -1504,6 +1745,7 @@ impl Resolver {
                         type_params,
                         statement,
                         &mut block_locals,
+                        allow_self_type,
                         diagnostics,
                     );
                 }
@@ -1513,13 +1755,21 @@ impl Resolver {
                         type_params,
                         expr,
                         &mut block_locals,
+                        allow_self_type,
                         diagnostics,
                     );
                 }
             }
             Expression::Return { value, .. } => {
                 if let Some(value) = value {
-                    self.validate_expr_refs(table, type_params, value, locals, diagnostics);
+                    self.validate_expr_refs(
+                        table,
+                        type_params,
+                        value,
+                        locals,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
             }
             Expression::Closure {
@@ -1531,7 +1781,14 @@ impl Resolver {
                 let closure_scope_id = table.new_scope();
                 let mut closure_locals = ScopeStack::with_parent(closure_scope_id, locals);
                 for param in params {
-                    self.validate_type_ref(table, type_params, &param.ty, param.span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        &param.ty,
+                        param.span,
+                        allow_self_type,
+                        diagnostics,
+                    );
                     self.define_local_symbol(
                         table,
                         &param.name,
@@ -1542,31 +1799,87 @@ impl Resolver {
                     );
                 }
                 if let Some(return_type) = return_type {
-                    self.validate_type_ref(table, type_params, return_type, *span, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        return_type,
+                        *span,
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
-                self.validate_expr_refs(table, type_params, body, &mut closure_locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    body,
+                    &mut closure_locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Expression::Cast {
                 expr,
                 target_type,
                 span,
             } => {
-                self.validate_expr_refs(table, type_params, expr, locals, diagnostics);
-                self.validate_type_ref(table, type_params, target_type, *span, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    expr,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
+                self.validate_type_ref(
+                    table,
+                    type_params,
+                    target_type,
+                    *span,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Expression::StringInterpolation { parts, .. } => {
                 for part in parts {
                     if let StringPart::Expr(expr) = part {
-                        self.validate_expr_refs(table, type_params, expr, locals, diagnostics);
+                        self.validate_expr_refs(
+                            table,
+                            type_params,
+                            expr,
+                            locals,
+                            allow_self_type,
+                            diagnostics,
+                        );
                     }
                 }
             }
             Expression::Range { start, end, .. } => {
-                self.validate_expr_refs(table, type_params, start, locals, diagnostics);
-                self.validate_expr_refs(table, type_params, end, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    start,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    end,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Expression::Defer { expr, .. } => {
-                self.validate_expr_refs(table, type_params, expr, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    expr,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Expression::IntLiteral { .. }
             | Expression::FloatLiteral { .. }
@@ -1585,6 +1898,7 @@ impl Resolver {
         type_params: &[TypeParam],
         statement: &Statement,
         locals: &mut ScopeStack,
+        allow_self_type: bool,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         match statement {
@@ -1597,9 +1911,23 @@ impl Resolver {
                 ..
             } => {
                 if let Some(ty) = ty {
-                    self.validate_type_ref(table, type_params, ty, statement.span(), diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        ty,
+                        statement.span(),
+                        allow_self_type,
+                        diagnostics,
+                    );
                 }
-                self.validate_expr_refs(table, type_params, value, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    value,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
                 if *constant || *mutable || !locals.is_mutable(name) {
                     self.define_local_symbol(
                         table,
@@ -1612,11 +1940,32 @@ impl Resolver {
                 }
             }
             Statement::Assignment { target, value, .. } => {
-                self.validate_expr_refs(table, type_params, target, locals, diagnostics);
-                self.validate_expr_refs(table, type_params, value, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    target,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    value,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Statement::Expression { expr, .. } => {
-                self.validate_expr_refs(table, type_params, expr, locals, diagnostics);
+                self.validate_expr_refs(
+                    table,
+                    type_params,
+                    expr,
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Statement::Block { stmts, .. } => {
                 let block_scope_id = table.new_scope();
@@ -1627,6 +1976,7 @@ impl Resolver {
                         type_params,
                         statement,
                         &mut block_locals,
+                        allow_self_type,
                         diagnostics,
                     );
                 }

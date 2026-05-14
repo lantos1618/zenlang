@@ -140,6 +140,25 @@ Missing.label = () str { return "missing" }
 }
 
 #[test]
+fn resolver_rejects_self_type_outside_method_or_behavior() {
+    let program = parse_program(
+        r#"
+main = (value: Self) i32 { return 0 }
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("Self should require a method or behavior context");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("Self type is only valid")),
+        "expected invalid Self type diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_import_bindings_as_symbols() {
     let program = parse_program(
         r#"
