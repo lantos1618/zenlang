@@ -1212,6 +1212,28 @@ main = () i32 {
 }
 
 #[test]
+fn resolver_rejects_unknown_struct_literal_types() {
+    let program = parse_program(
+        r#"
+main = () i32 {
+    point = Point { x: 1 }
+    return 0
+}
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("unknown struct literal type should fail in resolver");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("unknown type symbol 'Point'")),
+        "expected unknown struct literal type diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_enum_variant_payload_counts() {
     let program = parse_program(
         r#"

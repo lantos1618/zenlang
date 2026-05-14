@@ -1682,6 +1682,12 @@ impl Resolver {
                             }
                         }
                     }
+                } else if !self.is_known_type_name(table, type_params, name) {
+                    diagnostics.push(Diagnostic::error(
+                        "E0201",
+                        format!("unknown type symbol '{name}'"),
+                        *span,
+                    ));
                 }
                 for type_arg in type_args {
                     self.validate_type_ref(

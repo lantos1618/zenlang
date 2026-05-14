@@ -119,6 +119,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "resolver_rejects_duplicate_struct_literal_fields",
         "resolver_rejects_unknown_struct_literal_fields",
         "resolver_rejects_missing_struct_literal_fields",
+        "resolver_rejects_unknown_struct_literal_types",
         "resolver_allows_same_variant_names_in_different_enums",
         "resolver_rejects_duplicate_variant_names_in_same_enum",
         "resolver_rejects_unknown_enum_variant_expressions",
