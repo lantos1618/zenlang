@@ -349,6 +349,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_parameter_types_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        parameter_types: Option<Vec<AstType>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.parameter_types = parameter_types;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_parameter_names_for_test(
         &mut self,
         namespace: Namespace,
@@ -377,6 +393,22 @@ impl SymbolTable {
             .find(|symbol| symbol.namespace == namespace && symbol.name == name)
         {
             symbol.return_type_name = return_type_name;
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_return_type_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        return_type: Option<AstType>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.return_type = return_type;
         }
     }
 

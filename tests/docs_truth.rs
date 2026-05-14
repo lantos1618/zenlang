@@ -114,6 +114,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "resolver_rejects_duplicate_signature_parameter_names",
         "check_program_with_symbols_validates_resolver_function_type_parameter_metadata",
         "check_program_with_symbols_validates_resolver_function_type_return_metadata",
+        "check_program_with_symbols_validates_resolver_function_typed_signature_metadata",
         "collect_declarations_with_symbols_uses_resolver_function_type_metadata",
         "collect_declarations_with_symbols_uses_resolver_generic_function_template_metadata",
         "collect_declarations_with_symbols_uses_resolver_generic_method_template_metadata",

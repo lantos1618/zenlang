@@ -153,7 +153,9 @@ struct DefaultBehaviorMethod {
 
 struct ExpectedValueSignature {
     parameter_names: Vec<String>,
+    parameter_types: Vec<AstType>,
     parameter_type_names: Vec<String>,
+    return_type: AstType,
     return_type_name: String,
     type_parameter_count: usize,
     type_parameter_names: Vec<String>,
@@ -6406,6 +6408,18 @@ impl TypeChecker {
                 span,
             ));
         }
+        if symbol.parameter_types.as_deref() != Some(expected_signature.parameter_types.as_slice())
+        {
+            let actual = format_ast_type_list(symbol.parameter_types.as_deref());
+            let expected = format_ast_type_list(Some(&expected_signature.parameter_types));
+            self.diagnostics.push(Diagnostic::error(
+                "E0356",
+                format!(
+                    "resolver value symbol '{name}' has typed parameter types '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
 
         if symbol.return_type_name.as_deref() != Some(expected_signature.return_type_name.as_str())
         {
@@ -6415,6 +6429,21 @@ impl TypeChecker {
                 format!(
                     "resolver value symbol '{name}' has return type '{actual}', expected '{}'",
                     expected_signature.return_type_name
+                ),
+                span,
+            ));
+        }
+        if symbol.return_type.as_ref() != Some(&expected_signature.return_type) {
+            let actual = symbol
+                .return_type
+                .as_ref()
+                .map(AstType::display_name)
+                .unwrap_or_else(|| "unknown".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0357",
+                format!(
+                    "resolver value symbol '{name}' has typed return type '{actual}', expected '{}'",
+                    expected_signature.return_type.display_name()
                 ),
                 span,
             ));
@@ -6569,6 +6598,10 @@ fn expected_parameter_type_names(params: &[Param]) -> Vec<String> {
     params.iter().map(|param| param.ty.display_name()).collect()
 }
 
+fn expected_parameter_types(params: &[Param]) -> Vec<AstType> {
+    params.iter().map(|param| param.ty.clone()).collect()
+}
+
 fn expected_parameter_names(params: &[Param]) -> Vec<String> {
     params.iter().map(|param| param.name.clone()).collect()
 }
@@ -6580,7 +6613,9 @@ fn expected_value_signature(
 ) -> ExpectedValueSignature {
     ExpectedValueSignature {
         parameter_names: expected_parameter_names(params),
+        parameter_types: expected_parameter_types(params),
         parameter_type_names: expected_parameter_type_names(params),
+        return_type: return_type.clone().unwrap_or(AstType::Void),
         return_type_name: expected_return_type_name(return_type),
         type_parameter_count: type_params.len(),
         type_parameter_names: expected_type_parameter_names(type_params),
@@ -6681,6 +6716,20 @@ fn format_type_parameter_bound_refs(bounds: Option<&[TypeParameterBoundRefMetada
 fn format_parameter_type_names(names: Option<&[String]>) -> String {
     match names {
         Some(names) => format!("({})", names.join(", ")),
+        None => "unknown".to_string(),
+    }
+}
+
+fn format_ast_type_list(types: Option<&[AstType]>) -> String {
+    match types {
+        Some(types) => format!(
+            "({})",
+            types
+                .iter()
+                .map(AstType::display_name)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
         None => "unknown".to_string(),
     }
 }
@@ -9704,6 +9753,40 @@ factory = () (i32) i32 {
                 "resolver value symbol 'factory' has return type 'i32', expected '(i32) i32'"
             )),
             "expected resolver function type return metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_typed_signature_metadata() {
+        let program = parse_program(
+            r#"
+apply = (callback: (i32) i32) (i32) i32 {
+    return callback
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_types_for_test(Namespace::Value, "apply", Some(vec![AstType::I32]));
+        symbols.set_return_type_for_test(Namespace::Value, "apply", Some(AstType::I32));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver typed function signature metadata mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'apply' has typed parameter types '(i32)', expected '((i32) i32)'"
+            )),
+            "expected resolver typed parameter diagnostic, got {err:?}"
+        );
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'apply' has typed return type 'i32', expected '(i32) i32'"
+            )),
+            "expected resolver typed return diagnostic, got {err:?}"
         );
     }
 

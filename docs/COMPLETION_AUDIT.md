@@ -459,6 +459,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver top-level method and behavior impl method value symbols preserve
   function-typed parameters and returns, and typechecker setup rejects
   function-type method handoff drift before method body collection.
+- Typechecker setup validates typed resolver value-signature metadata in
+  addition to display signatures, so stale `parameter_types` or `return_type`
+  cannot feed resolver-backed value collection behind matching signature
+  strings.
 - Resolver struct symbols carry field-count metadata, and typechecker setup
   rejects mismatches before collecting struct field metadata.
 - Resolver struct symbols carry field-name/type metadata, and typechecker setup
