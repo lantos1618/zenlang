@@ -419,6 +419,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior method signature metadata preserves generic return types on
   generic behaviors, and typechecker setup rejects generic method-signature
   handoff drift before behavior metadata collection.
+- Resolver behavior method signature metadata preserves function-typed
+  parameters and returns over generic type parameters, and typechecker setup
+  rejects generic function-type method drift before behavior metadata
+  collection.
 - Resolver top-level method and behavior impl method value symbols preserve
   function-typed parameters and returns, and typechecker setup rejects
   function-type method handoff drift before method body collection.
