@@ -469,6 +469,13 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Box_T"));
     assert!(!c_source.contains("T Box_get"));
 
+    let c_source = compile_to_c(&test_dir().join("multi_file_type_method/main.zen"));
+    assert!(c_source.contains("int32_t Point_keep_i32(Point self, int32_t value)"));
+    assert!(c_source.contains("Point_keep_i32(point, 13LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "Point_keep_i32");
+    assert!(!c_source.contains("T Point_keep"));
+    assert!(!c_source.contains("Point_keep(point"));
+
     let c_source = compile_to_c(&test_dir().join("generic_ufc_function.zen"));
     assert!(c_source.contains("int32_t id_i32(int32_t value)"));
     assert!(c_source.contains("id_i32(12LL)"));
@@ -1197,6 +1204,13 @@ fn test_multi_file_type_impl_imports() {
     let zen_path = test_dir().join("multi_file_type_impl/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "34\n");
+}
+
+#[test]
+fn test_multi_file_type_method_imports() {
+    let zen_path = test_dir().join("multi_file_type_method/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "13\n");
 }
 
 #[test]

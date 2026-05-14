@@ -275,7 +275,9 @@ checked-in docs, tests, and commits only.
   declarations. Function-typed imported signatures and imported generic
   function and enum specializations are covered, and importing a public type
   also seeds its public methods and public generic method templates on the graph
-  path without seeding private imported methods.
+  path without seeding private imported methods. Generated-C assertions now
+  cover imported public generic top-level methods through
+  `tests/zen/multi_file_type_method/main.zen`.
 - The CLI `check` path now loads the module graph and reports resolver
   diagnostics from imported modules before typechecking the entry module.
 - The module-graph typechecker entrypoint now typechecks imported modules before
@@ -305,6 +307,9 @@ checked-in docs, tests, and commits only.
 - Resolver rejects top-level methods whose receiver type is unknown, and
   typechecker setup requires the resolver-owned receiver type symbol before
   collecting method metadata from the AST.
+- Imported public generic top-level methods compile through the module graph and
+  emit concrete generated-C call/definition pairs, covered by
+  `tests/zen/multi_file_type_method/main.zen`.
 - Non-behavior `Type.impl = { ... }` blocks now parse, resolve as
   `Type.method` value symbols, typecheck, and emit concrete method functions,
   including generic impl methods. Covered by `parser::tests::parse_impl_block`,

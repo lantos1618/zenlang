@@ -162,6 +162,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_validates_resolver_method_signature",
         "check_program_with_symbols_validates_resolver_method_function_type_signature",
         "check_module_graph_entry_does_not_seed_private_methods_for_imported_types",
+        "tests/zen/multi_file_type_method/main.zen",
         "parse_impl_block",
         "resolver_accepts_non_behavior_impl_blocks_as_method_symbols",
         "tests/zen/type_impl_methods.zen",

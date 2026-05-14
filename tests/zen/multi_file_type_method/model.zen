@@ -1,0 +1,7 @@
+pub Point: {
+    x: i32
+}
+
+pub Point.keep<T> = (self: Point, value: T) T {
+    return value
+}

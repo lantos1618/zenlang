@@ -1,0 +1,8 @@
+{ io } = std
+{ Point } = model
+
+main = () i32 {
+    point = Point { x: 7 }
+    io.println("${point.keep<i32>(13)}")
+    return 0
+}
