@@ -45,7 +45,10 @@ and do not assume Phase 4 is ready without evidence.
   structs, enums, methods, and recursive worklist emission. The C-source
   assertions also match generated mangled generic call sites to emitted
   definitions, including struct-returning specializations without counting
-  declarations or definitions as calls.
+  declarations or definitions as calls. The generated-C specialization test also
+  scans covered underscore-style generated calls and fails if any call lacks an
+  emitted definition, guarded by
+  `integration::generated_c_call_definition_scan_reports_missing_generated_calls`.
 - Generic method specialization preserves concrete `Self` receiver context in
   call-site typing and specialized method bodies for generic struct and enum
   receivers, with executable and generated-C coverage in

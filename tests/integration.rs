@@ -58,6 +58,12 @@ fn compile_to_c(zen_path: &Path) -> String {
         .unwrap_or_else(|e| panic!("codegen error in {}: {}", zen_path.display(), e))
 }
 
+fn compile_to_c_with_generated_call_check(zen_path: &Path) -> String {
+    let c_source = compile_to_c(zen_path);
+    assert_generated_c_calls_resolve_to_definitions(&c_source);
+    c_source
+}
+
 /// Run the full pipeline for a `.zen` file and return stdout of the compiled binary.
 fn compile_and_run(zen_path: &Path) -> String {
     let c_source = compile_to_c(zen_path);
@@ -139,6 +145,125 @@ fn assert_c_call_resolves_to_definition(c_source: &str, name: &str) {
     );
 }
 
+fn assert_generated_c_calls_resolve_to_definitions(c_source: &str) {
+    let undefined = undefined_generated_c_calls(c_source);
+    assert!(
+        undefined.is_empty(),
+        "generated C calls missing emitted definitions: {undefined:?}\n{c_source}"
+    );
+}
+
+fn undefined_generated_c_calls(c_source: &str) -> Vec<String> {
+    let definitions = c_function_definitions(c_source);
+    let mut undefined = Vec::new();
+
+    for line in c_source.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty()
+            || trimmed.starts_with('#')
+            || trimmed.starts_with("typedef ")
+            || is_any_c_function_signature_line(trimmed)
+        {
+            continue;
+        }
+
+        for call in generated_c_calls_on_line(trimmed) {
+            if !definitions.contains(&call) && !undefined.contains(&call) {
+                undefined.push(call);
+            }
+        }
+    }
+
+    undefined
+}
+
+fn c_function_definitions(c_source: &str) -> Vec<String> {
+    c_source
+        .lines()
+        .filter_map(|line| c_function_definition_name(line.trim()))
+        .collect()
+}
+
+fn c_function_definition_name(trimmed: &str) -> Option<String> {
+    if !trimmed.ends_with('{') {
+        return None;
+    }
+
+    let paren = trimmed.find('(')?;
+    let before = trimmed[..paren].trim_end();
+    let name_start = before
+        .rfind(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+        .map_or(0, |idx| idx + 1);
+    let name = &before[name_start..];
+
+    if is_generated_c_function_name(name) {
+        Some(name.to_string())
+    } else {
+        None
+    }
+}
+
+fn is_any_c_function_signature_line(trimmed: &str) -> bool {
+    if !(trimmed.ends_with(';') || trimmed.ends_with('{')) {
+        return false;
+    }
+
+    let Some(paren) = trimmed.find('(') else {
+        return false;
+    };
+    let before = &trimmed[..paren];
+    let name_start = before
+        .trim_end()
+        .rfind(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+        .map_or(0, |idx| idx + 1);
+    let return_type = before[..name_start].trim();
+    let name = before[name_start..].trim();
+
+    !return_type.is_empty()
+        && is_generated_c_function_name(name)
+        && !before.contains('=')
+        && !before.contains("return")
+}
+
+fn generated_c_calls_on_line(trimmed: &str) -> Vec<String> {
+    let mut calls = Vec::new();
+    let bytes = trimmed.as_bytes();
+    let mut index = 0;
+
+    while let Some(relative) = trimmed[index..].find('(') {
+        let paren = index + relative;
+        let mut start = paren;
+        while start > 0 {
+            let ch = bytes[start - 1] as char;
+            if ch.is_ascii_alphanumeric() || ch == '_' {
+                start -= 1;
+            } else {
+                break;
+            }
+        }
+
+        let name = &trimmed[start..paren];
+        if is_generated_c_function_name(name) && !calls.iter().any(|call| call == name) {
+            calls.push(name.to_string());
+        }
+
+        index = paren + 1;
+    }
+
+    calls
+}
+
+fn is_generated_c_function_name(name: &str) -> bool {
+    name.contains('_')
+        && name
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_alphabetic())
+        && name
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+}
+
 fn has_c_call_outside_signature(c_source: &str, name: &str) -> bool {
     let call = format!("{name}(");
     c_source.lines().any(|line| {
@@ -171,6 +296,28 @@ Box_Option_i32 Box_copy_Option_i32(Box_Option_i32 self) {
     assert!(
         !has_c_call_outside_signature(c_source, "Box_copy_Option_i32"),
         "definition-only generated C should not count as a call"
+    );
+}
+
+#[test]
+fn generated_c_call_definition_scan_reports_missing_generated_calls() {
+    let c_source = r#"
+#include <stdio.h>
+
+int32_t inner_i32(int32_t value) {
+    return value;
+}
+
+int32_t outer_i32(int32_t value) {
+    printf("%d", value);
+    missing_stmt_i32(value);
+    return missing_i32(value) + inner_i32(value);
+}
+"#;
+
+    assert_eq!(
+        undefined_generated_c_calls(c_source),
+        vec!["missing_stmt_i32".to_string(), "missing_i32".to_string()]
     );
 }
 
@@ -333,14 +480,15 @@ fn test_behavior_inherited_generic_dispatch() {
 
 #[test]
 fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
-    let c_source = compile_to_c(&test_dir().join("generic_method.zen"));
+    let c_source = compile_to_c_with_generated_call_check(&test_dir().join("generic_method.zen"));
     assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_get_i32(box)"));
     assert_c_call_resolves_to_definition(&c_source, "Box_get_i32");
     assert!(!c_source.contains("Box_T"));
     assert!(!c_source.contains("T Box_get"));
 
-    let c_source = compile_to_c(&test_dir().join("generic_method_self.zen"));
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_method_self.zen"));
     assert!(c_source.contains("Box_i32 Box_copy_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_copy_i32(box)"));
     assert!(c_source.contains("Box_Option_i32 Box_copy_Option_i32(Box_Option_i32 self)"));
@@ -361,7 +509,8 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Box_copy(box"));
     assert!(!c_source.contains("Unknown"));
 
-    let c_source = compile_to_c(&test_dir().join("generic_method_worklist.zen"));
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_method_worklist.zen"));
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
     assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
     assert!(c_source.contains("inner_i32(self.value)"));
@@ -371,7 +520,8 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
 
-    let c_source = compile_to_c(&test_dir().join("type_impl_methods.zen"));
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("type_impl_methods.zen"));
     assert!(c_source.contains("int32_t Point_get(Point self)"));
     assert!(c_source.contains("int32_t Point_keep_i32(Point self, int32_t value)"));
     assert!(c_source.contains("Point_get(point)"));
@@ -381,7 +531,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T Point_keep"));
     assert!(!c_source.contains("Point_keep(point"));
 
-    let c_source = compile_to_c(&test_dir().join("generic_vec.zen"));
+    let c_source = compile_to_c_with_generated_call_check(&test_dir().join("generic_vec.zen"));
     assert!(c_source.contains("int32_t Vec_len_i32(Vec_i32 self)"));
     assert!(c_source.contains("int32_t Vec_len_str(Vec_str self)"));
     assert!(c_source.contains("Vec_len_i32(ints)"));
@@ -391,7 +541,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Vec_T"));
     assert!(!c_source.contains("T Vec_len"));
 
-    let c_source = compile_to_c(&test_dir().join("generic_worklist.zen"));
+    let c_source = compile_to_c_with_generated_call_check(&test_dir().join("generic_worklist.zen"));
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
     assert!(c_source.contains("int32_t outer_i32(int32_t value)"));
     assert!(c_source.contains("inner_i32(value)"));
@@ -404,7 +554,8 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
 
-    let c_source = compile_to_c(&test_dir().join("generic_worklist_dedup.zen"));
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_worklist_dedup.zen"));
     assert!(c_source.contains("int32_t left_i32(int32_t value)"));
     assert!(c_source.contains("int32_t right_i32(int32_t value)"));
     assert!(c_source.contains("inner_i32(value)"));
@@ -418,7 +569,8 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
 
-    let c_source = compile_to_c(&test_dir().join("generic_enum_option.zen"));
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_enum_option.zen"));
     assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
     assert!(c_source.contains("int32_t unwrap_or_i32(Option_i32 value, int32_t fallback)"));
     assert!(c_source.contains("Option_i32_Some"));
@@ -428,13 +580,16 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T unwrap_or"));
     assert!(!c_source.contains("unwrap_or(x"));
 
-    let c_source = compile_to_c(&test_dir().join("duplicate_enum_variant_names.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("duplicate_enum_variant_names.zen"),
+    );
     assert!(c_source.contains("First_i32_Some"));
     assert!(c_source.contains("First_i32_None"));
     assert!(c_source.contains("Second_bool_Some"));
     assert!(c_source.contains("Second_bool_None"));
 
-    let c_source = compile_to_c(&test_dir().join("generic_result_enum.zen"));
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_result_enum.zen"));
     assert!(c_source.contains("typedef struct Result_i32_str Result_i32_str;"));
     assert!(c_source.contains("int32_t unwrap_or_i32_str(Result_i32_str value, int32_t fallback)"));
     assert!(c_source.contains("Result_i32_str_Err"));
@@ -444,7 +599,8 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T unwrap_or"));
     assert!(!c_source.contains("unwrap_or(err"));
 
-    let c_source = compile_to_c(&test_dir().join("multi_file_generic/main.zen"));
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("multi_file_generic/main.zen"));
     assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
     assert!(c_source.contains("typedef struct Result_i32_str Result_i32_str;"));
     assert!(c_source.contains("int32_t unwrap_option_i32(Option_i32 value, int32_t fallback)"));
@@ -462,8 +618,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("unwrap_option(some"));
     assert!(!c_source.contains("unwrap_result(err"));
 
-    let c_source =
-        compile_to_c(&test_dir().join("multi_file_generic_imported_type_dependency/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_generic_imported_type_dependency/main.zen"),
+    );
     assert!(c_source.contains("typedef struct Holder_i32 Holder_i32;"));
     assert!(c_source.contains("int32_t Holder_get_i32(Holder_i32 self)"));
     assert!(c_source.contains("int32_t get_held_i32(int32_t value)"));
@@ -475,8 +632,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Holder_T"));
     assert!(!c_source.contains("T Holder_get"));
 
-    let c_source =
-        compile_to_c(&test_dir().join("multi_file_generic_imported_worklist_chain/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_generic_imported_worklist_chain/main.zen"),
+    );
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
     assert!(c_source.contains("int32_t middle_i32(int32_t value)"));
     assert!(c_source.contains("int32_t outer_i32(int32_t value)"));
@@ -489,7 +647,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("T middle"));
 
-    let c_source = compile_to_c(
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_generic_imported_transitive_dependency/main.zen"),
     );
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
@@ -504,15 +662,17 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("T middle"));
 
-    let c_source = compile_to_c(&test_dir().join("multi_file_type_impl/main.zen"));
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("multi_file_type_impl/main.zen"));
     assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_get_i32(box)"));
     assert_c_call_resolves_to_definition(&c_source, "Box_get_i32");
     assert!(!c_source.contains("Box_T"));
     assert!(!c_source.contains("T Box_get"));
 
-    let c_source =
-        compile_to_c(&test_dir().join("multi_file_type_impl_imported_type_dependency/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_type_impl_imported_type_dependency/main.zen"),
+    );
     assert!(c_source.contains("typedef struct Holder_i32 Holder_i32;"));
     assert!(c_source.contains("int32_t Holder_get_i32(Holder_i32 self)"));
     assert!(c_source.contains("int32_t Box_get_held_i32(Box_i32 self)"));
@@ -524,14 +684,17 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Holder_T"));
     assert!(!c_source.contains("T Holder_get"));
 
-    let c_source = compile_to_c(&test_dir().join("multi_file_type_method/main.zen"));
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("multi_file_type_method/main.zen"));
     assert!(c_source.contains("int32_t Point_keep_i32(Point self, int32_t value)"));
     assert!(c_source.contains("Point_keep_i32(point, 13LL)"));
     assert_c_call_resolves_to_definition(&c_source, "Point_keep_i32");
     assert!(!c_source.contains("T Point_keep"));
     assert!(!c_source.contains("Point_keep(point"));
 
-    let c_source = compile_to_c(&test_dir().join("multi_file_type_method_worklist/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_type_method_worklist/main.zen"),
+    );
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
     assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
     assert!(c_source.contains("inner_i32(self.value)"));
@@ -541,8 +704,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
 
-    let c_source =
-        compile_to_c(&test_dir().join("multi_file_type_method_method_dependency/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_type_method_method_dependency/main.zen"),
+    );
     assert!(c_source.contains("int32_t Box_inner_i32(Box_i32 self)"));
     assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_inner_i32(self)"));
@@ -551,8 +715,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Box_get_inner_i32");
     assert!(!c_source.contains("T Box_inner"));
 
-    let c_source =
-        compile_to_c(&test_dir().join("multi_file_type_method_imported_dependency/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_type_method_imported_dependency/main.zen"),
+    );
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
     assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
     assert!(c_source.contains("inner_i32(self.value)"));
@@ -561,19 +726,24 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Box_get_inner_i32");
     assert!(!c_source.contains("T inner"));
 
-    let c_source = compile_to_c(&test_dir().join("generic_ufc_function.zen"));
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_ufc_function.zen"));
     assert!(c_source.contains("int32_t id_i32(int32_t value)"));
     assert!(c_source.contains("id_i32(12LL)"));
     assert_c_call_resolves_to_definition(&c_source, "id_i32");
     assert!(!c_source.contains("id(12LL)"));
     assert!(!c_source.contains("T id"));
 
-    let c_source = compile_to_c(&test_dir().join("behavior_json_generic_bound_ufcs.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("behavior_json_generic_bound_ufcs.zen"),
+    );
     assert!(c_source.contains("Point Point_encode(Point value)"));
     assert!(c_source.contains("Point_encode(value)"));
     assert!(!c_source.contains("T_encode"));
 
-    let c_source = compile_to_c(&test_dir().join("multi_file_behavior_bound/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_behavior_bound/main.zen"),
+    );
     assert!(c_source.contains("Point Point_encode(Point value)"));
     assert!(c_source.contains("Point encode_Point(Point value)"));
     assert!(c_source.contains("Point_encode(value)"));
@@ -581,7 +751,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
-    let c_source = compile_to_c(&test_dir().join("multi_file_behavior_inheritance/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_behavior_inheritance/main.zen"),
+    );
     assert!(c_source.contains("zen_str Point_encode(Point value)"));
     assert!(c_source.contains("zen_str encode_Point(Point value)"));
     assert!(c_source.contains("Point_encode(value)"));
@@ -589,7 +761,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
-    let c_source = compile_to_c(&test_dir().join("multi_file_imported_behavior_impl/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_imported_behavior_impl/main.zen"),
+    );
     assert!(c_source.contains("zen_str Point_encode(Point value)"));
     assert!(c_source.contains("zen_str encode_Point(Point value)"));
     assert!(c_source.contains("Point_encode(value)"));
@@ -597,7 +771,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
-    let c_source = compile_to_c(&test_dir().join("multi_file_imported_behavior_default/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_imported_behavior_default/main.zen"),
+    );
     assert!(c_source.contains("zen_str Point_to_json(Point "));
     assert!(c_source.contains("zen_str render_Point(Point value)"));
     assert!(c_source.contains("Point_to_json(value)"));
@@ -605,8 +781,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "render_Point");
     assert!(!c_source.contains("T_to_json"));
 
-    let c_source =
-        compile_to_c(&test_dir().join("multi_file_imported_impl_imported_behavior/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_imported_impl_imported_behavior/main.zen"),
+    );
     assert!(c_source.contains("zen_str Point_encode(Point value)"));
     assert!(c_source.contains("zen_str encode_Point(Point value)"));
     assert!(c_source.contains("Point_encode(value)"));
@@ -614,8 +791,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
-    let c_source =
-        compile_to_c(&test_dir().join("multi_file_imported_child_parent_dispatch/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_imported_child_parent_dispatch/main.zen"),
+    );
     assert!(c_source.contains("zen_str Point_encode(Point value)"));
     assert!(c_source.contains("zen_str render_Point(Point value)"));
     assert!(c_source.contains("Point_encode(value)"));
@@ -623,7 +801,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "render_Point");
     assert!(!c_source.contains("T_encode"));
 
-    let c_source = compile_to_c(&test_dir().join("multi_file_imported_behavior_requires/main.zen"));
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_imported_behavior_requires/main.zen"),
+    );
     assert!(c_source.contains("zen_str Point_encode(Point value)"));
     assert!(c_source.contains("zen_str encode_Point(Point value)"));
     assert!(c_source.contains("Point_encode(value)"));
@@ -631,7 +811,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
-    let c_source = compile_to_c(
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_imported_function_imported_behavior_bound/main.zen"),
     );
     assert!(c_source.contains("int32_t Point_encode(Point value)"));
@@ -641,7 +821,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
-    let c_source = compile_to_c(
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_imported_function_return_type_dependency/main.zen"),
     );
     assert!(c_source.contains("typedef struct Point"));
@@ -654,7 +834,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
-    let c_source = compile_to_c(
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_imported_function_imported_return_type_behavior/main.zen"),
     );
     assert!(c_source.contains("typedef struct Point"));
@@ -667,7 +847,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
-    let c_source = compile_to_c(
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_imported_generic_function_return_enum_dependency/main.zen"),
     );
     assert!(c_source.contains("typedef struct Option_i32"));
