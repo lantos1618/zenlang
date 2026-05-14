@@ -6015,6 +6015,11 @@ main = () i32 {
             Some(vec!["i32".to_string()]),
         );
         symbols.set_type_parameter_count_for_test(Namespace::Import, "io", Some(1));
+        symbols.set_type_parameter_names_for_test(
+            Namespace::Import,
+            "io",
+            Some(vec!["T".to_string()]),
+        );
         symbols.set_type_parameter_bounds_for_test(
             Namespace::Import,
             "io",
@@ -6072,6 +6077,7 @@ main = () i32 {
             "resolver import symbol 'io' has parameter names metadata, expected none",
             "resolver import symbol 'io' has parameter types metadata, expected none",
             "resolver import symbol 'io' has type parameter count metadata, expected none",
+            "resolver import symbol 'io' has type parameter names metadata, expected none",
             "resolver import symbol 'io' has type parameter bounds metadata, expected none",
             "resolver import symbol 'io' has field count metadata, expected none",
             "resolver import symbol 'io' has field types metadata, expected none",
@@ -6213,6 +6219,11 @@ main = () i32 {
             Some(vec!["i32".to_string()]),
         );
         symbols.set_type_parameter_count_for_test(Namespace::Module, "std", Some(1));
+        symbols.set_type_parameter_names_for_test(
+            Namespace::Module,
+            "std",
+            Some(vec!["T".to_string()]),
+        );
         symbols.set_type_parameter_bounds_for_test(
             Namespace::Module,
             "std",
@@ -6274,6 +6285,7 @@ main = () i32 {
             "resolver module symbol 'std' has parameter names metadata, expected none",
             "resolver module symbol 'std' has parameter types metadata, expected none",
             "resolver module symbol 'std' has type parameter count metadata, expected none",
+            "resolver module symbol 'std' has type parameter names metadata, expected none",
             "resolver module symbol 'std' has type parameter bounds metadata, expected none",
             "resolver module symbol 'std' has field count metadata, expected none",
             "resolver module symbol 'std' has field types metadata, expected none",
@@ -6562,6 +6574,11 @@ add = (a: i32, b: i32) i32 { return a + b }
             Some(vec!["i32".to_string()]),
         );
         symbols.set_type_parameter_count_for_test(Namespace::Local, "a", Some(1));
+        symbols.set_type_parameter_names_for_test(
+            Namespace::Local,
+            "a",
+            Some(vec!["T".to_string()]),
+        );
         symbols.set_type_parameter_bounds_for_test(
             Namespace::Local,
             "a",
@@ -6615,6 +6632,7 @@ add = (a: i32, b: i32) i32 { return a + b }
             "resolver local symbol 'a' has parameter names metadata, expected none",
             "resolver local symbol 'a' has parameter types metadata, expected none",
             "resolver local symbol 'a' has type parameter count metadata, expected none",
+            "resolver local symbol 'a' has type parameter names metadata, expected none",
             "resolver local symbol 'a' has type parameter bounds metadata, expected none",
             "resolver local symbol 'a' has field count metadata, expected none",
             "resolver local symbol 'a' has field types metadata, expected none",
@@ -7761,6 +7779,11 @@ Option: Some(i32), None
         symbols.set_import_source_for_test(Namespace::Variant, "Some", Some("std".to_string()));
         symbols.set_parameter_count_for_test(Namespace::Variant, "Some", Some(1));
         symbols.set_type_parameter_count_for_test(Namespace::Variant, "Some", Some(1));
+        symbols.set_type_parameter_names_for_test(
+            Namespace::Variant,
+            "Some",
+            Some(vec!["T".to_string()]),
+        );
         symbols.set_field_count_for_test(Namespace::Variant, "Some", Some(1));
         symbols.set_behavior_impl_names_for_test(
             Namespace::Variant,
@@ -7777,6 +7800,7 @@ Option: Some(i32), None
             "resolver variant symbol 'Some' has source 'std', expected none",
             "resolver variant symbol 'Some' has parameter count metadata, expected none",
             "resolver variant symbol 'Some' has type parameter count metadata, expected none",
+            "resolver variant symbol 'Some' has type parameter names metadata, expected none",
             "resolver variant symbol 'Some' has field count metadata, expected none",
             "resolver variant symbol 'Some' has behavior impls metadata, expected none",
         ] {
