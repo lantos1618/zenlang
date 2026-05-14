@@ -205,6 +205,11 @@ checked-in docs, tests, and commits only.
 - Typechecker setup now has an opt-in module-graph entrypoint that validates
   the entry resolver symbols and seeds imported signatures from graph-owned
   `ImportBinding`s without merging imported declarations into the entry AST.
+- Module-graph import setup now seeds imported declaration signatures directly
+  instead of re-running declaration collection over cloned imported
+  declarations. Function-typed imported signatures and imported generic
+  function specializations are covered, and importing a public type also seeds
+  its public methods and public generic method templates on the graph path.
 - The CLI `check` path now loads the module graph and reports resolver
   diagnostics from imported modules before typechecking the entry module.
 - The module-graph typechecker entrypoint now typechecks imported modules before

@@ -3380,7 +3380,6 @@ impl TypeChecker {
         graph: &ResolvedModuleGraph,
         entry: &ResolvedModule,
     ) {
-        let mut imported_decls = Vec::new();
         for binding in &entry.imports {
             let Some(source_module) = graph.module(binding.source_module) else {
                 self.diagnostics.push(Diagnostic::error(
@@ -3411,10 +3410,164 @@ impl TypeChecker {
                 continue;
             };
 
-            imported_decls.push(decl.clone());
+            self.seed_module_graph_import(binding.local_name.as_str(), decl);
+            self.seed_public_methods_for_imported_type(
+                binding.source_symbol.as_str(),
+                source_module,
+            );
         }
+    }
 
-        self.collect_declarations(&imported_decls);
+    fn seed_module_graph_import(&mut self, local_name: &str, decl: &Declaration) {
+        match decl {
+            Declaration::Struct {
+                type_params,
+                fields,
+                ..
+            } => {
+                self.structs.insert(
+                    local_name.to_string(),
+                    StructInfo {
+                        name: local_name.to_string(),
+                        fields: fields
+                            .iter()
+                            .map(|field| (field.name.clone(), field.ty.clone()))
+                            .collect(),
+                        type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        type_param_bounds: type_param_bounds(type_params),
+                    },
+                );
+            }
+            Declaration::Enum {
+                type_params,
+                variants,
+                ..
+            } => {
+                self.enums.insert(
+                    local_name.to_string(),
+                    EnumInfo {
+                        name: local_name.to_string(),
+                        variants: variants
+                            .iter()
+                            .map(|variant| (variant.name.clone(), variant.payload.clone()))
+                            .collect(),
+                        type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        type_param_bounds: type_param_bounds(type_params),
+                    },
+                );
+            }
+            Declaration::Behavior {
+                type_params,
+                methods,
+                ..
+            } => {
+                self.behaviors.insert(
+                    local_name.to_string(),
+                    BehaviorInfo {
+                        name: local_name.to_string(),
+                        type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        methods: methods.clone(),
+                    },
+                );
+            }
+            Declaration::Function {
+                type_params,
+                params,
+                return_type,
+                body,
+                span,
+                ..
+            } => {
+                let collected_type_params: Vec<String> =
+                    type_params.iter().map(|param| param.name.clone()).collect();
+                self.functions.insert(
+                    local_name.to_string(),
+                    FuncInfo {
+                        name: local_name.to_string(),
+                        params: params
+                            .iter()
+                            .map(|param| (param.name.clone(), param.ty.clone()))
+                            .collect(),
+                        return_type: return_type.clone().unwrap_or(AstType::Void),
+                        type_params: collected_type_params.clone(),
+                        type_param_bounds: type_param_bounds(type_params),
+                    },
+                );
+                if !collected_type_params.is_empty() {
+                    self.generic_functions.insert(
+                        local_name.to_string(),
+                        GenericFunctionTemplate {
+                            type_params: collected_type_params,
+                            params: params.clone(),
+                            return_type: return_type.clone(),
+                            body: body.clone(),
+                            span: *span,
+                        },
+                    );
+                }
+            }
+            Declaration::Method {
+                type_name,
+                method_name,
+                type_params,
+                params,
+                return_type,
+                body,
+                span,
+                ..
+            } => {
+                let key = format!("{}.{}", type_name, method_name);
+                let collected_type_params: Vec<String> =
+                    type_params.iter().map(|param| param.name.clone()).collect();
+                self.methods.insert(
+                    key.clone(),
+                    FuncInfo {
+                        name: key.clone(),
+                        params: params
+                            .iter()
+                            .map(|param| (param.name.clone(), param.ty.clone()))
+                            .collect(),
+                        return_type: return_type.clone().unwrap_or(AstType::Void),
+                        type_params: collected_type_params.clone(),
+                        type_param_bounds: type_param_bounds(type_params),
+                    },
+                );
+                if !collected_type_params.is_empty() {
+                    self.generic_methods.insert(
+                        key,
+                        GenericFunctionTemplate {
+                            type_params: collected_type_params,
+                            params: params.clone(),
+                            return_type: return_type.clone(),
+                            body: body.clone(),
+                            span: *span,
+                        },
+                    );
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn seed_public_methods_for_imported_type(
+        &mut self,
+        type_name: &str,
+        source_module: &ResolvedModule,
+    ) {
+        for decl in &source_module.program.declarations {
+            let Declaration::Method {
+                type_name: method_type,
+                public,
+                ..
+            } = decl
+            else {
+                continue;
+            };
+
+            if method_type == type_name && *public {
+                self.seed_module_graph_import(type_name, decl);
+            }
+        }
     }
 
     fn require_resolver_symbol(
@@ -5972,6 +6125,158 @@ main = () i32 { return 0 }
             .functions
             .iter()
             .any(|function| function.name == "add"));
+    }
+
+    #[test]
+    fn check_module_graph_entry_seeds_imported_function_type_signatures() {
+        let tmp = tempfile::tempdir().expect("temp dir");
+        let callbacks_path = tmp.path().join("callbacks.zen");
+        std::fs::write(
+            &callbacks_path,
+            "pub apply = (callback: (i32) i32, value: i32) i32 { return value }\n",
+        )
+        .expect("write imported module");
+
+        let main_path = tmp.path().join("main.zen");
+        std::fs::write(
+            &main_path,
+            r#"{ apply } = callbacks
+
+main = () i32 {
+    callback = (value: i32) i32 { return value }
+    return apply(callback, 1)
+}
+"#,
+        )
+        .expect("write entry module");
+
+        let mut files = crate::error::FileTable::new();
+        let mut modules = crate::module_system::ModuleSystem::new();
+        let graph = modules
+            .load_module_graph(&main_path, &mut files)
+            .expect("module graph");
+
+        let mut tc = TypeChecker::new();
+        tc.check_module_graph_entry(&graph)
+            .expect("graph import bindings should seed function-typed signatures");
+    }
+
+    #[test]
+    fn check_module_graph_entry_specializes_imported_generic_functions() {
+        let tmp = tempfile::tempdir().expect("temp dir");
+        let identity_path = tmp.path().join("identity.zen");
+        std::fs::write(
+            &identity_path,
+            "pub id<T> = (value: T) T { return value }\n",
+        )
+        .expect("write imported module");
+
+        let main_path = tmp.path().join("main.zen");
+        std::fs::write(
+            &main_path,
+            "{ id } = identity\n\nmain = () i32 { return id<i32>(1) }\n",
+        )
+        .expect("write entry module");
+
+        let mut files = crate::error::FileTable::new();
+        let mut modules = crate::module_system::ModuleSystem::new();
+        let graph = modules
+            .load_module_graph(&main_path, &mut files)
+            .expect("module graph");
+
+        let mut tc = TypeChecker::new();
+        let typed = tc
+            .check_module_graph_entry(&graph)
+            .expect("graph import bindings should seed generic templates");
+
+        assert!(typed
+            .functions
+            .iter()
+            .any(|function| function.name == "id_i32"));
+    }
+
+    #[test]
+    fn check_module_graph_entry_seeds_public_methods_for_imported_types() {
+        let tmp = tempfile::tempdir().expect("temp dir");
+        let geometry_path = tmp.path().join("geometry.zen");
+        std::fs::write(
+            &geometry_path,
+            r#"pub Point: { x: i32 }
+
+pub Point.value = (self: Point) i32 {
+    return self.x
+}
+"#,
+        )
+        .expect("write imported module");
+
+        let main_path = tmp.path().join("main.zen");
+        std::fs::write(
+            &main_path,
+            r#"{ Point } = geometry
+
+main = () i32 {
+    point = Point { x: 7 }
+    return point.value()
+}
+"#,
+        )
+        .expect("write entry module");
+
+        let mut files = crate::error::FileTable::new();
+        let mut modules = crate::module_system::ModuleSystem::new();
+        let graph = modules
+            .load_module_graph(&main_path, &mut files)
+            .expect("module graph");
+
+        let mut tc = TypeChecker::new();
+        tc.check_module_graph_entry(&graph)
+            .expect("imported public type should seed its public methods");
+    }
+
+    #[test]
+    fn check_module_graph_entry_specializes_public_generic_methods_for_imported_types() {
+        let tmp = tempfile::tempdir().expect("temp dir");
+        let geometry_path = tmp.path().join("geometry.zen");
+        std::fs::write(
+            &geometry_path,
+            r#"pub Point: { x: i32 }
+
+pub Point.keep<T> = (self: Point, value: T) T {
+    return value
+}
+"#,
+        )
+        .expect("write imported module");
+
+        let main_path = tmp.path().join("main.zen");
+        std::fs::write(
+            &main_path,
+            r#"{ Point } = geometry
+
+main = () i32 {
+    point = Point { x: 7 }
+    return point.keep<i32>(1)
+}
+"#,
+        )
+        .expect("write entry module");
+
+        let mut files = crate::error::FileTable::new();
+        let mut modules = crate::module_system::ModuleSystem::new();
+        let graph = modules
+            .load_module_graph(&main_path, &mut files)
+            .expect("module graph");
+
+        let mut tc = TypeChecker::new();
+        let typed = tc
+            .check_module_graph_entry(&graph)
+            .expect("imported public type should seed public generic method templates");
+
+        assert!(typed
+            .functions
+            .iter()
+            .any(|function| function.name == "Point.keep_i32"));
     }
 
     #[test]

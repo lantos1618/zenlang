@@ -227,6 +227,11 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker setup rejects extra resolver-owned import and module symbols when
   AST import declarations are present, while preserving the resolver-symbol
   import seeding path for stripped import declarations.
+- Module-graph import setup seeds imported declaration signatures directly
+  instead of re-running declaration collection over cloned imported
+  declarations, with coverage for function-typed imported signatures and
+  imported generic function specialization. Importing a public type also seeds
+  its public methods and public generic method templates on the graph path.
 - Typechecker setup rejects extra resolver-owned local symbols after mirroring
   resolver scope allocation across function bodies, nested scopes, pattern
   bindings, closures, defaults, and top-level expressions.
