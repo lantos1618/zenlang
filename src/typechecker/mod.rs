@@ -3723,6 +3723,24 @@ impl TypeChecker {
                 span,
             ));
         }
+
+        if symbol.parameter_count.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0249",
+                format!(
+                    "resolver local symbol '{name}' has parameter count metadata, expected none"
+                ),
+                span,
+            ));
+        }
+
+        if symbol.return_type_name.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0250",
+                format!("resolver local symbol '{name}' has return type metadata, expected none"),
+                span,
+            ));
+        }
     }
 
     fn require_resolver_type_like_symbol<'a>(
@@ -5551,6 +5569,38 @@ add = (a: i32, b: i32) i32 { return a + b }
                 .message
                 .contains("resolver local symbol 'a' has source 'std', expected none")),
             "expected resolver local source diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_local_absent_declaration_metadata() {
+        let program = parse_program(
+            r#"
+add = (a: i32, b: i32) i32 { return a + b }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_count_for_test(Namespace::Local, "a", Some(1));
+        symbols.set_return_type_name_for_test(Namespace::Local, "a", Some("i32".to_string()));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver local declaration metadata should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver local symbol 'a' has parameter count metadata, expected none")),
+            "expected resolver local parameter metadata diagnostic, got {err:?}"
+        );
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver local symbol 'a' has return type metadata, expected none")),
+            "expected resolver local return metadata diagnostic, got {err:?}"
         );
     }
 
