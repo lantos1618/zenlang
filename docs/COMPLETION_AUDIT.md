@@ -165,6 +165,8 @@ and do not assume Phase 4 is ready without evidence.
   bindings, closures, defaults, and top-level expressions.
 - Resolver rejects `Self` type references outside method, impl-method, or
   behavior contexts before typechecking can resolve them to `Unknown`.
+- Direct typechecker entrypoints enforce the same `Self` context rule for
+  resolver-less unit/API paths.
 - Enum variants are validated through resolver `Variant` symbols during
   typechecker setup.
 - Resolver value symbols carry parameter-count metadata, and typechecker setup

@@ -171,6 +171,9 @@ checked-in docs, tests, and commits only.
 - Resolver now rejects `Self` type references outside method, impl-method, or
   behavior contexts instead of letting plain functions carry unresolved `Self`
   into typechecking.
+- Direct typechecker entrypoints now enforce the same `Self` context rule, so
+  resolver-less unit/API paths cannot resolve invalid `Self` references to
+  `Unknown`.
 - Typechecker resolver-symbol validation now checks enum variant symbols from
   resolver output instead of treating enum type presence as sufficient.
 - Resolver value symbols now carry parameter-count metadata for functions and
