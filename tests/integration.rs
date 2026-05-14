@@ -455,6 +455,14 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Point_encode");
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
+
+    let c_source = compile_to_c(&test_dir().join("multi_file_behavior_inheritance/main.zen"));
+    assert!(c_source.contains("zen_str Point_encode(Point value)"));
+    assert!(c_source.contains("zen_str encode_Point(Point value)"));
+    assert!(c_source.contains("Point_encode(value)"));
+    assert_c_call_resolves_to_definition(&c_source, "Point_encode");
+    assert_c_call_resolves_to_definition(&c_source, "encode_Point");
+    assert!(!c_source.contains("T_encode"));
 }
 
 #[test]
@@ -798,6 +806,63 @@ main = () i32 {
 }
 
 #[test]
+fn imported_behavior_extends_requires_parent_methods() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let traits_path = tmp.path().join("traits.zen");
+    std::fs::write(
+        &traits_path,
+        r#"
+pub Json<T>: behavior {
+    encode: (Self) T
+}
+
+pub PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+"#,
+    )
+    .expect("write traits module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ PrettyJson } = traits
+
+Point: {
+    x: i32
+}
+
+Point.implements(PrettyJson) {
+    pretty = (value: Point) str {
+        return "point"
+    }
+}
+
+main = () i32 {
+    return 0
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject imported inherited behavior requirements");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("implementation of `PrettyJson` is missing required method `encode`"),
+        "expected inherited behavior method diagnostic, panic={message}"
+    );
+}
+
+#[test]
 fn test_defer() {
     run_test("defer");
 }
@@ -866,6 +931,13 @@ fn test_multi_file_behavior_bound_imports() {
     let zen_path = test_dir().join("multi_file_behavior_bound/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "11\n");
+}
+
+#[test]
+fn test_multi_file_behavior_inheritance_imports() {
+    let zen_path = test_dir().join("multi_file_behavior_inheritance/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "encoded\npretty\n");
 }
 
 // ── Discovery test: all .zen files have matching .expected ──────────

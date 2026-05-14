@@ -3412,6 +3412,13 @@ impl TypeChecker {
             };
 
             self.seed_module_graph_import(binding.local_name.as_str(), decl);
+            if matches!(decl, Declaration::Behavior { .. }) {
+                self.seed_behavior_extends_for_imported_behavior(
+                    binding.local_name.as_str(),
+                    binding.source_symbol.as_str(),
+                    source_module,
+                );
+            }
             self.seed_public_methods_for_imported_type(
                 binding.source_symbol.as_str(),
                 source_module,
@@ -3547,6 +3554,55 @@ impl TypeChecker {
                 }
             }
             _ => {}
+        }
+    }
+
+    fn seed_behavior_extends_for_imported_behavior(
+        &mut self,
+        local_name: &str,
+        source_name: &str,
+        source_module: &ResolvedModule,
+    ) {
+        for decl in &source_module.program.declarations {
+            let Declaration::BehaviorExtends {
+                behavior,
+                parent,
+                parent_type_args,
+                span,
+            } = decl
+            else {
+                continue;
+            };
+            if behavior != source_name {
+                continue;
+            }
+
+            if let Some(parent_decl) = source_module
+                .program
+                .declarations
+                .iter()
+                .find(|decl| decl.name() == Some(parent.as_str()))
+            {
+                self.seed_module_graph_import(parent, parent_decl);
+            }
+
+            let parent_key = self.behavior_reference_key(parent, parent_type_args);
+            let parents = self
+                .behavior_extends
+                .entry(local_name.to_string())
+                .or_default();
+            if parents.iter().any(|existing| existing.key == parent_key) {
+                continue;
+            }
+
+            parents.push(BehaviorParentRef {
+                behavior: parent.clone(),
+                type_args: parent_type_args.clone(),
+                key: parent_key,
+            });
+            self.behavior_extends_spans
+                .entry(local_name.to_string())
+                .or_insert(*span);
         }
     }
 
