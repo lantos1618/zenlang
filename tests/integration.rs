@@ -551,6 +551,43 @@ main = () i32 {
 }
 
 #[test]
+fn check_command_rejects_gated_non_behavior_impl_blocks() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("gated_impl.zen");
+    std::fs::write(
+        &zen_path,
+        r#"
+Point: { x: i32 }
+
+Point.impl = {
+    get = (self: Point) i32 { return self.x }
+}
+
+main = () i32 { return 0 }
+"#,
+    )
+    .expect("write test file");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["check", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen check");
+
+    assert!(
+        !output.status.success(),
+        "zen check unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("non-behavior impl blocks are gated until impl methods are typechecked"),
+        "expected gated impl diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn check_command_reports_imported_module_resolver_diagnostics() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let math_path = tmp.path().join("math.zen");

@@ -69,6 +69,11 @@ advertised as implemented.
 - `Behavior association`: gated. Associated operations resolve by explicit impl,
   then generated impl, then declared fallback where the spec allows it. Ambiguity
   is a hard diagnostic.
+- `Type.impl` non-behavior impl blocks: gated. The parser accepts
+  `Type.impl = { ... }`, but resolver rejects it until those methods are
+  collected and typechecked; covered by
+  `resolver_phase2::resolver_rejects_non_behavior_impl_blocks_until_collected`
+  and `integration::check_command_rejects_gated_non_behavior_impl_blocks`.
 - `AST traversal`: experimental. Raw AST traversal is for tooling and source
   transforms. Typed HIR traversal is required for semantic metaprogramming.
   Neither replaces compiler resolver, typechecker, effect checker, or MIR passes.

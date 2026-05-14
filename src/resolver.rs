@@ -1223,6 +1223,13 @@ impl Resolver {
                 span,
                 ..
             } => {
+                if behavior.is_none() {
+                    diagnostics.push(Diagnostic::error(
+                        "E0218",
+                        "non-behavior impl blocks are gated until impl methods are typechecked",
+                        *span,
+                    ));
+                }
                 if !self.is_known_type_name(table, &[], type_name) {
                     diagnostics.push(Diagnostic::error(
                         "E0201",

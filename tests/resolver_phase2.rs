@@ -336,6 +336,30 @@ Point.implements(Marker) { }
 }
 
 #[test]
+fn resolver_rejects_non_behavior_impl_blocks_until_collected() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 }
+
+Point.impl = {
+    get = (self: Point) i32 { return self.x }
+}
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("non-behavior impl blocks should stay gated");
+
+    assert!(
+        err.iter().any(|d| d
+            .message
+            .contains("non-behavior impl blocks are gated until impl methods are typechecked")),
+        "expected gated non-behavior impl diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_behavior_impl_function_type_methods() {
     let program = parse_program(
         r#"

@@ -161,6 +161,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "resolver_records_method_function_type_signatures",
         "check_program_with_symbols_validates_resolver_method_signature",
         "check_program_with_symbols_validates_resolver_method_function_type_signature",
+        "resolver_rejects_non_behavior_impl_blocks_until_collected",
+        "check_command_rejects_gated_non_behavior_impl_blocks",
         "resolver_records_struct_function_type_fields",
         "check_program_with_symbols_validates_resolver_struct_function_type_fields",
         "resolver_records_enum_function_type_payloads",

@@ -287,6 +287,9 @@ and do not assume Phase 4 is ready without evidence.
 - Top-level method declarations require a known receiver type in resolver
   diagnostics, and typechecker setup rejects missing receiver type symbols
   before collecting method metadata.
+- Non-behavior `Type.impl = { ... }` blocks are resolver-gated until their
+  methods are collected and typechecked, preventing silently ignored impl
+  method bodies.
 - Typechecker setup rejects extra resolver-owned declaration symbols for values,
   types, behaviors, and enum variants before declaration metadata collection.
 - Typechecker setup rejects extra resolver-owned import and module symbols when
