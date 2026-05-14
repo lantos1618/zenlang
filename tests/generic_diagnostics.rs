@@ -198,6 +198,50 @@ read = (value: Option<i32, str>) i32 {
 }
 
 #[test]
+fn generic_struct_annotation_without_type_args_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+read = (box: Box) i32 {
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic struct `Box` expects 1 type arguments, found 0")),
+        "expected unspecialized generic struct annotation diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_enum_annotation_without_type_args_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Option<T>:
+    None,
+    Some(T)
+
+read = (value: Option) i32 {
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic enum `Option` expects 1 type arguments, found 0")),
+        "expected unspecialized generic enum annotation diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_struct_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"

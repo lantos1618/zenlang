@@ -42,7 +42,8 @@ and do not assume Phase 4 is ready without evidence.
 - CLI and integration frontend paths now run resolver diagnostics before
   typechecking.
 - Generic struct and enum type-argument arity diagnostics cover both expression
-  instantiation and type annotation positions.
+  instantiation and type annotation positions, including bare generic
+  annotation names with missing type arguments.
 - Typechecker setup accepts resolver `SymbolTable` through
   `check_program_with_symbols`.
 - Resolver local symbols carry mutability metadata for mutable parameters and

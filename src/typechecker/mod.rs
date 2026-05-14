@@ -1520,6 +1520,33 @@ impl TypeChecker {
         span: Span,
     ) {
         match ast_type {
+            AstType::Named(name) => {
+                if scoped_type_params.contains(name) {
+                    return;
+                }
+
+                let generic = self
+                    .structs
+                    .get(name)
+                    .map(|info| ("struct", info.type_params.len()))
+                    .or_else(|| {
+                        self.enums
+                            .get(name)
+                            .map(|info| ("enum", info.type_params.len()))
+                    });
+                if let Some((kind, type_param_count)) = generic {
+                    if type_param_count > 0 {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E5001",
+                            format!(
+                                "generic {} `{}` expects {} type arguments, found 0",
+                                kind, name, type_param_count
+                            ),
+                            span,
+                        ));
+                    }
+                }
+            }
             AstType::Generic { name, type_args } => {
                 for type_arg in type_args {
                     self.validate_generic_type_ref_bounds(type_arg, scoped_type_params, span);

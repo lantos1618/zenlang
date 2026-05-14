@@ -29,7 +29,8 @@ checked-in docs, tests, and commits only.
 - Generic specialization has positive executable coverage for generic functions,
   structs, enums, methods, and recursive worklist emission.
 - Generic struct and enum type-argument arity diagnostics cover both expression
-  instantiation and type annotation positions.
+  instantiation and type annotation positions, including bare generic
+  annotation names with missing type arguments.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.
