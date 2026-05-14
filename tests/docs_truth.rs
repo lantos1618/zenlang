@@ -198,6 +198,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_validates_resolver_struct_function_type_fields",
         "resolver_records_enum_function_type_payloads",
         "check_program_with_symbols_validates_resolver_enum_function_type_payloads",
+        "resolver_records_generic_enum_function_type_payloads",
+        "check_program_with_symbols_validates_resolver_generic_enum_function_type_payloads",
         "resolver_records_behavior_function_type_method_signatures",
         "check_program_with_symbols_validates_resolver_behavior_function_type_method_signatures",
         "resolver_records_behavior_impl_method_body_locals",
