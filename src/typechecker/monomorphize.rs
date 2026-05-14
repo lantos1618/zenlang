@@ -8,6 +8,13 @@ use crate::error::{Diagnostic, Span};
 
 use super::TypeChecker;
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct InferenceConflict {
+    pub(crate) param: String,
+    pub(crate) inferred: Type,
+    pub(crate) actual: Type,
+}
+
 impl TypeChecker {
     pub(crate) fn mangle_generic_type_name(&self, name: &str, type_args: &[AstType]) -> String {
         if type_args.is_empty() {
@@ -403,7 +410,8 @@ impl TypeChecker {
             .map(|(name, info)| (name.clone(), info.type_params.clone()))
         {
             let mut inferred = HashMap::new();
-            self.match_generic_type_params(&name, ty, &params, &mut inferred);
+            let mut conflicts = Vec::new();
+            self.match_generic_type_params(&name, ty, &params, &mut inferred, &mut conflicts);
             let type_args = params
                 .iter()
                 .filter_map(|param| inferred.get(param).map(|ty| self.type_to_ast_ref(ty)))
@@ -424,7 +432,8 @@ impl TypeChecker {
             .map(|(name, info)| (name.clone(), info.type_params.clone()))
         {
             let mut inferred = HashMap::new();
-            self.match_generic_type_params(&name, ty, &params, &mut inferred);
+            let mut conflicts = Vec::new();
+            self.match_generic_type_params(&name, ty, &params, &mut inferred, &mut conflicts);
             let type_args = params
                 .iter()
                 .filter_map(|param| inferred.get(param).map(|ty| self.type_to_ast_ref(ty)))
@@ -485,17 +494,29 @@ impl TypeChecker {
 
     /// Infer type arguments for a generic function by matching actual arg types
     /// against parameter types containing type params.
+    #[cfg(test)]
     pub(crate) fn infer_type_args(
         &self,
         type_params: &[String],
         param_types: &[(String, AstType)],
         arg_types: &[Type],
     ) -> HashMap<String, Type> {
+        self.infer_type_args_with_conflicts(type_params, param_types, arg_types)
+            .0
+    }
+
+    pub(crate) fn infer_type_args_with_conflicts(
+        &self,
+        type_params: &[String],
+        param_types: &[(String, AstType)],
+        arg_types: &[Type],
+    ) -> (HashMap<String, Type>, Vec<InferenceConflict>) {
         let mut map = HashMap::new();
+        let mut conflicts = Vec::new();
         for ((_name, param_ty), arg_ty) in param_types.iter().zip(arg_types.iter()) {
-            self.match_type_param(param_ty, arg_ty, type_params, &mut map);
+            self.match_type_param(param_ty, arg_ty, type_params, &mut map, &mut conflicts);
         }
-        map
+        (map, conflicts)
     }
 
     pub(crate) fn infer_method_type_args(
@@ -504,14 +525,21 @@ impl TypeChecker {
         type_params: &[String],
         param_types: &[(String, AstType)],
         arg_types: &[Type],
-    ) -> HashMap<String, Type> {
-        let mut map = self.infer_type_args(type_params, param_types, arg_types);
+    ) -> (HashMap<String, Type>, Vec<InferenceConflict>) {
+        let (mut map, mut conflicts) =
+            self.infer_type_args_with_conflicts(type_params, param_types, arg_types);
         if let (Some((receiver_name, _)), Some(receiver_ty)) =
             (method_name.split_once('.'), arg_types.first())
         {
-            self.match_generic_type_params(receiver_name, receiver_ty, type_params, &mut map);
+            self.match_generic_type_params(
+                receiver_name,
+                receiver_ty,
+                type_params,
+                &mut map,
+                &mut conflicts,
+            );
         }
-        map
+        (map, conflicts)
     }
 
     fn match_type_param(
@@ -520,31 +548,53 @@ impl TypeChecker {
         actual: &Type,
         type_params: &[String],
         map: &mut HashMap<String, Type>,
+        conflicts: &mut Vec<InferenceConflict>,
     ) {
         match param {
             AstType::Named(name) if type_params.contains(name) => {
-                map.entry(name.clone()).or_insert_with(|| actual.clone());
+                self.set_inferred_type_param(name, actual, map, conflicts);
             }
             AstType::Ptr(inner) => {
                 if let Type::Ptr(actual_inner) = actual {
-                    self.match_type_param(inner, actual_inner, type_params, map);
+                    self.match_type_param(inner, actual_inner, type_params, map, conflicts);
                 }
             }
             AstType::MutPtr(inner) => {
                 if let Type::MutPtr(actual_inner) = actual {
-                    self.match_type_param(inner, actual_inner, type_params, map);
+                    self.match_type_param(inner, actual_inner, type_params, map, conflicts);
                 }
             }
             AstType::Slice(inner) => {
                 if let Type::Slice(actual_inner) = actual {
-                    self.match_type_param(inner, actual_inner, type_params, map);
+                    self.match_type_param(inner, actual_inner, type_params, map, conflicts);
                 }
             }
             AstType::Generic { name, .. } => {
-                self.match_generic_type_params(name, actual, type_params, map);
+                self.match_generic_type_params(name, actual, type_params, map, conflicts);
             }
             _ => {}
         }
+    }
+
+    fn set_inferred_type_param(
+        &self,
+        name: &str,
+        actual: &Type,
+        map: &mut HashMap<String, Type>,
+        conflicts: &mut Vec<InferenceConflict>,
+    ) {
+        if let Some(inferred) = map.get(name) {
+            if !self.types_compatible(inferred, actual) {
+                conflicts.push(InferenceConflict {
+                    param: name.to_string(),
+                    inferred: inferred.clone(),
+                    actual: actual.clone(),
+                });
+            }
+            return;
+        }
+
+        map.insert(name.to_string(), actual.clone());
     }
 
     fn match_generic_type_params(
@@ -553,6 +603,7 @@ impl TypeChecker {
         actual: &Type,
         type_params: &[String],
         map: &mut HashMap<String, Type>,
+        conflicts: &mut Vec<InferenceConflict>,
     ) {
         match actual {
             Type::Struct {
@@ -562,7 +613,7 @@ impl TypeChecker {
                 if let Some(info) = self.structs.get(generic_name) {
                     for ((_, expected), (_, actual)) in info.fields.iter().zip(actual_fields.iter())
                     {
-                        self.match_type_param(expected, actual, type_params, map);
+                        self.match_type_param(expected, actual, type_params, map, conflicts);
                     }
                 }
             }
@@ -575,7 +626,7 @@ impl TypeChecker {
                         info.variants.iter().zip(actual_variants.iter())
                     {
                         if let (Some(expected), Some(actual)) = (expected_payload, actual_payload) {
-                            self.match_type_param(expected, actual, type_params, map);
+                            self.match_type_param(expected, actual, type_params, map, conflicts);
                         }
                     }
                 }

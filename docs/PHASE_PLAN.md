@@ -48,6 +48,9 @@ checked-in docs, tests, and commits only.
   are included in the same annotation validation path.
   Generic method explicit type arguments also reject bare generic type
   annotations with missing type arguments.
+  Generic function and method type-argument inference conflicts now produce
+  direct diagnostics instead of relying only on substituted argument mismatch
+  errors.
   Generic behavior bound failures are covered across direct function, method,
   generic-receiver method, and UFC-style function call paths.
 - Explicit behavior declarations, impl conformance, default methods, generic

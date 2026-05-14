@@ -7,6 +7,7 @@ use crate::ast::{AstType, Expression, Param};
 use crate::error::{Diagnostic, Span};
 
 use super::closures::collect_captures;
+use super::monomorphize::InferenceConflict;
 use super::TypeChecker;
 
 impl TypeChecker {
@@ -192,7 +193,15 @@ impl TypeChecker {
                             let subs = if type_args.is_empty() {
                                 let arg_types: Vec<Type> =
                                     typed_args.iter().map(|a| a.ty.clone()).collect();
-                                self.infer_type_args(&info.type_params, &info.params, &arg_types)
+                                let (subs, conflicts) = self.infer_type_args_with_conflicts(
+                                    &info.type_params,
+                                    &info.params,
+                                    &arg_types,
+                                );
+                                self.report_inference_conflicts(
+                                    "function", &full_name, conflicts, *span,
+                                );
+                                subs
                             } else {
                                 self.explicit_type_arg_substitutions(
                                     &full_name,
@@ -357,12 +366,19 @@ impl TypeChecker {
                         let subs = if type_args.is_empty() {
                             let arg_types: Vec<Type> =
                                 typed_args.iter().map(|a| a.ty.clone()).collect();
-                            self.infer_method_type_args(
+                            let (subs, conflicts) = self.infer_method_type_args(
                                 &method_key,
                                 &info.type_params,
                                 &info.params,
                                 &arg_types,
-                            )
+                            );
+                            self.report_inference_conflicts(
+                                "method",
+                                &method_key,
+                                conflicts,
+                                *span,
+                            );
+                            subs
                         } else {
                             self.type_param_substitutions(
                                 &info.type_params,
@@ -426,12 +442,19 @@ impl TypeChecker {
                             let subs = if type_args.is_empty() {
                                 let arg_types: Vec<Type> =
                                     typed_args.iter().map(|a| a.ty.clone()).collect();
-                                self.infer_method_type_args(
+                                let (subs, conflicts) = self.infer_method_type_args(
                                     &generic_method_key,
                                     &info.type_params,
                                     &info.params,
                                     &arg_types,
-                                )
+                                );
+                                self.report_inference_conflicts(
+                                    "method",
+                                    &generic_method_key,
+                                    conflicts,
+                                    *span,
+                                );
+                                subs
                             } else {
                                 self.type_param_substitutions(
                                     &info.type_params,
@@ -506,7 +529,13 @@ impl TypeChecker {
                         let subs = if type_args.is_empty() {
                             let arg_types: Vec<Type> =
                                 typed_args.iter().map(|a| a.ty.clone()).collect();
-                            self.infer_type_args(&info.type_params, &info.params, &arg_types)
+                            let (subs, conflicts) = self.infer_type_args_with_conflicts(
+                                &info.type_params,
+                                &info.params,
+                                &arg_types,
+                            );
+                            self.report_inference_conflicts("function", method, conflicts, *span);
+                            subs
                         } else {
                             self.explicit_type_arg_substitutions(
                                 method,
@@ -1371,6 +1400,29 @@ impl TypeChecker {
                     actual.span,
                 ));
             }
+        }
+    }
+
+    fn report_inference_conflicts(
+        &mut self,
+        kind: &str,
+        callee: &str,
+        conflicts: Vec<InferenceConflict>,
+        span: Span,
+    ) {
+        for conflict in conflicts {
+            self.diagnostics.push(Diagnostic::error(
+                "E5000",
+                format!(
+                    "conflicting inferred type argument `{}` for generic {} `{}`: inferred `{}` and `{}`",
+                    conflict.param,
+                    kind,
+                    callee,
+                    conflict.inferred.display_name(),
+                    conflict.actual.display_name()
+                ),
+                span,
+            ));
         }
     }
 

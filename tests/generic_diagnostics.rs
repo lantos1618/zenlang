@@ -108,6 +108,56 @@ main = () i32 {
 }
 
 #[test]
+fn generic_function_inference_conflict_is_error() {
+    let errors = typecheck_errors(
+        r#"
+choose<T> = (left: T, right: T) T {
+    return left
+}
+
+main = () i32 {
+    value = choose(1, "bad")
+    return value
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic function `choose`: inferred `i32` and `str`"
+        )),
+        "expected generic function inference conflict diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_method_inference_conflict_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+Box.choose<T> = (self: Box<T>, other: T) T {
+    return self.value
+}
+
+main = () i32 {
+    box = Box<i32> { value: 1 }
+    return box.choose("bad")
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic method `Box.choose`: inferred `i32` and `str`"
+        )),
+        "expected generic method inference conflict diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_function_type_arg_annotation_arity_is_error() {
     let errors = typecheck_errors(
         r#"
