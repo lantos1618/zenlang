@@ -158,6 +158,8 @@ and do not assume Phase 4 is ready without evidence.
 - Top-level method declarations require a known receiver type in resolver
   diagnostics, and typechecker setup rejects missing receiver type symbols
   before collecting method metadata.
+- Typechecker setup rejects extra resolver-owned declaration symbols for values,
+  types, behaviors, and enum variants before declaration metadata collection.
 - Enum variants are validated through resolver `Variant` symbols during
   typechecker setup.
 - Resolver value symbols carry parameter-count metadata, and typechecker setup

@@ -2594,8 +2594,36 @@ impl TypeChecker {
                 Declaration::Error { .. } => {}
             }
         }
+        self.validate_no_extra_resolver_declaration_symbols(program, symbols);
         self.validate_resolver_behavior_association_lists(program, symbols);
         self.validate_resolver_behavior_parent_lists(program, symbols);
+    }
+
+    fn validate_no_extra_resolver_declaration_symbols(
+        &mut self,
+        program: &ast::Program,
+        symbols: &SymbolTable,
+    ) {
+        let expected = expected_resolver_declaration_symbols(program);
+        for symbol in symbols.symbols() {
+            if !matches!(
+                symbol.namespace,
+                Namespace::Value | Namespace::Type | Namespace::Behavior | Namespace::Variant
+            ) {
+                continue;
+            }
+            if !expected.contains(&(symbol.namespace, symbol.name.clone())) {
+                self.diagnostics.push(Diagnostic::error(
+                    "E0243",
+                    format!(
+                        "resolver symbol table has extra {} symbol '{}'",
+                        symbol.namespace.diagnostic_name(),
+                        symbol.name
+                    ),
+                    symbol.definition_span,
+                ));
+            }
+        }
     }
 
     fn validate_resolver_behavior_association_lists(
@@ -3808,6 +3836,51 @@ fn expected_behavior_parent_associations(program: &ast::Program) -> HashMap<Stri
     parents
 }
 
+fn expected_resolver_declaration_symbols(program: &ast::Program) -> HashSet<(Namespace, String)> {
+    let mut expected = HashSet::new();
+    for decl in &program.declarations {
+        match decl {
+            Declaration::Function { name, .. } => {
+                expected.insert((Namespace::Value, name.clone()));
+            }
+            Declaration::Method {
+                type_name,
+                method_name,
+                ..
+            } => {
+                expected.insert((Namespace::Value, format!("{type_name}.{method_name}")));
+            }
+            Declaration::Struct { name, .. } => {
+                expected.insert((Namespace::Type, name.clone()));
+            }
+            Declaration::Enum { name, variants, .. } => {
+                expected.insert((Namespace::Type, name.clone()));
+                for variant in variants {
+                    expected.insert((Namespace::Variant, variant.name.clone()));
+                }
+            }
+            Declaration::Behavior { name, .. } => {
+                expected.insert((Namespace::Behavior, name.clone()));
+            }
+            Declaration::ImplBlock {
+                type_name, methods, ..
+            } => {
+                for method in methods {
+                    if let Declaration::Function { name, .. } = method {
+                        expected.insert((Namespace::Value, format!("{type_name}.{name}")));
+                    }
+                }
+            }
+            Declaration::Import { .. }
+            | Declaration::Requires { .. }
+            | Declaration::BehaviorExtends { .. }
+            | Declaration::TopLevelExpr { .. }
+            | Declaration::Error { .. } => {}
+        }
+    }
+    expected
+}
+
 fn format_behavior_method_signatures(methods: Option<&[MethodSignatureMetadata]>) -> String {
     match methods {
         Some(methods) => format!(
@@ -3941,6 +4014,36 @@ main = () i32 { return 0 }
                 .message
                 .contains("resolver symbol table missing value symbol 'main'")),
             "expected missing resolver symbol diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_rejects_extra_resolver_declarations() {
+        let program = parse_program(
+            r#"
+main = () i32 { return 0 }
+"#,
+        );
+        let symbols_program = parse_program(
+            r#"
+main = () i32 { return 0 }
+extra = () i32 { return 1 }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&symbols_program)
+            .expect("resolver succeeds");
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("extra resolver declarations should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table has extra value symbol 'extra'")),
+            "expected extra resolver symbol diagnostic, got {err:?}"
         );
     }
 
