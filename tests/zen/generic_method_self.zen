@@ -10,7 +10,7 @@ Box.copy<T> = (self: Self) Self {
 
 main = () i32 {
     box = Box<i32> { value: 42 }
-    copied = box.copy<i32>()
+    copied = box.copy()
     io.println("${copied.value}")
     return 0
 }

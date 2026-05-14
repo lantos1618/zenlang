@@ -342,6 +342,22 @@ impl TypeChecker {
         map
     }
 
+    pub(crate) fn infer_method_type_args(
+        &self,
+        method_name: &str,
+        type_params: &[String],
+        param_types: &[(String, AstType)],
+        arg_types: &[Type],
+    ) -> HashMap<String, Type> {
+        let mut map = self.infer_type_args(type_params, param_types, arg_types);
+        if let (Some((receiver_name, _)), Some(receiver_ty)) =
+            (method_name.split_once('.'), arg_types.first())
+        {
+            self.match_generic_type_params(receiver_name, receiver_ty, type_params, &mut map);
+        }
+        map
+    }
+
     fn match_type_param(
         &self,
         param: &AstType,

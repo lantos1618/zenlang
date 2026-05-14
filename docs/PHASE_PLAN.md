@@ -32,7 +32,8 @@ checked-in docs, tests, and commits only.
   definitions.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies, covered by
-  `tests/zen/generic_method_self.zen`.
+  `tests/zen/generic_method_self.zen`. `Self`-only generic methods also infer
+  their type arguments from the concrete receiver type.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.

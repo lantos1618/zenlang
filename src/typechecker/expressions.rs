@@ -357,7 +357,12 @@ impl TypeChecker {
                         let subs = if type_args.is_empty() {
                             let arg_types: Vec<Type> =
                                 typed_args.iter().map(|a| a.ty.clone()).collect();
-                            self.infer_type_args(&info.type_params, &info.params, &arg_types)
+                            self.infer_method_type_args(
+                                &method_key,
+                                &info.type_params,
+                                &info.params,
+                                &arg_types,
+                            )
                         } else {
                             self.type_param_substitutions(
                                 &info.type_params,
@@ -421,7 +426,12 @@ impl TypeChecker {
                             let subs = if type_args.is_empty() {
                                 let arg_types: Vec<Type> =
                                     typed_args.iter().map(|a| a.ty.clone()).collect();
-                                self.infer_type_args(&info.type_params, &info.params, &arg_types)
+                                self.infer_method_type_args(
+                                    &generic_method_key,
+                                    &info.type_params,
+                                    &info.params,
+                                    &arg_types,
+                                )
                             } else {
                                 self.type_param_substitutions(
                                     &info.type_params,
