@@ -107,6 +107,9 @@ checked-in docs, tests, and commits only.
 - Generic dispatch through an imported child behavior can call a method inherited
   from that behavior's imported parent, covered by
   `tests/zen/multi_file_imported_child_parent_dispatch/main.zen`.
+- Entry-module `.requires` assertions over imported public types and imported
+  generic behaviors are covered by
+  `tests/zen/multi_file_imported_behavior_requires/main.zen`.
 - Unknown method calls through generic behavior-bound receivers now produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares

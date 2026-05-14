@@ -128,6 +128,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "tests/zen/multi_file_imported_behavior_default/main.zen",
         "tests/zen/multi_file_imported_impl_imported_behavior/main.zen",
         "tests/zen/multi_file_imported_child_parent_dispatch/main.zen",
+        "tests/zen/multi_file_imported_behavior_requires/main.zen",
         "imported_behavior_extends_requires_parent_methods",
         "imported_behavior_extends_imported_parent_requires_parent_methods",
         "imported_behavior_extends_requires_transitive_parent_methods",

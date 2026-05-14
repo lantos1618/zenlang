@@ -1,0 +1,14 @@
+{ io } = std
+{ Json, Point } = traits
+
+Point.requires(Json<str>)
+
+encode<T: Json<str>> = (value: T) str {
+    return value.encode()
+}
+
+main = () i32 {
+    point = Point { x: 41 }
+    io.println(encode(point))
+    return 0
+}
