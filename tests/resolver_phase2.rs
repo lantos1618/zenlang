@@ -424,10 +424,28 @@ Point.wrap<T> = (self: Point, value: T) Point { return self }
     );
     assert_eq!(
         table
+            .lookup(Namespace::Value, "identity")
+            .expect("function symbol")
+            .type_parameter_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&["T".to_string()][..])
+    );
+    assert_eq!(
+        table
             .lookup(Namespace::Value, "Point.wrap")
             .expect("method symbol")
             .type_parameter_count,
         Some(1)
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "Point.wrap")
+            .expect("method symbol")
+            .type_parameter_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&["T".to_string()][..])
     );
 }
 
@@ -478,6 +496,15 @@ Serializable<T>: behavior {
     );
     assert_eq!(
         table
+            .lookup(Namespace::Type, "Box")
+            .expect("struct symbol")
+            .type_parameter_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&["T".to_string()][..])
+    );
+    assert_eq!(
+        table
             .lookup(Namespace::Type, "Option")
             .expect("enum symbol")
             .type_parameter_count,
@@ -485,10 +512,28 @@ Serializable<T>: behavior {
     );
     assert_eq!(
         table
+            .lookup(Namespace::Type, "Option")
+            .expect("enum symbol")
+            .type_parameter_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&["T".to_string()][..])
+    );
+    assert_eq!(
+        table
             .lookup(Namespace::Behavior, "Serializable")
             .expect("behavior symbol")
             .type_parameter_count,
         Some(1)
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Behavior, "Serializable")
+            .expect("behavior symbol")
+            .type_parameter_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&["T".to_string()][..])
     );
 }
 

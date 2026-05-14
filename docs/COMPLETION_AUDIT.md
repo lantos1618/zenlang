@@ -221,6 +221,8 @@ and do not assume Phase 4 is ready without evidence.
   rejects mismatches before declaration collection.
 - Resolver value symbols carry generic type-parameter counts, and typechecker
   setup rejects mismatches before collecting function or method metadata.
+- Resolver value symbols carry generic type-parameter names, and typechecker
+  setup rejects mismatches before collecting function or method metadata.
 - Resolver value symbols carry generic type-parameter bounds, and typechecker
   setup rejects mismatches before collecting function or method metadata.
 - Typechecker setup rejects resolver value source, field, variant, behavior,
@@ -235,6 +237,8 @@ and do not assume Phase 4 is ready without evidence.
   enum-type, behavior, and mutability metadata before collecting enum variant
   metadata.
 - Resolver type and behavior symbols carry generic parameter-count metadata, and
+  typechecker setup rejects mismatches before collecting declaration metadata.
+- Resolver type and behavior symbols carry generic parameter-name metadata, and
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Resolver type and behavior symbols carry generic type-parameter bounds, and
   typechecker setup rejects mismatches before collecting declaration metadata.

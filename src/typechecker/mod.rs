@@ -90,11 +90,13 @@ struct ExpectedValueSignature {
     parameter_type_names: Vec<String>,
     return_type_name: String,
     type_parameter_count: usize,
+    type_parameter_names: Vec<String>,
     type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
 }
 
 struct ExpectedTypeLikeSymbol {
     type_parameter_count: usize,
+    type_parameter_names: Vec<String>,
     type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
     is_public: Option<bool>,
 }
@@ -3251,6 +3253,11 @@ impl TypeChecker {
                 "type parameter count",
             ),
             (
+                symbol.type_parameter_names.is_some(),
+                "E0348",
+                "type parameter names",
+            ),
+            (
                 symbol.type_parameter_bounds.is_some(),
                 "E0270",
                 "type parameter bounds",
@@ -3499,6 +3506,11 @@ impl TypeChecker {
                 symbol.type_parameter_count.is_some(),
                 "E0285",
                 "type parameter count",
+            ),
+            (
+                symbol.type_parameter_names.is_some(),
+                "E0349",
+                "type parameter names",
             ),
             (
                 symbol.type_parameter_bounds.is_some(),
@@ -3949,6 +3961,11 @@ impl TypeChecker {
                 "type parameter count",
             ),
             (
+                symbol.type_parameter_names.is_some(),
+                "E0350",
+                "type parameter names",
+            ),
+            (
                 symbol.type_parameter_bounds.is_some(),
                 "E0254",
                 "type parameter bounds",
@@ -4041,6 +4058,20 @@ impl TypeChecker {
                     "resolver {} symbol '{name}' has type parameter count {actual}, expected {expected_type_parameter_count}",
                     namespace.diagnostic_name(),
                     expected_type_parameter_count = expected.type_parameter_count
+                ),
+                span,
+            ));
+        }
+
+        if symbol.type_parameter_names.as_deref() != Some(expected.type_parameter_names.as_slice())
+        {
+            let actual = format_type_parameter_names(symbol.type_parameter_names.as_deref());
+            let expected = format_type_parameter_names(Some(&expected.type_parameter_names));
+            self.diagnostics.push(Diagnostic::error(
+                "E0346",
+                format!(
+                    "resolver {} symbol '{name}' has type parameter names '{actual}', expected '{expected}'",
+                    namespace.diagnostic_name()
                 ),
                 span,
             ));
@@ -4375,6 +4406,11 @@ impl TypeChecker {
                 symbol.type_parameter_count.is_some(),
                 "E0334",
                 "type parameter count",
+            ),
+            (
+                symbol.type_parameter_names.is_some(),
+                "E0351",
+                "type parameter names",
             ),
             (
                 symbol.type_parameter_bounds.is_some(),
@@ -4716,6 +4752,21 @@ impl TypeChecker {
             ));
         }
 
+        if symbol.type_parameter_names.as_deref()
+            != Some(expected_signature.type_parameter_names.as_slice())
+        {
+            let actual = format_type_parameter_names(symbol.type_parameter_names.as_deref());
+            let expected =
+                format_type_parameter_names(Some(&expected_signature.type_parameter_names));
+            self.diagnostics.push(Diagnostic::error(
+                "E0347",
+                format!(
+                    "resolver value symbol '{name}' has type parameter names '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
+
         if symbol.type_parameter_bounds.as_deref()
             != Some(expected_signature.type_parameter_bounds.as_slice())
         {
@@ -4833,8 +4884,16 @@ fn expected_value_signature(
         parameter_type_names: expected_parameter_type_names(params),
         return_type_name: expected_return_type_name(return_type),
         type_parameter_count: type_params.len(),
+        type_parameter_names: expected_type_parameter_names(type_params),
         type_parameter_bounds: expected_type_parameter_bounds(type_params),
     }
+}
+
+fn expected_type_parameter_names(type_params: &[ast::TypeParam]) -> Vec<String> {
+    type_params
+        .iter()
+        .map(|type_param| type_param.name.clone())
+        .collect()
 }
 
 fn expected_type_parameter_bounds(
@@ -4855,8 +4914,16 @@ fn expected_type_like_symbol(
 ) -> ExpectedTypeLikeSymbol {
     ExpectedTypeLikeSymbol {
         type_parameter_count: type_params.len(),
+        type_parameter_names: expected_type_parameter_names(type_params),
         type_parameter_bounds: expected_type_parameter_bounds(type_params),
         is_public,
+    }
+}
+
+fn format_type_parameter_names(names: Option<&[String]>) -> String {
+    match names {
+        Some(names) => format!("({})", names.join(", ")),
+        None => "unknown".to_string(),
     }
 }
 
@@ -6890,6 +6957,35 @@ identity<T> = (value: T) T { return value }
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_function_type_parameter_names() {
+        let program = parse_program(
+            r#"
+identity<T> = (value: T) T { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_names_for_test(
+            Namespace::Value,
+            "identity",
+            Some(vec!["U".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function generic parameter name mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'identity' has type parameter names '(U)', expected '(T)'"
+            )),
+            "expected resolver function generic parameter name diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_validates_resolver_function_type_parameter_bounds() {
         let program = parse_program(
             r#"
@@ -6994,6 +7090,49 @@ Serializable<T>: behavior {
                 "resolver behavior symbol 'Serializable' has type parameter count 0, expected 1"
             )),
             "expected resolver behavior generic arity diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_type_parameter_names() {
+        let program = parse_program(
+            r#"
+Box<T>: { value: T }
+Serializable<T>: behavior {
+    encode: (T) str
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_names_for_test(
+            Namespace::Type,
+            "Box",
+            Some(vec!["U".to_string()]),
+        );
+        symbols.set_type_parameter_names_for_test(
+            Namespace::Behavior,
+            "Serializable",
+            Some(vec!["U".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver generic parameter name mismatches should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver type symbol 'Box' has type parameter names '(U)', expected '(T)'"
+            )),
+            "expected resolver type generic parameter name diagnostic, got {err:?}"
+        );
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver behavior symbol 'Serializable' has type parameter names '(U)', expected '(T)'"
+            )),
+            "expected resolver behavior generic parameter name diagnostic, got {err:?}"
         );
     }
 
