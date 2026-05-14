@@ -109,6 +109,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_validates_resolver_type_parameter_names",
         "check_module_graph_entry_seeds_imported_function_type_signatures",
         "check_module_graph_entry_specializes_imported_generic_functions",
+        "check_module_graph_entry_specializes_imported_generic_enums",
         "check_module_graph_entry_seeds_public_methods_for_imported_types",
         "check_module_graph_entry_specializes_public_generic_methods_for_imported_types",
         "tests/zen/generic_method_worklist.zen",
