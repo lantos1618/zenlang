@@ -137,6 +137,17 @@ fn assert_c_function_definition(c_source: &str, name: &str) {
     );
 }
 
+fn assert_c_function_definition_count(c_source: &str, name: &str, expected: usize) {
+    let actual = c_function_definitions(c_source)
+        .iter()
+        .filter(|definition| definition.as_str() == name)
+        .count();
+    assert_eq!(
+        actual, expected,
+        "expected {expected} generated C definitions for `{name}`, found {actual}:\n{c_source}"
+    );
+}
+
 fn assert_c_call_resolves_to_definition(c_source: &str, name: &str) {
     assert_c_function_definition(c_source, name);
     assert!(
@@ -319,6 +330,19 @@ int32_t outer_i32(int32_t value) {
         undefined_generated_c_calls(c_source),
         vec!["missing_stmt_i32".to_string(), "missing_i32".to_string()]
     );
+}
+
+#[test]
+fn generated_c_definition_count_ignores_prototypes() {
+    let c_source = r#"
+int32_t inner_i32(int32_t value);
+
+int32_t inner_i32(int32_t value) {
+    return value;
+}
+"#;
+
+    assert_c_function_definition_count(c_source, "inner_i32", 1);
 }
 
 // ── Individual test cases ───────────────────────────────────────────
@@ -547,10 +571,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("inner_i32(value)"));
     assert_c_call_resolves_to_definition(&c_source, "inner_i32");
     assert_c_call_resolves_to_definition(&c_source, "outer_i32");
-    assert_eq!(
-        c_source.matches("int32_t inner_i32(int32_t value)").count(),
-        2
-    );
+    assert_c_function_definition_count(&c_source, "inner_i32", 1);
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
 
@@ -562,10 +583,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "inner_i32");
     assert_c_call_resolves_to_definition(&c_source, "left_i32");
     assert_c_call_resolves_to_definition(&c_source, "right_i32");
-    assert_eq!(
-        c_source.matches("int32_t inner_i32(int32_t value)").count(),
-        2
-    );
+    assert_c_function_definition_count(&c_source, "inner_i32", 1);
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
 

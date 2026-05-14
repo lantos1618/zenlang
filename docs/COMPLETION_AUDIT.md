@@ -49,6 +49,8 @@ and do not assume Phase 4 is ready without evidence.
   scans covered underscore-style generated calls and fails if any call lacks an
   emitted definition, guarded by
   `integration::generated_c_call_definition_scan_reports_missing_generated_calls`.
+  Worklist dedup checks count generated function definitions directly, guarded
+  by `integration::generated_c_definition_count_ignores_prototypes`.
 - Generic method specialization preserves concrete `Self` receiver context in
   call-site typing and specialized method bodies for generic struct and enum
   receivers, with executable and generated-C coverage in
