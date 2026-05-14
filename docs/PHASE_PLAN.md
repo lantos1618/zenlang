@@ -28,6 +28,8 @@ checked-in docs, tests, and commits only.
   forms listed in `docs/V1_SPEC.md` and covered by `tests/zen`.
 - Generic specialization has positive executable coverage for generic functions,
   structs, enums, methods, and recursive worklist emission.
+- Generic struct and enum type-argument arity diagnostics cover both expression
+  instantiation and type annotation positions.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.

@@ -154,6 +154,50 @@ main = () i32 {
 }
 
 #[test]
+fn generic_struct_annotation_type_arg_arity_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+read = (box: Box<i32, str>) i32 {
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic struct `Box` expects 1 type arguments, found 2")),
+        "expected generic struct annotation arity diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_enum_annotation_type_arg_arity_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Option<T>:
+    None,
+    Some(T)
+
+read = (value: Option<i32, str>) i32 {
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic enum `Option` expects 1 type arguments, found 2")),
+        "expected generic enum annotation arity diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_struct_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"

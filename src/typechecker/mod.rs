@@ -1525,13 +1525,37 @@ impl TypeChecker {
                     self.validate_generic_type_ref_bounds(type_arg, scoped_type_params, span);
                 }
 
-                let (type_params, type_param_bounds) = if let Some(info) = self.structs.get(name) {
-                    (info.type_params.clone(), info.type_param_bounds.clone())
-                } else if let Some(info) = self.enums.get(name) {
-                    (info.type_params.clone(), info.type_param_bounds.clone())
-                } else {
+                let (kind, type_params, type_param_bounds) =
+                    if let Some(info) = self.structs.get(name) {
+                        (
+                            "struct",
+                            info.type_params.clone(),
+                            info.type_param_bounds.clone(),
+                        )
+                    } else if let Some(info) = self.enums.get(name) {
+                        (
+                            "enum",
+                            info.type_params.clone(),
+                            info.type_param_bounds.clone(),
+                        )
+                    } else {
+                        return;
+                    };
+
+                if type_params.len() != type_args.len() {
+                    self.diagnostics.push(Diagnostic::error(
+                        "E5001",
+                        format!(
+                            "generic {} `{}` expects {} type arguments, found {}",
+                            kind,
+                            name,
+                            type_params.len(),
+                            type_args.len()
+                        ),
+                        span,
+                    ));
                     return;
-                };
+                }
 
                 let substitutions: HashMap<String, Type> = type_params
                     .iter()
