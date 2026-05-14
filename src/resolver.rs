@@ -852,17 +852,19 @@ impl SymbolTable {
         true
     }
 
-    fn record_behavior_impl(&mut self, type_name: &str, behavior: &str) {
+    fn record_behavior_impl(&mut self, type_name: &str, behavior: &str) -> bool {
         if let Some(symbol) = self
             .symbols
             .iter_mut()
             .find(|symbol| symbol.namespace == Namespace::Type && symbol.name == type_name)
         {
-            symbol
-                .behavior_impl_names
-                .get_or_insert_with(Vec::new)
-                .push(behavior.to_string());
+            let impls = symbol.behavior_impl_names.get_or_insert_with(Vec::new);
+            if impls.iter().any(|recorded| recorded == behavior) {
+                return false;
+            }
+            impls.push(behavior.to_string());
         }
+        true
     }
 
     fn record_behavior_required(&mut self, type_name: &str, behavior: &str) -> bool {
@@ -1238,10 +1240,16 @@ impl Resolver {
                         ));
                     }
                     if self.is_known_type_name(table, &[], type_name) && behavior_known {
-                        table.record_behavior_impl(
-                            type_name,
-                            &behavior_ref_display(behavior, behavior_type_args),
-                        );
+                        let behavior_display = behavior_ref_display(behavior, behavior_type_args);
+                        if !table.record_behavior_impl(type_name, &behavior_display) {
+                            diagnostics.push(Diagnostic::error(
+                                "E0217",
+                                format!(
+                                    "duplicate behavior implementation `{behavior_display}` for `{type_name}`"
+                                ),
+                                *span,
+                            ));
+                        }
                     }
                 }
                 for type_arg in behavior_type_args {

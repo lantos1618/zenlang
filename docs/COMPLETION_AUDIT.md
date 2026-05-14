@@ -255,6 +255,9 @@ and do not assume Phase 4 is ready without evidence.
 - Unspecialized generic type targets in `.implements` and `.requires`, such as
   `Box.implements(Json)` when `Box` declares type parameters, produce hard
   arity diagnostics instead of resolver handoff mismatch diagnostics.
+  Resolver rejects duplicate local `.implements` edges before recording
+  duplicate metadata, covered by
+  `resolver_phase2::resolver_rejects_duplicate_behavior_impl_edges`.
   Resolver rejects duplicate local `.requires` edges before recording duplicate
   metadata, covered by
   `resolver_phase2::resolver_rejects_duplicate_behavior_required_edges`.

@@ -310,6 +310,32 @@ Point.implements(Json) {
 }
 
 #[test]
+fn resolver_rejects_duplicate_behavior_impl_edges() {
+    let program = parse_program(
+        r#"
+Marker: behavior { }
+
+Point: { x: i32 }
+
+Point.implements(Marker) { }
+
+Point.implements(Marker) { }
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("duplicate behavior impl should fail in resolver");
+
+    assert!(
+        err.iter().any(|d| d
+            .message
+            .contains("duplicate behavior implementation `Marker`")),
+        "expected duplicate behavior implementation diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_behavior_impl_function_type_methods() {
     let program = parse_program(
         r#"

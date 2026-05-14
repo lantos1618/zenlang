@@ -159,6 +159,9 @@ checked-in docs, tests, and commits only.
   before collecting behavior impls/requires from the AST.
   Specialized behavior references such as `Json<str>` are included in this
   resolver handoff validation.
+  Resolver now rejects duplicate local `.implements` edges before recording
+  duplicate metadata, covered by
+  `resolver_phase2::resolver_rejects_duplicate_behavior_impl_edges`.
   Resolver now rejects duplicate local `.requires` edges before recording
   duplicate metadata, covered by
   `resolver_phase2::resolver_rejects_duplicate_behavior_required_edges`.
