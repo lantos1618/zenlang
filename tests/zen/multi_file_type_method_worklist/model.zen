@@ -1,0 +1,11 @@
+inner<T> = (value: T) T {
+    return value
+}
+
+pub Box<T>: {
+    value: T
+}
+
+pub Box.get_inner<T> = (self: Box<T>) T {
+    return inner(self.value)
+}

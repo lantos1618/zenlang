@@ -89,6 +89,7 @@ impl TypeChecker {
         let saved_return_type = self.current_return_type.clone();
         let saved_self_type = self.current_self_type.clone();
         let saved_defers = std::mem::take(&mut self.pending_defers);
+        let dependency_state = self.install_template_dependencies(&template);
         self.type_substitutions.push(substitutions.clone());
         match self.check_function(
             &mangled,
@@ -101,6 +102,7 @@ impl TypeChecker {
             Err(diagnostic) => self.diagnostics.push(diagnostic),
         }
         self.type_substitutions.pop();
+        self.restore_template_dependencies(dependency_state);
         self.pending_defers = saved_defers;
         self.current_return_type = saved_return_type;
         self.current_self_type = saved_self_type;
@@ -153,6 +155,7 @@ impl TypeChecker {
         let saved_return_type = self.current_return_type.clone();
         let saved_self_type = self.current_self_type.clone();
         let saved_defers = std::mem::take(&mut self.pending_defers);
+        let dependency_state = self.install_template_dependencies(&template);
         self.current_self_type = self.generic_method_self_type(name, substitutions);
         self.type_substitutions.push(substitutions.clone());
         match self.check_function(
@@ -166,6 +169,7 @@ impl TypeChecker {
             Err(diagnostic) => self.diagnostics.push(diagnostic),
         }
         self.type_substitutions.pop();
+        self.restore_template_dependencies(dependency_state);
         self.pending_defers = saved_defers;
         self.current_return_type = saved_return_type;
         self.current_self_type = saved_self_type;
@@ -194,6 +198,48 @@ impl TypeChecker {
             ));
         }
         Some(self.resolve_type(&AstType::Named(receiver_name.to_string())))
+    }
+
+    fn install_template_dependencies(
+        &mut self,
+        template: &super::GenericFunctionTemplate,
+    ) -> super::TemplateDependencyState {
+        let mut saved_functions = Vec::new();
+        for (name, info) in &template.dependency_functions {
+            saved_functions.push((
+                name.clone(),
+                self.functions.insert(name.clone(), info.clone()),
+            ));
+        }
+
+        let mut saved_generic_functions = Vec::new();
+        for (name, dependency) in &template.dependency_generic_functions {
+            saved_generic_functions.push((
+                name.clone(),
+                self.generic_functions
+                    .insert(name.clone(), dependency.clone()),
+            ));
+        }
+
+        (saved_functions, saved_generic_functions)
+    }
+
+    fn restore_template_dependencies(&mut self, state: super::TemplateDependencyState) {
+        let (functions, generic_functions) = state;
+        for (name, previous) in functions {
+            if let Some(previous) = previous {
+                self.functions.insert(name, previous);
+            } else {
+                self.functions.remove(&name);
+            }
+        }
+        for (name, previous) in generic_functions {
+            if let Some(previous) = previous {
+                self.generic_functions.insert(name, previous);
+            } else {
+                self.generic_functions.remove(&name);
+            }
+        }
     }
 
     fn generic_receiver_self_type(

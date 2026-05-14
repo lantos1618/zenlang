@@ -55,6 +55,10 @@ and do not assume Phase 4 is ready without evidence.
 - Generic method specializations that call generic functions have executable
   and generated-C coverage in `tests/zen/generic_method_worklist.zen`, including
   call-resolution assertions for the reached generic function dependency.
+  Imported public generic methods can also specialize private source-module
+  generic helper calls without exposing those helpers to entry modules, covered
+  by `tests/zen/multi_file_type_method_worklist/main.zen` and
+  `integration::imported_type_method_worklist_helpers_are_not_directly_visible`.
 - Resolver method value symbols carry complete value-signature metadata, and
   typechecker setup rejects method signature drift before method body
   collection. Function-typed method parameters and returns are included in
@@ -307,7 +311,9 @@ and do not assume Phase 4 is ready without evidence.
   imported generic function and enum specialization. Importing a public type
   also seeds its public methods and public generic method templates on the graph
   path, including end-to-end generated-C coverage for imported public generic
-  top-level methods, while private imported methods remain inaccessible.
+  top-level methods. Imported method templates carry source-module private
+  generic helper dependencies only during specialization, while private imported
+  methods and helper functions remain inaccessible from entry modules.
 - Typechecker setup rejects extra resolver-owned local symbols after mirroring
   resolver scope allocation across function bodies, nested scopes, pattern
   bindings, closures, defaults, and top-level expressions.

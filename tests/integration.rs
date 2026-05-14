@@ -476,6 +476,16 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T Point_keep"));
     assert!(!c_source.contains("Point_keep(point"));
 
+    let c_source = compile_to_c(&test_dir().join("multi_file_type_method_worklist/main.zen"));
+    assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
+    assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
+    assert!(c_source.contains("inner_i32(self.value)"));
+    assert!(c_source.contains("Box_get_inner_i32(box)"));
+    assert_c_call_resolves_to_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_definition(&c_source, "Box_get_inner_i32");
+    assert!(!c_source.contains("T inner"));
+    assert!(!c_source.contains("inner_T"));
+
     let c_source = compile_to_c(&test_dir().join("generic_ufc_function.zen"));
     assert!(c_source.contains("int32_t id_i32(int32_t value)"));
     assert!(c_source.contains("id_i32(12LL)"));
@@ -1211,6 +1221,63 @@ fn test_multi_file_type_method_imports() {
     let zen_path = test_dir().join("multi_file_type_method/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "13\n");
+}
+
+#[test]
+fn test_multi_file_type_method_worklist_imports() {
+    let zen_path = test_dir().join("multi_file_type_method_worklist/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "31\n");
+}
+
+#[test]
+fn imported_type_method_worklist_helpers_are_not_directly_visible() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let model_path = tmp.path().join("model.zen");
+    std::fs::write(
+        &model_path,
+        r#"
+inner<T> = (value: T) T {
+    return value
+}
+
+pub Box<T>: {
+    value: T
+}
+
+pub Box.get_inner<T> = (self: Box<T>) T {
+    return inner(self.value)
+}
+"#,
+    )
+    .expect("write imported module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ Box } = model
+
+main = () i32 {
+    return inner<i32>(1)
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject direct calls to unimported helpers");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("unknown value symbol 'inner'")
+            || message.contains("undefined function `inner`"),
+        "expected unimported helper diagnostic, panic={message}"
+    );
 }
 
 #[test]

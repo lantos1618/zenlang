@@ -75,7 +75,46 @@ pub(crate) struct GenericFunctionTemplate {
     pub return_type: Option<AstType>,
     pub body: Expression,
     pub span: Span,
+    pub dependency_functions: HashMap<String, FuncInfo>,
+    pub dependency_generic_functions: HashMap<String, GenericFunctionTemplate>,
 }
+
+impl GenericFunctionTemplate {
+    fn new(
+        type_params: Vec<String>,
+        params: Vec<Param>,
+        return_type: Option<AstType>,
+        body: Expression,
+        span: Span,
+    ) -> Self {
+        Self {
+            type_params,
+            params,
+            return_type,
+            body,
+            span,
+            dependency_functions: HashMap::new(),
+            dependency_generic_functions: HashMap::new(),
+        }
+    }
+
+    fn with_dependencies(
+        mut self,
+        dependency_functions: HashMap<String, FuncInfo>,
+        dependency_generic_functions: HashMap<String, GenericFunctionTemplate>,
+    ) -> Self {
+        self.dependency_functions = dependency_functions;
+        self.dependency_generic_functions = dependency_generic_functions;
+        self
+    }
+}
+
+pub(crate) type TemplateFunctionDependencyState = Vec<(String, Option<FuncInfo>)>;
+pub(crate) type TemplateGenericDependencyState = Vec<(String, Option<GenericFunctionTemplate>)>;
+pub(crate) type TemplateDependencyState = (
+    TemplateFunctionDependencyState,
+    TemplateGenericDependencyState,
+);
 
 struct DefaultBehaviorMethod {
     name: String,
@@ -99,6 +138,20 @@ struct ExpectedTypeLikeSymbol {
     type_parameter_names: Vec<String>,
     type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
     is_public: Option<bool>,
+}
+
+struct ImportedMethodSignature<'a> {
+    name: &'a str,
+    type_params: &'a [ast::TypeParam],
+    params: &'a [Param],
+    return_type: &'a Option<AstType>,
+    body: &'a Expression,
+    span: Span,
+}
+
+struct ImportedMethodDependencies<'a> {
+    functions: &'a HashMap<String, FuncInfo>,
+    generic_functions: &'a HashMap<String, GenericFunctionTemplate>,
 }
 
 #[derive(Debug, Clone)]
@@ -919,13 +972,13 @@ impl TypeChecker {
                     if !collected_type_params.is_empty() {
                         self.generic_functions.insert(
                             name.clone(),
-                            GenericFunctionTemplate {
-                                type_params: collected_type_params,
-                                params: params.clone(),
-                                return_type: return_type.clone(),
-                                body: body.clone(),
-                                span: *span,
-                            },
+                            GenericFunctionTemplate::new(
+                                collected_type_params,
+                                params.clone(),
+                                return_type.clone(),
+                                body.clone(),
+                                *span,
+                            ),
                         );
                     }
                 }
@@ -961,13 +1014,13 @@ impl TypeChecker {
                     if !collected_type_params.is_empty() {
                         self.generic_methods.insert(
                             format!("{}.{}", type_name, method_name),
-                            GenericFunctionTemplate {
-                                type_params: collected_type_params,
-                                params: params.clone(),
-                                return_type: return_type.clone(),
-                                body: body.clone(),
-                                span: *span,
-                            },
+                            GenericFunctionTemplate::new(
+                                collected_type_params,
+                                params.clone(),
+                                return_type.clone(),
+                                body.clone(),
+                                *span,
+                            ),
                         );
                     }
                 }
@@ -1077,13 +1130,13 @@ impl TypeChecker {
         if !collected_type_params.is_empty() {
             self.generic_methods.insert(
                 key,
-                GenericFunctionTemplate {
-                    type_params: collected_type_params,
-                    params: params.to_vec(),
-                    return_type: return_type.clone(),
-                    body: body.clone(),
-                    span: *span,
-                },
+                GenericFunctionTemplate::new(
+                    collected_type_params,
+                    params.to_vec(),
+                    return_type.clone(),
+                    body.clone(),
+                    *span,
+                ),
             );
         }
     }
@@ -3547,13 +3600,13 @@ impl TypeChecker {
                 if !collected_type_params.is_empty() {
                     self.generic_functions.insert(
                         local_name.to_string(),
-                        GenericFunctionTemplate {
-                            type_params: collected_type_params,
-                            params: params.clone(),
-                            return_type: return_type.clone(),
-                            body: body.clone(),
-                            span: *span,
-                        },
+                        GenericFunctionTemplate::new(
+                            collected_type_params,
+                            params.clone(),
+                            return_type.clone(),
+                            body.clone(),
+                            *span,
+                        ),
                     );
                 }
             }
@@ -3586,13 +3639,13 @@ impl TypeChecker {
                 if !collected_type_params.is_empty() {
                     self.generic_methods.insert(
                         key,
-                        GenericFunctionTemplate {
-                            type_params: collected_type_params,
-                            params: params.clone(),
-                            return_type: return_type.clone(),
-                            body: body.clone(),
-                            span: *span,
-                        },
+                        GenericFunctionTemplate::new(
+                            collected_type_params,
+                            params.clone(),
+                            return_type.clone(),
+                            body.clone(),
+                            *span,
+                        ),
                     );
                 }
             }
@@ -3705,6 +3758,9 @@ impl TypeChecker {
         type_name: &str,
         source_module: &ResolvedModule,
     ) {
+        let (dependency_functions, dependency_generic_functions) =
+            Self::source_module_function_dependencies(source_module);
+
         for decl in &source_module.program.declarations {
             let Declaration::Method {
                 type_name: method_type,
@@ -3716,7 +3772,12 @@ impl TypeChecker {
             };
 
             if method_type == type_name && *public {
-                self.seed_module_graph_import(type_name, decl);
+                self.seed_imported_method_with_dependencies(
+                    type_name,
+                    decl,
+                    &dependency_functions,
+                    &dependency_generic_functions,
+                );
             }
         }
         for decl in &source_module.program.declarations {
@@ -3733,7 +3794,13 @@ impl TypeChecker {
                 continue;
             }
             for method in methods {
-                self.seed_imported_impl_method(type_name, method, true);
+                self.seed_imported_impl_method(
+                    type_name,
+                    method,
+                    true,
+                    &dependency_functions,
+                    &dependency_generic_functions,
+                );
             }
         }
     }
@@ -3770,8 +3837,16 @@ impl TypeChecker {
             self.behavior_impls
                 .insert((local_name.to_string(), behavior_key));
 
+            let (dependency_functions, dependency_generic_functions) =
+                Self::source_module_function_dependencies(source_module);
             for method in methods {
-                self.seed_imported_impl_method(local_name, method, false);
+                self.seed_imported_impl_method(
+                    local_name,
+                    method,
+                    false,
+                    &dependency_functions,
+                    &dependency_generic_functions,
+                );
             }
             for default in self.behavior_default_methods_for_impl(
                 local_name,
@@ -3881,11 +3956,103 @@ impl TypeChecker {
         );
     }
 
+    fn source_module_function_dependencies(
+        source_module: &ResolvedModule,
+    ) -> (
+        HashMap<String, FuncInfo>,
+        HashMap<String, GenericFunctionTemplate>,
+    ) {
+        let mut functions = HashMap::new();
+        let mut generic_functions = HashMap::new();
+        for decl in &source_module.program.declarations {
+            let Declaration::Function {
+                name,
+                type_params,
+                params,
+                return_type,
+                body,
+                span,
+                ..
+            } = decl
+            else {
+                continue;
+            };
+
+            let collected_type_params: Vec<String> =
+                type_params.iter().map(|param| param.name.clone()).collect();
+            functions.insert(
+                name.clone(),
+                FuncInfo {
+                    name: name.clone(),
+                    params: params
+                        .iter()
+                        .map(|param| (param.name.clone(), param.ty.clone()))
+                        .collect(),
+                    return_type: return_type.clone().unwrap_or(AstType::Void),
+                    type_params: collected_type_params.clone(),
+                    type_param_bounds: type_param_bounds(type_params),
+                },
+            );
+            if !collected_type_params.is_empty() {
+                generic_functions.insert(
+                    name.clone(),
+                    GenericFunctionTemplate::new(
+                        collected_type_params,
+                        params.clone(),
+                        return_type.clone(),
+                        body.clone(),
+                        *span,
+                    ),
+                );
+            }
+        }
+        (functions, generic_functions)
+    }
+
+    fn seed_imported_method_with_dependencies(
+        &mut self,
+        local_type_name: &str,
+        method: &Declaration,
+        dependency_functions: &HashMap<String, FuncInfo>,
+        dependency_generic_functions: &HashMap<String, GenericFunctionTemplate>,
+    ) {
+        let Declaration::Method {
+            method_name,
+            type_params,
+            params,
+            return_type,
+            body,
+            span,
+            ..
+        } = method
+        else {
+            return;
+        };
+
+        self.seed_imported_method_signature(
+            local_type_name,
+            ImportedMethodSignature {
+                name: method_name,
+                type_params,
+                params,
+                return_type,
+                body,
+                span: *span,
+            },
+            ImportedMethodDependencies {
+                functions: dependency_functions,
+                generic_functions: dependency_generic_functions,
+            },
+        );
+    }
+
     fn seed_imported_impl_method(
         &mut self,
         local_type_name: &str,
         method: &Declaration,
         public_only: bool,
+        dependency_functions: &HashMap<String, FuncInfo>,
+        dependency_generic_functions: &HashMap<String, GenericFunctionTemplate>,
     ) {
         let Declaration::Function {
             name,
@@ -3904,32 +4071,63 @@ impl TypeChecker {
             return;
         }
 
-        let key = format!("{}.{}", local_type_name, name);
-        let collected_type_params: Vec<String> =
-            type_params.iter().map(|param| param.name.clone()).collect();
+        self.seed_imported_method_signature(
+            local_type_name,
+            ImportedMethodSignature {
+                name,
+                type_params,
+                params,
+                return_type,
+                body,
+                span: *span,
+            },
+            ImportedMethodDependencies {
+                functions: dependency_functions,
+                generic_functions: dependency_generic_functions,
+            },
+        );
+    }
+
+    fn seed_imported_method_signature(
+        &mut self,
+        local_type_name: &str,
+        signature: ImportedMethodSignature<'_>,
+        dependencies: ImportedMethodDependencies<'_>,
+    ) {
+        let key = format!("{}.{}", local_type_name, signature.name);
+        let collected_type_params: Vec<String> = signature
+            .type_params
+            .iter()
+            .map(|param| param.name.clone())
+            .collect();
         self.methods.insert(
             key.clone(),
             FuncInfo {
                 name: key.clone(),
-                params: params
+                params: signature
+                    .params
                     .iter()
                     .map(|param| (param.name.clone(), param.ty.clone()))
                     .collect(),
-                return_type: return_type.clone().unwrap_or(AstType::Void),
+                return_type: signature.return_type.clone().unwrap_or(AstType::Void),
                 type_params: collected_type_params.clone(),
-                type_param_bounds: type_param_bounds(type_params),
+                type_param_bounds: type_param_bounds(signature.type_params),
             },
         );
         if !collected_type_params.is_empty() {
             self.generic_methods.insert(
                 key,
-                GenericFunctionTemplate {
-                    type_params: collected_type_params,
-                    params: params.clone(),
-                    return_type: return_type.clone(),
-                    body: body.clone(),
-                    span: *span,
-                },
+                GenericFunctionTemplate::new(
+                    collected_type_params,
+                    signature.params.to_vec(),
+                    signature.return_type.clone(),
+                    signature.body.clone(),
+                    signature.span,
+                )
+                .with_dependencies(
+                    dependencies.functions.clone(),
+                    dependencies.generic_functions.clone(),
+                ),
             );
         }
     }
