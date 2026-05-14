@@ -59,6 +59,7 @@ pub struct Symbol {
     pub variant_names: Option<Vec<String>>,
     pub variant_owner_name: Option<String>,
     pub variant_payload_count: Option<usize>,
+    pub variant_payload_type: Option<AstType>,
     pub variant_payload_type_name: Option<String>,
     pub behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
     pub behavior_parent_names: Option<Vec<String>>,
@@ -87,6 +88,7 @@ struct SymbolMetadata {
     variant_names: Option<Vec<String>>,
     variant_owner_name: Option<String>,
     variant_payload_count: Option<usize>,
+    variant_payload_type: Option<AstType>,
     variant_payload_type_name: Option<String>,
     behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
     behavior_parent_names: Option<Vec<String>>,
@@ -584,6 +586,7 @@ impl SymbolTable {
                 variant_names: None,
                 variant_owner_name: None,
                 variant_payload_count: None,
+                variant_payload_type: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
                 behavior_parent_names: None,
@@ -625,6 +628,7 @@ impl SymbolTable {
                 variant_names: None,
                 variant_owner_name: None,
                 variant_payload_count: None,
+                variant_payload_type: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
                 behavior_parent_names: None,
@@ -683,6 +687,7 @@ impl SymbolTable {
                 variant_names,
                 variant_owner_name: None,
                 variant_payload_count: None,
+                variant_payload_type: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
                 behavior_parent_names: None,
@@ -700,10 +705,11 @@ impl SymbolTable {
         owner_name: &str,
         name: &str,
         is_public: bool,
-        variant_payload_type_name: Option<String>,
+        variant_payload_type: Option<AstType>,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
-        let variant_payload_count = usize::from(variant_payload_type_name.is_some());
+        let variant_payload_count = usize::from(variant_payload_type.is_some());
+        let variant_payload_type_name = variant_payload_type.as_ref().map(AstType::display_name);
         self.define_in_scope(
             Namespace::Variant,
             name,
@@ -725,6 +731,7 @@ impl SymbolTable {
                 variant_names: None,
                 variant_owner_name: Some(owner_name.to_string()),
                 variant_payload_count: Some(variant_payload_count),
+                variant_payload_type,
                 variant_payload_type_name,
                 behavior_method_signatures: None,
                 behavior_parent_names: None,
@@ -767,6 +774,7 @@ impl SymbolTable {
                 variant_names: None,
                 variant_owner_name: None,
                 variant_payload_count: None,
+                variant_payload_type: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: Some(behavior_method_signatures),
                 behavior_parent_names: None,
@@ -835,6 +843,7 @@ impl SymbolTable {
             variant_names: metadata.variant_names,
             variant_owner_name: metadata.variant_owner_name,
             variant_payload_count: metadata.variant_payload_count,
+            variant_payload_type: metadata.variant_payload_type,
             variant_payload_type_name: metadata.variant_payload_type_name,
             behavior_method_signatures: metadata.behavior_method_signatures,
             behavior_parent_names: metadata.behavior_parent_names,
@@ -1025,7 +1034,7 @@ impl Resolver {
                         name,
                         &variant.name,
                         *public,
-                        resolver_variant_payload_type_name(&variant.payload),
+                        variant.payload.clone(),
                         variant.span,
                     )?;
                 }
@@ -2413,10 +2422,6 @@ fn resolver_variant_names(variants: &[crate::ast::EnumVariant]) -> Vec<String> {
         .iter()
         .map(|variant| variant.name.clone())
         .collect()
-}
-
-fn resolver_variant_payload_type_name(payload: &Option<AstType>) -> Option<String> {
-    payload.as_ref().map(AstType::display_name)
 }
 
 fn resolver_behavior_method_signatures(methods: &[BehaviorMethod]) -> Vec<MethodSignatureMetadata> {

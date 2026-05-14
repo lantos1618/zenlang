@@ -1201,6 +1201,9 @@ impl TypeChecker {
                 Declaration::Struct { name, .. } => {
                     self.collect_resolver_struct_fields(symbols, name);
                 }
+                Declaration::Enum { name, .. } => {
+                    self.collect_resolver_enum_variants(symbols, name);
+                }
                 _ => {}
             }
         }
@@ -1262,6 +1265,41 @@ impl TypeChecker {
             StructInfo {
                 name: name.to_string(),
                 fields: field_types.clone(),
+                type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
+                type_param_bounds,
+            },
+        );
+    }
+
+    fn collect_resolver_enum_variants(&mut self, symbols: &SymbolTable, name: &str) {
+        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
+            return;
+        };
+        let Some(variant_names) = symbol.variant_names.as_ref() else {
+            return;
+        };
+
+        let variants = variant_names
+            .iter()
+            .map(|variant_name| {
+                (
+                    variant_name.clone(),
+                    symbols
+                        .lookup_variant(name, variant_name)
+                        .and_then(|variant| variant.variant_payload_type.clone()),
+                )
+            })
+            .collect();
+        let type_param_bounds = self
+            .enums
+            .get(name)
+            .map(|info| info.type_param_bounds.clone())
+            .unwrap_or_default();
+        self.enums.insert(
+            name.to_string(),
+            EnumInfo {
+                name: name.to_string(),
+                variants,
                 type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
                 type_param_bounds,
             },
@@ -6958,6 +6996,33 @@ Pipeline: { callback: (i32) i32 }
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             }
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_enum_payload_metadata() {
+        let mut program = parse_program(
+            r#"
+Callback: Wrap((i32) i32), None
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Enum { variants, .. } = &mut program.declarations[0] {
+            variants[0].payload = Some(AstType::I32);
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.enums.get("Callback").expect("enum info");
+        assert_eq!(
+            info.variants[0].1,
+            Some(AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::I32),
+            })
         );
     }
 

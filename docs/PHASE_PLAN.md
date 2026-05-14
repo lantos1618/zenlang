@@ -481,6 +481,10 @@ checked-in docs, tests, and commits only.
 - Resolver enum variant payload metadata preserves function-typed payloads, and
   typechecker setup rejects function-type payload handoff drift before
   collecting enum variant metadata from the AST.
+- The resolver-backed typechecker path now collects enum variant payload
+  metadata from validated resolver variant symbols, including typed
+  function-payload metadata, instead of rebuilding enum payloads only from AST
+  declarations after validation.
 - Resolver enum variant payload metadata also preserves function-typed payloads
   over generic type parameters, and typechecker setup rejects that generic
   handoff drift before enum variant metadata collection.
