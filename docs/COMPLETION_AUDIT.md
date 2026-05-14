@@ -44,6 +44,7 @@ and do not assume Phase 4 is ready without evidence.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.
+  Local generic annotations also enforce declared generic behavior bounds.
 - Typechecker setup accepts resolver `SymbolTable` through
   `check_program_with_symbols`.
 - Resolver local symbols carry mutability metadata for mutable parameters and
