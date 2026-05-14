@@ -3417,6 +3417,7 @@ impl TypeChecker {
                     binding.local_name.as_str(),
                     binding.source_symbol.as_str(),
                     source_module,
+                    graph,
                 );
             }
             self.seed_public_methods_for_imported_type(
@@ -3568,11 +3569,13 @@ impl TypeChecker {
         local_name: &str,
         source_name: &str,
         source_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
     ) {
         self.seed_behavior_extends_for_imported_behavior_inner(
             local_name,
             source_name,
             source_module,
+            graph,
             &mut HashSet::new(),
         );
     }
@@ -3582,6 +3585,7 @@ impl TypeChecker {
         local_name: &str,
         source_name: &str,
         source_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
         seen: &mut HashSet<String>,
     ) {
         if !seen.insert(source_name.to_string()) {
@@ -3609,14 +3613,36 @@ impl TypeChecker {
                 .find(|decl| decl.name() == Some(parent.as_str()))
             {
                 self.seed_module_graph_import(parent, parent_decl);
+                self.seed_behavior_extends_for_imported_behavior_inner(
+                    parent,
+                    parent,
+                    source_module,
+                    graph,
+                    seen,
+                );
+            } else if let Some(binding) = source_module
+                .imports
+                .iter()
+                .find(|binding| binding.local_name == *parent)
+            {
+                if let Some(parent_module) = graph.module(binding.source_module) {
+                    if let Some(parent_decl) = parent_module
+                        .program
+                        .declarations
+                        .iter()
+                        .find(|decl| decl.name() == Some(binding.source_symbol.as_str()))
+                    {
+                        self.seed_module_graph_import(parent, parent_decl);
+                        self.seed_behavior_extends_for_imported_behavior_inner(
+                            parent,
+                            binding.source_symbol.as_str(),
+                            parent_module,
+                            graph,
+                            seen,
+                        );
+                    }
+                }
             }
-
-            self.seed_behavior_extends_for_imported_behavior_inner(
-                parent,
-                parent,
-                source_module,
-                seen,
-            );
 
             let parent_key = self.behavior_reference_key(parent, parent_type_args);
             let parents = self
@@ -3681,7 +3707,7 @@ impl TypeChecker {
                 continue;
             }
 
-            self.seed_behavior_decl_for_imported_impl(behavior, behavior, source_module);
+            self.seed_behavior_decl_for_imported_impl(behavior, behavior, source_module, graph);
             self.seed_behavior_decl_for_imported_impl_from_imports(behavior, source_module, graph);
 
             let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
@@ -3721,6 +3747,7 @@ impl TypeChecker {
         local_name: &str,
         source_name: &str,
         source_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
     ) {
         if let Some(behavior_decl) = source_module
             .program
@@ -3733,6 +3760,7 @@ impl TypeChecker {
                 local_name,
                 source_name,
                 source_module,
+                graph,
             );
         }
     }
@@ -3758,6 +3786,7 @@ impl TypeChecker {
             behavior,
             binding.source_symbol.as_str(),
             imported_module,
+            graph,
         );
     }
 

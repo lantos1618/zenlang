@@ -101,6 +101,9 @@ checked-in docs, tests, and commits only.
 - Imported public types now preserve source-module impls whose target behavior
   was itself imported by that source module, including inherited parent bounds,
   covered by `tests/zen/multi_file_imported_impl_imported_behavior/main.zen`.
+- Imported behavior inheritance now follows parent behavior imports from the
+  defining module, with negative coverage in
+  `integration::imported_behavior_extends_imported_parent_requires_parent_methods`.
 - Unknown method calls through generic behavior-bound receivers now produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
