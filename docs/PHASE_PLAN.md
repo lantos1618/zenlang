@@ -45,6 +45,9 @@ checked-in docs, tests, and commits only.
   bound-ref, parameter-type, and return metadata, so monomorphization templates
   no longer keep stale AST-only generic names, bounds, or function-type
   signatures after resolver validation.
+- Resolver-backed struct and enum collection now also uses typed resolver
+  generic bound refs, so generic type templates no longer retain stale AST-only
+  behavior bounds after resolver validation.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

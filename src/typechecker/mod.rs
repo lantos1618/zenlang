@@ -1323,11 +1323,16 @@ impl TypeChecker {
             return;
         };
 
-        let type_param_bounds = self
+        let ast_type_param_bounds = self
             .structs
             .get(name)
             .map(|info| info.type_param_bounds.clone())
             .unwrap_or_default();
+        let type_param_bounds = symbol
+            .type_parameter_bound_refs
+            .as_deref()
+            .map(type_param_bounds_from_resolver_refs)
+            .unwrap_or(ast_type_param_bounds);
         self.structs.insert(
             name.to_string(),
             StructInfo {
@@ -1358,11 +1363,16 @@ impl TypeChecker {
                 )
             })
             .collect();
-        let type_param_bounds = self
+        let ast_type_param_bounds = self
             .enums
             .get(name)
             .map(|info| info.type_param_bounds.clone())
             .unwrap_or_default();
+        let type_param_bounds = symbol
+            .type_parameter_bound_refs
+            .as_deref()
+            .map(type_param_bounds_from_resolver_refs)
+            .unwrap_or(ast_type_param_bounds);
         self.enums.insert(
             name.to_string(),
             EnumInfo {
@@ -7556,13 +7566,26 @@ Box.apply<U: Json<U>> = (self: Box, callback: (U) U) (U) U {
     fn collect_declarations_with_symbols_uses_resolver_struct_field_metadata() {
         let mut program = parse_program(
             r#"
-Pipeline: { callback: (i32) i32 }
+Json<T>: behavior {
+    encode: (Self) T
+}
+Debug: behavior {
+    debug: (Self) str
+}
+Pipeline<T: Json<T>>: { callback: (i32) i32 }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
             .resolve_program(&program)
             .expect("resolver succeeds");
-        if let Declaration::Struct { fields, .. } = &mut program.declarations[0] {
+        if let Declaration::Struct {
+            type_params,
+            fields,
+            ..
+        } = &mut program.declarations[2]
+        {
+            type_params[0].constraint = Some("Debug".to_string());
+            type_params[0].constraint_type_args.clear();
             fields[0].ty = AstType::I32;
         }
         let mut tc = TypeChecker::new();
@@ -7570,6 +7593,13 @@ Pipeline: { callback: (i32) i32 }
         tc.collect_declarations_with_symbols(&program.declarations, &symbols);
 
         let info = tc.structs.get("Pipeline").expect("struct info");
+        assert_eq!(
+            info.type_param_bounds.get("T"),
+            Some(&BehaviorBound {
+                behavior: "Json".to_string(),
+                type_args: vec![AstType::Named("T".to_string())],
+            })
+        );
         assert_eq!(
             info.fields[0].1,
             AstType::Function {
@@ -7583,13 +7613,26 @@ Pipeline: { callback: (i32) i32 }
     fn collect_declarations_with_symbols_uses_resolver_enum_payload_metadata() {
         let mut program = parse_program(
             r#"
-Callback: Wrap((i32) i32), None
+Json<T>: behavior {
+    encode: (Self) T
+}
+Debug: behavior {
+    debug: (Self) str
+}
+Callback<T: Json<T>>: Wrap((i32) i32), None
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
             .resolve_program(&program)
             .expect("resolver succeeds");
-        if let Declaration::Enum { variants, .. } = &mut program.declarations[0] {
+        if let Declaration::Enum {
+            type_params,
+            variants,
+            ..
+        } = &mut program.declarations[2]
+        {
+            type_params[0].constraint = Some("Debug".to_string());
+            type_params[0].constraint_type_args.clear();
             variants[0].payload = Some(AstType::I32);
         }
         let mut tc = TypeChecker::new();
@@ -7597,6 +7640,13 @@ Callback: Wrap((i32) i32), None
         tc.collect_declarations_with_symbols(&program.declarations, &symbols);
 
         let info = tc.enums.get("Callback").expect("enum info");
+        assert_eq!(
+            info.type_param_bounds.get("T"),
+            Some(&BehaviorBound {
+                behavior: "Json".to_string(),
+                type_args: vec![AstType::Named("T".to_string())],
+            })
+        );
         assert_eq!(
             info.variants[0].1,
             Some(AstType::Function {

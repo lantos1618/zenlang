@@ -367,6 +367,9 @@ and do not assume Phase 4 is ready without evidence.
   parameter-type, and return metadata, so monomorphization templates no longer
   retain stale AST-only generic names, bounds, or function-type signatures after
   resolver validation.
+- Resolver-backed struct and enum collection uses typed resolver generic bound
+  refs, so generic type templates no longer retain stale AST-only behavior
+  bounds after resolver validation.
 - Typechecker setup rejects extra resolver-owned local symbols after mirroring
   resolver scope allocation across function bodies, nested scopes, pattern
   bindings, closures, defaults, and top-level expressions.
