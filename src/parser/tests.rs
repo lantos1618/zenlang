@@ -442,6 +442,24 @@ fn parse_behavior_declaration() {
 }
 
 #[test]
+fn parse_public_behavior_declaration() {
+    let prog = parse_ok("pub Json<T>: behavior {\n    encode: (Self) T\n}");
+    match &prog.declarations[0] {
+        Declaration::Behavior {
+            name,
+            type_params,
+            public,
+            ..
+        } => {
+            assert_eq!(name, "Json");
+            assert_eq!(type_params.len(), 1);
+            assert!(*public);
+        }
+        other => panic!("expected Behavior, got {:?}", other),
+    }
+}
+
+#[test]
 fn parse_behavior_impl_block() {
     let prog =
         parse_ok("Point.implements(Json) {\n    to_json = (value: Point) str { return \"{}\" }\n}");

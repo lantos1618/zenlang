@@ -702,6 +702,7 @@ impl SymbolTable {
     fn define_behavior(
         &mut self,
         name: &str,
+        is_public: bool,
         type_params: &[TypeParam],
         behavior_method_signatures: Vec<MethodSignatureMetadata>,
         definition_span: Span,
@@ -710,7 +711,7 @@ impl SymbolTable {
         self.define_in_scope(
             Namespace::Behavior,
             name,
-            false,
+            is_public,
             SymbolMetadata {
                 import_source: None,
                 parameter_count: None,
@@ -974,11 +975,13 @@ impl Resolver {
                 name,
                 type_params,
                 methods,
+                public,
                 span,
                 ..
             } => {
                 table.define_behavior(
                     name,
+                    *public,
                     type_params,
                     resolver_behavior_method_signatures(methods),
                     *span,
@@ -1187,7 +1190,7 @@ impl Resolver {
                     ));
                 }
                 if let Some(behavior) = behavior {
-                    let behavior_known = table.lookup(Namespace::Behavior, behavior).is_some();
+                    let behavior_known = self.is_known_behavior_name(table, behavior);
                     if !behavior_known {
                         diagnostics.push(Diagnostic::error(
                             "E0202",
@@ -1254,7 +1257,7 @@ impl Resolver {
                         *span,
                     ));
                 }
-                if table.lookup(Namespace::Behavior, behavior).is_none() {
+                if !self.is_known_behavior_name(table, behavior) {
                     diagnostics.push(Diagnostic::error(
                         "E0202",
                         format!("unknown behavior symbol '{behavior}'"),
@@ -1276,8 +1279,8 @@ impl Resolver {
                 parent_type_args,
                 span,
             } => {
-                let behavior_known = table.lookup(Namespace::Behavior, behavior).is_some();
-                let parent_known = table.lookup(Namespace::Behavior, parent).is_some();
+                let behavior_known = self.is_known_behavior_name(table, behavior);
+                let parent_known = self.is_known_behavior_name(table, parent);
                 if !behavior_known {
                     diagnostics.push(Diagnostic::error(
                         "E0202",
@@ -1345,7 +1348,7 @@ impl Resolver {
     ) {
         for type_param in type_params {
             if let Some(constraint) = &type_param.constraint {
-                if table.lookup(Namespace::Behavior, constraint).is_none() {
+                if !self.is_known_behavior_name(table, constraint) {
                     diagnostics.push(Diagnostic::error(
                         "E0202",
                         format!("unknown behavior symbol '{constraint}'"),
@@ -1468,6 +1471,11 @@ impl Resolver {
         table.lookup(Namespace::Type, name).is_some()
             || table.lookup(Namespace::Import, name).is_some()
             || type_params.iter().any(|type_param| type_param.name == name)
+    }
+
+    fn is_known_behavior_name(&self, table: &SymbolTable, name: &str) -> bool {
+        table.lookup(Namespace::Behavior, name).is_some()
+            || table.lookup(Namespace::Import, name).is_some()
     }
 
     fn validate_expr_refs(

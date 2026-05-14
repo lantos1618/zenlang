@@ -62,6 +62,8 @@ fn resolver_records_public_visibility_for_exported_declarations() {
         r#"
 pub PublicPoint: { x: i32 }
 PrivatePoint: { x: i32 }
+pub Json<T>: behavior { encode: (Self) T }
+InternalJson: behavior { encode: (Self) i32 }
 pub exported = () i32 { return 1 }
 internal = () i32 { return 2 }
 "#,
@@ -79,6 +81,18 @@ internal = () i32 { return 2 }
         !table
             .lookup(Namespace::Type, "PrivatePoint")
             .expect("private type")
+            .is_public
+    );
+    assert!(
+        table
+            .lookup(Namespace::Behavior, "Json")
+            .expect("public behavior")
+            .is_public
+    );
+    assert!(
+        !table
+            .lookup(Namespace::Behavior, "InternalJson")
+            .expect("private behavior")
             .is_public
     );
     assert!(

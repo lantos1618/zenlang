@@ -232,6 +232,9 @@ checked-in docs, tests, and commits only.
 - Multi-file generic import fixtures now compile and run through graph-owned
   imports, and generated-C assertions prove imported generic enum/function
   specializations resolve to concrete definitions instead of unspecialized calls.
+- Multi-file generic behavior-bound fixtures now compile and run through
+  graph-owned imports, proving imported public behaviors can satisfy
+  `T: Json<T>` bounds and dispatch to concrete generated C functions.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
 - Resolver rejects top-level methods whose receiver type is unknown, and

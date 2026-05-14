@@ -97,6 +97,7 @@ pub enum Declaration {
         name: String,
         type_params: Vec<TypeParam>,
         methods: Vec<BehaviorMethod>,
+        public: bool,
         span: Span,
     },
 
@@ -169,7 +170,8 @@ impl Declaration {
             Declaration::Function { public, .. }
             | Declaration::Method { public, .. }
             | Declaration::Struct { public, .. }
-            | Declaration::Enum { public, .. } => *public,
+            | Declaration::Enum { public, .. }
+            | Declaration::Behavior { public, .. } => *public,
             _ => false,
         }
     }

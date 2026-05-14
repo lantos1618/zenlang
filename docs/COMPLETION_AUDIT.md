@@ -328,6 +328,9 @@ and do not assume Phase 4 is ready without evidence.
 - Multi-file generic import fixtures cover imported generic enum/function
   specialization through C generation and runtime execution, including generated
   C assertions that imported mangled calls have matching concrete definitions.
+- Multi-file generic behavior-bound fixtures cover imported public behavior
+  declarations through module-graph resolver validation, typechecking, C
+  generation, and runtime execution.
 
 ## Unresolved Gaps
 

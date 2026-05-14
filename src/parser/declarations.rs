@@ -31,7 +31,7 @@ impl Parser {
         match self.peek() {
             // Behavior: `Name: behavior { method: (Self) Return }`
             Token::Colon if self.colon_is_followed_by_identifier("behavior") => {
-                self.parse_behavior_def(name, Vec::new(), name_span)
+                self.parse_behavior_def(name, Vec::new(), public, name_span)
             }
 
             // Struct: `Name: { fields }`
@@ -91,7 +91,7 @@ impl Parser {
                         self.parse_struct_def_with_params(name, type_params, public, name_span)
                     }
                     Token::Colon if self.colon_is_followed_by_identifier("behavior") => {
-                        self.parse_behavior_def(name, type_params, name_span)
+                        self.parse_behavior_def(name, type_params, public, name_span)
                     }
                     Token::Colon => {
                         self.parse_enum_def_with_params(name, type_params, public, name_span)
@@ -177,6 +177,7 @@ impl Parser {
         &mut self,
         name: String,
         type_params: Vec<TypeParam>,
+        public: bool,
         name_span: Span,
     ) -> Result<Declaration, CompileError> {
         self.expect(&Token::Colon)?;
@@ -220,6 +221,7 @@ impl Parser {
             name,
             type_params,
             methods,
+            public,
             span: name_span.merge(end),
         })
     }

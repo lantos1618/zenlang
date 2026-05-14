@@ -447,6 +447,14 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("Point Point_encode(Point value)"));
     assert!(c_source.contains("Point_encode(value)"));
     assert!(!c_source.contains("T_encode"));
+
+    let c_source = compile_to_c(&test_dir().join("multi_file_behavior_bound/main.zen"));
+    assert!(c_source.contains("Point Point_encode(Point value)"));
+    assert!(c_source.contains("Point encode_Point(Point value)"));
+    assert!(c_source.contains("Point_encode(value)"));
+    assert_c_call_resolves_to_definition(&c_source, "Point_encode");
+    assert_c_call_resolves_to_definition(&c_source, "encode_Point");
+    assert!(!c_source.contains("T_encode"));
 }
 
 #[test]
@@ -851,6 +859,13 @@ fn test_multi_file_generic_imports() {
     let zen_path = test_dir().join("multi_file_generic/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "42\n7\n5\n9\n");
+}
+
+#[test]
+fn test_multi_file_behavior_bound_imports() {
+    let zen_path = test_dir().join("multi_file_behavior_bound/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "11\n");
 }
 
 // ── Discovery test: all .zen files have matching .expected ──────────

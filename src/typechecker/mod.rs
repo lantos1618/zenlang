@@ -2891,6 +2891,7 @@ impl TypeChecker {
                     name,
                     type_params,
                     methods,
+                    public,
                     span,
                     ..
                 } => {
@@ -2898,7 +2899,7 @@ impl TypeChecker {
                         symbols,
                         Namespace::Behavior,
                         name,
-                        expected_type_like_symbol(type_params, Some(false)),
+                        expected_type_like_symbol(type_params, Some(*public)),
                         *span,
                     ) else {
                         continue;
@@ -3577,7 +3578,11 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        if symbols.lookup(namespace, name).is_none() {
+        let found = symbols.lookup(namespace, name).is_some()
+            || matches!(namespace, Namespace::Type | Namespace::Behavior)
+                && symbols.lookup(Namespace::Import, name).is_some();
+
+        if !found {
             self.diagnostics.push(Diagnostic::error(
                 "E0210",
                 format!(
