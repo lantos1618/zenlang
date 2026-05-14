@@ -32,6 +32,8 @@ checked-in docs, tests, and commits only.
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.
   Local generic annotations also enforce declared generic behavior bounds.
+  Explicit generic call type arguments and closure signatures are included in
+  the same annotation validation path.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.

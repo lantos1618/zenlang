@@ -45,6 +45,8 @@ and do not assume Phase 4 is ready without evidence.
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.
   Local generic annotations also enforce declared generic behavior bounds.
+  Explicit generic call type arguments and closure signatures are included in
+  the same annotation validation path.
 - Typechecker setup accepts resolver `SymbolTable` through
   `check_program_with_symbols`.
 - Resolver local symbols carry mutability metadata for mutable parameters and
