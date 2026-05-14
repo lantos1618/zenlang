@@ -844,6 +844,107 @@ main = () i32 {
 }
 
 #[test]
+fn generic_function_behavior_bound_failure_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: {
+    x: i32
+}
+
+encode<T: Json> = (value: T) str {
+    return value.encode()
+}
+
+main = () i32 {
+    point = Point { x: 1 }
+    text = encode(point)
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("type `Point` does not implement behavior `Json` required by `T`")),
+        "expected generic function bound diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_method_behavior_bound_failure_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: {
+    x: i32
+}
+
+Holder: {
+    value: i32
+}
+
+Holder.wrap<T: Json> = (self: Holder, value: T) T {
+    return value
+}
+
+main = () i32 {
+    holder = Holder { value: 1 }
+    point = Point { x: 1 }
+    bad = holder.wrap(point)
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("type `Point` does not implement behavior `Json` required by `T`")),
+        "expected generic method bound diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_ufc_function_behavior_bound_failure_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: {
+    x: i32
+}
+
+as_json<T: Json> = (value: T) str {
+    return value.encode()
+}
+
+main = () i32 {
+    point = Point { x: 1 }
+    text = point.as_json()
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("type `Point` does not implement behavior `Json` required by `T`")),
+        "expected generic UFC function bound diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn behavior_impl_for_unknown_type_is_error() {
     let errors = frontend_errors(
         r#"
