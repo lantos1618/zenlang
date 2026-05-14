@@ -318,6 +318,9 @@ and do not assume Phase 4 is ready without evidence.
   metadata collection.
 - CLI `build` rejects `build.zen` explicitly until deterministic build graph
   support exists, with integration coverage for the gated Phase 4 entrypoint.
+- Multi-file generic import fixtures cover imported generic enum/function
+  specialization through C generation and runtime execution, including generated
+  C assertions that imported mangled calls have matching concrete definitions.
 
 ## Unresolved Gaps
 

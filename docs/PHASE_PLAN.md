@@ -229,6 +229,9 @@ checked-in docs, tests, and commits only.
 - The reusable integration-test frontend helper now uses the module graph, so
   fixture compilation and generated-C assertions exercise the same graph-owned
   import validation as the CLI paths.
+- Multi-file generic import fixtures now compile and run through graph-owned
+  imports, and generated-C assertions prove imported generic enum/function
+  specializations resolve to concrete definitions instead of unspecialized calls.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
 - Resolver rejects top-level methods whose receiver type is unknown, and

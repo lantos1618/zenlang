@@ -1,0 +1,14 @@
+{ io } = std
+{ Option, Result, unwrap_option, unwrap_result } = result
+
+main = () i32 {
+    some = Option<i32>.Some(42)
+    none = Option<i32>.None
+    ok = Result<i32, str>.Ok(5)
+    err = Result<i32, str>.Err("bad")
+    io.println("${unwrap_option(some, 0)}")
+    io.println("${unwrap_option(none, 7)}")
+    io.println("${unwrap_result(ok, 0)}")
+    io.println("${unwrap_result(err, 9)}")
+    return 0
+}

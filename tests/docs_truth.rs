@@ -112,6 +112,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_module_graph_entry_specializes_imported_generic_enums",
         "check_module_graph_entry_seeds_public_methods_for_imported_types",
         "check_module_graph_entry_specializes_public_generic_methods_for_imported_types",
+        "tests/zen/multi_file_generic/main.zen",
         "tests/zen/generic_method_worklist.zen",
         "resolver_records_behavior_impl_methods_as_value_symbols",
         "resolver_records_behavior_impl_function_type_methods",

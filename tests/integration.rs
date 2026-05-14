@@ -418,6 +418,24 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T unwrap_or"));
     assert!(!c_source.contains("unwrap_or(err"));
 
+    let c_source = compile_to_c(&test_dir().join("multi_file_generic/main.zen"));
+    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
+    assert!(c_source.contains("typedef struct Result_i32_str Result_i32_str;"));
+    assert!(c_source.contains("int32_t unwrap_option_i32(Option_i32 value, int32_t fallback)"));
+    assert!(
+        c_source.contains("int32_t unwrap_result_i32_str(Result_i32_str value, int32_t fallback)")
+    );
+    assert!(c_source.contains("unwrap_option_i32(some, 0LL)"));
+    assert!(c_source.contains("unwrap_result_i32_str(err, 9LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_option_i32");
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_result_i32_str");
+    assert!(!c_source.contains("Option_T"));
+    assert!(!c_source.contains("Result_T"));
+    assert!(!c_source.contains("T unwrap_option"));
+    assert!(!c_source.contains("T unwrap_result"));
+    assert!(!c_source.contains("unwrap_option(some"));
+    assert!(!c_source.contains("unwrap_result(err"));
+
     let c_source = compile_to_c(&test_dir().join("generic_ufc_function.zen"));
     assert!(c_source.contains("int32_t id_i32(int32_t value)"));
     assert!(c_source.contains("id_i32(12LL)"));
@@ -826,6 +844,13 @@ fn test_multi_file_imports() {
     let zen_path = test_dir().join("multi_file/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "37\n");
+}
+
+#[test]
+fn test_multi_file_generic_imports() {
+    let zen_path = test_dir().join("multi_file_generic/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "42\n7\n5\n9\n");
 }
 
 // ── Discovery test: all .zen files have matching .expected ──────────
