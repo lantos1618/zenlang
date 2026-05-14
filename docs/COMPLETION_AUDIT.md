@@ -206,7 +206,9 @@ and do not assume Phase 4 is ready without evidence.
   that reject unresolved `T_encode` calls.
 - Imported public types carry source-module behavior impl associations and impl
   methods into graph-owned generic behavior-bound dispatch, covered by
-  `tests/zen/multi_file_imported_behavior_impl/main.zen`.
+  `tests/zen/multi_file_imported_behavior_impl/main.zen`. Private
+  source-module behavior impls are not exported as direct methods on imported
+  public types.
 - Imported public types carry omitted behavior default methods into graph-owned
   generic behavior-bound dispatch, covered by
   `tests/zen/multi_file_imported_behavior_default/main.zen`.

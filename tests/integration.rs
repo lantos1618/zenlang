@@ -1262,6 +1262,58 @@ main = () i32 {
 }
 
 #[test]
+fn imported_private_behavior_impl_methods_are_not_directly_visible() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let model_path = tmp.path().join("model.zen");
+    std::fs::write(
+        &model_path,
+        r#"
+Hidden: behavior {
+    reveal: (Self) str
+}
+
+pub Point: {
+    x: i32
+}
+
+Point.implements(Hidden) {
+    reveal = (value: Point) str {
+        return "hidden"
+    }
+}
+"#,
+    )
+    .expect("write imported module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ Point } = model
+
+main = () i32 {
+    point = Point { x: 34 }
+    return point.reveal()
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject private imported behavior impl methods");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("type `Point` has no method `reveal`"),
+        "expected private imported behavior impl method diagnostic, panic={message}"
+    );
+}
+
+#[test]
 fn test_multi_file_behavior_bound_imports() {
     let zen_path = test_dir().join("multi_file_behavior_bound/main.zen");
     let actual = compile_and_run(&zen_path);

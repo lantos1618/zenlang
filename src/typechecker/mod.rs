@@ -3759,6 +3759,9 @@ impl TypeChecker {
             if type_name != source_name {
                 continue;
             }
+            if !self.imported_behavior_impl_is_public(behavior, source_module, graph) {
+                continue;
+            }
 
             self.seed_behavior_decl_for_imported_impl(behavior, behavior, source_module, graph);
             self.seed_behavior_decl_for_imported_impl_from_imports(behavior, source_module, graph);
@@ -3793,6 +3796,41 @@ impl TypeChecker {
                 );
             }
         }
+    }
+
+    fn imported_behavior_impl_is_public(
+        &self,
+        behavior: &str,
+        source_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
+    ) -> bool {
+        if let Some(Declaration::Behavior { public, .. }) = source_module
+            .program
+            .declarations
+            .iter()
+            .find(|decl| decl.name() == Some(behavior))
+        {
+            return *public;
+        }
+
+        let Some(binding) = source_module
+            .imports
+            .iter()
+            .find(|binding| binding.local_name == behavior)
+        else {
+            return false;
+        };
+        let Some(imported_module) = graph.module(binding.source_module) else {
+            return false;
+        };
+        matches!(
+            imported_module
+                .program
+                .declarations
+                .iter()
+                .find(|decl| decl.name() == Some(binding.source_symbol.as_str())),
+            Some(Declaration::Behavior { public: true, .. })
+        )
     }
 
     fn seed_behavior_decl_for_imported_impl(

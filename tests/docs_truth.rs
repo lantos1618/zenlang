@@ -153,6 +153,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "resolver_records_behavior_impl_function_type_methods",
         "check_program_with_symbols_validates_resolver_impl_method_signature",
         "check_program_with_symbols_validates_resolver_impl_function_type_signature",
+        "imported_private_behavior_impl_methods_are_not_directly_visible",
         "resolver_rejects_duplicate_behavior_method_names",
         "check_program_with_symbols_validates_resolver_generic_behavior_impl_names",
         "check_program_with_symbols_validates_resolver_generic_behavior_required_names",
