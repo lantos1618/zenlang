@@ -77,6 +77,8 @@ pub(crate) struct GenericFunctionTemplate {
     pub span: Span,
     pub dependency_functions: HashMap<String, FuncInfo>,
     pub dependency_generic_functions: HashMap<String, GenericFunctionTemplate>,
+    pub dependency_methods: HashMap<String, FuncInfo>,
+    pub dependency_generic_methods: HashMap<String, GenericFunctionTemplate>,
 }
 
 impl GenericFunctionTemplate {
@@ -95,6 +97,8 @@ impl GenericFunctionTemplate {
             span,
             dependency_functions: HashMap::new(),
             dependency_generic_functions: HashMap::new(),
+            dependency_methods: HashMap::new(),
+            dependency_generic_methods: HashMap::new(),
         }
     }
 
@@ -102,18 +106,27 @@ impl GenericFunctionTemplate {
         mut self,
         dependency_functions: HashMap<String, FuncInfo>,
         dependency_generic_functions: HashMap<String, GenericFunctionTemplate>,
+        dependency_methods: HashMap<String, FuncInfo>,
+        dependency_generic_methods: HashMap<String, GenericFunctionTemplate>,
     ) -> Self {
         self.dependency_functions = dependency_functions;
         self.dependency_generic_functions = dependency_generic_functions;
+        self.dependency_methods = dependency_methods;
+        self.dependency_generic_methods = dependency_generic_methods;
         self
     }
 }
 
 pub(crate) type TemplateFunctionDependencyState = Vec<(String, Option<FuncInfo>)>;
 pub(crate) type TemplateGenericDependencyState = Vec<(String, Option<GenericFunctionTemplate>)>;
+pub(crate) type TemplateMethodDependencyState = Vec<(String, Option<FuncInfo>)>;
+pub(crate) type TemplateGenericMethodDependencyState =
+    Vec<(String, Option<GenericFunctionTemplate>)>;
 pub(crate) type TemplateDependencyState = (
     TemplateFunctionDependencyState,
     TemplateGenericDependencyState,
+    TemplateMethodDependencyState,
+    TemplateGenericMethodDependencyState,
 );
 
 struct DefaultBehaviorMethod {
@@ -152,6 +165,16 @@ struct ImportedMethodSignature<'a> {
 struct ImportedMethodDependencies<'a> {
     functions: &'a HashMap<String, FuncInfo>,
     generic_functions: &'a HashMap<String, GenericFunctionTemplate>,
+    methods: &'a HashMap<String, FuncInfo>,
+    generic_methods: &'a HashMap<String, GenericFunctionTemplate>,
+}
+
+#[derive(Default)]
+struct SourceModuleDependencies {
+    functions: HashMap<String, FuncInfo>,
+    generic_functions: HashMap<String, GenericFunctionTemplate>,
+    methods: HashMap<String, FuncInfo>,
+    generic_methods: HashMap<String, GenericFunctionTemplate>,
 }
 
 #[derive(Debug, Clone)]
@@ -3758,8 +3781,7 @@ impl TypeChecker {
         type_name: &str,
         source_module: &ResolvedModule,
     ) {
-        let (dependency_functions, dependency_generic_functions) =
-            Self::source_module_function_dependencies(source_module);
+        let dependencies = Self::source_module_dependencies(source_module);
 
         for decl in &source_module.program.declarations {
             let Declaration::Method {
@@ -3772,12 +3794,7 @@ impl TypeChecker {
             };
 
             if method_type == type_name && *public {
-                self.seed_imported_method_with_dependencies(
-                    type_name,
-                    decl,
-                    &dependency_functions,
-                    &dependency_generic_functions,
-                );
+                self.seed_imported_method_with_dependencies(type_name, decl, &dependencies);
             }
         }
         for decl in &source_module.program.declarations {
@@ -3794,13 +3811,7 @@ impl TypeChecker {
                 continue;
             }
             for method in methods {
-                self.seed_imported_impl_method(
-                    type_name,
-                    method,
-                    true,
-                    &dependency_functions,
-                    &dependency_generic_functions,
-                );
+                self.seed_imported_impl_method(type_name, method, true, &dependencies);
             }
         }
     }
@@ -3837,16 +3848,9 @@ impl TypeChecker {
             self.behavior_impls
                 .insert((local_name.to_string(), behavior_key));
 
-            let (dependency_functions, dependency_generic_functions) =
-                Self::source_module_function_dependencies(source_module);
+            let dependencies = Self::source_module_dependencies(source_module);
             for method in methods {
-                self.seed_imported_impl_method(
-                    local_name,
-                    method,
-                    false,
-                    &dependency_functions,
-                    &dependency_generic_functions,
-                );
+                self.seed_imported_impl_method(local_name, method, false, &dependencies);
             }
             for default in self.behavior_default_methods_for_impl(
                 local_name,
@@ -3956,65 +3960,163 @@ impl TypeChecker {
         );
     }
 
-    fn source_module_function_dependencies(
-        source_module: &ResolvedModule,
-    ) -> (
-        HashMap<String, FuncInfo>,
-        HashMap<String, GenericFunctionTemplate>,
-    ) {
-        let mut functions = HashMap::new();
-        let mut generic_functions = HashMap::new();
+    fn source_module_dependencies(source_module: &ResolvedModule) -> SourceModuleDependencies {
+        let mut dependencies = SourceModuleDependencies::default();
         for decl in &source_module.program.declarations {
-            let Declaration::Function {
-                name,
+            match decl {
+                Declaration::Function { name, .. } => {
+                    Self::insert_source_function_dependency(
+                        name,
+                        decl,
+                        &mut dependencies.functions,
+                        &mut dependencies.generic_functions,
+                    );
+                }
+                Declaration::Method {
+                    type_name,
+                    method_name,
+                    ..
+                } => {
+                    Self::insert_source_method_dependency(
+                        &format!("{type_name}.{method_name}"),
+                        decl,
+                        &mut dependencies.methods,
+                        &mut dependencies.generic_methods,
+                    );
+                }
+                Declaration::ImplBlock {
+                    type_name, methods, ..
+                } => {
+                    for method in methods {
+                        if let Declaration::Function { name, .. } = method {
+                            Self::insert_source_method_dependency(
+                                &format!("{type_name}.{name}"),
+                                method,
+                                &mut dependencies.methods,
+                                &mut dependencies.generic_methods,
+                            );
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        dependencies
+    }
+
+    fn insert_source_function_dependency(
+        key: &str,
+        decl: &Declaration,
+        functions: &mut HashMap<String, FuncInfo>,
+        generic_functions: &mut HashMap<String, GenericFunctionTemplate>,
+    ) {
+        let Declaration::Function {
+            type_params,
+            params,
+            return_type,
+            body,
+            span,
+            ..
+        } = decl
+        else {
+            return;
+        };
+
+        Self::insert_source_callable_dependency(
+            ImportedMethodSignature {
+                name: key,
+                type_params,
+                params,
+                return_type,
+                body,
+                span: *span,
+            },
+            functions,
+            generic_functions,
+        );
+    }
+
+    fn insert_source_method_dependency(
+        key: &str,
+        decl: &Declaration,
+        methods: &mut HashMap<String, FuncInfo>,
+        generic_methods: &mut HashMap<String, GenericFunctionTemplate>,
+    ) {
+        match decl {
+            Declaration::Function {
                 type_params,
                 params,
                 return_type,
                 body,
                 span,
                 ..
-            } = decl
-            else {
-                continue;
-            };
-
-            let collected_type_params: Vec<String> =
-                type_params.iter().map(|param| param.name.clone()).collect();
-            functions.insert(
-                name.clone(),
-                FuncInfo {
-                    name: name.clone(),
-                    params: params
-                        .iter()
-                        .map(|param| (param.name.clone(), param.ty.clone()))
-                        .collect(),
-                    return_type: return_type.clone().unwrap_or(AstType::Void),
-                    type_params: collected_type_params.clone(),
-                    type_param_bounds: type_param_bounds(type_params),
-                },
-            );
-            if !collected_type_params.is_empty() {
-                generic_functions.insert(
-                    name.clone(),
-                    GenericFunctionTemplate::new(
-                        collected_type_params,
-                        params.clone(),
-                        return_type.clone(),
-                        body.clone(),
-                        *span,
-                    ),
-                );
             }
+            | Declaration::Method {
+                type_params,
+                params,
+                return_type,
+                body,
+                span,
+                ..
+            } => Self::insert_source_callable_dependency(
+                ImportedMethodSignature {
+                    name: key,
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                    span: *span,
+                },
+                methods,
+                generic_methods,
+            ),
+            _ => {}
         }
-        (functions, generic_functions)
+    }
+
+    fn insert_source_callable_dependency(
+        signature: ImportedMethodSignature<'_>,
+        callables: &mut HashMap<String, FuncInfo>,
+        generic_callables: &mut HashMap<String, GenericFunctionTemplate>,
+    ) {
+        let collected_type_params: Vec<String> = signature
+            .type_params
+            .iter()
+            .map(|param| param.name.clone())
+            .collect();
+        callables.insert(
+            signature.name.to_string(),
+            FuncInfo {
+                name: signature.name.to_string(),
+                params: signature
+                    .params
+                    .iter()
+                    .map(|param| (param.name.clone(), param.ty.clone()))
+                    .collect(),
+                return_type: signature.return_type.clone().unwrap_or(AstType::Void),
+                type_params: collected_type_params.clone(),
+                type_param_bounds: type_param_bounds(signature.type_params),
+            },
+        );
+        if !collected_type_params.is_empty() {
+            generic_callables.insert(
+                signature.name.to_string(),
+                GenericFunctionTemplate::new(
+                    collected_type_params,
+                    signature.params.to_vec(),
+                    signature.return_type.clone(),
+                    signature.body.clone(),
+                    signature.span,
+                ),
+            );
+        }
     }
 
     fn seed_imported_method_with_dependencies(
         &mut self,
         local_type_name: &str,
         method: &Declaration,
-        dependency_functions: &HashMap<String, FuncInfo>,
-        dependency_generic_functions: &HashMap<String, GenericFunctionTemplate>,
+        dependencies: &SourceModuleDependencies,
     ) {
         let Declaration::Method {
             method_name,
@@ -4040,8 +4142,10 @@ impl TypeChecker {
                 span: *span,
             },
             ImportedMethodDependencies {
-                functions: dependency_functions,
-                generic_functions: dependency_generic_functions,
+                functions: &dependencies.functions,
+                generic_functions: &dependencies.generic_functions,
+                methods: &dependencies.methods,
+                generic_methods: &dependencies.generic_methods,
             },
         );
     }
@@ -4051,8 +4155,7 @@ impl TypeChecker {
         local_type_name: &str,
         method: &Declaration,
         public_only: bool,
-        dependency_functions: &HashMap<String, FuncInfo>,
-        dependency_generic_functions: &HashMap<String, GenericFunctionTemplate>,
+        dependencies: &SourceModuleDependencies,
     ) {
         let Declaration::Function {
             name,
@@ -4082,8 +4185,10 @@ impl TypeChecker {
                 span: *span,
             },
             ImportedMethodDependencies {
-                functions: dependency_functions,
-                generic_functions: dependency_generic_functions,
+                functions: &dependencies.functions,
+                generic_functions: &dependencies.generic_functions,
+                methods: &dependencies.methods,
+                generic_methods: &dependencies.generic_methods,
             },
         );
     }
@@ -4127,6 +4232,8 @@ impl TypeChecker {
                 .with_dependencies(
                     dependencies.functions.clone(),
                     dependencies.generic_functions.clone(),
+                    dependencies.methods.clone(),
+                    dependencies.generic_methods.clone(),
                 ),
             );
         }

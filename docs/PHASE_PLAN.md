@@ -45,7 +45,7 @@ checked-in docs, tests, and commits only.
   Generic method specializations that call generic functions now have worklist
   coverage so reachable generic function dependencies are emitted once,
   including public generic methods imported from another module whose bodies
-  call private source-module generic helpers.
+  call private source-module generic functions or methods.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.
@@ -282,9 +282,10 @@ checked-in docs, tests, and commits only.
   path without seeding private imported methods. Generated-C assertions now
   cover imported public generic top-level methods through
   `tests/zen/multi_file_type_method/main.zen`, and imported public generic
-  method templates can specialize private source-module generic helper calls
-  without exposing those helpers to entry modules, covered by
-  `tests/zen/multi_file_type_method_worklist/main.zen`.
+  method templates can specialize private source-module generic function and
+  method helper calls without exposing those helpers to entry modules, covered
+  by `tests/zen/multi_file_type_method_worklist/main.zen` and
+  `tests/zen/multi_file_type_method_method_dependency/main.zen`.
 - The CLI `check` path now loads the module graph and reports resolver
   diagnostics from imported modules before typechecking the entry module.
 - The module-graph typechecker entrypoint now typechecks imported modules before

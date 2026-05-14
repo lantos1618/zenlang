@@ -221,11 +221,33 @@ impl TypeChecker {
             ));
         }
 
-        (saved_functions, saved_generic_functions)
+        let mut saved_methods = Vec::new();
+        for (name, info) in &template.dependency_methods {
+            saved_methods.push((
+                name.clone(),
+                self.methods.insert(name.clone(), info.clone()),
+            ));
+        }
+
+        let mut saved_generic_methods = Vec::new();
+        for (name, dependency) in &template.dependency_generic_methods {
+            saved_generic_methods.push((
+                name.clone(),
+                self.generic_methods
+                    .insert(name.clone(), dependency.clone()),
+            ));
+        }
+
+        (
+            saved_functions,
+            saved_generic_functions,
+            saved_methods,
+            saved_generic_methods,
+        )
     }
 
     fn restore_template_dependencies(&mut self, state: super::TemplateDependencyState) {
-        let (functions, generic_functions) = state;
+        let (functions, generic_functions, methods, generic_methods) = state;
         for (name, previous) in functions {
             if let Some(previous) = previous {
                 self.functions.insert(name, previous);
@@ -238,6 +260,20 @@ impl TypeChecker {
                 self.generic_functions.insert(name, previous);
             } else {
                 self.generic_functions.remove(&name);
+            }
+        }
+        for (name, previous) in methods {
+            if let Some(previous) = previous {
+                self.methods.insert(name, previous);
+            } else {
+                self.methods.remove(&name);
+            }
+        }
+        for (name, previous) in generic_methods {
+            if let Some(previous) = previous {
+                self.generic_methods.insert(name, previous);
+            } else {
+                self.generic_methods.remove(&name);
             }
         }
     }
