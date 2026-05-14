@@ -278,6 +278,9 @@ and do not assume Phase 4 is ready without evidence.
   before collecting behavior metadata.
 - Resolver behavior symbols carry method signature metadata, and typechecker
   setup rejects mismatches before collecting behavior metadata.
+- Resolver behavior method signature metadata preserves function-typed
+  parameters and returns, and typechecker setup rejects function-type method
+  signature drift before behavior metadata collection.
 - Resolver struct symbols carry field-count metadata, and typechecker setup
   rejects mismatches before collecting struct field metadata.
 - Resolver struct symbols carry field-name/type metadata, and typechecker setup

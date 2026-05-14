@@ -754,6 +754,35 @@ Serializable: behavior {
 }
 
 #[test]
+fn resolver_records_behavior_function_type_method_signatures() {
+    let program = parse_program(
+        r#"
+Mapper: behavior {
+    map: (Self, (i32) i32) (i32) i32
+}
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Behavior, "Mapper")
+            .expect("behavior symbol")
+            .behavior_method_signatures
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(
+            &[(
+                "map".to_string(),
+                vec!["Self".to_string(), "(i32) i32".to_string()],
+                "(i32) i32".to_string()
+            )][..]
+        )
+    );
+}
+
+#[test]
 fn resolver_records_behavior_default_method_body_locals() {
     let program = parse_program(
         r#"

@@ -295,6 +295,9 @@ checked-in docs, tests, and commits only.
   before collecting behavior metadata from the AST.
 - Resolver behavior symbols now carry method signature metadata, and typechecker
   setup rejects mismatches before collecting behavior metadata from the AST.
+- Resolver behavior method signature metadata preserves function-typed
+  parameters and returns, and typechecker setup rejects function-type method
+  signature handoff drift before collecting behavior metadata from the AST.
 - Resolver struct symbols now carry field-count metadata, and typechecker setup
   rejects mismatches before collecting struct field metadata from the AST.
 - Resolver struct symbols now carry field-name/type metadata, and typechecker
