@@ -1,7 +1,7 @@
 use zen::error::FileTable;
 use zen::lexer;
 use zen::parser;
-use zen::resolver::{Namespace, Resolver};
+use zen::resolver::{Namespace, Resolver, TypeParameterBoundRefMetadata};
 
 fn parse_program(src: &str) -> zen::ast::Program {
     let mut files = FileTable::new();
@@ -819,6 +819,21 @@ encode<T: Json> = (value: T) str { return "encoded" }
             .map(Vec::as_slice),
         Some(&[("T".to_string(), "Json".to_string())][..])
     );
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "encode")
+            .expect("function symbol")
+            .type_parameter_bound_refs
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(
+            &[TypeParameterBoundRefMetadata {
+                type_parameter: "T".to_string(),
+                behavior: "Json".to_string(),
+                type_args: Vec::new(),
+            }][..]
+        )
+    );
 }
 
 #[test]
@@ -992,6 +1007,21 @@ Serializable<T: Json<T>>: behavior {
             .as_ref()
             .map(Vec::as_slice),
         Some(&[("T".to_string(), "Json<T>".to_string())][..])
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "encode")
+            .expect("function symbol")
+            .type_parameter_bound_refs
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(
+            &[TypeParameterBoundRefMetadata {
+                type_parameter: "T".to_string(),
+                behavior: "Json".to_string(),
+                type_args: vec![zen::ast::AstType::Named("T".to_string())],
+            }][..]
+        )
     );
     assert_eq!(
         table

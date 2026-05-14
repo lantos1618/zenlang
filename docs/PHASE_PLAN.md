@@ -42,9 +42,9 @@ checked-in docs, tests, and commits only.
   handoff coverage.
 - Resolver-backed typechecker collection now updates generic function and
   generic method templates with validated resolver type-parameter,
-  parameter-type, and return metadata, so monomorphization templates no longer
-  keep stale AST-only generic names or function-type signatures after resolver
-  validation.
+  bound-ref, parameter-type, and return metadata, so monomorphization templates
+  no longer keep stale AST-only generic names, bounds, or function-type
+  signatures after resolver validation.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only
@@ -418,9 +418,9 @@ checked-in docs, tests, and commits only.
 - Resolver value symbols now carry generic type-parameter names, and
   typechecker setup rejects mismatches before collecting function or method
   metadata from the AST.
-- Resolver value symbols now carry generic type-parameter bounds, and
-  typechecker setup rejects mismatches before collecting function or method
-  metadata from the AST.
+- Resolver value symbols now carry display and typed-ref generic
+  type-parameter bounds, and typechecker setup rejects mismatches before
+  collecting function or method metadata from the AST.
 - Typechecker setup now rejects resolver value source, field, variant,
   behavior, and mutability metadata before collecting function or method
   metadata from the AST.

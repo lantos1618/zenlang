@@ -33,6 +33,10 @@ manifests, and `build.zen` execution.
 Every accepted syntax form must have a spec entry and Test Evidence before it is
 advertised as implemented.
 
+Additional resolver/typechecker generic-bound handoff evidence:
+`resolver_phase2::resolver_records_value_symbol_generic_bounds` and
+`typechecker::tests::check_program_with_symbols_validates_resolver_function_type_parameter_bound_refs`.
+
 | Syntax form | Status | Test Evidence |
 |---|---|---|
 | Function declaration `name = (params) Return { ... }` | implemented | `parser::tests::parse_simple_function`, `tests/zen/functions.zen` |

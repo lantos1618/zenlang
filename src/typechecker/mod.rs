@@ -23,7 +23,7 @@ use crate::error::{Diagnostic, Span};
 use crate::module_system::{ResolvedModule, ResolvedModuleGraph};
 use crate::resolver::{
     BehaviorRefMetadata, MethodSignatureMetadata, Namespace, SymbolTable,
-    TypeParameterBoundMetadata,
+    TypeParameterBoundMetadata, TypeParameterBoundRefMetadata,
 };
 
 // ── Type Environment ──────────────────────────────────────────────
@@ -157,12 +157,14 @@ struct ExpectedValueSignature {
     type_parameter_count: usize,
     type_parameter_names: Vec<String>,
     type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
+    type_parameter_bound_refs: Vec<TypeParameterBoundRefMetadata>,
 }
 
 struct ExpectedTypeLikeSymbol {
     type_parameter_count: usize,
     type_parameter_names: Vec<String>,
     type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
+    type_parameter_bound_refs: Vec<TypeParameterBoundRefMetadata>,
     is_public: Option<bool>,
 }
 
@@ -281,6 +283,23 @@ fn type_param_bounds(type_params: &[ast::TypeParam]) -> HashMap<String, Behavior
                     },
                 )
             })
+        })
+        .collect()
+}
+
+fn type_param_bounds_from_resolver_refs(
+    bounds: &[TypeParameterBoundRefMetadata],
+) -> HashMap<String, BehaviorBound> {
+    bounds
+        .iter()
+        .map(|bound| {
+            (
+                bound.type_parameter.clone(),
+                BehaviorBound {
+                    behavior: bound.behavior.clone(),
+                    type_args: bound.type_args.clone(),
+                },
+            )
         })
         .collect()
 }
@@ -1227,12 +1246,17 @@ impl TypeChecker {
         ) else {
             return;
         };
-        let type_param_bounds = self
+        let ast_type_param_bounds = self
             .functions
             .get(name)
             .or_else(|| self.methods.get(name))
             .map(|info| info.type_param_bounds.clone())
             .unwrap_or_default();
+        let type_param_bounds = symbol
+            .type_parameter_bound_refs
+            .as_deref()
+            .map(type_param_bounds_from_resolver_refs)
+            .unwrap_or(ast_type_param_bounds);
 
         let info = FuncInfo {
             name: name.to_string(),
@@ -5586,6 +5610,22 @@ impl TypeChecker {
                 span,
             ));
         }
+        if symbol.type_parameter_bound_refs.as_deref()
+            != Some(expected.type_parameter_bound_refs.as_slice())
+        {
+            let actual =
+                format_type_parameter_bound_refs(symbol.type_parameter_bound_refs.as_deref());
+            let expected =
+                format_type_parameter_bound_refs(Some(&expected.type_parameter_bound_refs));
+            self.diagnostics.push(Diagnostic::error(
+                "E0350",
+                format!(
+                    "resolver {} symbol '{name}' has type parameter bound refs '{actual}', expected '{expected}'",
+                    namespace.diagnostic_name()
+                ),
+                span,
+            ));
+        }
 
         self.validate_resolver_type_like_absent_value_metadata(symbol, namespace, name, span);
 
@@ -6372,6 +6412,22 @@ impl TypeChecker {
                 span,
             ));
         }
+        if symbol.type_parameter_bound_refs.as_deref()
+            != Some(expected_signature.type_parameter_bound_refs.as_slice())
+        {
+            let actual =
+                format_type_parameter_bound_refs(symbol.type_parameter_bound_refs.as_deref());
+            let expected = format_type_parameter_bound_refs(Some(
+                &expected_signature.type_parameter_bound_refs,
+            ));
+            self.diagnostics.push(Diagnostic::error(
+                "E0351",
+                format!(
+                    "resolver value symbol '{name}' has type parameter bound refs '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
 
         self.validate_resolver_value_absent_declaration_metadata(symbol, name, span);
     }
@@ -6477,6 +6533,7 @@ fn expected_value_signature(
         type_parameter_count: type_params.len(),
         type_parameter_names: expected_type_parameter_names(type_params),
         type_parameter_bounds: expected_type_parameter_bounds(type_params),
+        type_parameter_bound_refs: expected_type_parameter_bound_refs(type_params),
     }
 }
 
@@ -6499,6 +6556,24 @@ fn expected_type_parameter_bounds(
         .collect()
 }
 
+fn expected_type_parameter_bound_refs(
+    type_params: &[ast::TypeParam],
+) -> Vec<TypeParameterBoundRefMetadata> {
+    type_params
+        .iter()
+        .filter_map(|type_param| {
+            type_param
+                .constraint
+                .as_ref()
+                .map(|behavior| TypeParameterBoundRefMetadata {
+                    type_parameter: type_param.name.clone(),
+                    behavior: behavior.clone(),
+                    type_args: type_param.constraint_type_args.clone(),
+                })
+        })
+        .collect()
+}
+
 fn expected_type_like_symbol(
     type_params: &[ast::TypeParam],
     is_public: Option<bool>,
@@ -6507,6 +6582,7 @@ fn expected_type_like_symbol(
         type_parameter_count: type_params.len(),
         type_parameter_names: expected_type_parameter_names(type_params),
         type_parameter_bounds: expected_type_parameter_bounds(type_params),
+        type_parameter_bound_refs: expected_type_parameter_bound_refs(type_params),
         is_public,
     }
 }
@@ -6525,6 +6601,24 @@ fn format_type_parameter_bounds(bounds: Option<&[TypeParameterBoundMetadata]>) -
             bounds
                 .iter()
                 .map(|(name, behavior)| format!("{name}: {behavior}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        None => "unknown".to_string(),
+    }
+}
+
+fn format_type_parameter_bound_refs(bounds: Option<&[TypeParameterBoundRefMetadata]>) -> String {
+    match bounds {
+        Some(bounds) => format!(
+            "({})",
+            bounds
+                .iter()
+                .map(|bound| format!(
+                    "{}: {}",
+                    bound.type_parameter,
+                    behavior_ref_display(&bound.behavior, &bound.type_args)
+                ))
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
@@ -7330,7 +7424,13 @@ apply = (callback: (i32) i32) (i32) i32 {
     fn collect_declarations_with_symbols_uses_resolver_generic_function_template_metadata() {
         let mut program = parse_program(
             r#"
-apply<T> = (callback: (T) T) (T) T {
+Json<T>: behavior {
+    encode: (Self) T
+}
+Debug: behavior {
+    debug: (Self) str
+}
+apply<T: Json<T>> = (callback: (T) T) (T) T {
     return callback
 }
 "#,
@@ -7343,9 +7443,11 @@ apply<T> = (callback: (T) T) (T) T {
             params,
             return_type,
             ..
-        } = &mut program.declarations[0]
+        } = &mut program.declarations[2]
         {
             type_params[0].name = "Stale".to_string();
+            type_params[0].constraint = Some("Debug".to_string());
+            type_params[0].constraint_type_args.clear();
             params[0].ty = AstType::I32;
             *return_type = Some(AstType::I32);
         }
@@ -7355,6 +7457,17 @@ apply<T> = (callback: (T) T) (T) T {
 
         let template = tc.generic_functions.get("apply").expect("generic template");
         assert_eq!(template.type_params, vec!["T".to_string()]);
+        assert_eq!(
+            tc.functions
+                .get("apply")
+                .expect("function info")
+                .type_param_bounds
+                .get("T"),
+            Some(&BehaviorBound {
+                behavior: "Json".to_string(),
+                type_args: vec![AstType::Named("T".to_string())],
+            })
+        );
         assert_eq!(
             template.params[0].ty,
             AstType::Function {
@@ -7375,8 +7488,14 @@ apply<T> = (callback: (T) T) (T) T {
     fn collect_declarations_with_symbols_uses_resolver_generic_method_template_metadata() {
         let mut program = parse_program(
             r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Debug: behavior {
+    debug: (Self) str
+}
 Box: { value: i32 }
-Box.apply<U> = (self: Box, callback: (U) U) (U) U {
+Box.apply<U: Json<U>> = (self: Box, callback: (U) U) (U) U {
     return callback
 }
 "#,
@@ -7389,9 +7508,11 @@ Box.apply<U> = (self: Box, callback: (U) U) (U) U {
             params,
             return_type,
             ..
-        } = &mut program.declarations[1]
+        } = &mut program.declarations[3]
         {
             type_params[0].name = "Stale".to_string();
+            type_params[0].constraint = Some("Debug".to_string());
+            type_params[0].constraint_type_args.clear();
             params[1].ty = AstType::I32;
             *return_type = Some(AstType::I32);
         }
@@ -7404,6 +7525,17 @@ Box.apply<U> = (self: Box, callback: (U) U) (U) U {
             .get("Box.apply")
             .expect("generic method template");
         assert_eq!(template.type_params, vec!["U".to_string()]);
+        assert_eq!(
+            tc.methods
+                .get("Box.apply")
+                .expect("method info")
+                .type_param_bounds
+                .get("U"),
+            Some(&BehaviorBound {
+                behavior: "Json".to_string(),
+                type_args: vec![AstType::Named("U".to_string())],
+            })
+        );
         assert_eq!(
             template.params[1].ty,
             AstType::Function {
@@ -9526,6 +9658,41 @@ encode<T: Json> = (value: T) str { return "encoded" }
                 "resolver value symbol 'encode' has type parameter bounds '(T: Other)', expected '(T: Json)'"
             )),
             "expected resolver function generic bound diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_type_parameter_bound_refs() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+identity<T: Json<T>> = (value: T) T { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_bound_refs_for_test(
+            Namespace::Value,
+            "identity",
+            Some(vec![TypeParameterBoundRefMetadata {
+                type_parameter: "T".to_string(),
+                behavior: "Json".to_string(),
+                type_args: vec![AstType::Str],
+            }]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function generic bound ref mismatch should fail");
+
+        let expected = "resolver value symbol 'identity' has type parameter bound refs '(T: Json<str>)', expected '(T: Json<T>)'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected resolver function generic bound ref diagnostic, got {err:?}"
         );
     }
 

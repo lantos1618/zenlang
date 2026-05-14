@@ -363,9 +363,10 @@ and do not assume Phase 4 is ready without evidence.
   metadata, reducing duplicate AST-only declaration collection for value
   signatures.
 - Resolver-backed typechecker collection updates generic function and generic
-  method templates with validated resolver type-parameter, parameter-type, and
-  return metadata, so monomorphization templates no longer retain stale AST-only
-  generic names or function-type signatures after resolver validation.
+  method templates with validated resolver type-parameter, bound-ref,
+  parameter-type, and return metadata, so monomorphization templates no longer
+  retain stale AST-only generic names, bounds, or function-type signatures after
+  resolver validation.
 - Typechecker setup rejects extra resolver-owned local symbols after mirroring
   resolver scope allocation across function bodies, nested scopes, pattern
   bindings, closures, defaults, and top-level expressions.
@@ -394,8 +395,9 @@ and do not assume Phase 4 is ready without evidence.
   setup rejects mismatches before collecting function or method metadata.
 - Resolver value symbols carry generic type-parameter names, and typechecker
   setup rejects mismatches before collecting function or method metadata.
-- Resolver value symbols carry generic type-parameter bounds, and typechecker
-  setup rejects mismatches before collecting function or method metadata.
+- Resolver value symbols carry display and typed-ref generic type-parameter
+  bounds, and typechecker setup rejects mismatches before collecting function or
+  method metadata.
 - Typechecker setup rejects resolver value source, field, variant, behavior,
   and mutability metadata before collecting function or method metadata.
 - Typechecker setup rejects resolver type and behavior source, value signature,

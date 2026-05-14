@@ -25,6 +25,13 @@ pub struct BehaviorRefMetadata {
     pub type_args: Vec<AstType>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeParameterBoundRefMetadata {
+    pub type_parameter: String,
+    pub behavior: String,
+    pub type_args: Vec<AstType>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Namespace {
     Value,
@@ -66,6 +73,7 @@ pub struct Symbol {
     pub type_parameter_count: Option<usize>,
     pub type_parameter_names: Option<Vec<String>>,
     pub type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
+    pub type_parameter_bound_refs: Option<Vec<TypeParameterBoundRefMetadata>>,
     pub field_count: Option<usize>,
     pub field_types: Option<Vec<(String, AstType)>>,
     pub field_type_names: Option<Vec<(String, String)>>,
@@ -99,6 +107,7 @@ struct SymbolMetadata {
     type_parameter_count: Option<usize>,
     type_parameter_names: Option<Vec<String>>,
     type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
+    type_parameter_bound_refs: Option<Vec<TypeParameterBoundRefMetadata>>,
     field_count: Option<usize>,
     field_types: Option<Vec<(String, AstType)>>,
     field_type_names: Option<Vec<(String, String)>>,
@@ -127,6 +136,7 @@ struct ValueSignatureMetadata {
     type_parameter_count: usize,
     type_parameter_names: Vec<String>,
     type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
+    type_parameter_bound_refs: Vec<TypeParameterBoundRefMetadata>,
 }
 
 enum TypeLikeMembers {
@@ -419,6 +429,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_type_parameter_bound_refs_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        type_parameter_bound_refs: Option<Vec<TypeParameterBoundRefMetadata>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.type_parameter_bound_refs = type_parameter_bound_refs;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_behavior_method_signatures_for_test(
         &mut self,
         namespace: Namespace,
@@ -649,6 +675,7 @@ impl SymbolTable {
                 type_parameter_count: None,
                 type_parameter_names: None,
                 type_parameter_bounds: None,
+                type_parameter_bound_refs: None,
                 field_count: None,
                 field_types: None,
                 field_type_names: None,
@@ -695,6 +722,7 @@ impl SymbolTable {
                 type_parameter_count: Some(signature.type_parameter_count),
                 type_parameter_names: Some(signature.type_parameter_names),
                 type_parameter_bounds: Some(signature.type_parameter_bounds),
+                type_parameter_bound_refs: Some(signature.type_parameter_bound_refs),
                 field_count: None,
                 field_types: None,
                 field_type_names: None,
@@ -758,6 +786,7 @@ impl SymbolTable {
                 type_parameter_count: Some(type_parameter_count),
                 type_parameter_names: Some(resolver_type_parameter_names(type_params)),
                 type_parameter_bounds: Some(resolver_type_parameter_bounds(type_params)),
+                type_parameter_bound_refs: Some(resolver_type_parameter_bound_refs(type_params)),
                 field_count,
                 field_types,
                 field_type_names,
@@ -806,6 +835,7 @@ impl SymbolTable {
                 type_parameter_count: None,
                 type_parameter_names: None,
                 type_parameter_bounds: None,
+                type_parameter_bound_refs: None,
                 field_count: None,
                 field_types: None,
                 field_type_names: None,
@@ -854,6 +884,7 @@ impl SymbolTable {
                 type_parameter_count: Some(type_parameter_count),
                 type_parameter_names: Some(resolver_type_parameter_names(type_params)),
                 type_parameter_bounds: Some(resolver_type_parameter_bounds(type_params)),
+                type_parameter_bound_refs: Some(resolver_type_parameter_bound_refs(type_params)),
                 field_count: None,
                 field_types: None,
                 field_type_names: None,
@@ -927,6 +958,7 @@ impl SymbolTable {
             type_parameter_count: metadata.type_parameter_count,
             type_parameter_names: metadata.type_parameter_names,
             type_parameter_bounds: metadata.type_parameter_bounds,
+            type_parameter_bound_refs: metadata.type_parameter_bound_refs,
             field_count: metadata.field_count,
             field_types: metadata.field_types,
             field_type_names: metadata.field_type_names,
@@ -2481,6 +2513,7 @@ fn resolver_value_signature(
         type_parameter_count: type_params.len(),
         type_parameter_names: resolver_type_parameter_names(type_params),
         type_parameter_bounds: resolver_type_parameter_bounds(type_params),
+        type_parameter_bound_refs: resolver_type_parameter_bound_refs(type_params),
     }
 }
 
@@ -2497,6 +2530,24 @@ fn resolver_type_parameter_bounds(type_params: &[TypeParam]) -> Vec<TypeParamete
         .filter_map(|type_param| {
             type_param_bound_display(type_param)
                 .map(|constraint| (type_param.name.clone(), constraint))
+        })
+        .collect()
+}
+
+fn resolver_type_parameter_bound_refs(
+    type_params: &[TypeParam],
+) -> Vec<TypeParameterBoundRefMetadata> {
+    type_params
+        .iter()
+        .filter_map(|type_param| {
+            type_param
+                .constraint
+                .as_ref()
+                .map(|behavior| TypeParameterBoundRefMetadata {
+                    type_parameter: type_param.name.clone(),
+                    behavior: behavior.clone(),
+                    type_args: type_param.constraint_type_args.clone(),
+                })
         })
         .collect()
 }
