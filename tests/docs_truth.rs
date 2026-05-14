@@ -216,6 +216,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "collect_declarations_with_symbols_uses_resolver_struct_field_metadata",
         "resolver_records_enum_function_type_payloads",
         "check_program_with_symbols_validates_resolver_enum_function_type_payloads",
+        "check_program_with_symbols_validates_resolver_enum_typed_payload_metadata",
         "collect_declarations_with_symbols_uses_resolver_enum_payload_metadata",
         "resolver_records_generic_enum_function_type_payloads",
         "check_program_with_symbols_validates_resolver_generic_enum_function_type_payloads",

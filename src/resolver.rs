@@ -716,6 +716,22 @@ impl SymbolTable {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn set_variant_payload_type_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        variant_payload_type: Option<AstType>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.variant_payload_type = variant_payload_type;
+        }
+    }
+
     fn define(
         &mut self,
         namespace: Namespace,

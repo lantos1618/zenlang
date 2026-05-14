@@ -3383,6 +3383,7 @@ impl TypeChecker {
                         self.validate_resolver_variant_payload_type(
                             symbol,
                             &variant.name,
+                            variant.payload.clone(),
                             expected_variant_payload_type_name(&variant.payload),
                             variant.span,
                         );
@@ -5935,9 +5936,28 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
+        expected_payload_type: Option<AstType>,
         expected_payload_type_name: Option<String>,
         span: Span,
     ) {
+        if symbol.variant_payload_type != expected_payload_type {
+            let actual = symbol
+                .variant_payload_type
+                .as_ref()
+                .map(AstType::display_name)
+                .unwrap_or_else(|| "none".to_string());
+            let expected = expected_payload_type
+                .as_ref()
+                .map(AstType::display_name)
+                .unwrap_or_else(|| "none".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0359",
+                format!(
+                    "resolver variant symbol '{name}' has typed payload type '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
         if symbol.variant_payload_type_name != expected_payload_type_name {
             let actual = symbol
                 .variant_payload_type_name
@@ -11203,6 +11223,31 @@ Callback: Wrap((i32) i32), None
                 "resolver variant symbol 'Wrap' has payload type 'i32', expected '(i32) i32'"
             )),
             "expected resolver enum function type payload diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_enum_typed_payload_metadata() {
+        let program = parse_program(
+            r#"
+Callback: Wrap((i32) i32), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_variant_payload_type_for_test(Namespace::Variant, "Wrap", Some(AstType::I32));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver typed enum payload metadata mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver variant symbol 'Wrap' has typed payload type 'i32', expected '(i32) i32'"
+            )),
+            "expected resolver typed enum payload diagnostic, got {err:?}"
         );
     }
 
