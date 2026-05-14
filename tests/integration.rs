@@ -655,6 +655,19 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T_encode"));
 
     let c_source = compile_to_c(
+        &test_dir().join("multi_file_imported_function_imported_return_type_behavior/main.zen"),
+    );
+    assert!(c_source.contains("typedef struct Point"));
+    assert!(c_source.contains("Point make_point(void)"));
+    assert!(c_source.contains("int32_t Point_encode(Point value)"));
+    assert!(c_source.contains("int32_t encode_Point(Point value)"));
+    assert!(c_source.contains("Point_encode(value)"));
+    assert_c_call_resolves_to_definition(&c_source, "make_point");
+    assert_c_call_resolves_to_definition(&c_source, "Point_encode");
+    assert_c_call_resolves_to_definition(&c_source, "encode_Point");
+    assert!(!c_source.contains("T_encode"));
+
+    let c_source = compile_to_c(
         &test_dir().join("multi_file_imported_generic_function_return_enum_dependency/main.zen"),
     );
     assert!(c_source.contains("typedef struct Option_i32"));
@@ -1943,6 +1956,14 @@ fn test_multi_file_imported_function_return_type_dependency() {
     let zen_path = test_dir().join("multi_file_imported_function_return_type_dependency/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "101\n");
+}
+
+#[test]
+fn test_multi_file_imported_function_imported_return_type_behavior() {
+    let zen_path =
+        test_dir().join("multi_file_imported_function_imported_return_type_behavior/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "113\n");
 }
 
 #[test]

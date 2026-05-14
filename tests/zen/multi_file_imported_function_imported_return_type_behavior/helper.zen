@@ -1,0 +1,13 @@
+pub Json<T>: behavior {
+    encode: (Self) T
+}
+
+pub Point: {
+    x: i32
+}
+
+Point.implements(Json<i32>) {
+    encode = (value: Point) i32 {
+        return value.x
+    }
+}

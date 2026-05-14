@@ -1,0 +1,9 @@
+{ Point, Json } = helper
+
+pub make_point = () Point {
+    return Point { x: 113 }
+}
+
+pub encode<T: Json<i32>> = (value: T) i32 {
+    return value.encode()
+}

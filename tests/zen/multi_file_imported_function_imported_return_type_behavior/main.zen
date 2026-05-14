@@ -1,0 +1,8 @@
+{ io } = std
+{ make_point, encode } = model
+
+main = () i32 {
+    point = make_point()
+    io.println("${encode(point)}")
+    return 0
+}
