@@ -863,6 +863,73 @@ main = () i32 {
 }
 
 #[test]
+fn imported_behavior_extends_requires_transitive_parent_methods() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let traits_path = tmp.path().join("traits.zen");
+    std::fs::write(
+        &traits_path,
+        r#"
+pub Json<T>: behavior {
+    encode: (Self) T
+}
+
+pub PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+pub FancyJson: behavior {
+    fancy: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+FancyJson.extends(PrettyJson)
+"#,
+    )
+    .expect("write traits module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ FancyJson } = traits
+
+Point: {
+    x: i32
+}
+
+Point.implements(FancyJson) {
+    pretty = (value: Point) str {
+        return "pretty"
+    }
+
+    fancy = (value: Point) str {
+        return "fancy"
+    }
+}
+
+main = () i32 {
+    return 0
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path)).expect_err(
+        "compile_to_c should reject transitive imported inherited behavior requirements",
+    );
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("implementation of `FancyJson` is missing required method `encode`"),
+        "expected transitive inherited behavior method diagnostic, panic={message}"
+    );
+}
+
+#[test]
 fn test_defer() {
     run_test("defer");
 }
@@ -937,7 +1004,7 @@ fn test_multi_file_behavior_bound_imports() {
 fn test_multi_file_behavior_inheritance_imports() {
     let zen_path = test_dir().join("multi_file_behavior_inheritance/main.zen");
     let actual = compile_and_run(&zen_path);
-    assert_eq!(actual, "encoded\npretty\n");
+    assert_eq!(actual, "encoded\npretty\nfancy\n");
 }
 
 // ── Discovery test: all .zen files have matching .expected ──────────

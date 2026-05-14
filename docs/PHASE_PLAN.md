@@ -237,7 +237,8 @@ checked-in docs, tests, and commits only.
   `T: Json<T>` bounds and dispatch to concrete generated C functions.
 - Multi-file behavior inheritance fixtures now compile and run through
   graph-owned imports, proving imported child behavior impls carry inherited
-  parent requirements and can satisfy imported parent behavior bounds.
+  parent requirements, including transitive parent chains, and can satisfy
+  imported parent behavior bounds.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
 - Resolver rejects top-level methods whose receiver type is unknown, and

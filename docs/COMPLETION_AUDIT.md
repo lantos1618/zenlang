@@ -332,9 +332,9 @@ and do not assume Phase 4 is ready without evidence.
   declarations through module-graph resolver validation, typechecking, C
   generation, and runtime execution.
 - Multi-file behavior inheritance fixtures cover imported behavior parent edges
-  through module-graph typechecking, including a negative missing-method
-  diagnostic and generated-C assertions for a positive inherited-bound
-  specialization.
+  through module-graph typechecking, including direct and transitive negative
+  missing-method diagnostics and generated-C assertions for a positive
+  inherited-bound specialization.
 
 ## Unresolved Gaps
 

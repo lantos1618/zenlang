@@ -3563,6 +3563,25 @@ impl TypeChecker {
         source_name: &str,
         source_module: &ResolvedModule,
     ) {
+        self.seed_behavior_extends_for_imported_behavior_inner(
+            local_name,
+            source_name,
+            source_module,
+            &mut HashSet::new(),
+        );
+    }
+
+    fn seed_behavior_extends_for_imported_behavior_inner(
+        &mut self,
+        local_name: &str,
+        source_name: &str,
+        source_module: &ResolvedModule,
+        seen: &mut HashSet<String>,
+    ) {
+        if !seen.insert(source_name.to_string()) {
+            return;
+        }
+
         for decl in &source_module.program.declarations {
             let Declaration::BehaviorExtends {
                 behavior,
@@ -3585,6 +3604,13 @@ impl TypeChecker {
             {
                 self.seed_module_graph_import(parent, parent_decl);
             }
+
+            self.seed_behavior_extends_for_imported_behavior_inner(
+                parent,
+                parent,
+                source_module,
+                seen,
+            );
 
             let parent_key = self.behavior_reference_key(parent, parent_type_args);
             let parents = self
