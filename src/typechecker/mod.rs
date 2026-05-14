@@ -2595,6 +2595,7 @@ impl TypeChecker {
             }
         }
         self.validate_no_extra_resolver_declaration_symbols(program, symbols);
+        self.validate_no_extra_resolver_local_symbols(program, symbols);
         self.validate_resolver_behavior_association_lists(program, symbols);
         self.validate_resolver_behavior_parent_lists(program, symbols);
     }
@@ -2618,6 +2619,29 @@ impl TypeChecker {
                     format!(
                         "resolver symbol table has extra {} symbol '{}'",
                         symbol.namespace.diagnostic_name(),
+                        symbol.name
+                    ),
+                    symbol.definition_span,
+                ));
+            }
+        }
+    }
+
+    fn validate_no_extra_resolver_local_symbols(
+        &mut self,
+        program: &ast::Program,
+        symbols: &SymbolTable,
+    ) {
+        let expected = expected_resolver_local_symbols(program);
+        for symbol in symbols.symbols() {
+            if symbol.namespace != Namespace::Local {
+                continue;
+            }
+            if !expected.contains(&(symbol.name.clone(), symbol.scope_id)) {
+                self.diagnostics.push(Diagnostic::error(
+                    "E0244",
+                    format!(
+                        "resolver symbol table has extra local symbol '{}'",
                         symbol.name
                     ),
                     symbol.definition_span,
@@ -3881,6 +3905,331 @@ fn expected_resolver_declaration_symbols(program: &ast::Program) -> HashSet<(Nam
     expected
 }
 
+fn expected_resolver_local_symbols(program: &ast::Program) -> HashSet<(String, u32)> {
+    let mut expected = HashSet::new();
+    let mut scope_cursor = ResolverScopeCursor::default();
+    for decl in &program.declarations {
+        match decl {
+            Declaration::Function { params, body, .. }
+            | Declaration::Method { params, body, .. } => {
+                let mut locals = scope_cursor.new_scope();
+                expected_resolver_parameter_locals(params, &mut locals, &mut expected);
+                expected_resolver_expr_locals(body, &mut scope_cursor, &mut locals, &mut expected);
+            }
+            Declaration::Struct { fields, .. } => {
+                for field in fields {
+                    if let Some(default) = &field.default {
+                        let mut locals = scope_cursor.new_scope();
+                        expected_resolver_expr_locals(
+                            default,
+                            &mut scope_cursor,
+                            &mut locals,
+                            &mut expected,
+                        );
+                    }
+                }
+            }
+            Declaration::Behavior { methods, .. } => {
+                for method in methods {
+                    if let Some(default_body) = &method.default_body {
+                        let mut locals = scope_cursor.new_scope();
+                        expected_resolver_parameter_locals(
+                            &method.params,
+                            &mut locals,
+                            &mut expected,
+                        );
+                        expected_resolver_expr_locals(
+                            default_body,
+                            &mut scope_cursor,
+                            &mut locals,
+                            &mut expected,
+                        );
+                    }
+                }
+            }
+            Declaration::ImplBlock { methods, .. } => {
+                for method in methods {
+                    if let Declaration::Function { params, body, .. } = method {
+                        let mut locals = scope_cursor.new_scope();
+                        expected_resolver_parameter_locals(params, &mut locals, &mut expected);
+                        expected_resolver_expr_locals(
+                            body,
+                            &mut scope_cursor,
+                            &mut locals,
+                            &mut expected,
+                        );
+                    }
+                }
+            }
+            Declaration::TopLevelExpr { expr, .. } => {
+                let mut locals = scope_cursor.new_scope();
+                expected_resolver_expr_locals(expr, &mut scope_cursor, &mut locals, &mut expected);
+            }
+            Declaration::Enum { .. }
+            | Declaration::Import { .. }
+            | Declaration::Requires { .. }
+            | Declaration::BehaviorExtends { .. }
+            | Declaration::Error { .. } => {}
+        }
+    }
+    expected
+}
+
+fn expected_resolver_parameter_locals(
+    params: &[Param],
+    locals: &mut ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    for param in params {
+        expected_resolver_local(&param.name, param.mutable, locals, expected);
+    }
+}
+
+fn expected_resolver_expr_locals(
+    expr: &Expression,
+    scope_cursor: &mut ResolverScopeCursor,
+    locals: &mut ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    match expr {
+        Expression::BinaryOp { left, right, .. } => {
+            expected_resolver_expr_locals(left, scope_cursor, locals, expected);
+            expected_resolver_expr_locals(right, scope_cursor, locals, expected);
+        }
+        Expression::UnaryOp { operand, .. } => {
+            expected_resolver_expr_locals(operand, scope_cursor, locals, expected);
+        }
+        Expression::FunctionCall { args, .. } => {
+            for arg in args {
+                expected_resolver_expr_locals(arg, scope_cursor, locals, expected);
+            }
+        }
+        Expression::MethodCall { receiver, args, .. } => {
+            expected_resolver_expr_locals(receiver, scope_cursor, locals, expected);
+            for arg in args {
+                expected_resolver_expr_locals(arg, scope_cursor, locals, expected);
+            }
+        }
+        Expression::MemberAccess { object, .. } => {
+            expected_resolver_expr_locals(object, scope_cursor, locals, expected);
+        }
+        Expression::IndexAccess { object, index, .. } => {
+            expected_resolver_expr_locals(object, scope_cursor, locals, expected);
+            expected_resolver_expr_locals(index, scope_cursor, locals, expected);
+        }
+        Expression::StructLiteral { fields, .. } => {
+            for (_, value) in fields {
+                expected_resolver_expr_locals(value, scope_cursor, locals, expected);
+            }
+        }
+        Expression::EnumVariant { payload, .. } => {
+            if let Some(payload) = payload {
+                expected_resolver_expr_locals(payload, scope_cursor, locals, expected);
+            }
+        }
+        Expression::ArrayLiteral { elements, .. } => {
+            for element in elements {
+                expected_resolver_expr_locals(element, scope_cursor, locals, expected);
+            }
+        }
+        Expression::Match {
+            scrutinee, arms, ..
+        } => {
+            expected_resolver_expr_locals(scrutinee, scope_cursor, locals, expected);
+            for arm in arms {
+                if let Some(guard) = &arm.guard {
+                    let mut guard_locals = scope_cursor.child_scope(locals);
+                    expected_resolver_pattern_locals(
+                        &arm.pattern,
+                        scope_cursor,
+                        &mut guard_locals,
+                        expected,
+                    );
+                    expected_resolver_expr_locals(guard, scope_cursor, &mut guard_locals, expected);
+                }
+                let mut arm_locals = scope_cursor.child_scope(locals);
+                expected_resolver_pattern_locals(
+                    &arm.pattern,
+                    scope_cursor,
+                    &mut arm_locals,
+                    expected,
+                );
+                expected_resolver_expr_locals(&arm.body, scope_cursor, &mut arm_locals, expected);
+            }
+        }
+        Expression::WhileLoop {
+            condition, body, ..
+        } => {
+            expected_resolver_expr_locals(condition, scope_cursor, locals, expected);
+            let mut body_locals = scope_cursor.child_scope(locals);
+            expected_resolver_expr_locals(body, scope_cursor, &mut body_locals, expected);
+        }
+        Expression::Loop { body, .. } => {
+            let mut body_locals = scope_cursor.child_scope(locals);
+            expected_resolver_expr_locals(body, scope_cursor, &mut body_locals, expected);
+        }
+        Expression::If {
+            condition,
+            then_body,
+            else_body,
+            ..
+        } => {
+            expected_resolver_expr_locals(condition, scope_cursor, locals, expected);
+            let mut then_locals = scope_cursor.child_scope(locals);
+            expected_resolver_expr_locals(then_body, scope_cursor, &mut then_locals, expected);
+            if let Some(else_body) = else_body {
+                let mut else_locals = scope_cursor.child_scope(locals);
+                expected_resolver_expr_locals(else_body, scope_cursor, &mut else_locals, expected);
+            }
+        }
+        Expression::Block {
+            statements, expr, ..
+        } => {
+            let mut block_locals = scope_cursor.child_scope(locals);
+            for statement in statements {
+                expected_resolver_statement_locals(
+                    statement,
+                    scope_cursor,
+                    &mut block_locals,
+                    expected,
+                );
+            }
+            if let Some(expr) = expr {
+                expected_resolver_expr_locals(expr, scope_cursor, &mut block_locals, expected);
+            }
+        }
+        Expression::Return { value, .. } => {
+            if let Some(value) = value {
+                expected_resolver_expr_locals(value, scope_cursor, locals, expected);
+            }
+        }
+        Expression::Closure { params, body, .. } => {
+            let mut closure_locals = scope_cursor.child_scope(locals);
+            for param in params {
+                expected_resolver_local(&param.name, false, &mut closure_locals, expected);
+            }
+            expected_resolver_expr_locals(body, scope_cursor, &mut closure_locals, expected);
+        }
+        Expression::Cast { expr, .. } | Expression::Defer { expr, .. } => {
+            expected_resolver_expr_locals(expr, scope_cursor, locals, expected);
+        }
+        Expression::StringInterpolation { parts, .. } => {
+            for part in parts {
+                if let ast::StringPart::Expr(expr) = part {
+                    expected_resolver_expr_locals(expr, scope_cursor, locals, expected);
+                }
+            }
+        }
+        Expression::Range { start, end, .. } => {
+            expected_resolver_expr_locals(start, scope_cursor, locals, expected);
+            expected_resolver_expr_locals(end, scope_cursor, locals, expected);
+        }
+        Expression::Identifier { .. }
+        | Expression::IntLiteral { .. }
+        | Expression::FloatLiteral { .. }
+        | Expression::StringLiteral { .. }
+        | Expression::BoolLiteral { .. }
+        | Expression::CharLiteral { .. }
+        | Expression::Break { .. }
+        | Expression::Continue { .. }
+        | Expression::Error { .. } => {}
+    }
+}
+
+fn expected_resolver_statement_locals(
+    statement: &ast::Statement,
+    scope_cursor: &mut ResolverScopeCursor,
+    locals: &mut ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    match statement {
+        ast::Statement::VarDecl {
+            name,
+            value,
+            mutable,
+            constant,
+            ..
+        } => {
+            expected_resolver_expr_locals(value, scope_cursor, locals, expected);
+            if *constant || *mutable || !locals.is_mutable(name) {
+                expected_resolver_local(name, *mutable, locals, expected);
+            }
+        }
+        ast::Statement::Assignment { target, value, .. } => {
+            expected_resolver_expr_locals(target, scope_cursor, locals, expected);
+            expected_resolver_expr_locals(value, scope_cursor, locals, expected);
+        }
+        ast::Statement::Expression { expr, .. } => {
+            expected_resolver_expr_locals(expr, scope_cursor, locals, expected);
+        }
+        ast::Statement::Block { stmts, .. } => {
+            let mut block_locals = scope_cursor.child_scope(locals);
+            for statement in stmts {
+                expected_resolver_statement_locals(
+                    statement,
+                    scope_cursor,
+                    &mut block_locals,
+                    expected,
+                );
+            }
+        }
+    }
+}
+
+fn expected_resolver_pattern_locals(
+    pattern: &ast::Pattern,
+    scope_cursor: &mut ResolverScopeCursor,
+    locals: &mut ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    match pattern {
+        ast::Pattern::Identifier { name, .. } => {
+            expected_resolver_local(name, false, locals, expected);
+        }
+        ast::Pattern::Struct { fields, .. } => {
+            for (name, nested) in fields {
+                if let Some(nested) = nested {
+                    expected_resolver_pattern_locals(nested, scope_cursor, locals, expected);
+                } else {
+                    expected_resolver_local(name, false, locals, expected);
+                }
+            }
+        }
+        ast::Pattern::Enum {
+            payload: Some(payload),
+            ..
+        } => {
+            expected_resolver_pattern_locals(payload, scope_cursor, locals, expected);
+        }
+        ast::Pattern::Or { patterns, .. } => {
+            for pattern in patterns {
+                expected_resolver_pattern_locals(pattern, scope_cursor, locals, expected);
+            }
+        }
+        ast::Pattern::Literal { value, .. } => {
+            expected_resolver_expr_locals(value, scope_cursor, locals, expected);
+        }
+        ast::Pattern::Range { start, end, .. } => {
+            expected_resolver_expr_locals(start, scope_cursor, locals, expected);
+            expected_resolver_expr_locals(end, scope_cursor, locals, expected);
+        }
+        ast::Pattern::Wildcard { .. }
+        | ast::Pattern::Enum { payload: None, .. }
+        | ast::Pattern::BoolTrue { .. }
+        | ast::Pattern::BoolFalse { .. } => {}
+    }
+}
+
+fn expected_resolver_local(
+    name: &str,
+    mutable: bool,
+    locals: &mut ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    expected.insert((name.to_string(), locals.current_scope_id));
+    locals.insert(name.to_string(), mutable);
+}
+
 fn format_behavior_method_signatures(methods: Option<&[MethodSignatureMetadata]>) -> String {
     match methods {
         Some(methods) => format!(
@@ -4449,6 +4798,40 @@ main = () i32 {
                 "resolver local symbol 'value' has mutability immutable, expected mutable"
             )),
             "expected resolver var local mutability diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_rejects_extra_resolver_locals() {
+        let program = parse_program(
+            r#"
+main = () i32 {
+    return 0
+}
+"#,
+        );
+        let symbols_program = parse_program(
+            r#"
+main = () i32 {
+    value = 1
+    return 0
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&symbols_program)
+            .expect("resolver succeeds");
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("extra resolver local should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table has extra local symbol 'value'")),
+            "expected extra resolver local diagnostic, got {err:?}"
         );
     }
 

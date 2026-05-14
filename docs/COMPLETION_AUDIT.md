@@ -160,6 +160,9 @@ and do not assume Phase 4 is ready without evidence.
   before collecting method metadata.
 - Typechecker setup rejects extra resolver-owned declaration symbols for values,
   types, behaviors, and enum variants before declaration metadata collection.
+- Typechecker setup rejects extra resolver-owned local symbols after mirroring
+  resolver scope allocation across function bodies, nested scopes, pattern
+  bindings, closures, defaults, and top-level expressions.
 - Enum variants are validated through resolver `Variant` symbols during
   typechecker setup.
 - Resolver value symbols carry parameter-count metadata, and typechecker setup

@@ -165,6 +165,9 @@ checked-in docs, tests, and commits only.
 - Typechecker setup now rejects extra resolver-owned declaration symbols for
   values, types, behaviors, and enum variants before collecting declaration
   metadata from the AST.
+- Typechecker setup now rejects extra resolver-owned local symbols by mirroring
+  resolver scope allocation for parameters, block locals, pattern bindings,
+  closures, field defaults, behavior defaults, and top-level expressions.
 - Typechecker resolver-symbol validation now checks enum variant symbols from
   resolver output instead of treating enum type presence as sufficient.
 - Resolver value symbols now carry parameter-count metadata for functions and
