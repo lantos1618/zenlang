@@ -415,6 +415,9 @@ and do not assume Phase 4 is ready without evidence.
   `.implements`, and `.requires`, and resolver-backed typechecker collection
   uses that structured metadata for inherited parents and behavior impls,
   reducing duplicate AST-only behavior association reconstruction.
+- Typechecker setup validates typed resolver behavior association refs for
+  generic parents, impls, and required-behavior assertions, so matching
+  display-name metadata cannot hide structured association drift.
 - Resolver type symbols carry visibility metadata for structs and enums, and
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Typechecker setup rejects resolver behavior symbol visibility mismatches

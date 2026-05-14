@@ -87,6 +87,9 @@ checked-in docs, tests, and commits only.
   `.extends`, `.implements`, and `.requires`, and resolver-backed typechecker
   collection uses that structured metadata for inherited parents and behavior
   impls instead of relying only on AST association reconstruction.
+  Typechecker setup also validates those structured behavior refs for generic
+  parent, impl, and required-behavior associations before declaration
+  collection, so display-name metadata cannot hide typed association drift.
 - Inherited generic behavior dispatch has executable coverage through
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Concrete generic behavior association syntax in `.implements` and `.requires`,

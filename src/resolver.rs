@@ -451,6 +451,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_behavior_parent_refs_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        behavior_parent_refs: Option<Vec<BehaviorRefMetadata>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.behavior_parent_refs = behavior_parent_refs;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_behavior_impl_names_for_test(
         &mut self,
         namespace: Namespace,
@@ -467,6 +483,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_behavior_impl_refs_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        behavior_impl_refs: Option<Vec<BehaviorRefMetadata>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.behavior_impl_refs = behavior_impl_refs;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_behavior_required_names_for_test(
         &mut self,
         namespace: Namespace,
@@ -479,6 +511,22 @@ impl SymbolTable {
             .find(|symbol| symbol.namespace == namespace && symbol.name == name)
         {
             symbol.behavior_required_names = behavior_required_names;
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_behavior_required_refs_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        behavior_required_refs: Option<Vec<BehaviorRefMetadata>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.behavior_required_refs = behavior_required_refs;
         }
     }
 

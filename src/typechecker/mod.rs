@@ -3366,6 +3366,10 @@ impl TypeChecker {
                                 symbol,
                                 type_name,
                                 &behavior_ref_display(behavior, behavior_type_args),
+                                &BehaviorRefMetadata {
+                                    name: behavior.clone(),
+                                    type_args: behavior_type_args.clone(),
+                                },
                                 *span,
                             );
                         }
@@ -3423,6 +3427,10 @@ impl TypeChecker {
                             symbol,
                             type_name,
                             &behavior_ref_display(behavior, behavior_type_args),
+                            &BehaviorRefMetadata {
+                                name: behavior.clone(),
+                                type_args: behavior_type_args.clone(),
+                            },
                             *span,
                         );
                     }
@@ -3454,6 +3462,10 @@ impl TypeChecker {
                             symbol,
                             behavior,
                             &behavior_ref_display(parent, parent_type_args),
+                            &BehaviorRefMetadata {
+                                name: parent.clone(),
+                                type_args: parent_type_args.clone(),
+                            },
                             *span,
                         );
                     }
@@ -3547,6 +3559,8 @@ impl TypeChecker {
         symbols: &SymbolTable,
     ) {
         let (expected_impls, expected_requires) = expected_behavior_associations(program);
+        let (expected_impl_refs, expected_required_refs) =
+            expected_behavior_association_refs(program);
         for decl in &program.declarations {
             let (Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. }) =
                 decl
@@ -3560,12 +3574,20 @@ impl TypeChecker {
                 symbol,
                 name,
                 expected_impls.get(name).map(Vec::as_slice).unwrap_or(&[]),
+                expected_impl_refs
+                    .get(name)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]),
                 *span,
             );
             self.validate_resolver_behavior_required_list(
                 symbol,
                 name,
                 expected_requires
+                    .get(name)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]),
+                expected_required_refs
                     .get(name)
                     .map(Vec::as_slice)
                     .unwrap_or(&[]),
@@ -3580,6 +3602,7 @@ impl TypeChecker {
         symbols: &SymbolTable,
     ) {
         let expected_parents = expected_behavior_parent_associations(program);
+        let expected_parent_refs = expected_behavior_parent_ref_associations(program);
         for decl in &program.declarations {
             let Declaration::Behavior { name, span, .. } = decl else {
                 continue;
@@ -3591,6 +3614,10 @@ impl TypeChecker {
                 symbol,
                 name,
                 expected_parents.get(name).map(Vec::as_slice).unwrap_or(&[]),
+                expected_parent_refs
+                    .get(name)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]),
                 *span,
             );
         }
@@ -5959,6 +5986,7 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         name: &str,
         expected_parent: &str,
+        expected_parent_ref: &BehaviorRefMetadata,
         span: Span,
     ) {
         if !symbol
@@ -5975,6 +6003,22 @@ impl TypeChecker {
                 span,
             ));
         }
+        if !symbol
+            .behavior_parent_refs
+            .as_deref()
+            .is_some_and(|parents| parents.iter().any(|parent| parent == expected_parent_ref))
+        {
+            let actual = format_behavior_refs(symbol.behavior_parent_refs.as_deref());
+            let expected =
+                behavior_ref_display(&expected_parent_ref.name, &expected_parent_ref.type_args);
+            self.diagnostics.push(Diagnostic::error(
+                "E0245",
+                format!(
+                    "resolver behavior symbol '{name}' has parent refs '{actual}', expected to include '{expected}'"
+                ),
+                span,
+            ));
+        }
     }
 
     fn validate_resolver_behavior_parent_list(
@@ -5982,6 +6026,7 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         name: &str,
         expected_parents: &[String],
+        expected_parent_refs: &[BehaviorRefMetadata],
         span: Span,
     ) {
         if !behavior_ref_names_match(symbol.behavior_parent_names.as_deref(), expected_parents) {
@@ -5995,6 +6040,17 @@ impl TypeChecker {
                 span,
             ));
         }
+        if !behavior_refs_match(symbol.behavior_parent_refs.as_deref(), expected_parent_refs) {
+            let actual = format_behavior_refs(symbol.behavior_parent_refs.as_deref());
+            let expected = format_behavior_refs(Some(expected_parent_refs));
+            self.diagnostics.push(Diagnostic::error(
+                "E0246",
+                format!(
+                    "resolver behavior symbol '{name}' has parent refs '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
     }
 
     fn validate_resolver_behavior_impl_names(
@@ -6002,6 +6058,7 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         name: &str,
         expected_impl: &str,
+        expected_impl_ref: &BehaviorRefMetadata,
         span: Span,
     ) {
         if !symbol
@@ -6018,6 +6075,22 @@ impl TypeChecker {
                 span,
             ));
         }
+        if !symbol
+            .behavior_impl_refs
+            .as_deref()
+            .is_some_and(|impls| impls.iter().any(|behavior| behavior == expected_impl_ref))
+        {
+            let actual = format_behavior_refs(symbol.behavior_impl_refs.as_deref());
+            let expected =
+                behavior_ref_display(&expected_impl_ref.name, &expected_impl_ref.type_args);
+            self.diagnostics.push(Diagnostic::error(
+                "E0247",
+                format!(
+                    "resolver type symbol '{name}' has behavior impl refs '{actual}', expected to include '{expected}'"
+                ),
+                span,
+            ));
+        }
     }
 
     fn validate_resolver_behavior_impl_list(
@@ -6025,6 +6098,7 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         name: &str,
         expected_impls: &[String],
+        expected_impl_refs: &[BehaviorRefMetadata],
         span: Span,
     ) {
         if !behavior_ref_names_match(symbol.behavior_impl_names.as_deref(), expected_impls) {
@@ -6038,6 +6112,17 @@ impl TypeChecker {
                 span,
             ));
         }
+        if !behavior_refs_match(symbol.behavior_impl_refs.as_deref(), expected_impl_refs) {
+            let actual = format_behavior_refs(symbol.behavior_impl_refs.as_deref());
+            let expected = format_behavior_refs(Some(expected_impl_refs));
+            self.diagnostics.push(Diagnostic::error(
+                "E0248",
+                format!(
+                    "resolver type symbol '{name}' has behavior impl refs '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
     }
 
     fn validate_resolver_behavior_required_names(
@@ -6045,6 +6130,7 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         name: &str,
         expected_required: &str,
+        expected_required_ref: &BehaviorRefMetadata,
         span: Span,
     ) {
         if !symbol
@@ -6065,6 +6151,28 @@ impl TypeChecker {
                 span,
             ));
         }
+        if !symbol
+            .behavior_required_refs
+            .as_deref()
+            .is_some_and(|required| {
+                required
+                    .iter()
+                    .any(|behavior| behavior == expected_required_ref)
+            })
+        {
+            let actual = format_behavior_refs(symbol.behavior_required_refs.as_deref());
+            let expected = behavior_ref_display(
+                &expected_required_ref.name,
+                &expected_required_ref.type_args,
+            );
+            self.diagnostics.push(Diagnostic::error(
+                "E0249",
+                format!(
+                    "resolver type symbol '{name}' has behavior requires refs '{actual}', expected to include '{expected}'"
+                ),
+                span,
+            ));
+        }
     }
 
     fn validate_resolver_behavior_required_list(
@@ -6072,6 +6180,7 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         name: &str,
         expected_required: &[String],
+        expected_required_refs: &[BehaviorRefMetadata],
         span: Span,
     ) {
         if !behavior_ref_names_match(symbol.behavior_required_names.as_deref(), expected_required) {
@@ -6081,6 +6190,20 @@ impl TypeChecker {
                 "E0239",
                 format!(
                     "resolver type symbol '{name}' has behavior requires '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
+        if !behavior_refs_match(
+            symbol.behavior_required_refs.as_deref(),
+            expected_required_refs,
+        ) {
+            let actual = format_behavior_refs(symbol.behavior_required_refs.as_deref());
+            let expected = format_behavior_refs(Some(expected_required_refs));
+            self.diagnostics.push(Diagnostic::error(
+                "E0250",
+                format!(
+                    "resolver type symbol '{name}' has behavior requires refs '{actual}', expected '{expected}'"
                 ),
                 span,
             ));
@@ -6475,6 +6598,50 @@ fn expected_behavior_associations(
     (impls, requires)
 }
 
+fn expected_behavior_association_refs(
+    program: &ast::Program,
+) -> (
+    HashMap<String, Vec<BehaviorRefMetadata>>,
+    HashMap<String, Vec<BehaviorRefMetadata>>,
+) {
+    let mut impls: HashMap<String, Vec<BehaviorRefMetadata>> = HashMap::new();
+    let mut requires: HashMap<String, Vec<BehaviorRefMetadata>> = HashMap::new();
+    for decl in &program.declarations {
+        match decl {
+            Declaration::ImplBlock {
+                type_name,
+                behavior: Some(behavior),
+                behavior_type_args,
+                ..
+            } => {
+                impls
+                    .entry(type_name.clone())
+                    .or_default()
+                    .push(BehaviorRefMetadata {
+                        name: behavior.clone(),
+                        type_args: behavior_type_args.clone(),
+                    });
+            }
+            Declaration::Requires {
+                type_name,
+                behavior,
+                behavior_type_args,
+                ..
+            } => {
+                requires
+                    .entry(type_name.clone())
+                    .or_default()
+                    .push(BehaviorRefMetadata {
+                        name: behavior.clone(),
+                        type_args: behavior_type_args.clone(),
+                    });
+            }
+            _ => {}
+        }
+    }
+    (impls, requires)
+}
+
 fn expected_behavior_parent_associations(program: &ast::Program) -> HashMap<String, Vec<String>> {
     let mut parents: HashMap<String, Vec<String>> = HashMap::new();
     for decl in &program.declarations {
@@ -6489,6 +6656,30 @@ fn expected_behavior_parent_associations(program: &ast::Program) -> HashMap<Stri
                 .entry(behavior.clone())
                 .or_default()
                 .push(behavior_ref_display(parent, parent_type_args));
+        }
+    }
+    parents
+}
+
+fn expected_behavior_parent_ref_associations(
+    program: &ast::Program,
+) -> HashMap<String, Vec<BehaviorRefMetadata>> {
+    let mut parents: HashMap<String, Vec<BehaviorRefMetadata>> = HashMap::new();
+    for decl in &program.declarations {
+        if let Declaration::BehaviorExtends {
+            behavior,
+            parent,
+            parent_type_args,
+            ..
+        } = decl
+        {
+            parents
+                .entry(behavior.clone())
+                .or_default()
+                .push(BehaviorRefMetadata {
+                    name: parent.clone(),
+                    type_args: parent_type_args.clone(),
+                });
         }
     }
     parents
@@ -6903,7 +7094,28 @@ fn format_behavior_ref_names(parents: Option<&[String]>) -> String {
     }
 }
 
+fn format_behavior_refs(refs: Option<&[BehaviorRefMetadata]>) -> String {
+    match refs {
+        Some(refs) if !refs.is_empty() => refs
+            .iter()
+            .map(|behavior| behavior_ref_display(&behavior.name, &behavior.type_args))
+            .collect::<Vec<_>>()
+            .join(", "),
+        _ => "none".to_string(),
+    }
+}
+
 fn behavior_ref_names_match(actual: Option<&[String]>, expected: &[String]) -> bool {
+    match actual {
+        Some(actual) => actual == expected,
+        None => expected.is_empty(),
+    }
+}
+
+fn behavior_refs_match(
+    actual: Option<&[BehaviorRefMetadata]>,
+    expected: &[BehaviorRefMetadata],
+) -> bool {
     match actual {
         Some(actual) => actual == expected,
         None => expected.is_empty(),
@@ -9730,6 +9942,46 @@ PrettyJson.extends(Json<str>)
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_generic_behavior_parent_refs() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_parent_refs_for_test(
+            Namespace::Behavior,
+            "PrettyJson",
+            Some(vec![BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![AstType::I32],
+            }]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver generic behavior parent ref mismatch should fail");
+
+        let expected =
+            "resolver behavior symbol 'PrettyJson' has parent refs 'Json<i32>', expected to include 'Json<str>'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected resolver generic behavior parent ref diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_rejects_extra_resolver_behavior_parent_names() {
         let program = parse_program(
             r#"
@@ -9841,6 +10093,46 @@ Point.implements(Json<str>) {
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_generic_behavior_impl_refs() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_impl_refs_for_test(
+            Namespace::Type,
+            "Point",
+            Some(vec![BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![AstType::I32],
+            }]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver generic behavior impl ref mismatch should fail");
+
+        let expected =
+            "resolver type symbol 'Point' has behavior impl refs 'Json<i32>', expected to include 'Json<str>'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected resolver generic behavior impl ref diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_validates_resolver_behavior_required_names() {
         let program = parse_program(
             r#"
@@ -9911,6 +10203,48 @@ Point.requires(Json<str>)
         assert!(
             err.iter().any(|d| d.message.contains(expected)),
             "expected resolver generic behavior requires metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_generic_behavior_required_refs() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_required_refs_for_test(
+            Namespace::Type,
+            "Point",
+            Some(vec![BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![AstType::I32],
+            }]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver generic behavior requires ref mismatch should fail");
+
+        let expected =
+            "resolver type symbol 'Point' has behavior requires refs 'Json<i32>', expected to include 'Json<str>'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected resolver generic behavior requires ref diagnostic, got {err:?}"
         );
     }
 
