@@ -259,6 +259,39 @@ Point.implements(Json) {
 }
 
 #[test]
+fn resolver_records_behavior_impl_method_body_locals() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    stringify: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.implements(Json) {
+    stringify = (value: Point) str {
+        label = "point"
+        return label
+    }
+}
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+    let value = table
+        .lookup_scoped(Namespace::Local, "value")
+        .expect("impl method parameter symbol");
+    let label = table
+        .lookup_scoped(Namespace::Local, "label")
+        .expect("impl method body local symbol");
+
+    assert_ne!(value.id, label.id);
+    assert_ne!(value.scope_id, label.scope_id);
+    assert_eq!(value.is_mutable, Some(false));
+    assert_eq!(label.is_mutable, Some(false));
+}
+
+#[test]
 fn resolver_accepts_behavior_requires_known_type_and_behavior() {
     let program = parse_program(
         r#"

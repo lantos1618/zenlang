@@ -6408,6 +6408,42 @@ Point.implements(Json) {
     }
 
     #[test]
+    fn check_program_with_symbols_requires_resolver_impl_method_body_locals() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    stringify: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.implements(Json) {
+    stringify = (value: Point) str {
+        label = "point"
+        return label
+    }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.remove_for_test(Namespace::Local, "label");
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("missing resolver impl method body local should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table missing local symbol 'label'")),
+            "expected missing resolver impl method body local diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_requires_resolver_enum_variants() {
         let program = parse_program(
             r#"

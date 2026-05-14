@@ -64,6 +64,8 @@ checked-in docs, tests, and commits only.
 - Behavior impl methods are resolver-owned value symbols with parameter,
   return, generic-name, and generic-bound metadata, and typechecker setup
   validates impl-method signature handoff drift before checking impl bodies.
+- Resolver records impl-method body locals in their nested scopes, and
+  typechecker setup requires those local symbols before checking impl bodies.
 - Generic behavior bounds share the behavior inheritance solver, so an impl of a
   child behavior can satisfy a parent behavior bound.
 - Inherited generic behavior dispatch has executable coverage through

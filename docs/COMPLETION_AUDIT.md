@@ -78,6 +78,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior impl method symbols carry complete value-signature metadata,
   and typechecker setup rejects impl-method signature drift before behavior impl
   body collection.
+- Resolver behavior impl method bodies carry scoped local symbols, and
+  typechecker setup rejects missing impl-method body locals before behavior impl
+  body collection.
 - Resolver local symbols carry mutability metadata for mutable parameters and
   local bindings.
 - Typechecker setup requires resolver parameter local symbols before collecting
