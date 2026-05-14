@@ -148,8 +148,8 @@ and do not assume Phase 4 is ready without evidence.
   collecting typed bodies from the AST.
 - Typechecker setup rejects resolver local parameter-count and return-type
   metadata before collecting typed bodies from the AST.
-- Typechecker setup rejects resolver local type, field, variant, and behavior
-  metadata before collecting typed bodies from the AST.
+- Typechecker setup rejects resolver local display and typed type, field,
+  variant, and behavior metadata before collecting typed bodies from the AST.
 - Typechecker setup mirrors resolver scope allocation for local-symbol
   validation, so same-name locals in different scopes are checked against the
   exact resolver scope.
