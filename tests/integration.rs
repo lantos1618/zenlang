@@ -121,6 +121,39 @@ fn run_test(name: &str) {
     );
 }
 
+fn assert_c_function_definition(c_source: &str, name: &str) {
+    let needle = format!(" {name}(");
+    assert!(
+        c_source
+            .lines()
+            .any(|line| line.trim_end().ends_with('{') && line.contains(&needle)),
+        "expected generated C definition for `{name}`:\n{c_source}"
+    );
+}
+
+fn assert_c_call_resolves_to_definition(c_source: &str, name: &str) {
+    assert_c_function_definition(c_source, name);
+    let call = format!("{name}(");
+    let declaration_prefixes = [
+        format!("int32_t {name}("),
+        format!("int64_t {name}("),
+        format!("uint32_t {name}("),
+        format!("uint64_t {name}("),
+        format!("zen_str {name}("),
+        format!("void {name}("),
+    ];
+    assert!(
+        c_source.lines().any(|line| {
+            let trimmed = line.trim();
+            trimmed.contains(&call)
+                && !declaration_prefixes
+                    .iter()
+                    .any(|prefix| trimmed.starts_with(prefix))
+        }),
+        "expected generated C call to `{name}` outside declarations/definitions:\n{c_source}"
+    );
+}
+
 // ── Individual test cases ───────────────────────────────────────────
 
 #[test]
@@ -243,6 +276,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     let c_source = compile_to_c(&test_dir().join("generic_method.zen"));
     assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_get_i32(box)"));
+    assert_c_call_resolves_to_definition(&c_source, "Box_get_i32");
     assert!(!c_source.contains("Box_T"));
     assert!(!c_source.contains("T Box_get"));
 
@@ -251,6 +285,8 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t Vec_len_str(Vec_str self)"));
     assert!(c_source.contains("Vec_len_i32(ints)"));
     assert!(c_source.contains("Vec_len_str(words)"));
+    assert_c_call_resolves_to_definition(&c_source, "Vec_len_i32");
+    assert_c_call_resolves_to_definition(&c_source, "Vec_len_str");
     assert!(!c_source.contains("Vec_T"));
     assert!(!c_source.contains("T Vec_len"));
 
@@ -258,6 +294,8 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
     assert!(c_source.contains("int32_t outer_i32(int32_t value)"));
     assert!(c_source.contains("inner_i32(value)"));
+    assert_c_call_resolves_to_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_definition(&c_source, "outer_i32");
     assert_eq!(
         c_source.matches("int32_t inner_i32(int32_t value)").count(),
         2
@@ -269,6 +307,9 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t left_i32(int32_t value)"));
     assert!(c_source.contains("int32_t right_i32(int32_t value)"));
     assert!(c_source.contains("inner_i32(value)"));
+    assert_c_call_resolves_to_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_definition(&c_source, "left_i32");
+    assert_c_call_resolves_to_definition(&c_source, "right_i32");
     assert_eq!(
         c_source.matches("int32_t inner_i32(int32_t value)").count(),
         2
@@ -281,6 +322,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t unwrap_or_i32(Option_i32 value, int32_t fallback)"));
     assert!(c_source.contains("Option_i32_Some"));
     assert!(c_source.contains("unwrap_or_i32(x, 0LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_or_i32");
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T unwrap_or"));
     assert!(!c_source.contains("unwrap_or(x"));
@@ -290,6 +332,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t unwrap_or_i32_str(Result_i32_str value, int32_t fallback)"));
     assert!(c_source.contains("Result_i32_str_Err"));
     assert!(c_source.contains("unwrap_or_i32_str(err, 9LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_or_i32_str");
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T unwrap_or"));
     assert!(!c_source.contains("unwrap_or(err"));
@@ -297,6 +340,7 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     let c_source = compile_to_c(&test_dir().join("generic_ufc_function.zen"));
     assert!(c_source.contains("int32_t id_i32(int32_t value)"));
     assert!(c_source.contains("id_i32(12LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "id_i32");
     assert!(!c_source.contains("id(12LL)"));
     assert!(!c_source.contains("T id"));
 }

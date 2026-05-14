@@ -41,6 +41,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver Phase 2 has dedicated tests in `tests/resolver_phase2.rs`.
 - CLI and integration frontend paths now run resolver diagnostics before
   typechecking.
+- Generic specialization has positive executable coverage for generic functions,
+  structs, enums, methods, and recursive worklist emission. The C-source
+  assertions also match generated mangled generic call sites to emitted
+  definitions.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.

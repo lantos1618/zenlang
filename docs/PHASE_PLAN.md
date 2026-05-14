@@ -27,7 +27,9 @@ checked-in docs, tests, and commits only.
 - Phase 1 frontend and tested C-backend baseline are implemented for the syntax
   forms listed in `docs/V1_SPEC.md` and covered by `tests/zen`.
 - Generic specialization has positive executable coverage for generic functions,
-  structs, enums, methods, and recursive worklist emission.
+  structs, enums, methods, and recursive worklist emission. The C-source
+  assertions also match generated mangled generic call sites to emitted
+  definitions.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.
