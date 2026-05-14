@@ -3059,6 +3059,7 @@ impl TypeChecker {
         self.validate_no_extra_resolver_local_symbols(program, symbols);
         self.validate_resolver_behavior_association_lists(program, symbols);
         self.validate_resolver_behavior_parent_lists(program, symbols);
+        self.validate_stripped_resolver_import_symbols(program, symbols);
     }
 
     fn validate_no_extra_resolver_declaration_symbols(
@@ -3207,6 +3208,46 @@ impl TypeChecker {
                 format!("resolver module symbol '{expected_module}' has source '{actual}', expected none"),
                 span,
             ));
+        }
+    }
+
+    fn validate_stripped_resolver_import_symbols(
+        &mut self,
+        program: &ast::Program,
+        symbols: &SymbolTable,
+    ) {
+        if program
+            .declarations
+            .iter()
+            .any(|decl| matches!(decl, Declaration::Import { .. }))
+        {
+            return;
+        }
+
+        for symbol in symbols.symbols() {
+            if symbol.namespace != Namespace::Import {
+                continue;
+            }
+            if symbol.is_public {
+                self.diagnostics.push(Diagnostic::error(
+                    "E0245",
+                    format!(
+                        "resolver import symbol '{}' has visibility public, expected private",
+                        symbol.name
+                    ),
+                    symbol.definition_span,
+                ));
+            }
+            if symbol.import_source.is_none() {
+                self.diagnostics.push(Diagnostic::error(
+                    "E0246",
+                    format!(
+                        "resolver import symbol '{}' has source 'unknown', expected a module source",
+                        symbol.name
+                    ),
+                    symbol.definition_span,
+                ));
+            }
         }
     }
 
@@ -5048,6 +5089,64 @@ main = () i32 {
             .expect("resolver import symbols should seed typechecker imports");
 
         assert!(tc.is_root_std_import("io"));
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_stripped_resolver_import_sources() {
+        let mut program = parse_program(
+            r#"
+{ io } = std
+main = () i32 { return 0 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_import_source_for_test(Namespace::Import, "io", None);
+        program
+            .declarations
+            .retain(|decl| !matches!(decl, Declaration::Import { .. }));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("stripped resolver imports without sources should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver import symbol 'io' has source 'unknown', expected a module source"
+            )),
+            "expected stripped resolver import source diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_stripped_resolver_import_visibility() {
+        let mut program = parse_program(
+            r#"
+{ io } = std
+main = () i32 { return 0 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_public_for_test(Namespace::Import, "io", true);
+        program
+            .declarations
+            .retain(|decl| !matches!(decl, Declaration::Import { .. }));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("stripped resolver import visibility should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver import symbol 'io' has visibility public, expected private")),
+            "expected stripped resolver import visibility diagnostic, got {err:?}"
+        );
     }
 
     #[test]
