@@ -5746,6 +5746,41 @@ Point.label = () str { return "point" }
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_method_signature() {
+        let program = parse_program(
+            r#"
+Box<T>: {
+    value: T
+}
+
+Box.get<T> = (self: Box<T>) T {
+    return self.value
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_type_names_for_test(
+            Namespace::Value,
+            "Box.get",
+            Some(vec!["Box<i32>".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver method signature mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'Box.get' has parameter types '(Box<i32>)', expected '(Box<T>)'"
+            )),
+            "expected resolver method signature diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_uses_resolver_import_bindings() {
         let mut program = parse_program(
             r#"

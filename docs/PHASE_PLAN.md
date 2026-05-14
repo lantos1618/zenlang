@@ -31,6 +31,9 @@ checked-in docs, tests, and commits only.
   assertions also match generated mangled generic call sites to emitted
   definitions, including struct-returning specializations without counting
   declarations or definitions as calls.
+- Resolver method symbols carry full value-signature metadata, including
+  generic type-parameter names and bounds, and typechecker setup validates
+  method signature handoff drift before method bodies are checked.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

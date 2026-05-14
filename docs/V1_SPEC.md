@@ -36,7 +36,7 @@ advertised as implemented.
 | Syntax form | Status | Test Evidence |
 |---|---|---|
 | Function declaration `name = (params) Return { ... }` | implemented | `parser::tests::parse_simple_function`, `tests/zen/functions.zen` |
-| Method declaration `Type.method = (...) Return { ... }` | implemented | `parser::tests::parse_method`, `resolver_phase2::resolver_rejects_method_on_unknown_type`, `typechecker::tests::check_program_with_symbols_requires_resolver_method_receiver_type`, `tests/zen/ufc.zen` |
+| Method declaration `Type.method = (...) Return { ... }` | implemented | `parser::tests::parse_method`, `resolver_phase2::resolver_rejects_method_on_unknown_type`, `resolver_phase2::resolver_records_method_signatures_as_value_symbols`, `typechecker::tests::check_program_with_symbols_requires_resolver_method_receiver_type`, `typechecker::tests::check_program_with_symbols_validates_resolver_method_signature`, `tests/zen/ufc.zen` |
 | Struct declaration `Name: { field: Type }` | implemented | `parser::tests::parse_struct_def`, `tests/zen/structs.zen` |
 | Enum declaration `Name: Variant, Payload(Type)` | implemented | `parser::tests::parse_enum_def`, `parser::tests::parse_enum_with_payload`, `resolver_phase2::resolver_records_enum_variant_names`, `resolver_phase2::resolver_records_enum_variant_owner_names`, `typechecker::tests::check_program_with_symbols_validates_resolver_enum_variant_names`, `typechecker::tests::check_program_with_symbols_validates_resolver_enum_variant_owner_names`, `tests/zen/enums.zen` |
 | Local imports `{ name } = module.path` | implemented | `parser::tests::parse_import`, `module_system::tests::load_file_with_relative_import` |

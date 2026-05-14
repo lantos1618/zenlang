@@ -55,6 +55,9 @@ and do not assume Phase 4 is ready without evidence.
 - Generic method specializations that call generic functions have executable
   and generated-C coverage in `tests/zen/generic_method_worklist.zen`, including
   call-resolution assertions for the reached generic function dependency.
+- Resolver method value symbols carry complete value-signature metadata, and
+  typechecker setup rejects method signature drift before method body
+  collection.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.
