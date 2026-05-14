@@ -1042,6 +1042,27 @@ Pipeline: { callback: (i32) i32 }
 }
 
 #[test]
+fn resolver_records_generic_struct_field_types() {
+    let program = parse_program(
+        r#"
+Box<T>: { value: T }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Box")
+            .expect("Box symbol")
+            .field_type_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&[("value".to_string(), "T".to_string())][..])
+    );
+}
+
+#[test]
 fn resolver_records_struct_field_default_locals() {
     let program = parse_program(
         r#"
@@ -1163,6 +1184,34 @@ Option: Some(i32), None
             .variant_payload_type_name
             .as_deref(),
         None
+    );
+}
+
+#[test]
+fn resolver_records_generic_enum_variant_payload_types() {
+    let program = parse_program(
+        r#"
+Result<T, E>: Ok(T), Err(E)
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Variant, "Ok")
+            .expect("Ok variant symbol")
+            .variant_payload_type_name
+            .as_deref(),
+        Some("T")
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Variant, "Err")
+            .expect("Err variant symbol")
+            .variant_payload_type_name
+            .as_deref(),
+        Some("E")
     );
 }
 
