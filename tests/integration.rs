@@ -653,6 +653,19 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Point_encode");
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
+
+    let c_source = compile_to_c(
+        &test_dir().join("multi_file_imported_generic_function_return_enum_dependency/main.zen"),
+    );
+    assert!(c_source.contains("typedef struct Option_i32"));
+    assert!(c_source.contains("Option_i32 wrap_i32(int32_t value)"));
+    assert!(c_source.contains("int32_t unwrap_i32(Option_i32 value, int32_t fallback)"));
+    assert!(c_source.contains("wrap_i32(107LL)"));
+    assert!(c_source.contains("unwrap_i32(value, 0LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "wrap_i32");
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_i32");
+    assert!(!c_source.contains("T wrap"));
+    assert!(!c_source.contains("T unwrap"));
 }
 
 #[test]
@@ -1882,6 +1895,14 @@ fn test_multi_file_imported_function_return_type_dependency() {
     let zen_path = test_dir().join("multi_file_imported_function_return_type_dependency/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "101\n");
+}
+
+#[test]
+fn test_multi_file_imported_generic_function_return_enum_dependency() {
+    let zen_path =
+        test_dir().join("multi_file_imported_generic_function_return_enum_dependency/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "107\n");
 }
 
 // ── Discovery test: all .zen files have matching .expected ──────────
