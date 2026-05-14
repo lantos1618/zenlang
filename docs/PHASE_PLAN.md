@@ -38,7 +38,7 @@ checked-in docs, tests, and commits only.
   Explicit generic call type arguments, closure signatures, and cast targets
   are included in the same annotation validation path.
   Generic behavior bound failures are covered across direct function, method,
-  and UFC-style function call paths.
+  generic-receiver method, and UFC-style function call paths.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.

@@ -913,6 +913,43 @@ main = () i32 {
 }
 
 #[test]
+fn generic_receiver_method_behavior_bound_failure_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: {
+    x: i32
+}
+
+Box<T>: {
+    value: T
+}
+
+Box.map<U: Json> = (self: Box<i32>, value: U) U {
+    return value
+}
+
+main = () i32 {
+    box = Box<i32> { value: 1 }
+    point = Point { x: 1 }
+    bad = box.map(point)
+    return 0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("type `Point` does not implement behavior `Json` required by `U`")),
+        "expected generic receiver method bound diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_ufc_function_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
