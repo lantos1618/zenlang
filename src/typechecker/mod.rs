@@ -6262,6 +6262,7 @@ impl TypeChecker {
         for (present, code, label) in [
             (symbol.field_count.is_some(), "E0321", "field count"),
             (symbol.field_type_names.is_some(), "E0322", "field types"),
+            (symbol.field_types.is_some(), "E0399", "typed field types"),
             (symbol.variant_names.is_some(), "E0323", "variant names"),
             (
                 symbol.variant_owner_name.is_some(),
@@ -6279,14 +6280,29 @@ impl TypeChecker {
                 "variant payload type",
             ),
             (
+                symbol.variant_payload_type.is_some(),
+                "E0400",
+                "typed variant payload type",
+            ),
+            (
                 symbol.behavior_impl_names.is_some(),
                 "E0327",
                 "behavior impls",
             ),
             (
+                symbol.behavior_impl_refs.is_some(),
+                "E0401",
+                "typed behavior impls",
+            ),
+            (
                 symbol.behavior_required_names.is_some(),
                 "E0328",
                 "behavior requires",
+            ),
+            (
+                symbol.behavior_required_refs.is_some(),
+                "E0402",
+                "typed behavior requires",
             ),
         ] {
             if present {
@@ -10783,20 +10799,52 @@ Json: behavior {
             .resolve_program(&program)
             .expect("resolver succeeds");
         symbols.set_field_count_for_test(Namespace::Behavior, "Json", Some(1));
+        symbols.set_field_type_names_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec![("value".to_string(), "i32".to_string())]),
+        );
+        symbols.set_field_types_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec![("value".to_string(), AstType::I32)]),
+        );
         symbols.set_variant_names_for_test(
             Namespace::Behavior,
             "Json",
             Some(vec!["Some".to_string()]),
         );
+        symbols.set_variant_payload_type_name_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some("i32".to_string()),
+        );
+        symbols.set_variant_payload_type_for_test(Namespace::Behavior, "Json", Some(AstType::I32));
         symbols.set_behavior_impl_names_for_test(
             Namespace::Behavior,
             "Json",
             Some(vec!["Debug".to_string()]),
         );
+        symbols.set_behavior_impl_refs_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec![BehaviorRefMetadata {
+                name: "Debug".to_string(),
+                type_args: Vec::new(),
+            }]),
+        );
         symbols.set_behavior_required_names_for_test(
             Namespace::Behavior,
             "Json",
             Some(vec!["Debug".to_string()]),
+        );
+        symbols.set_behavior_required_refs_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec![BehaviorRefMetadata {
+                name: "Debug".to_string(),
+                type_args: Vec::new(),
+            }]),
         );
         let mut tc = TypeChecker::new();
 
@@ -10806,9 +10854,15 @@ Json: behavior {
 
         for expected in [
             "resolver behavior symbol 'Json' has field count metadata, expected none",
+            "resolver behavior symbol 'Json' has field types metadata, expected none",
+            "resolver behavior symbol 'Json' has typed field types metadata, expected none",
             "resolver behavior symbol 'Json' has variant names metadata, expected none",
+            "resolver behavior symbol 'Json' has variant payload type metadata, expected none",
+            "resolver behavior symbol 'Json' has typed variant payload type metadata, expected none",
             "resolver behavior symbol 'Json' has behavior impls metadata, expected none",
+            "resolver behavior symbol 'Json' has typed behavior impls metadata, expected none",
             "resolver behavior symbol 'Json' has behavior requires metadata, expected none",
+            "resolver behavior symbol 'Json' has typed behavior requires metadata, expected none",
         ] {
             assert!(
                 err.iter().any(|d| d.message.contains(expected)),
