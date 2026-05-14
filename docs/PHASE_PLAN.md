@@ -61,6 +61,8 @@ checked-in docs, tests, and commits only.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.
+- Resolver records behavior default-method body locals, and typechecker setup
+  requires those local symbols before behavior metadata collection.
 - Behavior impl methods are resolver-owned value symbols with parameter,
   return, generic-name, and generic-bound metadata, and typechecker setup
   validates impl-method signature handoff drift before checking impl bodies.

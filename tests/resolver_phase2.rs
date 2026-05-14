@@ -734,6 +734,28 @@ Serializable: behavior {
 }
 
 #[test]
+fn resolver_records_behavior_default_method_body_locals() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    stringify: (Self) str {
+        label = "json"
+        return label
+    }
+}
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+    let label = table
+        .lookup_scoped(Namespace::Local, "label")
+        .expect("behavior default body local symbol");
+
+    assert_eq!(label.is_mutable, Some(false));
+    assert!(label.scope_id > 0);
+}
+
+#[test]
 fn resolver_records_behavior_parent_names() {
     let program = parse_program(
         r#"

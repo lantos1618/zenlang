@@ -111,6 +111,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_validates_resolver_method_signature",
         "resolver_records_behavior_impl_method_body_locals",
         "check_program_with_symbols_requires_resolver_impl_method_body_locals",
+        "resolver_records_behavior_default_method_body_locals",
+        "check_program_with_symbols_requires_resolver_behavior_default_locals",
     ] {
         assert!(
             spec.contains(required),

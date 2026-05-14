@@ -95,6 +95,9 @@ and do not assume Phase 4 is ready without evidence.
   expressions before collecting struct metadata.
 - Typechecker setup requires resolver parameter/local symbols inside behavior
   default method bodies before collecting behavior metadata.
+- Resolver behavior default method bodies carry scoped local symbols, and
+  typechecker setup rejects missing default-body locals before behavior metadata
+  collection.
 - Typechecker setup rejects resolver local mutability mismatches before
   collecting typed bodies from the AST.
 - Typechecker setup rejects resolver local visibility/source mismatches before
