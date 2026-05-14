@@ -75,8 +75,8 @@ checked-in docs, tests, and commits only.
 - Compile-time `.requires` behavior assertions now have parser, resolver, and
   typechecker coverage for satisfied and missing behavior implementations.
 - Resolver type symbols now carry behavior impl and `.requires` association
-  metadata, and typechecker setup rejects missing association metadata before
-  collecting behavior impls/requires from the AST.
+  metadata, and typechecker setup rejects missing or extra association metadata
+  before collecting behavior impls/requires from the AST.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker
   coverage for inherited required methods, parent behavior satisfaction, and
   coherence diagnostics for duplicate edges, cycles, and conflicting inherited

@@ -2580,6 +2580,40 @@ impl TypeChecker {
                 Declaration::Error { .. } => {}
             }
         }
+        self.validate_resolver_behavior_association_lists(program, symbols);
+    }
+
+    fn validate_resolver_behavior_association_lists(
+        &mut self,
+        program: &ast::Program,
+        symbols: &SymbolTable,
+    ) {
+        let (expected_impls, expected_requires) = expected_behavior_associations(program);
+        for decl in &program.declarations {
+            let (Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. }) =
+                decl
+            else {
+                continue;
+            };
+            let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
+                continue;
+            };
+            self.validate_resolver_behavior_impl_list(
+                symbol,
+                name,
+                expected_impls.get(name).map(Vec::as_slice).unwrap_or(&[]),
+                *span,
+            );
+            self.validate_resolver_behavior_required_list(
+                symbol,
+                name,
+                expected_requires
+                    .get(name)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]),
+                *span,
+            );
+        }
     }
 
     fn require_resolver_module_symbol(
@@ -3302,6 +3336,26 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_behavior_impl_list(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_impls: &[String],
+        span: Span,
+    ) {
+        if !behavior_ref_names_match(symbol.behavior_impl_names.as_deref(), expected_impls) {
+            let actual = format_behavior_ref_names(symbol.behavior_impl_names.as_deref());
+            let expected = format_behavior_ref_names(Some(expected_impls));
+            self.diagnostics.push(Diagnostic::error(
+                "E0238",
+                format!(
+                    "resolver type symbol '{name}' has behavior impls '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
+    }
+
     fn validate_resolver_behavior_required_names(
         &mut self,
         symbol: &crate::resolver::Symbol,
@@ -3323,6 +3377,26 @@ impl TypeChecker {
                 "E0237",
                 format!(
                     "resolver type symbol '{name}' has behavior requires '{actual}', expected to include '{expected_required}'"
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn validate_resolver_behavior_required_list(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_required: &[String],
+        span: Span,
+    ) {
+        if !behavior_ref_names_match(symbol.behavior_required_names.as_deref(), expected_required) {
+            let actual = format_behavior_ref_names(symbol.behavior_required_names.as_deref());
+            let expected = format_behavior_ref_names(Some(expected_required));
+            self.diagnostics.push(Diagnostic::error(
+                "E0239",
+                format!(
+                    "resolver type symbol '{name}' has behavior requires '{actual}', expected '{expected}'"
                 ),
                 span,
             ));
@@ -3570,6 +3644,41 @@ fn expected_behavior_method_signatures(
         .collect()
 }
 
+fn expected_behavior_associations(
+    program: &ast::Program,
+) -> (HashMap<String, Vec<String>>, HashMap<String, Vec<String>>) {
+    let mut impls: HashMap<String, Vec<String>> = HashMap::new();
+    let mut requires: HashMap<String, Vec<String>> = HashMap::new();
+    for decl in &program.declarations {
+        match decl {
+            Declaration::ImplBlock {
+                type_name,
+                behavior: Some(behavior),
+                behavior_type_args,
+                ..
+            } => {
+                impls
+                    .entry(type_name.clone())
+                    .or_default()
+                    .push(behavior_ref_display(behavior, behavior_type_args));
+            }
+            Declaration::Requires {
+                type_name,
+                behavior,
+                behavior_type_args,
+                ..
+            } => {
+                requires
+                    .entry(type_name.clone())
+                    .or_default()
+                    .push(behavior_ref_display(behavior, behavior_type_args));
+            }
+            _ => {}
+        }
+    }
+    (impls, requires)
+}
+
 fn format_behavior_method_signatures(methods: Option<&[MethodSignatureMetadata]>) -> String {
     match methods {
         Some(methods) => format!(
@@ -3594,6 +3703,13 @@ fn format_behavior_ref_names(parents: Option<&[String]>) -> String {
     match parents {
         Some(parents) if !parents.is_empty() => parents.join(", "),
         _ => "none".to_string(),
+    }
+}
+
+fn behavior_ref_names_match(actual: Option<&[String]>, expected: &[String]) -> bool {
+    match actual {
+        Some(actual) => actual == expected,
+        None => expected.is_empty(),
     }
 }
 
@@ -4545,6 +4661,10 @@ Json: behavior {
 
 Point: { x: i32 }
 
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+
 Point.requires(Json)
 "#,
         );
@@ -4563,6 +4683,86 @@ Point.requires(Json)
         assert!(
             err.iter().any(|d| d.message.contains(expected)),
             "expected resolver behavior requires metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_rejects_extra_resolver_behavior_impl_names() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Debug: behavior {
+    debug: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_impl_names_for_test(
+            Namespace::Type,
+            "Point",
+            Some(vec!["Json".to_string(), "Debug".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("extra resolver behavior impl metadata should fail");
+
+        let expected =
+            "resolver type symbol 'Point' has behavior impls 'Json, Debug', expected 'Json'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected extra resolver behavior impl metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_rejects_extra_resolver_behavior_required_names() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Debug: behavior {
+    debug: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.requires(Json)
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_required_names_for_test(
+            Namespace::Type,
+            "Point",
+            Some(vec!["Json".to_string(), "Debug".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("extra resolver behavior requires metadata should fail");
+
+        let expected =
+            "resolver type symbol 'Point' has behavior requires 'Json, Debug', expected 'Json'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected extra resolver behavior requires metadata diagnostic, got {err:?}"
         );
     }
 

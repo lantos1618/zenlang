@@ -105,8 +105,8 @@ and do not assume Phase 4 is ready without evidence.
 - Compile-time `.requires` behavior assertions are parsed, resolved against
   known type/behavior symbols, and typechecked against explicit behavior impls.
 - Resolver type symbols carry behavior impl and `.requires` association
-  metadata, and typechecker setup rejects missing association metadata before
-  collecting behavior impls/requires from the AST.
+  metadata, and typechecker setup rejects missing or extra association metadata
+  before collecting behavior impls/requires from the AST.
 - Generic behavior bounds use the same inheritance-aware behavior satisfaction
   check as `.requires`.
 - Inherited generic behavior dispatch is covered by the executable fixture
