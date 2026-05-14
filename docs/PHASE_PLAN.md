@@ -200,6 +200,9 @@ checked-in docs, tests, and commits only.
 - Resolver enum variant symbols now carry payload-count metadata, and
   typechecker setup rejects mismatches before collecting enum variant metadata
   from the AST.
+- Resolver enum type symbols now carry exact variant-name metadata, and
+  typechecker setup rejects mismatches before collecting enum variants from the
+  AST.
 - Resolver enum variant symbols now carry visibility metadata, and typechecker
   setup rejects mismatches before collecting enum variant metadata from the AST.
 - Resolver enum variant symbols now carry payload-type metadata, and typechecker

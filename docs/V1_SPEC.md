@@ -38,7 +38,7 @@ advertised as implemented.
 | Function declaration `name = (params) Return { ... }` | implemented | `parser::tests::parse_simple_function`, `tests/zen/functions.zen` |
 | Method declaration `Type.method = (...) Return { ... }` | implemented | `parser::tests::parse_method`, `tests/zen/ufc.zen` |
 | Struct declaration `Name: { field: Type }` | implemented | `parser::tests::parse_struct_def`, `tests/zen/structs.zen` |
-| Enum declaration `Name: Variant, Payload(Type)` | implemented | `parser::tests::parse_enum_def`, `parser::tests::parse_enum_with_payload`, `tests/zen/enums.zen` |
+| Enum declaration `Name: Variant, Payload(Type)` | implemented | `parser::tests::parse_enum_def`, `parser::tests::parse_enum_with_payload`, `resolver_phase2::resolver_records_enum_variant_names`, `typechecker::tests::check_program_with_symbols_validates_resolver_enum_variant_names`, `tests/zen/enums.zen` |
 | Local imports `{ name } = module.path` | implemented | `parser::tests::parse_import`, `module_system::tests::load_file_with_relative_import` |
 | Immutable and mutable local bindings | implemented | `parser::tests::parse_immutable_var`, `parser::tests::parse_var_decl_mutable`, `tests/zen/mutability.zen` |
 | `return`, `break`, `continue`, and `loop` forms used by fixtures | implemented | `parser::tests::parse_loop_expr`, `tests/zen/loops.zen` |

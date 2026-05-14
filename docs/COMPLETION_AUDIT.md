@@ -185,6 +185,8 @@ and do not assume Phase 4 is ready without evidence.
   rejects mismatches before collecting struct field metadata.
 - Resolver enum variant symbols carry payload-count metadata, and typechecker
   setup rejects mismatches before collecting enum variant metadata.
+- Resolver enum type symbols carry exact variant-name metadata, and typechecker
+  setup rejects mismatches before collecting enum variants.
 - Resolver enum variant symbols carry visibility metadata, and typechecker setup
   rejects mismatches before collecting enum variant metadata.
 - Resolver enum variant symbols carry payload-type metadata, and typechecker

@@ -734,6 +734,27 @@ Option: Some(i32), None
 }
 
 #[test]
+fn resolver_records_enum_variant_names() {
+    let program = parse_program(
+        r#"
+Option: Some(i32), None
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Option")
+            .expect("Option type symbol")
+            .variant_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&["Some".to_string(), "None".to_string()][..])
+    );
+}
+
+#[test]
 fn resolver_records_enum_variant_payload_types() {
     let program = parse_program(
         r#"

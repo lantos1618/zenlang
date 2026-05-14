@@ -18,7 +18,7 @@ mod statements;
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::typed::*;
-use crate::ast::{self, AstType, Declaration, Expression, Param, StructField};
+use crate::ast::{self, AstType, Declaration, EnumVariant, Expression, Param, StructField};
 use crate::error::{Diagnostic, Span};
 use crate::module_system::{ResolvedModule, ResolvedModuleGraph};
 use crate::resolver::{
@@ -2378,13 +2378,20 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.require_resolver_type_like_symbol(
+                    if let Some(symbol) = self.require_resolver_type_like_symbol(
                         symbols,
                         Namespace::Type,
                         name,
                         expected_type_like_symbol(type_params, Some(*public)),
                         *span,
-                    );
+                    ) {
+                        self.validate_resolver_variant_names(
+                            symbol,
+                            name,
+                            expected_variant_names(variants),
+                            *span,
+                        );
+                    }
                     for variant in variants {
                         let Some(symbol) = symbols.lookup(Namespace::Variant, &variant.name) else {
                             self.require_resolver_symbol(
@@ -3225,6 +3232,26 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_variant_names(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_variant_names: Vec<String>,
+        span: Span,
+    ) {
+        if symbol.variant_names.as_deref() != Some(expected_variant_names.as_slice()) {
+            let actual = format_variant_names(symbol.variant_names.as_deref());
+            let expected = format_variant_names(Some(&expected_variant_names));
+            self.diagnostics.push(Diagnostic::error(
+                "E0241",
+                format!(
+                    "resolver type symbol '{name}' has variants '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
+    }
+
     fn validate_resolver_variant_payload_count(
         &mut self,
         symbol: &crate::resolver::Symbol,
@@ -3664,6 +3691,20 @@ fn format_field_type_names(fields: Option<&[(String, String)]>) -> String {
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
+        None => "unknown".to_string(),
+    }
+}
+
+fn expected_variant_names(variants: &[EnumVariant]) -> Vec<String> {
+    variants
+        .iter()
+        .map(|variant| variant.name.clone())
+        .collect()
+}
+
+fn format_variant_names(variants: Option<&[String]>) -> String {
+    match variants {
+        Some(variants) => format!("({})", variants.join(", ")),
         None => "unknown".to_string(),
     }
 }
@@ -5002,6 +5043,35 @@ Option: Some(i32), None
                 "resolver variant symbol 'Some' has payload type 'bool', expected 'i32'"
             )),
             "expected resolver enum variant payload type diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_enum_variant_names() {
+        let program = parse_program(
+            r#"
+Option: Some(i32), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_variant_names_for_test(
+            Namespace::Type,
+            "Option",
+            Some(vec!["Some".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver enum variant names mismatch should fail");
+
+        let expected =
+            "resolver type symbol 'Option' has variants '(Some)', expected '(Some, None)'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected resolver enum variant names diagnostic, got {err:?}"
         );
     }
 

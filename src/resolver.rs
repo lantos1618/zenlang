@@ -52,6 +52,7 @@ pub struct Symbol {
     pub type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
     pub field_count: Option<usize>,
     pub field_type_names: Option<Vec<(String, String)>>,
+    pub variant_names: Option<Vec<String>>,
     pub variant_payload_count: Option<usize>,
     pub variant_payload_type_name: Option<String>,
     pub behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
@@ -74,6 +75,7 @@ struct SymbolMetadata {
     type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
     field_count: Option<usize>,
     field_type_names: Option<Vec<(String, String)>>,
+    variant_names: Option<Vec<String>>,
     variant_payload_count: Option<usize>,
     variant_payload_type_name: Option<String>,
     behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
@@ -89,6 +91,11 @@ struct ValueSignatureMetadata {
     return_type_name: String,
     type_parameter_count: usize,
     type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
+}
+
+enum TypeLikeMembers {
+    Fields(Vec<(String, String)>),
+    Variants(Vec<String>),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -432,6 +439,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_variant_names_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        variant_names: Option<Vec<String>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.variant_names = variant_names;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_variant_payload_count_for_test(
         &mut self,
         namespace: Namespace,
@@ -485,6 +508,7 @@ impl SymbolTable {
                 type_parameter_bounds: None,
                 field_count: None,
                 field_type_names: None,
+                variant_names: None,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
@@ -520,6 +544,7 @@ impl SymbolTable {
                 type_parameter_bounds: Some(signature.type_parameter_bounds),
                 field_count: None,
                 field_type_names: None,
+                variant_names: None,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
@@ -539,9 +564,13 @@ impl SymbolTable {
         name: &str,
         is_public: bool,
         type_params: &[TypeParam],
-        field_type_names: Option<Vec<(String, String)>>,
+        members: TypeLikeMembers,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
+        let (field_type_names, variant_names) = match members {
+            TypeLikeMembers::Fields(fields) => (Some(fields), None),
+            TypeLikeMembers::Variants(variants) => (None, Some(variants)),
+        };
         let field_count = field_type_names.as_ref().map(Vec::len);
         let type_parameter_count = type_params.len();
         self.define_in_scope(
@@ -558,6 +587,7 @@ impl SymbolTable {
                 type_parameter_bounds: Some(resolver_type_parameter_bounds(type_params)),
                 field_count,
                 field_type_names,
+                variant_names,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
@@ -593,6 +623,7 @@ impl SymbolTable {
                 type_parameter_bounds: None,
                 field_count: None,
                 field_type_names: None,
+                variant_names: None,
                 variant_payload_count: Some(variant_payload_count),
                 variant_payload_type_name,
                 behavior_method_signatures: None,
@@ -628,6 +659,7 @@ impl SymbolTable {
                 type_parameter_bounds: Some(resolver_type_parameter_bounds(type_params)),
                 field_count: None,
                 field_type_names: None,
+                variant_names: None,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: Some(behavior_method_signatures),
@@ -681,6 +713,7 @@ impl SymbolTable {
             type_parameter_bounds: metadata.type_parameter_bounds,
             field_count: metadata.field_count,
             field_type_names: metadata.field_type_names,
+            variant_names: metadata.variant_names,
             variant_payload_count: metadata.variant_payload_count,
             variant_payload_type_name: metadata.variant_payload_type_name,
             behavior_method_signatures: metadata.behavior_method_signatures,
@@ -841,7 +874,7 @@ impl Resolver {
                     name,
                     *public,
                     type_params,
-                    Some(resolver_field_type_names(fields)),
+                    TypeLikeMembers::Fields(resolver_field_type_names(fields)),
                     *span,
                 )?;
             }
@@ -853,7 +886,14 @@ impl Resolver {
                 span,
                 ..
             } => {
-                table.define_type_like(Namespace::Type, name, *public, type_params, None, *span)?;
+                table.define_type_like(
+                    Namespace::Type,
+                    name,
+                    *public,
+                    type_params,
+                    TypeLikeMembers::Variants(resolver_variant_names(variants)),
+                    *span,
+                )?;
                 for variant in variants {
                     table.define_variant(
                         &variant.name,
@@ -1728,6 +1768,13 @@ fn resolver_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {
     fields
         .iter()
         .map(|field| (field.name.clone(), field.ty.display_name()))
+        .collect()
+}
+
+fn resolver_variant_names(variants: &[crate::ast::EnumVariant]) -> Vec<String> {
+    variants
+        .iter()
+        .map(|variant| variant.name.clone())
         .collect()
 }
 
