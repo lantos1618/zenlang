@@ -302,7 +302,7 @@ and do not assume Phase 4 is ready without evidence.
   declarations, with coverage for function-typed imported signatures and
   imported generic function and enum specialization. Importing a public type
   also seeds its public methods and public generic method templates on the graph
-  path.
+  path, while private imported methods remain inaccessible.
 - Typechecker setup rejects extra resolver-owned local symbols after mirroring
   resolver scope allocation across function bodies, nested scopes, pattern
   bindings, closures, defaults, and top-level expressions.

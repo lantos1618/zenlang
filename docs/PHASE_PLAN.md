@@ -275,7 +275,7 @@ checked-in docs, tests, and commits only.
   declarations. Function-typed imported signatures and imported generic
   function and enum specializations are covered, and importing a public type
   also seeds its public methods and public generic method templates on the graph
-  path.
+  path without seeding private imported methods.
 - The CLI `check` path now loads the module graph and reports resolver
   diagnostics from imported modules before typechecking the entry module.
 - The module-graph typechecker entrypoint now typechecks imported modules before
