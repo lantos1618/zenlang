@@ -199,6 +199,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "imported_private_type_impl_methods_are_not_visible",
         "resolver_records_struct_function_type_fields",
         "check_program_with_symbols_validates_resolver_struct_function_type_fields",
+        "collect_declarations_with_symbols_uses_resolver_struct_field_metadata",
         "resolver_records_enum_function_type_payloads",
         "check_program_with_symbols_validates_resolver_enum_function_type_payloads",
         "resolver_records_generic_enum_function_type_payloads",

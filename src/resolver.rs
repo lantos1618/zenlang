@@ -54,6 +54,7 @@ pub struct Symbol {
     pub type_parameter_names: Option<Vec<String>>,
     pub type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
     pub field_count: Option<usize>,
+    pub field_types: Option<Vec<(String, AstType)>>,
     pub field_type_names: Option<Vec<(String, String)>>,
     pub variant_names: Option<Vec<String>>,
     pub variant_owner_name: Option<String>,
@@ -81,6 +82,7 @@ struct SymbolMetadata {
     type_parameter_names: Option<Vec<String>>,
     type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
     field_count: Option<usize>,
+    field_types: Option<Vec<(String, AstType)>>,
     field_type_names: Option<Vec<(String, String)>>,
     variant_names: Option<Vec<String>>,
     variant_owner_name: Option<String>,
@@ -105,7 +107,7 @@ struct ValueSignatureMetadata {
 }
 
 enum TypeLikeMembers {
-    Fields(Vec<(String, String)>),
+    Fields(Vec<(String, AstType, String)>),
     Variants(Vec<String>),
 }
 
@@ -577,6 +579,7 @@ impl SymbolTable {
                 type_parameter_names: None,
                 type_parameter_bounds: None,
                 field_count: None,
+                field_types: None,
                 field_type_names: None,
                 variant_names: None,
                 variant_owner_name: None,
@@ -617,6 +620,7 @@ impl SymbolTable {
                 type_parameter_names: Some(signature.type_parameter_names),
                 type_parameter_bounds: Some(signature.type_parameter_bounds),
                 field_count: None,
+                field_types: None,
                 field_type_names: None,
                 variant_names: None,
                 variant_owner_name: None,
@@ -642,9 +646,19 @@ impl SymbolTable {
         members: TypeLikeMembers,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
-        let (field_type_names, variant_names) = match members {
-            TypeLikeMembers::Fields(fields) => (Some(fields), None),
-            TypeLikeMembers::Variants(variants) => (None, Some(variants)),
+        let (field_types, field_type_names, variant_names) = match members {
+            TypeLikeMembers::Fields(fields) => {
+                let typed = fields
+                    .iter()
+                    .map(|(name, ty, _)| (name.clone(), ty.clone()))
+                    .collect();
+                let names = fields
+                    .into_iter()
+                    .map(|(name, _, type_name)| (name, type_name))
+                    .collect();
+                (Some(typed), Some(names), None)
+            }
+            TypeLikeMembers::Variants(variants) => (None, None, Some(variants)),
         };
         let field_count = field_type_names.as_ref().map(Vec::len);
         let type_parameter_count = type_params.len();
@@ -664,6 +678,7 @@ impl SymbolTable {
                 type_parameter_names: Some(resolver_type_parameter_names(type_params)),
                 type_parameter_bounds: Some(resolver_type_parameter_bounds(type_params)),
                 field_count,
+                field_types,
                 field_type_names,
                 variant_names,
                 variant_owner_name: None,
@@ -705,6 +720,7 @@ impl SymbolTable {
                 type_parameter_names: None,
                 type_parameter_bounds: None,
                 field_count: None,
+                field_types: None,
                 field_type_names: None,
                 variant_names: None,
                 variant_owner_name: Some(owner_name.to_string()),
@@ -746,6 +762,7 @@ impl SymbolTable {
                 type_parameter_names: Some(resolver_type_parameter_names(type_params)),
                 type_parameter_bounds: Some(resolver_type_parameter_bounds(type_params)),
                 field_count: None,
+                field_types: None,
                 field_type_names: None,
                 variant_names: None,
                 variant_owner_name: None,
@@ -813,6 +830,7 @@ impl SymbolTable {
             type_parameter_names: metadata.type_parameter_names,
             type_parameter_bounds: metadata.type_parameter_bounds,
             field_count: metadata.field_count,
+            field_types: metadata.field_types,
             field_type_names: metadata.field_type_names,
             variant_names: metadata.variant_names,
             variant_owner_name: metadata.variant_owner_name,
@@ -982,7 +1000,7 @@ impl Resolver {
                     name,
                     *public,
                     type_params,
-                    TypeLikeMembers::Fields(resolver_field_type_names(fields)),
+                    TypeLikeMembers::Fields(resolver_field_types(fields)),
                     *span,
                 )?;
             }
@@ -2377,10 +2395,16 @@ fn behavior_ref_display(behavior: &str, type_args: &[AstType]) -> String {
     }
 }
 
-fn resolver_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {
+fn resolver_field_types(fields: &[StructField]) -> Vec<(String, AstType, String)> {
     fields
         .iter()
-        .map(|field| (field.name.clone(), field.ty.display_name()))
+        .map(|field| {
+            (
+                field.name.clone(),
+                field.ty.clone(),
+                field.ty.display_name(),
+            )
+        })
         .collect()
 }
 

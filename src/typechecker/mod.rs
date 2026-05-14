@@ -1198,6 +1198,9 @@ impl TypeChecker {
                         }
                     }
                 }
+                Declaration::Struct { name, .. } => {
+                    self.collect_resolver_struct_fields(symbols, name);
+                }
                 _ => {}
             }
         }
@@ -1239,6 +1242,30 @@ impl TypeChecker {
         } else {
             self.functions.insert(name.to_string(), info);
         }
+    }
+
+    fn collect_resolver_struct_fields(&mut self, symbols: &SymbolTable, name: &str) {
+        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
+            return;
+        };
+        let Some(field_types) = symbol.field_types.as_ref() else {
+            return;
+        };
+
+        let type_param_bounds = self
+            .structs
+            .get(name)
+            .map(|info| info.type_param_bounds.clone())
+            .unwrap_or_default();
+        self.structs.insert(
+            name.to_string(),
+            StructInfo {
+                name: name.to_string(),
+                fields: field_types.clone(),
+                type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
+                type_param_bounds,
+            },
+        );
     }
 
     fn collect_impl_method_signature(&mut self, type_name: &str, method: &Declaration) {
@@ -6900,6 +6927,33 @@ apply = (callback: (i32) i32) (i32) i32 {
         );
         assert_eq!(
             info.return_type,
+            AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::I32),
+            }
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_struct_field_metadata() {
+        let mut program = parse_program(
+            r#"
+Pipeline: { callback: (i32) i32 }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Struct { fields, .. } = &mut program.declarations[0] {
+            fields[0].ty = AstType::I32;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.structs.get("Pipeline").expect("struct info");
+        assert_eq!(
+            info.fields[0].1,
             AstType::Function {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),

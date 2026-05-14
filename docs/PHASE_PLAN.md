@@ -460,6 +460,10 @@ checked-in docs, tests, and commits only.
 - Resolver struct field metadata preserves function-typed fields, and
   typechecker setup rejects function-type field handoff drift before collecting
   struct metadata from the AST.
+- The resolver-backed typechecker path now collects struct field metadata from
+  validated resolver type symbols, including typed function-field metadata,
+  instead of rebuilding struct fields only from AST declarations after
+  validation.
 - Resolver/typechecker handoff coverage preserves generic type parameters in
   struct fields and enum payloads before type metadata collection.
 - Resolver enum variant symbols now carry payload-count metadata, and

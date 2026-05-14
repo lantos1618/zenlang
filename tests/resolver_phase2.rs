@@ -1369,6 +1369,23 @@ Pipeline: { callback: (i32) i32 }
             .map(Vec::as_slice),
         Some(&[("callback".to_string(), "(i32) i32".to_string())][..])
     );
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Pipeline")
+            .expect("Pipeline symbol")
+            .field_types
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(
+            &[(
+                "callback".to_string(),
+                zen::ast::AstType::Function {
+                    params: vec![zen::ast::AstType::I32],
+                    ret: Box::new(zen::ast::AstType::I32),
+                }
+            )][..]
+        )
+    );
 }
 
 #[test]
