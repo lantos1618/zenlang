@@ -108,6 +108,8 @@ checked-in docs, tests, and commits only.
   resolver module symbol.
 - Typechecker setup now rejects resolver module symbol visibility/source
   mismatches before validating imported binding symbols.
+- Typechecker setup now rejects resolver module parameter-count and return-type
+  metadata before validating imported binding symbols.
 - Resolver now walks declaration bodies enough to diagnose simple unresolved
   unqualified function calls using resolver-owned value/import symbols.
 - Resolver now records scoped local symbols for parameters and local bindings,

@@ -3209,6 +3209,26 @@ impl TypeChecker {
                 span,
             ));
         }
+
+        if symbol.parameter_count.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0265",
+                format!(
+                    "resolver module symbol '{expected_module}' has parameter count metadata, expected none"
+                ),
+                span,
+            ));
+        }
+
+        if symbol.return_type_name.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0266",
+                format!(
+                    "resolver module symbol '{expected_module}' has return type metadata, expected none"
+                ),
+                span,
+            ));
+        }
     }
 
     fn validate_stripped_resolver_import_symbols(
@@ -5414,6 +5434,41 @@ main = () i32 {
                 .message
                 .contains("resolver module symbol 'std' has source 'other', expected none")),
             "expected resolver module source diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_module_absent_declaration_metadata() {
+        let program = parse_program(
+            r#"
+{ io } = std
+main = () i32 {
+    return 0
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_count_for_test(Namespace::Module, "std", Some(1));
+        symbols.set_return_type_name_for_test(Namespace::Module, "std", Some("i32".to_string()));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver module declaration metadata should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver module symbol 'std' has parameter count metadata, expected none"
+            )),
+            "expected resolver module parameter metadata diagnostic, got {err:?}"
+        );
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver module symbol 'std' has return type metadata, expected none")),
+            "expected resolver module return metadata diagnostic, got {err:?}"
         );
     }
 
