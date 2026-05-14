@@ -117,6 +117,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_requires_resolver_struct_field_default_locals",
         "resolver_records_top_level_expr_locals",
         "check_program_with_symbols_requires_resolver_top_level_expr_locals",
+        "resolver_records_closure_locals",
+        "check_program_with_symbols_requires_resolver_closure_locals",
     ] {
         assert!(
             spec.contains(required),

@@ -94,6 +94,8 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver top-level expressions carry scoped local symbols, and typechecker
   setup rejects missing top-level expression locals before typed declaration
   collection.
+- Resolver closure expressions carry scoped parameter/body local symbols, and
+  typechecker setup rejects missing closure locals before typed body collection.
 - Typechecker setup requires resolver local symbols inside struct field default
   expressions before collecting struct metadata.
 - Resolver struct field default expressions carry scoped local symbols, and

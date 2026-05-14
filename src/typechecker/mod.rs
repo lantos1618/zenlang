@@ -6948,6 +6948,37 @@ value := 1
     }
 
     #[test]
+    fn check_program_with_symbols_requires_resolver_closure_locals() {
+        let program = parse_program(
+            r#"
+main = () i32 {
+    mapper = (input: i32) i32 {
+        inner = input
+        inner
+    }
+    return 0
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.remove_for_test(Namespace::Local, "inner");
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("missing resolver closure local should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table missing local symbol 'inner'")),
+            "expected missing resolver closure local diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_requires_resolver_struct_field_default_locals() {
         let program = parse_program(
             r#"

@@ -161,6 +161,8 @@ checked-in docs, tests, and commits only.
   expression declarations before typed declaration collection.
 - Resolver records top-level expression locals, and typechecker setup requires
   those local symbols before typed declaration collection.
+- Resolver records closure parameter/body locals, and typechecker setup requires
+  those closure-local symbols before typed body collection.
 - Typechecker setup now requires resolver local symbols inside struct field
   default expressions before collecting struct metadata.
 - Resolver records struct field default-expression locals, and typechecker
