@@ -213,6 +213,9 @@ and do not assume Phase 4 is ready without evidence.
 - Entry-module `.requires` assertions over imported public types and imported
   generic behaviors are covered by
   `tests/zen/multi_file_imported_behavior_requires/main.zen`.
+- CLI graph-frontend typechecker failures are reported once rather than
+  duplicated from both returned errors and stored checker diagnostics, covered
+  by `integration::check_command_deduplicates_typechecker_diagnostics`.
 - Unknown method calls through generic behavior-bound receivers produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
