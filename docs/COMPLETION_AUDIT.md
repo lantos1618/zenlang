@@ -146,7 +146,7 @@ and do not assume Phase 4 is ready without evidence.
   checked with substituted parent method signatures, and covered by
   `tests/zen/behavior_generic_parent_inheritance.zen`.
 - Resolver behavior symbols carry parent behavior metadata, and typechecker
-  setup rejects missing resolver parent-edge metadata.
+  setup rejects missing or extra resolver parent-edge metadata.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.
 - Behavior impl coherence is covered for specialized generic parent/child

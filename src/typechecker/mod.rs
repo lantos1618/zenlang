@@ -2581,6 +2581,7 @@ impl TypeChecker {
             }
         }
         self.validate_resolver_behavior_association_lists(program, symbols);
+        self.validate_resolver_behavior_parent_lists(program, symbols);
     }
 
     fn validate_resolver_behavior_association_lists(
@@ -2611,6 +2612,28 @@ impl TypeChecker {
                     .get(name)
                     .map(Vec::as_slice)
                     .unwrap_or(&[]),
+                *span,
+            );
+        }
+    }
+
+    fn validate_resolver_behavior_parent_lists(
+        &mut self,
+        program: &ast::Program,
+        symbols: &SymbolTable,
+    ) {
+        let expected_parents = expected_behavior_parent_associations(program);
+        for decl in &program.declarations {
+            let Declaration::Behavior { name, span, .. } = decl else {
+                continue;
+            };
+            let Some(symbol) = symbols.lookup(Namespace::Behavior, name) else {
+                continue;
+            };
+            self.validate_resolver_behavior_parent_list(
+                symbol,
+                name,
+                expected_parents.get(name).map(Vec::as_slice).unwrap_or(&[]),
                 *span,
             );
         }
@@ -3313,6 +3336,26 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_behavior_parent_list(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_parents: &[String],
+        span: Span,
+    ) {
+        if !behavior_ref_names_match(symbol.behavior_parent_names.as_deref(), expected_parents) {
+            let actual = format_behavior_parent_names(symbol.behavior_parent_names.as_deref());
+            let expected = format_behavior_parent_names(Some(expected_parents));
+            self.diagnostics.push(Diagnostic::error(
+                "E0240",
+                format!(
+                    "resolver behavior symbol '{name}' has parents '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
+    }
+
     fn validate_resolver_behavior_impl_names(
         &mut self,
         symbol: &crate::resolver::Symbol,
@@ -3677,6 +3720,25 @@ fn expected_behavior_associations(
         }
     }
     (impls, requires)
+}
+
+fn expected_behavior_parent_associations(program: &ast::Program) -> HashMap<String, Vec<String>> {
+    let mut parents: HashMap<String, Vec<String>> = HashMap::new();
+    for decl in &program.declarations {
+        if let Declaration::BehaviorExtends {
+            behavior,
+            parent,
+            parent_type_args,
+            ..
+        } = decl
+        {
+            parents
+                .entry(behavior.clone())
+                .or_default()
+                .push(behavior_ref_display(parent, parent_type_args));
+        }
+    }
+    parents
 }
 
 fn format_behavior_method_signatures(methods: Option<&[MethodSignatureMetadata]>) -> String {
@@ -4615,6 +4677,47 @@ PrettyJson.extends(Json)
                 "resolver behavior symbol 'PrettyJson' has parents 'none', expected to include 'Json'"
             )),
             "expected resolver behavior parent metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_rejects_extra_resolver_behavior_parent_names() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Debug: behavior {
+    debug: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_parent_names_for_test(
+            Namespace::Behavior,
+            "PrettyJson",
+            Some(vec!["Json".to_string(), "Debug".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("extra resolver behavior parent metadata should fail");
+
+        let expected =
+            "resolver behavior symbol 'PrettyJson' has parents 'Json, Debug', expected 'Json'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected extra resolver behavior parent metadata diagnostic, got {err:?}"
         );
     }
 
