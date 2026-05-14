@@ -1109,6 +1109,30 @@ Mapper: behavior {
             )][..]
         )
     );
+    assert_eq!(
+        table
+            .lookup(Namespace::Behavior, "Mapper")
+            .expect("behavior symbol")
+            .behavior_method_types
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(
+            &[zen::resolver::BehaviorMethodTypeMetadata {
+                name: "map".to_string(),
+                parameter_types: vec![
+                    zen::ast::AstType::SelfType,
+                    zen::ast::AstType::Function {
+                        params: vec![zen::ast::AstType::I32],
+                        ret: Box::new(zen::ast::AstType::I32),
+                    },
+                ],
+                return_type: zen::ast::AstType::Function {
+                    params: vec![zen::ast::AstType::I32],
+                    ret: Box::new(zen::ast::AstType::I32),
+                },
+            }][..]
+        )
+    );
 }
 
 #[test]

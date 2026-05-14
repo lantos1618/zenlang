@@ -1204,6 +1204,9 @@ impl TypeChecker {
                 Declaration::Enum { name, .. } => {
                     self.collect_resolver_enum_variants(symbols, name);
                 }
+                Declaration::Behavior { name, .. } => {
+                    self.collect_resolver_behavior_methods(symbols, name);
+                }
                 _ => {}
             }
         }
@@ -1302,6 +1305,60 @@ impl TypeChecker {
                 variants,
                 type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
                 type_param_bounds,
+            },
+        );
+    }
+
+    fn collect_resolver_behavior_methods(&mut self, symbols: &SymbolTable, name: &str) {
+        let Some(symbol) = symbols.lookup(Namespace::Behavior, name) else {
+            return;
+        };
+        let Some(method_types) = symbol.behavior_method_types.as_ref() else {
+            return;
+        };
+
+        let Some(existing) = self.behaviors.get(name).cloned() else {
+            return;
+        };
+        let methods = existing
+            .methods
+            .into_iter()
+            .map(|method| {
+                let Some(metadata) = method_types
+                    .iter()
+                    .find(|metadata| metadata.name == method.name)
+                else {
+                    return method;
+                };
+                if method.params.len() != metadata.parameter_types.len() {
+                    return method;
+                }
+                let params = method
+                    .params
+                    .into_iter()
+                    .zip(metadata.parameter_types.iter().cloned())
+                    .map(|(mut param, ty)| {
+                        param.ty = ty;
+                        param
+                    })
+                    .collect();
+                let return_type = method
+                    .return_type
+                    .as_ref()
+                    .map(|_| metadata.return_type.clone());
+                ast::BehaviorMethod {
+                    params,
+                    return_type,
+                    ..method
+                }
+            })
+            .collect();
+        self.behaviors.insert(
+            name.to_string(),
+            BehaviorInfo {
+                name: name.to_string(),
+                type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
+                methods,
             },
         );
     }
@@ -7019,6 +7076,43 @@ Callback: Wrap((i32) i32), None
         let info = tc.enums.get("Callback").expect("enum info");
         assert_eq!(
             info.variants[0].1,
+            Some(AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::I32),
+            })
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_method_metadata() {
+        let mut program = parse_program(
+            r#"
+Mapper: behavior {
+    map: (Self, (i32) i32) (i32) i32
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[0] {
+            methods[0].params[1].ty = AstType::I32;
+            methods[0].return_type = Some(AstType::I32);
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.behaviors.get("Mapper").expect("behavior info");
+        assert_eq!(
+            info.methods[0].params[1].ty,
+            AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::I32),
+            }
+        );
+        assert_eq!(
+            info.methods[0].return_type,
             Some(AstType::Function {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),

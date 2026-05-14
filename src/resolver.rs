@@ -12,6 +12,13 @@ pub struct SymbolId(pub u32);
 pub type MethodSignatureMetadata = (String, Vec<String>, String);
 pub type TypeParameterBoundMetadata = (String, String);
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct BehaviorMethodTypeMetadata {
+    pub name: String,
+    pub parameter_types: Vec<AstType>,
+    pub return_type: AstType,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Namespace {
     Value,
@@ -62,6 +69,7 @@ pub struct Symbol {
     pub variant_payload_type: Option<AstType>,
     pub variant_payload_type_name: Option<String>,
     pub behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
+    pub behavior_method_types: Option<Vec<BehaviorMethodTypeMetadata>>,
     pub behavior_parent_names: Option<Vec<String>>,
     pub behavior_impl_names: Option<Vec<String>>,
     pub behavior_required_names: Option<Vec<String>>,
@@ -91,6 +99,7 @@ struct SymbolMetadata {
     variant_payload_type: Option<AstType>,
     variant_payload_type_name: Option<String>,
     behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
+    behavior_method_types: Option<Vec<BehaviorMethodTypeMetadata>>,
     behavior_parent_names: Option<Vec<String>>,
     behavior_impl_names: Option<Vec<String>>,
     behavior_required_names: Option<Vec<String>>,
@@ -589,6 +598,7 @@ impl SymbolTable {
                 variant_payload_type: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
+                behavior_method_types: None,
                 behavior_parent_names: None,
                 behavior_impl_names: None,
                 behavior_required_names: None,
@@ -631,6 +641,7 @@ impl SymbolTable {
                 variant_payload_type: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
+                behavior_method_types: None,
                 behavior_parent_names: None,
                 behavior_impl_names: None,
                 behavior_required_names: None,
@@ -690,6 +701,7 @@ impl SymbolTable {
                 variant_payload_type: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
+                behavior_method_types: None,
                 behavior_parent_names: None,
                 behavior_impl_names: None,
                 behavior_required_names: None,
@@ -734,6 +746,7 @@ impl SymbolTable {
                 variant_payload_type,
                 variant_payload_type_name,
                 behavior_method_signatures: None,
+                behavior_method_types: None,
                 behavior_parent_names: None,
                 behavior_impl_names: None,
                 behavior_required_names: None,
@@ -750,6 +763,7 @@ impl SymbolTable {
         is_public: bool,
         type_params: &[TypeParam],
         behavior_method_signatures: Vec<MethodSignatureMetadata>,
+        behavior_method_types: Vec<BehaviorMethodTypeMetadata>,
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
         let type_parameter_count = type_params.len();
@@ -777,6 +791,7 @@ impl SymbolTable {
                 variant_payload_type: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: Some(behavior_method_signatures),
+                behavior_method_types: Some(behavior_method_types),
                 behavior_parent_names: None,
                 behavior_impl_names: None,
                 behavior_required_names: None,
@@ -846,6 +861,7 @@ impl SymbolTable {
             variant_payload_type: metadata.variant_payload_type,
             variant_payload_type_name: metadata.variant_payload_type_name,
             behavior_method_signatures: metadata.behavior_method_signatures,
+            behavior_method_types: metadata.behavior_method_types,
             behavior_parent_names: metadata.behavior_parent_names,
             behavior_impl_names: metadata.behavior_impl_names,
             behavior_required_names: metadata.behavior_required_names,
@@ -1052,6 +1068,7 @@ impl Resolver {
                     *public,
                     type_params,
                     resolver_behavior_method_signatures(methods),
+                    resolver_behavior_method_types(methods),
                     *span,
                 )?;
             }
@@ -2433,6 +2450,17 @@ fn resolver_behavior_method_signatures(methods: &[BehaviorMethod]) -> Vec<Method
                 resolver_param_type_names(&method.params),
                 resolver_return_type_name(&method.return_type),
             )
+        })
+        .collect()
+}
+
+fn resolver_behavior_method_types(methods: &[BehaviorMethod]) -> Vec<BehaviorMethodTypeMetadata> {
+    methods
+        .iter()
+        .map(|method| BehaviorMethodTypeMetadata {
+            name: method.name.clone(),
+            parameter_types: method.params.iter().map(|param| param.ty.clone()).collect(),
+            return_type: method.return_type.clone().unwrap_or(AstType::Void),
         })
         .collect()
 }

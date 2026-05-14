@@ -443,6 +443,10 @@ checked-in docs, tests, and commits only.
 - Resolver behavior method signature metadata preserves function-typed
   parameters and returns, and typechecker setup rejects function-type method
   signature handoff drift before collecting behavior metadata from the AST.
+- The resolver-backed typechecker path now collects behavior method signatures
+  from validated resolver behavior symbols, including typed function-method
+  metadata, instead of rebuilding behavior method signatures only from AST
+  declarations after validation.
 - Resolver behavior method signature metadata preserves generic return types on
   generic behaviors, and typechecker setup rejects generic method-signature
   handoff drift before behavior metadata collection.
