@@ -146,6 +146,7 @@ impl TypeChecker {
         let saved_return_type = self.current_return_type.clone();
         let saved_self_type = self.current_self_type.clone();
         let saved_defers = std::mem::take(&mut self.pending_defers);
+        self.current_self_type = self.generic_method_self_type(name, substitutions);
         self.type_substitutions.push(substitutions.clone());
         match self.check_function(
             &mangled,
@@ -163,6 +164,53 @@ impl TypeChecker {
         self.current_self_type = saved_self_type;
 
         Some(mangled)
+    }
+
+    pub(crate) fn generic_method_self_type(
+        &mut self,
+        method_name: &str,
+        substitutions: &HashMap<String, Type>,
+    ) -> Option<Type> {
+        let (receiver_name, _) = method_name.split_once('.')?;
+        if let Some(info) = self.structs.get(receiver_name).cloned() {
+            return Some(self.generic_receiver_self_type(
+                receiver_name,
+                &info.type_params,
+                substitutions,
+            ));
+        }
+        if let Some(info) = self.enums.get(receiver_name).cloned() {
+            return Some(self.generic_receiver_self_type(
+                receiver_name,
+                &info.type_params,
+                substitutions,
+            ));
+        }
+        Some(self.resolve_type(&AstType::Named(receiver_name.to_string())))
+    }
+
+    fn generic_receiver_self_type(
+        &mut self,
+        receiver_name: &str,
+        type_params: &[String],
+        substitutions: &HashMap<String, Type>,
+    ) -> Type {
+        if type_params.is_empty() {
+            return self.resolve_type(&AstType::Named(receiver_name.to_string()));
+        }
+
+        let type_args: Vec<AstType> = type_params
+            .iter()
+            .filter_map(|param| substitutions.get(param).map(type_to_ast))
+            .collect();
+        if type_args.len() == type_params.len() {
+            self.resolve_type(&AstType::Generic {
+                name: receiver_name.to_string(),
+                type_args,
+            })
+        } else {
+            Type::Unknown
+        }
     }
 
     pub(crate) fn specialize_generic_struct(

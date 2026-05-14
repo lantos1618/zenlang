@@ -1,0 +1,16 @@
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+Box.copy<T> = (self: Self) Self {
+    return self
+}
+
+main = () i32 {
+    box = Box<i32> { value: 42 }
+    copied = box.copy<i32>()
+    io.println("${copied.value}")
+    return 0
+}

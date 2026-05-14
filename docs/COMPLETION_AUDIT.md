@@ -45,6 +45,9 @@ and do not assume Phase 4 is ready without evidence.
   structs, enums, methods, and recursive worklist emission. The C-source
   assertions also match generated mangled generic call sites to emitted
   definitions.
+- Generic method specialization preserves concrete `Self` receiver context in
+  call-site typing and specialized method bodies, with executable and generated-C
+  coverage in `tests/zen/generic_method_self.zen`.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.

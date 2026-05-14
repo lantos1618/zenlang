@@ -222,6 +222,11 @@ fn test_generic_method() {
 }
 
 #[test]
+fn test_generic_method_self() {
+    run_test("generic_method_self");
+}
+
+#[test]
 fn test_generic_result_enum() {
     run_test("generic_result_enum");
 }
@@ -299,6 +304,13 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Box_get_i32");
     assert!(!c_source.contains("Box_T"));
     assert!(!c_source.contains("T Box_get"));
+
+    let c_source = compile_to_c(&test_dir().join("generic_method_self.zen"));
+    assert!(c_source.contains("Box_i32 Box_copy_i32(Box_i32 self)"));
+    assert!(c_source.contains("Box_copy_i32(box)"));
+    assert_c_call_resolves_to_definition(&c_source, "Box_copy_i32");
+    assert!(!c_source.contains("Box_copy(box"));
+    assert!(!c_source.contains("Unknown"));
 
     let c_source = compile_to_c(&test_dir().join("generic_vec.zen"));
     assert!(c_source.contains("int32_t Vec_len_i32(Vec_i32 self)"));

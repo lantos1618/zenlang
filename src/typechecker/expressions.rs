@@ -367,6 +367,8 @@ impl TypeChecker {
                                 *span,
                             )
                         };
+                        let saved_self_type = self.current_self_type.clone();
+                        self.current_self_type = self.generic_method_self_type(&method_key, &subs);
                         self.check_call_signature_with_substitutions(
                             &method_key,
                             &info.params,
@@ -385,6 +387,7 @@ impl TypeChecker {
                                     &subs,
                                 )
                             });
+                        self.current_self_type = saved_self_type;
                         (mangled, ret)
                     } else {
                         if !type_args.is_empty() {
@@ -428,6 +431,9 @@ impl TypeChecker {
                                     *span,
                                 )
                             };
+                            let saved_self_type = self.current_self_type.clone();
+                            self.current_self_type =
+                                self.generic_method_self_type(&generic_method_key, &subs);
                             self.check_call_signature_with_substitutions(
                                 &generic_method_key,
                                 &info.params,
@@ -446,6 +452,7 @@ impl TypeChecker {
                                         &subs,
                                     )
                                 });
+                            self.current_self_type = saved_self_type;
                             Ok(TypedExpression {
                                 kind: TypedExprKind::FunctionCall {
                                     function: mangled,
