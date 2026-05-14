@@ -104,6 +104,9 @@ checked-in docs, tests, and commits only.
 - Imported behavior inheritance now follows parent behavior imports from the
   defining module, with negative coverage in
   `integration::imported_behavior_extends_imported_parent_requires_parent_methods`.
+- Generic dispatch through an imported child behavior can call a method inherited
+  from that behavior's imported parent, covered by
+  `tests/zen/multi_file_imported_child_parent_dispatch/main.zen`.
 - Unknown method calls through generic behavior-bound receivers now produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
