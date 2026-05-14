@@ -31,7 +31,9 @@ checked-in docs, tests, and commits only.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.
-  Local generic annotations also enforce declared generic behavior bounds.
+  Nested generic type arguments are checked recursively in annotations and
+  instantiation positions. Local generic annotations also enforce declared
+  generic behavior bounds.
   Explicit generic call type arguments, closure signatures, and cast targets
   are included in the same annotation validation path.
 - Explicit behavior declarations, impl conformance, default methods, generic
