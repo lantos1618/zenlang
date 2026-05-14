@@ -1076,6 +1076,25 @@ Point: { x: i32, y: f64 }
 }
 
 #[test]
+fn resolver_rejects_duplicate_struct_field_names() {
+    let program = parse_program(
+        r#"
+Point: { x: i32, x: i64 }
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("duplicate struct field names should fail in resolver");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("duplicate field `x` for struct `Point`")),
+        "expected duplicate struct field diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_struct_function_type_fields() {
     let program = parse_program(
         r#"

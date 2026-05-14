@@ -1111,12 +1111,21 @@ impl Resolver {
                 self.validate_expr_refs(table, type_params, body, &mut locals, true, diagnostics);
             }
             Declaration::Struct {
+                name,
                 type_params,
                 fields,
                 ..
             } => {
                 self.validate_type_param_constraints(table, type_params, false, diagnostics);
+                let mut seen_fields = HashSet::new();
                 for field in fields {
+                    if !seen_fields.insert(field.name.as_str()) {
+                        diagnostics.push(Diagnostic::error(
+                            "E0211",
+                            format!("duplicate field `{}` for struct `{name}`", field.name),
+                            field.span,
+                        ));
+                    }
                     self.validate_type_ref(
                         table,
                         type_params,

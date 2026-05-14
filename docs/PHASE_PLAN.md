@@ -131,6 +131,8 @@ checked-in docs, tests, and commits only.
   `resolver_phase2::resolver_rejects_unknown_struct_literal_fields`,
   `resolver_phase2::resolver_rejects_missing_struct_literal_fields`, and
   `resolver_phase2::resolver_rejects_unknown_struct_literal_types`.
+- Resolver now rejects duplicate field names inside local struct declarations,
+  covered by `resolver_phase2::resolver_rejects_duplicate_struct_field_names`.
 - Unknown method calls through generic behavior-bound receivers now produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
