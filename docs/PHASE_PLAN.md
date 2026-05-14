@@ -165,6 +165,9 @@ checked-in docs, tests, and commits only.
 - Typechecker setup now rejects extra resolver-owned declaration symbols for
   values, types, behaviors, and enum variants before collecting declaration
   metadata from the AST.
+- Typechecker setup now rejects extra resolver-owned import and module symbols
+  when AST import declarations are present, while preserving the resolver-symbol
+  import seeding path for stripped import declarations.
 - Typechecker setup now rejects extra resolver-owned local symbols by mirroring
   resolver scope allocation for parameters, block locals, pattern bindings,
   closures, field defaults, behavior defaults, and top-level expressions.

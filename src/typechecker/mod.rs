@@ -3067,10 +3067,24 @@ impl TypeChecker {
         symbols: &SymbolTable,
     ) {
         let expected = expected_resolver_declaration_symbols(program);
+        let validate_imports = program
+            .declarations
+            .iter()
+            .any(|decl| matches!(decl, Declaration::Import { .. }));
         for symbol in symbols.symbols() {
+            if !validate_imports
+                && matches!(symbol.namespace, Namespace::Module | Namespace::Import)
+            {
+                continue;
+            }
             if !matches!(
                 symbol.namespace,
-                Namespace::Value | Namespace::Type | Namespace::Behavior | Namespace::Variant
+                Namespace::Value
+                    | Namespace::Type
+                    | Namespace::Behavior
+                    | Namespace::Variant
+                    | Namespace::Module
+                    | Namespace::Import
             ) {
                 continue;
             }
@@ -4323,6 +4337,10 @@ fn expected_behavior_parent_associations(program: &ast::Program) -> HashMap<Stri
 
 fn expected_resolver_declaration_symbols(program: &ast::Program) -> HashSet<(Namespace, String)> {
     let mut expected = HashSet::new();
+    let validate_imports = program
+        .declarations
+        .iter()
+        .any(|decl| matches!(decl, Declaration::Import { .. }));
     for decl in &program.declarations {
         match decl {
             Declaration::Function { name, .. } => {
@@ -4346,6 +4364,14 @@ fn expected_resolver_declaration_symbols(program: &ast::Program) -> HashSet<(Nam
             }
             Declaration::Behavior { name, .. } => {
                 expected.insert((Namespace::Behavior, name.clone()));
+            }
+            Declaration::Import {
+                names, module_path, ..
+            } if validate_imports => {
+                expected.insert((Namespace::Module, module_path.join(".")));
+                for name in names {
+                    expected.insert((Namespace::Import, name.clone()));
+                }
             }
             Declaration::ImplBlock {
                 type_name, methods, ..
@@ -4899,6 +4925,69 @@ extra = () i32 { return 1 }
                 .message
                 .contains("resolver symbol table has extra value symbol 'extra'")),
             "expected extra resolver symbol diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_rejects_extra_resolver_imports_when_ast_imports_are_present() {
+        let program = parse_program(
+            r#"
+{ io } = std
+main = () i32 { return 0 }
+"#,
+        );
+        let symbols_program = parse_program(
+            r#"
+{ io, math } = std
+main = () i32 { return 0 }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&symbols_program)
+            .expect("resolver succeeds");
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("extra resolver imports should fail when AST imports are present");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table has extra import symbol 'math'")),
+            "expected extra resolver import diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_rejects_extra_resolver_modules_when_ast_imports_are_present() {
+        let program = parse_program(
+            r#"
+{ io } = std
+main = () i32 { return 0 }
+"#,
+        );
+        let symbols_program = parse_program(
+            r#"
+{ io } = std
+{ helper } = other
+main = () i32 { return 0 }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&symbols_program)
+            .expect("resolver succeeds");
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("extra resolver modules should fail when AST imports are present");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table has extra module symbol 'other'")),
+            "expected extra resolver module diagnostic, got {err:?}"
         );
     }
 
