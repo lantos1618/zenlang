@@ -24,8 +24,9 @@ and pattern-style `?` arms supported by the parser and C backend.
 
 Unsupported spec-like constructs must stay gated until parser and semantic tests
 exist. This includes generic behavior association syntax such as
-`Type.implements(Json<T>)` and `T: Json<T>`, comptime execution, type matching,
-async operations, actor syntax, package manifests, and `build.zen` execution.
+`Type.implements(Json<T>)` and `T: Json<T>`, plus unspecialized generic behavior
+bounds such as `T: Json`, comptime execution, type matching, async operations,
+actor syntax, package manifests, and `build.zen` execution.
 
 ## Accepted Syntax Forms
 

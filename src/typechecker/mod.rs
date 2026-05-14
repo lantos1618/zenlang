@@ -1368,6 +1368,8 @@ impl TypeChecker {
                         ),
                         param.span,
                     ));
+                } else {
+                    self.reject_unspecialized_generic_behavior(bound, param.span);
                 }
             }
         }
@@ -5503,6 +5505,37 @@ main = () i32 {
                 "generic bound `Display` on type parameter `T` references undefined behavior"
             )),
             "expected generic bound diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn generic_bound_rejects_unspecialized_generic_behavior() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    to_json: (Self) str
+}
+
+encode<T: Json> = (value: T) str {
+    return "encoded"
+}
+
+main = () i32 {
+    return 0
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        let errors = tc
+            .check_program(&program)
+            .expect_err("generic behavior bound without type arguments should fail");
+        assert!(
+            errors.iter().any(|d| {
+                d.message
+                    .contains("generic behavior `Json` expects 1 type arguments, found 0")
+            }),
+            "expected generic behavior bound arity diagnostic, got {errors:?}"
         );
     }
 

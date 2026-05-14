@@ -101,6 +101,9 @@ and do not assume Phase 4 is ready without evidence.
   behaviors.
 - Generic behavior bounds such as `T: Json<T>` are explicitly gated with parser
   diagnostics until generic behavior association is implemented.
+- Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
+  type parameters, produce hard arity diagnostics instead of silently acting
+  like nongeneric behavior bounds.
 - Behavior inheritance `.extends` is parsed, resolved against known behaviors,
   and typechecked so child behavior impls must satisfy inherited parent methods
   while duplicate edges, cyclic inheritance, and conflicting inherited method

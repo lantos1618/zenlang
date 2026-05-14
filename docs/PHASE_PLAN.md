@@ -43,6 +43,9 @@ checked-in docs, tests, and commits only.
   nongeneric behaviors.
 - Generic behavior bounds such as `T: Json<T>` are explicitly gated with parser
   diagnostics until generic behavior association is implemented.
+- Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
+  type parameters, now produce hard arity diagnostics instead of silently acting
+  like nongeneric behavior bounds.
 - Compile-time `.requires` behavior assertions now have parser, resolver, and
   typechecker coverage for satisfied and missing behavior implementations.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker
