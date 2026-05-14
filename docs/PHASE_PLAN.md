@@ -92,6 +92,9 @@ checked-in docs, tests, and commits only.
 - UFCS dispatch through a substituted generic behavior bound is covered by
   `tests/zen/behavior_json_generic_bound_ufcs.zen` and generated-C checks that
   reject unresolved `T_encode` calls.
+- Imported public types now carry source-module behavior impl associations and
+  impl methods into graph-owned generic behavior-bound dispatch, covered by
+  `tests/zen/multi_file_imported_behavior_impl/main.zen`.
 - Unknown method calls through generic behavior-bound receivers now produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares

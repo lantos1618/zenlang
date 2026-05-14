@@ -3423,6 +3423,11 @@ impl TypeChecker {
                 binding.source_symbol.as_str(),
                 source_module,
             );
+            self.seed_behavior_impls_for_imported_type(
+                binding.local_name.as_str(),
+                binding.source_symbol.as_str(),
+                source_module,
+            );
         }
     }
 
@@ -3650,6 +3655,113 @@ impl TypeChecker {
             if method_type == type_name && *public {
                 self.seed_module_graph_import(type_name, decl);
             }
+        }
+    }
+
+    fn seed_behavior_impls_for_imported_type(
+        &mut self,
+        local_name: &str,
+        source_name: &str,
+        source_module: &ResolvedModule,
+    ) {
+        for decl in &source_module.program.declarations {
+            let Declaration::ImplBlock {
+                type_name,
+                behavior: Some(behavior),
+                behavior_type_args,
+                methods,
+                ..
+            } = decl
+            else {
+                continue;
+            };
+            if type_name != source_name {
+                continue;
+            }
+
+            if let Some(behavior_decl) = source_module
+                .program
+                .declarations
+                .iter()
+                .find(|decl| decl.name() == Some(behavior.as_str()))
+            {
+                self.seed_module_graph_import(behavior, behavior_decl);
+                self.seed_behavior_extends_for_imported_behavior(behavior, behavior, source_module);
+            }
+
+            let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
+            self.behavior_impls
+                .insert((local_name.to_string(), behavior_key));
+
+            for method in methods {
+                self.seed_imported_behavior_impl_method(local_name, method);
+            }
+            for default in self.behavior_default_methods_for_impl(
+                local_name,
+                behavior,
+                behavior_type_args,
+                methods,
+            ) {
+                let key = format!("{}.{}", local_name, default.name);
+                self.methods.insert(
+                    key.clone(),
+                    FuncInfo {
+                        name: key,
+                        params: default
+                            .params
+                            .iter()
+                            .map(|param| (param.name.clone(), param.ty.clone()))
+                            .collect(),
+                        return_type: default.return_type.unwrap_or(AstType::Void),
+                        type_params: Vec::new(),
+                        type_param_bounds: HashMap::new(),
+                    },
+                );
+            }
+        }
+    }
+
+    fn seed_imported_behavior_impl_method(&mut self, local_type_name: &str, method: &Declaration) {
+        let Declaration::Function {
+            name,
+            type_params,
+            params,
+            return_type,
+            body,
+            span,
+            ..
+        } = method
+        else {
+            return;
+        };
+
+        let key = format!("{}.{}", local_type_name, name);
+        let collected_type_params: Vec<String> =
+            type_params.iter().map(|param| param.name.clone()).collect();
+        self.methods.insert(
+            key.clone(),
+            FuncInfo {
+                name: key.clone(),
+                params: params
+                    .iter()
+                    .map(|param| (param.name.clone(), param.ty.clone()))
+                    .collect(),
+                return_type: return_type.clone().unwrap_or(AstType::Void),
+                type_params: collected_type_params.clone(),
+                type_param_bounds: type_param_bounds(type_params),
+            },
+        );
+        if !collected_type_params.is_empty() {
+            self.generic_methods.insert(
+                key,
+                GenericFunctionTemplate {
+                    type_params: collected_type_params,
+                    params: params.clone(),
+                    return_type: return_type.clone(),
+                    body: body.clone(),
+                    span: *span,
+                },
+            );
         }
     }
 
