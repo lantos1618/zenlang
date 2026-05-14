@@ -3229,6 +3229,73 @@ impl TypeChecker {
                 span,
             ));
         }
+
+        for (present, code, label) in [
+            (symbol.parameter_names.is_some(), "E0267", "parameter names"),
+            (
+                symbol.parameter_type_names.is_some(),
+                "E0268",
+                "parameter types",
+            ),
+            (
+                symbol.type_parameter_count.is_some(),
+                "E0269",
+                "type parameter count",
+            ),
+            (
+                symbol.type_parameter_bounds.is_some(),
+                "E0270",
+                "type parameter bounds",
+            ),
+            (symbol.field_count.is_some(), "E0271", "field count"),
+            (symbol.field_type_names.is_some(), "E0272", "field types"),
+            (symbol.variant_names.is_some(), "E0273", "variant names"),
+            (
+                symbol.variant_owner_name.is_some(),
+                "E0274",
+                "variant owner",
+            ),
+            (
+                symbol.variant_payload_count.is_some(),
+                "E0275",
+                "variant payload count",
+            ),
+            (
+                symbol.variant_payload_type_name.is_some(),
+                "E0276",
+                "variant payload type",
+            ),
+            (
+                symbol.behavior_method_signatures.is_some(),
+                "E0277",
+                "behavior methods",
+            ),
+            (
+                symbol.behavior_parent_names.is_some(),
+                "E0278",
+                "behavior parents",
+            ),
+            (
+                symbol.behavior_impl_names.is_some(),
+                "E0279",
+                "behavior impls",
+            ),
+            (
+                symbol.behavior_required_names.is_some(),
+                "E0280",
+                "behavior requires",
+            ),
+        ] {
+            if present {
+                self.diagnostics.push(Diagnostic::error(
+                    code,
+                    format!(
+                        "resolver module symbol '{expected_module}' has {label} metadata, expected none"
+                    ),
+                    span,
+                ));
+            }
+        }
     }
 
     fn validate_stripped_resolver_import_symbols(
@@ -5470,6 +5537,106 @@ main = () i32 {
                 .contains("resolver module symbol 'std' has return type metadata, expected none")),
             "expected resolver module return metadata diagnostic, got {err:?}"
         );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_module_absent_type_metadata() {
+        let program = parse_program(
+            r#"
+{ io } = std
+main = () i32 {
+    return 0
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_names_for_test(Namespace::Module, "std", Some(vec!["x".to_string()]));
+        symbols.set_parameter_type_names_for_test(
+            Namespace::Module,
+            "std",
+            Some(vec!["i32".to_string()]),
+        );
+        symbols.set_type_parameter_count_for_test(Namespace::Module, "std", Some(1));
+        symbols.set_type_parameter_bounds_for_test(
+            Namespace::Module,
+            "std",
+            Some(vec![("T".to_string(), "Json".to_string())]),
+        );
+        symbols.set_field_count_for_test(Namespace::Module, "std", Some(1));
+        symbols.set_field_type_names_for_test(
+            Namespace::Module,
+            "std",
+            Some(vec![("value".to_string(), "i32".to_string())]),
+        );
+        symbols.set_variant_names_for_test(
+            Namespace::Module,
+            "std",
+            Some(vec!["Some".to_string()]),
+        );
+        symbols.set_variant_owner_name_for_test(
+            Namespace::Module,
+            "std",
+            Some("Option".to_string()),
+        );
+        symbols.set_variant_payload_count_for_test(Namespace::Module, "std", Some(1));
+        symbols.set_variant_payload_type_name_for_test(
+            Namespace::Module,
+            "std",
+            Some("i32".to_string()),
+        );
+        symbols.set_behavior_method_signatures_for_test(
+            Namespace::Module,
+            "std",
+            Some(vec![(
+                "encode".to_string(),
+                vec!["Self".to_string()],
+                "str".to_string(),
+            )]),
+        );
+        symbols.set_behavior_parent_names_for_test(
+            Namespace::Module,
+            "std",
+            Some(vec!["Json".to_string()]),
+        );
+        symbols.set_behavior_impl_names_for_test(
+            Namespace::Module,
+            "std",
+            Some(vec!["Json".to_string()]),
+        );
+        symbols.set_behavior_required_names_for_test(
+            Namespace::Module,
+            "std",
+            Some(vec!["Json".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver module type metadata should fail");
+
+        for expected in [
+            "resolver module symbol 'std' has parameter names metadata, expected none",
+            "resolver module symbol 'std' has parameter types metadata, expected none",
+            "resolver module symbol 'std' has type parameter count metadata, expected none",
+            "resolver module symbol 'std' has type parameter bounds metadata, expected none",
+            "resolver module symbol 'std' has field count metadata, expected none",
+            "resolver module symbol 'std' has field types metadata, expected none",
+            "resolver module symbol 'std' has variant names metadata, expected none",
+            "resolver module symbol 'std' has variant owner metadata, expected none",
+            "resolver module symbol 'std' has variant payload count metadata, expected none",
+            "resolver module symbol 'std' has variant payload type metadata, expected none",
+            "resolver module symbol 'std' has behavior methods metadata, expected none",
+            "resolver module symbol 'std' has behavior parents metadata, expected none",
+            "resolver module symbol 'std' has behavior impls metadata, expected none",
+            "resolver module symbol 'std' has behavior requires metadata, expected none",
+        ] {
+            assert!(
+                err.iter().any(|d| d.message.contains(expected)),
+                "expected resolver module metadata diagnostic `{expected}`, got {err:?}"
+            );
+        }
     }
 
     #[test]

@@ -96,6 +96,8 @@ and do not assume Phase 4 is ready without evidence.
   before validating imported binding symbols.
 - Typechecker setup rejects resolver module parameter-count and return-type
   metadata before validating imported binding symbols.
+- Typechecker setup rejects resolver module type, field, variant, and behavior
+  metadata before validating imported binding symbols.
 - The non-merging module graph records resolver `SymbolTable` data per module
   and rejects resolver diagnostics from loaded dependency modules.
 - Typechecker setup has an opt-in module-graph entrypoint that validates entry
