@@ -1362,7 +1362,15 @@ impl Resolver {
         allow_self_type: bool,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
+        let mut seen_params = HashSet::new();
         for param in params {
+            if !seen_params.insert(param.name.as_str()) {
+                diagnostics.push(Diagnostic::error(
+                    "E0214",
+                    format!("duplicate parameter `{}`", param.name),
+                    param.span,
+                ));
+            }
             self.validate_type_ref(
                 table,
                 type_params,

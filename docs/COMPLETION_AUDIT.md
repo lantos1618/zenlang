@@ -174,6 +174,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver rejects duplicate method names inside local behavior declarations,
   covered by
   `resolver_phase2::resolver_rejects_duplicate_behavior_method_names`.
+- Resolver rejects duplicate parameter names in behavior method signatures
+  before typechecker metadata collection, covered by
+  `resolver_phase2::resolver_rejects_duplicate_signature_parameter_names`.
 - Resolver type symbols carry behavior impl and `.requires` association
   metadata, and typechecker setup rejects missing or extra association metadata
   before collecting behavior impls/requires from the AST. Specialized behavior

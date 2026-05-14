@@ -109,6 +109,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "resolver_records_generic_behavior_method_signatures",
         "parse_public_behavior_declaration",
         "resolver_records_public_visibility_for_exported_declarations",
+        "resolver_rejects_duplicate_signature_parameter_names",
         "check_program_with_symbols_validates_resolver_function_type_parameter_metadata",
         "check_program_with_symbols_validates_resolver_function_type_return_metadata",
         "check_program_with_symbols_validates_resolver_function_type_parameter_names",

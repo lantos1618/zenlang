@@ -907,6 +907,27 @@ Serializable: behavior {
 }
 
 #[test]
+fn resolver_rejects_duplicate_signature_parameter_names() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    encode: (value: Self, value: Self) str
+}
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("duplicate behavior method parameter names should fail in resolver");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("duplicate parameter `value`")),
+        "expected duplicate behavior method parameter diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_behavior_function_type_method_signatures() {
     let program = parse_program(
         r#"
