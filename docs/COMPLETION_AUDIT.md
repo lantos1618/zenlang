@@ -72,6 +72,9 @@ and do not assume Phase 4 is ready without evidence.
   annotations with missing type arguments.
   Generic function and method type-argument inference conflicts now report
   direct diagnostics for the conflicting parameter and concrete types.
+  Resolver rejects duplicate generic type-parameter names across value, type,
+  and behavior declarations, covered by
+  `resolver_phase2::resolver_rejects_duplicate_type_parameter_names`.
   Generic behavior bound failures are covered across direct function, method,
   generic-receiver method, and UFC-style function call paths.
 - Typechecker setup accepts resolver `SymbolTable` through

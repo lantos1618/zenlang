@@ -731,6 +731,33 @@ Serializable<T>: behavior {
 }
 
 #[test]
+fn resolver_rejects_duplicate_type_parameter_names() {
+    let program = parse_program(
+        r#"
+Box<T, T>: { value: T }
+Option<T, T>: Some(T), None
+Serializable<T, T>: behavior {
+    encode: (T) str
+}
+identity<T, T> = (value: T) T { return value }
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("duplicate type parameter names should fail in resolver");
+
+    let duplicate_count = err
+        .iter()
+        .filter(|d| d.message.contains("duplicate type parameter `T`"))
+        .count();
+    assert_eq!(
+        duplicate_count, 4,
+        "expected duplicate type parameter diagnostics for struct, enum, behavior, and function, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_type_and_behavior_generic_bounds() {
     let program = parse_program(
         r#"

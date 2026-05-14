@@ -103,6 +103,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "resolver_records_value_symbol_generic_parameter_counts",
         "resolver_records_value_symbol_function_type_metadata",
         "resolver_records_type_and_behavior_generic_parameter_counts",
+        "resolver_rejects_duplicate_type_parameter_names",
         "resolver_records_generic_struct_field_types",
         "resolver_records_generic_enum_variant_payload_types",
         "resolver_records_generic_behavior_method_signatures",

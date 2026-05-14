@@ -58,6 +58,9 @@ checked-in docs, tests, and commits only.
   Generic function and method type-argument inference conflicts now produce
   direct diagnostics instead of relying only on substituted argument mismatch
   errors.
+  Resolver now rejects duplicate generic type-parameter names across value,
+  type, and behavior declarations, covered by
+  `resolver_phase2::resolver_rejects_duplicate_type_parameter_names`.
   Generic behavior bound failures are covered across direct function, method,
   generic-receiver method, and UFC-style function call paths.
 - Explicit behavior declarations, impl conformance, default methods, generic

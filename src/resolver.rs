@@ -1381,7 +1381,15 @@ impl Resolver {
         allow_self_type: bool,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
+        let mut seen_type_params = HashSet::new();
         for type_param in type_params {
+            if !seen_type_params.insert(type_param.name.as_str()) {
+                diagnostics.push(Diagnostic::error(
+                    "E0213",
+                    format!("duplicate type parameter `{}`", type_param.name),
+                    type_param.span,
+                ));
+            }
             if let Some(constraint) = &type_param.constraint {
                 if !self.is_known_behavior_name(table, constraint) {
                     diagnostics.push(Diagnostic::error(
