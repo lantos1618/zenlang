@@ -596,6 +596,37 @@ PrettyJson.extends(Json)
 }
 
 #[test]
+fn resolver_records_behavior_impl_and_requires_names() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+    let point = table.lookup(Namespace::Type, "Point").expect("Point type");
+
+    assert_eq!(
+        point.behavior_impl_names.as_ref().map(Vec::as_slice),
+        Some(&["Json<str>".to_string()][..])
+    );
+    assert_eq!(
+        point.behavior_required_names.as_ref().map(Vec::as_slice),
+        Some(&["Json<str>".to_string()][..])
+    );
+}
+
+#[test]
 fn resolver_records_generic_behavior_parent_names() {
     let program = parse_program(
         r#"

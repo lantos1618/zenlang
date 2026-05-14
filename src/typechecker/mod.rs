@@ -2477,9 +2477,20 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
+                    let type_symbol = symbols.lookup(Namespace::Type, type_name);
+                    if type_symbol.is_none() {
+                        self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
+                    }
                     if let Some(behavior) = behavior {
                         self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
+                        if let Some(symbol) = type_symbol {
+                            self.validate_resolver_behavior_impl_names(
+                                symbol,
+                                type_name,
+                                &behavior_ref_display(behavior, behavior_type_args),
+                                *span,
+                            );
+                        }
                     }
                     for type_arg in behavior_type_args {
                         self.validate_generic_type_ref_bounds(type_arg, &HashSet::new(), *span);
@@ -2520,8 +2531,19 @@ impl TypeChecker {
                     behavior_type_args,
                     span,
                 } => {
-                    self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
+                    let type_symbol = symbols.lookup(Namespace::Type, type_name);
+                    if type_symbol.is_none() {
+                        self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
+                    }
                     self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
+                    if let Some(symbol) = type_symbol {
+                        self.validate_resolver_behavior_required_names(
+                            symbol,
+                            type_name,
+                            &behavior_ref_display(behavior, behavior_type_args),
+                            *span,
+                        );
+                    }
                     for type_arg in behavior_type_args {
                         self.validate_generic_type_ref_bounds(type_arg, &HashSet::new(), *span);
                     }
@@ -3257,6 +3279,56 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_behavior_impl_names(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_impl: &str,
+        span: Span,
+    ) {
+        if !symbol
+            .behavior_impl_names
+            .as_deref()
+            .is_some_and(|impls| impls.iter().any(|behavior| behavior == expected_impl))
+        {
+            let actual = format_behavior_ref_names(symbol.behavior_impl_names.as_deref());
+            self.diagnostics.push(Diagnostic::error(
+                "E0236",
+                format!(
+                    "resolver type symbol '{name}' has behavior impls '{actual}', expected to include '{expected_impl}'"
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn validate_resolver_behavior_required_names(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_required: &str,
+        span: Span,
+    ) {
+        if !symbol
+            .behavior_required_names
+            .as_deref()
+            .is_some_and(|required| {
+                required
+                    .iter()
+                    .any(|behavior| behavior == expected_required)
+            })
+        {
+            let actual = format_behavior_ref_names(symbol.behavior_required_names.as_deref());
+            self.diagnostics.push(Diagnostic::error(
+                "E0237",
+                format!(
+                    "resolver type symbol '{name}' has behavior requires '{actual}', expected to include '{expected_required}'"
+                ),
+                span,
+            ));
+        }
+    }
+
     fn require_resolver_value_symbol(
         &mut self,
         symbols: &SymbolTable,
@@ -3515,6 +3587,10 @@ fn format_behavior_method_signatures(methods: Option<&[MethodSignatureMetadata]>
 }
 
 fn format_behavior_parent_names(parents: Option<&[String]>) -> String {
+    format_behavior_ref_names(parents)
+}
+
+fn format_behavior_ref_names(parents: Option<&[String]>) -> String {
     match parents {
         Some(parents) if !parents.is_empty() => parents.join(", "),
         _ => "none".to_string(),
@@ -4423,6 +4499,70 @@ PrettyJson.extends(Json)
                 "resolver behavior symbol 'PrettyJson' has parents 'none', expected to include 'Json'"
             )),
             "expected resolver behavior parent metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_behavior_impl_names() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_impl_names_for_test(Namespace::Type, "Point", None);
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver behavior impl metadata mismatch should fail");
+
+        let expected =
+            "resolver type symbol 'Point' has behavior impls 'none', expected to include 'Json'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected resolver behavior impl metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_behavior_required_names() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.requires(Json)
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_required_names_for_test(Namespace::Type, "Point", None);
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver behavior requires metadata mismatch should fail");
+
+        let expected =
+            "resolver type symbol 'Point' has behavior requires 'none', expected to include 'Json'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected resolver behavior requires metadata diagnostic, got {err:?}"
         );
     }
 

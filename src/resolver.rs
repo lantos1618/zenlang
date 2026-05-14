@@ -56,6 +56,8 @@ pub struct Symbol {
     pub variant_payload_type_name: Option<String>,
     pub behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
     pub behavior_parent_names: Option<Vec<String>>,
+    pub behavior_impl_names: Option<Vec<String>>,
+    pub behavior_required_names: Option<Vec<String>>,
     pub is_mutable: Option<bool>,
     pub scope_id: u32,
     pub definition_span: Span,
@@ -76,6 +78,8 @@ struct SymbolMetadata {
     variant_payload_type_name: Option<String>,
     behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
     behavior_parent_names: Option<Vec<String>>,
+    behavior_impl_names: Option<Vec<String>>,
+    behavior_required_names: Option<Vec<String>>,
     is_mutable: Option<bool>,
 }
 
@@ -364,6 +368,38 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_behavior_impl_names_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        behavior_impl_names: Option<Vec<String>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.behavior_impl_names = behavior_impl_names;
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_behavior_required_names_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        behavior_required_names: Option<Vec<String>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.behavior_required_names = behavior_required_names;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_field_count_for_test(
         &mut self,
         namespace: Namespace,
@@ -453,6 +489,8 @@ impl SymbolTable {
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
                 behavior_parent_names: None,
+                behavior_impl_names: None,
+                behavior_required_names: None,
                 is_mutable: None,
             },
             0,
@@ -486,6 +524,8 @@ impl SymbolTable {
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
                 behavior_parent_names: None,
+                behavior_impl_names: None,
+                behavior_required_names: None,
                 is_mutable: None,
             },
             0,
@@ -522,6 +562,8 @@ impl SymbolTable {
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
                 behavior_parent_names: None,
+                behavior_impl_names: None,
+                behavior_required_names: None,
                 is_mutable: None,
             },
             0,
@@ -555,6 +597,8 @@ impl SymbolTable {
                 variant_payload_type_name,
                 behavior_method_signatures: None,
                 behavior_parent_names: None,
+                behavior_impl_names: None,
+                behavior_required_names: None,
                 is_mutable: None,
             },
             0,
@@ -588,6 +632,8 @@ impl SymbolTable {
                 variant_payload_type_name: None,
                 behavior_method_signatures: Some(behavior_method_signatures),
                 behavior_parent_names: None,
+                behavior_impl_names: None,
+                behavior_required_names: None,
                 is_mutable: None,
             },
             0,
@@ -639,6 +685,8 @@ impl SymbolTable {
             variant_payload_type_name: metadata.variant_payload_type_name,
             behavior_method_signatures: metadata.behavior_method_signatures,
             behavior_parent_names: metadata.behavior_parent_names,
+            behavior_impl_names: metadata.behavior_impl_names,
+            behavior_required_names: metadata.behavior_required_names,
             is_mutable: metadata.is_mutable,
             scope_id,
             definition_span,
@@ -682,6 +730,32 @@ impl SymbolTable {
                 .behavior_parent_names
                 .get_or_insert_with(Vec::new)
                 .push(parent.to_string());
+        }
+    }
+
+    fn record_behavior_impl(&mut self, type_name: &str, behavior: &str) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == Namespace::Type && symbol.name == type_name)
+        {
+            symbol
+                .behavior_impl_names
+                .get_or_insert_with(Vec::new)
+                .push(behavior.to_string());
+        }
+    }
+
+    fn record_behavior_required(&mut self, type_name: &str, behavior: &str) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == Namespace::Type && symbol.name == type_name)
+        {
+            symbol
+                .behavior_required_names
+                .get_or_insert_with(Vec::new)
+                .push(behavior.to_string());
         }
     }
 }
@@ -973,12 +1047,19 @@ impl Resolver {
                     ));
                 }
                 if let Some(behavior) = behavior {
-                    if table.lookup(Namespace::Behavior, behavior).is_none() {
+                    let behavior_known = table.lookup(Namespace::Behavior, behavior).is_some();
+                    if !behavior_known {
                         diagnostics.push(Diagnostic::error(
                             "E0202",
                             format!("unknown behavior symbol '{behavior}'"),
                             *span,
                         ));
+                    }
+                    if self.is_known_type_name(table, &[], type_name) && behavior_known {
+                        table.record_behavior_impl(
+                            type_name,
+                            &behavior_ref_display(behavior, behavior_type_args),
+                        );
                     }
                 }
                 for type_arg in behavior_type_args {
@@ -1008,6 +1089,11 @@ impl Resolver {
                         format!("unknown behavior symbol '{behavior}'"),
                         *span,
                     ));
+                } else if self.is_known_type_name(table, &[], type_name) {
+                    table.record_behavior_required(
+                        type_name,
+                        &behavior_ref_display(behavior, behavior_type_args),
+                    );
                 }
                 for type_arg in behavior_type_args {
                     self.validate_type_ref(table, &[], type_arg, *span, diagnostics);
