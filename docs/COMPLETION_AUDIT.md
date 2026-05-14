@@ -106,6 +106,9 @@ and do not assume Phase 4 is ready without evidence.
   like nongeneric behavior bounds.
 - Generic behavior declaration bounds are validated after all behavior names are
   collected, so bounded behavior declarations do not depend on source order.
+- Unspecialized generic type targets in `.implements` and `.requires`, such as
+  `Box.implements(Json)` when `Box` declares type parameters, produce hard
+  arity diagnostics instead of resolver handoff mismatch diagnostics.
 - Behavior inheritance `.extends` is parsed, resolved against known behaviors,
   and typechecked so child behavior impls must satisfy inherited parent methods
   while duplicate edges, cyclic inheritance, and conflicting inherited method

@@ -890,6 +890,10 @@ impl TypeChecker {
             return;
         }
 
+        if self.reject_unspecialized_generic_type(type_name, span) {
+            return;
+        }
+
         if !self.behaviors.contains_key(behavior) {
             self.diagnostics.push(Diagnostic::error(
                 "E6006",
@@ -1109,6 +1113,19 @@ impl TypeChecker {
         methods: &[Declaration],
         span: Span,
     ) {
+        if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
+            self.diagnostics.push(Diagnostic::error(
+                "E6005",
+                format!("undefined type `{}`", type_name),
+                span,
+            ));
+            return;
+        }
+
+        if self.reject_unspecialized_generic_type(type_name, span) {
+            return;
+        }
+
         if !self.behaviors.contains_key(behavior) {
             self.diagnostics.push(Diagnostic::error(
                 "E6000",
@@ -1259,6 +1276,28 @@ impl TypeChecker {
                     || self.behavior_inherits_from(behavior, implemented_behavior)
             })
             .cloned()
+    }
+
+    fn reject_unspecialized_generic_type(&mut self, type_name: &str, span: Span) -> bool {
+        let type_param_count = self
+            .structs
+            .get(type_name)
+            .map(|info| info.type_params.len())
+            .or_else(|| self.enums.get(type_name).map(|info| info.type_params.len()))
+            .unwrap_or(0);
+        if type_param_count == 0 {
+            return false;
+        }
+
+        self.diagnostics.push(Diagnostic::error(
+            "E6013",
+            format!(
+                "generic type `{}` expects {} type arguments, found 0",
+                type_name, type_param_count
+            ),
+            span,
+        ));
+        true
     }
 
     fn reject_unspecialized_generic_behavior(&mut self, behavior: &str, span: Span) -> bool {
@@ -1820,17 +1859,7 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.require_resolver_type_like_symbol(
-                        symbols,
-                        Namespace::Type,
-                        type_name,
-                        ExpectedTypeLikeSymbol {
-                            type_parameter_count: 0,
-                            type_parameter_bounds: Vec::new(),
-                            is_public: None,
-                        },
-                        *span,
-                    );
+                    self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
                     if let Some(behavior) = behavior {
                         self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
                     }
@@ -1869,17 +1898,7 @@ impl TypeChecker {
                     behavior,
                     span,
                 } => {
-                    self.require_resolver_type_like_symbol(
-                        symbols,
-                        Namespace::Type,
-                        type_name,
-                        ExpectedTypeLikeSymbol {
-                            type_parameter_count: 0,
-                            type_parameter_bounds: Vec::new(),
-                            is_public: None,
-                        },
-                        *span,
-                    );
+                    self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
                     self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
                 }
                 Declaration::BehaviorExtends {

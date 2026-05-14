@@ -302,6 +302,58 @@ Missing.implements(Json) {
 }
 
 #[test]
+fn behavior_impl_for_unspecialized_generic_type_is_error() {
+    let errors = frontend_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Box.implements(Json) {
+    to_json = (value: Box) str {
+        return "box"
+    }
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic type `Box` expects 1 type arguments, found 0")),
+        "expected generic impl target arity diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn behavior_requires_unspecialized_generic_type_is_error() {
+    let errors = frontend_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Box.requires(Json)
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic type `Box` expects 1 type arguments, found 0")),
+        "expected generic requires target arity diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn behavior_impl_extra_method_is_error() {
     let errors = typecheck_errors(
         r#"
