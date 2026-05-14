@@ -1252,12 +1252,18 @@ impl TypeChecker {
         } else {
             self.functions.insert(name.to_string(), info);
         }
-        self.collect_resolver_generic_template_signature(name, parameter_types, return_type);
+        self.collect_resolver_generic_template_signature(
+            name,
+            symbol.type_parameter_names.as_deref().unwrap_or(&[]),
+            parameter_types,
+            return_type,
+        );
     }
 
     fn collect_resolver_generic_template_signature(
         &mut self,
         name: &str,
+        type_parameter_names: &[String],
         parameter_types: &[AstType],
         return_type: &AstType,
     ) {
@@ -1269,6 +1275,7 @@ impl TypeChecker {
         let Some(template) = template else {
             return;
         };
+        template.type_params = type_parameter_names.to_vec();
         if template.params.len() != parameter_types.len() {
             return;
         }
@@ -7332,11 +7339,13 @@ apply<T> = (callback: (T) T) (T) T {
             .resolve_program(&program)
             .expect("resolver succeeds");
         if let Declaration::Function {
+            type_params,
             params,
             return_type,
             ..
         } = &mut program.declarations[0]
         {
+            type_params[0].name = "Stale".to_string();
             params[0].ty = AstType::I32;
             *return_type = Some(AstType::I32);
         }
@@ -7345,6 +7354,7 @@ apply<T> = (callback: (T) T) (T) T {
         tc.collect_declarations_with_symbols(&program.declarations, &symbols);
 
         let template = tc.generic_functions.get("apply").expect("generic template");
+        assert_eq!(template.type_params, vec!["T".to_string()]);
         assert_eq!(
             template.params[0].ty,
             AstType::Function {
@@ -7375,11 +7385,13 @@ Box.apply<U> = (self: Box, callback: (U) U) (U) U {
             .resolve_program(&program)
             .expect("resolver succeeds");
         if let Declaration::Method {
+            type_params,
             params,
             return_type,
             ..
         } = &mut program.declarations[1]
         {
+            type_params[0].name = "Stale".to_string();
             params[1].ty = AstType::I32;
             *return_type = Some(AstType::I32);
         }
@@ -7391,6 +7403,7 @@ Box.apply<U> = (self: Box, callback: (U) U) (U) U {
             .generic_methods
             .get("Box.apply")
             .expect("generic method template");
+        assert_eq!(template.type_params, vec!["U".to_string()]);
         assert_eq!(
             template.params[1].ty,
             AstType::Function {
