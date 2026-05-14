@@ -84,7 +84,8 @@ and do not assume Phase 4 is ready without evidence.
   seeding imported module-call bindings.
 - Typechecker setup validates resolver import binding source and visibility
   invariants even when AST import declarations have already been stripped and
-  imports are seeded from resolver symbols only.
+  imports are seeded from resolver symbols only, including the referenced
+  resolver module symbol.
 - Typechecker setup rejects resolver module symbol visibility/source mismatches
   before validating imported binding symbols.
 - The non-merging module graph records resolver `SymbolTable` data per module
