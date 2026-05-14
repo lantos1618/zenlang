@@ -2902,6 +2902,7 @@ impl TypeChecker {
                         expected_behavior_method_signatures(methods),
                         *span,
                     );
+                    self.validate_resolver_behavior_absent_type_metadata(symbol, name, *span);
                     for method in methods {
                         if let Some(default_body) = &method.default_body {
                             let mut locals = scope_cursor.new_scope();
@@ -4344,6 +4345,54 @@ impl TypeChecker {
                 ),
                 span,
             ));
+        }
+    }
+
+    fn validate_resolver_behavior_absent_type_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        span: Span,
+    ) {
+        for (present, code, label) in [
+            (symbol.field_count.is_some(), "E0321", "field count"),
+            (symbol.field_type_names.is_some(), "E0322", "field types"),
+            (symbol.variant_names.is_some(), "E0323", "variant names"),
+            (
+                symbol.variant_owner_name.is_some(),
+                "E0324",
+                "variant owner",
+            ),
+            (
+                symbol.variant_payload_count.is_some(),
+                "E0325",
+                "variant payload count",
+            ),
+            (
+                symbol.variant_payload_type_name.is_some(),
+                "E0326",
+                "variant payload type",
+            ),
+            (
+                symbol.behavior_impl_names.is_some(),
+                "E0327",
+                "behavior impls",
+            ),
+            (
+                symbol.behavior_required_names.is_some(),
+                "E0328",
+                "behavior requires",
+            ),
+        ] {
+            if present {
+                self.diagnostics.push(Diagnostic::error(
+                    code,
+                    format!(
+                        "resolver behavior symbol '{name}' has {label} metadata, expected none"
+                    ),
+                    span,
+                ));
+            }
         }
     }
 
@@ -6990,6 +7039,53 @@ Serializable: behavior {
             )),
             "expected resolver behavior method signature diagnostic, got {err:?}"
         );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_behavior_absent_type_metadata() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_field_count_for_test(Namespace::Behavior, "Json", Some(1));
+        symbols.set_variant_names_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec!["Some".to_string()]),
+        );
+        symbols.set_behavior_impl_names_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec!["Debug".to_string()]),
+        );
+        symbols.set_behavior_required_names_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec!["Debug".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver behavior type metadata should fail");
+
+        for expected in [
+            "resolver behavior symbol 'Json' has field count metadata, expected none",
+            "resolver behavior symbol 'Json' has variant names metadata, expected none",
+            "resolver behavior symbol 'Json' has behavior impls metadata, expected none",
+            "resolver behavior symbol 'Json' has behavior requires metadata, expected none",
+        ] {
+            assert!(
+                err.iter().any(|d| d.message.contains(expected)),
+                "expected resolver behavior type metadata diagnostic '{expected}', got {err:?}"
+            );
+        }
     }
 
     #[test]

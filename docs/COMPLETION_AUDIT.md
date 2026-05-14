@@ -214,6 +214,8 @@ and do not assume Phase 4 is ready without evidence.
   and mutability metadata before collecting declaration metadata.
 - Typechecker setup rejects resolver struct variant metadata and resolver enum
   field metadata before collecting declaration metadata.
+- Typechecker setup rejects resolver behavior field, variant, impl, and
+  required-behavior metadata before collecting behavior metadata.
 - Resolver type and behavior symbols carry generic parameter-count metadata, and
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Resolver type and behavior symbols carry generic type-parameter bounds, and
