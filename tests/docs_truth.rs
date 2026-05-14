@@ -145,6 +145,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "imported_behavior_extends_requires_parent_methods",
         "imported_behavior_extends_imported_parent_requires_parent_methods",
         "imported_behavior_extends_requires_transitive_parent_methods",
+        "resolver_rejects_duplicate_behavior_required_edges",
         "resolver_rejects_duplicate_behavior_parent_edges",
         "tests/zen/generic_method_worklist.zen",
         "resolver_records_behavior_impl_methods_as_value_symbols",

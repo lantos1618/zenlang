@@ -401,6 +401,32 @@ Point.requires(Json)
 }
 
 #[test]
+fn resolver_rejects_duplicate_behavior_required_edges() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    stringify: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.requires(Json)
+Point.requires(Json)
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("duplicate behavior requires should fail in resolver");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("duplicate required behavior `Json`")),
+        "expected duplicate required behavior diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_rejects_behavior_requires_unknown_symbols() {
     let program = parse_program("Missing.requires(Json)");
 

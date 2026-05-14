@@ -865,17 +865,19 @@ impl SymbolTable {
         }
     }
 
-    fn record_behavior_required(&mut self, type_name: &str, behavior: &str) {
+    fn record_behavior_required(&mut self, type_name: &str, behavior: &str) -> bool {
         if let Some(symbol) = self
             .symbols
             .iter_mut()
             .find(|symbol| symbol.namespace == Namespace::Type && symbol.name == type_name)
         {
-            symbol
-                .behavior_required_names
-                .get_or_insert_with(Vec::new)
-                .push(behavior.to_string());
+            let required = symbol.behavior_required_names.get_or_insert_with(Vec::new);
+            if required.iter().any(|recorded| recorded == behavior) {
+                return false;
+            }
+            required.push(behavior.to_string());
         }
+        true
     }
 }
 
@@ -1301,10 +1303,16 @@ impl Resolver {
                         *span,
                     ));
                 } else if self.is_known_type_name(table, &[], type_name) {
-                    table.record_behavior_required(
-                        type_name,
-                        &behavior_ref_display(behavior, behavior_type_args),
-                    );
+                    let behavior_display = behavior_ref_display(behavior, behavior_type_args);
+                    if !table.record_behavior_required(type_name, &behavior_display) {
+                        diagnostics.push(Diagnostic::error(
+                            "E0216",
+                            format!(
+                                "duplicate required behavior `{behavior_display}` for `{type_name}`"
+                            ),
+                            *span,
+                        ));
+                    }
                 }
                 for type_arg in behavior_type_args {
                     self.validate_type_ref(table, &[], type_arg, *span, false, diagnostics);
