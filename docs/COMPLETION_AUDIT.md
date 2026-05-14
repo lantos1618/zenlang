@@ -187,6 +187,8 @@ and do not assume Phase 4 is ready without evidence.
   setup rejects mismatches before collecting enum variant metadata.
 - Resolver enum type symbols carry exact variant-name metadata, and typechecker
   setup rejects mismatches before collecting enum variants.
+- Resolver enum variant symbols carry owner enum metadata, and typechecker setup
+  rejects mismatches before collecting enum variant metadata.
 - Resolver enum variant symbols carry visibility metadata, and typechecker setup
   rejects mismatches before collecting enum variant metadata.
 - Resolver enum variant symbols carry payload-type metadata, and typechecker

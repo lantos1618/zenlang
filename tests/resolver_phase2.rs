@@ -755,6 +755,34 @@ Option: Some(i32), None
 }
 
 #[test]
+fn resolver_records_enum_variant_owner_names() {
+    let program = parse_program(
+        r#"
+Option: Some(i32), None
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Variant, "Some")
+            .expect("Some variant symbol")
+            .variant_owner_name
+            .as_deref(),
+        Some("Option")
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Variant, "None")
+            .expect("None variant symbol")
+            .variant_owner_name
+            .as_deref(),
+        Some("Option")
+    );
+}
+
+#[test]
 fn resolver_records_enum_variant_payload_types() {
     let program = parse_program(
         r#"

@@ -53,6 +53,7 @@ pub struct Symbol {
     pub field_count: Option<usize>,
     pub field_type_names: Option<Vec<(String, String)>>,
     pub variant_names: Option<Vec<String>>,
+    pub variant_owner_name: Option<String>,
     pub variant_payload_count: Option<usize>,
     pub variant_payload_type_name: Option<String>,
     pub behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
@@ -76,6 +77,7 @@ struct SymbolMetadata {
     field_count: Option<usize>,
     field_type_names: Option<Vec<(String, String)>>,
     variant_names: Option<Vec<String>>,
+    variant_owner_name: Option<String>,
     variant_payload_count: Option<usize>,
     variant_payload_type_name: Option<String>,
     behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
@@ -455,6 +457,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_variant_owner_name_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        variant_owner_name: Option<String>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.variant_owner_name = variant_owner_name;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_variant_payload_count_for_test(
         &mut self,
         namespace: Namespace,
@@ -509,6 +527,7 @@ impl SymbolTable {
                 field_count: None,
                 field_type_names: None,
                 variant_names: None,
+                variant_owner_name: None,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
@@ -545,6 +564,7 @@ impl SymbolTable {
                 field_count: None,
                 field_type_names: None,
                 variant_names: None,
+                variant_owner_name: None,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
@@ -588,6 +608,7 @@ impl SymbolTable {
                 field_count,
                 field_type_names,
                 variant_names,
+                variant_owner_name: None,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: None,
@@ -603,6 +624,7 @@ impl SymbolTable {
 
     fn define_variant(
         &mut self,
+        owner_name: &str,
         name: &str,
         is_public: bool,
         variant_payload_type_name: Option<String>,
@@ -624,6 +646,7 @@ impl SymbolTable {
                 field_count: None,
                 field_type_names: None,
                 variant_names: None,
+                variant_owner_name: Some(owner_name.to_string()),
                 variant_payload_count: Some(variant_payload_count),
                 variant_payload_type_name,
                 behavior_method_signatures: None,
@@ -660,6 +683,7 @@ impl SymbolTable {
                 field_count: None,
                 field_type_names: None,
                 variant_names: None,
+                variant_owner_name: None,
                 variant_payload_count: None,
                 variant_payload_type_name: None,
                 behavior_method_signatures: Some(behavior_method_signatures),
@@ -714,6 +738,7 @@ impl SymbolTable {
             field_count: metadata.field_count,
             field_type_names: metadata.field_type_names,
             variant_names: metadata.variant_names,
+            variant_owner_name: metadata.variant_owner_name,
             variant_payload_count: metadata.variant_payload_count,
             variant_payload_type_name: metadata.variant_payload_type_name,
             behavior_method_signatures: metadata.behavior_method_signatures,
@@ -896,6 +921,7 @@ impl Resolver {
                 )?;
                 for variant in variants {
                     table.define_variant(
+                        name,
                         &variant.name,
                         *public,
                         resolver_variant_payload_type_name(&variant.payload),

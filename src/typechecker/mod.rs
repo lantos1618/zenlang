@@ -2408,6 +2408,12 @@ impl TypeChecker {
                             usize::from(variant.payload.is_some()),
                             variant.span,
                         );
+                        self.validate_resolver_variant_owner_name(
+                            symbol,
+                            &variant.name,
+                            name,
+                            variant.span,
+                        );
                         self.validate_resolver_variant_visibility(
                             symbol,
                             &variant.name,
@@ -3268,6 +3274,25 @@ impl TypeChecker {
                 "E0215",
                 format!(
                     "resolver variant symbol '{name}' has payload count {actual}, expected {expected_payload_count}"
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn validate_resolver_variant_owner_name(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected_owner_name: &str,
+        span: Span,
+    ) {
+        if symbol.variant_owner_name.as_deref() != Some(expected_owner_name) {
+            let actual = symbol.variant_owner_name.as_deref().unwrap_or("unknown");
+            self.diagnostics.push(Diagnostic::error(
+                "E0242",
+                format!(
+                    "resolver variant symbol '{name}' has owner '{actual}', expected '{expected_owner_name}'"
                 ),
                 span,
             ));
@@ -5072,6 +5097,34 @@ Option: Some(i32), None
         assert!(
             err.iter().any(|d| d.message.contains(expected)),
             "expected resolver enum variant names diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_enum_variant_owner_names() {
+        let program = parse_program(
+            r#"
+Option: Some(i32), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_variant_owner_name_for_test(
+            Namespace::Variant,
+            "Some",
+            Some("Result".to_string()),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver enum variant owner mismatch should fail");
+
+        let expected = "resolver variant symbol 'Some' has owner 'Result', expected 'Option'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected resolver enum variant owner diagnostic, got {err:?}"
         );
     }
 
