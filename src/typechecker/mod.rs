@@ -4470,6 +4470,73 @@ impl TypeChecker {
                 span,
             ));
         }
+
+        self.validate_resolver_value_absent_declaration_metadata(symbol, name, span);
+    }
+
+    fn validate_resolver_value_absent_declaration_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        span: Span,
+    ) {
+        if let Some(actual) = symbol.import_source.as_deref() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0297",
+                format!("resolver value symbol '{name}' has source '{actual}', expected none"),
+                span,
+            ));
+        }
+
+        for (present, code, label) in [
+            (symbol.field_count.is_some(), "E0298", "field count"),
+            (symbol.field_type_names.is_some(), "E0299", "field types"),
+            (symbol.variant_names.is_some(), "E0300", "variant names"),
+            (
+                symbol.variant_owner_name.is_some(),
+                "E0301",
+                "variant owner",
+            ),
+            (
+                symbol.variant_payload_count.is_some(),
+                "E0302",
+                "variant payload count",
+            ),
+            (
+                symbol.variant_payload_type_name.is_some(),
+                "E0303",
+                "variant payload type",
+            ),
+            (
+                symbol.behavior_method_signatures.is_some(),
+                "E0304",
+                "behavior methods",
+            ),
+            (
+                symbol.behavior_parent_names.is_some(),
+                "E0305",
+                "behavior parents",
+            ),
+            (
+                symbol.behavior_impl_names.is_some(),
+                "E0306",
+                "behavior impls",
+            ),
+            (
+                symbol.behavior_required_names.is_some(),
+                "E0307",
+                "behavior requires",
+            ),
+            (symbol.is_mutable.is_some(), "E0308", "mutability"),
+        ] {
+            if present {
+                self.diagnostics.push(Diagnostic::error(
+                    code,
+                    format!("resolver value symbol '{name}' has {label} metadata, expected none"),
+                    span,
+                ));
+            }
+        }
     }
 }
 
@@ -6560,6 +6627,47 @@ encode<T: Json> = (value: T) str { return "encoded" }
             )),
             "expected resolver function generic bound diagnostic, got {err:?}"
         );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_absent_declaration_metadata() {
+        let program = parse_program(
+            r#"
+main = () i32 { return 0 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_import_source_for_test(Namespace::Value, "main", Some("std".to_string()));
+        symbols.set_field_count_for_test(Namespace::Value, "main", Some(1));
+        symbols.set_variant_names_for_test(
+            Namespace::Value,
+            "main",
+            Some(vec!["Some".to_string()]),
+        );
+        symbols.set_behavior_impl_names_for_test(
+            Namespace::Value,
+            "main",
+            Some(vec!["Json".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function declaration metadata should fail");
+
+        for expected in [
+            "resolver value symbol 'main' has source 'std', expected none",
+            "resolver value symbol 'main' has field count metadata, expected none",
+            "resolver value symbol 'main' has variant names metadata, expected none",
+            "resolver value symbol 'main' has behavior impls metadata, expected none",
+        ] {
+            assert!(
+                err.iter().any(|d| d.message.contains(expected)),
+                "expected resolver function declaration metadata diagnostic '{expected}', got {err:?}"
+            );
+        }
     }
 
     #[test]
