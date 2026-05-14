@@ -1415,6 +1415,30 @@ value := 1
 }
 
 #[test]
+fn resolver_rejects_unknown_enum_variant_expressions() {
+    let program = parse_program(
+        r#"
+Status: Ok, Err
+
+main = () i32 {
+    value = Status.Pending
+    return 0
+}
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("unknown enum variant expression should fail in resolver");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("enum `Status` has no variant `Pending`")),
+        "expected unknown enum variant diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_closure_locals() {
     let program = parse_program(
         r#"

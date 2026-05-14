@@ -1669,11 +1669,27 @@ impl Resolver {
                 }
             }
             Expression::EnumVariant {
+                enum_name,
                 type_args,
+                variant,
                 payload,
                 span,
-                ..
             } => {
+                if table.lookup(Namespace::Type, enum_name).is_some()
+                    && table.lookup_variant(enum_name, variant).is_none()
+                {
+                    diagnostics.push(Diagnostic::error(
+                        "E0205",
+                        format!("enum `{enum_name}` has no variant `{variant}`"),
+                        *span,
+                    ));
+                } else if !self.is_known_type_name(table, type_params, enum_name) {
+                    diagnostics.push(Diagnostic::error(
+                        "E0201",
+                        format!("unknown type symbol '{enum_name}'"),
+                        *span,
+                    ));
+                }
                 for type_arg in type_args {
                     self.validate_type_ref(
                         table,

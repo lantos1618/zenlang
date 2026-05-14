@@ -117,6 +117,9 @@ checked-in docs, tests, and commits only.
   reuse variant names while same-enum duplicates remain rejected, covered by
   `resolver_phase2::resolver_allows_same_variant_names_in_different_enums` and
   `tests/zen/duplicate_enum_variant_names.zen`.
+- Resolver now rejects unknown enum variant expressions for local enum types
+  before typechecking, covered by
+  `resolver_phase2::resolver_rejects_unknown_enum_variant_expressions`.
 - Unknown method calls through generic behavior-bound receivers now produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
