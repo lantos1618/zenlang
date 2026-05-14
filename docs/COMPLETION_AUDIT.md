@@ -216,6 +216,10 @@ and do not assume Phase 4 is ready without evidence.
 - CLI graph-frontend typechecker failures are reported once rather than
   duplicated from both returned errors and stored checker diagnostics, covered
   by `integration::check_command_deduplicates_typechecker_diagnostics`.
+- Enum variant resolver symbols are scoped by owner enum, so different enums can
+  reuse variant names while same-enum duplicates remain rejected, covered by
+  `resolver_phase2::resolver_allows_same_variant_names_in_different_enums` and
+  `tests/zen/duplicate_enum_variant_names.zen`.
 - Unknown method calls through generic behavior-bound receivers produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares

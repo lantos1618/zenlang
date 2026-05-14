@@ -197,6 +197,11 @@ fn test_enums() {
 }
 
 #[test]
+fn test_duplicate_enum_variant_names() {
+    run_test("duplicate_enum_variant_names");
+}
+
+#[test]
 fn test_ufc() {
     run_test("ufc");
 }
@@ -407,6 +412,12 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T unwrap_or"));
     assert!(!c_source.contains("unwrap_or(x"));
+
+    let c_source = compile_to_c(&test_dir().join("duplicate_enum_variant_names.zen"));
+    assert!(c_source.contains("First_i32_Some"));
+    assert!(c_source.contains("First_i32_None"));
+    assert!(c_source.contains("Second_bool_Some"));
+    assert!(c_source.contains("Second_bool_None"));
 
     let c_source = compile_to_c(&test_dir().join("generic_result_enum.zen"));
     assert!(c_source.contains("typedef struct Result_i32_str Result_i32_str;"));

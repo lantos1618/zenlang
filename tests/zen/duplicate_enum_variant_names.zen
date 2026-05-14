@@ -1,0 +1,29 @@
+{ io } = std
+
+First<T>:
+    None,
+    Some(T)
+
+Second<T>:
+    None,
+    Some(T)
+
+describe_first = (value: First<i32>) StaticString {
+    value ?
+        | Some(inner) { "first-some" }
+        | None { "first-none" }
+}
+
+describe_second = (value: Second<bool>) StaticString {
+    value ?
+        | Some(inner) { "second-some" }
+        | None { "second-none" }
+}
+
+main = () i32 {
+    first = First<i32>.Some(1)
+    second = Second<bool>.None
+    io.println(describe_first(first))
+    io.println(describe_second(second))
+    return 0
+}

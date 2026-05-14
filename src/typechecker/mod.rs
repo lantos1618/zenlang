@@ -2847,7 +2847,17 @@ impl TypeChecker {
                         self.validate_resolver_enum_absent_struct_metadata(symbol, name, *span);
                     }
                     for variant in variants {
-                        let Some(symbol) = symbols.lookup(Namespace::Variant, &variant.name) else {
+                        let Some(symbol) = symbols.lookup_variant(name, &variant.name) else {
+                            if let Some(symbol) = symbols.lookup(Namespace::Variant, &variant.name)
+                            {
+                                self.validate_resolver_variant_owner_name(
+                                    symbol,
+                                    &variant.name,
+                                    name,
+                                    variant.span,
+                                );
+                                continue;
+                            }
                             self.require_resolver_symbol(
                                 symbols,
                                 Namespace::Variant,

@@ -151,6 +151,14 @@ impl SymbolTable {
         self.symbols.get(id.0 as usize)
     }
 
+    pub fn lookup_variant(&self, owner_name: &str, name: &str) -> Option<&Symbol> {
+        self.symbols.iter().find(|symbol| {
+            symbol.namespace == Namespace::Variant
+                && symbol.name == name
+                && symbol.variant_owner_name.as_deref() == Some(owner_name)
+        })
+    }
+
     pub fn lookup_scoped(&self, namespace: Namespace, name: &str) -> Option<&Symbol> {
         self.symbols
             .iter()
@@ -748,7 +756,16 @@ impl SymbolTable {
         definition_span: Span,
     ) -> Result<SymbolId, Box<Diagnostic>> {
         let scoped_key = (namespace, name.to_string(), scope_id);
-        if self.by_scoped_name.contains_key(&scoped_key) {
+        let duplicate = if namespace == Namespace::Variant {
+            self.symbols.iter().any(|symbol| {
+                symbol.namespace == Namespace::Variant
+                    && symbol.name == name
+                    && symbol.variant_owner_name == metadata.variant_owner_name
+            })
+        } else {
+            self.by_scoped_name.contains_key(&scoped_key)
+        };
+        if duplicate {
             return Err(Box::new(Diagnostic::error(
                 "E0200",
                 format!(
