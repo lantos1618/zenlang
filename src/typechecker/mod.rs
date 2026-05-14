@@ -628,6 +628,7 @@ impl TypeChecker {
     ) -> Result<TypedProgram, Vec<Diagnostic>> {
         // Phase 1: Collect type definitions and function signatures
         self.collect_declarations(&program.declarations);
+        self.validate_collected_declaration_semantics(&program.declarations);
         self.check_program_after_collection(program)
     }
 
@@ -1146,34 +1147,6 @@ impl TypeChecker {
                 _ => {}
             }
         }
-
-        for decl in decls {
-            if let Declaration::ImplBlock {
-                type_name,
-                behavior: Some(behavior),
-                behavior_type_args,
-                methods,
-                span,
-                ..
-            } = decl
-            {
-                self.check_behavior_impl(type_name, behavior, behavior_type_args, methods, *span);
-            }
-        }
-
-        for decl in decls {
-            if let Declaration::Requires {
-                type_name,
-                behavior,
-                behavior_type_args,
-                span,
-            } = decl
-            {
-                self.check_behavior_requires(type_name, behavior, behavior_type_args, *span);
-            }
-        }
-
-        self.validate_generic_type_references(decls);
     }
 
     fn collect_declarations_with_symbols(&mut self, decls: &[Declaration], symbols: &SymbolTable) {
@@ -1208,11 +1181,9 @@ impl TypeChecker {
                 }
                 Declaration::Struct { name, .. } => {
                     self.collect_resolver_struct_fields(symbols, name);
-                    self.collect_resolver_type_behavior_impls(symbols, name);
                 }
                 Declaration::Enum { name, .. } => {
                     self.collect_resolver_enum_variants(symbols, name);
-                    self.collect_resolver_type_behavior_impls(symbols, name);
                 }
                 Declaration::Behavior { name, .. } => {
                     self.collect_resolver_behavior_methods(symbols, name);
@@ -1239,6 +1210,47 @@ impl TypeChecker {
                 );
             }
         }
+
+        self.validate_collected_declaration_semantics(decls);
+
+        for decl in decls {
+            match decl {
+                Declaration::Struct { name, .. } | Declaration::Enum { name, .. } => {
+                    self.collect_resolver_type_behavior_impls(symbols, name);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn validate_collected_declaration_semantics(&mut self, decls: &[Declaration]) {
+        for decl in decls {
+            if let Declaration::ImplBlock {
+                type_name,
+                behavior: Some(behavior),
+                behavior_type_args,
+                methods,
+                span,
+                ..
+            } = decl
+            {
+                self.check_behavior_impl(type_name, behavior, behavior_type_args, methods, *span);
+            }
+        }
+
+        for decl in decls {
+            if let Declaration::Requires {
+                type_name,
+                behavior,
+                behavior_type_args,
+                span,
+            } = decl
+            {
+                self.check_behavior_requires(type_name, behavior, behavior_type_args, *span);
+            }
+        }
+
+        self.validate_generic_type_references(decls);
     }
 
     fn collect_resolver_value_signature(&mut self, symbols: &SymbolTable, name: &str) {
@@ -8144,6 +8156,38 @@ Point.implements(Mapper) {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             }
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_defers_impl_checks_until_resolver_metadata_is_collected() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Mapper: behavior {
+    map: (self: Self, callback: (i32) i32) (i32) i32
+}
+
+Point.implements(Mapper) {
+    map = (self: Point, callback: (i32) i32) (i32) i32 { return callback }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
+            methods[0].params[1].ty = AstType::I32;
+            methods[0].return_type = Some(AstType::I32);
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior metadata should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
         );
     }
 

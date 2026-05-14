@@ -145,6 +145,9 @@ and do not assume Phase 4 is ready without evidence.
 - Omitted behavior default methods now refresh their method-table signatures
   from validated resolver behavior method metadata, so function-typed default
   methods do not retain stale AST-only signatures after behavior collection.
+- Resolver-backed declaration collection now defers impl/requires semantic
+  checks until after resolver value and behavior metadata has been restored, so
+  stale AST-only behavior signatures cannot produce false impl diagnostics.
 - Typechecker setup rejects resolver local mutability mismatches before
   collecting typed bodies from the AST.
 - Typechecker setup rejects resolver local visibility/source mismatches before

@@ -85,6 +85,8 @@ checked-in docs, tests, and commits only.
 - Omitted behavior default methods now refresh their method-table signatures
   from validated resolver behavior method metadata, including function-typed
   default method parameters and returns.
+- Resolver-backed declaration collection now defers impl/requires semantic
+  checks until after resolver value and behavior metadata has been restored.
 - Behavior impl methods are resolver-owned value symbols with parameter,
   return, generic-name, and generic-bound metadata, and typechecker setup
   validates impl-method signature handoff drift before checking impl bodies.
