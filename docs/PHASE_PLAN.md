@@ -157,6 +157,8 @@ checked-in docs, tests, and commits only.
   found in function or method bodies before typed body collection.
 - Typechecker setup now requires resolver local symbols for pattern bindings
   before checking match arm bodies.
+- Resolver records pattern binding locals, and typechecker setup requires those
+  resolver-owned pattern locals before checking match arm bodies.
 - Typechecker setup now requires resolver local symbols inside top-level
   expression declarations before typed declaration collection.
 - Resolver records top-level expression locals, and typechecker setup requires

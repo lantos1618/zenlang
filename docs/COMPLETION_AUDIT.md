@@ -89,6 +89,8 @@ and do not assume Phase 4 is ready without evidence.
   in function or method bodies before typed body collection.
 - Typechecker setup requires resolver local symbols for pattern bindings before
   checking match arm bodies.
+- Resolver pattern bindings carry scoped local symbols, and typechecker setup
+  rejects missing pattern locals before checking match arm bodies.
 - Typechecker setup requires resolver local symbols inside top-level expression
   declarations before typed declaration collection.
 - Resolver top-level expressions carry scoped local symbols, and typechecker
