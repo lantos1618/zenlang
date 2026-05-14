@@ -223,6 +223,11 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver rejects unknown enum variant expressions for local enum types before
   typechecking, covered by
   `resolver_phase2::resolver_rejects_unknown_enum_variant_expressions`.
+- Resolver rejects missing or unexpected payloads on local enum variant
+  expressions before typechecking, covered by
+  `resolver_phase2::resolver_rejects_missing_enum_variant_payload_expressions`
+  and
+  `resolver_phase2::resolver_rejects_unexpected_enum_variant_payload_expressions`.
 - Unknown method calls through generic behavior-bound receivers produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares

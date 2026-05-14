@@ -119,6 +119,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "resolver_allows_same_variant_names_in_different_enums",
         "resolver_rejects_duplicate_variant_names_in_same_enum",
         "resolver_rejects_unknown_enum_variant_expressions",
+        "resolver_rejects_missing_enum_variant_payload_expressions",
+        "resolver_rejects_unexpected_enum_variant_payload_expressions",
         "tests/zen/duplicate_enum_variant_names.zen",
         "check_module_graph_entry_seeds_imported_function_type_signatures",
         "check_module_graph_entry_specializes_imported_generic_functions",

@@ -1675,14 +1675,33 @@ impl Resolver {
                 payload,
                 span,
             } => {
-                if table.lookup(Namespace::Type, enum_name).is_some()
-                    && table.lookup_variant(enum_name, variant).is_none()
-                {
-                    diagnostics.push(Diagnostic::error(
-                        "E0205",
-                        format!("enum `{enum_name}` has no variant `{variant}`"),
-                        *span,
-                    ));
+                if table.lookup(Namespace::Type, enum_name).is_some() {
+                    if let Some(variant_symbol) = table.lookup_variant(enum_name, variant) {
+                        match (
+                            variant_symbol.variant_payload_count.unwrap_or(0),
+                            payload.is_some(),
+                        ) {
+                            (1, false) => diagnostics.push(Diagnostic::error(
+                                "E0206",
+                                format!("enum variant `{enum_name}.{variant}` requires a payload"),
+                                *span,
+                            )),
+                            (0, true) => diagnostics.push(Diagnostic::error(
+                                "E0207",
+                                format!(
+                                    "enum variant `{enum_name}.{variant}` does not accept a payload"
+                                ),
+                                *span,
+                            )),
+                            _ => {}
+                        }
+                    } else {
+                        diagnostics.push(Diagnostic::error(
+                            "E0205",
+                            format!("enum `{enum_name}` has no variant `{variant}`"),
+                            *span,
+                        ));
+                    }
                 } else if !self.is_known_type_name(table, type_params, enum_name) {
                     diagnostics.push(Diagnostic::error(
                         "E0201",
