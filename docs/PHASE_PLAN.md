@@ -34,6 +34,8 @@ checked-in docs, tests, and commits only.
 - Resolver method symbols carry full value-signature metadata, including
   generic type-parameter names and bounds, and typechecker setup validates
   method signature handoff drift before method bodies are checked.
+  Function-typed method parameters and returns are included in that resolver
+  handoff coverage.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only
@@ -66,6 +68,8 @@ checked-in docs, tests, and commits only.
 - Behavior impl methods are resolver-owned value symbols with parameter,
   return, generic-name, and generic-bound metadata, and typechecker setup
   validates impl-method signature handoff drift before checking impl bodies.
+  Function-typed impl-method parameters and returns are included in that
+  resolver handoff coverage.
 - Resolver records impl-method body locals in their nested scopes, and
   typechecker setup requires those local symbols before checking impl bodies.
 - Generic behavior bounds share the behavior inheritance solver, so an impl of a
@@ -298,6 +302,9 @@ checked-in docs, tests, and commits only.
 - Resolver behavior method signature metadata preserves function-typed
   parameters and returns, and typechecker setup rejects function-type method
   signature handoff drift before collecting behavior metadata from the AST.
+- Resolver top-level method and behavior impl method value symbols preserve
+  function-typed parameters and returns, and typechecker setup rejects
+  function-type method handoff drift before collecting method bodies.
 - Resolver struct symbols now carry field-count metadata, and typechecker setup
   rejects mismatches before collecting struct field metadata from the AST.
 - Resolver struct symbols now carry field-name/type metadata, and typechecker

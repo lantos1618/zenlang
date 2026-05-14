@@ -5781,6 +5781,41 @@ Box.get<T> = (self: Box<T>) T {
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_method_function_type_signature() {
+        let program = parse_program(
+            r#"
+Box<T>: {
+    value: T
+}
+
+Box.map<T> = (self: Box<T>, callback: (T) T) (T) T {
+    return callback
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_type_names_for_test(
+            Namespace::Value,
+            "Box.map",
+            Some(vec!["Box<T>".to_string(), "T".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver method function type mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'Box.map' has parameter types '(Box<T>, T)', expected '(Box<T>, (T) T)'"
+            )),
+            "expected resolver method function type diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_uses_resolver_import_bindings() {
         let mut program = parse_program(
             r#"
@@ -6404,6 +6439,45 @@ Point.implements(Json) {
                 "resolver value symbol 'Point.stringify' has return type 'i32', expected 'str'"
             )),
             "expected resolver impl method signature diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_impl_function_type_signature() {
+        let program = parse_program(
+            r#"
+Mapper: behavior {
+    map: (Self, (i32) i32) (i32) i32
+}
+
+Point: { x: i32 }
+
+Point.implements(Mapper) {
+    map = (value: Point, callback: (i32) i32) (i32) i32 {
+        return callback
+    }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_name_for_test(
+            Namespace::Value,
+            "Point.map",
+            Some("i32".to_string()),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver impl method function type mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'Point.map' has return type 'i32', expected '(i32) i32'"
+            )),
+            "expected resolver impl method function type diagnostic, got {err:?}"
         );
     }
 

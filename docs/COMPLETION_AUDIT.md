@@ -57,7 +57,8 @@ and do not assume Phase 4 is ready without evidence.
   call-resolution assertions for the reached generic function dependency.
 - Resolver method value symbols carry complete value-signature metadata, and
   typechecker setup rejects method signature drift before method body
-  collection.
+  collection. Function-typed method parameters and returns are included in
+  that handoff coverage.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.
@@ -77,7 +78,8 @@ and do not assume Phase 4 is ready without evidence.
   `check_program_with_symbols`.
 - Resolver behavior impl method symbols carry complete value-signature metadata,
   and typechecker setup rejects impl-method signature drift before behavior impl
-  body collection.
+  body collection. Function-typed impl-method parameters and returns are
+  included in that handoff coverage.
 - Resolver behavior impl method bodies carry scoped local symbols, and
   typechecker setup rejects missing impl-method body locals before behavior impl
   body collection.
@@ -281,6 +283,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior method signature metadata preserves function-typed
   parameters and returns, and typechecker setup rejects function-type method
   signature drift before behavior metadata collection.
+- Resolver top-level method and behavior impl method value symbols preserve
+  function-typed parameters and returns, and typechecker setup rejects
+  function-type method handoff drift before method body collection.
 - Resolver struct symbols carry field-count metadata, and typechecker setup
   rejects mismatches before collecting struct field metadata.
 - Resolver struct symbols carry field-name/type metadata, and typechecker setup
