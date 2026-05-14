@@ -1071,6 +1071,23 @@ main = (mut input: i32) i32 {
 }
 
 #[test]
+fn resolver_records_top_level_expr_locals() {
+    let program = parse_program(
+        r#"
+value := 1
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+    let value = table
+        .lookup_scoped(Namespace::Local, "value")
+        .expect("top-level expr local symbol");
+
+    assert_eq!(value.is_mutable, Some(false));
+    assert!(value.scope_id > 0);
+}
+
+#[test]
 fn resolver_rejects_duplicate_bindings_in_same_scope() {
     let program = parse_program(
         r#"

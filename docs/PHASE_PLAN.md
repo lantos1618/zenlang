@@ -159,6 +159,8 @@ checked-in docs, tests, and commits only.
   before checking match arm bodies.
 - Typechecker setup now requires resolver local symbols inside top-level
   expression declarations before typed declaration collection.
+- Resolver records top-level expression locals, and typechecker setup requires
+  those local symbols before typed declaration collection.
 - Typechecker setup now requires resolver local symbols inside struct field
   default expressions before collecting struct metadata.
 - Resolver records struct field default-expression locals, and typechecker
