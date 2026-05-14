@@ -165,6 +165,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "tests/zen/multi_file_type_method/main.zen",
         "parse_impl_block",
         "resolver_accepts_non_behavior_impl_blocks_as_method_symbols",
+        "resolver_rejects_duplicate_non_behavior_impl_method_names",
+        "resolver_rejects_non_behavior_impl_method_colliding_with_top_level_method",
         "tests/zen/type_impl_methods.zen",
         "tests/zen/multi_file_type_impl/main.zen",
         "imported_private_type_impl_methods_are_not_visible",

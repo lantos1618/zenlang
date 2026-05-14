@@ -318,7 +318,9 @@ checked-in docs, tests, and commits only.
   and generated-C assertions in
   `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`;
   `integration::imported_private_type_impl_methods_are_not_visible` covers the
-  graph-owned import privacy boundary.
+  graph-owned import privacy boundary. Duplicate non-behavior impl method names
+  and collisions with top-level `Type.method` declarations are rejected by
+  resolver coverage.
 - Typechecker setup now rejects extra resolver-owned declaration symbols for
   values, types, behaviors, and enum variants before collecting declaration
   metadata from the AST.

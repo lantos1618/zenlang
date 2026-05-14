@@ -291,7 +291,9 @@ and do not assume Phase 4 is ready without evidence.
   value symbols, typecheck, and emit concrete method functions, including
   generic impl methods and graph-owned public imports, preventing silently
   ignored impl method bodies. Imported private impl methods remain inaccessible
-  through graph-owned imports.
+  through graph-owned imports. Resolver rejects duplicate non-behavior impl
+  method symbols, including collisions with top-level `Type.method`
+  declarations.
 - Typechecker setup rejects extra resolver-owned declaration symbols for values,
   types, behaviors, and enum variants before declaration metadata collection.
 - Typechecker setup rejects extra resolver-owned import and module symbols when
