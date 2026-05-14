@@ -40,6 +40,8 @@ Generic behavior type-parameter bound enforcement is covered by
 `typechecker::tests::behavior_impl_generic_behavior_type_arg_bound_passes_when_satisfied`
 and
 `typechecker::tests::behavior_impl_generic_behavior_type_arg_bound_failure_is_error`.
+Generic behavior inheritance with child type-parameter parent args is covered by
+`typechecker::tests::behavior_extends_generic_parent_accepts_child_type_parameter_arg`.
 
 | Syntax form | Status | Test Evidence |
 |---|---|---|

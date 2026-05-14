@@ -122,6 +122,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_validates_resolver_type_parameter_names",
         "behavior_impl_generic_behavior_type_arg_bound_passes_when_satisfied",
         "behavior_impl_generic_behavior_type_arg_bound_failure_is_error",
+        "behavior_extends_generic_parent_accepts_child_type_parameter_arg",
         "check_program_with_symbols_validates_resolver_generic_struct_field_types",
         "check_program_with_symbols_validates_resolver_generic_enum_payload_types",
         "check_program_with_symbols_validates_resolver_generic_behavior_method_signatures",

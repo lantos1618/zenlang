@@ -116,6 +116,9 @@ checked-in docs, tests, and commits only.
 - Generic behavior declarations also enforce their own type-parameter bounds
   when concrete behavior type arguments are instantiated, with positive and
   negative typechecker coverage for `Serializable<T: Json<T>>`.
+- Generic behavior inheritance accepts parent type arguments that reference the
+  child behavior's own type parameters, deferring those bound checks until a
+  concrete behavior specialization is instantiated.
 - UFCS dispatch through a substituted generic behavior bound is covered by
   `tests/zen/behavior_json_generic_bound_ufcs.zen` and generated-C checks that
   reject unresolved `T_encode` calls.

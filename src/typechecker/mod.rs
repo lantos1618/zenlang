@@ -1546,6 +1546,7 @@ impl TypeChecker {
         &mut self,
         behavior: &str,
         type_args: &[AstType],
+        scoped_type_params: &HashSet<String>,
         span: Span,
     ) -> Option<HashMap<String, AstType>> {
         let Some(info) = self.behaviors.get(behavior).cloned() else {
@@ -1580,8 +1581,14 @@ impl TypeChecker {
         let type_substitutions: HashMap<String, Type> = info
             .type_params
             .iter()
-            .cloned()
-            .zip(type_args.iter().map(|arg| self.resolve_type(arg)))
+            .zip(type_args.iter())
+            .filter_map(|(param, arg)| {
+                if ast_type_references_type_param(arg, scoped_type_params) {
+                    None
+                } else {
+                    Some((param.clone(), self.resolve_type(arg)))
+                }
+            })
             .collect();
         let error_count = self
             .diagnostics
@@ -1622,8 +1629,12 @@ impl TypeChecker {
             return;
         }
 
-        let Some(_) = self.behavior_type_arg_substitutions(behavior, behavior_type_args, span)
-        else {
+        let Some(_) = self.behavior_type_arg_substitutions(
+            behavior,
+            behavior_type_args,
+            &HashSet::new(),
+            span,
+        ) else {
             return;
         };
         let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
@@ -1656,13 +1667,19 @@ impl TypeChecker {
             return;
         }
 
-        let Some(_) = self.behavior_type_arg_substitutions(parent, parent_type_args, span) else {
+        let scoped_type_params: HashSet<String> = self
+            .behaviors
+            .get(behavior)
+            .map(|info| info.type_params.iter().cloned().collect())
+            .unwrap_or_default();
+        let Some(_) = self.behavior_type_arg_substitutions(
+            parent,
+            parent_type_args,
+            &scoped_type_params,
+            span,
+        ) else {
             return;
         };
-
-        if self.reject_unspecialized_generic_behavior(behavior, span) {
-            return;
-        }
 
         let parent_key = self.behavior_reference_key(parent, parent_type_args);
         let parent_display = behavior_ref_display(parent, parent_type_args);
@@ -1882,9 +1899,12 @@ impl TypeChecker {
             return;
         }
 
-        let Some(behavior_substitutions) =
-            self.behavior_type_arg_substitutions(behavior, behavior_type_args, span)
-        else {
+        let Some(behavior_substitutions) = self.behavior_type_arg_substitutions(
+            behavior,
+            behavior_type_args,
+            &HashSet::new(),
+            span,
+        ) else {
             return;
         };
         let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
@@ -2045,27 +2065,6 @@ impl TypeChecker {
             format!(
                 "generic type `{}` expects {} type arguments, found 0",
                 type_name, type_param_count
-            ),
-            span,
-        ));
-        true
-    }
-
-    fn reject_unspecialized_generic_behavior(&mut self, behavior: &str, span: Span) -> bool {
-        let behavior_type_param_count = self
-            .behaviors
-            .get(behavior)
-            .map(|info| info.type_params.len())
-            .unwrap_or(0);
-        if behavior_type_param_count == 0 {
-            return false;
-        }
-
-        self.diagnostics.push(Diagnostic::error(
-            "E6012",
-            format!(
-                "generic behavior `{}` expects {} type arguments, found 0",
-                behavior, behavior_type_param_count
             ),
             span,
         ));
@@ -12676,6 +12675,31 @@ Point.requires(Json<str>)
         TypeChecker::new()
             .check_program(&program)
             .expect("child behavior impl should satisfy specialized generic parent requires");
+    }
+
+    #[test]
+    fn behavior_extends_generic_parent_accepts_child_type_parameter_arg() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Serializable<T: Json<T>>: behavior {
+    serialize: (Self) T
+}
+
+Pretty<T: Json<T>>: behavior {
+    pretty: (Self) T
+}
+
+Pretty.extends(Serializable<T>)
+"#,
+        );
+
+        TypeChecker::new()
+            .check_program(&program)
+            .expect("generic behavior parent should accept child type parameter args");
     }
 
     #[test]
