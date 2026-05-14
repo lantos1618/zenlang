@@ -52,6 +52,9 @@ and do not assume Phase 4 is ready without evidence.
   `tests/zen/generic_method_self.zen`, including receiver-based inference for
   `Self`-only generic method signatures and nested
   `Box<Option<i32>>` specialization dependency ordering.
+- Generic method specializations that call generic functions have executable
+  and generated-C coverage in `tests/zen/generic_method_worklist.zen`, including
+  call-resolution assertions for the reached generic function dependency.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.

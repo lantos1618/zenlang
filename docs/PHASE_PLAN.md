@@ -37,6 +37,8 @@ checked-in docs, tests, and commits only.
   generic methods also infer their type arguments from the concrete receiver
   type. Nested generic receiver inference preserves inner generic type
   structure and emits inner specializations before containing generic structs.
+  Generic method specializations that call generic functions now have worklist
+  coverage so reachable generic function dependencies are emitted once.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.

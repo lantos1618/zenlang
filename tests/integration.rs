@@ -247,6 +247,11 @@ fn test_generic_method_self() {
 }
 
 #[test]
+fn test_generic_method_worklist() {
+    run_test("generic_method_worklist");
+}
+
+#[test]
 fn test_generic_result_enum() {
     run_test("generic_result_enum");
 }
@@ -345,6 +350,16 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     );
     assert!(!c_source.contains("Box_copy(box"));
     assert!(!c_source.contains("Unknown"));
+
+    let c_source = compile_to_c(&test_dir().join("generic_method_worklist.zen"));
+    assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
+    assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
+    assert!(c_source.contains("inner_i32(self.value)"));
+    assert!(c_source.contains("Box_get_inner_i32(box)"));
+    assert_c_call_resolves_to_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_definition(&c_source, "Box_get_inner_i32");
+    assert!(!c_source.contains("T inner"));
+    assert!(!c_source.contains("inner_T"));
 
     let c_source = compile_to_c(&test_dir().join("generic_vec.zen"));
     assert!(c_source.contains("int32_t Vec_len_i32(Vec_i32 self)"));
