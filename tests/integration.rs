@@ -496,6 +496,16 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Box_get_inner_i32");
     assert!(!c_source.contains("T Box_inner"));
 
+    let c_source =
+        compile_to_c(&test_dir().join("multi_file_type_method_imported_dependency/main.zen"));
+    assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
+    assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
+    assert!(c_source.contains("inner_i32(self.value)"));
+    assert!(c_source.contains("Box_get_inner_i32(box)"));
+    assert_c_call_resolves_to_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_definition(&c_source, "Box_get_inner_i32");
+    assert!(!c_source.contains("T inner"));
+
     let c_source = compile_to_c(&test_dir().join("generic_ufc_function.zen"));
     assert!(c_source.contains("int32_t id_i32(int32_t value)"));
     assert!(c_source.contains("id_i32(12LL)"));
@@ -1248,6 +1258,13 @@ fn test_multi_file_type_method_method_dependency_imports() {
 }
 
 #[test]
+fn test_multi_file_type_method_imported_dependency_imports() {
+    let zen_path = test_dir().join("multi_file_type_method_imported_dependency/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "59\n");
+}
+
+#[test]
 fn imported_type_method_worklist_helpers_are_not_directly_visible() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let model_path = tmp.path().join("model.zen");
@@ -1345,6 +1362,65 @@ main = () i32 {
         message.contains("type `Box_i32` has no method `inner`")
             || message.contains("type `Box` has no method `inner`"),
         "expected unimported method diagnostic, panic={message}"
+    );
+}
+
+#[test]
+fn imported_type_method_imported_dependencies_are_not_directly_visible() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let helper_path = tmp.path().join("helper.zen");
+    std::fs::write(
+        &helper_path,
+        r#"
+pub inner<T> = (value: T) T {
+    return value
+}
+"#,
+    )
+    .expect("write helper module");
+
+    let model_path = tmp.path().join("model.zen");
+    std::fs::write(
+        &model_path,
+        r#"
+{ inner } = helper
+
+pub Box<T>: {
+    value: T
+}
+
+pub Box.get_inner<T> = (self: Box<T>) T {
+    return inner(self.value)
+}
+"#,
+    )
+    .expect("write imported module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ Box } = model
+
+main = () i32 {
+    return inner<i32>(59)
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject direct calls to source-module imports");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("unknown value symbol 'inner'")
+            || message.contains("undefined function `inner`"),
+        "expected unimported helper diagnostic, panic={message}"
     );
 }
 

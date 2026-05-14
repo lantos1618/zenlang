@@ -3535,6 +3535,7 @@ impl TypeChecker {
             self.seed_public_methods_for_imported_type(
                 binding.source_symbol.as_str(),
                 source_module,
+                graph,
             );
             self.seed_behavior_impls_for_imported_type(
                 binding.local_name.as_str(),
@@ -3780,8 +3781,9 @@ impl TypeChecker {
         &mut self,
         type_name: &str,
         source_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
     ) {
-        let dependencies = Self::source_module_dependencies(source_module);
+        let dependencies = Self::source_module_dependencies(source_module, graph);
 
         for decl in &source_module.program.declarations {
             let Declaration::Method {
@@ -3848,7 +3850,7 @@ impl TypeChecker {
             self.behavior_impls
                 .insert((local_name.to_string(), behavior_key));
 
-            let dependencies = Self::source_module_dependencies(source_module);
+            let dependencies = Self::source_module_dependencies(source_module, graph);
             for method in methods {
                 self.seed_imported_impl_method(local_name, method, false, &dependencies);
             }
@@ -3960,8 +3962,26 @@ impl TypeChecker {
         );
     }
 
-    fn source_module_dependencies(source_module: &ResolvedModule) -> SourceModuleDependencies {
+    fn source_module_dependencies(
+        source_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
+    ) -> SourceModuleDependencies {
         let mut dependencies = SourceModuleDependencies::default();
+        for binding in &source_module.imports {
+            let Some(imported_module) = graph.module(binding.source_module) else {
+                continue;
+            };
+            let Some(decl) = imported_module
+                .program
+                .declarations
+                .iter()
+                .find(|decl| decl.name() == Some(binding.source_symbol.as_str()))
+            else {
+                continue;
+            };
+            Self::insert_source_import_dependency(&binding.local_name, decl, &mut dependencies);
+        }
+
         for decl in &source_module.program.declarations {
             match decl {
                 Declaration::Function { name, .. } => {
@@ -4002,6 +4022,21 @@ impl TypeChecker {
             }
         }
         dependencies
+    }
+
+    fn insert_source_import_dependency(
+        local_name: &str,
+        decl: &Declaration,
+        dependencies: &mut SourceModuleDependencies,
+    ) {
+        if matches!(decl, Declaration::Function { .. }) {
+            Self::insert_source_function_dependency(
+                local_name,
+                decl,
+                &mut dependencies.functions,
+                &mut dependencies.generic_functions,
+            );
+        }
     }
 
     fn insert_source_function_dependency(
