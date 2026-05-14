@@ -14,15 +14,16 @@ pub(super) fn collect_captures(
     seen: &mut HashSet<String>,
 ) {
     match &expr.kind {
-        TypedExprKind::Variable(name) => {
-            if !params.contains(name) && outer_vars.contains_key(name) && seen.insert(name.clone())
-            {
-                captures.push(Capture {
-                    name: name.clone(),
-                    ty: outer_vars[name].clone(),
-                    by_ref: false,
-                });
-            }
+        TypedExprKind::Variable(name)
+            if !params.contains(name)
+                && outer_vars.contains_key(name)
+                && seen.insert(name.clone()) =>
+        {
+            captures.push(Capture {
+                name: name.clone(),
+                ty: outer_vars[name].clone(),
+                by_ref: false,
+            });
         }
         TypedExprKind::BinaryOp { left, right, .. } => {
             collect_captures(left, params, outer_vars, captures, seen);

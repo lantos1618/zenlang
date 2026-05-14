@@ -79,8 +79,10 @@ checked-in docs, tests, and commits only.
 - Concrete generic behavior association syntax in `.implements` and `.requires`,
   such as `Point.implements(Json<str>)`, has parser, typechecker, and executable
   coverage through `tests/zen/behavior_json_generic_association.zen`.
-- Generic behavior inheritance in `.extends` is still explicitly gated with
-  parser diagnostics.
+- Generic behavior inheritance in `.extends`, including
+  `PrettyJson.extends(Json<str>)`, now has parser, resolver metadata,
+  typechecker substitution, local executable coverage, and graph-owned
+  multi-file import coverage.
 - Unspecialized generic behaviors in `.implements`, `.requires`, and `.extends`
   now produce hard arity diagnostics instead of silently acting like
   nongeneric behaviors.

@@ -44,28 +44,26 @@ impl Parser {
                         span,
                     }));
                 }
-                Token::Colon => {
+                Token::Colon if self.is_typed_var_decl() => {
                     // Could be `name: Type = expr` (typed var decl)
                     // or `name: Type` (type annotation — rare)
                     // Peek further: name : Type = expr
-                    if self.is_typed_var_decl() {
-                        let (_, name_span) = self.advance(); // consume name
-                        self.advance(); // consume :
-                        let ty = self.parse_type()?;
-                        self.skip_newlines();
-                        self.expect(&Token::Assign)?;
-                        self.skip_newlines();
-                        let value = self.parse_expression()?;
-                        let span = name_span.merge(value.span());
-                        return Ok(StmtOrExpr::Stmt(Statement::VarDecl {
-                            name,
-                            ty: Some(ty),
-                            value,
-                            mutable: false,
-                            constant: false,
-                            span,
-                        }));
-                    }
+                    let (_, name_span) = self.advance(); // consume name
+                    self.advance(); // consume :
+                    let ty = self.parse_type()?;
+                    self.skip_newlines();
+                    self.expect(&Token::Assign)?;
+                    self.skip_newlines();
+                    let value = self.parse_expression()?;
+                    let span = name_span.merge(value.span());
+                    return Ok(StmtOrExpr::Stmt(Statement::VarDecl {
+                        name,
+                        ty: Some(ty),
+                        value,
+                        mutable: false,
+                        constant: false,
+                        span,
+                    }));
                 }
                 Token::Assign => {
                     // name = expr — could be const decl or assignment

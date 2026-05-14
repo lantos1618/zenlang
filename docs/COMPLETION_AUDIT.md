@@ -181,8 +181,10 @@ and do not assume Phase 4 is ready without evidence.
   such as `Point.implements(Json<str>)`, is parsed, typechecked with substituted
   behavior method signatures, and covered by
   `tests/zen/behavior_json_generic_association.zen`.
-- Generic behavior inheritance in `.extends` is still explicitly gated with
-  parser diagnostics.
+- Generic behavior inheritance in `.extends`, including
+  `PrettyJson.extends(Json<str>)`, is parsed, recorded in resolver metadata,
+  checked with substituted parent methods, and covered by local and graph-owned
+  multi-file fixtures.
 - Unspecialized generic behaviors in `.implements`, `.requires`, and `.extends`
   produce hard arity diagnostics instead of silently acting like nongeneric
   behaviors.

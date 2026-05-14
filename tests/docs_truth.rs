@@ -190,6 +190,11 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
             "docs/PHASE_PLAN.md is missing durable plan text: {required}"
         );
     }
+
+    assert!(
+        !plan.contains("Generic behavior inheritance in `.extends` is still explicitly gated"),
+        "docs/PHASE_PLAN.md still claims generic behavior inheritance is gated"
+    );
 }
 
 #[test]
@@ -215,6 +220,11 @@ fn completion_audit_records_recovery_objective_evidence_and_gaps() {
             "docs/COMPLETION_AUDIT.md is missing audit evidence text: {required}"
         );
     }
+
+    assert!(
+        !audit.contains("Generic behavior inheritance in `.extends` is still explicitly gated"),
+        "docs/COMPLETION_AUDIT.md still claims generic behavior inheritance is gated"
+    );
 }
 
 #[test]
