@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::{
     AstType, BehaviorMethod, Declaration, Expression, Param, Pattern, Program, Statement,
@@ -1642,11 +1642,47 @@ impl Resolver {
                 );
             }
             Expression::StructLiteral {
+                name,
                 type_args,
                 fields,
                 span,
-                ..
             } => {
+                if let Some(symbol) = table.lookup(Namespace::Type, name) {
+                    if let Some(field_type_names) = symbol.field_type_names.as_ref() {
+                        let expected_fields: HashSet<&str> = field_type_names
+                            .iter()
+                            .map(|(field_name, _)| field_name.as_str())
+                            .collect();
+                        let mut provided_fields = HashSet::new();
+
+                        for (field_name, _) in fields {
+                            if !provided_fields.insert(field_name.as_str()) {
+                                diagnostics.push(Diagnostic::error(
+                                    "E0208",
+                                    format!("duplicate field `{field_name}` for struct `{name}`"),
+                                    *span,
+                                ));
+                            }
+                            if !expected_fields.contains(field_name.as_str()) {
+                                diagnostics.push(Diagnostic::error(
+                                    "E0209",
+                                    format!("unknown field `{field_name}` for struct `{name}`"),
+                                    *span,
+                                ));
+                            }
+                        }
+
+                        for expected_field in expected_fields {
+                            if !provided_fields.contains(expected_field) {
+                                diagnostics.push(Diagnostic::error(
+                                    "E0210",
+                                    format!("missing field `{expected_field}` for struct `{name}`"),
+                                    *span,
+                                ));
+                            }
+                        }
+                    }
+                }
                 for type_arg in type_args {
                     self.validate_type_ref(
                         table,

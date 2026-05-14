@@ -125,6 +125,11 @@ checked-in docs, tests, and commits only.
   `resolver_phase2::resolver_rejects_missing_enum_variant_payload_expressions`
   and
   `resolver_phase2::resolver_rejects_unexpected_enum_variant_payload_expressions`.
+- Resolver now rejects duplicate, unknown, and missing fields on local struct
+  literal expressions before typechecking, covered by
+  `resolver_phase2::resolver_rejects_duplicate_struct_literal_fields`,
+  `resolver_phase2::resolver_rejects_unknown_struct_literal_fields`, and
+  `resolver_phase2::resolver_rejects_missing_struct_literal_fields`.
 - Unknown method calls through generic behavior-bound receivers now produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
