@@ -159,6 +159,9 @@ checked-in docs, tests, and commits only.
   import validation as the CLI paths.
 - Resolver and typechecker symbol validation now cover behavior impl methods as
   `Type.method` value symbols, closing another declaration handoff gap.
+- Resolver rejects top-level methods whose receiver type is unknown, and
+  typechecker setup requires the resolver-owned receiver type symbol before
+  collecting method metadata from the AST.
 - Typechecker resolver-symbol validation now checks enum variant symbols from
   resolver output instead of treating enum type presence as sufficient.
 - Resolver value symbols now carry parameter-count metadata for functions and

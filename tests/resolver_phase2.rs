@@ -121,6 +121,25 @@ distance = (point: Point) UnknownReturn { return 0 }
 }
 
 #[test]
+fn resolver_rejects_method_on_unknown_type() {
+    let program = parse_program(
+        r#"
+Missing.label = () str { return "missing" }
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("method receiver type should be known");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("unknown type symbol 'Missing'")),
+        "expected unknown method receiver type diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_import_bindings_as_symbols() {
     let program = parse_program(
         r#"

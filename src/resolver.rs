@@ -1011,6 +1011,7 @@ impl Resolver {
                 self.validate_expr_refs(table, type_params, body, &mut locals, diagnostics);
             }
             Declaration::Method {
+                type_name,
                 type_params,
                 params,
                 return_type,
@@ -1018,6 +1019,13 @@ impl Resolver {
                 span,
                 ..
             } => {
+                if !self.is_known_type_name(table, &[], type_name) {
+                    diagnostics.push(Diagnostic::error(
+                        "E0201",
+                        format!("unknown type symbol '{type_name}'"),
+                        *span,
+                    ));
+                }
                 self.validate_type_param_constraints(table, type_params, diagnostics);
                 self.validate_params(table, type_params, params, diagnostics);
                 if let Some(return_type) = return_type {

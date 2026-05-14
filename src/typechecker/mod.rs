@@ -2311,6 +2311,7 @@ impl TypeChecker {
                     body,
                     ..
                 } => {
+                    self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
                     self.require_resolver_value_symbol(
                         symbols,
                         &format!("{type_name}.{method_name}"),
@@ -3940,6 +3941,32 @@ main = () i32 { return 0 }
                 .message
                 .contains("resolver symbol table missing value symbol 'main'")),
             "expected missing resolver symbol diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_requires_resolver_method_receiver_type() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+Point.label = () str { return "point" }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.remove_for_test(Namespace::Type, "Point");
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("missing receiver type resolver symbol should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver symbol table missing type symbol 'Point'")),
+            "expected missing method receiver type symbol diagnostic, got {err:?}"
         );
     }
 

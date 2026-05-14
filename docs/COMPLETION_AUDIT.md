@@ -155,6 +155,9 @@ and do not assume Phase 4 is ready without evidence.
   fixture `tests/zen/behavior_inherited_default_method.zen`.
 - Behavior impl methods are recorded and validated through resolver
   `Type.method` value symbols.
+- Top-level method declarations require a known receiver type in resolver
+  diagnostics, and typechecker setup rejects missing receiver type symbols
+  before collecting method metadata.
 - Enum variants are validated through resolver `Variant` symbols during
   typechecker setup.
 - Resolver value symbols carry parameter-count metadata, and typechecker setup
