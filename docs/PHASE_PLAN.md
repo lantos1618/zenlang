@@ -105,6 +105,8 @@ checked-in docs, tests, and commits only.
 - Resolver type symbols now carry behavior impl and `.requires` association
   metadata, and typechecker setup rejects missing or extra association metadata
   before collecting behavior impls/requires from the AST.
+  Specialized behavior references such as `Json<str>` are included in this
+  resolver handoff validation.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker
   coverage for inherited required methods, parent behavior satisfaction, and
   coherence diagnostics for duplicate edges, cycles, and conflicting inherited
@@ -114,7 +116,9 @@ checked-in docs, tests, and commits only.
   typechecker substitution, and executable coverage through
   `tests/zen/behavior_generic_parent_inheritance.zen`.
 - Resolver behavior symbols now carry parent behavior metadata, and typechecker
-  setup rejects missing or extra resolver parent-edge metadata.
+  setup rejects missing or extra resolver parent-edge metadata. Specialized
+  parent references such as `Json<str>` are included in this resolver handoff
+  validation.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.
 - Behavior impl coherence is now covered for specialized generic parent/child

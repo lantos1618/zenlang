@@ -8011,6 +8011,43 @@ PrettyJson.extends(Json)
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_generic_behavior_parent_names() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_parent_names_for_test(
+            Namespace::Behavior,
+            "PrettyJson",
+            Some(vec!["Json<i32>".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver generic behavior parent metadata mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver behavior symbol 'PrettyJson' has parents 'Json<i32>', expected to include 'Json<str>'"
+            )),
+            "expected resolver generic behavior parent metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_rejects_extra_resolver_behavior_parent_names() {
         let program = parse_program(
             r#"
@@ -8085,6 +8122,43 @@ Point.implements(Json) {
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_generic_behavior_impl_names() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_impl_names_for_test(
+            Namespace::Type,
+            "Point",
+            Some(vec!["Json<i32>".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver generic behavior impl metadata mismatch should fail");
+
+        let expected =
+            "resolver type symbol 'Point' has behavior impls 'Json<i32>', expected to include 'Json<str>'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected resolver generic behavior impl metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_validates_resolver_behavior_required_names() {
         let program = parse_program(
             r#"
@@ -8116,6 +8190,45 @@ Point.requires(Json)
         assert!(
             err.iter().any(|d| d.message.contains(expected)),
             "expected resolver behavior requires metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_generic_behavior_required_names() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_required_names_for_test(
+            Namespace::Type,
+            "Point",
+            Some(vec!["Json<i32>".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver generic behavior requires metadata mismatch should fail");
+
+        let expected =
+            "resolver type symbol 'Point' has behavior requires 'Json<i32>', expected to include 'Json<str>'";
+        assert!(
+            err.iter().any(|d| d.message.contains(expected)),
+            "expected resolver generic behavior requires metadata diagnostic, got {err:?}"
         );
     }
 

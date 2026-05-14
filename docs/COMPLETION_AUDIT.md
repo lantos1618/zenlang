@@ -170,7 +170,9 @@ and do not assume Phase 4 is ready without evidence.
   known type/behavior symbols, and typechecked against explicit behavior impls.
 - Resolver type symbols carry behavior impl and `.requires` association
   metadata, and typechecker setup rejects missing or extra association metadata
-  before collecting behavior impls/requires from the AST.
+  before collecting behavior impls/requires from the AST. Specialized behavior
+  references such as `Json<str>` are included in this resolver handoff
+  validation.
 - Generic behavior bounds use the same inheritance-aware behavior satisfaction
   check as `.requires`.
 - Inherited generic behavior dispatch is covered by the executable fixture
@@ -210,7 +212,9 @@ and do not assume Phase 4 is ready without evidence.
   checked with substituted parent method signatures, and covered by
   `tests/zen/behavior_generic_parent_inheritance.zen`.
 - Resolver behavior symbols carry parent behavior metadata, and typechecker
-  setup rejects missing or extra resolver parent-edge metadata.
+  setup rejects missing or extra resolver parent-edge metadata. Specialized
+  parent references such as `Json<str>` are included in this resolver handoff
+  validation.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.
 - Behavior impl coherence is covered for specialized generic parent/child
