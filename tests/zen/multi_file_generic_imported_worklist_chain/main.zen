@@ -1,0 +1,7 @@
+{ io } = std
+{ outer } = model
+
+main = () i32 {
+    io.println("${outer<i32>(83)}")
+    return 0
+}

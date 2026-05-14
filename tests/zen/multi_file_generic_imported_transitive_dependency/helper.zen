@@ -1,0 +1,7 @@
+inner<T> = (value: T) T {
+    return value
+}
+
+pub middle<T> = (value: T) T {
+    return inner(value)
+}

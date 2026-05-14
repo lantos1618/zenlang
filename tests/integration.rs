@@ -475,6 +475,35 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Holder_T"));
     assert!(!c_source.contains("T Holder_get"));
 
+    let c_source =
+        compile_to_c(&test_dir().join("multi_file_generic_imported_worklist_chain/main.zen"));
+    assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
+    assert!(c_source.contains("int32_t middle_i32(int32_t value)"));
+    assert!(c_source.contains("int32_t outer_i32(int32_t value)"));
+    assert!(c_source.contains("inner_i32(value)"));
+    assert!(c_source.contains("middle_i32(value)"));
+    assert!(c_source.contains("outer_i32(83LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_definition(&c_source, "middle_i32");
+    assert_c_call_resolves_to_definition(&c_source, "outer_i32");
+    assert!(!c_source.contains("T inner"));
+    assert!(!c_source.contains("T middle"));
+
+    let c_source = compile_to_c(
+        &test_dir().join("multi_file_generic_imported_transitive_dependency/main.zen"),
+    );
+    assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
+    assert!(c_source.contains("int32_t middle_i32(int32_t value)"));
+    assert!(c_source.contains("int32_t outer_i32(int32_t value)"));
+    assert!(c_source.contains("inner_i32(value)"));
+    assert!(c_source.contains("middle_i32(value)"));
+    assert!(c_source.contains("outer_i32(89LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_definition(&c_source, "middle_i32");
+    assert_c_call_resolves_to_definition(&c_source, "outer_i32");
+    assert!(!c_source.contains("T inner"));
+    assert!(!c_source.contains("T middle"));
+
     let c_source = compile_to_c(&test_dir().join("multi_file_type_impl/main.zen"));
     assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_get_i32(box)"));
@@ -1263,6 +1292,20 @@ fn test_multi_file_generic_imported_type_dependency_imports() {
 }
 
 #[test]
+fn test_multi_file_generic_imported_worklist_chain_imports() {
+    let zen_path = test_dir().join("multi_file_generic_imported_worklist_chain/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "83\n");
+}
+
+#[test]
+fn test_multi_file_generic_imported_transitive_dependency_imports() {
+    let zen_path = test_dir().join("multi_file_generic_imported_transitive_dependency/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "89\n");
+}
+
+#[test]
 fn test_multi_file_type_impl_imports() {
     let zen_path = test_dir().join("multi_file_type_impl/main.zen");
     let actual = compile_and_run(&zen_path);
@@ -1593,6 +1636,65 @@ main = () i32 {
             || message.contains("unknown generic type `Holder`")
             || message.contains("type `Holder_i32` has no method `get`"),
         "expected unimported helper type or method diagnostic, panic={message}"
+    );
+}
+
+#[test]
+fn imported_generic_function_transitive_dependencies_are_not_directly_visible() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let helper_path = tmp.path().join("helper.zen");
+    std::fs::write(
+        &helper_path,
+        r#"
+inner<T> = (value: T) T {
+    return value
+}
+
+pub middle<T> = (value: T) T {
+    return inner(value)
+}
+"#,
+    )
+    .expect("write helper module");
+
+    let model_path = tmp.path().join("model.zen");
+    std::fs::write(
+        &model_path,
+        r#"
+{ middle } = helper
+
+pub outer<T> = (value: T) T {
+    return middle(value)
+}
+"#,
+    )
+    .expect("write imported module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ outer } = model
+
+main = () i32 {
+    return middle<i32>(89)
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject direct transitive helper calls");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("unknown value symbol 'middle'")
+            || message.contains("undefined function `middle`"),
+        "expected unimported transitive helper diagnostic, panic={message}"
     );
 }
 

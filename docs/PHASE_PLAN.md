@@ -311,7 +311,9 @@ checked-in docs, tests, and commits only.
   specializations resolve to concrete definitions instead of unspecialized calls.
   Imported public generic function templates also carry source-module imported
   generic type and method dependencies only during specialization, covered by
-  `tests/zen/multi_file_generic_imported_type_dependency/main.zen`.
+  `tests/zen/multi_file_generic_imported_type_dependency/main.zen`. Transitive
+  imported generic helper template dependencies are covered by
+  `tests/zen/multi_file_generic_imported_transitive_dependency/main.zen`.
 - Multi-file generic behavior-bound fixtures now compile and run through
   graph-owned imports, proving imported public behaviors can satisfy
   `T: Json<T>` bounds and dispatch to concrete generated C functions.

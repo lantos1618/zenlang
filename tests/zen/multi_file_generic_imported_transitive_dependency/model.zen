@@ -1,0 +1,5 @@
+{ middle } = helper
+
+pub outer<T> = (value: T) T {
+    return middle(value)
+}

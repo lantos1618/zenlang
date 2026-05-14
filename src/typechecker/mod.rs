@@ -3585,6 +3585,13 @@ impl TypeChecker {
         let Some(template) = self.generic_functions.get_mut(local_name) else {
             return;
         };
+        Self::attach_template_dependencies(template, dependencies);
+    }
+
+    fn attach_template_dependencies(
+        template: &mut GenericFunctionTemplate,
+        dependencies: SourceModuleDependencies,
+    ) {
         template.dependency_structs = dependencies.structs;
         template.dependency_enums = dependencies.enums;
         template.dependency_functions = dependencies.functions;
@@ -4032,8 +4039,20 @@ impl TypeChecker {
                     &binding.local_name,
                     binding.source_symbol.as_str(),
                     imported_module,
+                    graph,
                     &mut dependencies,
                 );
+            } else if matches!(
+                decl,
+                Declaration::Function { type_params, .. } if !type_params.is_empty()
+            ) {
+                let nested_dependencies = Self::source_module_dependencies(imported_module, graph);
+                if let Some(template) = dependencies
+                    .generic_functions
+                    .get_mut(binding.local_name.as_str())
+                {
+                    Self::attach_template_dependencies(template, nested_dependencies);
+                }
             }
         }
 
@@ -4156,6 +4175,7 @@ impl TypeChecker {
         local_name: &str,
         source_name: &str,
         imported_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
         dependencies: &mut SourceModuleDependencies,
     ) {
         for decl in &imported_module.program.declarations {
@@ -4172,6 +4192,12 @@ impl TypeChecker {
                         &mut dependencies.methods,
                         &mut dependencies.generic_methods,
                     );
+                    let key = format!("{local_name}.{method_name}");
+                    if let Some(template) = dependencies.generic_methods.get_mut(&key) {
+                        let nested_dependencies =
+                            Self::source_module_dependencies(imported_module, graph);
+                        Self::attach_template_dependencies(template, nested_dependencies);
+                    }
                 }
                 Declaration::ImplBlock {
                     type_name,
@@ -4192,6 +4218,12 @@ impl TypeChecker {
                             &mut dependencies.methods,
                             &mut dependencies.generic_methods,
                         );
+                        let key = format!("{local_name}.{name}");
+                        if let Some(template) = dependencies.generic_methods.get_mut(&key) {
+                            let nested_dependencies =
+                                Self::source_module_dependencies(imported_module, graph);
+                            Self::attach_template_dependencies(template, nested_dependencies);
+                        }
                     }
                 }
                 _ => {}
