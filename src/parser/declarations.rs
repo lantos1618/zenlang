@@ -641,6 +641,7 @@ impl Parser {
         Ok(Declaration::ImplBlock {
             type_name,
             behavior: None,
+            behavior_type_args: Vec::new(),
             type_args: Vec::new(),
             methods,
             span: name_span.merge(end),
@@ -656,7 +657,11 @@ impl Parser {
         self.expect(&Token::LParen)?;
         self.skip_newlines();
         let (behavior, _) = self.expect_identifier()?;
-        self.reject_generic_behavior_association("implements")?;
+        let behavior_type_args = if matches!(self.peek(), Token::Lt) {
+            self.parse_type_arg_list()?
+        } else {
+            Vec::new()
+        };
         self.skip_newlines();
         self.expect(&Token::RParen)?;
         self.skip_newlines();
@@ -675,6 +680,7 @@ impl Parser {
         Ok(Declaration::ImplBlock {
             type_name,
             behavior: Some(behavior),
+            behavior_type_args,
             type_args: Vec::new(),
             methods,
             span: name_span.merge(end),
@@ -690,12 +696,17 @@ impl Parser {
         self.expect(&Token::LParen)?;
         self.skip_newlines();
         let (behavior, behavior_span) = self.expect_identifier()?;
-        self.reject_generic_behavior_association("requires")?;
+        let behavior_type_args = if matches!(self.peek(), Token::Lt) {
+            self.parse_type_arg_list()?
+        } else {
+            Vec::new()
+        };
         self.skip_newlines();
         let end = self.expect(&Token::RParen)?;
         Ok(Declaration::Requires {
             type_name,
             behavior,
+            behavior_type_args,
             span: name_span.merge(behavior_span).merge(end),
         })
     }

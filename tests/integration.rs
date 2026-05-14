@@ -267,6 +267,11 @@ fn test_behavior_json_generic_dispatch() {
 }
 
 #[test]
+fn test_behavior_json_generic_association() {
+    run_test("behavior_json_generic_association");
+}
+
+#[test]
 fn test_behavior_inherited_generic_dispatch() {
     run_test("behavior_inherited_generic_dispatch");
 }

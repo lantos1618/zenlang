@@ -103,6 +103,7 @@ pub enum Declaration {
     ImplBlock {
         type_name: String,
         behavior: Option<String>,
+        behavior_type_args: Vec<AstType>,
         type_args: Vec<AstType>,
         methods: Vec<Declaration>,
         span: Span,
@@ -112,6 +113,7 @@ pub enum Declaration {
     Requires {
         type_name: String,
         behavior: String,
+        behavior_type_args: Vec<AstType>,
         span: Span,
     },
 

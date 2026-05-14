@@ -239,6 +239,49 @@ fn concrete_self_ast_type(ast_type: &AstType, self_type_name: &str) -> AstType {
     }
 }
 
+fn substitute_behavior_ast_type(
+    ast_type: &AstType,
+    substitutions: &HashMap<String, AstType>,
+) -> AstType {
+    match ast_type {
+        AstType::Named(name) => substitutions
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| ast_type.clone()),
+        AstType::Ptr(inner) => {
+            AstType::Ptr(Box::new(substitute_behavior_ast_type(inner, substitutions)))
+        }
+        AstType::MutPtr(inner) => {
+            AstType::MutPtr(Box::new(substitute_behavior_ast_type(inner, substitutions)))
+        }
+        AstType::RawPtr(inner) => {
+            AstType::RawPtr(Box::new(substitute_behavior_ast_type(inner, substitutions)))
+        }
+        AstType::Slice(inner) => {
+            AstType::Slice(Box::new(substitute_behavior_ast_type(inner, substitutions)))
+        }
+        AstType::Array { elem, size } => AstType::Array {
+            elem: Box::new(substitute_behavior_ast_type(elem, substitutions)),
+            size: *size,
+        },
+        AstType::Function { params, ret } => AstType::Function {
+            params: params
+                .iter()
+                .map(|param| substitute_behavior_ast_type(param, substitutions))
+                .collect(),
+            ret: Box::new(substitute_behavior_ast_type(ret, substitutions)),
+        },
+        AstType::Generic { name, type_args } => AstType::Generic {
+            name: name.clone(),
+            type_args: type_args
+                .iter()
+                .map(|arg| substitute_behavior_ast_type(arg, substitutions))
+                .collect(),
+        },
+        _ => ast_type.clone(),
+    }
+}
+
 fn behavior_method_signatures_match(
     left: &ast::BehaviorMethod,
     right: &ast::BehaviorMethod,
@@ -446,6 +489,7 @@ impl TypeChecker {
                 Declaration::ImplBlock {
                     type_name,
                     behavior: Some(behavior),
+                    behavior_type_args,
                     methods,
                     ..
                 } => {
@@ -471,9 +515,12 @@ impl TypeChecker {
                         }
                     }
 
-                    for default in
-                        self.behavior_default_methods_for_impl(type_name, behavior, methods)
-                    {
+                    for default in self.behavior_default_methods_for_impl(
+                        type_name,
+                        behavior,
+                        behavior_type_args,
+                        methods,
+                    ) {
                         let full_name = format!("{}.{}", type_name, default.name);
                         self.current_self_type =
                             Some(self.resolve_type(&AstType::Named(type_name.clone())));
@@ -796,6 +843,7 @@ impl TypeChecker {
                 Declaration::ImplBlock {
                     type_name,
                     behavior: Some(behavior),
+                    behavior_type_args,
                     methods,
                     ..
                 } => {
@@ -829,9 +877,12 @@ impl TypeChecker {
                         }
                     }
 
-                    for default in
-                        self.behavior_default_methods_for_impl(type_name, behavior, methods)
-                    {
+                    for default in self.behavior_default_methods_for_impl(
+                        type_name,
+                        behavior,
+                        behavior_type_args,
+                        methods,
+                    ) {
                         let key = format!("{}.{}", type_name, default.name);
                         self.methods.insert(
                             key.clone(),
@@ -857,12 +908,13 @@ impl TypeChecker {
             if let Declaration::ImplBlock {
                 type_name,
                 behavior: Some(behavior),
+                behavior_type_args,
                 methods,
                 span,
                 ..
             } = decl
             {
-                self.check_behavior_impl(type_name, behavior, methods, *span);
+                self.check_behavior_impl(type_name, behavior, behavior_type_args, methods, *span);
             }
         }
 
@@ -870,17 +922,70 @@ impl TypeChecker {
             if let Declaration::Requires {
                 type_name,
                 behavior,
+                behavior_type_args,
                 span,
             } = decl
             {
-                self.check_behavior_requires(type_name, behavior, *span);
+                self.check_behavior_requires(type_name, behavior, behavior_type_args, *span);
             }
         }
 
         self.validate_generic_type_references(decls);
     }
 
-    fn check_behavior_requires(&mut self, type_name: &str, behavior: &str, span: Span) {
+    fn behavior_reference_key(&self, behavior: &str, type_args: &[AstType]) -> String {
+        if type_args.is_empty() {
+            behavior.to_string()
+        } else {
+            self.mangle_generic_type_name(behavior, type_args)
+        }
+    }
+
+    fn behavior_type_arg_substitutions(
+        &mut self,
+        behavior: &str,
+        type_args: &[AstType],
+        span: Span,
+    ) -> Option<HashMap<String, AstType>> {
+        let Some(info) = self.behaviors.get(behavior).cloned() else {
+            self.diagnostics.push(Diagnostic::error(
+                "E6006",
+                format!("undefined behavior `{}`", behavior),
+                span,
+            ));
+            return None;
+        };
+
+        if info.type_params.len() != type_args.len() {
+            self.diagnostics.push(Diagnostic::error(
+                "E5001",
+                format!(
+                    "generic behavior `{}` expects {} type arguments, found {}",
+                    behavior,
+                    info.type_params.len(),
+                    type_args.len()
+                ),
+                span,
+            ));
+            return None;
+        }
+
+        Some(
+            info.type_params
+                .iter()
+                .cloned()
+                .zip(type_args.iter().cloned())
+                .collect(),
+        )
+    }
+
+    fn check_behavior_requires(
+        &mut self,
+        type_name: &str,
+        behavior: &str,
+        behavior_type_args: &[AstType],
+        span: Span,
+    ) {
         if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
             self.diagnostics.push(Diagnostic::error(
                 "E6005",
@@ -894,25 +999,18 @@ impl TypeChecker {
             return;
         }
 
-        if !self.behaviors.contains_key(behavior) {
-            self.diagnostics.push(Diagnostic::error(
-                "E6006",
-                format!("undefined behavior `{}`", behavior),
-                span,
-            ));
+        let Some(_) = self.behavior_type_arg_substitutions(behavior, behavior_type_args, span)
+        else {
             return;
-        }
+        };
+        let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
 
-        if self.reject_unspecialized_generic_behavior(behavior, span) {
-            return;
-        }
-
-        if !self.type_implements_behavior(type_name, behavior) {
+        if !self.type_implements_behavior(type_name, &behavior_key) {
             self.diagnostics.push(Diagnostic::error(
                 "E6007",
                 format!(
                     "type `{}` does not implement required behavior `{}`",
-                    type_name, behavior
+                    type_name, behavior_key
                 ),
                 span,
             ));
@@ -1110,6 +1208,7 @@ impl TypeChecker {
         &mut self,
         type_name: &str,
         behavior: &str,
+        behavior_type_args: &[AstType],
         methods: &[Declaration],
         span: Span,
     ) {
@@ -1126,40 +1225,34 @@ impl TypeChecker {
             return;
         }
 
-        if !self.behaviors.contains_key(behavior) {
-            self.diagnostics.push(Diagnostic::error(
-                "E6000",
-                format!("undefined behavior `{}`", behavior),
-                span,
-            ));
+        let Some(behavior_substitutions) =
+            self.behavior_type_arg_substitutions(behavior, behavior_type_args, span)
+        else {
             return;
-        }
-
-        if self.reject_unspecialized_generic_behavior(behavior, span) {
-            return;
-        }
+        };
+        let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
 
         if self
             .behavior_impls
-            .contains(&(type_name.to_string(), behavior.to_string()))
+            .contains(&(type_name.to_string(), behavior_key.clone()))
         {
             self.diagnostics.push(Diagnostic::error(
                 "E6003",
                 format!(
                     "duplicate implementation of behavior `{}` for type `{}`",
-                    behavior, type_name
+                    behavior_key, type_name
                 ),
                 span,
             ));
             return;
         }
 
-        if let Some(existing) = self.find_overlapping_behavior_impl(type_name, behavior) {
+        if let Some(existing) = self.find_overlapping_behavior_impl(type_name, &behavior_key) {
             self.diagnostics.push(Diagnostic::error(
                 "E6010",
                 format!(
                     "overlapping implementations of behaviors `{}` and `{}` for type `{}`",
-                    existing, behavior, type_name
+                    existing, behavior_key, type_name
                 ),
                 span,
             ));
@@ -1167,8 +1260,9 @@ impl TypeChecker {
         }
 
         self.behavior_impls
-            .insert((type_name.to_string(), behavior.to_string()));
-        let required_methods = self.behavior_methods_with_inherited(behavior, &mut HashSet::new());
+            .insert((type_name.to_string(), behavior_key.clone()));
+        let required_methods =
+            self.behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new());
 
         for method in methods {
             if let Declaration::Function { name, span, .. } = method {
@@ -1180,7 +1274,7 @@ impl TypeChecker {
                         "E6005",
                         format!(
                             "method `{}` is not declared by behavior `{}`",
-                            name, behavior
+                            name, behavior_key
                         ),
                         *span,
                     ));
@@ -1206,7 +1300,7 @@ impl TypeChecker {
                     "E6001",
                     format!(
                         "type `{}` implementation of `{}` is missing required method `{}`",
-                        type_name, behavior, required.name
+                        type_name, behavior_key, required.name
                     ),
                     span,
                 ));
@@ -1220,7 +1314,7 @@ impl TypeChecker {
                     format!(
                         "method `{}` for behavior `{}` expects {} parameters, found {}",
                         required.name,
-                        behavior,
+                        behavior_key,
                         required.params.len(),
                         actual_params.len()
                     ),
@@ -1239,7 +1333,7 @@ impl TypeChecker {
                             "parameter {} for method `{}` in behavior `{}` expects `{}`, found `{}`",
                             idx + 1,
                             required.name,
-                            behavior,
+                            behavior_key,
                             self.impl_type_display(&expected.ty, type_name),
                             actual.ty.display_name()
                         ),
@@ -1256,7 +1350,7 @@ impl TypeChecker {
                     format!(
                         "method `{}` for behavior `{}` expects return `{}`, found `{}`",
                         required.name,
-                        behavior,
+                        behavior_key,
                         self.impl_type_display(expected_return, type_name),
                         actual_return.display_name()
                     ),
@@ -1325,9 +1419,21 @@ impl TypeChecker {
         &self,
         type_name: &str,
         behavior: &str,
+        behavior_type_args: &[AstType],
         methods: &[Declaration],
     ) -> Vec<DefaultBehaviorMethod> {
-        self.behavior_methods_with_inherited(behavior, &mut HashSet::new())
+        let behavior_substitutions = self
+            .behaviors
+            .get(behavior)
+            .map(|info| {
+                info.type_params
+                    .iter()
+                    .cloned()
+                    .zip(behavior_type_args.iter().cloned())
+                    .collect::<HashMap<_, _>>()
+            })
+            .unwrap_or_default();
+        self.behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new())
             .iter()
             .filter(|required| {
                 required.default_body.is_some()
@@ -1379,6 +1485,26 @@ impl TypeChecker {
             methods.extend(info.methods.clone());
         }
         methods
+    }
+
+    fn behavior_methods_for_impl(
+        &self,
+        behavior: &str,
+        substitutions: &HashMap<String, AstType>,
+        seen: &mut HashSet<String>,
+    ) -> Vec<ast::BehaviorMethod> {
+        self.behavior_methods_with_inherited(behavior, seen)
+            .into_iter()
+            .map(|mut method| {
+                for param in &mut method.params {
+                    param.ty = substitute_behavior_ast_type(&param.ty, substitutions);
+                }
+                if let Some(return_type) = &mut method.return_type {
+                    *return_type = substitute_behavior_ast_type(return_type, substitutions);
+                }
+                method
+            })
+            .collect()
     }
 
     fn impl_ast_types_compatible(
@@ -2124,6 +2250,7 @@ impl TypeChecker {
                 Declaration::ImplBlock {
                     type_name,
                     behavior,
+                    behavior_type_args,
                     methods,
                     span,
                     ..
@@ -2131,6 +2258,9 @@ impl TypeChecker {
                     self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
                     if let Some(behavior) = behavior {
                         self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
+                    }
+                    for type_arg in behavior_type_args {
+                        self.validate_generic_type_ref_bounds(type_arg, &HashSet::new(), *span);
                     }
                     for method in methods {
                         if let Declaration::Function {
@@ -2165,10 +2295,14 @@ impl TypeChecker {
                 Declaration::Requires {
                     type_name,
                     behavior,
+                    behavior_type_args,
                     span,
                 } => {
                     self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
                     self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
+                    for type_arg in behavior_type_args {
+                        self.validate_generic_type_ref_bounds(type_arg, &HashSet::new(), *span);
+                    }
                 }
                 Declaration::BehaviorExtends {
                     behavior,
@@ -5372,6 +5506,81 @@ Point.implements(Json) {
                 .message
                 .contains("generic behavior `Json` expects 1 type arguments, found 0")),
             "expected generic behavior impl arity diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_impl_generic_behavior_with_type_args_passes_requires() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+
+        TypeChecker::new()
+            .check_program(&program)
+            .expect("generic behavior impl should satisfy matching generic requires");
+    }
+
+    #[test]
+    fn behavior_requires_generic_behavior_type_arg_arity_is_error() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.requires(Json<i32, str>)
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("generic behavior requires arity mismatch should fail");
+        assert!(
+            errors.iter().any(|d| d
+                .message
+                .contains("generic behavior `Json` expects 1 type arguments, found 2")),
+            "expected generic behavior requires arity diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_impl_generic_behavior_substitutes_method_signature() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<str>) {
+    encode = (value: Point) i32 { return 1 }
+}
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("generic behavior impl return mismatch should fail");
+        assert!(
+            errors.iter().any(|d| d.message.contains(
+                "method `encode` for behavior `Json_str` expects return `str`, found `i32`"
+            )),
+            "expected substituted behavior method return diagnostic, got {errors:?}"
         );
     }
 

@@ -108,14 +108,17 @@ and do not assume Phase 4 is ready without evidence.
   check as `.requires`.
 - Inherited generic behavior dispatch is covered by the executable fixture
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
-- Generic behavior association syntax in `.implements`, `.requires`, and
-  `.extends` is explicitly gated with parser diagnostics until `Json<T>`-style
-  behavior association is implemented.
+- Concrete generic behavior association syntax in `.implements` and `.requires`,
+  such as `Point.implements(Json<str>)`, is parsed, typechecked with substituted
+  behavior method signatures, and covered by
+  `tests/zen/behavior_json_generic_association.zen`.
+- Generic behavior inheritance in `.extends` is still explicitly gated with
+  parser diagnostics.
 - Unspecialized generic behaviors in `.implements`, `.requires`, and `.extends`
   produce hard arity diagnostics instead of silently acting like nongeneric
   behaviors.
-- Generic behavior bounds such as `T: Json<T>` are explicitly gated with parser
-  diagnostics until generic behavior association is implemented.
+- Generic behavior bounds such as `T: Json<T>` are still explicitly gated with
+  parser diagnostics.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
   type parameters, produce hard arity diagnostics instead of silently acting
   like nongeneric behavior bounds.

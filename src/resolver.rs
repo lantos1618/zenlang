@@ -960,6 +960,7 @@ impl Resolver {
             Declaration::ImplBlock {
                 type_name,
                 behavior,
+                behavior_type_args,
                 methods,
                 span,
                 ..
@@ -980,6 +981,9 @@ impl Resolver {
                         ));
                     }
                 }
+                for type_arg in behavior_type_args {
+                    self.validate_type_ref(table, &[], type_arg, *span, diagnostics);
+                }
                 for method in methods {
                     self.validate_declaration_types(table, method, diagnostics);
                 }
@@ -988,6 +992,7 @@ impl Resolver {
             Declaration::Requires {
                 type_name,
                 behavior,
+                behavior_type_args,
                 span,
             } => {
                 if !self.is_known_type_name(table, &[], type_name) {
@@ -1003,6 +1008,9 @@ impl Resolver {
                         format!("unknown behavior symbol '{behavior}'"),
                         *span,
                     ));
+                }
+                for type_arg in behavior_type_args {
+                    self.validate_type_ref(table, &[], type_arg, *span, diagnostics);
                 }
             }
             Declaration::BehaviorExtends {

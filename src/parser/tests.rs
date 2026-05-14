@@ -462,27 +462,35 @@ fn parse_behavior_impl_block() {
 }
 
 #[test]
-fn parse_rejects_generic_behavior_impl_with_clear_error() {
-    let result = parse_str("Point.implements(Json<i32>) { }");
-    let errs = result.expect_err("generic behavior impl syntax should be gated");
-    assert!(
-        errs.iter().any(|e| e
-            .to_string()
-            .contains("gated v1 feature 'implements': generic behavior association")),
-        "expected clear generic behavior impl diagnostic, got {errs:?}"
-    );
+fn parse_behavior_impl_with_generic_behavior_args() {
+    let prog = parse_ok("Point.implements(Json<i32>) { }");
+    match &prog.declarations[0] {
+        Declaration::ImplBlock {
+            behavior,
+            behavior_type_args,
+            ..
+        } => {
+            assert_eq!(behavior.as_deref(), Some("Json"));
+            assert_eq!(behavior_type_args, &vec![AstType::I32]);
+        }
+        other => panic!("expected ImplBlock, got {:?}", other),
+    }
 }
 
 #[test]
-fn parse_rejects_generic_behavior_requires_with_clear_error() {
-    let result = parse_str("Point.requires(Json<i32>)");
-    let errs = result.expect_err("generic behavior requires syntax should be gated");
-    assert!(
-        errs.iter().any(|e| e
-            .to_string()
-            .contains("gated v1 feature 'requires': generic behavior association")),
-        "expected clear generic behavior requires diagnostic, got {errs:?}"
-    );
+fn parse_behavior_requires_with_generic_behavior_args() {
+    let prog = parse_ok("Point.requires(Json<i32>)");
+    match &prog.declarations[0] {
+        Declaration::Requires {
+            behavior,
+            behavior_type_args,
+            ..
+        } => {
+            assert_eq!(behavior, "Json");
+            assert_eq!(behavior_type_args, &vec![AstType::I32]);
+        }
+        other => panic!("expected Requires, got {:?}", other),
+    }
 }
 
 #[test]

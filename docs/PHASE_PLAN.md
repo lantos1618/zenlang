@@ -48,14 +48,16 @@ checked-in docs, tests, and commits only.
   child behavior can satisfy a parent behavior bound.
 - Inherited generic behavior dispatch has executable coverage through
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
-- Generic behavior association syntax in `.implements`, `.requires`, and
-  `.extends` is explicitly gated with parser diagnostics until `Json<T>`-style
-  behavior association is implemented.
+- Concrete generic behavior association syntax in `.implements` and `.requires`,
+  such as `Point.implements(Json<str>)`, has parser, typechecker, and executable
+  coverage through `tests/zen/behavior_json_generic_association.zen`.
+- Generic behavior inheritance in `.extends` is still explicitly gated with
+  parser diagnostics.
 - Unspecialized generic behaviors in `.implements`, `.requires`, and `.extends`
   now produce hard arity diagnostics instead of silently acting like
   nongeneric behaviors.
-- Generic behavior bounds such as `T: Json<T>` are explicitly gated with parser
-  diagnostics until generic behavior association is implemented.
+- Generic behavior bounds such as `T: Json<T>` are still explicitly gated with
+  parser diagnostics.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
   type parameters, now produce hard arity diagnostics instead of silently acting
   like nongeneric behavior bounds.
@@ -193,16 +195,16 @@ checked-in docs, tests, and commits only.
 
 ## Current Phase
 
-Continue Phase 2 sema/resolver hardening. Phase 3 C codegen is sufficient for the
-current tested fixtures, but Phase 4 build-driver work is still gated by the lack
-of deterministic `build.zen` graph tests and implementation.
+Continue the smallest behavior-association and resolver/typechecker hardening
+slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
+Phase 4 build-driver work is still gated by the lack of deterministic
+`build.zen` graph tests and implementation.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Continue Phase 2 resolver/typechecker integration by choosing the next smallest
-handoff that reduces duplicate declaration collection or moves the module-graph
-entrypoint deeper into advertised compiler paths. Do not promote `build.zen`
-until a dedicated deterministic graph test exists.
+Continue the next smallest behavior-association handoff or resolver/typechecker
+integration slice that reduces duplicate declaration collection. Do not promote
+`build.zen` until a dedicated deterministic graph test exists.
