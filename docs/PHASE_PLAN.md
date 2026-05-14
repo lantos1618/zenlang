@@ -145,6 +145,9 @@ checked-in docs, tests, and commits only.
   arity diagnostics instead of resolver handoff mismatch diagnostics.
 - Compile-time `.requires` behavior assertions now have parser, resolver, and
   typechecker coverage for satisfied and missing behavior implementations.
+- Resolver now rejects duplicate method names inside local behavior
+  declarations, covered by
+  `resolver_phase2::resolver_rejects_duplicate_behavior_method_names`.
 - Resolver type symbols now carry behavior impl and `.requires` association
   metadata, and typechecker setup rejects missing or extra association metadata
   before collecting behavior impls/requires from the AST.

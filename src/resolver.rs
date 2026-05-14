@@ -1168,12 +1168,21 @@ impl Resolver {
                 }
             }
             Declaration::Behavior {
+                name,
                 type_params,
                 methods,
                 ..
             } => {
                 self.validate_type_param_constraints(table, type_params, true, diagnostics);
+                let mut seen_methods = HashSet::new();
                 for method in methods {
+                    if !seen_methods.insert(method.name.as_str()) {
+                        diagnostics.push(Diagnostic::error(
+                            "E0212",
+                            format!("duplicate behavior method `{}` in `{name}`", method.name),
+                            method.span,
+                        ));
+                    }
                     self.validate_params(table, type_params, &method.params, true, diagnostics);
                     if let Some(return_type) = &method.return_type {
                         self.validate_type_ref(

@@ -856,6 +856,30 @@ Serializable: behavior {
 }
 
 #[test]
+fn resolver_rejects_duplicate_behavior_method_names() {
+    let program = parse_program(
+        r#"
+Serializable: behavior {
+    encode: (Self) str
+    encode: (Self, i32) str
+}
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("duplicate behavior method names should fail in resolver");
+
+    assert!(
+        err.iter().any(|d| {
+            d.message
+                .contains("duplicate behavior method `encode` in `Serializable`")
+        }),
+        "expected duplicate behavior method diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_records_behavior_function_type_method_signatures() {
     let program = parse_program(
         r#"
