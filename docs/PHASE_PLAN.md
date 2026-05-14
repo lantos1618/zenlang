@@ -163,6 +163,9 @@ checked-in docs, tests, and commits only.
   coverage for inherited required methods, parent behavior satisfaction, and
   coherence diagnostics for duplicate edges, cycles, and conflicting inherited
   method signatures.
+  Resolver now rejects duplicate local parent edges before recording duplicate
+  metadata, covered by
+  `resolver_phase2::resolver_rejects_duplicate_behavior_parent_edges`.
 - Concrete generic behavior parent inheritance, such as
   `PrettyJson.extends(Json<str>)`, now has parser, resolver metadata,
   typechecker substitution, and executable coverage through

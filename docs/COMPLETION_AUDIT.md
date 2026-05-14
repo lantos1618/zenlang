@@ -259,6 +259,9 @@ and do not assume Phase 4 is ready without evidence.
   and typechecked so child behavior impls must satisfy inherited parent methods
   while duplicate edges, cyclic inheritance, and conflicting inherited method
   signatures are rejected.
+  Resolver rejects duplicate local parent edges before recording duplicate
+  metadata, covered by
+  `resolver_phase2::resolver_rejects_duplicate_behavior_parent_edges`.
 - Concrete generic behavior parent inheritance, such as
   `PrettyJson.extends(Json<str>)`, is parsed, recorded in resolver metadata,
   checked with substituted parent method signatures, and covered by

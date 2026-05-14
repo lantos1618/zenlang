@@ -837,17 +837,19 @@ impl SymbolTable {
         self.next_scope_id
     }
 
-    fn record_behavior_parent(&mut self, behavior: &str, parent: &str) {
+    fn record_behavior_parent(&mut self, behavior: &str, parent: &str) -> bool {
         if let Some(symbol) = self
             .symbols
             .iter_mut()
             .find(|symbol| symbol.namespace == Namespace::Behavior && symbol.name == behavior)
         {
-            symbol
-                .behavior_parent_names
-                .get_or_insert_with(Vec::new)
-                .push(parent.to_string());
+            let parents = symbol.behavior_parent_names.get_or_insert_with(Vec::new);
+            if parents.iter().any(|recorded| recorded == parent) {
+                return false;
+            }
+            parents.push(parent.to_string());
         }
+        true
     }
 
     fn record_behavior_impl(&mut self, type_name: &str, behavior: &str) {
@@ -1334,10 +1336,16 @@ impl Resolver {
                     self.validate_type_ref(table, &[], type_arg, *span, false, diagnostics);
                 }
                 if behavior_known && parent_known {
-                    table.record_behavior_parent(
-                        behavior,
-                        &behavior_ref_display(parent, parent_type_args),
-                    );
+                    let parent_display = behavior_ref_display(parent, parent_type_args);
+                    if !table.record_behavior_parent(behavior, &parent_display) {
+                        diagnostics.push(Diagnostic::error(
+                            "E0215",
+                            format!(
+                                "duplicate behavior parent `{parent_display}` for `{behavior}`"
+                            ),
+                            *span,
+                        ));
+                    }
                 }
             }
             Declaration::TopLevelExpr { expr, .. } => {

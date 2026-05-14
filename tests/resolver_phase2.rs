@@ -441,6 +441,34 @@ PrettyJson.extends(Json)
 }
 
 #[test]
+fn resolver_rejects_duplicate_behavior_parent_edges() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    stringify: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+PrettyJson.extends(Json)
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("duplicate behavior inheritance should fail in resolver");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("duplicate behavior parent `Json`")),
+        "expected duplicate behavior parent diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_rejects_behavior_extends_unknown_symbols() {
     let program = parse_program("PrettyJson.extends(Json)");
 
