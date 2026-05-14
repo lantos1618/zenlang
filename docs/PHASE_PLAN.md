@@ -311,7 +311,9 @@ checked-in docs, tests, and commits only.
   `resolver_phase2::resolver_accepts_non_behavior_impl_blocks_as_method_symbols`,
   `tests/zen/type_impl_methods.zen`, `tests/zen/multi_file_type_impl/main.zen`,
   and generated-C assertions in
-  `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`.
+  `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`;
+  `integration::imported_private_type_impl_methods_are_not_visible` covers the
+  graph-owned import privacy boundary.
 - Typechecker setup now rejects extra resolver-owned declaration symbols for
   values, types, behaviors, and enum variants before collecting declaration
   metadata from the AST.
