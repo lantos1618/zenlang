@@ -6052,6 +6052,72 @@ Point.requires(Json<str>)
     }
 
     #[test]
+    fn behavior_impl_generic_parent_overlap_is_error() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.implements(PrettyJson) {
+    encode = (value: Point) str { return "point" }
+    pretty = (value: Point) str { return "pretty" }
+}
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("specialized parent and child behavior impls should overlap");
+        assert!(
+            errors.iter().any(|d| d.message.contains(
+                "overlapping implementations of behaviors `Json_str` and `PrettyJson` for type `Point`"
+            )),
+            "expected specialized behavior impl overlap diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_impl_distinct_generic_specializations_do_not_overlap() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.implements(Json<i32>) {
+    encode = (value: Point) i32 { return value.x }
+}
+
+Point.requires(Json<str>)
+Point.requires(Json<i32>)
+"#,
+        );
+
+        TypeChecker::new()
+            .check_program(&program)
+            .expect("distinct behavior specializations should not overlap");
+    }
+
+    #[test]
     fn behavior_extends_cycle_is_error() {
         let program = parse_program(
             r#"
@@ -6105,6 +6171,35 @@ PrettyJson.extends(Json)
                     .contains("duplicate behavior inheritance `PrettyJson.extends(Json)`")
             }),
             "expected duplicate behavior inheritance diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_extends_duplicate_generic_parent_is_error() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<str>)
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("duplicate specialized behavior inheritance edge should fail");
+        assert!(
+            errors.iter().any(|d| {
+                d.message
+                    .contains("duplicate behavior inheritance `PrettyJson.extends(Json<str>)`")
+            }),
+            "expected duplicate generic behavior inheritance diagnostic, got {errors:?}"
         );
     }
 

@@ -144,6 +144,8 @@ and do not assume Phase 4 is ready without evidence.
   setup rejects missing resolver parent-edge metadata.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.
+- Behavior impl coherence is covered for specialized generic parent/child
+  overlap and for distinct generic specializations that must remain independent.
 - Inherited behavior default methods are emitted and callable in the executable
   fixture `tests/zen/behavior_inherited_default_method.zen`.
 - Behavior impl methods are recorded and validated through resolver
