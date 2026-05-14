@@ -629,7 +629,6 @@ impl TypeChecker {
                 ..
             } = decl
             {
-                self.validate_generic_bounds(type_params);
                 self.behaviors.insert(
                     name.clone(),
                     BehaviorInfo {
@@ -638,6 +637,12 @@ impl TypeChecker {
                         methods: methods.clone(),
                     },
                 );
+            }
+        }
+
+        for decl in decls {
+            if let Declaration::Behavior { type_params, .. } = decl {
+                self.validate_generic_bounds(type_params);
             }
         }
 
@@ -5537,6 +5542,29 @@ main = () i32 {
             }),
             "expected generic behavior bound arity diagnostic, got {errors:?}"
         );
+    }
+
+    #[test]
+    fn behavior_generic_bound_accepts_later_behavior_declaration() {
+        let program = parse_program(
+            r#"
+Serializable<T: Json>: behavior {
+    encode: (Self) str
+}
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+main = () i32 {
+    return 0
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        tc.check_program(&program)
+            .expect("behavior generic bounds should be independent of declaration order");
     }
 
     #[test]

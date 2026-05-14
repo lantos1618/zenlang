@@ -46,6 +46,8 @@ checked-in docs, tests, and commits only.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
   type parameters, now produce hard arity diagnostics instead of silently acting
   like nongeneric behavior bounds.
+- Generic behavior declaration bounds are validated after all behavior names are
+  collected, so bounded behavior declarations do not depend on source order.
 - Compile-time `.requires` behavior assertions now have parser, resolver, and
   typechecker coverage for satisfied and missing behavior implementations.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker
