@@ -5957,6 +5957,11 @@ impl TypeChecker {
                 "E0318",
                 "variant payload type",
             ),
+            (
+                symbol.variant_payload_type.is_some(),
+                "E0397",
+                "typed variant payload type",
+            ),
         ] {
             if present {
                 self.diagnostics.push(Diagnostic::error(
@@ -5977,6 +5982,7 @@ impl TypeChecker {
         for (present, code, label) in [
             (symbol.field_count.is_some(), "E0319", "field count"),
             (symbol.field_type_names.is_some(), "E0320", "field types"),
+            (symbol.field_types.is_some(), "E0398", "typed field types"),
         ] {
             if present {
                 self.diagnostics.push(Diagnostic::error(
@@ -11428,11 +11434,22 @@ Option: Some(i32), None
             "Point",
             Some(vec!["Some".to_string()]),
         );
+        symbols.set_variant_payload_type_name_for_test(
+            Namespace::Type,
+            "Point",
+            Some("i32".to_string()),
+        );
+        symbols.set_variant_payload_type_for_test(Namespace::Type, "Point", Some(AstType::I32));
         symbols.set_field_count_for_test(Namespace::Type, "Option", Some(1));
         symbols.set_field_type_names_for_test(
             Namespace::Type,
             "Option",
             Some(vec![("value".to_string(), "i32".to_string())]),
+        );
+        symbols.set_field_types_for_test(
+            Namespace::Type,
+            "Option",
+            Some(vec![("value".to_string(), AstType::I32)]),
         );
         let mut tc = TypeChecker::new();
 
@@ -11442,8 +11459,11 @@ Option: Some(i32), None
 
         for expected in [
             "resolver type symbol 'Point' has variant names metadata, expected none",
+            "resolver type symbol 'Point' has variant payload type metadata, expected none",
+            "resolver type symbol 'Point' has typed variant payload type metadata, expected none",
             "resolver type symbol 'Option' has field count metadata, expected none",
             "resolver type symbol 'Option' has field types metadata, expected none",
+            "resolver type symbol 'Option' has typed field types metadata, expected none",
         ] {
             assert!(
                 err.iter().any(|d| d.message.contains(expected)),

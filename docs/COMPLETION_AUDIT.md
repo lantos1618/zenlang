@@ -413,8 +413,9 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker setup rejects resolver type and behavior source, display and
   typed value-signature metadata, and mutability metadata before collecting
   declaration metadata.
-- Typechecker setup rejects resolver struct variant metadata and resolver enum
-  field metadata before collecting declaration metadata.
+- Typechecker setup rejects resolver struct display and typed variant metadata
+  and resolver enum display and typed field metadata before collecting
+  declaration metadata.
 - Typechecker setup rejects resolver behavior field, variant, impl, and
   required-behavior metadata before collecting behavior metadata.
 - Typechecker setup rejects resolver variant import, display and typed value,
