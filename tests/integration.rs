@@ -277,6 +277,11 @@ fn test_behavior_json_generic_bound() {
 }
 
 #[test]
+fn test_behavior_json_generic_bound_ufcs() {
+    run_test("behavior_json_generic_bound_ufcs");
+}
+
+#[test]
 fn test_behavior_generic_parent_inheritance() {
     run_test("behavior_generic_parent_inheritance");
 }
@@ -358,6 +363,11 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "id_i32");
     assert!(!c_source.contains("id(12LL)"));
     assert!(!c_source.contains("T id"));
+
+    let c_source = compile_to_c(&test_dir().join("behavior_json_generic_bound_ufcs.zen"));
+    assert!(c_source.contains("Point Point_encode(Point value)"));
+    assert!(c_source.contains("Point_encode(value)"));
+    assert!(!c_source.contains("T_encode"));
 }
 
 #[test]

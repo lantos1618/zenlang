@@ -59,6 +59,9 @@ checked-in docs, tests, and commits only.
 - Generic behavior bounds with concrete type arguments, including
   `T: Json<T>`, now have parser, resolver metadata, typechecker substitution,
   and executable coverage through `tests/zen/behavior_json_generic_bound.zen`.
+- UFCS dispatch through a substituted generic behavior bound is covered by
+  `tests/zen/behavior_json_generic_bound_ufcs.zen` and generated-C checks that
+  reject unresolved `T_encode` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
   type parameters, now produce hard arity diagnostics instead of silently acting
   like nongeneric behavior bounds.

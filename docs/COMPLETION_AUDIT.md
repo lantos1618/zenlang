@@ -121,6 +121,9 @@ and do not assume Phase 4 is ready without evidence.
   `T: Json<T>`, are parsed, recorded in resolver metadata, checked with
   substituted behavior type arguments, and covered by
   `tests/zen/behavior_json_generic_bound.zen`.
+- UFCS dispatch through substituted generic behavior bounds is covered by
+  `tests/zen/behavior_json_generic_bound_ufcs.zen` plus generated-C assertions
+  that reject unresolved `T_encode` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
   type parameters, produce hard arity diagnostics instead of silently acting
   like nongeneric behavior bounds.
