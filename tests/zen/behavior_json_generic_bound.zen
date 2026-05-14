@@ -1,0 +1,26 @@
+{ io } = std
+
+Point: {
+    x: i32
+}
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<Point>) {
+    encode = (value: Point) Point {
+        return value
+    }
+}
+
+identity<T: Json<T>> = (value: T) T {
+    return value
+}
+
+main = () i32 {
+    point = Point { x: 7 }
+    same = identity(point)
+    io.println("${same.x}")
+    return 0
+}

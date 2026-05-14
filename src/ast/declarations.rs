@@ -36,6 +36,7 @@ pub struct BehaviorMethod {
 pub struct TypeParam {
     pub name: String,
     pub constraint: Option<String>,
+    pub constraint_type_args: Vec<AstType>,
     pub span: Span,
 }
 

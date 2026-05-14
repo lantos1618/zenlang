@@ -501,6 +501,40 @@ Serializable<T: Json>: behavior {
 }
 
 #[test]
+fn resolver_records_generic_behavior_bounds_with_type_args() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Box<T: Json<T>>: { value: T }
+encode<T: Json<T>> = (value: T) T { return value }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Box")
+            .expect("struct symbol")
+            .type_parameter_bounds
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&[("T".to_string(), "Json<T>".to_string())][..])
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Value, "encode")
+            .expect("function symbol")
+            .type_parameter_bounds
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&[("T".to_string(), "Json<T>".to_string())][..])
+    );
+}
+
+#[test]
 fn resolver_records_behavior_method_signatures() {
     let program = parse_program(
         r#"

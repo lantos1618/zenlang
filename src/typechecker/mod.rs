@@ -33,7 +33,7 @@ pub struct StructInfo {
     pub name: String,
     pub fields: Vec<(String, AstType)>,
     pub type_params: Vec<String>,
-    pub type_param_bounds: HashMap<String, String>,
+    pub type_param_bounds: HashMap<String, BehaviorBound>,
 }
 
 /// Information about an enum type.
@@ -42,7 +42,7 @@ pub struct EnumInfo {
     pub name: String,
     pub variants: Vec<(String, Option<AstType>)>,
     pub type_params: Vec<String>,
-    pub type_param_bounds: HashMap<String, String>,
+    pub type_param_bounds: HashMap<String, BehaviorBound>,
 }
 
 /// Information about a function signature.
@@ -52,7 +52,13 @@ pub struct FuncInfo {
     pub params: Vec<(String, AstType)>,
     pub return_type: AstType,
     pub type_params: Vec<String>,
-    pub type_param_bounds: HashMap<String, String>,
+    pub type_param_bounds: HashMap<String, BehaviorBound>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BehaviorBound {
+    pub behavior: String,
+    pub type_args: Vec<AstType>,
 }
 
 #[derive(Debug, Clone)]
@@ -160,16 +166,40 @@ impl Scope {
     }
 }
 
-fn type_param_bounds(type_params: &[ast::TypeParam]) -> HashMap<String, String> {
+fn type_param_bounds(type_params: &[ast::TypeParam]) -> HashMap<String, BehaviorBound> {
     type_params
         .iter()
         .filter_map(|param| {
-            param
-                .constraint
-                .as_ref()
-                .map(|bound| (param.name.clone(), bound.clone()))
+            param.constraint.as_ref().map(|bound| {
+                (
+                    param.name.clone(),
+                    BehaviorBound {
+                        behavior: bound.clone(),
+                        type_args: param.constraint_type_args.clone(),
+                    },
+                )
+            })
         })
         .collect()
+}
+
+fn type_param_bound_display(type_param: &ast::TypeParam) -> Option<String> {
+    type_param.constraint.as_ref().map(|constraint| {
+        if type_param.constraint_type_args.is_empty() {
+            constraint.clone()
+        } else {
+            format!(
+                "{}<{}>",
+                constraint,
+                type_param
+                    .constraint_type_args
+                    .iter()
+                    .map(AstType::display_name)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }
+    })
 }
 
 fn type_param_name_set(type_params: &[ast::TypeParam]) -> HashSet<String> {
@@ -279,6 +309,77 @@ fn substitute_behavior_ast_type(
                 .collect(),
         },
         _ => ast_type.clone(),
+    }
+}
+
+fn substitute_behavior_bound_ast_type(
+    ast_type: &AstType,
+    substitutions: &HashMap<String, Type>,
+) -> AstType {
+    match ast_type {
+        AstType::Named(name) => substitutions
+            .get(name)
+            .map(monomorphize::type_to_ast)
+            .unwrap_or_else(|| ast_type.clone()),
+        AstType::Ptr(inner) => AstType::Ptr(Box::new(substitute_behavior_bound_ast_type(
+            inner,
+            substitutions,
+        ))),
+        AstType::MutPtr(inner) => AstType::MutPtr(Box::new(substitute_behavior_bound_ast_type(
+            inner,
+            substitutions,
+        ))),
+        AstType::RawPtr(inner) => AstType::RawPtr(Box::new(substitute_behavior_bound_ast_type(
+            inner,
+            substitutions,
+        ))),
+        AstType::Slice(inner) => AstType::Slice(Box::new(substitute_behavior_bound_ast_type(
+            inner,
+            substitutions,
+        ))),
+        AstType::Array { elem, size } => AstType::Array {
+            elem: Box::new(substitute_behavior_bound_ast_type(elem, substitutions)),
+            size: *size,
+        },
+        AstType::Function { params, ret } => AstType::Function {
+            params: params
+                .iter()
+                .map(|param| substitute_behavior_bound_ast_type(param, substitutions))
+                .collect(),
+            ret: Box::new(substitute_behavior_bound_ast_type(ret, substitutions)),
+        },
+        AstType::Generic { name, type_args } => AstType::Generic {
+            name: name.clone(),
+            type_args: substitute_behavior_bound_type_args(type_args, substitutions),
+        },
+        _ => ast_type.clone(),
+    }
+}
+
+fn substitute_behavior_bound_type_args(
+    type_args: &[AstType],
+    substitutions: &HashMap<String, Type>,
+) -> Vec<AstType> {
+    type_args
+        .iter()
+        .map(|arg| substitute_behavior_bound_ast_type(arg, substitutions))
+        .collect()
+}
+
+fn behavior_bound_display(bound: &BehaviorBound, substitutions: &HashMap<String, Type>) -> String {
+    let type_args = substitute_behavior_bound_type_args(&bound.type_args, substitutions);
+    if type_args.is_empty() {
+        bound.behavior.clone()
+    } else {
+        format!(
+            "{}<{}>",
+            bound.behavior,
+            type_args
+                .iter()
+                .map(AstType::display_name)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 
@@ -1539,7 +1640,22 @@ impl TypeChecker {
                         param.span,
                     ));
                 } else {
-                    self.reject_unspecialized_generic_behavior(bound, param.span);
+                    let expected = self
+                        .behaviors
+                        .get(bound)
+                        .map(|info| info.type_params.len())
+                        .unwrap_or(0);
+                    let found = param.constraint_type_args.len();
+                    if expected != found {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E6012",
+                            format!(
+                                "generic behavior `{}` expects {} type arguments, found {}",
+                                bound, expected, found
+                            ),
+                            param.span,
+                        ));
+                    }
                 }
             }
         }
@@ -1962,38 +2078,49 @@ impl TypeChecker {
 
     pub(crate) fn check_generic_bounds(
         &mut self,
-        bounds: &HashMap<String, String>,
+        bounds: &HashMap<String, BehaviorBound>,
         substitutions: &HashMap<String, Type>,
         span: Span,
     ) {
-        for (param, behavior) in bounds {
+        for (param, bound) in bounds {
             let Some(concrete) = substitutions.get(param) else {
                 continue;
             };
+            let behavior_key = self.behavior_bound_key(bound, substitutions);
+            let behavior_display = behavior_bound_display(bound, substitutions);
             let Some(type_name) = self.behavior_bound_type_name(concrete) else {
                 self.diagnostics.push(Diagnostic::error(
                     "E6004",
                     format!(
                         "type `{}` does not implement behavior `{}` required by `{}`",
                         concrete.display_name(),
-                        behavior,
+                        behavior_display,
                         param
                     ),
                     span,
                 ));
                 continue;
             };
-            if !self.type_implements_behavior(&type_name, behavior) {
+            if !self.type_implements_behavior(&type_name, &behavior_key) {
                 self.diagnostics.push(Diagnostic::error(
                     "E6004",
                     format!(
                         "type `{}` does not implement behavior `{}` required by `{}`",
-                        type_name, behavior, param
+                        type_name, behavior_display, param
                     ),
                     span,
                 ));
             }
         }
+    }
+
+    fn behavior_bound_key(
+        &self,
+        bound: &BehaviorBound,
+        substitutions: &HashMap<String, Type>,
+    ) -> String {
+        let type_args = substitute_behavior_bound_type_args(&bound.type_args, substitutions);
+        self.behavior_reference_key(&bound.behavior, &type_args)
     }
 
     fn behavior_bound_type_name(&self, ty: &Type) -> Option<String> {
@@ -3184,10 +3311,8 @@ fn expected_type_parameter_bounds(
     type_params
         .iter()
         .filter_map(|type_param| {
-            type_param
-                .constraint
-                .as_ref()
-                .map(|constraint| (type_param.name.clone(), constraint.clone()))
+            type_param_bound_display(type_param)
+                .map(|constraint| (type_param.name.clone(), constraint))
         })
         .collect()
 }
@@ -5342,6 +5467,7 @@ describe = (flag: bool) StaticString {
             type_params: vec![crate::ast::declarations::TypeParam {
                 name: "T".into(),
                 constraint: None,
+                constraint_type_args: Vec::new(),
                 span: Span::dummy(),
             }],
             params: vec![crate::ast::Param {
@@ -6038,6 +6164,74 @@ main = () i32 {
                     .contains("generic behavior `Json` expects 1 type arguments, found 0")
             }),
             "expected generic behavior bound arity diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn generic_behavior_bound_with_type_args_accepts_matching_impl() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<Point>) {
+    encode = (value: Point) Point { return value }
+}
+
+identity<T: Json<T>> = (value: T) T {
+    return value
+}
+
+main = () i32 {
+    p = Point { x: 1 }
+    same = identity(p)
+    return same.x
+}
+"#,
+        );
+
+        TypeChecker::new()
+            .check_program(&program)
+            .expect("generic behavior bound type argument should substitute at call site");
+    }
+
+    #[test]
+    fn generic_behavior_bound_with_type_args_rejects_mismatched_impl() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+identity<T: Json<T>> = (value: T) T {
+    return value
+}
+
+main = () i32 {
+    p = Point { x: 1 }
+    same = identity(p)
+    return same.x
+}
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("generic behavior bound should require matching behavior type args");
+        assert!(
+            errors.iter().any(|d| d.message.contains(
+                "type `Point` does not implement behavior `Json<Point>` required by `T`"
+            )),
+            "expected generic behavior bound type argument diagnostic, got {errors:?}"
         );
     }
 

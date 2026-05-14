@@ -117,8 +117,10 @@ and do not assume Phase 4 is ready without evidence.
 - Unspecialized generic behaviors in `.implements`, `.requires`, and `.extends`
   produce hard arity diagnostics instead of silently acting like nongeneric
   behaviors.
-- Generic behavior bounds such as `T: Json<T>` are still explicitly gated with
-  parser diagnostics.
+- Generic behavior bounds with concrete type arguments, including
+  `T: Json<T>`, are parsed, recorded in resolver metadata, checked with
+  substituted behavior type arguments, and covered by
+  `tests/zen/behavior_json_generic_bound.zen`.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
   type parameters, produce hard arity diagnostics instead of silently acting
   like nongeneric behavior bounds.

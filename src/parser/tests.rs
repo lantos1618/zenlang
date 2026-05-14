@@ -506,27 +506,37 @@ fn parse_rejects_generic_behavior_extends_with_clear_error() {
 }
 
 #[test]
-fn parse_rejects_generic_behavior_function_bound_with_clear_error() {
-    let result = parse_str("encode<T: Json<T>> = (value: T) str { return \"\" }");
-    let errs = result.expect_err("generic behavior bound syntax should be gated");
-    assert!(
-        errs.iter().any(|e| e
-            .to_string()
-            .contains("gated v1 feature 'generic behavior bound'")),
-        "expected clear generic behavior bound diagnostic, got {errs:?}"
-    );
+fn parse_generic_behavior_function_bound_with_type_args() {
+    let prog = parse_ok("encode<T: Json<T>> = (value: T) str { return \"\" }");
+    match &prog.declarations[0] {
+        Declaration::Function { type_params, .. } => {
+            assert_eq!(type_params.len(), 1);
+            assert_eq!(type_params[0].name, "T");
+            assert_eq!(type_params[0].constraint.as_deref(), Some("Json"));
+            assert_eq!(
+                type_params[0].constraint_type_args,
+                vec![AstType::Named("T".into())]
+            );
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
 }
 
 #[test]
-fn parse_rejects_generic_behavior_type_bound_with_clear_error() {
-    let result = parse_str("Box<T: Json<T>>: { value: T }");
-    let errs = result.expect_err("generic behavior bound syntax should be gated");
-    assert!(
-        errs.iter().any(|e| e
-            .to_string()
-            .contains("gated v1 feature 'generic behavior bound'")),
-        "expected clear generic behavior bound diagnostic, got {errs:?}"
-    );
+fn parse_generic_behavior_type_bound_with_type_args() {
+    let prog = parse_ok("Box<T: Json<T>>: { value: T }");
+    match &prog.declarations[0] {
+        Declaration::Struct { type_params, .. } => {
+            assert_eq!(type_params.len(), 1);
+            assert_eq!(type_params[0].name, "T");
+            assert_eq!(type_params[0].constraint.as_deref(), Some("Json"));
+            assert_eq!(
+                type_params[0].constraint_type_args,
+                vec![AstType::Named("T".into())]
+            );
+        }
+        other => panic!("expected Struct, got {:?}", other),
+    }
 }
 
 #[test]

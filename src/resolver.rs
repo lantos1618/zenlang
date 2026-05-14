@@ -1078,6 +1078,15 @@ impl Resolver {
                         type_param.span,
                     ));
                 }
+                for type_arg in &type_param.constraint_type_args {
+                    self.validate_type_ref(
+                        table,
+                        type_params,
+                        type_arg,
+                        type_param.span,
+                        diagnostics,
+                    );
+                }
             }
         }
     }
@@ -1581,12 +1590,29 @@ fn resolver_type_parameter_bounds(type_params: &[TypeParam]) -> Vec<TypeParamete
     type_params
         .iter()
         .filter_map(|type_param| {
-            type_param
-                .constraint
-                .as_ref()
-                .map(|constraint| (type_param.name.clone(), constraint.clone()))
+            type_param_bound_display(type_param)
+                .map(|constraint| (type_param.name.clone(), constraint))
         })
         .collect()
+}
+
+fn type_param_bound_display(type_param: &TypeParam) -> Option<String> {
+    type_param.constraint.as_ref().map(|constraint| {
+        if type_param.constraint_type_args.is_empty() {
+            constraint.clone()
+        } else {
+            format!(
+                "{}<{}>",
+                constraint,
+                type_param
+                    .constraint_type_args
+                    .iter()
+                    .map(AstType::display_name)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }
+    })
 }
 
 fn resolver_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {
