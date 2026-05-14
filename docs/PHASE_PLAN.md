@@ -117,6 +117,9 @@ checked-in docs, tests, and commits only.
 - Entry-module `.requires` assertions over imported public types and imported
   generic behaviors are covered by
   `tests/zen/multi_file_imported_behavior_requires/main.zen`.
+- Imported public generic functions can use behavior bounds whose behavior was
+  imported by the source module, covered by
+  `tests/zen/multi_file_imported_function_imported_behavior_bound/main.zen`.
 - CLI graph-frontend typechecker failures are reported once rather than
   duplicated from both returned errors and stored checker diagnostics, covered
   by `integration::check_command_deduplicates_typechecker_diagnostics`.

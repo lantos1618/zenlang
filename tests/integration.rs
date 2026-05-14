@@ -630,6 +630,16 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Point_encode");
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
+
+    let c_source = compile_to_c(
+        &test_dir().join("multi_file_imported_function_imported_behavior_bound/main.zen"),
+    );
+    assert!(c_source.contains("int32_t Point_encode(Point value)"));
+    assert!(c_source.contains("int32_t encode_Point(Point value)"));
+    assert!(c_source.contains("Point_encode(value)"));
+    assert_c_call_resolves_to_definition(&c_source, "Point_encode");
+    assert_c_call_resolves_to_definition(&c_source, "encode_Point");
+    assert!(!c_source.contains("T_encode"));
 }
 
 #[test]
@@ -1845,6 +1855,13 @@ fn test_multi_file_imported_behavior_requires() {
     let zen_path = test_dir().join("multi_file_imported_behavior_requires/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "required\n");
+}
+
+#[test]
+fn test_multi_file_imported_function_imported_behavior_bound() {
+    let zen_path = test_dir().join("multi_file_imported_function_imported_behavior_bound/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "97\n");
 }
 
 // ── Discovery test: all .zen files have matching .expected ──────────
