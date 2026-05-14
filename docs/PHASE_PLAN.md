@@ -32,8 +32,9 @@ checked-in docs, tests, and commits only.
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.
   Nested generic type arguments are checked recursively in annotations,
-  instantiation positions, and function type signatures. Local generic
-  annotations also enforce declared generic behavior bounds.
+  instantiation positions, function type signatures, and pointer/slice/array
+  container types. Local generic annotations also enforce declared generic
+  behavior bounds.
   Explicit generic call type arguments, closure signatures, and cast targets
   are included in the same annotation validation path.
 - Explicit behavior declarations, impl conformance, default methods, generic
