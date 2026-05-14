@@ -3741,6 +3741,71 @@ impl TypeChecker {
                 span,
             ));
         }
+
+        for (present, code, label) in [
+            (symbol.parameter_names.is_some(), "E0251", "parameter names"),
+            (
+                symbol.parameter_type_names.is_some(),
+                "E0252",
+                "parameter types",
+            ),
+            (
+                symbol.type_parameter_count.is_some(),
+                "E0253",
+                "type parameter count",
+            ),
+            (
+                symbol.type_parameter_bounds.is_some(),
+                "E0254",
+                "type parameter bounds",
+            ),
+            (symbol.field_count.is_some(), "E0255", "field count"),
+            (symbol.field_type_names.is_some(), "E0256", "field types"),
+            (symbol.variant_names.is_some(), "E0257", "variant names"),
+            (
+                symbol.variant_owner_name.is_some(),
+                "E0258",
+                "variant owner",
+            ),
+            (
+                symbol.variant_payload_count.is_some(),
+                "E0259",
+                "variant payload count",
+            ),
+            (
+                symbol.variant_payload_type_name.is_some(),
+                "E0260",
+                "variant payload type",
+            ),
+            (
+                symbol.behavior_method_signatures.is_some(),
+                "E0261",
+                "behavior methods",
+            ),
+            (
+                symbol.behavior_parent_names.is_some(),
+                "E0262",
+                "behavior parents",
+            ),
+            (
+                symbol.behavior_impl_names.is_some(),
+                "E0263",
+                "behavior impls",
+            ),
+            (
+                symbol.behavior_required_names.is_some(),
+                "E0264",
+                "behavior requires",
+            ),
+        ] {
+            if present {
+                self.diagnostics.push(Diagnostic::error(
+                    code,
+                    format!("resolver local symbol '{name}' has {label} metadata, expected none"),
+                    span,
+                ));
+            }
+        }
     }
 
     fn require_resolver_type_like_symbol<'a>(
@@ -5602,6 +5667,95 @@ add = (a: i32, b: i32) i32 { return a + b }
                 .contains("resolver local symbol 'a' has return type metadata, expected none")),
             "expected resolver local return metadata diagnostic, got {err:?}"
         );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_local_absent_type_metadata() {
+        let program = parse_program(
+            r#"
+add = (a: i32, b: i32) i32 { return a + b }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_names_for_test(Namespace::Local, "a", Some(vec!["x".to_string()]));
+        symbols.set_parameter_type_names_for_test(
+            Namespace::Local,
+            "a",
+            Some(vec!["i32".to_string()]),
+        );
+        symbols.set_type_parameter_count_for_test(Namespace::Local, "a", Some(1));
+        symbols.set_type_parameter_bounds_for_test(
+            Namespace::Local,
+            "a",
+            Some(vec![("T".to_string(), "Json".to_string())]),
+        );
+        symbols.set_field_count_for_test(Namespace::Local, "a", Some(1));
+        symbols.set_field_type_names_for_test(
+            Namespace::Local,
+            "a",
+            Some(vec![("value".to_string(), "i32".to_string())]),
+        );
+        symbols.set_variant_names_for_test(Namespace::Local, "a", Some(vec!["Some".to_string()]));
+        symbols.set_variant_owner_name_for_test(Namespace::Local, "a", Some("Option".to_string()));
+        symbols.set_variant_payload_count_for_test(Namespace::Local, "a", Some(1));
+        symbols.set_variant_payload_type_name_for_test(
+            Namespace::Local,
+            "a",
+            Some("i32".to_string()),
+        );
+        symbols.set_behavior_method_signatures_for_test(
+            Namespace::Local,
+            "a",
+            Some(vec![(
+                "encode".to_string(),
+                vec!["Self".to_string()],
+                "str".to_string(),
+            )]),
+        );
+        symbols.set_behavior_parent_names_for_test(
+            Namespace::Local,
+            "a",
+            Some(vec!["Json".to_string()]),
+        );
+        symbols.set_behavior_impl_names_for_test(
+            Namespace::Local,
+            "a",
+            Some(vec!["Json".to_string()]),
+        );
+        symbols.set_behavior_required_names_for_test(
+            Namespace::Local,
+            "a",
+            Some(vec!["Json".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver local type metadata should fail");
+
+        for expected in [
+            "resolver local symbol 'a' has parameter names metadata, expected none",
+            "resolver local symbol 'a' has parameter types metadata, expected none",
+            "resolver local symbol 'a' has type parameter count metadata, expected none",
+            "resolver local symbol 'a' has type parameter bounds metadata, expected none",
+            "resolver local symbol 'a' has field count metadata, expected none",
+            "resolver local symbol 'a' has field types metadata, expected none",
+            "resolver local symbol 'a' has variant names metadata, expected none",
+            "resolver local symbol 'a' has variant owner metadata, expected none",
+            "resolver local symbol 'a' has variant payload count metadata, expected none",
+            "resolver local symbol 'a' has variant payload type metadata, expected none",
+            "resolver local symbol 'a' has behavior methods metadata, expected none",
+            "resolver local symbol 'a' has behavior parents metadata, expected none",
+            "resolver local symbol 'a' has behavior impls metadata, expected none",
+            "resolver local symbol 'a' has behavior requires metadata, expected none",
+        ] {
+            assert!(
+                err.iter().any(|d| d.message.contains(expected)),
+                "expected resolver local metadata diagnostic `{expected}`, got {err:?}"
+            );
+        }
     }
 
     #[test]

@@ -133,6 +133,8 @@ checked-in docs, tests, and commits only.
   before collecting typed bodies from the AST.
 - Typechecker setup now rejects resolver local parameter-count and return-type
   metadata before collecting typed bodies from the AST.
+- Typechecker setup now rejects resolver local type, field, variant, and
+  behavior metadata before collecting typed bodies from the AST.
 - Typechecker setup now mirrors resolver scope allocation for local-symbol
   validation, so same-name locals in different scopes are checked against the
   exact resolver scope.
