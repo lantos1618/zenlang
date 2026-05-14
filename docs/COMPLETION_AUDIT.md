@@ -54,6 +54,8 @@ and do not assume Phase 4 is ready without evidence.
   behavior bounds.
   Explicit generic call type arguments, closure signatures, and cast targets
   are included in the same annotation validation path.
+  Generic method explicit type arguments also reject bare generic type
+  annotations with missing type arguments.
   Generic behavior bound failures are covered across direct function, method,
   generic-receiver method, and UFC-style function call paths.
 - Typechecker setup accepts resolver `SymbolTable` through

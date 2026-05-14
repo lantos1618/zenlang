@@ -39,6 +39,8 @@ checked-in docs, tests, and commits only.
   behavior bounds.
   Explicit generic call type arguments, closure signatures, and cast targets
   are included in the same annotation validation path.
+  Generic method explicit type arguments also reject bare generic type
+  annotations with missing type arguments.
   Generic behavior bound failures are covered across direct function, method,
   generic-receiver method, and UFC-style function call paths.
 - Explicit behavior declarations, impl conformance, default methods, generic

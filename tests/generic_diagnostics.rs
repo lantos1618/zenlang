@@ -169,6 +169,39 @@ main = () i32 {
 }
 
 #[test]
+fn generic_method_type_arg_annotation_without_type_args_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+Holder: {
+    value: i32
+}
+
+Holder.wrap<T> = (self: Holder, value: T) T {
+    return value
+}
+
+main = () i32 {
+    holder = Holder { value: 1 }
+    box = Box<i32> { value: 1 }
+    bad = holder.wrap<Box>(box)
+    return bad.value
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic struct `Box` expects 1 type arguments, found 0")),
+        "expected generic method type-argument annotation without args diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn closure_param_annotation_type_arg_arity_is_error() {
     let errors = typecheck_errors(
         r#"
