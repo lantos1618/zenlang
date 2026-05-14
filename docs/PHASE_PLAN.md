@@ -83,6 +83,10 @@ checked-in docs, tests, and commits only.
   typechecker setup requires those local symbols before checking impl bodies.
 - Generic behavior bounds share the behavior inheritance solver, so an impl of a
   child behavior can satisfy a parent behavior bound.
+- Resolver symbols now carry typed behavior association metadata for
+  `.extends`, `.implements`, and `.requires`, and resolver-backed typechecker
+  collection uses that structured metadata for inherited parents and behavior
+  impls instead of relying only on AST association reconstruction.
 - Inherited generic behavior dispatch has executable coverage through
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Concrete generic behavior association syntax in `.implements` and `.requires`,

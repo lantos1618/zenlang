@@ -19,6 +19,12 @@ pub struct BehaviorMethodTypeMetadata {
     pub return_type: AstType,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct BehaviorRefMetadata {
+    pub name: String,
+    pub type_args: Vec<AstType>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Namespace {
     Value,
@@ -71,8 +77,11 @@ pub struct Symbol {
     pub behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
     pub behavior_method_types: Option<Vec<BehaviorMethodTypeMetadata>>,
     pub behavior_parent_names: Option<Vec<String>>,
+    pub behavior_parent_refs: Option<Vec<BehaviorRefMetadata>>,
     pub behavior_impl_names: Option<Vec<String>>,
+    pub behavior_impl_refs: Option<Vec<BehaviorRefMetadata>>,
     pub behavior_required_names: Option<Vec<String>>,
+    pub behavior_required_refs: Option<Vec<BehaviorRefMetadata>>,
     pub is_mutable: Option<bool>,
     pub scope_id: u32,
     pub definition_span: Span,
@@ -101,8 +110,11 @@ struct SymbolMetadata {
     behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
     behavior_method_types: Option<Vec<BehaviorMethodTypeMetadata>>,
     behavior_parent_names: Option<Vec<String>>,
+    behavior_parent_refs: Option<Vec<BehaviorRefMetadata>>,
     behavior_impl_names: Option<Vec<String>>,
+    behavior_impl_refs: Option<Vec<BehaviorRefMetadata>>,
     behavior_required_names: Option<Vec<String>>,
+    behavior_required_refs: Option<Vec<BehaviorRefMetadata>>,
     is_mutable: Option<bool>,
 }
 
@@ -600,8 +612,11 @@ impl SymbolTable {
                 behavior_method_signatures: None,
                 behavior_method_types: None,
                 behavior_parent_names: None,
+                behavior_parent_refs: None,
                 behavior_impl_names: None,
+                behavior_impl_refs: None,
                 behavior_required_names: None,
+                behavior_required_refs: None,
                 is_mutable: None,
             },
             0,
@@ -643,8 +658,11 @@ impl SymbolTable {
                 behavior_method_signatures: None,
                 behavior_method_types: None,
                 behavior_parent_names: None,
+                behavior_parent_refs: None,
                 behavior_impl_names: None,
+                behavior_impl_refs: None,
                 behavior_required_names: None,
+                behavior_required_refs: None,
                 is_mutable: None,
             },
             0,
@@ -703,8 +721,11 @@ impl SymbolTable {
                 behavior_method_signatures: None,
                 behavior_method_types: None,
                 behavior_parent_names: None,
+                behavior_parent_refs: None,
                 behavior_impl_names: None,
+                behavior_impl_refs: None,
                 behavior_required_names: None,
+                behavior_required_refs: None,
                 is_mutable: None,
             },
             0,
@@ -748,8 +769,11 @@ impl SymbolTable {
                 behavior_method_signatures: None,
                 behavior_method_types: None,
                 behavior_parent_names: None,
+                behavior_parent_refs: None,
                 behavior_impl_names: None,
+                behavior_impl_refs: None,
                 behavior_required_names: None,
+                behavior_required_refs: None,
                 is_mutable: None,
             },
             0,
@@ -793,8 +817,11 @@ impl SymbolTable {
                 behavior_method_signatures: Some(behavior_method_signatures),
                 behavior_method_types: Some(behavior_method_types),
                 behavior_parent_names: None,
+                behavior_parent_refs: None,
                 behavior_impl_names: None,
+                behavior_impl_refs: None,
                 behavior_required_names: None,
+                behavior_required_refs: None,
                 is_mutable: None,
             },
             0,
@@ -863,8 +890,11 @@ impl SymbolTable {
             behavior_method_signatures: metadata.behavior_method_signatures,
             behavior_method_types: metadata.behavior_method_types,
             behavior_parent_names: metadata.behavior_parent_names,
+            behavior_parent_refs: metadata.behavior_parent_refs,
             behavior_impl_names: metadata.behavior_impl_names,
+            behavior_impl_refs: metadata.behavior_impl_refs,
             behavior_required_names: metadata.behavior_required_names,
+            behavior_required_refs: metadata.behavior_required_refs,
             is_mutable: metadata.is_mutable,
             scope_id,
             definition_span,
@@ -898,47 +928,66 @@ impl SymbolTable {
         self.next_scope_id
     }
 
-    fn record_behavior_parent(&mut self, behavior: &str, parent: &str) -> bool {
+    fn record_behavior_parent(&mut self, behavior: &str, parent_ref: BehaviorRefMetadata) -> bool {
         if let Some(symbol) = self
             .symbols
             .iter_mut()
             .find(|symbol| symbol.namespace == Namespace::Behavior && symbol.name == behavior)
         {
+            let parent = behavior_ref_display(&parent_ref.name, &parent_ref.type_args);
             let parents = symbol.behavior_parent_names.get_or_insert_with(Vec::new);
-            if parents.iter().any(|recorded| recorded == parent) {
+            if parents.iter().any(|recorded| recorded == &parent) {
                 return false;
             }
-            parents.push(parent.to_string());
+            parents.push(parent);
+            symbol
+                .behavior_parent_refs
+                .get_or_insert_with(Vec::new)
+                .push(parent_ref);
         }
         true
     }
 
-    fn record_behavior_impl(&mut self, type_name: &str, behavior: &str) -> bool {
+    fn record_behavior_impl(&mut self, type_name: &str, behavior_ref: BehaviorRefMetadata) -> bool {
         if let Some(symbol) = self
             .symbols
             .iter_mut()
             .find(|symbol| symbol.namespace == Namespace::Type && symbol.name == type_name)
         {
+            let behavior = behavior_ref_display(&behavior_ref.name, &behavior_ref.type_args);
             let impls = symbol.behavior_impl_names.get_or_insert_with(Vec::new);
-            if impls.iter().any(|recorded| recorded == behavior) {
+            if impls.iter().any(|recorded| recorded == &behavior) {
                 return false;
             }
-            impls.push(behavior.to_string());
+            impls.push(behavior);
+            symbol
+                .behavior_impl_refs
+                .get_or_insert_with(Vec::new)
+                .push(behavior_ref);
         }
         true
     }
 
-    fn record_behavior_required(&mut self, type_name: &str, behavior: &str) -> bool {
+    fn record_behavior_required(
+        &mut self,
+        type_name: &str,
+        behavior_ref: BehaviorRefMetadata,
+    ) -> bool {
         if let Some(symbol) = self
             .symbols
             .iter_mut()
             .find(|symbol| symbol.namespace == Namespace::Type && symbol.name == type_name)
         {
+            let behavior = behavior_ref_display(&behavior_ref.name, &behavior_ref.type_args);
             let required = symbol.behavior_required_names.get_or_insert_with(Vec::new);
-            if required.iter().any(|recorded| recorded == behavior) {
+            if required.iter().any(|recorded| recorded == &behavior) {
                 return false;
             }
-            required.push(behavior.to_string());
+            required.push(behavior);
+            symbol
+                .behavior_required_refs
+                .get_or_insert_with(Vec::new)
+                .push(behavior_ref);
         }
         true
     }
@@ -1303,7 +1352,13 @@ impl Resolver {
                     }
                     if self.is_known_type_name(table, &[], type_name) && behavior_known {
                         let behavior_display = behavior_ref_display(behavior, behavior_type_args);
-                        if !table.record_behavior_impl(type_name, &behavior_display) {
+                        if !table.record_behavior_impl(
+                            type_name,
+                            BehaviorRefMetadata {
+                                name: behavior.clone(),
+                                type_args: behavior_type_args.clone(),
+                            },
+                        ) {
                             diagnostics.push(Diagnostic::error(
                                 "E0217",
                                 format!(
@@ -1374,7 +1429,13 @@ impl Resolver {
                     ));
                 } else if self.is_known_type_name(table, &[], type_name) {
                     let behavior_display = behavior_ref_display(behavior, behavior_type_args);
-                    if !table.record_behavior_required(type_name, &behavior_display) {
+                    if !table.record_behavior_required(
+                        type_name,
+                        BehaviorRefMetadata {
+                            name: behavior.clone(),
+                            type_args: behavior_type_args.clone(),
+                        },
+                    ) {
                         diagnostics.push(Diagnostic::error(
                             "E0216",
                             format!(
@@ -1415,7 +1476,13 @@ impl Resolver {
                 }
                 if behavior_known && parent_known {
                     let parent_display = behavior_ref_display(parent, parent_type_args);
-                    if !table.record_behavior_parent(behavior, &parent_display) {
+                    if !table.record_behavior_parent(
+                        behavior,
+                        BehaviorRefMetadata {
+                            name: parent.clone(),
+                            type_args: parent_type_args.clone(),
+                        },
+                    ) {
                         diagnostics.push(Diagnostic::error(
                             "E0215",
                             format!(

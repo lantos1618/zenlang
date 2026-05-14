@@ -1269,8 +1269,26 @@ Point.requires(Json<str>)
         Some(&["Json<str>".to_string()][..])
     );
     assert_eq!(
+        point.behavior_impl_refs.as_ref().map(Vec::as_slice),
+        Some(
+            &[zen::resolver::BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![zen::ast::AstType::Str],
+            }][..]
+        )
+    );
+    assert_eq!(
         point.behavior_required_names.as_ref().map(Vec::as_slice),
         Some(&["Json<str>".to_string()][..])
+    );
+    assert_eq!(
+        point.behavior_required_refs.as_ref().map(Vec::as_slice),
+        Some(
+            &[zen::resolver::BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![zen::ast::AstType::Str],
+            }][..]
+        )
     );
 }
 
@@ -1299,6 +1317,20 @@ PrettyJson.extends(Json<str>)
             .as_ref()
             .map(Vec::as_slice),
         Some(&["Json<str>".to_string()][..])
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Behavior, "PrettyJson")
+            .expect("behavior symbol")
+            .behavior_parent_refs
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(
+            &[zen::resolver::BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![zen::ast::AstType::Str],
+            }][..]
+        )
     );
 }
 

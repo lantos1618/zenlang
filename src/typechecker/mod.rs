@@ -22,7 +22,8 @@ use crate::ast::{self, AstType, Declaration, EnumVariant, Expression, Param, Str
 use crate::error::{Diagnostic, Span};
 use crate::module_system::{ResolvedModule, ResolvedModuleGraph};
 use crate::resolver::{
-    MethodSignatureMetadata, Namespace, SymbolTable, TypeParameterBoundMetadata,
+    BehaviorRefMetadata, MethodSignatureMetadata, Namespace, SymbolTable,
+    TypeParameterBoundMetadata,
 };
 
 // ── Type Environment ──────────────────────────────────────────────
@@ -1200,12 +1201,15 @@ impl TypeChecker {
                 }
                 Declaration::Struct { name, .. } => {
                     self.collect_resolver_struct_fields(symbols, name);
+                    self.collect_resolver_type_behavior_impls(symbols, name);
                 }
                 Declaration::Enum { name, .. } => {
                     self.collect_resolver_enum_variants(symbols, name);
+                    self.collect_resolver_type_behavior_impls(symbols, name);
                 }
                 Declaration::Behavior { name, .. } => {
                     self.collect_resolver_behavior_methods(symbols, name);
+                    self.collect_resolver_behavior_parents(symbols, name);
                 }
                 _ => {}
             }
@@ -1361,6 +1365,50 @@ impl TypeChecker {
                 methods,
             },
         );
+    }
+
+    fn collect_resolver_behavior_parents(&mut self, symbols: &SymbolTable, name: &str) {
+        let Some(symbol) = symbols.lookup(Namespace::Behavior, name) else {
+            return;
+        };
+        let Some(parent_refs) = symbol.behavior_parent_refs.as_ref() else {
+            return;
+        };
+
+        let parents = parent_refs
+            .iter()
+            .map(|parent| self.behavior_parent_ref_from_metadata(parent))
+            .collect();
+        self.behavior_extends.insert(name.to_string(), parents);
+    }
+
+    fn collect_resolver_type_behavior_impls(&mut self, symbols: &SymbolTable, name: &str) {
+        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
+            return;
+        };
+        let Some(impl_refs) = symbol.behavior_impl_refs.as_ref() else {
+            return;
+        };
+
+        self.behavior_impls
+            .retain(|(type_name, _)| type_name != name);
+        for behavior in impl_refs {
+            self.behavior_impls.insert((
+                name.to_string(),
+                self.behavior_reference_key(&behavior.name, &behavior.type_args),
+            ));
+        }
+    }
+
+    fn behavior_parent_ref_from_metadata(
+        &self,
+        metadata: &BehaviorRefMetadata,
+    ) -> BehaviorParentRef {
+        BehaviorParentRef {
+            behavior: metadata.name.clone(),
+            type_args: metadata.type_args.clone(),
+            key: self.behavior_reference_key(&metadata.name, &metadata.type_args),
+        }
     }
 
     fn collect_impl_method_signature(&mut self, type_name: &str, method: &Declaration) {
@@ -7117,6 +7165,81 @@ Mapper: behavior {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             })
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_parent_metadata() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::BehaviorExtends {
+            parent_type_args, ..
+        } = &mut program.declarations[2]
+        {
+            parent_type_args[0] = AstType::I32;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let parents = tc
+            .behavior_extends
+            .get("PrettyJson")
+            .expect("behavior parents");
+        assert_eq!(parents[0].behavior, "Json");
+        assert_eq!(parents[0].type_args, vec![AstType::Str]);
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_impl_metadata() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock {
+            behavior_type_args, ..
+        } = &mut program.declarations[2]
+        {
+            behavior_type_args[0] = AstType::I32;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.behavior_impls
+                .contains(&("Point".to_string(), "Json_str".to_string())),
+            "resolver metadata should restore the validated Json<str> impl"
+        );
+        assert!(
+            !tc.behavior_impls
+                .contains(&("Point".to_string(), "Json_i32".to_string())),
+            "AST-only Json<i32> impl drift should not remain after resolver collection"
         );
     }
 
