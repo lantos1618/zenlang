@@ -105,6 +105,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_validates_resolver_function_type_parameter_names",
         "check_program_with_symbols_validates_resolver_type_parameter_names",
         "tests/zen/generic_method_worklist.zen",
+        "resolver_records_behavior_impl_methods_as_value_symbols",
+        "check_program_with_symbols_validates_resolver_impl_method_signature",
     ] {
         assert!(
             spec.contains(required),

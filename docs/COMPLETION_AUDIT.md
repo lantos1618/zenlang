@@ -72,6 +72,9 @@ and do not assume Phase 4 is ready without evidence.
   generic-receiver method, and UFC-style function call paths.
 - Typechecker setup accepts resolver `SymbolTable` through
   `check_program_with_symbols`.
+- Resolver behavior impl method symbols carry complete value-signature metadata,
+  and typechecker setup rejects impl-method signature drift before behavior impl
+  body collection.
 - Resolver local symbols carry mutability metadata for mutable parameters and
   local bindings.
 - Typechecker setup requires resolver parameter local symbols before collecting

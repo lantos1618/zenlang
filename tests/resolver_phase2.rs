@@ -206,6 +206,19 @@ Point.implements(Json) {
         .expect("impl method symbol");
 
     assert_eq!(method.name, "Point.stringify");
+    assert_eq!(method.parameter_count, Some(1));
+    assert_eq!(
+        method.parameter_names.as_deref(),
+        Some(&["value".to_string()][..])
+    );
+    assert_eq!(
+        method.parameter_type_names.as_deref(),
+        Some(&["Point".to_string()][..])
+    );
+    assert_eq!(method.return_type_name.as_deref(), Some("str"));
+    assert_eq!(method.type_parameter_count, Some(0));
+    assert_eq!(method.type_parameter_names.as_deref(), Some(&[][..]));
+    assert_eq!(method.type_parameter_bounds.as_deref(), Some(&[][..]));
 }
 
 #[test]

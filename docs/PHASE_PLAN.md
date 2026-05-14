@@ -58,6 +58,9 @@ checked-in docs, tests, and commits only.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.
+- Behavior impl methods are resolver-owned value symbols with parameter,
+  return, generic-name, and generic-bound metadata, and typechecker setup
+  validates impl-method signature handoff drift before checking impl bodies.
 - Generic behavior bounds share the behavior inheritance solver, so an impl of a
   child behavior can satisfy a parent behavior bound.
 - Inherited generic behavior dispatch has executable coverage through

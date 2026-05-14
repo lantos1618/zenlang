@@ -6336,6 +6336,43 @@ Point.implements(Json) {
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_impl_method_signature() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    stringify: (Self) str
+}
+
+Point: { x: i32 }
+
+Point.implements(Json) {
+    stringify = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_name_for_test(
+            Namespace::Value,
+            "Point.stringify",
+            Some("i32".to_string()),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver impl method signature mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'Point.stringify' has return type 'i32', expected 'str'"
+            )),
+            "expected resolver impl method signature diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_requires_resolver_enum_variants() {
         let program = parse_program(
             r#"
