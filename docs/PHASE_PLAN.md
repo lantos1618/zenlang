@@ -29,7 +29,8 @@ checked-in docs, tests, and commits only.
 - Generic specialization has positive executable coverage for generic functions,
   structs, enums, methods, and recursive worklist emission. The C-source
   assertions also match generated mangled generic call sites to emitted
-  definitions.
+  definitions, including struct-returning specializations without counting
+  declarations or definitions as calls.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies, covered by
   `tests/zen/generic_method_self.zen`. `Self`-only generic methods also infer

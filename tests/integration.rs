@@ -133,24 +133,44 @@ fn assert_c_function_definition(c_source: &str, name: &str) {
 
 fn assert_c_call_resolves_to_definition(c_source: &str, name: &str) {
     assert_c_function_definition(c_source, name);
-    let call = format!("{name}(");
-    let declaration_prefixes = [
-        format!("int32_t {name}("),
-        format!("int64_t {name}("),
-        format!("uint32_t {name}("),
-        format!("uint64_t {name}("),
-        format!("zen_str {name}("),
-        format!("void {name}("),
-    ];
     assert!(
-        c_source.lines().any(|line| {
-            let trimmed = line.trim();
-            trimmed.contains(&call)
-                && !declaration_prefixes
-                    .iter()
-                    .any(|prefix| trimmed.starts_with(prefix))
-        }),
+        has_c_call_outside_signature(c_source, name),
         "expected generated C call to `{name}` outside declarations/definitions:\n{c_source}"
+    );
+}
+
+fn has_c_call_outside_signature(c_source: &str, name: &str) -> bool {
+    let call = format!("{name}(");
+    c_source.lines().any(|line| {
+        let trimmed = line.trim();
+        trimmed.contains(&call) && !is_c_function_signature_line(trimmed, name)
+    })
+}
+
+fn is_c_function_signature_line(trimmed: &str, name: &str) -> bool {
+    let needle = format!(" {name}(");
+    let Some(call_start) = trimmed.find(&needle) else {
+        return false;
+    };
+    let prefix = &trimmed[..call_start];
+    !prefix.contains('=')
+        && !prefix.contains("return")
+        && (trimmed.ends_with(';') || trimmed.ends_with('{'))
+}
+
+#[test]
+fn c_call_assertion_ignores_struct_return_definitions() {
+    let c_source = r#"
+typedef struct Box_Option_i32 Box_Option_i32;
+
+Box_Option_i32 Box_copy_Option_i32(Box_Option_i32 self) {
+    return self;
+}
+"#;
+
+    assert!(
+        !has_c_call_outside_signature(c_source, "Box_copy_Option_i32"),
+        "definition-only generated C should not count as a call"
     );
 }
 
