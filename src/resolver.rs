@@ -461,6 +461,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_behavior_method_types_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        behavior_method_types: Option<Vec<BehaviorMethodTypeMetadata>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.behavior_method_types = behavior_method_types;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_behavior_parent_names_for_test(
         &mut self,
         namespace: Namespace,

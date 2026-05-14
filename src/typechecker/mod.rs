@@ -22,8 +22,8 @@ use crate::ast::{self, AstType, Declaration, EnumVariant, Expression, Param, Str
 use crate::error::{Diagnostic, Span};
 use crate::module_system::{ResolvedModule, ResolvedModuleGraph};
 use crate::resolver::{
-    BehaviorRefMetadata, MethodSignatureMetadata, Namespace, SymbolTable,
-    TypeParameterBoundMetadata, TypeParameterBoundRefMetadata,
+    BehaviorMethodTypeMetadata, BehaviorRefMetadata, MethodSignatureMetadata, Namespace,
+    SymbolTable, TypeParameterBoundMetadata, TypeParameterBoundRefMetadata,
 };
 
 // ── Type Environment ──────────────────────────────────────────────
@@ -3411,6 +3411,7 @@ impl TypeChecker {
                         symbol,
                         name,
                         expected_behavior_method_signatures(methods),
+                        expected_behavior_method_types(methods),
                         *span,
                     );
                     self.validate_resolver_behavior_absent_type_metadata(symbol, name, *span);
@@ -6031,6 +6032,7 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         name: &str,
         expected_method_signatures: Vec<MethodSignatureMetadata>,
+        expected_method_types: Vec<BehaviorMethodTypeMetadata>,
         span: Span,
     ) {
         if symbol.behavior_method_signatures.as_deref()
@@ -6043,6 +6045,17 @@ impl TypeChecker {
                 "E0219",
                 format!(
                     "resolver behavior symbol '{name}' has methods '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
+        if symbol.behavior_method_types.as_deref() != Some(expected_method_types.as_slice()) {
+            let actual = format_behavior_method_types(symbol.behavior_method_types.as_deref());
+            let expected = format_behavior_method_types(Some(&expected_method_types));
+            self.diagnostics.push(Diagnostic::error(
+                "E0355",
+                format!(
+                    "resolver behavior symbol '{name}' has typed methods '{actual}', expected '{expected}'"
                 ),
                 span,
             ));
@@ -6733,6 +6746,19 @@ fn expected_behavior_method_signatures(
         .collect()
 }
 
+fn expected_behavior_method_types(
+    methods: &[ast::BehaviorMethod],
+) -> Vec<BehaviorMethodTypeMetadata> {
+    methods
+        .iter()
+        .map(|method| BehaviorMethodTypeMetadata {
+            name: method.name.clone(),
+            parameter_types: method.params.iter().map(|param| param.ty.clone()).collect(),
+            return_type: method.return_type.clone().unwrap_or(AstType::Void),
+        })
+        .collect()
+}
+
 fn expected_behavior_associations(
     program: &ast::Program,
 ) -> (HashMap<String, Vec<String>>, HashMap<String, Vec<String>>) {
@@ -7245,6 +7271,33 @@ fn format_behavior_method_signatures(methods: Option<&[MethodSignatureMetadata]>
                 .iter()
                 .map(|(name, params, return_type)| {
                     format!("{name}({}) {return_type}", params.join(", "))
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        None => "unknown".to_string(),
+    }
+}
+
+fn format_behavior_method_types(methods: Option<&[BehaviorMethodTypeMetadata]>) -> String {
+    match methods {
+        Some(methods) => format!(
+            "({})",
+            methods
+                .iter()
+                .map(|method| {
+                    let params = method
+                        .parameter_types
+                        .iter()
+                        .map(AstType::display_name)
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    format!(
+                        "{}({}) {}",
+                        method.name,
+                        params,
+                        method.return_type.display_name()
+                    )
                 })
                 .collect::<Vec<_>>()
                 .join(", ")
@@ -10127,6 +10180,44 @@ Mapper: behavior {
                 "resolver behavior symbol 'Mapper' has methods '(map(Self, i32) (i32) i32)', expected '(map(Self, (i32) i32) (i32) i32)'"
             )),
             "expected resolver behavior function type method signature diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_behavior_method_types() {
+        let program = parse_program(
+            r#"
+Mapper: behavior {
+    map: (Self, (i32) i32) (i32) i32
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_method_types_for_test(
+            Namespace::Behavior,
+            "Mapper",
+            Some(vec![BehaviorMethodTypeMetadata {
+                name: "map".to_string(),
+                parameter_types: vec![AstType::SelfType, AstType::I32],
+                return_type: AstType::Function {
+                    params: vec![AstType::I32],
+                    ret: Box::new(AstType::I32),
+                },
+            }]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver typed behavior method metadata mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver behavior symbol 'Mapper' has typed methods '(map(Self, i32) (i32) i32)', expected '(map(Self, (i32) i32) (i32) i32)'"
+            )),
+            "expected resolver typed behavior method diagnostic, got {err:?}"
         );
     }
 

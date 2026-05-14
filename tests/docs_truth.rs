@@ -219,6 +219,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_validates_resolver_generic_enum_function_type_payloads",
         "resolver_records_behavior_function_type_method_signatures",
         "check_program_with_symbols_validates_resolver_behavior_function_type_method_signatures",
+        "check_program_with_symbols_validates_resolver_behavior_method_types",
         "collect_declarations_with_symbols_uses_resolver_behavior_method_metadata",
         "resolver_records_generic_behavior_function_type_method_signatures",
         "check_program_with_symbols_validates_resolver_generic_behavior_function_type_method_signatures",

@@ -442,6 +442,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior method signature metadata preserves function-typed
   parameters and returns, and typechecker setup rejects function-type method
   signature drift before behavior metadata collection.
+- Typechecker setup validates resolver typed behavior method metadata in
+  addition to display signatures, so stale `behavior_method_types` cannot feed
+  resolver-backed behavior collection behind matching signature strings.
 - The resolver-backed typechecker path collects behavior method signatures from
   validated resolver behavior symbols, including typed function-method metadata,
   reducing duplicate AST-only declaration collection for behavior method
