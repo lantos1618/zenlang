@@ -123,7 +123,10 @@ checked-in docs, tests, and commits only.
 - Imported public function signatures now seed public source-module return-type
   dependencies and their behavior impl associations even when the entry module
   imports only the functions, covered by
-  `tests/zen/multi_file_imported_function_return_type_dependency/main.zen`.
+  `tests/zen/multi_file_imported_function_return_type_dependency/main.zen`,
+  while `integration::imported_function_signature_type_dependencies_are_not_directly_visible`
+  proves those signature dependencies are not directly constructible without an
+  entry-module import.
 - Imported public generic functions also carry source-module imported generic
   enum return dependencies through graph-owned imports, covered by
   `tests/zen/multi_file_imported_generic_function_return_enum_dependency/main.zen`.
