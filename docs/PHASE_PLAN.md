@@ -30,7 +30,7 @@ checked-in docs, tests, and commits only.
   structs, enums, methods, and recursive worklist emission.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
-  annotation names with missing type arguments.
+  annotation names with missing type arguments and local variable annotations.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.
