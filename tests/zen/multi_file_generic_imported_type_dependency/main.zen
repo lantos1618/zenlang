@@ -1,0 +1,7 @@
+{ io } = std
+{ get_held } = model
+
+main = () i32 {
+    io.println("${get_held<i32>(73)}")
+    return 0
+}

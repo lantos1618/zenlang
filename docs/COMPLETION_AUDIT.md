@@ -71,6 +71,10 @@ and do not assume Phase 4 is ready without evidence.
   source-module imported generic types and methods are covered by
   `tests/zen/multi_file_type_impl_imported_type_dependency/main.zen` and
   `integration::imported_type_impl_imported_type_dependencies_are_not_directly_visible`.
+  Imported public generic function templates that use source-module imported
+  generic types and methods are covered by
+  `tests/zen/multi_file_generic_imported_type_dependency/main.zen` and
+  `integration::imported_generic_function_imported_type_dependencies_are_not_directly_visible`.
 - Resolver method value symbols carry complete value-signature metadata, and
   typechecker setup rejects method signature drift before method body
   collection. Function-typed method parameters and returns are included in
@@ -421,6 +425,9 @@ and do not assume Phase 4 is ready without evidence.
 - Multi-file generic import fixtures cover imported generic enum/function
   specialization through C generation and runtime execution, including generated
   C assertions that imported mangled calls have matching concrete definitions.
+  Imported generic function templates carry source-module imported generic type
+  and method dependencies only during specialization, while helper types remain
+  inaccessible from entry modules.
 - Multi-file generic behavior-bound fixtures cover imported public behavior
   declarations through module-graph resolver validation, typechecking, C
   generation, and runtime execution.

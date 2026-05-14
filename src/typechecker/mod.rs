@@ -3540,6 +3540,12 @@ impl TypeChecker {
             };
 
             self.seed_module_graph_import(binding.local_name.as_str(), decl);
+            self.seed_imported_generic_function_dependencies(
+                binding.local_name.as_str(),
+                decl,
+                source_module,
+                graph,
+            );
             if matches!(decl, Declaration::Behavior { .. }) {
                 self.seed_behavior_extends_for_imported_behavior(
                     binding.local_name.as_str(),
@@ -3560,6 +3566,31 @@ impl TypeChecker {
                 graph,
             );
         }
+    }
+
+    fn seed_imported_generic_function_dependencies(
+        &mut self,
+        local_name: &str,
+        decl: &Declaration,
+        source_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
+    ) {
+        let Declaration::Function { type_params, .. } = decl else {
+            return;
+        };
+        if type_params.is_empty() {
+            return;
+        }
+        let dependencies = Self::source_module_dependencies(source_module, graph);
+        let Some(template) = self.generic_functions.get_mut(local_name) else {
+            return;
+        };
+        template.dependency_structs = dependencies.structs;
+        template.dependency_enums = dependencies.enums;
+        template.dependency_functions = dependencies.functions;
+        template.dependency_generic_functions = dependencies.generic_functions;
+        template.dependency_methods = dependencies.methods;
+        template.dependency_generic_methods = dependencies.generic_methods;
     }
 
     fn seed_module_graph_import(&mut self, local_name: &str, decl: &Declaration) {
