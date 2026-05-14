@@ -3707,6 +3707,22 @@ impl TypeChecker {
                 span,
             ));
         }
+
+        if symbol.is_public {
+            self.diagnostics.push(Diagnostic::error(
+                "E0247",
+                format!("resolver local symbol '{name}' has visibility public, expected private"),
+                span,
+            ));
+        }
+
+        if let Some(actual) = symbol.import_source.as_deref() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0248",
+                format!("resolver local symbol '{name}' has source '{actual}', expected none"),
+                span,
+            ));
+        }
     }
 
     fn require_resolver_type_like_symbol<'a>(
@@ -5503,6 +5519,38 @@ add = (mut a: i32, b: i32) i32 { return a + b }
                 .message
                 .contains("resolver local symbol 'a' has mutability immutable, expected mutable")),
             "expected resolver parameter local mutability diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_local_visibility_and_source() {
+        let program = parse_program(
+            r#"
+add = (a: i32, b: i32) i32 { return a + b }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_public_for_test(Namespace::Local, "a", true);
+        symbols.set_import_source_for_test(Namespace::Local, "a", Some("std".to_string()));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver local visibility/source mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver local symbol 'a' has visibility public, expected private")),
+            "expected resolver local visibility diagnostic, got {err:?}"
+        );
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver local symbol 'a' has source 'std', expected none")),
+            "expected resolver local source diagnostic, got {err:?}"
         );
     }
 

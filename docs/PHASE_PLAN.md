@@ -129,6 +129,8 @@ checked-in docs, tests, and commits only.
   behavior default method bodies before collecting behavior metadata.
 - Typechecker setup now rejects resolver local mutability mismatches before
   collecting typed bodies from the AST.
+- Typechecker setup now rejects resolver local visibility/source mismatches
+  before collecting typed bodies from the AST.
 - Typechecker setup now mirrors resolver scope allocation for local-symbol
   validation, so same-name locals in different scopes are checked against the
   exact resolver scope.
