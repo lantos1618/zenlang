@@ -100,6 +100,8 @@ checked-in docs, tests, and commits only.
   source module metadata instead of relying on ad hoc imported-name collection.
 - Typechecker setup now rejects resolver import binding source mismatches before
   seeding imported module-call bindings.
+- Typechecker setup now rejects resolver import binding visibility mismatches
+  before seeding imported module-call bindings.
 - Typechecker setup now rejects resolver module symbol visibility/source
   mismatches before validating imported binding symbols.
 - Resolver now walks declaration bodies enough to diagnose simple unresolved

@@ -3298,6 +3298,14 @@ impl TypeChecker {
             return;
         };
 
+        if symbol.is_public {
+            self.diagnostics.push(Diagnostic::error(
+                "E0245",
+                format!("resolver import symbol '{name}' has visibility public, expected private"),
+                span,
+            ));
+        }
+
         if symbol.import_source.as_deref() != Some(expected_source) {
             let actual = symbol.import_source.as_deref().unwrap_or("unknown");
             self.diagnostics.push(Diagnostic::error(
@@ -5114,6 +5122,34 @@ main = () i32 {
                 .message
                 .contains("resolver import symbol 'io' has source 'other', expected 'std'")),
             "expected resolver import source diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_import_visibility() {
+        let program = parse_program(
+            r#"
+{ io } = std
+main = () i32 {
+    return 0
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_public_for_test(Namespace::Import, "io", true);
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver import visibility mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("resolver import symbol 'io' has visibility public, expected private")),
+            "expected resolver import visibility diagnostic, got {err:?}"
         );
     }
 

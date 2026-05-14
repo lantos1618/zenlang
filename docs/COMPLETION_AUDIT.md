@@ -80,6 +80,8 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker imports can be seeded from resolver import binding symbols.
 - Typechecker setup rejects resolver import binding source mismatches before
   seeding imported module-call bindings.
+- Typechecker setup rejects resolver import binding visibility mismatches before
+  seeding imported module-call bindings.
 - Typechecker setup rejects resolver module symbol visibility/source mismatches
   before validating imported binding symbols.
 - The non-merging module graph records resolver `SymbolTable` data per module
