@@ -1252,6 +1252,36 @@ impl TypeChecker {
         } else {
             self.functions.insert(name.to_string(), info);
         }
+        self.collect_resolver_generic_template_signature(name, parameter_types, return_type);
+    }
+
+    fn collect_resolver_generic_template_signature(
+        &mut self,
+        name: &str,
+        parameter_types: &[AstType],
+        return_type: &AstType,
+    ) {
+        let template = if name.contains('.') {
+            self.generic_methods.get_mut(name)
+        } else {
+            self.generic_functions.get_mut(name)
+        };
+        let Some(template) = template else {
+            return;
+        };
+        if template.params.len() != parameter_types.len() {
+            return;
+        }
+        for (param, ty) in template
+            .params
+            .iter_mut()
+            .zip(parameter_types.iter().cloned())
+        {
+            param.ty = ty;
+        }
+        if template.return_type.is_some() {
+            template.return_type = Some(return_type.clone());
+        }
     }
 
     fn collect_resolver_struct_fields(&mut self, symbols: &SymbolTable, name: &str) {
@@ -7286,6 +7316,94 @@ apply = (callback: (i32) i32) (i32) i32 {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             }
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_generic_function_template_metadata() {
+        let mut program = parse_program(
+            r#"
+apply<T> = (callback: (T) T) (T) T {
+    return callback
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function {
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[0]
+        {
+            params[0].ty = AstType::I32;
+            *return_type = Some(AstType::I32);
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc.generic_functions.get("apply").expect("generic template");
+        assert_eq!(
+            template.params[0].ty,
+            AstType::Function {
+                params: vec![AstType::Named("T".to_string())],
+                ret: Box::new(AstType::Named("T".to_string())),
+            }
+        );
+        assert_eq!(
+            template.return_type,
+            Some(AstType::Function {
+                params: vec![AstType::Named("T".to_string())],
+                ret: Box::new(AstType::Named("T".to_string())),
+            })
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_generic_method_template_metadata() {
+        let mut program = parse_program(
+            r#"
+Box: { value: i32 }
+Box.apply<U> = (self: Box, callback: (U) U) (U) U {
+    return callback
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Method {
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[1]
+        {
+            params[1].ty = AstType::I32;
+            *return_type = Some(AstType::I32);
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc
+            .generic_methods
+            .get("Box.apply")
+            .expect("generic method template");
+        assert_eq!(
+            template.params[1].ty,
+            AstType::Function {
+                params: vec![AstType::Named("U".to_string())],
+                ret: Box::new(AstType::Named("U".to_string())),
+            }
+        );
+        assert_eq!(
+            template.return_type,
+            Some(AstType::Function {
+                params: vec![AstType::Named("U".to_string())],
+                ret: Box::new(AstType::Named("U".to_string())),
+            })
         );
     }
 

@@ -362,6 +362,10 @@ and do not assume Phase 4 is ready without evidence.
   from validated resolver value symbols, including typed function-signature
   metadata, reducing duplicate AST-only declaration collection for value
   signatures.
+- Resolver-backed typechecker collection updates generic function and generic
+  method templates with validated resolver parameter and return metadata, so
+  monomorphization templates no longer retain stale AST-only function-type
+  signatures after resolver validation.
 - Typechecker setup rejects extra resolver-owned local symbols after mirroring
   resolver scope allocation across function bodies, nested scopes, pattern
   bindings, closures, defaults, and top-level expressions.
