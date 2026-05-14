@@ -315,6 +315,9 @@ checked-in docs, tests, and commits only.
 - Resolver behavior method signature metadata preserves function-typed
   parameters and returns, and typechecker setup rejects function-type method
   signature handoff drift before collecting behavior metadata from the AST.
+- Resolver behavior method signature metadata preserves generic return types on
+  generic behaviors, and typechecker setup rejects generic method-signature
+  handoff drift before behavior metadata collection.
 - Resolver top-level method and behavior impl method value symbols preserve
   function-typed parameters and returns, and typechecker setup rejects
   function-type method handoff drift before collecting method bodies.

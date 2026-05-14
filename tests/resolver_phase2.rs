@@ -859,6 +859,35 @@ Mapper: behavior {
 }
 
 #[test]
+fn resolver_records_generic_behavior_method_signatures() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Behavior, "Json")
+            .expect("behavior symbol")
+            .behavior_method_signatures
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(
+            &[(
+                "encode".to_string(),
+                vec!["Self".to_string()],
+                "T".to_string()
+            )][..]
+        )
+    );
+}
+
+#[test]
 fn resolver_records_behavior_default_method_body_locals() {
     let program = parse_program(
         r#"

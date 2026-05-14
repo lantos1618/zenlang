@@ -7977,6 +7977,41 @@ Mapper: behavior {
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_generic_behavior_method_signatures() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_method_signatures_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec![(
+                "encode".to_string(),
+                vec!["Self".to_string()],
+                "str".to_string(),
+            )]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver generic behavior method signature mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver behavior symbol 'Json' has methods '(encode(Self) str)', expected '(encode(Self) T)'"
+            )),
+            "expected resolver generic behavior method signature diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_validates_resolver_behavior_absent_type_metadata() {
         let program = parse_program(
             r#"
