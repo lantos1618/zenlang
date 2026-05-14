@@ -124,9 +124,10 @@ checked-in docs, tests, and commits only.
 - Imported public generic functions can use behavior bounds whose behavior was
   imported by the source module, covered by
   `tests/zen/multi_file_imported_function_imported_behavior_bound/main.zen`.
-- Imported public function signatures now seed public source-module return-type
-  dependencies and their behavior impl associations even when the entry module
-  imports only the functions, covered by
+- Imported public function signatures now seed public source-module parameter
+  and return-type dependencies plus their behavior impl associations even when
+  the entry module imports only the functions, covered by
+  `tests/zen/multi_file_imported_function_param_type_dependency/main.zen`,
   `tests/zen/multi_file_imported_function_return_type_dependency/main.zen`,
   `tests/zen/multi_file_imported_function_imported_return_type_behavior/main.zen`,
   while `integration::imported_function_signature_type_dependencies_are_not_directly_visible`

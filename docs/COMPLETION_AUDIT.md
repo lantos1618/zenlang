@@ -256,9 +256,11 @@ and do not assume Phase 4 is ready without evidence.
 - Imported public generic functions preserve behavior bounds whose behavior was
   imported by the source module, covered by
   `tests/zen/multi_file_imported_function_imported_behavior_bound/main.zen`.
-- Imported public function return-type dependencies preserve behavior impl
-  associations even when the entry module imports only the functions, covered by
-  `tests/zen/multi_file_imported_function_return_type_dependency/main.zen` and
+- Imported public function parameter and return-type dependencies preserve
+  behavior impl associations even when the entry module imports only the
+  functions, covered by
+  `tests/zen/multi_file_imported_function_param_type_dependency/main.zen`,
+  `tests/zen/multi_file_imported_function_return_type_dependency/main.zen`, and
   `tests/zen/multi_file_imported_function_imported_return_type_behavior/main.zen`;
   `integration::imported_function_signature_type_dependencies_are_not_directly_visible`
   verifies the dependency type is not directly constructible without an

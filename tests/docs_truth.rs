@@ -149,6 +149,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "tests/zen/multi_file_imported_child_parent_dispatch/main.zen",
         "tests/zen/multi_file_imported_behavior_requires/main.zen",
         "tests/zen/multi_file_imported_function_imported_behavior_bound/main.zen",
+        "tests/zen/multi_file_imported_function_param_type_dependency/main.zen",
         "tests/zen/multi_file_imported_function_return_type_dependency/main.zen",
         "tests/zen/multi_file_imported_function_imported_return_type_behavior/main.zen",
         "tests/zen/multi_file_imported_generic_function_return_enum_dependency/main.zen",

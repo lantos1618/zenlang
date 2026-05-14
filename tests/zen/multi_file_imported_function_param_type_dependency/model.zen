@@ -1,0 +1,19 @@
+{ Json } = traits
+
+pub Point: {
+    x: i32
+}
+
+Point.implements(Json<i32>) {
+    encode = (value: Point) i32 {
+        return value.x
+    }
+}
+
+pub make_point = () Point {
+    return Point { x: 127 }
+}
+
+pub encode_point = (value: Point) i32 {
+    return value.encode()
+}
