@@ -75,6 +75,8 @@ pub(crate) struct GenericFunctionTemplate {
     pub return_type: Option<AstType>,
     pub body: Expression,
     pub span: Span,
+    pub dependency_structs: HashMap<String, StructInfo>,
+    pub dependency_enums: HashMap<String, EnumInfo>,
     pub dependency_functions: HashMap<String, FuncInfo>,
     pub dependency_generic_functions: HashMap<String, GenericFunctionTemplate>,
     pub dependency_methods: HashMap<String, FuncInfo>,
@@ -95,6 +97,8 @@ impl GenericFunctionTemplate {
             return_type,
             body,
             span,
+            dependency_structs: HashMap::new(),
+            dependency_enums: HashMap::new(),
             dependency_functions: HashMap::new(),
             dependency_generic_functions: HashMap::new(),
             dependency_methods: HashMap::new(),
@@ -104,11 +108,15 @@ impl GenericFunctionTemplate {
 
     fn with_dependencies(
         mut self,
+        dependency_structs: HashMap<String, StructInfo>,
+        dependency_enums: HashMap<String, EnumInfo>,
         dependency_functions: HashMap<String, FuncInfo>,
         dependency_generic_functions: HashMap<String, GenericFunctionTemplate>,
         dependency_methods: HashMap<String, FuncInfo>,
         dependency_generic_methods: HashMap<String, GenericFunctionTemplate>,
     ) -> Self {
+        self.dependency_structs = dependency_structs;
+        self.dependency_enums = dependency_enums;
         self.dependency_functions = dependency_functions;
         self.dependency_generic_functions = dependency_generic_functions;
         self.dependency_methods = dependency_methods;
@@ -117,12 +125,16 @@ impl GenericFunctionTemplate {
     }
 }
 
+pub(crate) type TemplateStructDependencyState = Vec<(String, Option<StructInfo>)>;
+pub(crate) type TemplateEnumDependencyState = Vec<(String, Option<EnumInfo>)>;
 pub(crate) type TemplateFunctionDependencyState = Vec<(String, Option<FuncInfo>)>;
 pub(crate) type TemplateGenericDependencyState = Vec<(String, Option<GenericFunctionTemplate>)>;
 pub(crate) type TemplateMethodDependencyState = Vec<(String, Option<FuncInfo>)>;
 pub(crate) type TemplateGenericMethodDependencyState =
     Vec<(String, Option<GenericFunctionTemplate>)>;
 pub(crate) type TemplateDependencyState = (
+    TemplateStructDependencyState,
+    TemplateEnumDependencyState,
     TemplateFunctionDependencyState,
     TemplateGenericDependencyState,
     TemplateMethodDependencyState,
@@ -163,6 +175,8 @@ struct ImportedMethodSignature<'a> {
 }
 
 struct ImportedMethodDependencies<'a> {
+    structs: &'a HashMap<String, StructInfo>,
+    enums: &'a HashMap<String, EnumInfo>,
     functions: &'a HashMap<String, FuncInfo>,
     generic_functions: &'a HashMap<String, GenericFunctionTemplate>,
     methods: &'a HashMap<String, FuncInfo>,
@@ -171,6 +185,8 @@ struct ImportedMethodDependencies<'a> {
 
 #[derive(Default)]
 struct SourceModuleDependencies {
+    structs: HashMap<String, StructInfo>,
+    enums: HashMap<String, EnumInfo>,
     functions: HashMap<String, FuncInfo>,
     generic_functions: HashMap<String, GenericFunctionTemplate>,
     methods: HashMap<String, FuncInfo>,
@@ -3980,10 +3996,24 @@ impl TypeChecker {
                 continue;
             };
             Self::insert_source_import_dependency(&binding.local_name, decl, &mut dependencies);
+            if matches!(decl, Declaration::Struct { .. } | Declaration::Enum { .. }) {
+                Self::insert_source_import_type_method_dependencies(
+                    &binding.local_name,
+                    binding.source_symbol.as_str(),
+                    imported_module,
+                    &mut dependencies,
+                );
+            }
         }
 
         for decl in &source_module.program.declarations {
             match decl {
+                Declaration::Struct { name, .. } => {
+                    Self::insert_source_type_dependency(name, decl, &mut dependencies);
+                }
+                Declaration::Enum { name, .. } => {
+                    Self::insert_source_type_dependency(name, decl, &mut dependencies);
+                }
                 Declaration::Function { name, .. } => {
                     Self::insert_source_function_dependency(
                         name,
@@ -4029,13 +4059,112 @@ impl TypeChecker {
         decl: &Declaration,
         dependencies: &mut SourceModuleDependencies,
     ) {
-        if matches!(decl, Declaration::Function { .. }) {
-            Self::insert_source_function_dependency(
-                local_name,
-                decl,
-                &mut dependencies.functions,
-                &mut dependencies.generic_functions,
-            );
+        match decl {
+            Declaration::Struct { .. } | Declaration::Enum { .. } => {
+                Self::insert_source_type_dependency(local_name, decl, dependencies);
+            }
+            Declaration::Function { .. } => {
+                Self::insert_source_function_dependency(
+                    local_name,
+                    decl,
+                    &mut dependencies.functions,
+                    &mut dependencies.generic_functions,
+                );
+            }
+            _ => {}
+        }
+    }
+
+    fn insert_source_type_dependency(
+        local_name: &str,
+        decl: &Declaration,
+        dependencies: &mut SourceModuleDependencies,
+    ) {
+        match decl {
+            Declaration::Struct {
+                type_params,
+                fields,
+                ..
+            } => {
+                dependencies.structs.insert(
+                    local_name.to_string(),
+                    StructInfo {
+                        name: local_name.to_string(),
+                        fields: fields
+                            .iter()
+                            .map(|field| (field.name.clone(), field.ty.clone()))
+                            .collect(),
+                        type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        type_param_bounds: type_param_bounds(type_params),
+                    },
+                );
+            }
+            Declaration::Enum {
+                type_params,
+                variants,
+                ..
+            } => {
+                dependencies.enums.insert(
+                    local_name.to_string(),
+                    EnumInfo {
+                        name: local_name.to_string(),
+                        variants: variants
+                            .iter()
+                            .map(|variant| (variant.name.clone(), variant.payload.clone()))
+                            .collect(),
+                        type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        type_param_bounds: type_param_bounds(type_params),
+                    },
+                );
+            }
+            _ => {}
+        }
+    }
+
+    fn insert_source_import_type_method_dependencies(
+        local_name: &str,
+        source_name: &str,
+        imported_module: &ResolvedModule,
+        dependencies: &mut SourceModuleDependencies,
+    ) {
+        for decl in &imported_module.program.declarations {
+            match decl {
+                Declaration::Method {
+                    type_name,
+                    method_name,
+                    public,
+                    ..
+                } if type_name == source_name && *public => {
+                    Self::insert_source_method_dependency(
+                        &format!("{local_name}.{method_name}"),
+                        decl,
+                        &mut dependencies.methods,
+                        &mut dependencies.generic_methods,
+                    );
+                }
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior: None,
+                    methods,
+                    ..
+                } if type_name == source_name => {
+                    for method in methods {
+                        let Declaration::Function { name, public, .. } = method else {
+                            continue;
+                        };
+                        if !*public {
+                            continue;
+                        }
+                        Self::insert_source_method_dependency(
+                            &format!("{local_name}.{name}"),
+                            method,
+                            &mut dependencies.methods,
+                            &mut dependencies.generic_methods,
+                        );
+                    }
+                }
+                _ => {}
+            }
         }
     }
 
@@ -4177,6 +4306,8 @@ impl TypeChecker {
                 span: *span,
             },
             ImportedMethodDependencies {
+                structs: &dependencies.structs,
+                enums: &dependencies.enums,
                 functions: &dependencies.functions,
                 generic_functions: &dependencies.generic_functions,
                 methods: &dependencies.methods,
@@ -4220,6 +4351,8 @@ impl TypeChecker {
                 span: *span,
             },
             ImportedMethodDependencies {
+                structs: &dependencies.structs,
+                enums: &dependencies.enums,
                 functions: &dependencies.functions,
                 generic_functions: &dependencies.generic_functions,
                 methods: &dependencies.methods,
@@ -4265,6 +4398,8 @@ impl TypeChecker {
                     signature.span,
                 )
                 .with_dependencies(
+                    dependencies.structs.clone(),
+                    dependencies.enums.clone(),
                     dependencies.functions.clone(),
                     dependencies.generic_functions.clone(),
                     dependencies.methods.clone(),

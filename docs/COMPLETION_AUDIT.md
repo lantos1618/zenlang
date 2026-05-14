@@ -67,6 +67,10 @@ and do not assume Phase 4 is ready without evidence.
   covered by `tests/zen/multi_file_type_method_imported_dependency/main.zen`
   and
   `integration::imported_type_method_imported_dependencies_are_not_directly_visible`.
+  Imported public generic non-behavior `Type.impl` method templates that use
+  source-module imported generic types and methods are covered by
+  `tests/zen/multi_file_type_impl_imported_type_dependency/main.zen` and
+  `integration::imported_type_impl_imported_type_dependencies_are_not_directly_visible`.
 - Resolver method value symbols carry complete value-signature metadata, and
   typechecker setup rejects method signature drift before method body
   collection. Function-typed method parameters and returns are included in
@@ -321,8 +325,11 @@ and do not assume Phase 4 is ready without evidence.
   path, including end-to-end generated-C coverage for imported public generic
   top-level methods. Imported method templates carry source-module private
   generic function and method helper dependencies, including source-module
-  imports, only during specialization, while private imported methods and helper
-  functions remain inaccessible from entry modules.
+  imports, only during specialization. Imported public generic non-behavior
+  `Type.impl` method templates also carry source-module imported generic type
+  and method dependencies only during specialization, while private imported
+  methods, helper functions, and helper types remain inaccessible from entry
+  modules.
 - Typechecker setup rejects extra resolver-owned local symbols after mirroring
   resolver scope allocation across function bodies, nested scopes, pattern
   bindings, closures, defaults, and top-level expressions.

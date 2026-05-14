@@ -287,7 +287,11 @@ checked-in docs, tests, and commits only.
   exposing those helpers to entry modules, covered by
   `tests/zen/multi_file_type_method_worklist/main.zen`,
   `tests/zen/multi_file_type_method_method_dependency/main.zen`, and
-  `tests/zen/multi_file_type_method_imported_dependency/main.zen`.
+  `tests/zen/multi_file_type_method_imported_dependency/main.zen`. Imported
+  public generic non-behavior `Type.impl` methods also carry source-module
+  imported generic type and method dependencies only during specialization,
+  covered by
+  `tests/zen/multi_file_type_impl_imported_type_dependency/main.zen`.
 - The CLI `check` path now loads the module graph and reports resolver
   diagnostics from imported modules before typechecking the entry module.
 - The module-graph typechecker entrypoint now typechecks imported modules before

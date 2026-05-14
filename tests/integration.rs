@@ -469,6 +469,19 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Box_T"));
     assert!(!c_source.contains("T Box_get"));
 
+    let c_source =
+        compile_to_c(&test_dir().join("multi_file_type_impl_imported_type_dependency/main.zen"));
+    assert!(c_source.contains("typedef struct Holder_i32 Holder_i32;"));
+    assert!(c_source.contains("int32_t Holder_get_i32(Holder_i32 self)"));
+    assert!(c_source.contains("int32_t Box_get_held_i32(Box_i32 self)"));
+    assert!(c_source.contains("const Holder_i32 holder = (Holder_i32){ .value = self.value }"));
+    assert!(c_source.contains("Holder_get_i32(holder)"));
+    assert!(c_source.contains("Box_get_held_i32(box)"));
+    assert_c_call_resolves_to_definition(&c_source, "Holder_get_i32");
+    assert_c_call_resolves_to_definition(&c_source, "Box_get_held_i32");
+    assert!(!c_source.contains("Holder_T"));
+    assert!(!c_source.contains("T Holder_get"));
+
     let c_source = compile_to_c(&test_dir().join("multi_file_type_method/main.zen"));
     assert!(c_source.contains("int32_t Point_keep_i32(Point self, int32_t value)"));
     assert!(c_source.contains("Point_keep_i32(point, 13LL)"));
@@ -1237,6 +1250,13 @@ fn test_multi_file_type_impl_imports() {
 }
 
 #[test]
+fn test_multi_file_type_impl_imported_type_dependency_imports() {
+    let zen_path = test_dir().join("multi_file_type_impl_imported_type_dependency/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "61\n");
+}
+
+#[test]
 fn test_multi_file_type_method_imports() {
     let zen_path = test_dir().join("multi_file_type_method/main.zen");
     let actual = compile_and_run(&zen_path);
@@ -1421,6 +1441,75 @@ main = () i32 {
         message.contains("unknown value symbol 'inner'")
             || message.contains("undefined function `inner`"),
         "expected unimported helper diagnostic, panic={message}"
+    );
+}
+
+#[test]
+fn imported_type_impl_imported_type_dependencies_are_not_directly_visible() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let helper_path = tmp.path().join("helper.zen");
+    std::fs::write(
+        &helper_path,
+        r#"
+pub Holder<T>: {
+    value: T
+}
+
+pub Holder.get<T> = (self: Holder<T>) T {
+    return self.value
+}
+"#,
+    )
+    .expect("write helper module");
+
+    let model_path = tmp.path().join("model.zen");
+    std::fs::write(
+        &model_path,
+        r#"
+{ Holder } = helper
+
+pub Box<T>: {
+    value: T
+}
+
+Box.impl = {
+    pub get_held<T> = (self: Box<T>) T {
+        holder = Holder<T> { value: self.value }
+        return holder.get<T>()
+    }
+}
+"#,
+    )
+    .expect("write imported module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ Box } = model
+
+main = () i32 {
+    holder = Holder<i32> { value: 61 }
+    return holder.get<i32>()
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject direct source-module imported type use");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("unknown type symbol 'Holder'")
+            || message.contains("unknown type `Holder`")
+            || message.contains("unknown generic type `Holder`")
+            || message.contains("type `Holder_i32` has no method `get`"),
+        "expected unimported helper type or method diagnostic, panic={message}"
     );
 }
 

@@ -204,6 +204,19 @@ impl TypeChecker {
         &mut self,
         template: &super::GenericFunctionTemplate,
     ) -> super::TemplateDependencyState {
+        let mut saved_structs = Vec::new();
+        for (name, info) in &template.dependency_structs {
+            saved_structs.push((
+                name.clone(),
+                self.structs.insert(name.clone(), info.clone()),
+            ));
+        }
+
+        let mut saved_enums = Vec::new();
+        for (name, info) in &template.dependency_enums {
+            saved_enums.push((name.clone(), self.enums.insert(name.clone(), info.clone())));
+        }
+
         let mut saved_functions = Vec::new();
         for (name, info) in &template.dependency_functions {
             saved_functions.push((
@@ -239,6 +252,8 @@ impl TypeChecker {
         }
 
         (
+            saved_structs,
+            saved_enums,
             saved_functions,
             saved_generic_functions,
             saved_methods,
@@ -247,7 +262,21 @@ impl TypeChecker {
     }
 
     fn restore_template_dependencies(&mut self, state: super::TemplateDependencyState) {
-        let (functions, generic_functions, methods, generic_methods) = state;
+        let (structs, enums, functions, generic_functions, methods, generic_methods) = state;
+        for (name, previous) in structs {
+            if let Some(previous) = previous {
+                self.structs.insert(name, previous);
+            } else {
+                self.structs.remove(&name);
+            }
+        }
+        for (name, previous) in enums {
+            if let Some(previous) = previous {
+                self.enums.insert(name, previous);
+            } else {
+                self.enums.remove(&name);
+            }
+        }
         for (name, previous) in functions {
             if let Some(previous) = previous {
                 self.functions.insert(name, previous);
