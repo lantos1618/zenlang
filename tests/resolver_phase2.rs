@@ -771,6 +771,9 @@ Json<T>: behavior {
 }
 Box<T: Json<T>>: { value: T }
 encode<T: Json<T>> = (value: T) T { return value }
+Serializable<T: Json<T>>: behavior {
+    serialize: (Self) T
+}
 "#,
     );
 
@@ -789,6 +792,15 @@ encode<T: Json<T>> = (value: T) T { return value }
         table
             .lookup(Namespace::Value, "encode")
             .expect("function symbol")
+            .type_parameter_bounds
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&[("T".to_string(), "Json<T>".to_string())][..])
+    );
+    assert_eq!(
+        table
+            .lookup(Namespace::Behavior, "Serializable")
+            .expect("behavior symbol")
             .type_parameter_bounds
             .as_ref()
             .map(Vec::as_slice),

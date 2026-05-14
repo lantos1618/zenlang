@@ -7859,6 +7859,40 @@ Box<T: Json>: { value: T }
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_behavior_type_parameter_bounds() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Serializable<T: Json<T>>: behavior {
+    serialize: (Self) T
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_bounds_for_test(
+            Namespace::Behavior,
+            "Serializable",
+            Some(vec![("T".to_string(), "Json<i32>".to_string())]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver behavior generic bound mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver behavior symbol 'Serializable' has type parameter bounds '(T: Json<i32>)', expected '(T: Json<T>)'"
+            )),
+            "expected resolver behavior generic bound diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_validates_resolver_type_like_absent_value_metadata() {
         let program = parse_program(
             r#"

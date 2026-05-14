@@ -113,6 +113,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_validates_resolver_generic_struct_field_types",
         "check_program_with_symbols_validates_resolver_generic_enum_payload_types",
         "check_program_with_symbols_validates_resolver_generic_behavior_method_signatures",
+        "check_program_with_symbols_validates_resolver_behavior_type_parameter_bounds",
         "check_module_graph_entry_seeds_imported_function_type_signatures",
         "check_module_graph_entry_specializes_imported_generic_functions",
         "check_module_graph_entry_specializes_imported_generic_enums",

@@ -305,6 +305,8 @@ checked-in docs, tests, and commits only.
 - Resolver type and behavior symbols now carry generic type-parameter bounds,
   and typechecker setup rejects mismatches before collecting struct, enum, or
   behavior metadata from the AST.
+- Typechecker setup rejects generic behavior type-parameter bound drift,
+  including bounds with type arguments such as `T: Json<T>`.
 - Resolver type symbols now carry visibility metadata for structs and enums, and
   typechecker setup rejects mismatches before collecting declaration metadata
   from the AST.

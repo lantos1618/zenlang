@@ -284,6 +284,8 @@ and do not assume Phase 4 is ready without evidence.
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Resolver type and behavior symbols carry generic type-parameter bounds, and
   typechecker setup rejects mismatches before collecting declaration metadata.
+- Typechecker setup rejects generic behavior type-parameter bound drift,
+  including bounds with type arguments such as `T: Json<T>`.
 - Resolver type symbols carry visibility metadata for structs and enums, and
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Typechecker setup rejects resolver behavior symbol visibility mismatches
