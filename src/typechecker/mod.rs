@@ -5723,6 +5723,12 @@ impl TypeChecker {
                 "E0313",
                 "parameter types",
             ),
+            (
+                symbol.parameter_types.is_some(),
+                "E0360",
+                "typed parameter types",
+            ),
+            (symbol.return_type.is_some(), "E0361", "typed return type"),
             (symbol.is_mutable.is_some(), "E0314", "mutability"),
         ] {
             if present {
@@ -10219,6 +10225,7 @@ Json: behavior {
         symbols.set_import_source_for_test(Namespace::Type, "Box", Some("std".to_string()));
         symbols.set_parameter_count_for_test(Namespace::Type, "Box", Some(1));
         symbols.set_return_type_name_for_test(Namespace::Type, "Box", Some("i32".to_string()));
+        symbols.set_return_type_for_test(Namespace::Type, "Box", Some(AstType::I32));
         symbols.set_import_source_for_test(Namespace::Behavior, "Json", Some("std".to_string()));
         symbols.set_parameter_names_for_test(
             Namespace::Behavior,
@@ -10230,6 +10237,11 @@ Json: behavior {
             "Json",
             Some(vec!["Self".to_string()]),
         );
+        symbols.set_parameter_types_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec![AstType::SelfType]),
+        );
         let mut tc = TypeChecker::new();
 
         let err = tc
@@ -10240,9 +10252,11 @@ Json: behavior {
             "resolver type symbol 'Box' has source 'std', expected none",
             "resolver type symbol 'Box' has parameter count metadata, expected none",
             "resolver type symbol 'Box' has return type metadata, expected none",
+            "resolver type symbol 'Box' has typed return type metadata, expected none",
             "resolver behavior symbol 'Json' has source 'std', expected none",
             "resolver behavior symbol 'Json' has parameter names metadata, expected none",
             "resolver behavior symbol 'Json' has parameter types metadata, expected none",
+            "resolver behavior symbol 'Json' has typed parameter types metadata, expected none",
         ] {
             assert!(
                 err.iter().any(|d| d.message.contains(expected)),
