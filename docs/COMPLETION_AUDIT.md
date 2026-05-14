@@ -285,6 +285,9 @@ and do not assume Phase 4 is ready without evidence.
   rejects mismatches before collecting struct field metadata.
 - Resolver struct symbols carry field-name/type metadata, and typechecker setup
   rejects mismatches before collecting struct field metadata.
+- Resolver struct field metadata preserves function-typed fields, and
+  typechecker setup rejects function-type field drift before struct metadata
+  collection.
 - Resolver enum variant symbols carry payload-count metadata, and typechecker
   setup rejects mismatches before collecting enum variant metadata.
 - Resolver enum type symbols carry exact variant-name metadata, and typechecker
@@ -295,6 +298,9 @@ and do not assume Phase 4 is ready without evidence.
   rejects mismatches before collecting enum variant metadata.
 - Resolver enum variant symbols carry payload-type metadata, and typechecker
   setup rejects mismatches before collecting enum variant metadata.
+- Resolver enum variant payload metadata preserves function-typed payloads, and
+  typechecker setup rejects function-type payload drift before enum variant
+  metadata collection.
 - CLI `build` rejects `build.zen` explicitly until deterministic build graph
   support exists, with integration coverage for the gated Phase 4 entrypoint.
 

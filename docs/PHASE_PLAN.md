@@ -302,6 +302,9 @@ checked-in docs, tests, and commits only.
   rejects mismatches before collecting struct field metadata from the AST.
 - Resolver struct symbols now carry field-name/type metadata, and typechecker
   setup rejects mismatches before collecting struct field metadata from the AST.
+- Resolver struct field metadata preserves function-typed fields, and
+  typechecker setup rejects function-type field handoff drift before collecting
+  struct metadata from the AST.
 - Resolver enum variant symbols now carry payload-count metadata, and
   typechecker setup rejects mismatches before collecting enum variant metadata
   from the AST.
@@ -314,6 +317,9 @@ checked-in docs, tests, and commits only.
   setup rejects mismatches before collecting enum variant metadata from the AST.
 - Resolver enum variant symbols now carry payload-type metadata, and typechecker
   setup rejects mismatches before collecting enum variant metadata from the AST.
+- Resolver enum variant payload metadata preserves function-typed payloads, and
+  typechecker setup rejects function-type payload handoff drift before
+  collecting enum variant metadata from the AST.
 - The CLI `build` path now rejects `build.zen` explicitly until deterministic
   build graph support exists, with integration coverage for the gated Phase 4
   entrypoint.

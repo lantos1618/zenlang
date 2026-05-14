@@ -7878,6 +7878,35 @@ Point: { x: i32, y: f64 }
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_struct_function_type_fields() {
+        let program = parse_program(
+            r#"
+Pipeline: { callback: (i32) i32 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_field_type_names_for_test(
+            Namespace::Type,
+            "Pipeline",
+            Some(vec![("callback".to_string(), "i32".to_string())]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver struct function type field mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver type symbol 'Pipeline' has fields '(callback: i32)', expected '(callback: (i32) i32)'"
+            )),
+            "expected resolver struct function type field diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_validates_resolver_struct_and_enum_absent_kind_metadata() {
         let program = parse_program(
             r#"
@@ -7993,6 +8022,35 @@ Option: Some(i32), None
                 "resolver variant symbol 'Some' has payload type 'bool', expected 'i32'"
             )),
             "expected resolver enum variant payload type diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_enum_function_type_payloads() {
+        let program = parse_program(
+            r#"
+Callback: Wrap((i32) i32), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_variant_payload_type_name_for_test(
+            Namespace::Variant,
+            "Wrap",
+            Some("i32".to_string()),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver enum function type payload mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver variant symbol 'Wrap' has payload type 'i32', expected '(i32) i32'"
+            )),
+            "expected resolver enum function type payload diagnostic, got {err:?}"
         );
     }
 

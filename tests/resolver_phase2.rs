@@ -945,6 +945,27 @@ Point: { x: i32, y: f64 }
 }
 
 #[test]
+fn resolver_records_struct_function_type_fields() {
+    let program = parse_program(
+        r#"
+Pipeline: { callback: (i32) i32 }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Type, "Pipeline")
+            .expect("Pipeline symbol")
+            .field_type_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&[("callback".to_string(), "(i32) i32".to_string())][..])
+    );
+}
+
+#[test]
 fn resolver_records_struct_field_default_locals() {
     let program = parse_program(
         r#"
@@ -1066,6 +1087,26 @@ Option: Some(i32), None
             .variant_payload_type_name
             .as_deref(),
         None
+    );
+}
+
+#[test]
+fn resolver_records_enum_function_type_payloads() {
+    let program = parse_program(
+        r#"
+Callback: Wrap((i32) i32), None
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Variant, "Wrap")
+            .expect("Wrap variant symbol")
+            .variant_payload_type_name
+            .as_deref(),
+        Some("(i32) i32")
     );
 }
 
