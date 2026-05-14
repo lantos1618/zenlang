@@ -462,6 +462,13 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("unwrap_option(some"));
     assert!(!c_source.contains("unwrap_result(err"));
 
+    let c_source = compile_to_c(&test_dir().join("multi_file_type_impl/main.zen"));
+    assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));
+    assert!(c_source.contains("Box_get_i32(box)"));
+    assert_c_call_resolves_to_definition(&c_source, "Box_get_i32");
+    assert!(!c_source.contains("Box_T"));
+    assert!(!c_source.contains("T Box_get"));
+
     let c_source = compile_to_c(&test_dir().join("generic_ufc_function.zen"));
     assert!(c_source.contains("int32_t id_i32(int32_t value)"));
     assert!(c_source.contains("id_i32(12LL)"));
@@ -1183,6 +1190,13 @@ fn test_multi_file_generic_imports() {
     let zen_path = test_dir().join("multi_file_generic/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "42\n7\n5\n9\n");
+}
+
+#[test]
+fn test_multi_file_type_impl_imports() {
+    let zen_path = test_dir().join("multi_file_type_impl/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "34\n");
 }
 
 #[test]

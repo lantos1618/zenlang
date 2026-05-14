@@ -164,6 +164,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "parse_impl_block",
         "resolver_accepts_non_behavior_impl_blocks_as_method_symbols",
         "tests/zen/type_impl_methods.zen",
+        "tests/zen/multi_file_type_impl/main.zen",
         "resolver_records_struct_function_type_fields",
         "check_program_with_symbols_validates_resolver_struct_function_type_fields",
         "resolver_records_enum_function_type_payloads",

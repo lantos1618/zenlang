@@ -309,7 +309,8 @@ checked-in docs, tests, and commits only.
   `Type.method` value symbols, typecheck, and emit concrete method functions,
   including generic impl methods. Covered by `parser::tests::parse_impl_block`,
   `resolver_phase2::resolver_accepts_non_behavior_impl_blocks_as_method_symbols`,
-  `tests/zen/type_impl_methods.zen`, and generated-C assertions in
+  `tests/zen/type_impl_methods.zen`, `tests/zen/multi_file_type_impl/main.zen`,
+  and generated-C assertions in
   `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`.
 - Typechecker setup now rejects extra resolver-owned declaration symbols for
   values, types, behaviors, and enum variants before collecting declaration

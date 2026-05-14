@@ -289,7 +289,8 @@ and do not assume Phase 4 is ready without evidence.
   before collecting method metadata.
 - Non-behavior `Type.impl = { ... }` blocks parse, resolve as `Type.method`
   value symbols, typecheck, and emit concrete method functions, including
-  generic impl methods, preventing silently ignored impl method bodies.
+  generic impl methods and graph-owned public imports, preventing silently
+  ignored impl method bodies.
 - Typechecker setup rejects extra resolver-owned declaration symbols for values,
   types, behaviors, and enum variants before declaration metadata collection.
 - Typechecker setup rejects extra resolver-owned import and module symbols when
