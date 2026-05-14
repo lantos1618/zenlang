@@ -305,11 +305,12 @@ checked-in docs, tests, and commits only.
 - Resolver rejects top-level methods whose receiver type is unknown, and
   typechecker setup requires the resolver-owned receiver type symbol before
   collecting method metadata from the AST.
-- Resolver now rejects non-behavior `Type.impl = { ... }` blocks until those
-  impl methods are collected and typechecked, preventing accepted-but-ignored
-  method bodies. Covered by
-  `resolver_phase2::resolver_rejects_non_behavior_impl_blocks_until_collected`
-  and `integration::check_command_rejects_gated_non_behavior_impl_blocks`.
+- Non-behavior `Type.impl = { ... }` blocks now parse, resolve as
+  `Type.method` value symbols, typecheck, and emit concrete method functions,
+  including generic impl methods. Covered by `parser::tests::parse_impl_block`,
+  `resolver_phase2::resolver_accepts_non_behavior_impl_blocks_as_method_symbols`,
+  `tests/zen/type_impl_methods.zen`, and generated-C assertions in
+  `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`.
 - Typechecker setup now rejects extra resolver-owned declaration symbols for
   values, types, behaviors, and enum variants before collecting declaration
   metadata from the AST.

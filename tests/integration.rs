@@ -257,6 +257,11 @@ fn test_generic_method_worklist() {
 }
 
 #[test]
+fn test_type_impl_methods() {
+    run_test("type_impl_methods");
+}
+
+#[test]
 fn test_generic_result_enum() {
     run_test("generic_result_enum");
 }
@@ -365,6 +370,16 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Box_get_inner_i32");
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
+
+    let c_source = compile_to_c(&test_dir().join("type_impl_methods.zen"));
+    assert!(c_source.contains("int32_t Point_get(Point self)"));
+    assert!(c_source.contains("int32_t Point_keep_i32(Point self, int32_t value)"));
+    assert!(c_source.contains("Point_get(point)"));
+    assert!(c_source.contains("Point_keep_i32(point, 7LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "Point_get");
+    assert_c_call_resolves_to_definition(&c_source, "Point_keep_i32");
+    assert!(!c_source.contains("T Point_keep"));
+    assert!(!c_source.contains("Point_keep(point"));
 
     let c_source = compile_to_c(&test_dir().join("generic_vec.zen"));
     assert!(c_source.contains("int32_t Vec_len_i32(Vec_i32 self)"));
@@ -546,43 +561,6 @@ main = () i32 {
     assert!(
         String::from_utf8_lossy(&output.stderr).contains("unknown value symbol 'missing_local'"),
         "expected resolver diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-}
-
-#[test]
-fn check_command_rejects_gated_non_behavior_impl_blocks() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let zen_path = tmp.path().join("gated_impl.zen");
-    std::fs::write(
-        &zen_path,
-        r#"
-Point: { x: i32 }
-
-Point.impl = {
-    get = (self: Point) i32 { return self.x }
-}
-
-main = () i32 { return 0 }
-"#,
-    )
-    .expect("write test file");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["check", zen_path.to_str().unwrap()])
-        .output()
-        .expect("run zen check");
-
-    assert!(
-        !output.status.success(),
-        "zen check unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("non-behavior impl blocks are gated until impl methods are typechecked"),
-        "expected gated impl diagnostic, stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
 }

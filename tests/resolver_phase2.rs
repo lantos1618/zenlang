@@ -336,7 +336,7 @@ Point.implements(Marker) { }
 }
 
 #[test]
-fn resolver_rejects_non_behavior_impl_blocks_until_collected() {
+fn resolver_accepts_non_behavior_impl_blocks_as_method_symbols() {
     let program = parse_program(
         r#"
 Point: { x: i32 }
@@ -347,15 +347,17 @@ Point.impl = {
 "#,
     );
 
-    let err = Resolver::new()
+    let symbols = Resolver::new()
         .resolve_program(&program)
-        .expect_err("non-behavior impl blocks should stay gated");
+        .expect("non-behavior impl blocks should resolve");
 
-    assert!(
-        err.iter().any(|d| d
-            .message
-            .contains("non-behavior impl blocks are gated until impl methods are typechecked")),
-        "expected gated non-behavior impl diagnostic, got {err:?}"
+    let get = symbols
+        .lookup(Namespace::Value, "Point.get")
+        .expect("impl method symbol");
+    assert_eq!(get.parameter_count, Some(1));
+    assert_eq!(
+        get.parameter_type_names.as_ref().map(Vec::as_slice),
+        Some(&["Point".to_string()][..])
     );
 }
 

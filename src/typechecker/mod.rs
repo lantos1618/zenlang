@@ -614,7 +614,7 @@ impl TypeChecker {
                 Declaration::Behavior { .. } => {}
                 Declaration::ImplBlock {
                     type_name,
-                    behavior: Some(behavior),
+                    behavior,
                     behavior_type_args,
                     methods,
                     ..
@@ -634,33 +634,38 @@ impl TypeChecker {
                                 continue;
                             }
                             let full_name = format!("{}.{}", type_name, name);
+                            self.current_self_type =
+                                Some(self.resolve_type(&AstType::Named(type_name.clone())));
                             match self.check_function(&full_name, params, return_type, body, span) {
                                 Ok(func) => functions.push(func),
                                 Err(d) => self.diagnostics.push(d),
                             }
+                            self.current_self_type = None;
                         }
                     }
 
-                    for default in self.behavior_default_methods_for_impl(
-                        type_name,
-                        behavior,
-                        behavior_type_args,
-                        methods,
-                    ) {
-                        let full_name = format!("{}.{}", type_name, default.name);
-                        self.current_self_type =
-                            Some(self.resolve_type(&AstType::Named(type_name.clone())));
-                        match self.check_function(
-                            &full_name,
-                            &default.params,
-                            &default.return_type,
-                            &default.body,
-                            &default.span,
+                    if let Some(behavior) = behavior {
+                        for default in self.behavior_default_methods_for_impl(
+                            type_name,
+                            behavior,
+                            behavior_type_args,
+                            methods,
                         ) {
-                            Ok(func) => functions.push(func),
-                            Err(d) => self.diagnostics.push(d),
+                            let full_name = format!("{}.{}", type_name, default.name);
+                            self.current_self_type =
+                                Some(self.resolve_type(&AstType::Named(type_name.clone())));
+                            match self.check_function(
+                                &full_name,
+                                &default.params,
+                                &default.return_type,
+                                &default.body,
+                                &default.span,
+                            ) {
+                                Ok(func) => functions.push(func),
+                                Err(d) => self.diagnostics.push(d),
+                            }
+                            self.current_self_type = None;
                         }
-                        self.current_self_type = None;
                     }
                 }
                 _ => {}
@@ -971,62 +976,38 @@ impl TypeChecker {
                 }
                 Declaration::ImplBlock {
                     type_name,
-                    behavior: Some(behavior),
+                    behavior,
                     behavior_type_args,
                     methods,
                     ..
                 } => {
                     for method in methods {
-                        if let Declaration::Function {
-                            name,
-                            type_params,
-                            params,
-                            return_type,
-                            ..
-                        } = method
-                        {
-                            self.validate_generic_bounds(type_params);
-                            let key = format!("{}.{}", type_name, name);
+                        self.collect_impl_method_signature(type_name, method);
+                    }
+
+                    if let Some(behavior) = behavior {
+                        for default in self.behavior_default_methods_for_impl(
+                            type_name,
+                            behavior,
+                            behavior_type_args,
+                            methods,
+                        ) {
+                            let key = format!("{}.{}", type_name, default.name);
                             self.methods.insert(
                                 key.clone(),
                                 FuncInfo {
                                     name: key,
-                                    params: params
+                                    params: default
+                                        .params
                                         .iter()
                                         .map(|p| (p.name.clone(), p.ty.clone()))
                                         .collect(),
-                                    return_type: return_type.clone().unwrap_or(AstType::Void),
-                                    type_params: type_params
-                                        .iter()
-                                        .map(|tp| tp.name.clone())
-                                        .collect(),
-                                    type_param_bounds: type_param_bounds(type_params),
+                                    return_type: default.return_type.unwrap_or(AstType::Void),
+                                    type_params: Vec::new(),
+                                    type_param_bounds: HashMap::new(),
                                 },
                             );
                         }
-                    }
-
-                    for default in self.behavior_default_methods_for_impl(
-                        type_name,
-                        behavior,
-                        behavior_type_args,
-                        methods,
-                    ) {
-                        let key = format!("{}.{}", type_name, default.name);
-                        self.methods.insert(
-                            key.clone(),
-                            FuncInfo {
-                                name: key,
-                                params: default
-                                    .params
-                                    .iter()
-                                    .map(|p| (p.name.clone(), p.ty.clone()))
-                                    .collect(),
-                                return_type: default.return_type.unwrap_or(AstType::Void),
-                                type_params: Vec::new(),
-                                type_param_bounds: HashMap::new(),
-                            },
-                        );
                     }
                 }
                 _ => {}
@@ -1060,6 +1041,51 @@ impl TypeChecker {
         }
 
         self.validate_generic_type_references(decls);
+    }
+
+    fn collect_impl_method_signature(&mut self, type_name: &str, method: &Declaration) {
+        let Declaration::Function {
+            name,
+            type_params,
+            params,
+            return_type,
+            body,
+            span,
+            ..
+        } = method
+        else {
+            return;
+        };
+
+        self.validate_generic_bounds(type_params);
+        let key = format!("{}.{}", type_name, name);
+        let collected_type_params: Vec<String> =
+            type_params.iter().map(|tp| tp.name.clone()).collect();
+        self.methods.insert(
+            key.clone(),
+            FuncInfo {
+                name: key.clone(),
+                params: params
+                    .iter()
+                    .map(|p| (p.name.clone(), p.ty.clone()))
+                    .collect(),
+                return_type: return_type.clone().unwrap_or(AstType::Void),
+                type_params: collected_type_params.clone(),
+                type_param_bounds: type_param_bounds(type_params),
+            },
+        );
+        if !collected_type_params.is_empty() {
+            self.generic_methods.insert(
+                key,
+                GenericFunctionTemplate {
+                    type_params: collected_type_params,
+                    params: params.to_vec(),
+                    return_type: return_type.clone(),
+                    body: body.clone(),
+                    span: *span,
+                },
+            );
+        }
     }
 
     fn behavior_reference_key(&self, behavior: &str, type_args: &[AstType]) -> String {
@@ -3693,6 +3719,23 @@ impl TypeChecker {
                 self.seed_module_graph_import(type_name, decl);
             }
         }
+        for decl in &source_module.program.declarations {
+            let Declaration::ImplBlock {
+                type_name: impl_type,
+                behavior: None,
+                methods,
+                ..
+            } = decl
+            else {
+                continue;
+            };
+            if impl_type != type_name {
+                continue;
+            }
+            for method in methods {
+                self.seed_imported_impl_method(type_name, method, true);
+            }
+        }
     }
 
     fn seed_behavior_impls_for_imported_type(
@@ -3725,7 +3768,7 @@ impl TypeChecker {
                 .insert((local_name.to_string(), behavior_key));
 
             for method in methods {
-                self.seed_imported_behavior_impl_method(local_name, method);
+                self.seed_imported_impl_method(local_name, method, false);
             }
             for default in self.behavior_default_methods_for_impl(
                 local_name,
@@ -3800,7 +3843,12 @@ impl TypeChecker {
         );
     }
 
-    fn seed_imported_behavior_impl_method(&mut self, local_type_name: &str, method: &Declaration) {
+    fn seed_imported_impl_method(
+        &mut self,
+        local_type_name: &str,
+        method: &Declaration,
+        public_only: bool,
+    ) {
         let Declaration::Function {
             name,
             type_params,
@@ -3808,11 +3856,15 @@ impl TypeChecker {
             return_type,
             body,
             span,
+            public,
             ..
         } = method
         else {
             return;
         };
+        if public_only && !*public {
+            return;
+        }
 
         let key = format!("{}.{}", local_type_name, name);
         let collected_type_params: Vec<String> =

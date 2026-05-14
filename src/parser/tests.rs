@@ -480,6 +480,25 @@ fn parse_behavior_impl_block() {
 }
 
 #[test]
+fn parse_impl_block() {
+    let prog = parse_ok("Point.impl = {\n    get = (self: Point) i32 { return self.x }\n}");
+    match &prog.declarations[0] {
+        Declaration::ImplBlock {
+            type_name,
+            behavior,
+            methods,
+            ..
+        } => {
+            assert_eq!(type_name, "Point");
+            assert_eq!(behavior, &None);
+            assert_eq!(methods.len(), 1);
+            assert_eq!(methods[0].name(), Some("get"));
+        }
+        other => panic!("expected ImplBlock, got {:?}", other),
+    }
+}
+
+#[test]
 fn parse_behavior_impl_with_generic_behavior_args() {
     let prog = parse_ok("Point.implements(Json<i32>) { }");
     match &prog.declarations[0] {
