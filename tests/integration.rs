@@ -308,7 +308,18 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     let c_source = compile_to_c(&test_dir().join("generic_method_self.zen"));
     assert!(c_source.contains("Box_i32 Box_copy_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_copy_i32(box)"));
+    assert!(c_source.contains("Box_Option_i32 Box_copy_Option_i32(Box_Option_i32 self)"));
+    assert!(c_source.contains("Box_copy_Option_i32(nested)"));
     assert_c_call_resolves_to_definition(&c_source, "Box_copy_i32");
+    assert_c_call_resolves_to_definition(&c_source, "Box_copy_Option_i32");
+    assert!(
+        c_source
+            .find("struct Option_i32")
+            .expect("Option_i32 struct")
+            < c_source
+                .find("struct Box_Option_i32")
+                .expect("Box_Option_i32 struct")
+    );
     assert!(!c_source.contains("Box_copy(box"));
     assert!(!c_source.contains("Unknown"));
 

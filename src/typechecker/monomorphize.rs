@@ -201,7 +201,7 @@ impl TypeChecker {
 
         let type_args: Vec<AstType> = type_params
             .iter()
-            .filter_map(|param| substitutions.get(param).map(type_to_ast))
+            .filter_map(|param| substitutions.get(param).map(|ty| self.type_to_ast_ref(ty)))
             .collect();
         if type_args.len() == type_params.len() {
             self.resolve_type(&AstType::Generic {
@@ -225,6 +225,9 @@ impl TypeChecker {
         let substitutions =
             self.type_param_substitutions(&info.type_params, type_args, "struct", name, span);
         self.check_generic_bounds(&info.type_param_bounds, &substitutions, span);
+        for (_, field_type) in &info.fields {
+            self.ensure_specialized_type_refs(field_type, &substitutions, span);
+        }
         let fields: Vec<(String, Type)> = info
             .fields
             .iter()
@@ -235,6 +238,9 @@ impl TypeChecker {
                 )
             })
             .collect();
+        for (_, field_type) in &fields {
+            self.ensure_specialized_type_refs_for_type(field_type, span);
+        }
         let field_map = fields.iter().cloned().collect();
         let mangled = self.mangle_generic_type_name(name, type_args);
         if self.specialized_types_seen.insert(mangled.clone()) {
@@ -260,6 +266,11 @@ impl TypeChecker {
         let substitutions =
             self.type_param_substitutions(&info.type_params, type_args, "enum", name, span);
         self.check_generic_bounds(&info.type_param_bounds, &substitutions, span);
+        for (_, payload) in &info.variants {
+            if let Some(payload) = payload {
+                self.ensure_specialized_type_refs(payload, &substitutions, span);
+            }
+        }
         let variants: Vec<(String, Option<Type>)> = info
             .variants
             .iter()
@@ -272,6 +283,11 @@ impl TypeChecker {
                 )
             })
             .collect();
+        for (_, payload) in &variants {
+            if let Some(payload) = payload {
+                self.ensure_specialized_type_refs_for_type(payload, span);
+            }
+        }
         let variant_map = variants.iter().cloned().collect();
         let mangled = self.mangle_generic_type_name(name, type_args);
         if self.specialized_types_seen.insert(mangled.clone()) {
@@ -296,6 +312,146 @@ impl TypeChecker {
             });
         }
         variant_map
+    }
+
+    fn ensure_specialized_type_refs(
+        &mut self,
+        ast_type: &AstType,
+        substitutions: &HashMap<String, Type>,
+        span: Span,
+    ) {
+        match substitute_ast_type(ast_type, substitutions) {
+            AstType::Generic { name, type_args } => {
+                for type_arg in &type_args {
+                    self.ensure_specialized_type_refs(type_arg, substitutions, span);
+                }
+                if self.structs.contains_key(&name) {
+                    self.specialize_generic_struct(&name, &type_args, span);
+                } else if self.enums.contains_key(&name) {
+                    self.specialize_generic_enum(&name, &type_args, span);
+                }
+            }
+            AstType::Ptr(inner)
+            | AstType::MutPtr(inner)
+            | AstType::RawPtr(inner)
+            | AstType::Slice(inner) => {
+                self.ensure_specialized_type_refs(&inner, substitutions, span);
+            }
+            AstType::Array { elem, .. } => {
+                self.ensure_specialized_type_refs(&elem, substitutions, span);
+            }
+            AstType::Function { params, ret } => {
+                for param in &params {
+                    self.ensure_specialized_type_refs(param, substitutions, span);
+                }
+                self.ensure_specialized_type_refs(&ret, substitutions, span);
+            }
+            _ => {}
+        }
+    }
+
+    fn ensure_specialized_type_refs_for_type(&mut self, ty: &Type, span: Span) {
+        match ty {
+            Type::Struct { name, fields } => {
+                if let Some((generic_name, type_args)) = self.generic_type_args_from_type(name, ty)
+                {
+                    self.specialize_generic_struct(&generic_name, &type_args, span);
+                }
+                for (_, field_type) in fields {
+                    self.ensure_specialized_type_refs_for_type(field_type, span);
+                }
+            }
+            Type::Enum { name, variants } => {
+                if let Some((generic_name, type_args)) = self.generic_type_args_from_type(name, ty)
+                {
+                    self.specialize_generic_enum(&generic_name, &type_args, span);
+                }
+                for (_, payload) in variants {
+                    if let Some(payload) = payload {
+                        self.ensure_specialized_type_refs_for_type(payload, span);
+                    }
+                }
+            }
+            Type::Array { elem, .. }
+            | Type::Slice(elem)
+            | Type::Ptr(elem)
+            | Type::MutPtr(elem)
+            | Type::RawPtr(elem) => self.ensure_specialized_type_refs_for_type(elem, span),
+            Type::Function { params, ret } => {
+                for param in params {
+                    self.ensure_specialized_type_refs_for_type(param, span);
+                }
+                self.ensure_specialized_type_refs_for_type(ret, span);
+            }
+            _ => {}
+        }
+    }
+
+    fn generic_type_args_from_type(
+        &self,
+        concrete_name: &str,
+        ty: &Type,
+    ) -> Option<(String, Vec<AstType>)> {
+        if let Some((name, params)) = self
+            .structs
+            .iter()
+            .find(|(name, info)| {
+                concrete_name != name.as_str()
+                    && concrete_name_matches_generic(concrete_name, name)
+                    && !info.type_params.is_empty()
+            })
+            .map(|(name, info)| (name.clone(), info.type_params.clone()))
+        {
+            let mut inferred = HashMap::new();
+            self.match_generic_type_params(&name, ty, &params, &mut inferred);
+            let type_args = params
+                .iter()
+                .filter_map(|param| inferred.get(param).map(|ty| self.type_to_ast_ref(ty)))
+                .collect::<Vec<_>>();
+            if type_args.len() == params.len() {
+                return Some((name, type_args));
+            }
+        }
+
+        if let Some((name, params)) = self
+            .enums
+            .iter()
+            .find(|(name, info)| {
+                concrete_name != name.as_str()
+                    && concrete_name_matches_generic(concrete_name, name)
+                    && !info.type_params.is_empty()
+            })
+            .map(|(name, info)| (name.clone(), info.type_params.clone()))
+        {
+            let mut inferred = HashMap::new();
+            self.match_generic_type_params(&name, ty, &params, &mut inferred);
+            let type_args = params
+                .iter()
+                .filter_map(|param| inferred.get(param).map(|ty| self.type_to_ast_ref(ty)))
+                .collect::<Vec<_>>();
+            if type_args.len() == params.len() {
+                return Some((name, type_args));
+            }
+        }
+
+        None
+    }
+
+    fn type_to_ast_ref(&self, ty: &Type) -> AstType {
+        match ty {
+            Type::Struct { name, .. } | Type::Enum { name, .. } => {
+                if let Some((generic_name, type_args)) = self.generic_type_args_from_type(name, ty)
+                {
+                    AstType::Generic {
+                        name: generic_name,
+                        type_args,
+                    }
+                } else {
+                    type_to_ast(ty)
+                }
+            }
+            _ => type_to_ast(ty),
+        }
     }
 
     pub(crate) fn type_param_substitutions(
