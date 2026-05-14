@@ -121,6 +121,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_requires_resolver_closure_locals",
         "resolver_records_pattern_locals",
         "check_program_with_symbols_requires_resolver_pattern_locals",
+        "resolver_records_same_name_locals_in_distinct_scopes",
+        "check_program_with_symbols_validates_resolver_local_mutability_by_scope",
     ] {
         assert!(
             spec.contains(required),

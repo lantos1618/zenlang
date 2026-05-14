@@ -119,6 +119,8 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker setup mirrors resolver scope allocation for local-symbol
   validation, so same-name locals in different scopes are checked against the
   exact resolver scope.
+- Resolver records same-name locals in distinct scopes as separate scoped
+  symbols, matching the typechecker setup scope mirror.
 - Typechecker imports can be seeded from resolver import binding symbols.
 - Typechecker setup rejects resolver import binding source mismatches before
   seeding imported module-call bindings.

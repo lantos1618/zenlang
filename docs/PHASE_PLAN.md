@@ -182,6 +182,8 @@ checked-in docs, tests, and commits only.
 - Typechecker setup now mirrors resolver scope allocation for local-symbol
   validation, so same-name locals in different scopes are checked against the
   exact resolver scope.
+- Resolver records same-name locals in distinct scopes as separate local
+  symbols, matching the typechecker setup scope mirror.
 - The CLI `check` path now runs resolver diagnostics before typechecking, with
   integration coverage for resolver-owned diagnostics outside resolver-only
   tests.
