@@ -66,6 +66,7 @@ pub struct BehaviorBound {
 pub struct BehaviorInfo {
     pub name: String,
     pub type_params: Vec<String>,
+    pub type_param_bounds: HashMap<String, BehaviorBound>,
     pub methods: Vec<ast::BehaviorMethod>,
 }
 
@@ -957,6 +958,7 @@ impl TypeChecker {
                     BehaviorInfo {
                         name: name.clone(),
                         type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
+                        type_param_bounds: type_param_bounds(type_params),
                         methods: methods.clone(),
                     },
                 );
@@ -1433,6 +1435,11 @@ impl TypeChecker {
             BehaviorInfo {
                 name: name.to_string(),
                 type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
+                type_param_bounds: symbol
+                    .type_parameter_bound_refs
+                    .as_deref()
+                    .map(type_param_bounds_from_resolver_refs)
+                    .unwrap_or_else(|| existing.type_param_bounds.clone()),
                 methods,
             },
         );
@@ -1564,13 +1571,35 @@ impl TypeChecker {
             return None;
         }
 
-        Some(
-            info.type_params
-                .iter()
-                .cloned()
-                .zip(type_args.iter().cloned())
-                .collect(),
-        )
+        let ast_substitutions: HashMap<String, AstType> = info
+            .type_params
+            .iter()
+            .cloned()
+            .zip(type_args.iter().cloned())
+            .collect();
+        let type_substitutions: HashMap<String, Type> = info
+            .type_params
+            .iter()
+            .cloned()
+            .zip(type_args.iter().map(|arg| self.resolve_type(arg)))
+            .collect();
+        let error_count = self
+            .diagnostics
+            .iter()
+            .filter(|diag| diag.is_error())
+            .count();
+        self.check_generic_bounds(&info.type_param_bounds, &type_substitutions, span);
+        if self
+            .diagnostics
+            .iter()
+            .filter(|diag| diag.is_error())
+            .count()
+            > error_count
+        {
+            return None;
+        }
+
+        Some(ast_substitutions)
     }
 
     fn check_behavior_requires(
@@ -4118,6 +4147,7 @@ impl TypeChecker {
                     BehaviorInfo {
                         name: local_name.to_string(),
                         type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        type_param_bounds: type_param_bounds(type_params),
                         methods: methods.clone(),
                     },
                 );
@@ -12295,6 +12325,66 @@ Point.requires(Json<str>)
         TypeChecker::new()
             .check_program(&program)
             .expect("generic behavior impl should satisfy matching generic requires");
+    }
+
+    #[test]
+    fn behavior_impl_generic_behavior_type_arg_bound_failure_is_error() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Serializable<T: Json<T>>: behavior {
+    serialize: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Serializable<Point>) {
+    serialize = (value: Point) Point { return value }
+}
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("generic behavior type argument bound should fail");
+        assert!(
+            errors.iter().any(|d| d.message.contains(
+                "type `Point` does not implement behavior `Json<Point>` required by `T`"
+            )),
+            "expected generic behavior type argument bound diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_impl_generic_behavior_type_arg_bound_passes_when_satisfied() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Serializable<T: Json<T>>: behavior {
+    serialize: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<Point>) {
+    encode = (value: Point) Point { return value }
+}
+
+Point.implements(Serializable<Point>) {
+    serialize = (value: Point) Point { return value }
+}
+"#,
+        );
+
+        TypeChecker::new()
+            .check_program(&program)
+            .expect("generic behavior type argument bound should pass when satisfied");
     }
 
     #[test]

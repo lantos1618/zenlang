@@ -36,6 +36,10 @@ advertised as implemented.
 Additional resolver/typechecker generic-bound handoff evidence:
 `resolver_phase2::resolver_records_value_symbol_generic_bounds` and
 `typechecker::tests::check_program_with_symbols_validates_resolver_function_type_parameter_bound_refs`.
+Generic behavior type-parameter bound enforcement is covered by
+`typechecker::tests::behavior_impl_generic_behavior_type_arg_bound_passes_when_satisfied`
+and
+`typechecker::tests::behavior_impl_generic_behavior_type_arg_bound_failure_is_error`.
 
 | Syntax form | Status | Test Evidence |
 |---|---|---|
