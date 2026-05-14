@@ -431,9 +431,9 @@ checked-in docs, tests, and commits only.
 - Resolver value symbols now carry display and typed-ref generic
   type-parameter bounds, and typechecker setup rejects mismatches before
   collecting function or method metadata from the AST.
-- Typechecker setup now rejects resolver value source, field, variant,
-  behavior, and mutability metadata before collecting function or method
-  metadata from the AST.
+- Typechecker setup now rejects resolver value source, display and typed field,
+  variant, behavior, and mutability metadata before collecting function or
+  method metadata from the AST.
 - Typechecker setup now rejects resolver type and behavior source, display and
   typed value-signature metadata, and mutability metadata before collecting
   declaration metadata from the AST.

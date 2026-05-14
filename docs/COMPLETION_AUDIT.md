@@ -408,8 +408,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver value symbols carry display and typed-ref generic type-parameter
   bounds, and typechecker setup rejects mismatches before collecting function or
   method metadata.
-- Typechecker setup rejects resolver value source, field, variant, behavior,
-  and mutability metadata before collecting function or method metadata.
+- Typechecker setup rejects resolver value source, display and typed field,
+  variant, behavior, and mutability metadata before collecting function or
+  method metadata.
 - Typechecker setup rejects resolver type and behavior source, display and
   typed value-signature metadata, and mutability metadata before collecting
   declaration metadata.
