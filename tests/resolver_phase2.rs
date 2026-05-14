@@ -487,6 +487,26 @@ log = () { return }
 }
 
 #[test]
+fn resolver_records_value_symbol_function_type_metadata() {
+    let program = parse_program(
+        r#"
+apply = (callback: (i32) i32, value: i32) (i32) i32 { return callback }
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+    let apply = table
+        .lookup(Namespace::Value, "apply")
+        .expect("function symbol");
+
+    assert_eq!(
+        apply.parameter_type_names.as_deref(),
+        Some(&["(i32) i32".to_string(), "i32".to_string()][..])
+    );
+    assert_eq!(apply.return_type_name.as_deref(), Some("(i32) i32"));
+}
+
+#[test]
 fn resolver_records_value_symbol_generic_parameter_counts() {
     let program = parse_program(
         r#"

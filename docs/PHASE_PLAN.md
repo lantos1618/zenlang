@@ -254,6 +254,9 @@ checked-in docs, tests, and commits only.
 - Resolver value symbols now also carry return-type metadata, and typechecker
   setup rejects return-type mismatches before collecting declarations from the
   AST.
+- Resolver value signature metadata preserves function-typed parameters and
+  returns, and typechecker setup rejects function-type signature handoff drift
+  before collecting declarations from the AST.
 - Resolver value symbols now carry generic type-parameter counts, and
   typechecker setup rejects mismatches before collecting function or method
   metadata from the AST.

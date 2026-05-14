@@ -246,6 +246,9 @@ and do not assume Phase 4 is ready without evidence.
   rejects mismatches before collecting function signatures.
 - Resolver value symbols carry return-type metadata, and typechecker setup
   rejects mismatches before declaration collection.
+- Resolver value signature metadata preserves function-typed parameters and
+  returns, and typechecker setup rejects function-type signature drift before
+  declaration collection.
 - Resolver value symbols carry generic type-parameter counts, and typechecker
   setup rejects mismatches before collecting function or method metadata.
 - Resolver value symbols carry generic type-parameter names, and typechecker

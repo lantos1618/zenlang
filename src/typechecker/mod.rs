@@ -6523,6 +6523,35 @@ add = (a: i32, b: f64) f64 { return b }
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_function_type_parameter_metadata() {
+        let program = parse_program(
+            r#"
+apply = (callback: (i32) i32, value: i32) i32 { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_parameter_type_names_for_test(
+            Namespace::Value,
+            "apply",
+            Some(vec!["i32".to_string(), "i32".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function type parameter metadata mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'apply' has parameter types '(i32, i32)', expected '((i32) i32, i32)'"
+            )),
+            "expected resolver function type parameter metadata diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_validates_resolver_function_parameter_names() {
         let program = parse_program(
             r#"
@@ -7085,6 +7114,33 @@ main = () i32 { return 0 }
                 .message
                 .contains("resolver value symbol 'main' has return type 'bool', expected 'i32'")),
             "expected resolver function return diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_function_type_return_metadata() {
+        let program = parse_program(
+            r#"
+factory = () (i32) i32 {
+    return (value: i32) i32 { value }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_name_for_test(Namespace::Value, "factory", Some("i32".to_string()));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver function type return metadata mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver value symbol 'factory' has return type 'i32', expected '(i32) i32'"
+            )),
+            "expected resolver function type return metadata diagnostic, got {err:?}"
         );
     }
 
