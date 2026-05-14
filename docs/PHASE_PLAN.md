@@ -161,6 +161,8 @@ checked-in docs, tests, and commits only.
   expression declarations before typed declaration collection.
 - Typechecker setup now requires resolver local symbols inside struct field
   default expressions before collecting struct metadata.
+- Resolver records struct field default-expression locals, and typechecker
+  setup requires those local symbols before collecting struct metadata.
 - Typechecker setup now requires resolver parameter/local symbols inside
   behavior default method bodies before collecting behavior metadata.
 - Typechecker setup now rejects resolver local mutability mismatches before

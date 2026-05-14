@@ -93,6 +93,9 @@ and do not assume Phase 4 is ready without evidence.
   declarations before typed declaration collection.
 - Typechecker setup requires resolver local symbols inside struct field default
   expressions before collecting struct metadata.
+- Resolver struct field default expressions carry scoped local symbols, and
+  typechecker setup rejects missing default-expression locals before struct
+  metadata collection.
 - Typechecker setup requires resolver parameter/local symbols inside behavior
   default method bodies before collecting behavior metadata.
 - Resolver behavior default method bodies carry scoped local symbols, and
