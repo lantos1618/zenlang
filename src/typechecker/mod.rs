@@ -2808,6 +2808,7 @@ impl TypeChecker {
                         expected_field_type_names(fields),
                         *span,
                     );
+                    self.validate_resolver_struct_absent_enum_metadata(symbol, name, *span);
                     for field in fields {
                         if let Some(default) = &field.default {
                             let mut locals = scope_cursor.new_scope();
@@ -2841,6 +2842,7 @@ impl TypeChecker {
                             expected_variant_names(variants),
                             *span,
                         );
+                        self.validate_resolver_enum_absent_struct_metadata(symbol, name, *span);
                     }
                     for variant in variants {
                         let Some(symbol) = symbols.lookup(Namespace::Variant, &variant.name) else {
@@ -4181,6 +4183,60 @@ impl TypeChecker {
                 ),
                 span,
             ));
+        }
+    }
+
+    fn validate_resolver_struct_absent_enum_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        span: Span,
+    ) {
+        for (present, code, label) in [
+            (symbol.variant_names.is_some(), "E0315", "variant names"),
+            (
+                symbol.variant_owner_name.is_some(),
+                "E0316",
+                "variant owner",
+            ),
+            (
+                symbol.variant_payload_count.is_some(),
+                "E0317",
+                "variant payload count",
+            ),
+            (
+                symbol.variant_payload_type_name.is_some(),
+                "E0318",
+                "variant payload type",
+            ),
+        ] {
+            if present {
+                self.diagnostics.push(Diagnostic::error(
+                    code,
+                    format!("resolver type symbol '{name}' has {label} metadata, expected none"),
+                    span,
+                ));
+            }
+        }
+    }
+
+    fn validate_resolver_enum_absent_struct_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        span: Span,
+    ) {
+        for (present, code, label) in [
+            (symbol.field_count.is_some(), "E0319", "field count"),
+            (symbol.field_type_names.is_some(), "E0320", "field types"),
+        ] {
+            if present {
+                self.diagnostics.push(Diagnostic::error(
+                    code,
+                    format!("resolver type symbol '{name}' has {label} metadata, expected none"),
+                    span,
+                ));
+            }
         }
     }
 
@@ -7213,6 +7269,46 @@ Point: { x: i32, y: f64 }
             )),
             "expected resolver struct field type diagnostic, got {err:?}"
         );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_struct_and_enum_absent_kind_metadata() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+Option: Some(i32), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_variant_names_for_test(
+            Namespace::Type,
+            "Point",
+            Some(vec!["Some".to_string()]),
+        );
+        symbols.set_field_count_for_test(Namespace::Type, "Option", Some(1));
+        symbols.set_field_type_names_for_test(
+            Namespace::Type,
+            "Option",
+            Some(vec![("value".to_string(), "i32".to_string())]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver struct/enum kind metadata should fail");
+
+        for expected in [
+            "resolver type symbol 'Point' has variant names metadata, expected none",
+            "resolver type symbol 'Option' has field count metadata, expected none",
+            "resolver type symbol 'Option' has field types metadata, expected none",
+        ] {
+            assert!(
+                err.iter().any(|d| d.message.contains(expected)),
+                "expected resolver struct/enum kind metadata diagnostic '{expected}', got {err:?}"
+            );
+        }
     }
 
     #[test]
