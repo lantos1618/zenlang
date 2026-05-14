@@ -2889,7 +2889,7 @@ impl TypeChecker {
                         symbols,
                         Namespace::Behavior,
                         name,
-                        expected_type_like_symbol(type_params, None),
+                        expected_type_like_symbol(type_params, Some(false)),
                         *span,
                     ) else {
                         continue;
@@ -5917,6 +5917,33 @@ pub Box<T>: { value: T }
                 .message
                 .contains("resolver type symbol 'Box' has visibility private, expected public")),
             "expected resolver type visibility diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_behavior_visibility() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_public_for_test(Namespace::Behavior, "Json", true);
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver behavior visibility mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver behavior symbol 'Json' has visibility public, expected private"
+            )),
+            "expected resolver behavior visibility diagnostic, got {err:?}"
         );
     }
 
