@@ -1392,8 +1392,8 @@ impl TypeChecker {
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
         if !type_name.is_empty() {
-            self.diagnostics.push(Diagnostic::warning(
-                "W3043",
+            self.diagnostics.push(Diagnostic::error(
+                "E3043",
                 format!("type `{}` has no method `{}`", type_name, method),
                 span,
             ));

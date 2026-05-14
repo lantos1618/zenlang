@@ -876,6 +876,44 @@ main = () i32 {
 }
 
 #[test]
+fn generic_behavior_bound_unknown_method_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: {
+    x: i32
+}
+
+Point.implements(Json<Point>) {
+    encode = (value: Point) Point {
+        return value
+    }
+}
+
+decode<T: Json<T>> = (value: T) T {
+    return value.serialize()
+}
+
+main = () i32 {
+    point = Point { x: 1 }
+    decoded = decode(point)
+    return decoded.x
+}
+"#,
+    );
+
+    assert!(
+        errors
+            .iter()
+            .any(|d| d.message.contains("type `Point` has no method `serialize`")),
+        "expected unknown method diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_method_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
