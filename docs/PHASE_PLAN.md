@@ -174,6 +174,8 @@ checked-in docs, tests, and commits only.
 - Direct typechecker entrypoints now enforce the same `Self` context rule, so
   resolver-less unit/API paths cannot resolve invalid `Self` references to
   `Unknown`.
+- Direct typechecker entrypoints now reject unknown named and generic type
+  references before body checking, matching resolver-backed diagnostics.
 - Typechecker resolver-symbol validation now checks enum variant symbols from
   resolver output instead of treating enum type presence as sufficient.
 - Resolver value symbols now carry parameter-count metadata for functions and

@@ -2234,9 +2234,49 @@ impl TypeChecker {
         scoped_type_params: &HashSet<String>,
         span: Span,
     ) {
+        self.validate_generic_type_ref_bounds_with_unknowns(
+            ast_type,
+            scoped_type_params,
+            span,
+            true,
+        );
+    }
+
+    fn validate_generic_type_ref_bounds_allow_unknowns(
+        &mut self,
+        ast_type: &AstType,
+        scoped_type_params: &HashSet<String>,
+        span: Span,
+    ) {
+        self.validate_generic_type_ref_bounds_with_unknowns(
+            ast_type,
+            scoped_type_params,
+            span,
+            false,
+        );
+    }
+
+    fn validate_generic_type_ref_bounds_with_unknowns(
+        &mut self,
+        ast_type: &AstType,
+        scoped_type_params: &HashSet<String>,
+        span: Span,
+        reject_unknown: bool,
+    ) {
         match ast_type {
             AstType::Named(name) => {
                 if scoped_type_params.contains(name) {
+                    return;
+                }
+
+                if !self.is_known_named_type(name) {
+                    if reject_unknown {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E0201",
+                            format!("unknown type symbol '{name}'"),
+                            span,
+                        ));
+                    }
                     return;
                 }
 
@@ -2264,7 +2304,16 @@ impl TypeChecker {
             }
             AstType::Generic { name, type_args } => {
                 for type_arg in type_args {
-                    self.validate_generic_type_ref_bounds(type_arg, scoped_type_params, span);
+                    self.validate_generic_type_ref_bounds_with_unknowns(
+                        type_arg,
+                        scoped_type_params,
+                        span,
+                        reject_unknown,
+                    );
+                }
+
+                if scoped_type_params.contains(name) {
+                    return;
                 }
 
                 let (kind, type_params, type_param_bounds) =
@@ -2281,6 +2330,13 @@ impl TypeChecker {
                             info.type_param_bounds.clone(),
                         )
                     } else {
+                        if reject_unknown && !self.imports.contains_key(name) {
+                            self.diagnostics.push(Diagnostic::error(
+                                "E0201",
+                                format!("unknown type symbol '{name}'"),
+                                span,
+                            ));
+                        }
                         return;
                     };
 
@@ -2316,19 +2372,45 @@ impl TypeChecker {
             | AstType::MutPtr(inner)
             | AstType::RawPtr(inner)
             | AstType::Slice(inner) => {
-                self.validate_generic_type_ref_bounds(inner, scoped_type_params, span);
+                self.validate_generic_type_ref_bounds_with_unknowns(
+                    inner,
+                    scoped_type_params,
+                    span,
+                    reject_unknown,
+                );
             }
             AstType::Array { elem, .. } => {
-                self.validate_generic_type_ref_bounds(elem, scoped_type_params, span);
+                self.validate_generic_type_ref_bounds_with_unknowns(
+                    elem,
+                    scoped_type_params,
+                    span,
+                    reject_unknown,
+                );
             }
             AstType::Function { params, ret } => {
                 for param in params {
-                    self.validate_generic_type_ref_bounds(param, scoped_type_params, span);
+                    self.validate_generic_type_ref_bounds_with_unknowns(
+                        param,
+                        scoped_type_params,
+                        span,
+                        reject_unknown,
+                    );
                 }
-                self.validate_generic_type_ref_bounds(ret, scoped_type_params, span);
+                self.validate_generic_type_ref_bounds_with_unknowns(
+                    ret,
+                    scoped_type_params,
+                    span,
+                    reject_unknown,
+                );
             }
             _ => {}
         }
+    }
+
+    fn is_known_named_type(&self, name: &str) -> bool {
+        self.structs.contains_key(name)
+            || self.enums.contains_key(name)
+            || self.imports.contains_key(name)
     }
 
     fn validate_generic_expr_type_references(
@@ -2874,7 +2956,11 @@ impl TypeChecker {
                         }
                     }
                     for type_arg in behavior_type_args {
-                        self.validate_generic_type_ref_bounds(type_arg, &HashSet::new(), *span);
+                        self.validate_generic_type_ref_bounds_allow_unknowns(
+                            type_arg,
+                            &HashSet::new(),
+                            *span,
+                        );
                     }
                     for method in methods {
                         if let Declaration::Function {
@@ -2926,7 +3012,11 @@ impl TypeChecker {
                         );
                     }
                     for type_arg in behavior_type_args {
-                        self.validate_generic_type_ref_bounds(type_arg, &HashSet::new(), *span);
+                        self.validate_generic_type_ref_bounds_allow_unknowns(
+                            type_arg,
+                            &HashSet::new(),
+                            *span,
+                        );
                     }
                 }
                 Declaration::BehaviorExtends {
@@ -2938,7 +3028,11 @@ impl TypeChecker {
                     self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
                     self.require_resolver_symbol(symbols, Namespace::Behavior, parent, *span);
                     for type_arg in parent_type_args {
-                        self.validate_generic_type_ref_bounds(type_arg, &HashSet::new(), *span);
+                        self.validate_generic_type_ref_bounds_allow_unknowns(
+                            type_arg,
+                            &HashSet::new(),
+                            *span,
+                        );
                     }
                     if let Some(symbol) = symbols.lookup(Namespace::Behavior, behavior) {
                         self.validate_resolver_behavior_parent_names(
@@ -4683,6 +4777,31 @@ main = (value: Self) i32 { return 0 }
             err.iter()
                 .any(|d| d.message.contains("Self type is only valid")),
             "expected invalid Self type diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_rejects_unknown_type_references() {
+        let program = parse_program(
+            r#"
+main = (value: Missing, items: Bag<i32>) i32 { return 0 }
+"#,
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program(&program)
+            .expect_err("unknown type reference should fail");
+
+        assert!(
+            err.iter()
+                .any(|d| d.message.contains("unknown type symbol 'Missing'")),
+            "expected unknown type diagnostic, got {err:?}"
+        );
+        assert!(
+            err.iter()
+                .any(|d| d.message.contains("unknown type symbol 'Bag'")),
+            "expected unknown generic type diagnostic, got {err:?}"
         );
     }
 

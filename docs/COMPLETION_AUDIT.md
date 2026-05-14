@@ -167,6 +167,8 @@ and do not assume Phase 4 is ready without evidence.
   behavior contexts before typechecking can resolve them to `Unknown`.
 - Direct typechecker entrypoints enforce the same `Self` context rule for
   resolver-less unit/API paths.
+- Direct typechecker entrypoints reject unknown named and generic type
+  references before body checking, matching resolver-backed diagnostics.
 - Enum variants are validated through resolver `Variant` symbols during
   typechecker setup.
 - Resolver value symbols carry parameter-count metadata, and typechecker setup
