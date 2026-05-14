@@ -333,6 +333,32 @@ fn ast_type_references_type_param(
     }
 }
 
+fn collect_ast_type_names(ast_type: &AstType, names: &mut HashSet<String>) {
+    match ast_type {
+        AstType::Named(name) => {
+            names.insert(name.clone());
+        }
+        AstType::Generic { name, type_args } => {
+            names.insert(name.clone());
+            for type_arg in type_args {
+                collect_ast_type_names(type_arg, names);
+            }
+        }
+        AstType::Ptr(inner)
+        | AstType::MutPtr(inner)
+        | AstType::RawPtr(inner)
+        | AstType::Slice(inner)
+        | AstType::Array { elem: inner, .. } => collect_ast_type_names(inner, names),
+        AstType::Function { params, ret } => {
+            for param in params {
+                collect_ast_type_names(param, names);
+            }
+            collect_ast_type_names(ret, names);
+        }
+        _ => {}
+    }
+}
+
 fn concrete_self_ast_type(ast_type: &AstType, self_type_name: &str) -> AstType {
     match ast_type {
         AstType::SelfType => AstType::Named(self_type_name.to_string()),
@@ -3540,6 +3566,7 @@ impl TypeChecker {
             };
 
             self.seed_module_graph_import(binding.local_name.as_str(), decl);
+            self.seed_imported_callable_signature_type_dependencies(decl, source_module, graph);
             self.seed_imported_generic_function_dependencies(
                 binding.local_name.as_str(),
                 decl,
@@ -3566,6 +3593,101 @@ impl TypeChecker {
                 graph,
             );
         }
+    }
+
+    fn seed_imported_callable_signature_type_dependencies(
+        &mut self,
+        decl: &Declaration,
+        source_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
+    ) {
+        let mut type_names = HashSet::new();
+        match decl {
+            Declaration::Function {
+                params,
+                return_type,
+                ..
+            }
+            | Declaration::Method {
+                params,
+                return_type,
+                ..
+            } => {
+                for param in params {
+                    collect_ast_type_names(&param.ty, &mut type_names);
+                }
+                if let Some(return_type) = return_type {
+                    collect_ast_type_names(return_type, &mut type_names);
+                }
+            }
+            _ => return,
+        }
+
+        for type_name in type_names {
+            self.seed_imported_type_dependency(&type_name, source_module, graph);
+        }
+    }
+
+    fn seed_imported_type_dependency(
+        &mut self,
+        type_name: &str,
+        source_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
+    ) {
+        if let Some(type_decl) = source_module
+            .program
+            .declarations
+            .iter()
+            .find(|decl| decl.name() == Some(type_name))
+        {
+            if !matches!(
+                type_decl,
+                Declaration::Struct { public: true, .. } | Declaration::Enum { public: true, .. }
+            ) {
+                return;
+            }
+            self.seed_module_graph_import(type_name, type_decl);
+            self.seed_public_methods_for_imported_type(type_name, source_module, graph);
+            self.seed_behavior_impls_for_imported_type(type_name, type_name, source_module, graph);
+            return;
+        }
+
+        let Some(binding) = source_module
+            .imports
+            .iter()
+            .find(|binding| binding.local_name == type_name)
+        else {
+            return;
+        };
+        let Some(imported_module) = graph.module(binding.source_module) else {
+            return;
+        };
+        let Some(type_decl) = imported_module
+            .program
+            .declarations
+            .iter()
+            .find(|decl| decl.name() == Some(binding.source_symbol.as_str()))
+        else {
+            return;
+        };
+        if !matches!(
+            type_decl,
+            Declaration::Struct { public: true, .. } | Declaration::Enum { public: true, .. }
+        ) {
+            return;
+        }
+        self.seed_module_graph_import(type_name, type_decl);
+        self.seed_public_methods_for_imported_type(
+            binding.source_symbol.as_str(),
+            imported_module,
+            graph,
+        );
+        self.seed_behavior_impls_for_imported_type(
+            type_name,
+            binding.source_symbol.as_str(),
+            imported_module,
+            graph,
+        );
     }
 
     fn seed_imported_generic_function_dependencies(

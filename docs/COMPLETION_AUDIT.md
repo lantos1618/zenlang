@@ -251,6 +251,9 @@ and do not assume Phase 4 is ready without evidence.
 - Imported public generic functions preserve behavior bounds whose behavior was
   imported by the source module, covered by
   `tests/zen/multi_file_imported_function_imported_behavior_bound/main.zen`.
+- Imported public function return-type dependencies preserve behavior impl
+  associations even when the entry module imports only the functions, covered by
+  `tests/zen/multi_file_imported_function_return_type_dependency/main.zen`.
 - CLI graph-frontend typechecker failures are reported once rather than
   duplicated from both returned errors and stored checker diagnostics, covered
   by `integration::check_command_deduplicates_typechecker_diagnostics`.
