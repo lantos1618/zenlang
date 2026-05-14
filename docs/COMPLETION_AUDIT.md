@@ -358,6 +358,10 @@ and do not assume Phase 4 is ready without evidence.
   and method dependencies only during specialization, while private imported
   methods, helper functions, and helper types remain inaccessible from entry
   modules.
+- The resolver-backed typechecker path collects function and method signatures
+  from validated resolver value symbols, including typed function-signature
+  metadata, reducing duplicate AST-only declaration collection for value
+  signatures.
 - Typechecker setup rejects extra resolver-owned local symbols after mirroring
   resolver scope allocation across function bodies, nested scopes, pattern
   bindings, closures, defaults, and top-level expressions.

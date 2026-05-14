@@ -396,6 +396,10 @@ checked-in docs, tests, and commits only.
 - Resolver value signature metadata preserves function-typed parameters and
   returns, and typechecker setup rejects function-type signature handoff drift
   before collecting declarations from the AST.
+- The resolver-backed typechecker path now collects function and method
+  signatures from validated resolver value symbols, including typed
+  function-signature metadata, instead of rebuilding those signatures only from
+  AST declarations after validation.
 - Resolver value symbols now carry generic type-parameter counts, and
   typechecker setup rejects mismatches before collecting function or method
   metadata from the AST.

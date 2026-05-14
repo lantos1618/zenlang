@@ -605,7 +605,13 @@ impl TypeChecker {
     ) -> Result<TypedProgram, Vec<Diagnostic>> {
         // Phase 1: Collect type definitions and function signatures
         self.collect_declarations(&program.declarations);
+        self.check_program_after_collection(program)
+    }
 
+    fn check_program_after_collection(
+        &mut self,
+        program: &ast::Program,
+    ) -> Result<TypedProgram, Vec<Diagnostic>> {
         // Phase 2: Check function bodies and produce typed AST
         let mut functions = Vec::new();
         let mut types = Vec::new();
@@ -826,7 +832,8 @@ impl TypeChecker {
                 .collect());
         }
         self.collect_resolver_imports(symbols);
-        self.check_program(program)
+        self.collect_declarations_with_symbols(&program.declarations, symbols);
+        self.check_program_after_collection(program)
     }
 
     pub fn check_module_graph_entry(
@@ -1159,6 +1166,79 @@ impl TypeChecker {
         }
 
         self.validate_generic_type_references(decls);
+    }
+
+    fn collect_declarations_with_symbols(&mut self, decls: &[Declaration], symbols: &SymbolTable) {
+        self.collect_declarations(decls);
+
+        for decl in decls {
+            match decl {
+                Declaration::Function { name, .. } => {
+                    self.collect_resolver_value_signature(symbols, name);
+                }
+                Declaration::Method {
+                    type_name,
+                    method_name,
+                    ..
+                } => {
+                    self.collect_resolver_value_signature(
+                        symbols,
+                        &format!("{type_name}.{method_name}"),
+                    );
+                }
+                Declaration::ImplBlock {
+                    type_name, methods, ..
+                } => {
+                    for method in methods {
+                        if let Declaration::Function { name, .. } = method {
+                            self.collect_resolver_value_signature(
+                                symbols,
+                                &format!("{type_name}.{name}"),
+                            );
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn collect_resolver_value_signature(&mut self, symbols: &SymbolTable, name: &str) {
+        let Some(symbol) = symbols.lookup(Namespace::Value, name) else {
+            return;
+        };
+        let (Some(parameter_names), Some(parameter_types), Some(return_type)) = (
+            symbol.parameter_names.as_ref(),
+            symbol.parameter_types.as_ref(),
+            symbol.return_type.as_ref(),
+        ) else {
+            return;
+        };
+        let type_param_bounds = self
+            .functions
+            .get(name)
+            .or_else(|| self.methods.get(name))
+            .map(|info| info.type_param_bounds.clone())
+            .unwrap_or_default();
+
+        let info = FuncInfo {
+            name: name.to_string(),
+            params: parameter_names
+                .iter()
+                .cloned()
+                .zip(parameter_types.iter().cloned())
+                .collect(),
+            return_type: return_type.clone(),
+            type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
+            type_param_bounds,
+        };
+        self.functions.remove(name);
+        self.methods.remove(name);
+        if name.contains('.') {
+            self.methods.insert(name.to_string(), info);
+        } else {
+            self.functions.insert(name.to_string(), info);
+        }
     }
 
     fn collect_impl_method_signature(&mut self, type_name: &str, method: &Declaration) {
@@ -6783,6 +6863,48 @@ main = (value: Missing, items: Bag<i32>) i32 { return 0 }
         tc.collect_declarations(&decls);
         assert!(tc.structs.contains_key("Point"));
         assert_eq!(tc.structs["Point"].fields.len(), 2);
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_function_type_metadata() {
+        let mut program = parse_program(
+            r#"
+apply = (callback: (i32) i32) (i32) i32 {
+    return callback
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function {
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[0]
+        {
+            params[0].ty = AstType::I32;
+            *return_type = Some(AstType::I32);
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.functions.get("apply").expect("function info");
+        assert_eq!(
+            info.params[0].1,
+            AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::I32),
+            }
+        );
+        assert_eq!(
+            info.return_type,
+            AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::I32),
+            }
+        );
     }
 
     #[test]

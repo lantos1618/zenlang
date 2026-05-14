@@ -37,7 +37,7 @@ impl Namespace {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Symbol {
     pub id: SymbolId,
     pub namespace: Namespace,
@@ -46,7 +46,9 @@ pub struct Symbol {
     pub import_source: Option<String>,
     pub parameter_count: Option<usize>,
     pub parameter_names: Option<Vec<String>>,
+    pub parameter_types: Option<Vec<AstType>>,
     pub parameter_type_names: Option<Vec<String>>,
+    pub return_type: Option<AstType>,
     pub return_type_name: Option<String>,
     pub type_parameter_count: Option<usize>,
     pub type_parameter_names: Option<Vec<String>>,
@@ -66,12 +68,14 @@ pub struct Symbol {
     pub definition_span: Span,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 struct SymbolMetadata {
     import_source: Option<String>,
     parameter_count: Option<usize>,
     parameter_names: Option<Vec<String>>,
+    parameter_types: Option<Vec<AstType>>,
     parameter_type_names: Option<Vec<String>>,
+    return_type: Option<AstType>,
     return_type_name: Option<String>,
     type_parameter_count: Option<usize>,
     type_parameter_names: Option<Vec<String>>,
@@ -91,7 +95,9 @@ struct SymbolMetadata {
 
 struct ValueSignatureMetadata {
     parameter_names: Vec<String>,
+    parameter_types: Vec<AstType>,
     parameter_type_names: Vec<String>,
+    return_type: AstType,
     return_type_name: String,
     type_parameter_count: usize,
     type_parameter_names: Vec<String>,
@@ -563,7 +569,9 @@ impl SymbolTable {
                 import_source,
                 parameter_count: None,
                 parameter_names: None,
+                parameter_types: None,
                 parameter_type_names: None,
+                return_type: None,
                 return_type_name: None,
                 type_parameter_count: None,
                 type_parameter_names: None,
@@ -601,7 +609,9 @@ impl SymbolTable {
                 import_source: None,
                 parameter_count: Some(parameter_count),
                 parameter_names: Some(signature.parameter_names),
+                parameter_types: Some(signature.parameter_types),
                 parameter_type_names: Some(signature.parameter_type_names),
+                return_type: Some(signature.return_type),
                 return_type_name: Some(signature.return_type_name),
                 type_parameter_count: Some(signature.type_parameter_count),
                 type_parameter_names: Some(signature.type_parameter_names),
@@ -646,7 +656,9 @@ impl SymbolTable {
                 import_source: None,
                 parameter_count: None,
                 parameter_names: None,
+                parameter_types: None,
                 parameter_type_names: None,
+                return_type: None,
                 return_type_name: None,
                 type_parameter_count: Some(type_parameter_count),
                 type_parameter_names: Some(resolver_type_parameter_names(type_params)),
@@ -685,7 +697,9 @@ impl SymbolTable {
                 import_source: None,
                 parameter_count: None,
                 parameter_names: None,
+                parameter_types: None,
                 parameter_type_names: None,
+                return_type: None,
                 return_type_name: None,
                 type_parameter_count: None,
                 type_parameter_names: None,
@@ -724,7 +738,9 @@ impl SymbolTable {
                 import_source: None,
                 parameter_count: None,
                 parameter_names: None,
+                parameter_types: None,
                 parameter_type_names: None,
+                return_type: None,
                 return_type_name: None,
                 type_parameter_count: Some(type_parameter_count),
                 type_parameter_names: Some(resolver_type_parameter_names(type_params)),
@@ -789,7 +805,9 @@ impl SymbolTable {
             import_source: metadata.import_source,
             parameter_count: metadata.parameter_count,
             parameter_names: metadata.parameter_names,
+            parameter_types: metadata.parameter_types,
             parameter_type_names: metadata.parameter_type_names,
+            return_type: metadata.return_type,
             return_type_name: metadata.return_type_name,
             type_parameter_count: metadata.type_parameter_count,
             type_parameter_names: metadata.type_parameter_names,
@@ -2297,7 +2315,9 @@ fn resolver_value_signature(
 ) -> ValueSignatureMetadata {
     ValueSignatureMetadata {
         parameter_names: resolver_param_names(params),
+        parameter_types: params.iter().map(|param| param.ty.clone()).collect(),
         parameter_type_names: resolver_param_type_names(params),
+        return_type: return_type.clone().unwrap_or(AstType::Void),
         return_type_name: resolver_return_type_name(return_type),
         type_parameter_count: type_params.len(),
         type_parameter_names: resolver_type_parameter_names(type_params),
