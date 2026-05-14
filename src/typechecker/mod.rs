@@ -1135,28 +1135,12 @@ impl TypeChecker {
                     }
 
                     if let Some(behavior) = behavior {
-                        for default in self.behavior_default_methods_for_impl(
+                        self.collect_behavior_default_method_signatures(
                             type_name,
                             behavior,
                             behavior_type_args,
                             methods,
-                        ) {
-                            let key = format!("{}.{}", type_name, default.name);
-                            self.methods.insert(
-                                key.clone(),
-                                FuncInfo {
-                                    name: key,
-                                    params: default
-                                        .params
-                                        .iter()
-                                        .map(|p| (p.name.clone(), p.ty.clone()))
-                                        .collect(),
-                                    return_type: default.return_type.unwrap_or(AstType::Void),
-                                    type_params: Vec::new(),
-                                    type_param_bounds: HashMap::new(),
-                                },
-                            );
-                        }
+                        );
                     }
                 }
                 _ => {}
@@ -1235,6 +1219,24 @@ impl TypeChecker {
                     self.collect_resolver_behavior_parents(symbols, name);
                 }
                 _ => {}
+            }
+        }
+
+        for decl in decls {
+            if let Declaration::ImplBlock {
+                type_name,
+                behavior: Some(behavior),
+                behavior_type_args,
+                methods,
+                ..
+            } = decl
+            {
+                self.collect_behavior_default_method_signatures(
+                    type_name,
+                    behavior,
+                    behavior_type_args,
+                    methods,
+                );
             }
         }
     }
@@ -1532,6 +1534,34 @@ impl TypeChecker {
                     body.clone(),
                     *span,
                 ),
+            );
+        }
+    }
+
+    fn collect_behavior_default_method_signatures(
+        &mut self,
+        type_name: &str,
+        behavior: &str,
+        behavior_type_args: &[AstType],
+        methods: &[Declaration],
+    ) {
+        for default in
+            self.behavior_default_methods_for_impl(type_name, behavior, behavior_type_args, methods)
+        {
+            let key = format!("{}.{}", type_name, default.name);
+            self.methods.insert(
+                key.clone(),
+                FuncInfo {
+                    name: key,
+                    params: default
+                        .params
+                        .iter()
+                        .map(|p| (p.name.clone(), p.ty.clone()))
+                        .collect(),
+                    return_type: default.return_type.unwrap_or(AstType::Void),
+                    type_params: Vec::new(),
+                    type_param_bounds: HashMap::new(),
+                },
             );
         }
     }
@@ -8073,6 +8103,47 @@ Mapper: behavior {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             })
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_default_method_metadata() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Mapper: behavior {
+    map: (self: Self, callback: (i32) i32) (i32) i32 { return callback }
+}
+
+Point.implements(Mapper) {
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
+            methods[0].params[1].ty = AstType::I32;
+            methods[0].return_type = Some(AstType::I32);
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.methods.get("Point.map").expect("default method info");
+        assert_eq!(
+            info.params[1].1,
+            AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::I32),
+            }
+        );
+        assert_eq!(
+            info.return_type,
+            AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::I32),
+            }
         );
     }
 

@@ -82,6 +82,9 @@ checked-in docs, tests, and commits only.
   and executable coverage.
 - Resolver records behavior default-method body locals, and typechecker setup
   requires those local symbols before behavior metadata collection.
+- Omitted behavior default methods now refresh their method-table signatures
+  from validated resolver behavior method metadata, including function-typed
+  default method parameters and returns.
 - Behavior impl methods are resolver-owned value symbols with parameter,
   return, generic-name, and generic-bound metadata, and typechecker setup
   validates impl-method signature handoff drift before checking impl bodies.
