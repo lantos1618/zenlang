@@ -471,6 +471,14 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Point_encode");
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
+
+    let c_source = compile_to_c(&test_dir().join("multi_file_imported_behavior_default/main.zen"));
+    assert!(c_source.contains("zen_str Point_to_json(Point "));
+    assert!(c_source.contains("zen_str render_Point(Point value)"));
+    assert!(c_source.contains("Point_to_json(value)"));
+    assert_c_call_resolves_to_definition(&c_source, "Point_to_json");
+    assert_c_call_resolves_to_definition(&c_source, "render_Point");
+    assert!(!c_source.contains("T_to_json"));
 }
 
 #[test]
@@ -1020,6 +1028,13 @@ fn test_multi_file_imported_behavior_impls() {
     let zen_path = test_dir().join("multi_file_imported_behavior_impl/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "encoded\n");
+}
+
+#[test]
+fn test_multi_file_imported_behavior_defaults() {
+    let zen_path = test_dir().join("multi_file_imported_behavior_default/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "default-json\n");
 }
 
 // ── Discovery test: all .zen files have matching .expected ──────────

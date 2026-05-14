@@ -198,6 +198,9 @@ and do not assume Phase 4 is ready without evidence.
 - Imported public types carry source-module behavior impl associations and impl
   methods into graph-owned generic behavior-bound dispatch, covered by
   `tests/zen/multi_file_imported_behavior_impl/main.zen`.
+- Imported public types carry omitted behavior default methods into graph-owned
+  generic behavior-bound dispatch, covered by
+  `tests/zen/multi_file_imported_behavior_default/main.zen`.
 - Unknown method calls through generic behavior-bound receivers produce hard
   diagnostics before codegen instead of unresolved `Type_method` calls.
 - Unspecialized generic behavior bounds such as `T: Json`, where `Json` declares
