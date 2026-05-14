@@ -330,8 +330,11 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("Box_copy_i32(box)"));
     assert!(c_source.contains("Box_Option_i32 Box_copy_Option_i32(Box_Option_i32 self)"));
     assert!(c_source.contains("Box_copy_Option_i32(nested)"));
+    assert!(c_source.contains("Option_i32 Option_copy_i32(Option_i32 self)"));
+    assert!(c_source.contains("Option_copy_i32(option)"));
     assert_c_call_resolves_to_definition(&c_source, "Box_copy_i32");
     assert_c_call_resolves_to_definition(&c_source, "Box_copy_Option_i32");
+    assert_c_call_resolves_to_definition(&c_source, "Option_copy_i32");
     assert!(
         c_source
             .find("struct Option_i32")

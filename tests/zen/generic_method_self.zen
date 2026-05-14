@@ -12,6 +12,10 @@ Box.copy<T> = (self: Self) Self {
     return self
 }
 
+Option.copy<T> = (self: Self) Self {
+    return self
+}
+
 main = () i32 {
     box = Box<i32> { value: 42 }
     copied = box.copy()
@@ -22,5 +26,11 @@ main = () i32 {
         | Some(value) { value }
         | None { 0 }
     io.println("${unwrapped}")
+    option = Option<i32>.Some(11)
+    copied_option = option.copy()
+    option_value = copied_option ?
+        | Some(value) { value }
+        | None { 0 }
+    io.println("${option_value}")
     return 0
 }

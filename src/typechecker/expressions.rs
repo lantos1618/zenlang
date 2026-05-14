@@ -1399,6 +1399,13 @@ impl TypeChecker {
             .filter(|info| !info.type_params.is_empty())
             .find(|info| concrete_name.starts_with(&format!("{}_", info.name)))
             .map(|info| info.name.clone())
+            .or_else(|| {
+                self.enums
+                    .values()
+                    .filter(|info| !info.type_params.is_empty())
+                    .find(|info| concrete_name.starts_with(&format!("{}_", info.name)))
+                    .map(|info| info.name.clone())
+            })
     }
 
     fn unknown_method_expr(

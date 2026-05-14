@@ -47,9 +47,10 @@ and do not assume Phase 4 is ready without evidence.
   definitions, including struct-returning specializations without counting
   declarations or definitions as calls.
 - Generic method specialization preserves concrete `Self` receiver context in
-  call-site typing and specialized method bodies, with executable and generated-C
-  coverage in `tests/zen/generic_method_self.zen`, including receiver-based
-  inference for `Self`-only generic method signatures and nested
+  call-site typing and specialized method bodies for generic struct and enum
+  receivers, with executable and generated-C coverage in
+  `tests/zen/generic_method_self.zen`, including receiver-based inference for
+  `Self`-only generic method signatures and nested
   `Box<Option<i32>>` specialization dependency ordering.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
