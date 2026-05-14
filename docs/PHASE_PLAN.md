@@ -225,6 +225,9 @@ checked-in docs, tests, and commits only.
 - Typechecker setup now rejects resolver value source, field, variant,
   behavior, and mutability metadata before collecting function or method
   metadata from the AST.
+- Typechecker setup now rejects resolver type and behavior source, value
+  signature, and mutability metadata before collecting declaration metadata
+  from the AST.
 - Resolver type and behavior symbols now carry generic type-parameter counts,
   and typechecker setup rejects mismatches before collecting struct, enum, or
   behavior metadata from the AST.

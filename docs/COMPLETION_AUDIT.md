@@ -210,6 +210,8 @@ and do not assume Phase 4 is ready without evidence.
   setup rejects mismatches before collecting function or method metadata.
 - Typechecker setup rejects resolver value source, field, variant, behavior,
   and mutability metadata before collecting function or method metadata.
+- Typechecker setup rejects resolver type and behavior source, value signature,
+  and mutability metadata before collecting declaration metadata.
 - Resolver type and behavior symbols carry generic parameter-count metadata, and
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Resolver type and behavior symbols carry generic type-parameter bounds, and

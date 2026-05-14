@@ -4051,7 +4051,71 @@ impl TypeChecker {
             ));
         }
 
+        self.validate_resolver_type_like_absent_value_metadata(symbol, namespace, name, span);
+
         Some(symbol)
+    }
+
+    fn validate_resolver_type_like_absent_value_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        namespace: Namespace,
+        name: &str,
+        span: Span,
+    ) {
+        if let Some(actual) = symbol.import_source.as_deref() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0309",
+                format!(
+                    "resolver {} symbol '{name}' has source '{actual}', expected none",
+                    namespace.diagnostic_name()
+                ),
+                span,
+            ));
+        }
+
+        if symbol.parameter_count.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0310",
+                format!(
+                    "resolver {} symbol '{name}' has parameter count metadata, expected none",
+                    namespace.diagnostic_name()
+                ),
+                span,
+            ));
+        }
+
+        if symbol.return_type_name.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                "E0311",
+                format!(
+                    "resolver {} symbol '{name}' has return type metadata, expected none",
+                    namespace.diagnostic_name()
+                ),
+                span,
+            ));
+        }
+
+        for (present, code, label) in [
+            (symbol.parameter_names.is_some(), "E0312", "parameter names"),
+            (
+                symbol.parameter_type_names.is_some(),
+                "E0313",
+                "parameter types",
+            ),
+            (symbol.is_mutable.is_some(), "E0314", "mutability"),
+        ] {
+            if present {
+                self.diagnostics.push(Diagnostic::error(
+                    code,
+                    format!(
+                        "resolver {} symbol '{name}' has {label} metadata, expected none",
+                        namespace.diagnostic_name()
+                    ),
+                    span,
+                ));
+            }
+        }
     }
 
     fn validate_resolver_field_count(
@@ -6787,6 +6851,54 @@ Box<T: Json>: { value: T }
             )),
             "expected resolver type generic bound diagnostic, got {err:?}"
         );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_type_like_absent_value_metadata() {
+        let program = parse_program(
+            r#"
+Box<T>: { value: T }
+Json: behavior {
+    encode: (Self) str
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_import_source_for_test(Namespace::Type, "Box", Some("std".to_string()));
+        symbols.set_parameter_count_for_test(Namespace::Type, "Box", Some(1));
+        symbols.set_return_type_name_for_test(Namespace::Type, "Box", Some("i32".to_string()));
+        symbols.set_import_source_for_test(Namespace::Behavior, "Json", Some("std".to_string()));
+        symbols.set_parameter_names_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec!["value".to_string()]),
+        );
+        symbols.set_parameter_type_names_for_test(
+            Namespace::Behavior,
+            "Json",
+            Some(vec!["Self".to_string()]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver type-like value metadata should fail");
+
+        for expected in [
+            "resolver type symbol 'Box' has source 'std', expected none",
+            "resolver type symbol 'Box' has parameter count metadata, expected none",
+            "resolver type symbol 'Box' has return type metadata, expected none",
+            "resolver behavior symbol 'Json' has source 'std', expected none",
+            "resolver behavior symbol 'Json' has parameter names metadata, expected none",
+            "resolver behavior symbol 'Json' has parameter types metadata, expected none",
+        ] {
+            assert!(
+                err.iter().any(|d| d.message.contains(expected)),
+                "expected resolver type-like value metadata diagnostic '{expected}', got {err:?}"
+            );
+        }
     }
 
     #[test]
