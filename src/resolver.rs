@@ -637,6 +637,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_field_types_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        field_types: Option<Vec<(String, AstType)>>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.field_types = field_types;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_variant_names_for_test(
         &mut self,
         namespace: Namespace,

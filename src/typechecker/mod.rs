@@ -3302,6 +3302,7 @@ impl TypeChecker {
                         symbol,
                         Namespace::Type,
                         name,
+                        expected_field_types(fields),
                         expected_field_type_names(fields),
                         *span,
                     );
@@ -5765,9 +5766,22 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         namespace: Namespace,
         name: &str,
+        expected_field_types: Vec<(String, AstType)>,
         expected_field_type_names: Vec<(String, String)>,
         span: Span,
     ) {
+        if symbol.field_types.as_deref() != Some(expected_field_types.as_slice()) {
+            let actual = format_field_types(symbol.field_types.as_deref());
+            let expected = format_field_types(Some(&expected_field_types));
+            self.diagnostics.push(Diagnostic::error(
+                "E0358",
+                format!(
+                    "resolver {} symbol '{name}' has typed fields '{actual}', expected '{expected}'",
+                    namespace.diagnostic_name()
+                ),
+                span,
+            ));
+        }
         if symbol.field_type_names.as_deref() != Some(expected_field_type_names.as_slice()) {
             let actual = format_field_type_names(symbol.field_type_names.as_deref());
             let expected = format_field_type_names(Some(&expected_field_type_names));
@@ -6746,6 +6760,27 @@ fn expected_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {
         .iter()
         .map(|field| (field.name.clone(), field.ty.display_name()))
         .collect()
+}
+
+fn expected_field_types(fields: &[StructField]) -> Vec<(String, AstType)> {
+    fields
+        .iter()
+        .map(|field| (field.name.clone(), field.ty.clone()))
+        .collect()
+}
+
+fn format_field_types(fields: Option<&[(String, AstType)]>) -> String {
+    match fields {
+        Some(fields) => format!(
+            "({})",
+            fields
+                .iter()
+                .map(|(name, ty)| format!("{name}: {}", ty.display_name()))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        None => "unknown".to_string(),
+    }
 }
 
 fn format_field_type_names(fields: Option<&[(String, String)]>) -> String {
@@ -10962,6 +10997,35 @@ Pipeline: { callback: (i32) i32 }
                 "resolver type symbol 'Pipeline' has fields '(callback: i32)', expected '(callback: (i32) i32)'"
             )),
             "expected resolver struct function type field diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_with_symbols_validates_resolver_struct_typed_field_metadata() {
+        let program = parse_program(
+            r#"
+Pipeline: { callback: (i32) i32 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_field_types_for_test(
+            Namespace::Type,
+            "Pipeline",
+            Some(vec![("callback".to_string(), AstType::I32)]),
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver typed struct field metadata mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver type symbol 'Pipeline' has typed fields '(callback: i32)', expected '(callback: (i32) i32)'"
+            )),
+            "expected resolver typed struct field diagnostic, got {err:?}"
         );
     }
 

@@ -491,6 +491,9 @@ checked-in docs, tests, and commits only.
 - Resolver struct field metadata preserves function-typed fields, and
   typechecker setup rejects function-type field handoff drift before collecting
   struct metadata from the AST.
+- Typechecker setup also validates typed resolver struct field metadata, so
+  stale `field_types` cannot survive behind matching field display strings
+  before resolver-backed struct collection.
 - The resolver-backed typechecker path now collects struct field metadata from
   validated resolver type symbols, including typed function-field metadata,
   instead of rebuilding struct fields only from AST declarations after
