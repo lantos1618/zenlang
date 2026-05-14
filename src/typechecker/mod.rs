@@ -99,6 +99,13 @@ struct ExpectedTypeLikeSymbol {
     is_public: Option<bool>,
 }
 
+#[derive(Debug, Clone)]
+struct BehaviorParentRef {
+    behavior: String,
+    type_args: Vec<AstType>,
+    key: String,
+}
+
 #[derive(Default)]
 struct ResolverScopeCursor {
     next_scope_id: u32,
@@ -383,6 +390,22 @@ fn behavior_bound_display(bound: &BehaviorBound, substitutions: &HashMap<String,
     }
 }
 
+fn behavior_ref_display(behavior: &str, type_args: &[AstType]) -> String {
+    if type_args.is_empty() {
+        behavior.to_string()
+    } else {
+        format!(
+            "{}<{}>",
+            behavior,
+            type_args
+                .iter()
+                .map(AstType::display_name)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
 fn behavior_method_signatures_match(
     left: &ast::BehaviorMethod,
     right: &ast::BehaviorMethod,
@@ -404,7 +427,7 @@ pub struct TypeChecker {
     functions: HashMap<String, FuncInfo>,
     methods: HashMap<String, FuncInfo>, // key: "TypeName.method_name"
     behaviors: HashMap<String, BehaviorInfo>,
-    behavior_extends: HashMap<String, Vec<String>>,
+    behavior_extends: HashMap<String, Vec<BehaviorParentRef>>,
     behavior_extends_spans: HashMap<String, Span>,
     behavior_impls: HashSet<(String, String)>,
     generic_functions: HashMap<String, GenericFunctionTemplate>,
@@ -798,10 +821,11 @@ impl TypeChecker {
             if let Declaration::BehaviorExtends {
                 behavior,
                 parent,
+                parent_type_args,
                 span,
             } = decl
             {
-                self.check_behavior_extends(behavior, parent, *span);
+                self.check_behavior_extends(behavior, parent, parent_type_args, *span);
             }
         }
         self.validate_behavior_extends_cycles();
@@ -1118,7 +1142,13 @@ impl TypeChecker {
         }
     }
 
-    fn check_behavior_extends(&mut self, behavior: &str, parent: &str, span: Span) {
+    fn check_behavior_extends(
+        &mut self,
+        behavior: &str,
+        parent: &str,
+        parent_type_args: &[AstType],
+        span: Span,
+    ) {
         if !self.behaviors.contains_key(behavior) {
             self.diagnostics.push(Diagnostic::error(
                 "E6006",
@@ -1128,35 +1158,34 @@ impl TypeChecker {
             return;
         }
 
-        if !self.behaviors.contains_key(parent) {
-            self.diagnostics.push(Diagnostic::error(
-                "E6006",
-                format!("undefined behavior `{}`", parent),
-                span,
-            ));
+        let Some(_) = self.behavior_type_arg_substitutions(parent, parent_type_args, span) else {
+            return;
+        };
+
+        if self.reject_unspecialized_generic_behavior(behavior, span) {
             return;
         }
 
-        if self.reject_unspecialized_generic_behavior(behavior, span)
-            || self.reject_unspecialized_generic_behavior(parent, span)
-        {
-            return;
-        }
-
+        let parent_key = self.behavior_reference_key(parent, parent_type_args);
+        let parent_display = behavior_ref_display(parent, parent_type_args);
         let parents = self
             .behavior_extends
             .entry(behavior.to_string())
             .or_default();
-        if parents.iter().any(|existing| existing == parent) {
+        if parents.iter().any(|existing| existing.key == parent_key) {
             self.diagnostics.push(Diagnostic::error(
                 "E6011",
-                format!("duplicate behavior inheritance `{behavior}.extends({parent})`"),
+                format!("duplicate behavior inheritance `{behavior}.extends({parent_display})`"),
                 span,
             ));
             return;
         }
 
-        parents.push(parent.to_string());
+        parents.push(BehaviorParentRef {
+            behavior: parent.to_string(),
+            type_args: parent_type_args.to_vec(),
+            key: parent_key,
+        });
         self.behavior_extends_spans
             .entry(behavior.to_string())
             .or_insert(span);
@@ -1199,7 +1228,7 @@ impl TypeChecker {
         let has_cycle = self.behavior_extends.get(behavior).is_some_and(|parents| {
             parents
                 .iter()
-                .any(|parent| self.behavior_extends_has_cycle(parent, visiting, visited))
+                .any(|parent| self.behavior_extends_has_cycle(&parent.key, visiting, visited))
         });
         visiting.remove(behavior);
         has_cycle
@@ -1215,6 +1244,7 @@ impl TypeChecker {
             self.collect_behavior_method_coherence_errors(
                 &behavior,
                 &behavior,
+                &HashMap::new(),
                 &mut seen_behaviors,
                 &mut seen_methods,
                 &mut diagnostics,
@@ -1228,19 +1258,38 @@ impl TypeChecker {
         &self,
         behavior: &str,
         root_behavior: &str,
+        substitutions: &HashMap<String, AstType>,
         seen_behaviors: &mut HashSet<String>,
         seen_methods: &mut HashMap<String, ast::BehaviorMethod>,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
-        if !seen_behaviors.insert(behavior.to_string()) {
+        let behavior_seen_key = self.behavior_seen_key(behavior, substitutions);
+        if !seen_behaviors.insert(behavior_seen_key) {
             return;
         }
 
         if let Some(parents) = self.behavior_extends.get(behavior) {
             for parent in parents {
+                let parent_type_args: Vec<AstType> = parent
+                    .type_args
+                    .iter()
+                    .map(|type_arg| substitute_behavior_ast_type(type_arg, substitutions))
+                    .collect();
+                let parent_substitutions = self
+                    .behaviors
+                    .get(&parent.behavior)
+                    .map(|info| {
+                        info.type_params
+                            .iter()
+                            .cloned()
+                            .zip(parent_type_args)
+                            .collect::<HashMap<_, _>>()
+                    })
+                    .unwrap_or_default();
                 self.collect_behavior_method_coherence_errors(
-                    parent,
+                    &parent.behavior,
                     root_behavior,
+                    &parent_substitutions,
                     seen_behaviors,
                     seen_methods,
                     diagnostics,
@@ -1250,8 +1299,16 @@ impl TypeChecker {
 
         if let Some(info) = self.behaviors.get(behavior) {
             for method in &info.methods {
+                let mut method = method.clone();
+                for param in &mut method.params {
+                    param.ty = substitute_behavior_ast_type(&param.ty, substitutions);
+                }
+                if let Some(return_type) = &mut method.return_type {
+                    *return_type = substitute_behavior_ast_type(return_type, substitutions);
+                }
+
                 if let Some(previous) = seen_methods.get(&method.name) {
-                    if !behavior_method_signatures_match(previous, method) {
+                    if !behavior_method_signatures_match(previous, &method) {
                         diagnostics.push(Diagnostic::error(
                             "E6009",
                             format!(
@@ -1262,7 +1319,7 @@ impl TypeChecker {
                         ));
                     }
                 } else {
-                    seen_methods.insert(method.name.clone(), method.clone());
+                    seen_methods.insert(method.name.clone(), method);
                 }
             }
         }
@@ -1300,7 +1357,8 @@ impl TypeChecker {
 
         self.behavior_extends.get(behavior).is_some_and(|parents| {
             parents.iter().any(|candidate| {
-                candidate == parent || self.behavior_inherits_from_inner(candidate, parent, seen)
+                candidate.key == parent
+                    || self.behavior_inherits_from_inner(&candidate.key, parent, seen)
             })
         })
     }
@@ -1567,25 +1625,73 @@ impl TypeChecker {
             .collect()
     }
 
-    fn behavior_methods_with_inherited(
+    fn behavior_methods_with_inherited_substituted(
         &self,
         behavior: &str,
+        substitutions: &HashMap<String, AstType>,
         seen: &mut HashSet<String>,
     ) -> Vec<ast::BehaviorMethod> {
-        if !seen.insert(behavior.to_string()) {
+        let behavior_seen_key = self.behavior_seen_key(behavior, substitutions);
+        if !seen.insert(behavior_seen_key) {
             return Vec::new();
         }
 
         let mut methods = Vec::new();
         if let Some(parents) = self.behavior_extends.get(behavior) {
             for parent in parents {
-                methods.extend(self.behavior_methods_with_inherited(parent, seen));
+                let parent_type_args: Vec<AstType> = parent
+                    .type_args
+                    .iter()
+                    .map(|type_arg| substitute_behavior_ast_type(type_arg, substitutions))
+                    .collect();
+                let parent_substitutions = self
+                    .behaviors
+                    .get(&parent.behavior)
+                    .map(|info| {
+                        info.type_params
+                            .iter()
+                            .cloned()
+                            .zip(parent_type_args)
+                            .collect::<HashMap<_, _>>()
+                    })
+                    .unwrap_or_default();
+                methods.extend(self.behavior_methods_with_inherited_substituted(
+                    &parent.behavior,
+                    &parent_substitutions,
+                    seen,
+                ));
             }
         }
         if let Some(info) = self.behaviors.get(behavior) {
-            methods.extend(info.methods.clone());
+            methods.extend(info.methods.iter().cloned().map(|mut method| {
+                for param in &mut method.params {
+                    param.ty = substitute_behavior_ast_type(&param.ty, substitutions);
+                }
+                if let Some(return_type) = &mut method.return_type {
+                    *return_type = substitute_behavior_ast_type(return_type, substitutions);
+                }
+                method
+            }));
         }
         methods
+    }
+
+    fn behavior_seen_key(
+        &self,
+        behavior: &str,
+        substitutions: &HashMap<String, AstType>,
+    ) -> String {
+        let type_args = self
+            .behaviors
+            .get(behavior)
+            .map(|info| {
+                info.type_params
+                    .iter()
+                    .filter_map(|param| substitutions.get(param).cloned())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        behavior_ref_display(behavior, &type_args)
     }
 
     fn behavior_methods_for_impl(
@@ -1594,18 +1700,7 @@ impl TypeChecker {
         substitutions: &HashMap<String, AstType>,
         seen: &mut HashSet<String>,
     ) -> Vec<ast::BehaviorMethod> {
-        self.behavior_methods_with_inherited(behavior, seen)
-            .into_iter()
-            .map(|mut method| {
-                for param in &mut method.params {
-                    param.ty = substitute_behavior_ast_type(&param.ty, substitutions);
-                }
-                if let Some(return_type) = &mut method.return_type {
-                    *return_type = substitute_behavior_ast_type(return_type, substitutions);
-                }
-                method
-            })
-            .collect()
+        self.behavior_methods_with_inherited_substituted(behavior, substitutions, seen)
     }
 
     fn impl_ast_types_compatible(
@@ -2434,13 +2529,20 @@ impl TypeChecker {
                 Declaration::BehaviorExtends {
                     behavior,
                     parent,
+                    parent_type_args,
                     span,
                 } => {
                     self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
                     self.require_resolver_symbol(symbols, Namespace::Behavior, parent, *span);
+                    for type_arg in parent_type_args {
+                        self.validate_generic_type_ref_bounds(type_arg, &HashSet::new(), *span);
+                    }
                     if let Some(symbol) = symbols.lookup(Namespace::Behavior, behavior) {
                         self.validate_resolver_behavior_parent_names(
-                            symbol, behavior, parent, *span,
+                            symbol,
+                            behavior,
+                            &behavior_ref_display(parent, parent_type_args),
+                            *span,
                         );
                     }
                 }
@@ -5884,6 +5986,69 @@ Point.requires(Json)
         TypeChecker::new()
             .check_program(&program)
             .expect("implementation of child behavior should satisfy parent requires");
+    }
+
+    #[test]
+    fn behavior_extends_generic_parent_requires_substituted_methods() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+
+Point.implements(PrettyJson) {
+    pretty = (value: Point) str { return "pretty" }
+}
+"#,
+        );
+
+        let errors = TypeChecker::new()
+            .check_program(&program)
+            .expect_err("generic parent method should be required with substituted signature");
+        assert!(
+            errors.iter().any(|d| d.message.contains(
+                "type `Point` implementation of `PrettyJson` is missing required method `encode`"
+            )),
+            "expected inherited generic parent missing method diagnostic, got {errors:?}"
+        );
+    }
+
+    #[test]
+    fn behavior_extends_generic_parent_satisfies_specialized_requires() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+
+Point.implements(PrettyJson) {
+    encode = (value: Point) str { return "point" }
+    pretty = (value: Point) str { return "pretty" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+
+        TypeChecker::new()
+            .check_program(&program)
+            .expect("child behavior impl should satisfy specialized generic parent requires");
     }
 
     #[test]

@@ -720,26 +720,19 @@ impl Parser {
         self.expect(&Token::LParen)?;
         self.skip_newlines();
         let (parent, parent_span) = self.expect_identifier()?;
-        self.reject_generic_behavior_association("extends")?;
+        let parent_type_args = if matches!(self.peek(), Token::Lt) {
+            self.parse_type_arg_list()?
+        } else {
+            Vec::new()
+        };
         self.skip_newlines();
         let end = self.expect(&Token::RParen)?;
         Ok(Declaration::BehaviorExtends {
             behavior,
             parent,
+            parent_type_args,
             span: name_span.merge(parent_span).merge(end),
         })
-    }
-
-    fn reject_generic_behavior_association(&self, feature: &str) -> Result<(), CompileError> {
-        if matches!(self.peek(), Token::Lt) {
-            return Err(CompileError::Syntax(
-                format!(
-                    "gated v1 feature '{feature}': generic behavior association is specified in docs/V1_SPEC.md but is not implemented"
-                ),
-                Some(self.peek_span()),
-            ));
-        }
-        Ok(())
     }
 
     // ── Type Params ───────────────────────────────────────────

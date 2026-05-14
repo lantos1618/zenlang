@@ -23,11 +23,10 @@ access, method-style calls, loops, `return`, `defer`, casts, string interpolatio
 and pattern-style `?` arms supported by the parser and C backend.
 
 Unsupported spec-like constructs must stay gated until parser and semantic tests
-exist. This includes generic behavior inheritance such as
-`PrettyJson.extends(Json<T>)`, unspecialized generic behavior bounds such as
-`T: Json`, unspecialized generic type association targets such as
-`Box.implements(Json)`, comptime execution, type matching, async operations,
-actor syntax, package manifests, and `build.zen` execution.
+exist. This includes unspecialized generic behavior bounds such as `T: Json`,
+unspecialized generic type association targets such as `Box.implements(Json)`,
+comptime execution, type matching, async operations, actor syntax, package
+manifests, and `build.zen` execution.
 
 ## Accepted Syntax Forms
 
@@ -53,7 +52,7 @@ advertised as implemented.
 | Behavior declarations `Name: behavior { method: (Self) Return }` | experimental | `parser::tests::parse_behavior_declaration`, `typechecker::tests::behavior_declaration_collection` |
 | Explicit behavior impl blocks `Type.implements(Behavior) { ... }` | experimental | `parser::tests::parse_behavior_impl_block`, `parser::tests::parse_behavior_impl_with_generic_behavior_args`, `typechecker::tests::behavior_impl_with_required_method_passes`, `typechecker::tests::behavior_impl_missing_required_method_is_error`, `typechecker::tests::behavior_impl_can_omit_default_method`, `typechecker::tests::behavior_impl_overlapping_inherited_behavior_is_error`, `typechecker::tests::behavior_impl_generic_behavior_without_type_args_is_error`, `typechecker::tests::behavior_impl_generic_behavior_with_type_args_passes_requires`, `typechecker::tests::behavior_impl_generic_behavior_substitutes_method_signature`, `generic_diagnostics::behavior_impl_for_unspecialized_generic_type_is_error`, `tests/zen/behavior_json_explicit_impl.zen`, `tests/zen/behavior_json_generic_association.zen` |
 | Type association assertions `.requires` | experimental | `parser::tests::parse_behavior_requires_assertion`, `parser::tests::parse_behavior_requires_with_generic_behavior_args`, `resolver_phase2::resolver_accepts_behavior_requires_known_type_and_behavior`, `typechecker::tests::behavior_requires_rejects_missing_impl`, `typechecker::tests::behavior_requires_generic_behavior_without_type_args_is_error`, `typechecker::tests::behavior_requires_generic_behavior_type_arg_arity_is_error`, `tests/zen/behavior_json_generic_association.zen`, `generic_diagnostics::behavior_requires_unspecialized_generic_type_is_error` |
-| Behavior inheritance `.extends` | experimental | `parser::tests::parse_behavior_extends_declaration`, `parser::tests::parse_rejects_generic_behavior_extends_with_clear_error`, `resolver_phase2::resolver_accepts_behavior_extends_known_behaviors`, `resolver_phase2::resolver_records_behavior_parent_names`, `typechecker::tests::behavior_extends_requires_parent_methods`, `typechecker::tests::behavior_extends_duplicate_parent_is_error`, `typechecker::tests::behavior_extends_generic_parent_without_type_args_is_error`, `typechecker::tests::behavior_extends_cycle_is_error`, `typechecker::tests::behavior_extends_conflicting_method_signature_is_error`, `tests/zen/behavior_inherited_default_method.zen` |
+| Behavior inheritance `.extends` | experimental | `parser::tests::parse_behavior_extends_declaration`, `parser::tests::parse_behavior_extends_with_generic_parent_args`, `resolver_phase2::resolver_accepts_behavior_extends_known_behaviors`, `resolver_phase2::resolver_records_behavior_parent_names`, `resolver_phase2::resolver_records_generic_behavior_parent_names`, `typechecker::tests::behavior_extends_requires_parent_methods`, `typechecker::tests::behavior_extends_generic_parent_requires_substituted_methods`, `typechecker::tests::behavior_extends_generic_parent_satisfies_specialized_requires`, `typechecker::tests::behavior_extends_duplicate_parent_is_error`, `typechecker::tests::behavior_extends_generic_parent_without_type_args_is_error`, `typechecker::tests::behavior_extends_cycle_is_error`, `typechecker::tests::behavior_extends_conflicting_method_signature_is_error`, `tests/zen/behavior_inherited_default_method.zen`, `tests/zen/behavior_generic_parent_inheritance.zen` |
 
 ## Type, Module, ABI, Error, Effect, And Comptime Decisions
 

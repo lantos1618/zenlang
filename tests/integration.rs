@@ -277,6 +277,11 @@ fn test_behavior_json_generic_bound() {
 }
 
 #[test]
+fn test_behavior_generic_parent_inheritance() {
+    run_test("behavior_generic_parent_inheritance");
+}
+
+#[test]
 fn test_behavior_inherited_generic_dispatch() {
     run_test("behavior_inherited_generic_dispatch");
 }

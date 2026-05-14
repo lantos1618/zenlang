@@ -1016,6 +1016,7 @@ impl Resolver {
             Declaration::BehaviorExtends {
                 behavior,
                 parent,
+                parent_type_args,
                 span,
             } => {
                 let behavior_known = table.lookup(Namespace::Behavior, behavior).is_some();
@@ -1034,8 +1035,14 @@ impl Resolver {
                         *span,
                     ));
                 }
+                for type_arg in parent_type_args {
+                    self.validate_type_ref(table, &[], type_arg, *span, diagnostics);
+                }
                 if behavior_known && parent_known {
-                    table.record_behavior_parent(behavior, parent);
+                    table.record_behavior_parent(
+                        behavior,
+                        &behavior_ref_display(parent, parent_type_args),
+                    );
                 }
             }
             Declaration::TopLevelExpr { expr, .. } => {
@@ -1613,6 +1620,22 @@ fn type_param_bound_display(type_param: &TypeParam) -> Option<String> {
             )
         }
     })
+}
+
+fn behavior_ref_display(behavior: &str, type_args: &[AstType]) -> String {
+    if type_args.is_empty() {
+        behavior.to_string()
+    } else {
+        format!(
+            "{}<{}>",
+            behavior,
+            type_args
+                .iter()
+                .map(AstType::display_name)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
 }
 
 fn resolver_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {

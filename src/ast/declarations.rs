@@ -122,6 +122,7 @@ pub enum Declaration {
     BehaviorExtends {
         behavior: String,
         parent: String,
+        parent_type_args: Vec<AstType>,
         span: Span,
     },
 

@@ -494,15 +494,21 @@ fn parse_behavior_requires_with_generic_behavior_args() {
 }
 
 #[test]
-fn parse_rejects_generic_behavior_extends_with_clear_error() {
-    let result = parse_str("PrettyJson.extends(Json<i32>)");
-    let errs = result.expect_err("generic behavior extends syntax should be gated");
-    assert!(
-        errs.iter().any(|e| e
-            .to_string()
-            .contains("gated v1 feature 'extends': generic behavior association")),
-        "expected clear generic behavior extends diagnostic, got {errs:?}"
-    );
+fn parse_behavior_extends_with_generic_parent_args() {
+    let prog = parse_ok("PrettyJson.extends(Json<i32>)");
+    match &prog.declarations[0] {
+        Declaration::BehaviorExtends {
+            behavior,
+            parent,
+            parent_type_args,
+            ..
+        } => {
+            assert_eq!(behavior, "PrettyJson");
+            assert_eq!(parent, "Json");
+            assert_eq!(parent_type_args, &vec![AstType::I32]);
+        }
+        other => panic!("expected BehaviorExtends, got {:?}", other),
+    }
 }
 
 #[test]

@@ -574,7 +574,6 @@ fn resolver_records_behavior_parent_names() {
 Json: behavior {
     encode: (Self) str
 }
-
 PrettyJson: behavior {
     pretty: (Self) str
 }
@@ -593,6 +592,34 @@ PrettyJson.extends(Json)
             .as_ref()
             .map(Vec::as_slice),
         Some(&["Json".to_string()][..])
+    );
+}
+
+#[test]
+fn resolver_records_generic_behavior_parent_names() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+
+    assert_eq!(
+        table
+            .lookup(Namespace::Behavior, "PrettyJson")
+            .expect("behavior symbol")
+            .behavior_parent_names
+            .as_ref()
+            .map(Vec::as_slice),
+        Some(&["Json<str>".to_string()][..])
     );
 }
 

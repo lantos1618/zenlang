@@ -73,6 +73,10 @@ checked-in docs, tests, and commits only.
   coverage for inherited required methods, parent behavior satisfaction, and
   coherence diagnostics for duplicate edges, cycles, and conflicting inherited
   method signatures.
+- Concrete generic behavior parent inheritance, such as
+  `PrettyJson.extends(Json<str>)`, now has parser, resolver metadata,
+  typechecker substitution, and executable coverage through
+  `tests/zen/behavior_generic_parent_inheritance.zen`.
 - Resolver behavior symbols now carry parent behavior metadata, and typechecker
   setup rejects missing resolver parent-edge metadata.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for

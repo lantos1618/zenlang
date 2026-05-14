@@ -133,6 +133,10 @@ and do not assume Phase 4 is ready without evidence.
   and typechecked so child behavior impls must satisfy inherited parent methods
   while duplicate edges, cyclic inheritance, and conflicting inherited method
   signatures are rejected.
+- Concrete generic behavior parent inheritance, such as
+  `PrettyJson.extends(Json<str>)`, is parsed, recorded in resolver metadata,
+  checked with substituted parent method signatures, and covered by
+  `tests/zen/behavior_generic_parent_inheritance.zen`.
 - Resolver behavior symbols carry parent behavior metadata, and typechecker
   setup rejects missing resolver parent-edge metadata.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
