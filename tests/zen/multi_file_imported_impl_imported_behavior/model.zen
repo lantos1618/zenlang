@@ -1,0 +1,15 @@
+{ PrettyJson } = traits
+
+pub Point: {
+    x: i32
+}
+
+Point.implements(PrettyJson) {
+    encode = (value: Point) str {
+        return "encoded"
+    }
+
+    pretty = (value: Point) str {
+        return "pretty"
+    }
+}
