@@ -249,6 +249,22 @@ impl SymbolTable {
     }
 
     #[cfg(test)]
+    pub(crate) fn set_mutability_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+        is_mutable: Option<bool>,
+    ) {
+        if let Some(symbol) = self
+            .symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+        {
+            symbol.is_mutable = is_mutable;
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn set_parameter_count_for_test(
         &mut self,
         namespace: Namespace,

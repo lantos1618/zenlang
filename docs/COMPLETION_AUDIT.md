@@ -92,6 +92,8 @@ and do not assume Phase 4 is ready without evidence.
   return-type metadata before seeding imported module-call bindings.
 - Typechecker setup rejects resolver import binding type, field, variant, and
   behavior metadata before seeding imported module-call bindings.
+- Typechecker setup rejects resolver import binding mutability metadata before
+  seeding imported module-call bindings.
 - Typechecker setup validates resolver import binding source and visibility
   invariants even when AST import declarations have already been stripped and
   imports are seeded from resolver symbols only, including the referenced
@@ -102,6 +104,8 @@ and do not assume Phase 4 is ready without evidence.
   metadata before validating imported binding symbols.
 - Typechecker setup rejects resolver module type, field, variant, and behavior
   metadata before validating imported binding symbols.
+- Typechecker setup rejects resolver module mutability metadata before
+  validating imported binding symbols.
 - The non-merging module graph records resolver `SymbolTable` data per module
   and rejects resolver diagnostics from loaded dependency modules.
 - Typechecker setup has an opt-in module-graph entrypoint that validates entry

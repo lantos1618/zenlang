@@ -106,6 +106,8 @@ checked-in docs, tests, and commits only.
   return-type metadata before seeding imported module-call bindings.
 - Typechecker setup now rejects resolver import binding type, field, variant,
   and behavior metadata before seeding imported module-call bindings.
+- Typechecker setup now rejects resolver import binding mutability metadata
+  before seeding imported module-call bindings.
 - Typechecker setup now validates resolver import binding source and visibility
   invariants even when AST import declarations have already been stripped and
   imports are seeded from resolver symbols only, including the referenced
@@ -116,6 +118,8 @@ checked-in docs, tests, and commits only.
   metadata before validating imported binding symbols.
 - Typechecker setup now rejects resolver module type, field, variant, and
   behavior metadata before validating imported binding symbols.
+- Typechecker setup now rejects resolver module mutability metadata before
+  validating imported binding symbols.
 - Resolver now walks declaration bodies enough to diagnose simple unresolved
   unqualified function calls using resolver-owned value/import symbols.
 - Resolver now records scoped local symbols for parameters and local bindings,
