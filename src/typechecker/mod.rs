@@ -1678,27 +1678,32 @@ impl TypeChecker {
     }
 
     fn collect_resolver_type_behavior_impl_refs(&mut self, symbols: &SymbolTable, name: &str) {
-        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
-            return;
-        };
-        let Some(impl_refs) = symbol.behavior_impl_refs.as_ref() else {
-            return;
-        };
-
-        self.resolver_behavior_impl_refs
-            .insert(name.to_string(), impl_refs.iter().cloned().collect());
+        if let Some(impl_refs) =
+            Self::resolver_type_behavior_refs(symbols, name, |symbol| &symbol.behavior_impl_refs)
+        {
+            self.resolver_behavior_impl_refs
+                .insert(name.to_string(), impl_refs);
+        }
     }
 
     fn collect_resolver_type_behavior_requires(&mut self, symbols: &SymbolTable, name: &str) {
-        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
-            return;
-        };
-        let Some(required_refs) = symbol.behavior_required_refs.as_ref() else {
-            return;
-        };
+        if let Some(required_refs) = Self::resolver_type_behavior_refs(symbols, name, |symbol| {
+            &symbol.behavior_required_refs
+        }) {
+            self.resolver_behavior_required_refs
+                .insert(name.to_string(), required_refs);
+        }
+    }
 
-        self.resolver_behavior_required_refs
-            .insert(name.to_string(), required_refs.iter().cloned().collect());
+    fn resolver_type_behavior_refs(
+        symbols: &SymbolTable,
+        name: &str,
+        select_refs: impl Fn(&crate::resolver::Symbol) -> &Option<Vec<BehaviorRefMetadata>>,
+    ) -> Option<VecDeque<BehaviorRefMetadata>> {
+        let symbol = symbols.lookup(Namespace::Type, name)?;
+        let refs = select_refs(symbol).as_ref()?;
+
+        Some(refs.iter().cloned().collect())
     }
 
     fn behavior_parent_ref_from_metadata(
