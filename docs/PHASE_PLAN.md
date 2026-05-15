@@ -870,6 +870,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed declaration collection now restores type-parameter bounds
   through one shared resolver metadata helper for values, structs, enums, and
   behaviors.
+- Resolver-backed declaration collection now restores type-parameter names
+  through the same helper pattern across value, struct, enum, and behavior
+  collection.
 
 ## Current Phase
 

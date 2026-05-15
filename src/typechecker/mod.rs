@@ -398,6 +398,10 @@ fn resolver_type_param_bounds(symbol: &crate::resolver::Symbol) -> HashMap<Strin
         .unwrap_or_default()
 }
 
+fn resolver_type_param_names(symbol: &crate::resolver::Symbol) -> Vec<String> {
+    symbol.type_parameter_names.clone().unwrap_or_default()
+}
+
 fn type_param_bound_display(type_param: &ast::TypeParam) -> Option<String> {
     type_param.constraint.as_ref().map(|constraint| {
         if type_param.constraint_type_args.is_empty() {
@@ -1608,7 +1612,7 @@ impl TypeChecker {
                 .zip(parameter_types.iter().cloned())
                 .collect(),
             return_type: return_type.clone(),
-            type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
+            type_params: resolver_type_param_names(symbol),
             type_param_bounds: resolver_type_param_bounds(symbol),
         };
         self.functions.remove(name);
@@ -1871,7 +1875,7 @@ impl TypeChecker {
             StructInfo {
                 name: name.to_string(),
                 fields: field_types.clone(),
-                type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
+                type_params: resolver_type_param_names(symbol),
                 type_param_bounds: resolver_type_param_bounds(symbol),
             },
         );
@@ -1901,7 +1905,7 @@ impl TypeChecker {
             EnumInfo {
                 name: name.to_string(),
                 variants,
-                type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
+                type_params: resolver_type_param_names(symbol),
                 type_param_bounds: resolver_type_param_bounds(symbol),
             },
         );
@@ -1951,7 +1955,7 @@ impl TypeChecker {
             name.to_string(),
             BehaviorInfo {
                 name: name.to_string(),
-                type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
+                type_params: resolver_type_param_names(symbol),
                 type_param_bounds: resolver_type_param_bounds(symbol),
                 methods,
             },
