@@ -2422,24 +2422,42 @@ impl TypeChecker {
         for decl in decls {
             match decl {
                 Declaration::Struct {
+                    name,
                     type_params,
                     fields,
+                    span,
                     ..
                 } => {
-                    let scoped = type_param_name_set(type_params);
-                    for field in fields {
-                        self.validate_generic_type_ref_bounds(&field.ty, &scoped, field.span);
+                    if self.resolver_backed_collection {
+                        let scoped = self.collected_type_type_param_scope(name, type_params);
+                        self.validate_collected_struct_type_references(name, &scoped, *span);
+                    } else {
+                        let scoped = type_param_name_set(type_params);
+                        for field in fields {
+                            self.validate_generic_type_ref_bounds(&field.ty, &scoped, field.span);
+                        }
                     }
                 }
                 Declaration::Enum {
+                    name,
                     type_params,
                     variants,
+                    span,
                     ..
                 } => {
-                    let scoped = type_param_name_set(type_params);
-                    for variant in variants {
-                        if let Some(payload) = &variant.payload {
-                            self.validate_generic_type_ref_bounds(payload, &scoped, variant.span);
+                    if self.resolver_backed_collection {
+                        let scoped = self.collected_type_type_param_scope(name, type_params);
+                        self.validate_collected_enum_type_references(name, &scoped, *span);
+                    } else {
+                        let scoped = type_param_name_set(type_params);
+                        for variant in variants {
+                            if let Some(payload) = &variant.payload {
+                                self.validate_generic_type_ref_bounds(
+                                    payload,
+                                    &scoped,
+                                    variant.span,
+                                );
+                            }
                         }
                     }
                 }
@@ -2451,10 +2469,12 @@ impl TypeChecker {
                     body,
                     ..
                 } => {
-                    let scoped = type_param_name_set(type_params);
                     if self.resolver_backed_collection {
+                        let scoped = self.collected_value_type_param_scope(name, type_params);
                         self.validate_collected_value_type_references(name, &scoped, Span::dummy());
+                        self.validate_generic_expr_type_references(body, &scoped);
                     } else {
+                        let scoped = type_param_name_set(type_params);
                         for param in params {
                             self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
                         }
@@ -2465,8 +2485,8 @@ impl TypeChecker {
                                 Span::dummy(),
                             );
                         }
+                        self.validate_generic_expr_type_references(body, &scoped);
                     }
-                    self.validate_generic_expr_type_references(body, &scoped);
                 }
                 Declaration::Method {
                     type_params,
@@ -2478,14 +2498,13 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    let scoped = type_param_name_set(type_params);
+                    let full_name = format!("{type_name}.{method_name}");
                     if self.resolver_backed_collection {
-                        self.validate_collected_value_type_references(
-                            &format!("{type_name}.{method_name}"),
-                            &scoped,
-                            *span,
-                        );
+                        let scoped = self.collected_value_type_param_scope(&full_name, type_params);
+                        self.validate_collected_value_type_references(&full_name, &scoped, *span);
+                        self.validate_generic_expr_type_references(body, &scoped);
                     } else {
+                        let scoped = type_param_name_set(type_params);
                         for param in params {
                             self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
                         }
@@ -2496,34 +2515,51 @@ impl TypeChecker {
                                 Span::dummy(),
                             );
                         }
+                        self.validate_generic_expr_type_references(body, &scoped);
                     }
-                    self.validate_generic_expr_type_references(body, &scoped);
                 }
                 Declaration::Behavior {
+                    name,
                     type_params,
                     methods,
+                    span,
                     ..
                 } => {
-                    let scoped = type_param_name_set(type_params);
-                    for method in methods {
-                        for param in &method.params {
-                            self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
+                    if self.resolver_backed_collection {
+                        let scoped = self.collected_behavior_type_param_scope(name, type_params);
+                        self.validate_collected_behavior_type_references(name, &scoped, *span);
+                        for method in methods {
+                            if let Some(default_body) = &method.default_body {
+                                self.validate_generic_expr_type_references(default_body, &scoped);
+                            }
                         }
-                        if let Some(return_type) = &method.return_type {
-                            self.validate_generic_type_ref_bounds(
-                                return_type,
-                                &scoped,
-                                method.span,
-                            );
-                        }
-                        if let Some(default_body) = &method.default_body {
-                            self.validate_generic_expr_type_references(default_body, &scoped);
+                    } else {
+                        let scoped = type_param_name_set(type_params);
+                        for method in methods {
+                            for param in &method.params {
+                                self.validate_generic_type_ref_bounds(
+                                    &param.ty, &scoped, param.span,
+                                );
+                            }
+                            if let Some(return_type) = &method.return_type {
+                                self.validate_generic_type_ref_bounds(
+                                    return_type,
+                                    &scoped,
+                                    method.span,
+                                );
+                            }
+                            if let Some(default_body) = &method.default_body {
+                                self.validate_generic_expr_type_references(default_body, &scoped);
+                            }
                         }
                     }
                 }
-                Declaration::ImplBlock { methods, .. } => {
+                Declaration::ImplBlock {
+                    type_name, methods, ..
+                } => {
                     for method in methods {
                         if let Declaration::Function {
+                            name,
                             type_params,
                             params,
                             return_type,
@@ -2531,20 +2567,32 @@ impl TypeChecker {
                             ..
                         } = method
                         {
-                            let scoped = type_param_name_set(type_params);
-                            for param in params {
-                                self.validate_generic_type_ref_bounds(
-                                    &param.ty, &scoped, param.span,
-                                );
-                            }
-                            if let Some(return_type) = return_type {
-                                self.validate_generic_type_ref_bounds(
-                                    return_type,
+                            if self.resolver_backed_collection {
+                                let full_name = format!("{type_name}.{name}");
+                                let scoped =
+                                    self.collected_value_type_param_scope(&full_name, type_params);
+                                self.validate_collected_value_type_references(
+                                    &full_name,
                                     &scoped,
                                     method.span(),
                                 );
+                                self.validate_generic_expr_type_references(body, &scoped);
+                            } else {
+                                let scoped = type_param_name_set(type_params);
+                                for param in params {
+                                    self.validate_generic_type_ref_bounds(
+                                        &param.ty, &scoped, param.span,
+                                    );
+                                }
+                                if let Some(return_type) = return_type {
+                                    self.validate_generic_type_ref_bounds(
+                                        return_type,
+                                        &scoped,
+                                        method.span(),
+                                    );
+                                }
+                                self.validate_generic_expr_type_references(body, &scoped);
                             }
-                            self.validate_generic_expr_type_references(body, &scoped);
                         }
                     }
                 }
@@ -2552,6 +2600,94 @@ impl TypeChecker {
                     self.validate_generic_expr_type_references(expr, &HashSet::new());
                 }
                 _ => {}
+            }
+        }
+    }
+
+    fn collected_value_type_param_scope(
+        &self,
+        name: &str,
+        ast_type_params: &[ast::TypeParam],
+    ) -> HashSet<String> {
+        self.functions
+            .get(name)
+            .or_else(|| self.methods.get(name))
+            .map(|info| info.type_params.iter().cloned().collect())
+            .unwrap_or_else(|| type_param_name_set(ast_type_params))
+    }
+
+    fn collected_type_type_param_scope(
+        &self,
+        name: &str,
+        ast_type_params: &[ast::TypeParam],
+    ) -> HashSet<String> {
+        self.structs
+            .get(name)
+            .map(|info| info.type_params.iter().cloned().collect())
+            .or_else(|| {
+                self.enums
+                    .get(name)
+                    .map(|info| info.type_params.iter().cloned().collect())
+            })
+            .unwrap_or_else(|| type_param_name_set(ast_type_params))
+    }
+
+    fn collected_behavior_type_param_scope(
+        &self,
+        name: &str,
+        ast_type_params: &[ast::TypeParam],
+    ) -> HashSet<String> {
+        self.behaviors
+            .get(name)
+            .map(|info| info.type_params.iter().cloned().collect())
+            .unwrap_or_else(|| type_param_name_set(ast_type_params))
+    }
+
+    fn validate_collected_struct_type_references(
+        &mut self,
+        name: &str,
+        scoped: &HashSet<String>,
+        span: Span,
+    ) {
+        let Some(info) = self.structs.get(name).cloned() else {
+            return;
+        };
+        for (_, ty) in &info.fields {
+            self.validate_generic_type_ref_bounds(ty, scoped, span);
+        }
+    }
+
+    fn validate_collected_enum_type_references(
+        &mut self,
+        name: &str,
+        scoped: &HashSet<String>,
+        span: Span,
+    ) {
+        let Some(info) = self.enums.get(name).cloned() else {
+            return;
+        };
+        for (_, payload) in &info.variants {
+            if let Some(payload) = payload {
+                self.validate_generic_type_ref_bounds(payload, scoped, span);
+            }
+        }
+    }
+
+    fn validate_collected_behavior_type_references(
+        &mut self,
+        name: &str,
+        scoped: &HashSet<String>,
+        span: Span,
+    ) {
+        let Some(info) = self.behaviors.get(name).cloned() else {
+            return;
+        };
+        for method in &info.methods {
+            for param in &method.params {
+                self.validate_generic_type_ref_bounds(&param.ty, scoped, span);
+            }
+            if let Some(return_type) = &method.return_type {
+                self.validate_generic_type_ref_bounds(return_type, scoped, span);
             }
         }
     }
@@ -8087,6 +8223,84 @@ Box.get = (self: Box, value: i32) i32 { return value }
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored method signature metadata should avoid stale AST type-ref diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_function_type_params_for_type_refs() {
+        let mut program = parse_program(
+            r#"
+identity<T> = (value: T) T { return value }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function { type_params, .. } = &mut program.declarations[0] {
+            type_params[0].name = "Stale".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored function type parameters should avoid stale AST type-ref diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_type_metadata_for_type_refs() {
+        let mut program = parse_program(
+            r#"
+Box<T>: { value: T }
+Option<T>: Some(T), None
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Struct { type_params, .. } = &mut program.declarations[0] {
+            type_params[0].name = "StaleBox".to_string();
+        }
+        if let Declaration::Enum { type_params, .. } = &mut program.declarations[1] {
+            type_params[0].name = "StaleOption".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored type metadata should avoid stale AST type-ref diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_type_params_for_type_refs() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { type_params, .. } = &mut program.declarations[0] {
+            type_params[0].name = "Stale".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior type parameters should avoid stale AST type-ref diagnostics: {:?}",
             tc.diagnostics
         );
     }

@@ -43,6 +43,11 @@ checked-in docs, tests, and commits only.
 - Resolver-backed generic type-reference validation now reads collected
   resolver-restored function and method signatures, so stale AST-only parameter
   or return annotations cannot produce false unknown-type diagnostics.
+- Resolver-backed generic type-reference validation now also derives scoped
+  generic type parameters and struct, enum, behavior, and impl-method
+  declaration type references from collected resolver-restored metadata, so
+  stale AST-only generic parameter names cannot produce false unknown-type
+  diagnostics.
 - Resolver-backed typechecker collection now updates generic function and
   generic method templates with validated resolver type-parameter,
   bound-ref, parameter-type, and return metadata, so monomorphization templates

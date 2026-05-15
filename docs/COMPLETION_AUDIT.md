@@ -91,6 +91,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed generic type-reference validation reads collected
   resolver-restored function and method signatures, so stale AST-only parameter
   or return annotations cannot produce false unknown-type diagnostics.
+- Resolver-backed generic type-reference validation also derives scoped generic
+  type parameters and struct, enum, behavior, and impl-method declaration type
+  references from collected resolver-restored metadata, so stale AST-only
+  generic parameter names cannot produce false unknown-type diagnostics.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.
