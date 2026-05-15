@@ -40,6 +40,9 @@ checked-in docs, tests, and commits only.
   method signature handoff drift before method bodies are checked.
   Function-typed method parameters and returns are included in that resolver
   handoff coverage.
+- Resolver-backed generic type-reference validation now reads collected
+  resolver-restored function and method signatures, so stale AST-only parameter
+  or return annotations cannot produce false unknown-type diagnostics.
 - Resolver-backed typechecker collection now updates generic function and
   generic method templates with validated resolver type-parameter,
   bound-ref, parameter-type, and return metadata, so monomorphization templates

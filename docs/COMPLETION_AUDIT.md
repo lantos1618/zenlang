@@ -88,6 +88,9 @@ and do not assume Phase 4 is ready without evidence.
   typechecker setup rejects method signature drift before method body
   collection. Function-typed method parameters and returns are included in
   that handoff coverage.
+- Resolver-backed generic type-reference validation reads collected
+  resolver-restored function and method signatures, so stale AST-only parameter
+  or return annotations cannot produce false unknown-type diagnostics.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.

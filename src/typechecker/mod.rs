@@ -2444,13 +2444,7 @@ impl TypeChecker {
                     }
                 }
                 Declaration::Function {
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                    ..
-                }
-                | Declaration::Method {
+                    name,
                     type_params,
                     params,
                     return_type,
@@ -2458,11 +2452,50 @@ impl TypeChecker {
                     ..
                 } => {
                     let scoped = type_param_name_set(type_params);
-                    for param in params {
-                        self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
+                    if self.resolver_backed_collection {
+                        self.validate_collected_value_type_references(name, &scoped, Span::dummy());
+                    } else {
+                        for param in params {
+                            self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
+                        }
+                        if let Some(return_type) = return_type {
+                            self.validate_generic_type_ref_bounds(
+                                return_type,
+                                &scoped,
+                                Span::dummy(),
+                            );
+                        }
                     }
-                    if let Some(return_type) = return_type {
-                        self.validate_generic_type_ref_bounds(return_type, &scoped, Span::dummy());
+                    self.validate_generic_expr_type_references(body, &scoped);
+                }
+                Declaration::Method {
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                    type_name,
+                    method_name,
+                    span,
+                    ..
+                } => {
+                    let scoped = type_param_name_set(type_params);
+                    if self.resolver_backed_collection {
+                        self.validate_collected_value_type_references(
+                            &format!("{type_name}.{method_name}"),
+                            &scoped,
+                            *span,
+                        );
+                    } else {
+                        for param in params {
+                            self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
+                        }
+                        if let Some(return_type) = return_type {
+                            self.validate_generic_type_ref_bounds(
+                                return_type,
+                                &scoped,
+                                Span::dummy(),
+                            );
+                        }
                     }
                     self.validate_generic_expr_type_references(body, &scoped);
                 }
@@ -2521,6 +2554,27 @@ impl TypeChecker {
                 _ => {}
             }
         }
+    }
+
+    fn validate_collected_value_type_references(
+        &mut self,
+        name: &str,
+        scoped: &HashSet<String>,
+        span: Span,
+    ) {
+        let info = self
+            .functions
+            .get(name)
+            .or_else(|| self.methods.get(name))
+            .cloned();
+        let Some(info) = info else {
+            return;
+        };
+
+        for (_, ty) in &info.params {
+            self.validate_generic_type_ref_bounds(ty, scoped, span);
+        }
+        self.validate_generic_type_ref_bounds(&info.return_type, scoped, span);
     }
 
     fn validate_self_type_contexts(&mut self, decls: &[Declaration]) {
@@ -7973,6 +8027,67 @@ apply = (callback: (i32) i32) (i32) i32 {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             }
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_function_signature_for_type_refs() {
+        let mut program = parse_program(
+            r#"
+main = (value: i32) i32 { return value }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function {
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[0]
+        {
+            params[0].ty = AstType::Named("Missing".to_string());
+            *return_type = Some(AstType::Named("AlsoMissing".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored function signature metadata should avoid stale AST type-ref diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_method_signature_for_type_refs() {
+        let mut program = parse_program(
+            r#"
+Box: { value: i32 }
+Box.get = (self: Box, value: i32) i32 { return value }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Method {
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[1]
+        {
+            params[1].ty = AstType::Named("Missing".to_string());
+            *return_type = Some(AstType::Named("AlsoMissing".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored method signature metadata should avoid stale AST type-ref diagnostics: {:?}",
+            tc.diagnostics
         );
     }
 
