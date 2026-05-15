@@ -5612,22 +5612,13 @@ impl TypeChecker {
                         {
                             if self.resolver_backed_collection {
                                 let ast_key = format!("{type_name}.{name}");
-                                let restored_key = Self::validation_method_key(
+                                self.validate_resolver_method_type_references(
                                     symbols,
                                     &ast_key,
                                     type_name,
+                                    body,
                                     method.span(),
                                 );
-                                if let Some(scoped) =
-                                    self.collected_value_type_param_scope(&restored_key)
-                                {
-                                    self.validate_collected_value_type_references(
-                                        &restored_key,
-                                        &scoped,
-                                        method.span(),
-                                    );
-                                    self.validate_generic_expr_type_references(body, &scoped);
-                                }
                             } else {
                                 let scoped = type_param_name_set(type_params);
                                 for param in params {
@@ -14033,6 +14024,44 @@ Box.impl = {
         assert_eq!(template.params[1].name, "value");
         assert_eq!(template.params[1].ty, AstType::Named("T".to_string()));
         assert_eq!(template.return_type, Some(AstType::Named("T".to_string())));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_name_for_body_type_refs(
+    ) {
+        let mut program = parse_program(
+            r#"
+Box: { value: i32 }
+
+Box.impl = {
+    keep<T> = (self: Box, value: T) T {
+        same: T = value
+        return same
+    }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[1] {
+            if let Declaration::Function {
+                name, type_params, ..
+            } = &mut methods[0]
+            {
+                *name = "missing".to_string();
+                type_params[0].name = "Stale".to_string();
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored generic impl method name and type parameters should avoid stale AST body type-ref diagnostics: {:?}",
+            tc.diagnostics
+        );
     }
 
     #[test]
