@@ -778,6 +778,8 @@ checked-in docs, tests, and commits only.
   before resolver metadata restoration.
 - Resolver-backed enum collection no longer seeds AST-only variant metadata
   before resolver metadata restoration.
+- Resolver-backed behavior collection no longer keeps AST-only behavior method
+  metadata when resolver method metadata is missing.
 
 ## Current Phase
 

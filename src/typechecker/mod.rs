@@ -1714,9 +1714,11 @@ impl TypeChecker {
 
     fn collect_resolver_behavior_methods(&mut self, symbols: &SymbolTable, name: &str) {
         let Some(symbol) = symbols.lookup(Namespace::Behavior, name) else {
+            self.behaviors.remove(name);
             return;
         };
         let Some(method_types) = symbol.behavior_method_types.as_ref() else {
+            self.behaviors.remove(name);
             return;
         };
 
@@ -9492,6 +9494,33 @@ Mapper: behavior {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             })
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_behavior_methods() {
+        let mut program = parse_program(
+            r#"
+Mapper: behavior {
+    map: (Self, i32) i32
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_method_types_for_test(Namespace::Behavior, "Mapper", None);
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[0] {
+            methods[0].params[1].ty = AstType::Named("Stale".to_string());
+            methods[0].return_type = Some(AstType::Named("AlsoStale".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.behaviors.contains_key("Mapper"),
+            "resolver-backed collection should not keep AST-only behavior methods when resolver method metadata is incomplete"
         );
     }
 
