@@ -1019,6 +1019,8 @@ checked-in docs, tests, and commits only.
   for counts, display payload types, and typed AST payloads.
 - Resolver variant-payload validation now carries display-payload and
   typed-payload message formatting through a validation bundle.
+- Resolver variant-payload validation now owns its resolver diagnostic code
+  mapping instead of constructing those codes at the call site.
 - Resolver variant owner-name validation now carries its diagnostic code and
   message formatting through a validation bundle.
 - Resolver variant-name validation now carries its diagnostic code and message

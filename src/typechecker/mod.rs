@@ -914,6 +914,13 @@ struct VariantPayloadValidation {
 }
 
 impl VariantPayloadValidation {
+    fn resolver_codes() -> Self {
+        Self {
+            display_code: "E0218",
+            typed_code: "E0359",
+        }
+    }
+
     fn display_message(self, name: &str, actual: &str, expected: &str) -> String {
         format!(
             "resolver variant symbol '{name}' has payload type '{actual}', expected '{expected}'"
@@ -8197,10 +8204,7 @@ impl TypeChecker {
             },
             span,
         );
-        let validation = VariantPayloadValidation {
-            display_code: "E0218",
-            typed_code: "E0359",
-        };
+        let validation = VariantPayloadValidation::resolver_codes();
         if symbol.variant_payload_type != expected.typed {
             let actual = optional_ast_type_display(symbol.variant_payload_type.as_ref(), "none");
             let expected = optional_ast_type_display(expected.typed.as_ref(), "none");
@@ -9926,6 +9930,14 @@ Point.get = (self: Point) i32 { return self.x }
             validation.typed_message("Wrap", "i32", "(i32) i32"),
             "resolver variant symbol 'Wrap' has typed payload type 'i32', expected '(i32) i32'"
         );
+    }
+
+    #[test]
+    fn variant_payload_validation_uses_resolver_codes() {
+        let validation = VariantPayloadValidation::resolver_codes();
+
+        assert_eq!(validation.display_code, "E0218");
+        assert_eq!(validation.typed_code, "E0359");
     }
 
     #[test]

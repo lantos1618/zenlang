@@ -989,6 +989,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver variant-payload validation now carries display-payload and
   typed-payload message formatting through a validation bundle, covered by
   `typechecker::tests::variant_payload_validation_formats_messages`.
+- Resolver variant-payload validation now owns its resolver diagnostic code
+  mapping, covered by
+  `typechecker::tests::variant_payload_validation_uses_resolver_codes`.
 - Resolver variant owner-name validation now carries its diagnostic code and
   message formatting through a validation bundle, covered by
   `typechecker::tests::variant_owner_validation_formats_message`.
