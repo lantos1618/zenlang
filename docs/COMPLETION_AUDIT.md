@@ -561,6 +561,9 @@ and do not assume Phase 4 is ready without evidence.
   declaration-order resolver refs when AST-only behavior names are stale, so
   validated resolver behavior associations cannot be shadowed by stale AST names
   during semantic checks.
+  Explicit generic `.implements` target, behavior name, and type-argument
+  restoration together are covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_impl_target_and_name_metadata`.
 - Generic behavior bounds use the same inheritance-aware behavior satisfaction
   check as `.requires`.
 - Inherited generic behavior dispatch is covered by the executable fixture

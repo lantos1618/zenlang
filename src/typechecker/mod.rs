@@ -15624,6 +15624,56 @@ Point.implements(Json<str>) {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_impl_target_and_name_metadata() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock {
+            type_name,
+            behavior,
+            behavior_type_args,
+            ..
+        } = &mut program.declarations[2]
+        {
+            *type_name = "Missing".to_string();
+            *behavior = Some("AlsoMissing".to_string());
+            behavior_type_args[0] = AstType::I32;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.behavior_impls
+                .contains(&("Point".to_string(), "Json_str".to_string())),
+            "resolver metadata should restore the validated Point implements Json<str> association"
+        );
+        assert!(
+            !tc.behavior_impls
+                .contains(&("Missing".to_string(), "AlsoMissing_i32".to_string())),
+            "stale AST-only impl target and behavior metadata should not remain after resolver collection"
+        );
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored impl target and behavior metadata should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_behavior_required_metadata() {
         let mut program = parse_program(
             r#"

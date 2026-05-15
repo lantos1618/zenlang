@@ -445,6 +445,8 @@ checked-in docs, tests, and commits only.
   to declaration-order resolver refs when AST-only behavior names are stale, so
   validated resolver behavior associations cannot be shadowed by stale AST
   names during semantic checks.
+  Explicit generic `.implements` collection now also directly covers stale AST
+  target type names, behavior names, and behavior type arguments together.
 - Resolver-backed behavior association validation now skips AST-only parent,
   impl, and required refs when resolver association metadata is missing, and
   clears stale impl associations before resolver-owned refresh.
