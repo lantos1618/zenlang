@@ -1125,6 +1125,9 @@ checked-in docs, tests, and commits only.
   before resolver metadata restoration.
 - Resolver-backed behavior collection no longer keeps AST-only behavior method
   metadata when resolver method metadata is missing.
+- Resolver-backed behavior collection now seeds only behavior method/default
+  stubs before resolver metadata restoration, so generic names and bounds come
+  from resolver symbols instead of the initial AST collection pass.
 - Resolver-backed behavior collection no longer falls back to AST-only generic
   bounds when resolver bound metadata is missing.
 - Resolver-backed value, struct, and enum collection now defaults missing

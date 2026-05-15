@@ -1930,6 +1930,18 @@ fn behavior_info_from_ast_methods(
     }
 }
 
+fn behavior_info_for_resolver_backed_stub(
+    name: String,
+    methods: &[ast::BehaviorMethod],
+) -> BehaviorInfo {
+    BehaviorInfo {
+        name,
+        type_params: Vec::new(),
+        type_param_bounds: HashMap::new(),
+        methods: methods.to_vec(),
+    }
+}
+
 fn struct_info_from_resolver_fields(
     name: String,
     symbol: &Symbol,
@@ -3204,10 +3216,12 @@ impl TypeChecker {
                 ..
             } = decl
             {
-                self.behaviors.insert(
-                    name.clone(),
-                    behavior_info_from_ast_methods(name.clone(), type_params, methods),
-                );
+                let info = if self.resolver_backed_collection {
+                    behavior_info_for_resolver_backed_stub(name.clone(), methods)
+                } else {
+                    behavior_info_from_ast_methods(name.clone(), type_params, methods)
+                };
+                self.behaviors.insert(name.clone(), info);
             }
         }
     }
@@ -11054,6 +11068,38 @@ Point.get = (self: Point) i32 { return self.x }
             tc.resolver_backed_method_signature("Point", "encode")
                 .map(|info| info.return_type.clone()),
             Some(AstType::Str)
+        );
+    }
+
+    #[test]
+    fn resolver_backed_behavior_collection_defers_generic_metadata_to_resolver() {
+        let program = parse_program(
+            r#"
+Json<T: Json<T>>: behavior {
+    encode: (Self) T {
+        return 1
+    }
+}
+"#,
+        );
+        let mut tc = TypeChecker::new();
+
+        tc.with_resolver_backed_collection(|checker| {
+            checker.collect_declarations(&program.declarations);
+        });
+
+        let behavior = tc.behaviors.get("Json").expect("behavior stub");
+        assert!(
+            behavior.type_params.is_empty(),
+            "resolver-backed behavior collection should not keep AST generic names before resolver metadata"
+        );
+        assert!(
+            behavior.type_param_bounds.is_empty(),
+            "resolver-backed behavior collection should not keep AST generic bounds before resolver metadata"
+        );
+        assert!(
+            behavior.methods[0].default_body.is_some(),
+            "resolver-backed behavior collection should still keep default bodies for later resolver metadata restoration"
         );
     }
 

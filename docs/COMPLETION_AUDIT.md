@@ -853,6 +853,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior method collection also walks resolver-owned behavior
   method metadata in resolver order, so stale AST-only missing behavior methods
   cannot drop required methods from impl conformance checks.
+- Resolver-backed behavior collection now seeds only behavior method/default
+  stubs before resolver metadata restoration, so generic names and bounds come
+  from resolver symbols instead of the initial AST collection pass, covered by
+  `typechecker::tests::resolver_backed_behavior_collection_defers_generic_metadata_to_resolver`.
 - When resolver behavior-method metadata is incomplete and behavior collection
   is removed, default-body type-reference validation skips that behavior instead
   of falling back to stale AST generic parameters, covered by
