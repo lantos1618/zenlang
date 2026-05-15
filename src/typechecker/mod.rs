@@ -2932,41 +2932,12 @@ impl TypeChecker {
         self.collect_ast_behavior_declarations(decls);
         self.validate_ast_behavior_generic_bounds(decls);
         self.validate_ast_behavior_extends(decls);
+        self.validate_ast_type_generic_bounds(decls);
+        self.collect_ast_type_declarations(decls);
 
         for decl in decls {
             match decl {
-                Declaration::Struct {
-                    name,
-                    type_params,
-                    fields,
-                    ..
-                } => {
-                    if !self.resolver_backed_collection {
-                        self.validate_generic_bounds(type_params);
-                    } else {
-                        continue;
-                    }
-                    self.structs.insert(
-                        name.clone(),
-                        struct_info_from_ast_fields(name.clone(), type_params, fields),
-                    );
-                }
-                Declaration::Enum {
-                    name,
-                    type_params,
-                    variants,
-                    ..
-                } => {
-                    if !self.resolver_backed_collection {
-                        self.validate_generic_bounds(type_params);
-                    } else {
-                        continue;
-                    }
-                    self.enums.insert(
-                        name.clone(),
-                        enum_info_from_ast_variants(name.clone(), type_params, variants),
-                    );
-                }
+                Declaration::Struct { .. } | Declaration::Enum { .. } => {}
                 Declaration::Import {
                     names, module_path, ..
                 } => {
@@ -3088,6 +3059,55 @@ impl TypeChecker {
                             self.collect_resolver_backed_impl_method_template(type_name, method);
                         }
                     }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn validate_ast_type_generic_bounds(&mut self, decls: &[Declaration]) {
+        if self.resolver_backed_collection {
+            return;
+        }
+
+        for decl in decls {
+            match decl {
+                Declaration::Struct { type_params, .. } | Declaration::Enum { type_params, .. } => {
+                    self.validate_generic_bounds(type_params);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn collect_ast_type_declarations(&mut self, decls: &[Declaration]) {
+        if self.resolver_backed_collection {
+            return;
+        }
+
+        for decl in decls {
+            match decl {
+                Declaration::Struct {
+                    name,
+                    type_params,
+                    fields,
+                    ..
+                } => {
+                    self.structs.insert(
+                        name.clone(),
+                        struct_info_from_ast_fields(name.clone(), type_params, fields),
+                    );
+                }
+                Declaration::Enum {
+                    name,
+                    type_params,
+                    variants,
+                    ..
+                } => {
+                    self.enums.insert(
+                        name.clone(),
+                        enum_info_from_ast_variants(name.clone(), type_params, variants),
+                    );
                 }
                 _ => {}
             }
@@ -12552,6 +12572,32 @@ Point: { x: i32 = "bad" }
         tc.collect_declarations(&decls);
         assert!(tc.structs.contains_key("Point"));
         assert_eq!(tc.structs["Point"].fields.len(), 2);
+    }
+
+    #[test]
+    fn collect_enum_info() {
+        let mut tc = TypeChecker::new();
+        let decls = vec![Declaration::Enum {
+            name: "OptionI32".into(),
+            type_params: Vec::new(),
+            variants: vec![
+                EnumVariant {
+                    name: "Some".into(),
+                    payload: Some(AstType::I32),
+                    span: Span::dummy(),
+                },
+                EnumVariant {
+                    name: "None".into(),
+                    payload: None,
+                    span: Span::dummy(),
+                },
+            ],
+            public: false,
+            span: Span::dummy(),
+        }];
+        tc.collect_declarations(&decls);
+        assert!(tc.enums.contains_key("OptionI32"));
+        assert_eq!(tc.enums["OptionI32"].variants.len(), 2);
     }
 
     #[test]

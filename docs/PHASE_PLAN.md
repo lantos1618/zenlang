@@ -484,6 +484,8 @@ checked-in docs, tests, and commits only.
   collection loop.
   AST behavior declaration seeding, behavior generic-bound validation, and
   AST-only behavior inheritance validation now also have named helper passes.
+  AST struct/enum generic-bound validation and type declaration seeding now
+  also have named helper passes.
   Resolver-backed semantic validation and final type impl association refresh
   now each have focused helper boundaries matching those named passes.
   The declaration metadata refresh pass also routes callable signatures,
