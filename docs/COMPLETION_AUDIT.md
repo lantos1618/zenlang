@@ -560,6 +560,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed `.implements` conformance checks read validated resolver
   behavior impl refs before method conformance, so stale AST-only impl behavior
   type arguments cannot produce false method signature diagnostics.
+  Restored missing-method diagnostics for stale target type names, behavior
+  names, and behavior type arguments are covered by
+  `typechecker::tests::collect_declarations_with_symbols_reports_resolver_restored_impl_target_and_name`.
 - Resolver-backed `.implements` and `.requires` conformance also falls back to
   declaration-order resolver refs when AST-only behavior names are stale, so
   validated resolver behavior associations cannot be shadowed by stale AST names

@@ -15674,6 +15674,59 @@ Point.implements(Json<str>) {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_reports_resolver_restored_impl_target_and_name() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock {
+            type_name,
+            behavior,
+            behavior_type_args,
+            ..
+        } = &mut program.declarations[2]
+        {
+            *type_name = "Missing".to_string();
+            *behavior = Some("AlsoMissing".to_string());
+            behavior_type_args[0] = AstType::I32;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let messages: Vec<_> = tc
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.message.as_str())
+            .collect();
+        assert!(
+            messages.iter().any(|message| {
+                *message == "type `Point` implementation of `Json_str` is missing required method `encode`"
+            }),
+            "resolver-restored impl metadata should report the validated missing method, got {:?}",
+            messages
+        );
+        assert!(
+            messages
+                .iter()
+                .all(|message| !message.contains("Missing") && !message.contains("AlsoMissing")),
+            "stale AST-only impl names should not leak into diagnostics: {:?}",
+            messages
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_behavior_required_metadata() {
         let mut program = parse_program(
             r#"
