@@ -3367,7 +3367,7 @@ impl TypeChecker {
         for decl in decls {
             match decl {
                 Declaration::Function { name, span, .. } => {
-                    self.collect_resolver_function_declaration_metadata(symbols, name, *span);
+                    self.collect_resolver_function_signature(symbols, name, *span);
                 }
                 Declaration::Method {
                     type_name,
@@ -3375,12 +3375,7 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.collect_resolver_method_declaration_metadata(
-                        symbols,
-                        type_name,
-                        method_name,
-                        *span,
-                    );
+                    self.collect_resolver_method_signature(symbols, type_name, method_name, *span);
                 }
                 Declaration::ImplBlock {
                     type_name,
@@ -3395,25 +3390,6 @@ impl TypeChecker {
                 _ => {}
             }
         }
-    }
-
-    fn collect_resolver_function_declaration_metadata(
-        &mut self,
-        symbols: &SymbolTable,
-        name: &str,
-        span: Span,
-    ) {
-        self.collect_resolver_function_signature(symbols, name, span);
-    }
-
-    fn collect_resolver_method_declaration_metadata(
-        &mut self,
-        symbols: &SymbolTable,
-        type_name: &str,
-        method_name: &str,
-        span: Span,
-    ) {
-        self.collect_resolver_method_signature(symbols, type_name, method_name, span);
     }
 
     fn collect_resolver_type_impl_declaration_metadata(

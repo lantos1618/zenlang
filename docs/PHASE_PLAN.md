@@ -546,7 +546,8 @@ checked-in docs, tests, and commits only.
   final impl association refresh into named passes instead of one mixed
   collection loop.
   Callable resolver declaration metadata now has a focused traversal for
-  functions, top-level methods, and non-behavior impl methods.
+  functions, top-level methods, and non-behavior impl methods, and the
+  function/method arms call the shared signature restoration helpers directly.
   Type resolver declaration metadata now has a focused traversal for structs
   and enums.
   Behavior resolver declaration metadata now has a focused traversal for
