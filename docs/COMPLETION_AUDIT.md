@@ -1124,6 +1124,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver module behavior-association absence validation now owns its resolver
   diagnostic code mapping, covered by
   `typechecker::tests::behavior_association_absence_validation_uses_module_resolver_codes`.
+- Resolver import behavior-association absence validation now owns its resolver
+  diagnostic code mapping, covered by
+  `typechecker::tests::behavior_association_absence_validation_uses_import_resolver_codes`.
 - Resolver absent behavior-declaration metadata validation now shares one
   helper across module, import, local, variant, and value symbols.
 - Resolver absent behavior-declaration metadata validation now lets the
