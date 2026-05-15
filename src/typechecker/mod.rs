@@ -6298,9 +6298,7 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    for type_arg in behavior_type_args {
-                        self.validate_self_type_ref(type_arg, *span, false);
-                    }
+                    self.validate_self_type_refs(behavior_type_args, *span, false);
                     for method in methods {
                         if let Declaration::Function {
                             params,
@@ -6325,18 +6323,14 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    for type_arg in behavior_type_args {
-                        self.validate_self_type_ref(type_arg, *span, false);
-                    }
+                    self.validate_self_type_refs(behavior_type_args, *span, false);
                 }
                 Declaration::BehaviorExtends {
                     parent_type_args,
                     span,
                     ..
                 } => {
-                    for type_arg in parent_type_args {
-                        self.validate_self_type_ref(type_arg, *span, false);
-                    }
+                    self.validate_self_type_refs(parent_type_args, *span, false);
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
                     self.validate_self_type_expr(expr, false);
@@ -6364,6 +6358,17 @@ impl TypeChecker {
     fn validate_self_type_params(&mut self, params: &[Param], allow_self_type: bool) {
         for param in params {
             self.validate_self_type_ref(&param.ty, param.span, allow_self_type);
+        }
+    }
+
+    fn validate_self_type_refs(
+        &mut self,
+        ast_types: &[AstType],
+        span: Span,
+        allow_self_type: bool,
+    ) {
+        for ast_type in ast_types {
+            self.validate_self_type_ref(ast_type, span, allow_self_type);
         }
     }
 
@@ -6645,6 +6650,17 @@ impl TypeChecker {
             span,
             false,
         );
+    }
+
+    fn validate_generic_type_arg_refs_allow_unknowns(&mut self, type_args: &[AstType], span: Span) {
+        let scoped_type_params = HashSet::new();
+        for type_arg in type_args {
+            self.validate_generic_type_ref_bounds_allow_unknowns(
+                type_arg,
+                &scoped_type_params,
+                span,
+            );
+        }
     }
 
     fn validate_generic_type_ref_bounds_with_unknowns(
@@ -7278,13 +7294,7 @@ impl TypeChecker {
                             );
                         }
                     }
-                    for type_arg in behavior_type_args {
-                        self.validate_generic_type_ref_bounds_allow_unknowns(
-                            type_arg,
-                            &HashSet::new(),
-                            *span,
-                        );
-                    }
+                    self.validate_generic_type_arg_refs_allow_unknowns(behavior_type_args, *span);
                     for method in methods {
                         if let Declaration::Function {
                             name,
@@ -7331,13 +7341,7 @@ impl TypeChecker {
                             *span,
                         );
                     }
-                    for type_arg in behavior_type_args {
-                        self.validate_generic_type_ref_bounds_allow_unknowns(
-                            type_arg,
-                            &HashSet::new(),
-                            *span,
-                        );
-                    }
+                    self.validate_generic_type_arg_refs_allow_unknowns(behavior_type_args, *span);
                 }
                 Declaration::BehaviorExtends {
                     behavior,
@@ -7347,13 +7351,7 @@ impl TypeChecker {
                 } => {
                     self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
                     self.require_resolver_symbol(symbols, Namespace::Behavior, parent, *span);
-                    for type_arg in parent_type_args {
-                        self.validate_generic_type_ref_bounds_allow_unknowns(
-                            type_arg,
-                            &HashSet::new(),
-                            *span,
-                        );
-                    }
+                    self.validate_generic_type_arg_refs_allow_unknowns(parent_type_args, *span);
                     if let Some(symbol) = symbols.lookup(Namespace::Behavior, behavior) {
                         self.validate_resolver_behavior_parent_names(
                             symbol,

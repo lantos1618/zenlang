@@ -118,9 +118,15 @@ checked-in docs, tests, and commits only.
 - `Self` type validation now shares one callable signature/body helper across
   functions, top-level methods, behavior default methods, and `Type.impl`
   methods while preserving each caller's existing `Self` allowance.
+- `Self` type validation now also shares behavior-association type-argument
+  validation across impl, requires, and extends declarations instead of walking
+  each association form inline.
 - Resolver-symbol validation now shares one callable local-symbol helper across
   functions, top-level methods, behavior default methods, and `Type.impl`
   methods while leaving declaration symbol checks at each call site.
+- Resolver-symbol validation now shares generic behavior-association
+  type-argument validation across impl, requires, and extends declarations,
+  keeping unknown-tolerant resolver handoff checks on one path.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.
