@@ -1632,8 +1632,16 @@ impl Resolver {
                         *span,
                     ));
                 }
+                let behavior_type_params = self.behavior_type_params_for_ref(table, behavior);
                 for type_arg in parent_type_args {
-                    self.validate_type_ref(table, &[], type_arg, *span, false, diagnostics);
+                    self.validate_type_ref(
+                        table,
+                        &behavior_type_params,
+                        type_arg,
+                        *span,
+                        false,
+                        diagnostics,
+                    );
                 }
                 if behavior_known && parent_known {
                     let parent_display = behavior_ref_display(parent, parent_type_args);
@@ -1841,6 +1849,24 @@ impl Resolver {
     fn is_known_behavior_name(&self, table: &SymbolTable, name: &str) -> bool {
         table.lookup(Namespace::Behavior, name).is_some()
             || table.lookup(Namespace::Import, name).is_some()
+    }
+
+    fn behavior_type_params_for_ref(&self, table: &SymbolTable, behavior: &str) -> Vec<TypeParam> {
+        table
+            .lookup(Namespace::Behavior, behavior)
+            .and_then(|symbol| symbol.type_parameter_names.as_ref())
+            .map(|names| {
+                names
+                    .iter()
+                    .map(|name| TypeParam {
+                        name: name.clone(),
+                        constraint: None,
+                        constraint_type_args: Vec::new(),
+                        span: Span::dummy(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 
     fn validate_expr_refs(

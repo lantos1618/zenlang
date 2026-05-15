@@ -400,6 +400,9 @@ checked-in docs, tests, and commits only.
   `PrettyJson.extends(Json<str>)`, now has parser, resolver metadata,
   typechecker substitution, and executable coverage through
   `tests/zen/behavior_generic_parent_inheritance.zen`.
+- Resolver validation for `.extends(...)` parent type arguments now scopes the
+  child behavior's generic parameters, so generic behavior inheritance such as
+  `Pretty<T>.extends(Serializable<T>)` resolves before typechecker handoff.
 - Resolver behavior symbols now carry parent behavior metadata, and typechecker
   setup rejects missing or extra resolver parent-edge metadata. Specialized
   parent references such as `Json<str>` are included in this resolver handoff
