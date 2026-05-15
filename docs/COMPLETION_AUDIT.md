@@ -236,6 +236,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver expected variant-symbol construction now pairs owner, visibility,
   and payload expectations through one constructor, covered by
   `typechecker::tests::expected_variant_symbol_builds_owner_visibility_and_payload_together`.
+- Resolver expected import-symbol construction now pairs import source
+  expectations and default visibility through one constructor, covered by
+  `typechecker::tests::expected_import_symbol_builds_source_and_visibility_together`.
 - Resolver expected behavior association construction now pairs display names
   and typed refs through one constructor, covered by
   `typechecker::tests::expected_behavior_edge_builds_display_and_metadata_together`.

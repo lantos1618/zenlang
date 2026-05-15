@@ -188,6 +188,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver expected variant-symbol construction now pairs owner,
   visibility, and payload expectations through one expected-variant
   constructor.
+- Typechecker resolver expected import-symbol construction now pairs import
+  source expectations and default visibility through one expected-import
+  constructor.
 - Typechecker resolver behavior-ref validation now separates role labels from
   per-check diagnostic code mappings, avoiding duplicated label bundles across
   contains and full-list checks.

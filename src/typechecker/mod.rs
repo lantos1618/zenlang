@@ -476,6 +476,15 @@ struct ExpectedImportSymbol {
     is_public: bool,
 }
 
+impl ExpectedImportSymbol {
+    fn new(source: &str) -> Self {
+        Self {
+            source: source.to_string(),
+            is_public: false,
+        }
+    }
+}
+
 struct ExpectedModuleSymbol {
     name: String,
     source: Option<String>,
@@ -9381,10 +9390,7 @@ fn expected_variant_symbol(
 }
 
 fn expected_import_symbol(source: &str) -> ExpectedImportSymbol {
-    ExpectedImportSymbol {
-        source: source.to_string(),
-        is_public: false,
-    }
+    ExpectedImportSymbol::new(source)
 }
 
 fn expected_module_symbol(name: &str) -> ExpectedModuleSymbol {
@@ -11271,6 +11277,14 @@ Point.requires(Json<str>)
                 ret: Box::new(AstType::Bool),
             })
         );
+    }
+
+    #[test]
+    fn expected_import_symbol_builds_source_and_visibility_together() {
+        let symbol = ExpectedImportSymbol::new("std.io");
+
+        assert_eq!(symbol.source, "std.io");
+        assert!(!symbol.is_public);
     }
 
     #[test]
