@@ -1046,6 +1046,9 @@ checked-in docs, tests, and commits only.
   the shared call-signature checker.
 - Explicit generic function and method type-argument arity failures now stop
   before specialization emits misleading follow-up inference diagnostics.
+- Invalid explicit generic function and method type-argument arity now also
+  skips dependent signature checks so bare omitted type parameters do not
+  cascade into argument or return mismatches.
 
 ## Current Phase
 

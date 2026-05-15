@@ -1005,6 +1005,12 @@ and do not assume Phase 4 is ready without evidence.
   `generic_diagnostics::generic_function_explicit_type_arg_arity_does_not_emit_inference_followup`
   and
   `generic_diagnostics::generic_method_explicit_type_arg_arity_does_not_emit_inference_followup`.
+- Invalid explicit generic function and method type-argument arity now also
+  skips dependent signature checks so bare omitted type parameters do not
+  cascade into argument or return mismatches, covered by
+  `generic_diagnostics::generic_function_explicit_type_arg_arity_does_not_emit_argument_followup`
+  and
+  `generic_diagnostics::generic_method_explicit_type_arg_arity_does_not_emit_argument_followup`.
 
 ## Unresolved Gaps
 
