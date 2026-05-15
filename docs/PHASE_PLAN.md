@@ -1096,6 +1096,8 @@ checked-in docs, tests, and commits only.
   and AST default bodies through one metadata helper.
 - Resolver-backed behavior parent collection now restores parent refs and
   computed behavior keys through one metadata helper.
+- Resolver-backed type implementation collection now restores impl association
+  keys from resolver behavior metadata through one helper.
 - Resolver behavior-association validation now builds expected display names
   and typed refs in the same AST pass for impl/requires and parent edges.
 - Resolver behavior-association expectation storage now uses a shared edge

@@ -4371,8 +4371,8 @@ impl TypeChecker {
             return;
         };
 
-        for behavior in impl_refs {
-            self.insert_behavior_impl_ref(name, &behavior.name, &behavior.type_args);
+        for implementation in self.behavior_impl_refs_from_metadata(name, impl_refs) {
+            self.behavior_impls.insert(implementation);
         }
     }
 
@@ -4594,6 +4594,22 @@ impl TypeChecker {
         let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
         self.behavior_impls
             .insert((type_name.to_string(), behavior_key));
+    }
+
+    fn behavior_impl_refs_from_metadata(
+        &self,
+        type_name: &str,
+        metadata: &[BehaviorRefMetadata],
+    ) -> Vec<(String, String)> {
+        metadata
+            .iter()
+            .map(|behavior| {
+                (
+                    type_name.to_string(),
+                    self.behavior_reference_key(&behavior.name, &behavior.type_args),
+                )
+            })
+            .collect()
     }
 
     fn behavior_type_arg_substitutions(
@@ -11335,6 +11351,29 @@ Second: Wrap(str)
         assert_eq!(refs[1].behavior, "Debug");
         assert!(refs[1].type_args.is_empty());
         assert_eq!(refs[1].key, "Debug");
+    }
+
+    #[test]
+    fn behavior_impl_refs_from_metadata_restores_type_and_behavior_keys() {
+        let tc = TypeChecker::new();
+        let metadata = vec![
+            BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![AstType::Str],
+            },
+            BehaviorRefMetadata {
+                name: "Debug".to_string(),
+                type_args: vec![],
+            },
+        ];
+
+        assert_eq!(
+            tc.behavior_impl_refs_from_metadata("Point", &metadata),
+            vec![
+                ("Point".to_string(), "Json_str".to_string()),
+                ("Point".to_string(), "Debug".to_string()),
+            ]
+        );
     }
 
     #[test]

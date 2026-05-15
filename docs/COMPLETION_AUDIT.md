@@ -1314,6 +1314,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior parent collection now restores parent refs and
   computed behavior keys through one metadata helper, covered by
   `typechecker::tests::behavior_parent_refs_from_metadata_restores_keys_and_type_args`.
+- Resolver-backed type implementation collection now restores impl association
+  keys from resolver behavior metadata through one helper, covered by
+  `typechecker::tests::behavior_impl_refs_from_metadata_restores_type_and_behavior_keys`.
 - Resolver behavior-association validation now derives display-name and typed
   ref expectations together, avoiding duplicate AST scans for the same edges.
 - Resolver behavior-association expectation storage now uses one shared edge
