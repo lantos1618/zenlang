@@ -854,6 +854,8 @@ and do not assume Phase 4 is ready without evidence.
   shape used by the resolver metadata validation paths.
 - Resolver extra-symbol validation now shares one diagnostic helper across
   declaration/import/module and local symbol checks.
+- Resolver missing-symbol validation now shares one diagnostic helper across
+  declaration/import/module/type/behavior/variant/value and local checks.
 
 ## Unresolved Gaps
 

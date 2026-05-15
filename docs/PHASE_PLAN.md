@@ -931,6 +931,8 @@ checked-in docs, tests, and commits only.
   shape used by the resolver metadata validation paths.
 - Resolver extra-symbol validation now shares one diagnostic helper across
   declaration/import/module and local symbol checks.
+- Resolver missing-symbol validation now shares one diagnostic helper across
+  declaration/import/module/type/behavior/variant/value and local checks.
 
 ## Current Phase
 

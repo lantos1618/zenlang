@@ -6096,15 +6096,7 @@ impl TypeChecker {
                 && symbols.lookup(Namespace::Import, name).is_some();
 
         if !found {
-            self.diagnostics.push(Diagnostic::error(
-                "E0210",
-                format!(
-                    "resolver symbol table missing {} symbol '{}'",
-                    namespace.diagnostic_name(),
-                    name
-                ),
-                span,
-            ));
+            self.validate_missing_resolver_symbol(namespace.diagnostic_name(), name, "E0210", span);
         }
     }
 
@@ -6582,11 +6574,7 @@ impl TypeChecker {
     ) {
         let Some(symbol) = symbols.lookup_in_scope(Namespace::Local, name, expected.scope_id)
         else {
-            self.diagnostics.push(Diagnostic::error(
-                "E0228",
-                format!("resolver symbol table missing local symbol '{name}'"),
-                span,
-            ));
+            self.validate_missing_resolver_symbol("local", name, "E0228", span);
             return;
         };
 
@@ -6974,6 +6962,20 @@ impl TypeChecker {
         self.diagnostics.push(Diagnostic::error(
             code,
             format!("resolver symbol table has extra {symbol_kind} symbol '{name}'"),
+            span,
+        ));
+    }
+
+    fn validate_missing_resolver_symbol(
+        &mut self,
+        symbol_kind: &str,
+        name: &str,
+        code: &'static str,
+        span: Span,
+    ) {
+        self.diagnostics.push(Diagnostic::error(
+            code,
+            format!("resolver symbol table missing {symbol_kind} symbol '{name}'"),
             span,
         ));
     }
