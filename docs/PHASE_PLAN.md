@@ -106,6 +106,9 @@ checked-in docs, tests, and commits only.
 - Behavior declaration collection now dispatches each behavior once and passes
   extracted signature fields into AST signatures or resolver-backed stubs,
   avoiding whole-list handoff inside behavior setup.
+- AST behavior-extends validation now records explicit extends-validation
+  tasks before replaying checks, keeping declaration filtering out of the
+  validation pass while preserving cycle and coherence ordering.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.

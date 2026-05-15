@@ -121,6 +121,13 @@ struct BehaviorRequiresValidationTask<'a> {
     span: Span,
 }
 
+struct BehaviorExtendsValidationTask<'a> {
+    behavior: &'a str,
+    parent: &'a str,
+    parent_type_args: &'a [AstType],
+    span: Span,
+}
+
 struct ResolverTypeBehaviorRefreshTask {
     restored_name: String,
 }
@@ -3374,6 +3381,7 @@ impl TypeChecker {
     }
 
     fn validate_ast_behavior_extends_declarations(&mut self, decls: &[Declaration]) {
+        let mut tasks = Vec::new();
         for decl in decls {
             if let Declaration::BehaviorExtends {
                 behavior,
@@ -3382,8 +3390,21 @@ impl TypeChecker {
                 span,
             } = decl
             {
-                self.check_behavior_extends(behavior, parent, parent_type_args, *span);
+                tasks.push(BehaviorExtendsValidationTask {
+                    behavior,
+                    parent,
+                    parent_type_args,
+                    span: *span,
+                });
             }
+        }
+        for task in tasks {
+            self.check_behavior_extends(
+                task.behavior,
+                task.parent,
+                task.parent_type_args,
+                task.span,
+            );
         }
         self.validate_behavior_extends_cycles();
         self.validate_behavior_method_coherence();

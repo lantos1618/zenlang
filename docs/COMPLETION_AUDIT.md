@@ -179,6 +179,9 @@ and do not assume Phase 4 is ready without evidence.
 - Behavior declaration collection now dispatches each behavior once and sends
   extracted signature fields into AST signatures or resolver-backed stubs,
   preserving existing behavior metadata coverage without whole-list handoff.
+- AST behavior-extends validation now records explicit extends-validation
+  tasks before replaying checks, preserving cycle and coherence validation
+  order without passing the whole declaration list into the check loop.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate
