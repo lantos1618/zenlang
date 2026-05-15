@@ -788,6 +788,11 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior method collection rebuilds behavior parameters from
   resolver-owned parameter names and types, so stale AST-only missing or extra
   parameters cannot distort impl conformance checks.
+  Stale AST behavior method parameter names and parameter ordering are covered
+  by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_method_parameter_names`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_ignores_stale_behavior_method_parameter_order`.
 - Resolver-backed behavior method collection also walks resolver-owned behavior
   method metadata in resolver order, so stale AST-only missing behavior methods
   cannot drop required methods from impl conformance checks.

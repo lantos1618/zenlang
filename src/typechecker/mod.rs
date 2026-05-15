@@ -14678,6 +14678,76 @@ Point.implements(Mapper) {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_method_parameter_names() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (value: Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
+            methods[0].params[0].name = "stale".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.behaviors.get("Json").expect("behavior info");
+        assert_eq!(info.methods[0].params[0].name, "value");
+        assert_eq!(info.methods[0].params[0].ty, AstType::SelfType);
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior method parameter names should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_ignores_stale_behavior_method_parameter_order() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Mapper: behavior {
+    map: (value: Self, input: i32) str
+}
+
+Point.implements(Mapper) {
+    map = (value: Point, input: i32) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
+            methods[0].params.swap(0, 1);
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.behaviors.get("Mapper").expect("behavior info");
+        assert_eq!(info.methods[0].params[0].name, "value");
+        assert_eq!(info.methods[0].params[1].name, "input");
+        assert_eq!(info.methods[0].params[0].ty, AstType::SelfType);
+        assert_eq!(info.methods[0].params[1].ty, AstType::I32);
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior method parameter order should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_behavior_method_count() {
         let mut program = parse_program(
             r#"

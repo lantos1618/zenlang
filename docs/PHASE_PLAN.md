@@ -113,6 +113,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior method collection now rebuilds behavior parameters
   from resolver-owned parameter names and types, so stale AST-only missing or
   extra parameters cannot distort impl conformance checks.
+  Direct coverage now includes stale AST behavior method parameter names and
+  stale parameter ordering.
 - Resolver-backed behavior method collection now also walks resolver-owned
   behavior method metadata in resolver order, so stale AST-only missing behavior
   methods cannot drop required methods from impl conformance checks.
