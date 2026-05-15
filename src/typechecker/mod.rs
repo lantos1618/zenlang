@@ -11051,6 +11051,52 @@ Point.get = (self: Point) i32 { return self.x }
     }
 
     #[test]
+    fn resolver_behavior_ref_for_selects_impl_and_required_queues_by_role() {
+        let mut tc = TypeChecker::new();
+        tc.resolver_backed_collection = true;
+        tc.resolver_behavior_impl_refs.insert(
+            "Point".to_string(),
+            VecDeque::from([BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![AstType::I32],
+            }]),
+        );
+        tc.resolver_behavior_required_refs.insert(
+            "Point".to_string(),
+            VecDeque::from([BehaviorRefMetadata {
+                name: "Debug".to_string(),
+                type_args: vec![],
+            }]),
+        );
+
+        assert_eq!(
+            tc.resolver_behavior_ref_for(BehaviorRefRole::Impl, "Point", "Json")
+                .map(|reference| reference.name),
+            Some("Json".to_string())
+        );
+        assert_eq!(
+            tc.resolver_behavior_ref_for(BehaviorRefRole::Required, "Point", "Debug")
+                .map(|reference| reference.name),
+            Some("Debug".to_string())
+        );
+        assert!(tc
+            .resolver_behavior_ref_for(BehaviorRefRole::Parent, "Point", "Json")
+            .is_none());
+
+        tc.resolver_behavior_impl_refs.insert(
+            "Point".to_string(),
+            VecDeque::from([BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![],
+            }]),
+        );
+        tc.resolver_backed_collection = false;
+        assert!(tc
+            .resolver_behavior_ref_for(BehaviorRefRole::Impl, "Point", "Json")
+            .is_none());
+    }
+
+    #[test]
     fn resolver_behavior_ref_queue_selection_prefers_exact_then_front() {
         let refs = VecDeque::from(vec![
             BehaviorRefMetadata {

@@ -1082,7 +1082,7 @@ checked-in docs, tests, and commits only.
 - Resolver behavior-association collection now shares resolver behavior-ref
   symbol lookup across parent, impl, and requires handoff paths, and
   resolver-backed impl/requires semantic checks pop restored refs through one
-  role-selected helper.
+  role-selected helper, covered by focused unit coverage.
 - Resolver behavior-association validation now builds expected display names
   and typed refs in the same AST pass for impl/requires and parent edges.
 - Resolver behavior-association expectation storage now uses a shared edge

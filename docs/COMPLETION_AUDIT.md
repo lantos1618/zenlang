@@ -1292,7 +1292,8 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-association collection now uses one resolver behavior-ref
   accessor for behavior parent refs, type impl refs, and type requires refs;
   resolver-backed impl/requires semantic checks also pop restored refs through
-  one role-selected helper.
+  one role-selected helper, covered by
+  `typechecker::tests::resolver_behavior_ref_for_selects_impl_and_required_queues_by_role`.
 - Resolver behavior-association validation now derives display-name and typed
   ref expectations together, avoiding duplicate AST scans for the same edges.
 - Resolver behavior-association expectation storage now uses one shared edge
