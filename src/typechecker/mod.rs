@@ -4065,7 +4065,7 @@ impl TypeChecker {
                     ) else {
                         continue;
                     };
-                    self.validate_resolver_field_types(
+                    self.validate_resolver_fields(
                         symbol,
                         Namespace::Type,
                         name,
@@ -6613,7 +6613,7 @@ impl TypeChecker {
         }
     }
 
-    fn validate_resolver_field_types(
+    fn validate_resolver_fields(
         &mut self,
         symbol: &crate::resolver::Symbol,
         namespace: Namespace,

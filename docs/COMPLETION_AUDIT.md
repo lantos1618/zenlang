@@ -199,8 +199,8 @@ and do not assume Phase 4 is ready without evidence.
   expectation and validation paths for value and type-like symbols, keeping
   generic metadata handoff checks aligned.
 - Typechecker resolver validation now derives struct field count, display
-  metadata, and typed field metadata from one shared expectation pass, keeping
-  resolver field handoff checks aligned.
+  metadata, and typed field metadata from one shared field expectation and
+  validation path, keeping resolver field handoff checks aligned.
 - Typechecker resolver validation now derives enum variant payload count,
   display type, and typed payload metadata from one shared expectation pass,
   keeping resolver variant handoff checks aligned.
