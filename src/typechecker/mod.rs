@@ -663,14 +663,14 @@ struct BehaviorRefActual<'a> {
     refs: Option<&'a [BehaviorRefMetadata]>,
 }
 
-struct ExpectedBehaviorRef {
+struct ExpectedBehaviorEdge {
     display: String,
     metadata: BehaviorRefMetadata,
 }
 
 #[derive(Default)]
 struct ExpectedBehaviorEdges {
-    edges: HashMap<String, Vec<ExpectedBehaviorRef>>,
+    edges: HashMap<String, Vec<ExpectedBehaviorEdge>>,
 }
 
 impl ExpectedBehaviorEdges {
@@ -678,7 +678,7 @@ impl ExpectedBehaviorEdges {
         self.edges
             .entry(owner.to_string())
             .or_default()
-            .push(ExpectedBehaviorRef {
+            .push(ExpectedBehaviorEdge {
                 display: behavior_ref_display(behavior, type_args),
                 metadata: BehaviorRefMetadata {
                     name: behavior.to_string(),
@@ -687,7 +687,7 @@ impl ExpectedBehaviorEdges {
             });
     }
 
-    fn edges_for(&self, owner: &str) -> &[ExpectedBehaviorRef] {
+    fn edges_for(&self, owner: &str) -> &[ExpectedBehaviorEdge] {
         self.edges.get(owner).map(Vec::as_slice).unwrap_or(&[])
     }
 }
@@ -7149,7 +7149,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected: ExpectedBehaviorRef,
+        expected: ExpectedBehaviorEdge,
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_contains(
@@ -7174,7 +7174,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected: &[ExpectedBehaviorRef],
+        expected: &[ExpectedBehaviorEdge],
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
@@ -7199,7 +7199,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected: ExpectedBehaviorRef,
+        expected: ExpectedBehaviorEdge,
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_contains(
@@ -7224,7 +7224,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected: &[ExpectedBehaviorRef],
+        expected: &[ExpectedBehaviorEdge],
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
@@ -7249,7 +7249,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected: ExpectedBehaviorRef,
+        expected: ExpectedBehaviorEdge,
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_contains(
@@ -7274,7 +7274,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected: &[ExpectedBehaviorRef],
+        expected: &[ExpectedBehaviorEdge],
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
@@ -7300,7 +7300,7 @@ impl TypeChecker {
         validation: BehaviorRefValidation,
         name: &str,
         actual: BehaviorRefActual<'_>,
-        expected: ExpectedBehaviorRef,
+        expected: ExpectedBehaviorEdge,
         span: Span,
     ) {
         if !actual
@@ -7340,7 +7340,7 @@ impl TypeChecker {
         validation: BehaviorRefValidation,
         name: &str,
         actual: BehaviorRefActual<'_>,
-        expected: &[ExpectedBehaviorRef],
+        expected: &[ExpectedBehaviorEdge],
         span: Span,
     ) {
         let expected_names: Vec<_> = expected.iter().map(|edge| edge.display.clone()).collect();
@@ -7940,8 +7940,8 @@ fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAss
     expected
 }
 
-fn expected_behavior_ref(behavior: &str, type_args: &[AstType]) -> ExpectedBehaviorRef {
-    ExpectedBehaviorRef {
+fn expected_behavior_ref(behavior: &str, type_args: &[AstType]) -> ExpectedBehaviorEdge {
+    ExpectedBehaviorEdge {
         display: behavior_ref_display(behavior, type_args),
         metadata: BehaviorRefMetadata {
             name: behavior.to_string(),
