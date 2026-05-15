@@ -3504,7 +3504,7 @@ impl TypeChecker {
         self.collect_resolver_behavior_impl_metadata(&tasks.behavior_impl_blocks, symbols);
         self.validate_resolver_collected_declaration_semantics(decls, symbols);
         self.clear_resolver_behavior_ref_state();
-        self.refresh_resolver_type_behavior_impls(decls, symbols);
+        self.refresh_resolver_type_behavior_impls(&tasks.types, symbols);
     }
 
     fn collect_resolver_declaration_metadata_tasks(
@@ -3761,10 +3761,10 @@ impl TypeChecker {
 
     fn refresh_resolver_type_behavior_impls(
         &mut self,
-        decls: &[Declaration],
+        type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
         symbols: &SymbolTable,
     ) {
-        for task in self.resolver_type_behavior_refresh_tasks(decls, symbols) {
+        for task in self.resolver_type_behavior_refresh_tasks(type_tasks, symbols) {
             self.collect_resolver_type_behavior_impls(symbols, &task.restored_name);
         }
     }
@@ -3802,18 +3802,18 @@ impl TypeChecker {
 
     fn resolver_type_behavior_refresh_tasks(
         &self,
-        decls: &[Declaration],
+        type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
         symbols: &SymbolTable,
     ) -> Vec<ResolverTypeBehaviorRefreshTask> {
         let mut tasks = Vec::new();
-        for decl in decls {
-            match decl {
-                Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. } => {
+        for type_task in type_tasks {
+            match type_task {
+                ResolverTypeDeclarationMetadataTask::Struct { name, span, .. }
+                | ResolverTypeDeclarationMetadataTask::Enum { name, span } => {
                     let restored_name =
                         Self::resolver_symbol_name_for(symbols, Namespace::Type, name, *span);
                     tasks.push(ResolverTypeBehaviorRefreshTask { restored_name });
                 }
-                _ => {}
             }
         }
         tasks
@@ -13214,6 +13214,9 @@ main = () i32 { return 0 }
         );
 
         let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
 
         assert_eq!(tasks.types.len(), 2);
         assert_eq!(tasks.behaviors.len(), 1);
@@ -13224,6 +13227,12 @@ main = () i32 { return 0 }
         assert_eq!(behavior_impl.ast_type_name, "Point");
         assert_eq!(behavior_impl.behavior, "Json");
         assert_eq!(behavior_impl.methods.len(), 1);
+
+        let tc = TypeChecker::new();
+        let refresh_tasks = tc.resolver_type_behavior_refresh_tasks(&tasks.types, &symbols);
+        assert_eq!(refresh_tasks.len(), 2);
+        assert_eq!(refresh_tasks[0].restored_name, "Point");
+        assert_eq!(refresh_tasks[1].restored_name, "Option");
     }
 
     #[test]

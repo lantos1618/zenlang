@@ -1630,8 +1630,9 @@ checked-in docs, tests, and commits only.
   preserving variant-specific resolver diagnostics.
 - Resolver declaration metadata task collection now gathers callable, type,
   behavior, and behavior-impl block tasks in one declaration pass before
-  replaying the existing resolver-backed collection order, reducing another
-  duplicate declaration scan.
+  replaying the existing resolver-backed collection order. Type behavior-ref
+  refresh now reuses the collected type tasks, reducing another duplicate
+  declaration scan.
 
 ## Current Phase
 
