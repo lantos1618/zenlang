@@ -4603,16 +4603,14 @@ impl TypeChecker {
             ),
             (symbol.is_mutable.is_some(), "E0345", "mutability"),
         ] {
-            if present {
-                self.diagnostics.push(Diagnostic::error(
-                    code,
-                    format!(
-                        "resolver module symbol '{}' has {label} metadata, expected none",
-                        expected.name
-                    ),
-                    span,
-                ));
-            }
+            self.validate_resolver_absent_metadata_entry(
+                "module",
+                &expected.name,
+                present,
+                code,
+                label,
+                span,
+            );
         }
     }
 
@@ -5925,13 +5923,9 @@ impl TypeChecker {
             ),
             (symbol.is_mutable.is_some(), "E0344", "mutability"),
         ] {
-            if present {
-                self.diagnostics.push(Diagnostic::error(
-                    code,
-                    format!("resolver import symbol '{name}' has {label} metadata, expected none"),
-                    span,
-                ));
-            }
+            self.validate_resolver_absent_metadata_entry(
+                "import", name, present, code, label, span,
+            );
         }
     }
 
@@ -6410,13 +6404,7 @@ impl TypeChecker {
                 "typed behavior requires",
             ),
         ] {
-            if present {
-                self.diagnostics.push(Diagnostic::error(
-                    code,
-                    format!("resolver local symbol '{name}' has {label} metadata, expected none"),
-                    span,
-                ));
-            }
+            self.validate_resolver_absent_metadata_entry("local", name, present, code, label, span);
         }
     }
 
@@ -6577,6 +6565,26 @@ impl TypeChecker {
                 validation.return_type_code,
                 format!(
                     "resolver {symbol_kind} symbol '{name}' has return type metadata, expected none"
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn validate_resolver_absent_metadata_entry(
+        &mut self,
+        symbol_kind: &str,
+        name: &str,
+        present: bool,
+        code: &'static str,
+        label: &'static str,
+        span: Span,
+    ) {
+        if present {
+            self.diagnostics.push(Diagnostic::error(
+                code,
+                format!(
+                    "resolver {symbol_kind} symbol '{name}' has {label} metadata, expected none"
                 ),
                 span,
             ));

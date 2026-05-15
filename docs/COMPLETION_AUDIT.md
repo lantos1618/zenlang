@@ -223,6 +223,9 @@ and do not assume Phase 4 is ready without evidence.
   and visibility expectations through one expected local-symbol object.
 - Typechecker resolver validation now shares absent value-signature metadata
   checks for non-value resolver symbols while preserving per-kind diagnostics.
+- Typechecker resolver validation now shares the remaining absent metadata
+  emission path for module, import, and local resolver symbols while keeping
+  per-kind diagnostic code tables local to each validator.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, keeping
