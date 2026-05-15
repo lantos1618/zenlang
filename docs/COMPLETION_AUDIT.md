@@ -761,6 +761,11 @@ and do not assume Phase 4 is ready without evidence.
   from stale AST parameters with matching names in different positions, covered
   by
   `typechecker::tests::collect_declarations_with_symbols_ignores_stale_generic_template_param_names_for_mutability`.
+- Top-level generic method template return presence and parameter counts are
+  restored from resolver metadata, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_generic_method_template_return_presence`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_generic_method_template_parameter_count`.
 - Resolver-backed generic `Type.impl` method template collection preserves
   function-typed parameter/return metadata and behavior-bound metadata from
   resolver symbols instead of stale AST-only generic signatures, covered by

@@ -13870,6 +13870,66 @@ Box.apply<U: Json<U>> = (self: Box, callback: (U) U) (U) U {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_uses_resolver_generic_method_template_return_presence() {
+        let mut program = parse_program(
+            r#"
+Box: { value: i32 }
+Box.keep<T> = (self: Box, value: T) T {
+    return value
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Method { return_type, .. } = &mut program.declarations[1] {
+            *return_type = None;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc
+            .generic_methods
+            .get("Box.keep")
+            .expect("generic method template");
+        assert_eq!(template.return_type, Some(AstType::Named("T".to_string())));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_generic_method_template_parameter_count() {
+        let mut program = parse_program(
+            r#"
+Box: { value: i32 }
+Box.choose<T> = (self: Box, left: T, right: T) T {
+    return left
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Method { params, .. } = &mut program.declarations[1] {
+            params.pop();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc
+            .generic_methods
+            .get("Box.choose")
+            .expect("generic method template");
+        assert_eq!(template.params.len(), 3);
+        assert_eq!(template.params[0].name, "self");
+        assert_eq!(template.params[1].name, "left");
+        assert_eq!(template.params[2].name, "right");
+        assert_eq!(template.params[0].ty, AstType::Named("Box".to_string()));
+        assert_eq!(template.params[1].ty, AstType::Named("T".to_string()));
+        assert_eq!(template.params[2].ty, AstType::Named("T".to_string()));
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_generic_method_template() {
         let mut program = parse_program(
             r#"

@@ -95,6 +95,9 @@ checked-in docs, tests, and commits only.
   The rebuild preserves AST-only parameter mutability by positional fallback
   when resolver-restored parameter names differ from stale AST names, and it
   ignores stale same-name matches from different parameter positions.
+- Top-level generic method templates now have direct resolver-restored return
+  presence and parameter-count coverage, matching the generic function template
+  path.
 - Resolver-backed generic `Type.impl` method template collection now has the
   same function-typed parameter/return and behavior-bound metadata coverage as
   top-level generic method templates, so impl templates do not rely on stale
