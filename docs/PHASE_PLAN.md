@@ -945,6 +945,8 @@ checked-in docs, tests, and commits only.
   across module, import, local, and variant symbols.
 - Resolver absent field metadata validation now shares one helper across
   module, import, local, enum, variant, behavior, and value symbols.
+- Resolver absent variant metadata validation now shares one helper across
+  module, import, local, struct/type, behavior, and value symbols.
 
 ## Current Phase
 

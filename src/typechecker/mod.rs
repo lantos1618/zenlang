@@ -347,6 +347,14 @@ struct FieldAbsenceValidation {
     typed_code: &'static str,
 }
 
+struct VariantAbsenceValidation {
+    names_code: &'static str,
+    owner_code: &'static str,
+    payload_count_code: &'static str,
+    payload_type_name_code: &'static str,
+    payload_type_code: &'static str,
+}
+
 struct SourceValidation {
     code: &'static str,
     actual_missing: &'static str,
@@ -5126,31 +5134,24 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_variant_metadata(
+            symbol,
+            "module",
+            &expected.name,
+            VariantAbsenceValidation {
+                names_code: "E0273",
+                owner_code: "E0274",
+                payload_count_code: "E0275",
+                payload_type_name_code: "E0276",
+                payload_type_code: "E0375",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "module",
             &expected.name,
             &[
-                (symbol.variant_names.is_some(), "E0273", "variant names"),
-                (
-                    symbol.variant_owner_name.is_some(),
-                    "E0274",
-                    "variant owner",
-                ),
-                (
-                    symbol.variant_payload_count.is_some(),
-                    "E0275",
-                    "variant payload count",
-                ),
-                (
-                    symbol.variant_payload_type_name.is_some(),
-                    "E0276",
-                    "variant payload type",
-                ),
-                (
-                    symbol.variant_payload_type.is_some(),
-                    "E0375",
-                    "typed variant payload type",
-                ),
                 (
                     symbol.behavior_method_signatures.is_some(),
                     "E0277",
@@ -6200,31 +6201,24 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_variant_metadata(
+            symbol,
+            "import",
+            name,
+            VariantAbsenceValidation {
+                names_code: "E0289",
+                owner_code: "E0290",
+                payload_count_code: "E0291",
+                payload_type_name_code: "E0292",
+                payload_type_code: "E0366",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "import",
             name,
             &[
-                (symbol.variant_names.is_some(), "E0289", "variant names"),
-                (
-                    symbol.variant_owner_name.is_some(),
-                    "E0290",
-                    "variant owner",
-                ),
-                (
-                    symbol.variant_payload_count.is_some(),
-                    "E0291",
-                    "variant payload count",
-                ),
-                (
-                    symbol.variant_payload_type_name.is_some(),
-                    "E0292",
-                    "variant payload type",
-                ),
-                (
-                    symbol.variant_payload_type.is_some(),
-                    "E0366",
-                    "typed variant payload type",
-                ),
                 (
                     symbol.behavior_method_signatures.is_some(),
                     "E0293",
@@ -6661,31 +6655,24 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_variant_metadata(
+            symbol,
+            "local",
+            name,
+            VariantAbsenceValidation {
+                names_code: "E0257",
+                owner_code: "E0258",
+                payload_count_code: "E0259",
+                payload_type_name_code: "E0260",
+                payload_type_code: "E0384",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "local",
             name,
             &[
-                (symbol.variant_names.is_some(), "E0257", "variant names"),
-                (
-                    symbol.variant_owner_name.is_some(),
-                    "E0258",
-                    "variant owner",
-                ),
-                (
-                    symbol.variant_payload_count.is_some(),
-                    "E0259",
-                    "variant payload count",
-                ),
-                (
-                    symbol.variant_payload_type_name.is_some(),
-                    "E0260",
-                    "variant payload type",
-                ),
-                (
-                    symbol.variant_payload_type.is_some(),
-                    "E0384",
-                    "typed variant payload type",
-                ),
                 (
                     symbol.behavior_method_signatures.is_some(),
                     "E0261",
@@ -6971,6 +6958,48 @@ impl TypeChecker {
                     symbol.field_types.is_some(),
                     validation.typed_code,
                     "typed field types",
+                ),
+            ],
+            span,
+        );
+    }
+
+    fn validate_resolver_absent_variant_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        symbol_kind: &str,
+        name: &str,
+        validation: VariantAbsenceValidation,
+        span: Span,
+    ) {
+        self.validate_resolver_absent_metadata_entries(
+            symbol_kind,
+            name,
+            &[
+                (
+                    symbol.variant_names.is_some(),
+                    validation.names_code,
+                    "variant names",
+                ),
+                (
+                    symbol.variant_owner_name.is_some(),
+                    validation.owner_code,
+                    "variant owner",
+                ),
+                (
+                    symbol.variant_payload_count.is_some(),
+                    validation.payload_count_code,
+                    "variant payload count",
+                ),
+                (
+                    symbol.variant_payload_type_name.is_some(),
+                    validation.payload_type_name_code,
+                    "variant payload type",
+                ),
+                (
+                    symbol.variant_payload_type.is_some(),
+                    validation.payload_type_code,
+                    "typed variant payload type",
                 ),
             ],
             span,
@@ -7314,32 +7343,17 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        self.validate_resolver_absent_metadata_entries(
+        self.validate_resolver_absent_variant_metadata(
+            symbol,
             "type",
             name,
-            &[
-                (symbol.variant_names.is_some(), "E0315", "variant names"),
-                (
-                    symbol.variant_owner_name.is_some(),
-                    "E0316",
-                    "variant owner",
-                ),
-                (
-                    symbol.variant_payload_count.is_some(),
-                    "E0317",
-                    "variant payload count",
-                ),
-                (
-                    symbol.variant_payload_type_name.is_some(),
-                    "E0318",
-                    "variant payload type",
-                ),
-                (
-                    symbol.variant_payload_type.is_some(),
-                    "E0397",
-                    "typed variant payload type",
-                ),
-            ],
+            VariantAbsenceValidation {
+                names_code: "E0315",
+                owner_code: "E0316",
+                payload_count_code: "E0317",
+                payload_type_name_code: "E0318",
+                payload_type_code: "E0397",
+            },
             span,
         );
     }
@@ -7606,31 +7620,24 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_variant_metadata(
+            symbol,
+            "behavior",
+            name,
+            VariantAbsenceValidation {
+                names_code: "E0323",
+                owner_code: "E0324",
+                payload_count_code: "E0325",
+                payload_type_name_code: "E0326",
+                payload_type_code: "E0400",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "behavior",
             name,
             &[
-                (symbol.variant_names.is_some(), "E0323", "variant names"),
-                (
-                    symbol.variant_owner_name.is_some(),
-                    "E0324",
-                    "variant owner",
-                ),
-                (
-                    symbol.variant_payload_count.is_some(),
-                    "E0325",
-                    "variant payload count",
-                ),
-                (
-                    symbol.variant_payload_type_name.is_some(),
-                    "E0326",
-                    "variant payload type",
-                ),
-                (
-                    symbol.variant_payload_type.is_some(),
-                    "E0400",
-                    "typed variant payload type",
-                ),
                 (
                     symbol.behavior_impl_names.is_some(),
                     "E0327",
@@ -8023,31 +8030,24 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_variant_metadata(
+            symbol,
+            "value",
+            name,
+            VariantAbsenceValidation {
+                names_code: "E0300",
+                owner_code: "E0301",
+                payload_count_code: "E0302",
+                payload_type_name_code: "E0303",
+                payload_type_code: "E0404",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "value",
             name,
             &[
-                (symbol.variant_names.is_some(), "E0300", "variant names"),
-                (
-                    symbol.variant_owner_name.is_some(),
-                    "E0301",
-                    "variant owner",
-                ),
-                (
-                    symbol.variant_payload_count.is_some(),
-                    "E0302",
-                    "variant payload count",
-                ),
-                (
-                    symbol.variant_payload_type_name.is_some(),
-                    "E0303",
-                    "variant payload type",
-                ),
-                (
-                    symbol.variant_payload_type.is_some(),
-                    "E0404",
-                    "typed variant payload type",
-                ),
                 (
                     symbol.behavior_method_signatures.is_some(),
                     "E0304",
