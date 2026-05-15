@@ -403,6 +403,8 @@ checked-in docs, tests, and commits only.
 - Resolver validation for `.extends(...)` parent type arguments now scopes the
   child behavior's generic parameters, so generic behavior inheritance such as
   `Pretty<T>.extends(Serializable<T>)` resolves before typechecker handoff.
+  A paired resolver negative test rejects parent type arguments outside that
+  child behavior parameter scope.
 - Resolver behavior symbols now carry parent behavior metadata, and typechecker
   setup rejects missing or extra resolver parent-edge metadata. Specialized
   parent references such as `Json<str>` are included in this resolver handoff
