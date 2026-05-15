@@ -6670,27 +6670,16 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.parameter_count.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0310",
-                format!(
-                    "resolver {} symbol '{name}' has parameter count metadata, expected none",
-                    namespace.diagnostic_name()
-                ),
-                span,
-            ));
-        }
-
-        if symbol.return_type_name.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0311",
-                format!(
-                    "resolver {} symbol '{name}' has return type metadata, expected none",
-                    namespace.diagnostic_name()
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_absent_value_signature_metadata(
+            symbol,
+            namespace.diagnostic_name(),
+            name,
+            ValueSignatureAbsenceValidation {
+                parameter_count_code: "E0310",
+                return_type_code: "E0311",
+            },
+            span,
+        );
 
         for (present, code, label) in [
             (symbol.parameter_names.is_some(), "E0312", "parameter names"),
@@ -6707,16 +6696,14 @@ impl TypeChecker {
             (symbol.return_type.is_some(), "E0361", "typed return type"),
             (symbol.is_mutable.is_some(), "E0314", "mutability"),
         ] {
-            if present {
-                self.diagnostics.push(Diagnostic::error(
-                    code,
-                    format!(
-                        "resolver {} symbol '{name}' has {label} metadata, expected none",
-                        namespace.diagnostic_name()
-                    ),
-                    span,
-                ));
-            }
+            self.validate_resolver_absent_metadata_entry(
+                namespace.diagnostic_name(),
+                name,
+                present,
+                code,
+                label,
+                span,
+            );
         }
     }
 
@@ -6818,13 +6805,7 @@ impl TypeChecker {
                 "typed variant payload type",
             ),
         ] {
-            if present {
-                self.diagnostics.push(Diagnostic::error(
-                    code,
-                    format!("resolver type symbol '{name}' has {label} metadata, expected none"),
-                    span,
-                ));
-            }
+            self.validate_resolver_absent_metadata_entry("type", name, present, code, label, span);
         }
     }
 
@@ -6839,13 +6820,7 @@ impl TypeChecker {
             (symbol.field_type_names.is_some(), "E0320", "field types"),
             (symbol.field_types.is_some(), "E0398", "typed field types"),
         ] {
-            if present {
-                self.diagnostics.push(Diagnostic::error(
-                    code,
-                    format!("resolver type symbol '{name}' has {label} metadata, expected none"),
-                    span,
-                ));
-            }
+            self.validate_resolver_absent_metadata_entry("type", name, present, code, label, span);
         }
     }
 
@@ -6958,23 +6933,16 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.parameter_count.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0330",
-                format!(
-                    "resolver variant symbol '{name}' has parameter count metadata, expected none"
-                ),
-                span,
-            ));
-        }
-
-        if symbol.return_type_name.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0331",
-                format!("resolver variant symbol '{name}' has return type metadata, expected none"),
-                span,
-            ));
-        }
+        self.validate_resolver_absent_value_signature_metadata(
+            symbol,
+            "variant",
+            name,
+            ValueSignatureAbsenceValidation {
+                parameter_count_code: "E0330",
+                return_type_code: "E0331",
+            },
+            span,
+        );
 
         for (present, code, label) in [
             (symbol.parameter_names.is_some(), "E0332", "parameter names"),
@@ -7055,13 +7023,9 @@ impl TypeChecker {
             ),
             (symbol.is_mutable.is_some(), "E0343", "mutability"),
         ] {
-            if present {
-                self.diagnostics.push(Diagnostic::error(
-                    code,
-                    format!("resolver variant symbol '{name}' has {label} metadata, expected none"),
-                    span,
-                ));
-            }
+            self.validate_resolver_absent_metadata_entry(
+                "variant", name, present, code, label, span,
+            );
         }
     }
 
@@ -7151,15 +7115,9 @@ impl TypeChecker {
                 "typed behavior requires",
             ),
         ] {
-            if present {
-                self.diagnostics.push(Diagnostic::error(
-                    code,
-                    format!(
-                        "resolver behavior symbol '{name}' has {label} metadata, expected none"
-                    ),
-                    span,
-                ));
-            }
+            self.validate_resolver_absent_metadata_entry(
+                "behavior", name, present, code, label, span,
+            );
         }
     }
 
@@ -7610,13 +7568,7 @@ impl TypeChecker {
             ),
             (symbol.is_mutable.is_some(), "E0308", "mutability"),
         ] {
-            if present {
-                self.diagnostics.push(Diagnostic::error(
-                    code,
-                    format!("resolver value symbol '{name}' has {label} metadata, expected none"),
-                    span,
-                ));
-            }
+            self.validate_resolver_absent_metadata_entry("value", name, present, code, label, span);
         }
     }
 }

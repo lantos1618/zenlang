@@ -226,6 +226,10 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker resolver validation now shares the remaining absent metadata
   emission path for module, import, and local resolver symbols while keeping
   per-kind diagnostic code tables local to each validator.
+- Typechecker resolver validation now reuses the same absent metadata
+  emission path across value, type-like, struct/enum, variant, and behavior
+  resolver-symbol validators while preserving each validator's diagnostic
+  codes.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, keeping
