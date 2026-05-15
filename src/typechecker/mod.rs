@@ -791,6 +791,32 @@ struct ExpectedFieldMetadata {
     display: Vec<(String, String)>,
 }
 
+#[derive(Clone, Copy)]
+struct FieldValidation {
+    display_code: &'static str,
+    typed_code: &'static str,
+}
+
+impl FieldValidation {
+    fn display_message(
+        self,
+        symbol_kind: &str,
+        name: &str,
+        actual: &str,
+        expected: &str,
+    ) -> String {
+        format!(
+            "resolver {symbol_kind} symbol '{name}' has fields '{actual}', expected '{expected}'"
+        )
+    }
+
+    fn typed_message(self, symbol_kind: &str, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver {symbol_kind} symbol '{name}' has typed fields '{actual}', expected '{expected}'"
+        )
+    }
+}
+
 impl ExpectedFieldMetadata {
     fn from_fields(fields: &[ExpectedField]) -> Self {
         Self {
@@ -7982,15 +8008,17 @@ impl TypeChecker {
             },
             span,
         );
+        let validation = FieldValidation {
+            display_code: "E0217",
+            typed_code: "E0358",
+        };
+        let symbol_kind = namespace.diagnostic_name();
         if symbol.field_types.as_deref() != Some(expected.typed.as_slice()) {
             let actual = format_field_types(symbol.field_types.as_deref());
             let expected = format_field_types(Some(&expected.typed));
             self.diagnostics.push(Diagnostic::error(
-                "E0358",
-                format!(
-                    "resolver {} symbol '{name}' has typed fields '{actual}', expected '{expected}'",
-                    namespace.diagnostic_name()
-                ),
+                validation.typed_code,
+                validation.typed_message(symbol_kind, name, &actual, &expected),
                 span,
             ));
         }
@@ -7998,11 +8026,8 @@ impl TypeChecker {
             let actual = format_field_type_names(symbol.field_type_names.as_deref());
             let expected = format_field_type_names(Some(&expected.display));
             self.diagnostics.push(Diagnostic::error(
-                "E0217",
-                format!(
-                    "resolver {} symbol '{name}' has fields '{actual}', expected '{expected}'",
-                    namespace.diagnostic_name()
-                ),
+                validation.display_code,
+                validation.display_message(symbol_kind, name, &actual, &expected),
                 span,
             ));
         }
@@ -9735,6 +9760,24 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(
             validation.typed_message("apply", "i32", "(i32) i32"),
             "resolver value symbol 'apply' has typed return type 'i32', expected '(i32) i32'"
+        );
+    }
+
+    #[test]
+    fn field_validation_formats_messages() {
+        let validation = FieldValidation {
+            display_code: "FIELDS",
+            typed_code: "TYPED_FIELDS",
+        };
+
+        assert_eq!(validation.display_code, "FIELDS");
+        assert_eq!(
+            validation.display_message("type", "Point", "(x: i32)", "(x: f64)"),
+            "resolver type symbol 'Point' has fields '(x: i32)', expected '(x: f64)'"
+        );
+        assert_eq!(
+            validation.typed_message("type", "Pipeline", "(callback: i32)", "(callback: (i32) i32)"),
+            "resolver type symbol 'Pipeline' has typed fields '(callback: i32)', expected '(callback: (i32) i32)'"
         );
     }
 

@@ -967,6 +967,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::behavior_ref_validation_maps_role_and_check_diagnostics`.
 - Resolver struct-field validation now shares one expected metadata bundle
   for counts, display fields, and typed AST fields.
+- Resolver struct-field validation now carries display-field and typed-field
+  message formatting through a validation bundle, covered by
+  `typechecker::tests::field_validation_formats_messages`.
 - Resolver behavior-method validation now shares one expected metadata bundle
   for display signatures and typed method metadata.
 - Resolver variant-payload validation now shares one expected metadata bundle
