@@ -831,9 +831,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed value, struct, and enum collection now defaults missing
   resolver generic-bound metadata directly instead of carrying dead AST-bound
   fallback state.
-- Resolver-backed value signature restoration now clears pre-seeded function or
-  method entries when resolver value metadata is missing or incomplete, so
-  behavior impl collection cannot retain AST-only method signatures.
+- Resolver-backed value signature restoration now clears pre-seeded function,
+  method, and generic template entries when resolver value metadata is missing
+  or incomplete, so behavior impl collection and monomorphization cannot retain
+  AST-only signatures.
 
 ## Current Phase
 

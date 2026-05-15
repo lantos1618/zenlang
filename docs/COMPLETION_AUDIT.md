@@ -556,6 +556,9 @@ and do not assume Phase 4 is ready without evidence.
   parameter-type, and return metadata, so monomorphization templates no longer
   retain stale AST-only generic names, bounds, or function-type signatures after
   resolver validation.
+- Resolver-backed value signature cleanup removes generic function and method
+  templates when resolver value metadata is missing or incomplete, so incomplete
+  handoff cannot leave stale monomorphization templates behind.
 - Resolver-backed generic template collection also derives return-type presence
   from validated resolver metadata, so stale AST-only missing return annotations
   cannot erase resolver-owned generic function or method returns before

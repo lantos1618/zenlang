@@ -1581,6 +1581,8 @@ impl TypeChecker {
         let Some(symbol) = symbols.lookup(Namespace::Value, name) else {
             self.functions.remove(name);
             self.methods.remove(name);
+            self.generic_functions.remove(name);
+            self.generic_methods.remove(name);
             return;
         };
         let (Some(parameter_names), Some(parameter_types), Some(return_type)) = (
@@ -1590,6 +1592,8 @@ impl TypeChecker {
         ) else {
             self.functions.remove(name);
             self.methods.remove(name);
+            self.generic_functions.remove(name);
+            self.generic_methods.remove(name);
             return;
         };
         let type_param_bounds = symbol
@@ -8936,6 +8940,37 @@ main = (value: i32) i32 { return value }
     }
 
     #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_generic_function_template()
+    {
+        let mut program = parse_program(
+            r#"
+identity<T> = (value: T) T { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "identity", None);
+        if let Declaration::Function {
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[0]
+        {
+            params[0].ty = AstType::Named("Stale".to_string());
+            *return_type = Some(AstType::Named("AlsoStale".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.generic_functions.contains_key("identity"),
+            "resolver-backed collection should not keep AST-only generic function templates when resolver signature metadata is incomplete"
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_function_signature_for_type_refs() {
         let mut program = parse_program(
             r#"
@@ -9497,6 +9532,43 @@ Box.impl = {
         assert_eq!(template.params[1].name, "value");
         assert_eq!(template.params[1].ty, AstType::Named("T".to_string()));
         assert_eq!(template.return_type, Some(AstType::Named("T".to_string())));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_generic_impl_method_template(
+    ) {
+        let mut program = parse_program(
+            r#"
+Box: { value: i32 }
+
+Box.impl = {
+    keep<T> = (self: Box, value: T) T { return value }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "Box.keep", None);
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[1] {
+            if let Declaration::Function {
+                params,
+                return_type,
+                ..
+            } = &mut methods[0]
+            {
+                params[1].ty = AstType::Named("Stale".to_string());
+                *return_type = Some(AstType::Named("AlsoStale".to_string()));
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.generic_methods.contains_key("Box.keep"),
+            "resolver-backed collection should not keep AST-only generic impl method templates when resolver signature metadata is incomplete"
+        );
     }
 
     #[test]
