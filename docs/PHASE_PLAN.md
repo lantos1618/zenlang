@@ -88,6 +88,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior method collection now also walks resolver-owned
   behavior method metadata in resolver order, so stale AST-only missing behavior
   methods cannot drop required methods from impl conformance checks.
+- If resolver behavior-method metadata is incomplete and behavior collection is
+  removed, default-body type-reference validation now skips that behavior
+  instead of falling back to stale AST generic parameters.
 - Typechecker resolver validation now derives behavior method display
   signatures and typed method metadata from one shared expectation pass, so the
   two resolver handoff checks cannot drift while scanning the same behavior

@@ -666,6 +666,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior method collection also walks resolver-owned behavior
   method metadata in resolver order, so stale AST-only missing behavior methods
   cannot drop required methods from impl conformance checks.
+- When resolver behavior-method metadata is incomplete and behavior collection
+  is removed, default-body type-reference validation skips that behavior instead
+  of falling back to stale AST generic parameters, covered by
+  `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_behavior_default_body_refs_when_methods_incomplete`.
 - Resolver-backed struct and enum collection uses typed resolver generic bound
   refs, so generic type templates no longer retain stale AST-only behavior
   bounds after resolver validation.

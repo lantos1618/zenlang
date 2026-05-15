@@ -4147,16 +4147,21 @@ impl TypeChecker {
                     if self.resolver_backed_collection {
                         let restored_name =
                             Self::validation_symbol_name(symbols, Namespace::Behavior, name, *span);
-                        let scoped =
-                            self.collected_behavior_type_param_scope(&restored_name, type_params);
-                        self.validate_collected_behavior_type_references(
-                            &restored_name,
-                            &scoped,
-                            *span,
-                        );
-                        for method in methods {
-                            if let Some(default_body) = &method.default_body {
-                                self.validate_generic_expr_type_references(default_body, &scoped);
+                        if let Some(scoped) =
+                            self.collected_behavior_type_param_scope(&restored_name)
+                        {
+                            self.validate_collected_behavior_type_references(
+                                &restored_name,
+                                &scoped,
+                                *span,
+                            );
+                            for method in methods {
+                                if let Some(default_body) = &method.default_body {
+                                    self.validate_generic_expr_type_references(
+                                        default_body,
+                                        &scoped,
+                                    );
+                                }
                             }
                         }
                     } else {
@@ -4285,15 +4290,10 @@ impl TypeChecker {
             .unwrap_or_else(|| type_param_name_set(ast_type_params))
     }
 
-    fn collected_behavior_type_param_scope(
-        &self,
-        name: &str,
-        ast_type_params: &[ast::TypeParam],
-    ) -> HashSet<String> {
+    fn collected_behavior_type_param_scope(&self, name: &str) -> Option<HashSet<String>> {
         self.behaviors
             .get(name)
             .map(|info| info.type_params.iter().cloned().collect())
-            .unwrap_or_else(|| type_param_name_set(ast_type_params))
     }
 
     fn validate_collected_struct_type_references(
@@ -11933,6 +11933,41 @@ Mapper: behavior {
         assert!(
             !tc.behaviors.contains_key("Mapper"),
             "resolver-backed collection should not keep AST-only behavior methods when resolver method metadata is incomplete"
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_validate_stale_behavior_default_body_refs_when_methods_incomplete(
+    ) {
+        let mut program = parse_program(
+            r#"
+Mapper<T>: behavior {
+    map: (Self, value: T) T {
+        same: T = value
+        return same
+    }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_method_types_for_test(Namespace::Behavior, "Mapper", None);
+        if let Declaration::Behavior { type_params, .. } = &mut program.declarations[0] {
+            type_params[0].name = "Stale".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.behaviors.contains_key("Mapper"),
+            "resolver-backed collection should remove behavior methods when resolver method metadata is incomplete"
+        );
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-backed collection should not validate stale AST behavior default body refs when resolver method metadata is incomplete: {:?}",
+            tc.diagnostics
         );
     }
 
