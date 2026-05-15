@@ -184,6 +184,9 @@ and do not assume Phase 4 is ready without evidence.
 - Omitted behavior default methods now refresh their method-table signatures
   from validated resolver behavior method metadata, so function-typed default
   methods do not retain stale AST-only signatures after behavior collection.
+- Typechecker resolver validation now derives behavior method display
+  signatures and typed method metadata from one shared expectation pass, keeping
+  those behavior-method handoff checks aligned.
 - Resolver-backed behavior default synthesis now waits until resolver behavior
   and impl-method metadata has been restored, and it treats resolver-restored
   impl method names as explicit overrides. This prevents stale AST-only impl
