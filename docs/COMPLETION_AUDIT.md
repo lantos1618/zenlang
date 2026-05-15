@@ -126,6 +126,9 @@ and do not assume Phase 4 is ready without evidence.
   method key classifier for concrete value metadata and generic templates.
 - Resolver-backed method key restoration now uses the same callable key
   classifier for resolver value-symbol declaration-span matching.
+- Method-key receiver parsing is shared between resolver-backed method target
+  restoration and generic method monomorphization inference, covered by
+  `typechecker::tests::method_signature_key_helpers_share_receiver_parsing`.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only

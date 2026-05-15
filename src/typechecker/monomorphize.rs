@@ -197,7 +197,7 @@ impl TypeChecker {
         method_name: &str,
         substitutions: &HashMap<String, Type>,
     ) -> Option<Type> {
-        let (receiver_name, _) = method_name.split_once('.')?;
+        let receiver_name = super::method_signature_receiver_name(method_name)?;
         if let Some(info) = self.structs.get(receiver_name).cloned() {
             return Some(self.generic_receiver_self_type(
                 receiver_name,
@@ -576,9 +576,10 @@ impl TypeChecker {
     ) -> (HashMap<String, Type>, Vec<InferenceConflict>) {
         let (mut map, mut conflicts) =
             self.infer_type_args_with_conflicts(type_params, param_types, arg_types);
-        if let (Some((receiver_name, _)), Some(receiver_ty)) =
-            (method_name.split_once('.'), arg_types.first())
-        {
+        if let (Some(receiver_name), Some(receiver_ty)) = (
+            super::method_signature_receiver_name(method_name),
+            arg_types.first(),
+        ) {
             self.match_generic_type_params(
                 receiver_name,
                 receiver_ty,

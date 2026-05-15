@@ -216,6 +216,8 @@ checked-in docs, tests, and commits only.
   method key classifier between value metadata and generic template refresh.
 - Resolver-backed method key restoration now also reuses that callable key
   classifier when matching resolver value symbols by declaration span.
+- Method-key receiver parsing is now shared between resolver-backed method
+  target restoration and generic method monomorphization inference.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

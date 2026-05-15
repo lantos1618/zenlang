@@ -789,8 +789,16 @@ fn resolver_type_param_names(symbol: &crate::resolver::Symbol) -> Vec<String> {
     symbol.type_parameter_names.clone().unwrap_or_default()
 }
 
+fn method_signature_key_parts(name: &str) -> Option<(&str, &str)> {
+    name.split_once('.')
+}
+
+fn method_signature_receiver_name(name: &str) -> Option<&str> {
+    method_signature_key_parts(name).map(|(receiver, _)| receiver)
+}
+
 fn is_method_signature_key(name: &str) -> bool {
-    name.contains('.')
+    method_signature_key_parts(name).is_some()
 }
 
 fn type_param_bound_display(type_param: &ast::TypeParam) -> Option<String> {
@@ -2209,8 +2217,7 @@ impl TypeChecker {
                         && is_method_signature_key(&symbol.name)
                         && symbol.definition_span == *span
                 })
-                .and_then(|symbol| symbol.name.rsplit_once('.'))
-                .map(|(type_name, _)| type_name.to_string())
+                .and_then(|symbol| method_signature_receiver_name(&symbol.name).map(str::to_string))
         }) {
             return type_name;
         }
@@ -9041,6 +9048,19 @@ mod tests {
             tc.resolve_type(&AstType::Ptr(Box::new(AstType::I32))),
             Type::Ptr(Box::new(Type::I32))
         );
+    }
+
+    #[test]
+    fn method_signature_key_helpers_share_receiver_parsing() {
+        assert_eq!(
+            method_signature_key_parts("Point.get"),
+            Some(("Point", "get"))
+        );
+        assert_eq!(method_signature_receiver_name("Point.get"), Some("Point"));
+        assert!(is_method_signature_key("Point.get"));
+        assert_eq!(method_signature_key_parts("plain"), None);
+        assert_eq!(method_signature_receiver_name("plain"), None);
+        assert!(!is_method_signature_key("plain"));
     }
 
     #[test]
