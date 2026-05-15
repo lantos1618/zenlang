@@ -416,6 +416,38 @@ fn func_info_from_ast_signature(
     }
 }
 
+fn struct_info_from_ast_fields(
+    name: String,
+    type_params: &[ast::TypeParam],
+    fields: &[StructField],
+) -> StructInfo {
+    StructInfo {
+        name,
+        fields: fields
+            .iter()
+            .map(|field| (field.name.clone(), field.ty.clone()))
+            .collect(),
+        type_params: type_param_names(type_params),
+        type_param_bounds: type_param_bounds(type_params),
+    }
+}
+
+fn enum_info_from_ast_variants(
+    name: String,
+    type_params: &[ast::TypeParam],
+    variants: &[EnumVariant],
+) -> EnumInfo {
+    EnumInfo {
+        name,
+        variants: variants
+            .iter()
+            .map(|variant| (variant.name.clone(), variant.payload.clone()))
+            .collect(),
+        type_params: type_param_names(type_params),
+        type_param_bounds: type_param_bounds(type_params),
+    }
+}
+
 fn type_param_bounds_from_resolver_refs(
     bounds: &[TypeParameterBoundRefMetadata],
 ) -> HashMap<String, BehaviorBound> {
@@ -1206,15 +1238,7 @@ impl TypeChecker {
                     }
                     self.structs.insert(
                         name.clone(),
-                        StructInfo {
-                            name: name.clone(),
-                            fields: fields
-                                .iter()
-                                .map(|f| (f.name.clone(), f.ty.clone()))
-                                .collect(),
-                            type_params: type_param_names(type_params),
-                            type_param_bounds: type_param_bounds(type_params),
-                        },
+                        struct_info_from_ast_fields(name.clone(), type_params, fields),
                     );
                 }
                 Declaration::Enum {
@@ -1230,15 +1254,7 @@ impl TypeChecker {
                     }
                     self.enums.insert(
                         name.clone(),
-                        EnumInfo {
-                            name: name.clone(),
-                            variants: variants
-                                .iter()
-                                .map(|v| (v.name.clone(), v.payload.clone()))
-                                .collect(),
-                            type_params: type_param_names(type_params),
-                            type_param_bounds: type_param_bounds(type_params),
-                        },
+                        enum_info_from_ast_variants(name.clone(), type_params, variants),
                     );
                 }
                 Declaration::Import {
@@ -5147,15 +5163,7 @@ impl TypeChecker {
             } => {
                 self.structs.insert(
                     local_name.to_string(),
-                    StructInfo {
-                        name: local_name.to_string(),
-                        fields: fields
-                            .iter()
-                            .map(|field| (field.name.clone(), field.ty.clone()))
-                            .collect(),
-                        type_params: type_param_names(type_params),
-                        type_param_bounds: type_param_bounds(type_params),
-                    },
+                    struct_info_from_ast_fields(local_name.to_string(), type_params, fields),
                 );
             }
             Declaration::Enum {
@@ -5165,15 +5173,7 @@ impl TypeChecker {
             } => {
                 self.enums.insert(
                     local_name.to_string(),
-                    EnumInfo {
-                        name: local_name.to_string(),
-                        variants: variants
-                            .iter()
-                            .map(|variant| (variant.name.clone(), variant.payload.clone()))
-                            .collect(),
-                        type_params: type_param_names(type_params),
-                        type_param_bounds: type_param_bounds(type_params),
-                    },
+                    enum_info_from_ast_variants(local_name.to_string(), type_params, variants),
                 );
             }
             Declaration::Behavior {
@@ -5647,15 +5647,7 @@ impl TypeChecker {
             } => {
                 dependencies.structs.insert(
                     local_name.to_string(),
-                    StructInfo {
-                        name: local_name.to_string(),
-                        fields: fields
-                            .iter()
-                            .map(|field| (field.name.clone(), field.ty.clone()))
-                            .collect(),
-                        type_params: type_param_names(type_params),
-                        type_param_bounds: type_param_bounds(type_params),
-                    },
+                    struct_info_from_ast_fields(local_name.to_string(), type_params, fields),
                 );
             }
             Declaration::Enum {
@@ -5665,15 +5657,7 @@ impl TypeChecker {
             } => {
                 dependencies.enums.insert(
                     local_name.to_string(),
-                    EnumInfo {
-                        name: local_name.to_string(),
-                        variants: variants
-                            .iter()
-                            .map(|variant| (variant.name.clone(), variant.payload.clone()))
-                            .collect(),
-                        type_params: type_param_names(type_params),
-                        type_param_bounds: type_param_bounds(type_params),
-                    },
+                    enum_info_from_ast_variants(local_name.to_string(), type_params, variants),
                 );
             }
             _ => {}

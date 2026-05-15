@@ -879,6 +879,8 @@ checked-in docs, tests, and commits only.
   function, method, and impl-method templates.
 - AST callable metadata collection now uses one `FuncInfo` helper for local,
   impl, imported, and dependency function/method signatures.
+- AST type metadata collection now uses shared struct and enum helpers across
+  local declaration, module-graph import, and source-dependency seeding paths.
 
 ## Current Phase
 
