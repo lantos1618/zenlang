@@ -999,6 +999,12 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_does_not_let_stale_ast_name_hide_extra_impl_method`,
   and
   `typechecker::tests::method_key_formats_type_qualified_method_name`.
+- AST, resolver-backed, graph-import, dependency, and typed body method-key
+  construction now route through the same type-qualified method key helper,
+  covered by
+  `typechecker::tests::method_signature_key_helpers_share_receiver_parsing`,
+  `typechecker::tests::method_key_formats_type_qualified_method_name`, and
+  `typechecker::tests::callable_signature_insert_routes_function_and_method_keys`.
 - Resolver-backed declaration collection now has named passes for resolver
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed

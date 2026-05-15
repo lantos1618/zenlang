@@ -397,6 +397,8 @@ checked-in docs, tests, and commits only.
   the shared type-qualified method key helper.
 - Behavior impl conformance now uses the shared type-qualified method key
   helper before resolver-owned method name restoration.
+- AST, resolver-backed, graph-import, dependency, and typed body method-key
+  construction now route through the same type-qualified method key helper.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths.
 - Generic method specialization preserves concrete `Self` receiver context in

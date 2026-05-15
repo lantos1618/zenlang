@@ -2017,6 +2017,10 @@ fn resolver_type_param_names(symbol: &crate::resolver::Symbol) -> Vec<String> {
     symbol.type_parameter_names.clone().unwrap_or_default()
 }
 
+fn method_signature_key(type_name: &str, method_name: &str) -> String {
+    format!("{type_name}.{method_name}")
+}
+
 fn method_signature_key_parts(name: &str) -> Option<(&str, &str)> {
     name.split_once('.')
 }
@@ -2659,7 +2663,7 @@ impl TypeChecker {
                     if !type_params.is_empty() {
                         continue;
                     }
-                    let full_name = format!("{}.{}", type_name, method_name);
+                    let full_name = Self::method_key(type_name, method_name);
                     // Set Self type for method body
                     self.current_self_type =
                         Some(self.resolve_type(&AstType::Named(type_name.clone())));
@@ -2763,7 +2767,7 @@ impl TypeChecker {
                             if !type_params.is_empty() {
                                 continue;
                             }
-                            let full_name = format!("{}.{}", type_name, name);
+                            let full_name = Self::method_key(type_name, name);
                             self.current_self_type =
                                 Some(self.resolve_type(&AstType::Named(type_name.clone())));
                             match self.check_function(&full_name, params, return_type, body, span) {
@@ -2781,7 +2785,7 @@ impl TypeChecker {
                             behavior_type_args,
                             methods,
                         ) {
-                            let full_name = format!("{}.{}", type_name, default.name);
+                            let full_name = Self::method_key(type_name, &default.name);
                             self.current_self_type =
                                 Some(self.resolve_type(&AstType::Named(type_name.clone())));
                             match self.check_function(
@@ -3070,7 +3074,7 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    let key = format!("{}.{}", type_name, method_name);
+                    let key = Self::method_key(type_name, method_name);
                     self.methods.insert(
                         key.clone(),
                         func_info_from_ast_signature(key.clone(), type_params, params, return_type),
@@ -3134,7 +3138,7 @@ impl TypeChecker {
                         *span,
                     ) {
                         self.generic_methods
-                            .insert(format!("{}.{}", type_name, method_name), template);
+                            .insert(Self::method_key(type_name, method_name), template);
                     }
                 }
                 _ => {}
@@ -5298,7 +5302,7 @@ impl TypeChecker {
     }
 
     fn method_key(type_name: &str, method_name: &str) -> String {
-        format!("{type_name}.{method_name}")
+        method_signature_key(type_name, method_name)
     }
 
     fn remove_named_queue_entry(items: &mut VecDeque<String>, name: &str) -> Option<String> {
@@ -7503,7 +7507,7 @@ impl TypeChecker {
                 span,
                 ..
             } => {
-                let key = format!("{}.{}", type_name, method_name);
+                let key = Self::method_key(type_name, method_name);
                 self.methods.insert(
                     key.clone(),
                     func_info_from_ast_signature(key.clone(), type_params, params, return_type),
@@ -7848,7 +7852,7 @@ impl TypeChecker {
                     ..
                 } => {
                     Self::insert_source_method_dependency(
-                        &format!("{type_name}.{method_name}"),
+                        &Self::method_key(type_name, method_name),
                         decl,
                         &mut dependencies.methods,
                         &mut dependencies.generic_methods,
@@ -7860,7 +7864,7 @@ impl TypeChecker {
                     for method in methods {
                         if let Declaration::Function { name, .. } = method {
                             Self::insert_source_method_dependency(
-                                &format!("{type_name}.{name}"),
+                                &Self::method_key(type_name, name),
                                 method,
                                 &mut dependencies.methods,
                                 &mut dependencies.generic_methods,
@@ -7941,7 +7945,7 @@ impl TypeChecker {
                     ..
                 } if type_name == source_name && *public => {
                     Self::insert_source_imported_type_method_dependency(
-                        &format!("{local_name}.{method_name}"),
+                        &Self::method_key(local_name, method_name),
                         decl,
                         imported_module,
                         graph,
@@ -7962,7 +7966,7 @@ impl TypeChecker {
                             continue;
                         }
                         Self::insert_source_imported_type_method_dependency(
-                            &format!("{local_name}.{name}"),
+                            &Self::method_key(local_name, name),
                             method,
                             imported_module,
                             graph,
@@ -8076,7 +8080,7 @@ impl TypeChecker {
         signature: ImportedMethodSignature<'_>,
         dependencies: &SourceModuleDependencies,
     ) {
-        let key = format!("{}.{}", local_type_name, signature.name);
+        let key = Self::method_key(local_type_name, signature.name);
         self.methods
             .insert(key.clone(), signature.func_info(key.clone()));
         if let Some(template) = signature.generic_template() {
@@ -9948,7 +9952,10 @@ fn expected_resolver_declaration_symbols(program: &ast::Program) -> HashSet<(Nam
                 method_name,
                 ..
             } => {
-                expected.insert((Namespace::Value, format!("{type_name}.{method_name}")));
+                expected.insert((
+                    Namespace::Value,
+                    method_signature_key(type_name, method_name),
+                ));
             }
             Declaration::Struct { name, .. } => {
                 expected.insert((Namespace::Type, name.clone()));
@@ -9975,7 +9982,7 @@ fn expected_resolver_declaration_symbols(program: &ast::Program) -> HashSet<(Nam
             } => {
                 for method in methods {
                     if let Declaration::Function { name, .. } = method {
-                        expected.insert((Namespace::Value, format!("{type_name}.{name}")));
+                        expected.insert((Namespace::Value, method_signature_key(type_name, name)));
                     }
                 }
             }
@@ -10419,6 +10426,7 @@ mod tests {
 
     #[test]
     fn method_signature_key_helpers_share_receiver_parsing() {
+        assert_eq!(method_signature_key("Point", "get"), "Point.get");
         assert_eq!(
             method_signature_key_parts("Point.get"),
             Some(("Point", "get"))
