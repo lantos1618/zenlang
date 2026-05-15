@@ -1021,6 +1021,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver type-like visibility validation now owns its resolver diagnostic code
   mapping, covered by
   `typechecker::tests::visibility_validation_uses_type_like_resolver_code`.
+- Resolver variant visibility validation now owns its resolver diagnostic code
+  mapping, covered by
+  `typechecker::tests::visibility_validation_uses_variant_resolver_code`.
 - Resolver local visibility validation now owns its resolver diagnostic code
   mapping, covered by
   `typechecker::tests::visibility_validation_uses_local_resolver_code`.
