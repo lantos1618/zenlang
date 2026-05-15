@@ -1088,6 +1088,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed value declaration collection no longer seeds AST-only
   function or method signatures before resolver metadata restoration, while
   preserving generic template bodies for later metadata replacement.
+- Resolver-backed generic function and method template collection now seeds
+  body-only template stubs before resolver metadata restoration, preserving
+  positional mutability and spans without carrying AST-only generic names,
+  parameter types, or return annotations.
 - Resolver-backed top-level function collection now restores function names
   from resolver value symbols by declaration span, so stale AST-only function
   names cannot drop restored signatures or generic templates during setup.

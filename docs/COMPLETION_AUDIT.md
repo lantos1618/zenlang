@@ -784,6 +784,11 @@ and do not assume Phase 4 is ready without evidence.
   parameter-type, and return metadata, so monomorphization templates no longer
   retain stale AST-only generic names, bounds, or function-type signatures after
   resolver validation.
+- Resolver-backed generic function and method template collection now seeds
+  body-only template stubs before resolver metadata restoration, preserving
+  positional mutability and spans without carrying AST-only generic names,
+  parameter types, or return annotations, covered by
+  `typechecker::tests::resolver_backed_callable_template_collection_defers_signature_metadata_to_resolver`.
 - Resolver-backed value signature cleanup removes generic function and method
   templates when resolver value metadata is missing or incomplete, so incomplete
   handoff cannot leave stale monomorphization templates behind.

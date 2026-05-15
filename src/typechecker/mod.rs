@@ -1838,6 +1838,34 @@ fn generic_template_from_type_params(
     ))
 }
 
+fn generic_template_body_stub_from_type_params(
+    type_params: &[ast::TypeParam],
+    params: &[Param],
+    body: &Expression,
+    span: Span,
+) -> Option<GenericFunctionTemplate> {
+    if type_params.is_empty() {
+        return None;
+    }
+
+    let params = params
+        .iter()
+        .map(|param| Param {
+            name: String::new(),
+            ty: AstType::Void,
+            mutable: param.mutable,
+            span: param.span,
+        })
+        .collect();
+    Some(GenericFunctionTemplate::new(
+        Vec::new(),
+        params,
+        None,
+        body.clone(),
+        span,
+    ))
+}
+
 fn func_info_from_ast_signature(
     name: String,
     type_params: &[ast::TypeParam],
@@ -3117,15 +3145,13 @@ impl TypeChecker {
                     name,
                     type_params,
                     params,
-                    return_type,
                     body,
                     span,
                     ..
                 } => {
-                    if let Some(template) = generic_template_from_type_params(
+                    if let Some(template) = generic_template_body_stub_from_type_params(
                         type_params,
                         params,
-                        return_type,
                         body,
                         *span,
                     ) {
@@ -3137,15 +3163,13 @@ impl TypeChecker {
                     method_name,
                     type_params,
                     params,
-                    return_type,
                     body,
                     span,
                     ..
                 } => {
-                    if let Some(template) = generic_template_from_type_params(
+                    if let Some(template) = generic_template_body_stub_from_type_params(
                         type_params,
                         params,
-                        return_type,
                         body,
                         *span,
                     ) {
@@ -4424,7 +4448,6 @@ impl TypeChecker {
             name,
             type_params,
             params,
-            return_type,
             body,
             span,
             ..
@@ -4433,7 +4456,7 @@ impl TypeChecker {
             return;
         };
         if let Some(template) =
-            generic_template_from_type_params(type_params, params, return_type, body, *span)
+            generic_template_body_stub_from_type_params(type_params, params, body, *span)
         {
             self.generic_methods
                 .insert(Self::method_key(type_name, name), template);
@@ -11367,6 +11390,54 @@ Box.get<T> = (self: Box<T>) T { return self.value }
         assert!(!tc.generic_functions.contains_key("identity"));
         assert!(tc.generic_methods.contains_key("Box.fetch"));
         assert!(!tc.generic_methods.contains_key("Box.get"));
+    }
+
+    #[test]
+    fn resolver_backed_callable_template_collection_defers_signature_metadata_to_resolver() {
+        let program = parse_program(
+            r#"
+Box<T>: {
+    value: T
+}
+
+identity<T> = (mut value: T) T { return value }
+
+Box.get<T> = (self: Box<T>, mut fallback: T) T { return fallback }
+"#,
+        );
+        let mut tc = TypeChecker::new();
+
+        tc.with_resolver_backed_collection(|checker| {
+            checker.collect_declarations(&program.declarations);
+        });
+
+        let function_template = tc
+            .generic_functions
+            .get("identity")
+            .expect("function template stub");
+        assert!(
+            function_template.type_params.is_empty(),
+            "resolver-backed generic function templates should not keep AST generic names before resolver metadata"
+        );
+        assert_eq!(function_template.params.len(), 1);
+        assert_eq!(function_template.params[0].name, "");
+        assert_eq!(function_template.params[0].ty, AstType::Void);
+        assert!(function_template.params[0].mutable);
+        assert_eq!(function_template.return_type, None);
+
+        let method_template = tc
+            .generic_methods
+            .get("Box.get")
+            .expect("method template stub");
+        assert!(
+            method_template.type_params.is_empty(),
+            "resolver-backed generic method templates should not keep AST generic names before resolver metadata"
+        );
+        assert_eq!(method_template.params.len(), 2);
+        assert_eq!(method_template.params[1].name, "");
+        assert_eq!(method_template.params[1].ty, AstType::Void);
+        assert!(method_template.params[1].mutable);
+        assert_eq!(method_template.return_type, None);
     }
 
     #[test]
