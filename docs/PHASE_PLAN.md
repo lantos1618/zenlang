@@ -987,6 +987,8 @@ checked-in docs, tests, and commits only.
   formatting through a validation bundle.
 - Resolver source validation now shares one diagnostic helper across module,
   import, and local symbols.
+- Resolver source validation now carries source diagnostic message formatting
+  through the shared source validation bundle.
 - Resolver local mutability validation now shares the same diagnostic helper
   shape used by the resolver metadata validation paths.
 - Resolver local mutability validation now carries its diagnostic code and

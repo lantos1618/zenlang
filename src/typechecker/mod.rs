@@ -614,11 +614,31 @@ impl ResolverSymbolPresenceValidation {
     }
 }
 
+#[derive(Clone, Copy)]
 struct SourceValidation {
     code: &'static str,
     actual_missing: &'static str,
     expected_missing: &'static str,
     quote_expected: bool,
+}
+
+impl SourceValidation {
+    fn message(
+        self,
+        symbol_kind: &str,
+        name: &str,
+        actual: Option<&str>,
+        expected: Option<&str>,
+    ) -> String {
+        let actual = actual.unwrap_or(self.actual_missing);
+        let expected = expected.unwrap_or(self.expected_missing);
+        let expected = if self.quote_expected {
+            format!("'{expected}'")
+        } else {
+            expected.to_string()
+        };
+        format!("resolver {symbol_kind} symbol '{name}' has source '{actual}', expected {expected}")
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -7398,18 +7418,9 @@ impl TypeChecker {
         span: Span,
     ) {
         if actual != expected {
-            let actual = actual.unwrap_or(validation.actual_missing);
-            let expected = expected.unwrap_or(validation.expected_missing);
-            let expected = if validation.quote_expected {
-                format!("'{expected}'")
-            } else {
-                expected.to_string()
-            };
             self.diagnostics.push(Diagnostic::error(
                 validation.code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has source '{actual}', expected {expected}"
-                ),
+                validation.message(symbol_kind, name, actual, expected),
                 span,
             ));
         }
@@ -10073,6 +10084,31 @@ main = (mut input: i32) i32 {
         assert_eq!(validation.actual_missing, "none");
         assert_eq!(validation.expected_missing, "none");
         assert!(!validation.quote_expected);
+    }
+
+    #[test]
+    fn source_validation_formats_message() {
+        let quoted = SourceValidation {
+            code: "SOURCE",
+            actual_missing: "unknown",
+            expected_missing: "none",
+            quote_expected: true,
+        };
+        let unquoted = SourceValidation {
+            code: "SOURCE",
+            actual_missing: "none",
+            expected_missing: "none",
+            quote_expected: false,
+        };
+
+        assert_eq!(
+            quoted.message("import", "io", Some("other"), Some("std")),
+            "resolver import symbol 'io' has source 'other', expected 'std'"
+        );
+        assert_eq!(
+            unquoted.message("value", "main", Some("std"), None),
+            "resolver value symbol 'main' has source 'std', expected none"
+        );
     }
 
     #[test]

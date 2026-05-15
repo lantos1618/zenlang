@@ -930,6 +930,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::visibility_validation_formats_actual_and_expected`.
 - Resolver source validation now shares one diagnostic helper across module,
   import, and local symbols.
+- Resolver source validation now carries source diagnostic message formatting
+  through the shared source validation bundle, covered by
+  `typechecker::tests::source_validation_formats_message`.
 - Resolver local mutability validation now shares the same diagnostic helper
   shape used by the resolver metadata validation paths.
 - Resolver local mutability validation now carries its diagnostic code and
