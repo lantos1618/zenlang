@@ -4424,9 +4424,7 @@ impl TypeChecker {
             return;
         };
 
-        if !self.resolver_backed_collection {
-            self.validate_generic_bounds(type_params);
-        }
+        self.validate_generic_bounds(type_params);
         let key = Self::method_key(type_name, name);
         self.methods.insert(
             key.clone(),

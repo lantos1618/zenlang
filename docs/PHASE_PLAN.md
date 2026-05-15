@@ -1102,6 +1102,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed impl-block collection no longer seeds AST-only method
   signatures before resolver metadata restoration, while preserving generic
   impl method template bodies for later metadata replacement.
+- AST `Type.impl` method signature collection now owns generic-bound
+  validation directly, removing a dead resolver-backed branch from the helper
+  after resolver-backed impl collection split into its own template pass.
 - Resolver-backed `Type.impl` method collection now restores method keys by
   declaration span even when the AST-only impl target type name is stale.
 - Resolver-backed method collection and generic `Type.impl` method templates

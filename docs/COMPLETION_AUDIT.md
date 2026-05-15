@@ -789,6 +789,10 @@ and do not assume Phase 4 is ready without evidence.
   positional mutability and spans without carrying AST-only generic names,
   parameter types, or return annotations, covered by
   `typechecker::tests::resolver_backed_callable_template_collection_defers_signature_metadata_to_resolver`.
+- AST `Type.impl` method signature collection owns generic-bound validation
+  directly after resolver-backed impl collection split into its own template
+  pass, covered by `typechecker::tests::type_impl_method_collection` and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_method_bounds_for_validation`.
 - Resolver-backed value signature cleanup removes generic function and method
   templates when resolver value metadata is missing or incomplete, so incomplete
   handoff cannot leave stale monomorphization templates behind.
