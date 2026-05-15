@@ -555,6 +555,17 @@ impl MutabilityAbsenceValidation {
 }
 
 #[derive(Clone, Copy)]
+struct MutabilityValidation {
+    code: &'static str,
+}
+
+impl MutabilityValidation {
+    fn display(self, actual: Option<bool>, expected: bool) -> (&'static str, &'static str) {
+        (mutability_name(actual), mutability_name(Some(expected)))
+    }
+}
+
+#[derive(Clone, Copy)]
 struct SourceAbsenceValidation {
     code: &'static str,
 }
@@ -6965,7 +6976,7 @@ impl TypeChecker {
             name,
             symbol.is_mutable,
             expected.is_mutable,
-            "E0231",
+            MutabilityValidation { code: "E0231" },
             span,
         );
 
@@ -7338,14 +7349,13 @@ impl TypeChecker {
         name: &str,
         actual: Option<bool>,
         expected: bool,
-        code: &'static str,
+        validation: MutabilityValidation,
         span: Span,
     ) {
         if actual != Some(expected) {
-            let actual = mutability_name(actual);
-            let expected = mutability_name(Some(expected));
+            let (actual, expected) = validation.display(actual, expected);
             self.diagnostics.push(Diagnostic::error(
-                code,
+                validation.code,
                 format!(
                     "resolver {symbol_kind} symbol '{name}' has mutability {actual}, expected {expected}"
                 ),
@@ -9924,6 +9934,18 @@ main = (mut input: i32) i32 {
         let entry = MutabilityAbsenceValidation { code: "MUTABLE" }.entry(symbol);
 
         assert_eq!(entry, (true, "MUTABLE", "mutability"));
+    }
+
+    #[test]
+    fn mutability_validation_formats_actual_and_expected() {
+        let validation = MutabilityValidation { code: "MUTABLE" };
+
+        assert_eq!(validation.code, "MUTABLE");
+        assert_eq!(
+            validation.display(Some(false), true),
+            ("immutable", "mutable")
+        );
+        assert_eq!(validation.display(None, false), ("unknown", "immutable"));
     }
 
     #[test]

@@ -926,6 +926,9 @@ and do not assume Phase 4 is ready without evidence.
   import, and local symbols.
 - Resolver local mutability validation now shares the same diagnostic helper
   shape used by the resolver metadata validation paths.
+- Resolver local mutability validation now carries its diagnostic code and
+  actual/expected display formatting through a validation bundle, covered by
+  `typechecker::tests::mutability_validation_formats_actual_and_expected`.
 - Resolver extra-symbol validation now shares one diagnostic helper across
   declaration/import/module and local symbol checks.
 - Resolver missing-symbol validation now shares one diagnostic helper across
