@@ -315,6 +315,22 @@ struct ExpectedField {
     display: (String, String),
 }
 
+struct ExpectedFieldMetadata {
+    count: usize,
+    typed: Vec<(String, AstType)>,
+    display: Vec<(String, String)>,
+}
+
+impl ExpectedFieldMetadata {
+    fn from_fields(fields: &[ExpectedField]) -> Self {
+        Self {
+            count: fields.len(),
+            typed: fields.iter().map(|field| field.typed.clone()).collect(),
+            display: fields.iter().map(|field| field.display.clone()).collect(),
+        }
+    }
+}
+
 struct ExpectedVariantPayloadType {
     typed: Option<AstType>,
     display: Option<String>,
@@ -7042,8 +7058,8 @@ impl TypeChecker {
         expected_fields: &[ExpectedField],
         span: Span,
     ) {
-        let expected_count = expected_fields.len();
-        if symbol.field_count != Some(expected_count) {
+        let expected = ExpectedFieldMetadata::from_fields(expected_fields);
+        if symbol.field_count != Some(expected.count) {
             let actual = symbol
                 .field_count
                 .map(|count| count.to_string())
@@ -7053,18 +7069,14 @@ impl TypeChecker {
                 format!(
                     "resolver {} symbol '{name}' has field count {actual}, expected {}",
                     namespace.diagnostic_name(),
-                    expected_count
+                    expected.count
                 ),
                 span,
             ));
         }
-        let expected_types: Vec<_> = expected_fields
-            .iter()
-            .map(|field| field.typed.clone())
-            .collect();
-        if symbol.field_types.as_deref() != Some(expected_types.as_slice()) {
+        if symbol.field_types.as_deref() != Some(expected.typed.as_slice()) {
             let actual = format_field_types(symbol.field_types.as_deref());
-            let expected = format_field_types(Some(&expected_types));
+            let expected = format_field_types(Some(&expected.typed));
             self.diagnostics.push(Diagnostic::error(
                 "E0358",
                 format!(
@@ -7074,13 +7086,9 @@ impl TypeChecker {
                 span,
             ));
         }
-        let expected_type_names: Vec<_> = expected_fields
-            .iter()
-            .map(|field| field.display.clone())
-            .collect();
-        if symbol.field_type_names.as_deref() != Some(expected_type_names.as_slice()) {
+        if symbol.field_type_names.as_deref() != Some(expected.display.as_slice()) {
             let actual = format_field_type_names(symbol.field_type_names.as_deref());
-            let expected = format_field_type_names(Some(&expected_type_names));
+            let expected = format_field_type_names(Some(&expected.display));
             self.diagnostics.push(Diagnostic::error(
                 "E0217",
                 format!(

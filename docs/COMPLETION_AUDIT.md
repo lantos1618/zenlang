@@ -840,6 +840,8 @@ and do not assume Phase 4 is ready without evidence.
   for counts, names, display types, and typed AST types.
 - Resolver behavior-association list validation now shares one expected
   metadata bundle for display names and typed refs.
+- Resolver struct-field validation now shares one expected metadata bundle
+  for counts, display fields, and typed AST fields.
 
 ## Unresolved Gaps
 
