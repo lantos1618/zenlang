@@ -267,6 +267,9 @@ and do not assume Phase 4 is ready without evidence.
   resolver comparison values.
 - Typechecker resolver validation now constructs expected value typed-return
   metadata and its display name in the same return expectation helper.
+- Typechecker resolver validation now stores expected value return metadata
+  directly on value signatures instead of wrapping the paired display and typed
+  return expectation.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, keeping
