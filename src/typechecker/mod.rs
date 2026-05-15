@@ -263,7 +263,53 @@ struct ImportedMethodSignature<'a> {
     span: Span,
 }
 
-impl ImportedMethodSignature<'_> {
+impl<'a> ImportedMethodSignature<'a> {
+    fn from_function_declaration(name: &'a str, decl: &'a Declaration) -> Option<Self> {
+        let Declaration::Function {
+            type_params,
+            params,
+            return_type,
+            body,
+            span,
+            ..
+        } = decl
+        else {
+            return None;
+        };
+
+        Some(Self {
+            name,
+            type_params,
+            params,
+            return_type,
+            body,
+            span: *span,
+        })
+    }
+
+    fn from_method_declaration(name: &'a str, decl: &'a Declaration) -> Option<Self> {
+        let Declaration::Method {
+            type_params,
+            params,
+            return_type,
+            body,
+            span,
+            ..
+        } = decl
+        else {
+            return None;
+        };
+
+        Some(Self {
+            name,
+            type_params,
+            params,
+            return_type,
+            body,
+            span: *span,
+        })
+    }
+
     fn func_info(&self, key: String) -> FuncInfo {
         func_info_from_ast_signature(key, self.type_params, self.params, self.return_type)
     }
@@ -5811,30 +5857,9 @@ impl TypeChecker {
         functions: &mut HashMap<String, FuncInfo>,
         generic_functions: &mut HashMap<String, GenericFunctionTemplate>,
     ) {
-        let Declaration::Function {
-            type_params,
-            params,
-            return_type,
-            body,
-            span,
-            ..
-        } = decl
-        else {
-            return;
-        };
-
-        Self::insert_source_callable_dependency(
-            ImportedMethodSignature {
-                name: key,
-                type_params,
-                params,
-                return_type,
-                body,
-                span: *span,
-            },
-            functions,
-            generic_functions,
-        );
+        if let Some(signature) = ImportedMethodSignature::from_function_declaration(key, decl) {
+            Self::insert_source_callable_dependency(signature, functions, generic_functions);
+        }
     }
 
     fn insert_source_method_dependency(
@@ -5843,35 +5868,10 @@ impl TypeChecker {
         methods: &mut HashMap<String, FuncInfo>,
         generic_methods: &mut HashMap<String, GenericFunctionTemplate>,
     ) {
-        match decl {
-            Declaration::Function {
-                type_params,
-                params,
-                return_type,
-                body,
-                span,
-                ..
-            }
-            | Declaration::Method {
-                type_params,
-                params,
-                return_type,
-                body,
-                span,
-                ..
-            } => Self::insert_source_callable_dependency(
-                ImportedMethodSignature {
-                    name: key,
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                    span: *span,
-                },
-                methods,
-                generic_methods,
-            ),
-            _ => {}
+        if let Some(signature) = ImportedMethodSignature::from_function_declaration(key, decl)
+            .or_else(|| ImportedMethodSignature::from_method_declaration(key, decl))
+        {
+            Self::insert_source_callable_dependency(signature, methods, generic_methods);
         }
     }
 
@@ -5895,29 +5895,17 @@ impl TypeChecker {
         method: &Declaration,
         dependencies: &SourceModuleDependencies,
     ) {
-        let Declaration::Method {
-            method_name,
-            type_params,
-            params,
-            return_type,
-            body,
-            span,
-            ..
-        } = method
+        let Declaration::Method { method_name, .. } = method else {
+            return;
+        };
+        let Some(signature) = ImportedMethodSignature::from_method_declaration(method_name, method)
         else {
             return;
         };
 
         self.seed_imported_method_signature(
             local_type_name,
-            ImportedMethodSignature {
-                name: method_name,
-                type_params,
-                params,
-                return_type,
-                body,
-                span: *span,
-            },
+            signature,
             dependencies.as_imported_method_dependencies(),
         );
     }
@@ -5929,33 +5917,20 @@ impl TypeChecker {
         public_only: bool,
         dependencies: &SourceModuleDependencies,
     ) {
-        let Declaration::Function {
-            name,
-            type_params,
-            params,
-            return_type,
-            body,
-            span,
-            public,
-            ..
-        } = method
-        else {
+        let Declaration::Function { name, public, .. } = method else {
             return;
         };
         if public_only && !*public {
             return;
         }
+        let Some(signature) = ImportedMethodSignature::from_function_declaration(name, method)
+        else {
+            return;
+        };
 
         self.seed_imported_method_signature(
             local_type_name,
-            ImportedMethodSignature {
-                name,
-                type_params,
-                params,
-                return_type,
-                body,
-                span: *span,
-            },
+            signature,
             dependencies.as_imported_method_dependencies(),
         );
     }
