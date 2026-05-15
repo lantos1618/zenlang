@@ -3136,15 +3136,9 @@ impl TypeChecker {
 
         self.collect_resolver_declaration_metadata(decls, symbols);
         self.collect_resolver_behavior_impl_metadata(decls, symbols);
-
-        self.with_resolver_backed_collection(|checker| {
-            checker.validate_collected_declaration_semantics(decls, Some(symbols));
-        });
+        self.validate_resolver_collected_declaration_semantics(decls, symbols);
         self.clear_resolver_behavior_ref_state();
-
-        self.for_each_resolver_type_declaration(decls, symbols, |checker, restored_name| {
-            checker.collect_resolver_type_behavior_impls(symbols, restored_name);
-        });
+        self.refresh_resolver_type_behavior_impls(decls, symbols);
     }
 
     fn collect_resolver_declaration_metadata(
@@ -3269,11 +3263,31 @@ impl TypeChecker {
         });
     }
 
+    fn validate_resolver_collected_declaration_semantics(
+        &mut self,
+        decls: &[Declaration],
+        symbols: &SymbolTable,
+    ) {
+        self.with_resolver_backed_collection(|checker| {
+            checker.validate_collected_declaration_semantics(decls, Some(symbols));
+        });
+    }
+
     fn clear_resolver_behavior_ref_state(&mut self) {
         self.resolver_behavior_impl_refs.clear();
         self.resolver_behavior_required_refs.clear();
         self.resolver_missing_behavior_impl_refs.clear();
         self.resolver_missing_behavior_required_refs.clear();
+    }
+
+    fn refresh_resolver_type_behavior_impls(
+        &mut self,
+        decls: &[Declaration],
+        symbols: &SymbolTable,
+    ) {
+        self.for_each_resolver_type_declaration(decls, symbols, |checker, restored_name| {
+            checker.collect_resolver_type_behavior_impls(symbols, restored_name);
+        });
     }
 
     fn with_resolver_backed_collection(&mut self, collect: impl FnOnce(&mut Self)) {

@@ -482,6 +482,8 @@ checked-in docs, tests, and commits only.
   metadata refresh, behavior impl metadata refresh, semantic validation, and
   final impl association refresh into named passes instead of one mixed
   collection loop.
+  Resolver-backed semantic validation and final type impl association refresh
+  now each have focused helper boundaries matching those named passes.
   The declaration metadata refresh pass also routes callable signatures,
   type declarations, and behavior declarations through focused helpers instead
   of one mixed match arm.
