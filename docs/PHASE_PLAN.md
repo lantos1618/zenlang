@@ -161,6 +161,8 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver behavior-ref owner restoration now splits exact
   behavior-key owner selection from the unique fallback owner path used when
   repairing stale AST association targets.
+- Typechecker resolver expected behavior association construction now builds
+  display names and typed refs through one expected-edge constructor.
 - Typechecker resolver validation now stores expected behavior display
   signatures and typed method metadata as paired per-method expectations before
   deriving the resolver comparison lists.

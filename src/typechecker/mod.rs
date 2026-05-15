@@ -2229,6 +2229,18 @@ struct ExpectedBehaviorEdge {
     metadata: BehaviorRefMetadata,
 }
 
+impl ExpectedBehaviorEdge {
+    fn new(behavior: &str, type_args: &[AstType]) -> Self {
+        Self {
+            display: behavior_ref_display(behavior, type_args),
+            metadata: BehaviorRefMetadata {
+                name: behavior.to_string(),
+                type_args: type_args.to_vec(),
+            },
+        }
+    }
+}
+
 struct ExpectedBehaviorEdgeMetadata {
     names: Vec<String>,
     refs: Vec<BehaviorRefMetadata>,
@@ -2253,13 +2265,7 @@ impl ExpectedBehaviorEdges {
         self.edges
             .entry(owner.to_string())
             .or_default()
-            .push(ExpectedBehaviorEdge {
-                display: behavior_ref_display(behavior, type_args),
-                metadata: BehaviorRefMetadata {
-                    name: behavior.to_string(),
-                    type_args: type_args.to_vec(),
-                },
-            });
+            .push(ExpectedBehaviorEdge::new(behavior, type_args));
     }
 
     fn edges_for(&self, owner: &str) -> &[ExpectedBehaviorEdge] {
@@ -9452,13 +9458,7 @@ fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAss
 }
 
 fn expected_behavior_edge(behavior: &str, type_args: &[AstType]) -> ExpectedBehaviorEdge {
-    ExpectedBehaviorEdge {
-        display: behavior_ref_display(behavior, type_args),
-        metadata: BehaviorRefMetadata {
-            name: behavior.to_string(),
-            type_args: type_args.to_vec(),
-        },
-    }
+    ExpectedBehaviorEdge::new(behavior, type_args)
 }
 
 fn expected_behavior_parent_associations(program: &ast::Program) -> ExpectedBehaviorEdges {
@@ -10842,6 +10842,15 @@ Point.requires(Json<str>)
         assert!(!actual.contains_metadata(&mismatch.metadata));
         assert!(actual.names_match(&expected_list.names));
         assert!(actual.refs_match(&expected_list.refs));
+    }
+
+    #[test]
+    fn expected_behavior_edge_builds_display_and_metadata_together() {
+        let edge = ExpectedBehaviorEdge::new("Json", &[AstType::I32]);
+
+        assert_eq!(edge.display, "Json<i32>");
+        assert_eq!(edge.metadata.name, "Json");
+        assert_eq!(edge.metadata.type_args, vec![AstType::I32]);
     }
 
     #[test]
