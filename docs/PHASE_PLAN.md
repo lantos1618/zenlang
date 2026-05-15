@@ -911,6 +911,8 @@ checked-in docs, tests, and commits only.
   selection for restored behavior names and type arguments.
 - Resolver behavior parent, impl, and requires validation now share metadata
   source selection for names and typed refs.
+- Resolver type-parameter validation now shares one expected metadata bundle
+  for counts, names, display bounds, and typed bound refs.
 
 ## Current Phase
 

@@ -248,6 +248,30 @@ struct ExpectedTypeParameterBound {
     reference: TypeParameterBoundRefMetadata,
 }
 
+struct ExpectedTypeParameterMetadata {
+    count: usize,
+    names: Vec<String>,
+    bounds: Vec<TypeParameterBoundMetadata>,
+    bound_refs: Vec<TypeParameterBoundRefMetadata>,
+}
+
+impl ExpectedTypeParameterMetadata {
+    fn from_parameters(parameters: &[ExpectedTypeParameter]) -> Self {
+        Self {
+            count: parameters.len(),
+            names: parameters.iter().map(|param| param.name.clone()).collect(),
+            bounds: parameters
+                .iter()
+                .filter_map(|param| param.bound.as_ref().map(|bound| bound.display.clone()))
+                .collect(),
+            bound_refs: parameters
+                .iter()
+                .filter_map(|param| param.bound.as_ref().map(|bound| bound.reference.clone()))
+                .collect(),
+        }
+    }
+}
+
 struct ExpectedTypeLikeSymbol {
     type_params: Vec<ExpectedTypeParameter>,
     is_public: Option<bool>,
@@ -6874,8 +6898,8 @@ impl TypeChecker {
         validation: TypeParameterValidation,
         span: Span,
     ) {
-        let expected_count = expected.len();
-        if symbol.type_parameter_count != Some(expected_count) {
+        let expected = ExpectedTypeParameterMetadata::from_parameters(expected);
+        if symbol.type_parameter_count != Some(expected.count) {
             let actual = symbol
                 .type_parameter_count
                 .map(|count| count.to_string())
@@ -6884,16 +6908,15 @@ impl TypeChecker {
                 validation.count_code,
                 format!(
                     "resolver {symbol_kind} symbol '{name}' has type parameter count {actual}, expected {}",
-                    expected_count
+                    expected.count
                 ),
                 span,
             ));
         }
 
-        let expected_names: Vec<_> = expected.iter().map(|param| param.name.clone()).collect();
-        if symbol.type_parameter_names.as_deref() != Some(expected_names.as_slice()) {
+        if symbol.type_parameter_names.as_deref() != Some(expected.names.as_slice()) {
             let actual = format_type_parameter_names(symbol.type_parameter_names.as_deref());
-            let expected_names_display = format_type_parameter_names(Some(&expected_names));
+            let expected_names_display = format_type_parameter_names(Some(&expected.names));
             self.diagnostics.push(Diagnostic::error(
                 validation.name_code,
                 format!(
@@ -6903,13 +6926,9 @@ impl TypeChecker {
             ));
         }
 
-        let expected_bounds: Vec<_> = expected
-            .iter()
-            .filter_map(|param| param.bound.as_ref().map(|bound| bound.display.clone()))
-            .collect();
-        if symbol.type_parameter_bounds.as_deref() != Some(expected_bounds.as_slice()) {
+        if symbol.type_parameter_bounds.as_deref() != Some(expected.bounds.as_slice()) {
             let actual = format_type_parameter_bounds(symbol.type_parameter_bounds.as_deref());
-            let expected_bounds_display = format_type_parameter_bounds(Some(&expected_bounds));
+            let expected_bounds_display = format_type_parameter_bounds(Some(&expected.bounds));
             self.diagnostics.push(Diagnostic::error(
                 validation.bound_code,
                 format!(
@@ -6918,14 +6937,10 @@ impl TypeChecker {
                 span,
             ));
         }
-        let expected_bound_refs: Vec<_> = expected
-            .iter()
-            .filter_map(|param| param.bound.as_ref().map(|bound| bound.reference.clone()))
-            .collect();
-        if symbol.type_parameter_bound_refs.as_deref() != Some(expected_bound_refs.as_slice()) {
+        if symbol.type_parameter_bound_refs.as_deref() != Some(expected.bound_refs.as_slice()) {
             let actual =
                 format_type_parameter_bound_refs(symbol.type_parameter_bound_refs.as_deref());
-            let expected_refs = format_type_parameter_bound_refs(Some(&expected_bound_refs));
+            let expected_refs = format_type_parameter_bound_refs(Some(&expected.bound_refs));
             self.diagnostics.push(Diagnostic::error(
                 validation.bound_ref_code,
                 format!(
