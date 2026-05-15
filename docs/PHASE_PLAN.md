@@ -99,6 +99,8 @@ checked-in docs, tests, and commits only.
   same function-typed parameter/return and behavior-bound metadata coverage as
   top-level generic method templates, so impl templates do not rely on stale
   AST-only generic signatures before monomorphization.
+  It also directly covers resolver-restored return presence and parameter
+  counts for generic impl method templates.
 - Resolver-backed behavior method collection now rebuilds behavior parameters
   from resolver-owned parameter names and types, so stale AST-only missing or
   extra parameters cannot distort impl conformance checks.

@@ -765,6 +765,10 @@ and do not assume Phase 4 is ready without evidence.
   function-typed parameter/return metadata and behavior-bound metadata from
   resolver symbols instead of stale AST-only generic signatures, covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_metadata`.
+  Resolver-restored return presence and parameter counts are covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_return_presence`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_parameter_count`.
 - Resolver-backed behavior method collection rebuilds behavior parameters from
   resolver-owned parameter names and types, so stale AST-only missing or extra
   parameters cannot distort impl conformance checks.
