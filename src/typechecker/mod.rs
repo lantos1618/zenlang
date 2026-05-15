@@ -4246,8 +4246,24 @@ impl TypeChecker {
         let Some(existing) = self.behaviors.get(name).cloned() else {
             return;
         };
+        let methods = Self::resolver_behavior_methods_from_metadata(
+            existing.methods,
+            method_types,
+            symbol.definition_span,
+        );
+        self.behaviors.insert(
+            name.to_string(),
+            behavior_info_from_resolver_methods(name.to_string(), symbol, methods),
+        );
+    }
+
+    fn resolver_behavior_methods_from_metadata(
+        existing_methods: Vec<ast::BehaviorMethod>,
+        method_types: &[BehaviorMethodTypeMetadata],
+        span: Span,
+    ) -> Vec<ast::BehaviorMethod> {
         let mut existing_methods: VecDeque<ast::BehaviorMethod> =
-            existing.methods.into_iter().collect();
+            existing_methods.into_iter().collect();
         let mut methods = Vec::new();
         for (metadata_index, metadata) in method_types.iter().cloned().enumerate() {
             let future_method_names = method_types[metadata_index + 1..]
@@ -4263,13 +4279,10 @@ impl TypeChecker {
             methods.push(Self::resolver_behavior_method_from_metadata(
                 method.as_ref(),
                 metadata,
-                symbol.definition_span,
+                span,
             ));
         }
-        self.behaviors.insert(
-            name.to_string(),
-            behavior_info_from_resolver_methods(name.to_string(), symbol, methods),
-        );
+        methods
     }
 
     fn resolver_behavior_method_from_metadata(
@@ -11220,6 +11233,77 @@ Second: Wrap(str)
         assert!(defaults.contains_key("x"));
         assert!(!defaults.contains_key("stale_x"));
         assert!(!defaults.contains_key("callback"));
+    }
+
+    #[test]
+    fn resolver_behavior_methods_from_metadata_preserves_defaults_by_resolver_order() {
+        let first_span = Span::new(1, 10, 15);
+        let second_span = Span::new(1, 20, 25);
+        let default_span = Span::new(1, 30, 35);
+        let existing_methods = vec![
+            ast::BehaviorMethod {
+                name: "first".to_string(),
+                params: vec![Param {
+                    name: "stale".to_string(),
+                    ty: AstType::Bool,
+                    mutable: false,
+                    span: first_span,
+                }],
+                return_type: Some(AstType::Bool),
+                default_body: Some(Expression::IntLiteral {
+                    value: 1,
+                    span: first_span,
+                }),
+                span: first_span,
+            },
+            ast::BehaviorMethod {
+                name: "second".to_string(),
+                params: vec![],
+                return_type: None,
+                default_body: Some(Expression::IntLiteral {
+                    value: 2,
+                    span: second_span,
+                }),
+                span: second_span,
+            },
+        ];
+        let method_types = vec![
+            BehaviorMethodTypeMetadata {
+                name: "second".to_string(),
+                parameter_names: vec!["value".to_string()],
+                parameter_types: vec![AstType::I32],
+                return_type: AstType::Str,
+            },
+            BehaviorMethodTypeMetadata {
+                name: "first".to_string(),
+                parameter_names: vec![],
+                parameter_types: vec![],
+                return_type: AstType::Void,
+            },
+        ];
+
+        let methods = TypeChecker::resolver_behavior_methods_from_metadata(
+            existing_methods,
+            &method_types,
+            default_span,
+        );
+
+        assert_eq!(methods[0].name, "second");
+        assert_eq!(methods[0].params[0].name, "value");
+        assert_eq!(methods[0].params[0].ty, AstType::I32);
+        assert_eq!(methods[0].return_type, Some(AstType::Str));
+        assert_eq!(methods[0].span, second_span);
+        assert!(matches!(
+            methods[0].default_body,
+            Some(Expression::IntLiteral { value: 2, .. })
+        ));
+        assert_eq!(methods[1].name, "first");
+        assert_eq!(methods[1].return_type, None);
+        assert_eq!(methods[1].span, first_span);
+        assert!(matches!(
+            methods[1].default_body,
+            Some(Expression::IntLiteral { value: 1, .. })
+        ));
     }
 
     #[test]

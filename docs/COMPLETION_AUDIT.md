@@ -1308,6 +1308,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed struct collection now restores resolver-owned field names,
   typed field metadata, and field defaults through one helper, covered by
   `typechecker::tests::resolver_struct_fields_from_metadata_restores_field_names_and_defaults`.
+- Resolver-backed behavior collection now restores resolver-owned method lists
+  and AST default bodies through one metadata helper, covered by
+  `typechecker::tests::resolver_behavior_methods_from_metadata_preserves_defaults_by_resolver_order`.
 - Resolver behavior-association validation now derives display-name and typed
   ref expectations together, avoiding duplicate AST scans for the same edges.
 - Resolver behavior-association expectation storage now uses one shared edge
