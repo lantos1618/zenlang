@@ -157,6 +157,11 @@ struct ExpectedValueSignature {
     type_params: ExpectedTypeParameters,
 }
 
+struct ExpectedValueSymbol {
+    signature: ExpectedValueSignature,
+    is_public: bool,
+}
+
 #[derive(Default)]
 struct ExpectedParameters {
     count: usize,
@@ -4007,8 +4012,7 @@ impl TypeChecker {
                     self.require_resolver_value_symbol(
                         symbols,
                         name,
-                        expected_value_signature(params, return_type, type_params),
-                        *public,
+                        expected_value_symbol(params, return_type, type_params, *public),
                         *span,
                     );
                     let mut locals = scope_cursor.new_scope();
@@ -4035,8 +4039,7 @@ impl TypeChecker {
                     self.require_resolver_value_symbol(
                         symbols,
                         &format!("{type_name}.{method_name}"),
-                        expected_value_signature(params, return_type, type_params),
-                        *public,
+                        expected_value_symbol(params, return_type, type_params, *public),
                         *span,
                     );
                     let mut locals = scope_cursor.new_scope();
@@ -4259,8 +4262,7 @@ impl TypeChecker {
                             self.require_resolver_value_symbol(
                                 symbols,
                                 &format!("{type_name}.{name}"),
-                                expected_value_signature(params, return_type, type_params),
-                                *public,
+                                expected_value_symbol(params, return_type, type_params, *public),
                                 *span,
                             );
                             let mut locals = scope_cursor.new_scope();
@@ -7308,8 +7310,7 @@ impl TypeChecker {
         &mut self,
         symbols: &SymbolTable,
         name: &str,
-        expected_signature: ExpectedValueSignature,
-        expected_is_public: bool,
+        expected: ExpectedValueSymbol,
         span: Span,
     ) {
         let Some(symbol) = symbols.lookup(Namespace::Value, name) else {
@@ -7317,23 +7318,23 @@ impl TypeChecker {
             return;
         };
 
-        if symbol.is_public != expected_is_public {
+        if symbol.is_public != expected.is_public {
             self.diagnostics.push(Diagnostic::error(
                 "E0224",
                 format!(
                     "resolver value symbol '{name}' has visibility {}, expected {}",
                     visibility_name(symbol.is_public),
-                    visibility_name(expected_is_public)
+                    visibility_name(expected.is_public)
                 ),
                 span,
             ));
         }
 
-        self.validate_resolver_value_parameters(symbol, name, &expected_signature.params, span);
+        self.validate_resolver_value_parameters(symbol, name, &expected.signature.params, span);
         self.validate_resolver_value_return_type(
             symbol,
             name,
-            &expected_signature.return_type,
+            &expected.signature.return_type,
             span,
         );
 
@@ -7341,7 +7342,7 @@ impl TypeChecker {
             symbol,
             "value",
             name,
-            &expected_signature.type_params,
+            &expected.signature.type_params,
             TypeParameterValidation {
                 count_code: "E0220",
                 name_code: "E0347",
@@ -7585,6 +7586,18 @@ fn expected_value_signature(
         params,
         return_type: expected_return_type(return_type),
         type_params,
+    }
+}
+
+fn expected_value_symbol(
+    params: &[Param],
+    return_type: &Option<AstType>,
+    type_params: &[ast::TypeParam],
+    is_public: bool,
+) -> ExpectedValueSymbol {
+    ExpectedValueSymbol {
+        signature: expected_value_signature(params, return_type, type_params),
+        is_public,
     }
 }
 

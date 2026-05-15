@@ -93,6 +93,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver validation now carries value display-return and
   typed-return metadata through one shared return expectation and validation
   path, keeping those resolver value-signature handoff checks aligned.
+- Typechecker resolver validation now carries value visibility and signature
+  metadata through one expected value-symbol object, aligning value-symbol
+  handoff checks with the type-like symbol expectation shape.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, reducing
