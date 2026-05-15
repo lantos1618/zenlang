@@ -1116,6 +1116,8 @@ checked-in docs, tests, and commits only.
   helper across module, import, local, variant, behavior, and value symbols.
 - Resolver absent behavior-association metadata validation now lets the
   validation bundle build its impl/requires metadata entries.
+- Resolver module behavior-association absence validation now owns its resolver
+  diagnostic code mapping instead of constructing those codes at the call site.
 - Resolver absent behavior-declaration metadata validation now shares one
   helper across module, import, local, variant, and value symbols.
 - Resolver absent behavior-declaration metadata validation now lets the
