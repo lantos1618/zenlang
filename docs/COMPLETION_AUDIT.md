@@ -852,6 +852,8 @@ and do not assume Phase 4 is ready without evidence.
   import, and local symbols.
 - Resolver local mutability validation now shares the same diagnostic helper
   shape used by the resolver metadata validation paths.
+- Resolver extra-symbol validation now shares one diagnostic helper across
+  declaration/import/module and local symbol checks.
 
 ## Unresolved Gaps
 

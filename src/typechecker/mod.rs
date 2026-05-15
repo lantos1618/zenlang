@@ -4951,15 +4951,12 @@ impl TypeChecker {
                 continue;
             }
             if !expected.contains(&(symbol.namespace, symbol.name.clone())) {
-                self.diagnostics.push(Diagnostic::error(
+                self.validate_extra_resolver_symbol(
+                    symbol.namespace.diagnostic_name(),
+                    &symbol.name,
                     "E0243",
-                    format!(
-                        "resolver symbol table has extra {} symbol '{}'",
-                        symbol.namespace.diagnostic_name(),
-                        symbol.name
-                    ),
                     symbol.definition_span,
-                ));
+                );
             }
         }
     }
@@ -4975,14 +4972,12 @@ impl TypeChecker {
                 continue;
             }
             if !expected.contains(&(symbol.name.clone(), symbol.scope_id)) {
-                self.diagnostics.push(Diagnostic::error(
+                self.validate_extra_resolver_symbol(
+                    "local",
+                    &symbol.name,
                     "E0244",
-                    format!(
-                        "resolver symbol table has extra local symbol '{}'",
-                        symbol.name
-                    ),
                     symbol.definition_span,
-                ));
+                );
             }
         }
     }
@@ -6967,6 +6962,20 @@ impl TypeChecker {
                 span,
             ));
         }
+    }
+
+    fn validate_extra_resolver_symbol(
+        &mut self,
+        symbol_kind: &str,
+        name: &str,
+        code: &'static str,
+        span: Span,
+    ) {
+        self.diagnostics.push(Diagnostic::error(
+            code,
+            format!("resolver symbol table has extra {symbol_kind} symbol '{name}'"),
+            span,
+        ));
     }
 
     fn validate_resolver_absent_metadata_entry(
