@@ -5460,15 +5460,7 @@ impl TypeChecker {
                     ..
                 } => {
                     if self.resolver_backed_collection {
-                        let restored_name =
-                            Self::validation_symbol_name(symbols, Namespace::Type, name, *span);
-                        if let Some(scoped) = self.collected_type_type_param_scope(&restored_name) {
-                            self.validate_collected_enum_type_references(
-                                &restored_name,
-                                &scoped,
-                                *span,
-                            );
-                        }
+                        self.validate_resolver_enum_type_references(symbols, name, *span);
                     } else {
                         let scoped = type_param_name_set(type_params);
                         for variant in variants {
@@ -5616,6 +5608,18 @@ impl TypeChecker {
                 }
                 _ => {}
             }
+        }
+    }
+
+    fn validate_resolver_enum_type_references(
+        &mut self,
+        symbols: Option<&SymbolTable>,
+        name: &str,
+        span: Span,
+    ) {
+        let restored_name = Self::validation_symbol_name(symbols, Namespace::Type, name, span);
+        if let Some(scoped) = self.collected_type_type_param_scope(&restored_name) {
+            self.validate_collected_enum_type_references(&restored_name, &scoped, span);
         }
     }
 

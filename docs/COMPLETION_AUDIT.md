@@ -863,6 +863,11 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_metadata_for_type_refs`
   and
   `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_struct_field_default_refs_when_fields_incomplete`.
+- Resolver-backed enum type-reference validation now runs through a dedicated
+  restored-enum helper, with focused coverage from
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_metadata_for_type_refs`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_enum_payload_metadata`.
 - Struct field default expressions now participate in generic type-reference
   validation, so local annotations inside defaults cannot hide unknown type
   symbols, covered by

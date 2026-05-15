@@ -326,6 +326,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed struct type-reference and field-default expression validation
   now runs through a dedicated restored-struct helper, reducing another inline
   resolver handoff in the generic type-reference scan.
+- Resolver-backed enum type-reference validation now runs through a dedicated
+  restored-enum helper, matching the restored struct type-reference path.
 - Struct field default expressions now participate in generic type-reference
   validation. Non-generic struct defaults are checked against their declared
   field type, struct literals inject omitted defaulted fields with concrete
