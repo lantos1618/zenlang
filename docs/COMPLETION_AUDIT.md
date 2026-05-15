@@ -95,6 +95,10 @@ and do not assume Phase 4 is ready without evidence.
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
   generic parameter names cannot produce false unknown-type diagnostics.
+- Resolver-backed generic bound validation defers AST-only type-parameter
+  constraint checks until resolver metadata has been restored for functions,
+  structs, enums, and behaviors, so stale AST-only behavior constraints cannot
+  produce false generic-bound diagnostics.
 - Generic struct and enum type-argument arity diagnostics cover both expression
   instantiation and type annotation positions, including bare generic
   annotation names with missing type arguments and local variable annotations.

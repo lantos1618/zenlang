@@ -974,7 +974,9 @@ impl TypeChecker {
 
         for decl in decls {
             if let Declaration::Behavior { type_params, .. } = decl {
-                self.validate_generic_bounds(type_params);
+                if !self.resolver_backed_collection {
+                    self.validate_generic_bounds(type_params);
+                }
             }
         }
 
@@ -1004,7 +1006,9 @@ impl TypeChecker {
                     fields,
                     ..
                 } => {
-                    self.validate_generic_bounds(type_params);
+                    if !self.resolver_backed_collection {
+                        self.validate_generic_bounds(type_params);
+                    }
                     self.structs.insert(
                         name.clone(),
                         StructInfo {
@@ -1024,7 +1028,9 @@ impl TypeChecker {
                     variants,
                     ..
                 } => {
-                    self.validate_generic_bounds(type_params);
+                    if !self.resolver_backed_collection {
+                        self.validate_generic_bounds(type_params);
+                    }
                     self.enums.insert(
                         name.clone(),
                         EnumInfo {
@@ -1054,7 +1060,9 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.validate_generic_bounds(type_params);
+                    if !self.resolver_backed_collection {
+                        self.validate_generic_bounds(type_params);
+                    }
                     let ret = return_type.clone().unwrap_or(AstType::Void);
                     let collected_type_params: Vec<String> =
                         type_params.iter().map(|tp| tp.name.clone()).collect();
@@ -1095,7 +1103,9 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.validate_generic_bounds(type_params);
+                    if !self.resolver_backed_collection {
+                        self.validate_generic_bounds(type_params);
+                    }
                     let key = format!("{}.{}", type_name, method_name);
                     let ret = return_type.clone().unwrap_or(AstType::Void);
                     let collected_type_params: Vec<String> =
@@ -1128,7 +1138,9 @@ impl TypeChecker {
                     }
                 }
                 Declaration::Behavior { type_params, .. } => {
-                    self.validate_generic_bounds(type_params);
+                    if !self.resolver_backed_collection {
+                        self.validate_generic_bounds(type_params);
+                    }
                 }
                 Declaration::ImplBlock {
                     type_name,
@@ -8301,6 +8313,97 @@ Json<T>: behavior {
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored behavior type parameters should avoid stale AST type-ref diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_function_bounds_for_validation() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+identity<T: Json<T>> = (value: T) T { return value }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function { type_params, .. } = &mut program.declarations[1] {
+            type_params[0].constraint = Some("Missing".to_string());
+            type_params[0].constraint_type_args.clear();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored function bounds should avoid stale AST generic-bound diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_type_bounds_for_validation() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Box<T: Json<T>>: { value: T }
+Option<T: Json<T>>: Some(T), None
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Struct { type_params, .. } = &mut program.declarations[1] {
+            type_params[0].constraint = Some("MissingBox".to_string());
+            type_params[0].constraint_type_args.clear();
+        }
+        if let Declaration::Enum { type_params, .. } = &mut program.declarations[2] {
+            type_params[0].constraint = Some("MissingOption".to_string());
+            type_params[0].constraint_type_args.clear();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored type bounds should avoid stale AST generic-bound diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_bounds_for_validation() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Serializable<T: Json<T>>: behavior {
+    serialize: (Self) T
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { type_params, .. } = &mut program.declarations[1] {
+            type_params[0].constraint = Some("Missing".to_string());
+            type_params[0].constraint_type_args.clear();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior bounds should avoid stale AST generic-bound diagnostics: {:?}",
             tc.diagnostics
         );
     }
