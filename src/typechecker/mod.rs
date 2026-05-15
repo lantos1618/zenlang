@@ -1750,18 +1750,14 @@ impl TypeChecker {
                     }
                 }
                 Declaration::Struct { name, span, .. } => {
-                    let restored_name =
-                        Self::resolver_symbol_name_for(symbols, Namespace::Type, name, *span);
+                    let restored_name = self
+                        .collect_resolver_type_behavior_refs_for_declaration(symbols, name, *span);
                     self.collect_resolver_struct_fields(symbols, &restored_name);
-                    self.collect_resolver_type_behavior_impl_refs(symbols, &restored_name);
-                    self.collect_resolver_type_behavior_requires(symbols, &restored_name);
                 }
                 Declaration::Enum { name, span, .. } => {
-                    let restored_name =
-                        Self::resolver_symbol_name_for(symbols, Namespace::Type, name, *span);
+                    let restored_name = self
+                        .collect_resolver_type_behavior_refs_for_declaration(symbols, name, *span);
                     self.collect_resolver_enum_variants(symbols, &restored_name);
-                    self.collect_resolver_type_behavior_impl_refs(symbols, &restored_name);
-                    self.collect_resolver_type_behavior_requires(symbols, &restored_name);
                 }
                 Declaration::Behavior { name, span, .. } => {
                     let restored_name =
@@ -1855,6 +1851,18 @@ impl TypeChecker {
                 _ => {}
             }
         }
+    }
+
+    fn collect_resolver_type_behavior_refs_for_declaration(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        span: Span,
+    ) -> String {
+        let restored_name = Self::resolver_symbol_name_for(symbols, Namespace::Type, name, span);
+        self.collect_resolver_type_behavior_impl_refs(symbols, &restored_name);
+        self.collect_resolver_type_behavior_requires(symbols, &restored_name);
+        restored_name
     }
 
     fn validate_collected_declaration_semantics(

@@ -194,6 +194,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed struct and enum collection now also uses typed resolver
   generic bound refs, so generic type templates no longer retain stale AST-only
   behavior bounds after resolver validation.
+- Resolver-backed struct and enum collection now shares resolver-restored
+  behavior association ref handoff setup, keeping impl and required association
+  metadata collection aligned before kind-specific field or variant metadata is
+  rebuilt.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

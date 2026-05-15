@@ -107,6 +107,9 @@ and do not assume Phase 4 is ready without evidence.
   graph modules use the same resolver-owned metadata handoff as
   `check_program_with_symbols` instead of returning to plain AST declaration
   collection after resolver validation.
+- Resolver-backed struct and enum collection shares the resolver-restored
+  behavior association ref setup before rebuilding kind-specific metadata,
+  keeping impl and required association handoffs on the same collection path.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
