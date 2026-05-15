@@ -905,6 +905,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-association validation now uses one role/check mapping for
   parent, impl, and requires diagnostic metadata, covered by
   `typechecker::tests::behavior_ref_validation_maps_role_and_check_diagnostics`.
+- Resolver behavior-association validation now uses the same role mapping for
+  parent, impl, and requires resolver metadata selection, covered by
+  `typechecker::tests::behavior_ref_actual_selects_role_metadata`.
 - Resolver struct-field validation now shares one expected metadata bundle
   for counts, display fields, and typed AST fields.
 - Resolver behavior-method validation now shares one expected metadata bundle

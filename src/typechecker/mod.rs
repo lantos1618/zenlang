@@ -1084,12 +1084,14 @@ struct BehaviorRefValidation {
     ref_code: &'static str,
 }
 
+#[derive(Clone, Copy)]
 enum BehaviorRefRole {
     Parent,
     Impl,
     Required,
 }
 
+#[derive(Clone, Copy)]
 enum BehaviorRefCheck {
     Contains,
     List,
@@ -1150,6 +1152,14 @@ struct BehaviorRefActual<'a> {
 }
 
 impl<'a> BehaviorRefActual<'a> {
+    fn for_role(symbol: &'a Symbol, role: BehaviorRefRole) -> Self {
+        match role {
+            BehaviorRefRole::Parent => Self::parents(symbol),
+            BehaviorRefRole::Impl => Self::impls(symbol),
+            BehaviorRefRole::Required => Self::required(symbol),
+        }
+    }
+
     fn parents(symbol: &'a Symbol) -> Self {
         Self {
             names: symbol.behavior_parent_names.as_deref(),
@@ -7874,7 +7884,7 @@ impl TypeChecker {
         self.validate_resolver_behavior_ref_contains(
             BehaviorRefValidation::for_role(BehaviorRefRole::Parent, BehaviorRefCheck::Contains),
             name,
-            BehaviorRefActual::parents(symbol),
+            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Parent),
             expected,
             span,
         );
@@ -7890,7 +7900,7 @@ impl TypeChecker {
         self.validate_resolver_behavior_ref_list(
             BehaviorRefValidation::for_role(BehaviorRefRole::Parent, BehaviorRefCheck::List),
             name,
-            BehaviorRefActual::parents(symbol),
+            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Parent),
             expected,
             span,
         );
@@ -7906,7 +7916,7 @@ impl TypeChecker {
         self.validate_resolver_behavior_ref_contains(
             BehaviorRefValidation::for_role(BehaviorRefRole::Impl, BehaviorRefCheck::Contains),
             name,
-            BehaviorRefActual::impls(symbol),
+            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Impl),
             expected,
             span,
         );
@@ -7922,7 +7932,7 @@ impl TypeChecker {
         self.validate_resolver_behavior_ref_list(
             BehaviorRefValidation::for_role(BehaviorRefRole::Impl, BehaviorRefCheck::List),
             name,
-            BehaviorRefActual::impls(symbol),
+            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Impl),
             expected,
             span,
         );
@@ -7938,7 +7948,7 @@ impl TypeChecker {
         self.validate_resolver_behavior_ref_contains(
             BehaviorRefValidation::for_role(BehaviorRefRole::Required, BehaviorRefCheck::Contains),
             name,
-            BehaviorRefActual::required(symbol),
+            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Required),
             expected,
             span,
         );
@@ -7954,7 +7964,7 @@ impl TypeChecker {
         self.validate_resolver_behavior_ref_list(
             BehaviorRefValidation::for_role(BehaviorRefRole::Required, BehaviorRefCheck::List),
             name,
-            BehaviorRefActual::required(symbol),
+            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Required),
             expected,
             span,
         );
@@ -9488,6 +9498,56 @@ Box.get<T> = (self: Box<T>) T { return self.value }
                 expected
             );
         }
+    }
+
+    #[test]
+    fn behavior_ref_actual_selects_role_metadata() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+
+Point.implements(PrettyJson) {
+    encode = (value: Point) str { return "point" }
+    pretty = (value: Point) str { return "pretty" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let behavior = symbols
+            .lookup(Namespace::Behavior, "PrettyJson")
+            .expect("behavior symbol");
+        let ty = symbols
+            .lookup(Namespace::Type, "Point")
+            .expect("type symbol");
+
+        let parent = BehaviorRefActual::for_role(behavior, BehaviorRefRole::Parent);
+        assert_eq!(format_behavior_ref_names(parent.names), "Json<str>");
+        assert_eq!(format_behavior_refs(parent.refs), "Json<str>");
+
+        let implementation = BehaviorRefActual::for_role(ty, BehaviorRefRole::Impl);
+        assert_eq!(
+            format_behavior_ref_names(implementation.names),
+            "PrettyJson"
+        );
+        assert_eq!(format_behavior_refs(implementation.refs), "PrettyJson");
+
+        let required = BehaviorRefActual::for_role(ty, BehaviorRefRole::Required);
+        assert_eq!(format_behavior_ref_names(required.names), "Json<str>");
+        assert_eq!(format_behavior_refs(required.refs), "Json<str>");
     }
 
     #[test]
