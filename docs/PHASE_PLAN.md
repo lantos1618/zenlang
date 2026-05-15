@@ -848,6 +848,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed `.implements` and `.requires` target restoration now share
   the unique behavior-ref owner selection helper, reducing duplicate association
   handoff logic while preserving ambiguity checks.
+- Resolver-backed type association collection now shares the same
+  behavior-ref handoff helper for `.implements` and `.requires`, reducing
+  duplicate resolver metadata setup while preserving incomplete-metadata
+  tracking.
 
 ## Current Phase
 

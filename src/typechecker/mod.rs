@@ -2066,30 +2066,40 @@ impl TypeChecker {
     }
 
     fn collect_resolver_type_behavior_impl_refs(&mut self, symbols: &SymbolTable, name: &str) {
-        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
-            return;
-        };
-
-        if let Some(impl_refs) = symbol.behavior_impl_refs.as_deref() {
-            self.resolver_behavior_impl_refs
-                .insert(name.to_string(), impl_refs.iter().cloned().collect());
-        } else {
-            self.resolver_missing_behavior_impl_refs
-                .insert(name.to_string());
-        }
+        Self::collect_resolver_type_behavior_refs(
+            symbols,
+            name,
+            |symbol| &symbol.behavior_impl_refs,
+            &mut self.resolver_behavior_impl_refs,
+            &mut self.resolver_missing_behavior_impl_refs,
+        );
     }
 
     fn collect_resolver_type_behavior_requires(&mut self, symbols: &SymbolTable, name: &str) {
+        Self::collect_resolver_type_behavior_refs(
+            symbols,
+            name,
+            |symbol| &symbol.behavior_required_refs,
+            &mut self.resolver_behavior_required_refs,
+            &mut self.resolver_missing_behavior_required_refs,
+        );
+    }
+
+    fn collect_resolver_type_behavior_refs(
+        symbols: &SymbolTable,
+        name: &str,
+        select_refs: impl Fn(&crate::resolver::Symbol) -> &Option<Vec<BehaviorRefMetadata>>,
+        collected_refs: &mut HashMap<String, VecDeque<BehaviorRefMetadata>>,
+        missing_refs: &mut HashSet<String>,
+    ) {
         let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
             return;
         };
 
-        if let Some(required_refs) = symbol.behavior_required_refs.as_deref() {
-            self.resolver_behavior_required_refs
-                .insert(name.to_string(), required_refs.iter().cloned().collect());
+        if let Some(refs) = select_refs(symbol).as_deref() {
+            collected_refs.insert(name.to_string(), refs.iter().cloned().collect());
         } else {
-            self.resolver_missing_behavior_required_refs
-                .insert(name.to_string());
+            missing_refs.insert(name.to_string());
         }
     }
 

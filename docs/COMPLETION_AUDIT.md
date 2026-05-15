@@ -572,6 +572,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed `.implements` and `.requires` target restoration share a
   unique behavior-ref owner helper, reducing duplicate association handoff logic
   while preserving ambiguity checks.
+- Resolver-backed type association collection shares the same behavior-ref
+  handoff helper for `.implements` and `.requires`, reducing duplicate resolver
+  metadata setup while preserving incomplete-metadata tracking.
 - Resolver-backed generic template collection also derives return-type presence
   from validated resolver metadata, so stale AST-only missing return annotations
   cannot erase resolver-owned generic function or method returns before
