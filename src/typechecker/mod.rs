@@ -7654,18 +7654,12 @@ impl TypeChecker {
     }
 }
 
-fn expected_return_type_name(return_type: &Option<AstType>) -> String {
-    return_type
-        .as_ref()
-        .unwrap_or(&AstType::Void)
-        .display_name()
-}
-
 fn expected_return_type(return_type: &Option<AstType>) -> ExpectedReturnType {
+    let typed = return_type.clone().unwrap_or(AstType::Void);
     ExpectedReturnType {
         metadata: ExpectedReturnMetadata {
-            typed: return_type.clone().unwrap_or(AstType::Void),
-            display: expected_return_type_name(return_type),
+            display: typed.display_name(),
+            typed,
         },
     }
 }

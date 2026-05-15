@@ -161,6 +161,8 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver validation now stores expected value display-return and
   typed-return metadata as one paired return expectation before deriving
   resolver comparison values.
+- Typechecker resolver validation now constructs expected value typed-return
+  metadata and its display name in the same return expectation helper.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, reducing
