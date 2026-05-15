@@ -1100,6 +1100,8 @@ checked-in docs, tests, and commits only.
   method call type arguments now also skip dependent signature checks.
 - Generic behavior bound failures now skip dependent function and method body
   specialization diagnostics.
+- Resolver value-parameter validation now owns its resolver diagnostic code
+  mapping instead of constructing those codes at the call site.
 
 ## Current Phase
 

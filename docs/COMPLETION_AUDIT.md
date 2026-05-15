@@ -1099,6 +1099,9 @@ and do not assume Phase 4 is ready without evidence.
   `generic_diagnostics::generic_function_behavior_bound_failure_is_error`,
   `generic_diagnostics::generic_method_behavior_bound_failure_is_error`, and
   `generic_diagnostics::generic_ufc_function_behavior_bound_failure_is_error`.
+- Resolver value-parameter validation now owns its resolver diagnostic code
+  mapping, covered by
+  `typechecker::tests::value_parameter_validation_uses_resolver_codes`.
 
 ## Unresolved Gaps
 

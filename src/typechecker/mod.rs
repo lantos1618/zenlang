@@ -205,6 +205,14 @@ struct ValueParameterValidation {
 }
 
 impl ValueParameterValidation {
+    fn resolver_codes() -> Self {
+        Self {
+            name_code: "E0223",
+            display_type_code: "E0216",
+            typed_type_code: "E0356",
+        }
+    }
+
     fn name_message(self, name: &str, actual: &str, expected: &str) -> String {
         format!(
             "resolver value symbol '{name}' has parameter names '{actual}', expected '{expected}'"
@@ -8671,11 +8679,7 @@ impl TypeChecker {
             span,
         );
 
-        let validation = ValueParameterValidation {
-            name_code: "E0223",
-            display_type_code: "E0216",
-            typed_type_code: "E0356",
-        };
+        let validation = ValueParameterValidation::resolver_codes();
 
         if symbol.parameter_names.as_deref() != Some(expected.names.as_slice()) {
             let actual = format_parameter_names(symbol.parameter_names.as_deref());
@@ -9805,6 +9809,15 @@ Point.get = (self: Point) i32 { return self.x }
             validation.typed_type_message("apply", "(i32)", "((i32) i32)"),
             "resolver value symbol 'apply' has typed parameter types '(i32)', expected '((i32) i32)'"
         );
+    }
+
+    #[test]
+    fn value_parameter_validation_uses_resolver_codes() {
+        let validation = ValueParameterValidation::resolver_codes();
+
+        assert_eq!(validation.name_code, "E0223");
+        assert_eq!(validation.display_type_code, "E0216");
+        assert_eq!(validation.typed_type_code, "E0356");
     }
 
     #[test]
