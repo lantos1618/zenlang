@@ -242,6 +242,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver expected module-symbol construction now pairs module name, absent
   source, and default visibility through one constructor, covered by
   `typechecker::tests::expected_module_symbol_builds_name_source_and_visibility_together`.
+- Resolver expected local-symbol construction now pairs local scope, mutability,
+  absent source, and default visibility through one constructor, covered by
+  `typechecker::tests::expected_local_symbol_builds_scope_mutability_source_and_visibility_together`.
 - Resolver expected behavior association construction now pairs display names
   and typed refs through one constructor, covered by
   `typechecker::tests::expected_behavior_edge_builds_display_and_metadata_together`.

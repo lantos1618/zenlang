@@ -194,6 +194,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver expected module-symbol construction now pairs module
   name, absent source, and default visibility through one expected-module
   constructor.
+- Typechecker resolver expected local-symbol construction now pairs local
+  scope, mutability, absent source, and default visibility through one
+  expected-local constructor.
 - Typechecker resolver behavior-ref validation now separates role labels from
   per-check diagnostic code mappings, avoiding duplicated label bundles across
   contains and full-list checks.

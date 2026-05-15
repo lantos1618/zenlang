@@ -508,6 +508,17 @@ struct ExpectedLocalSymbol {
     source: Option<String>,
 }
 
+impl ExpectedLocalSymbol {
+    fn new(is_mutable: bool, scope_id: u32) -> Self {
+        Self {
+            scope_id,
+            is_mutable,
+            is_public: false,
+            source: None,
+        }
+    }
+}
+
 struct ExpectedTypeParameter {
     name: String,
     bound: Option<ExpectedTypeParameterBound>,
@@ -9408,12 +9419,7 @@ fn expected_module_symbol(name: &str) -> ExpectedModuleSymbol {
 }
 
 fn expected_local_symbol(is_mutable: bool, scope_id: u32) -> ExpectedLocalSymbol {
-    ExpectedLocalSymbol {
-        scope_id,
-        is_mutable,
-        is_public: false,
-        source: None,
-    }
+    ExpectedLocalSymbol::new(is_mutable, scope_id)
 }
 
 fn format_type_parameter_names(names: Option<&[String]>) -> String {
@@ -11298,6 +11304,16 @@ Point.requires(Json<str>)
         let symbol = ExpectedModuleSymbol::new("std.io");
 
         assert_eq!(symbol.name, "std.io");
+        assert_eq!(symbol.source, None);
+        assert!(!symbol.is_public);
+    }
+
+    #[test]
+    fn expected_local_symbol_builds_scope_mutability_source_and_visibility_together() {
+        let symbol = ExpectedLocalSymbol::new(true, 42);
+
+        assert_eq!(symbol.scope_id, 42);
+        assert!(symbol.is_mutable);
         assert_eq!(symbol.source, None);
         assert!(!symbol.is_public);
     }
