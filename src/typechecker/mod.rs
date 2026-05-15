@@ -432,12 +432,45 @@ impl FieldAbsenceValidation {
     }
 }
 
+#[derive(Clone, Copy)]
 struct VariantAbsenceValidation {
     names_code: &'static str,
     owner_code: &'static str,
     payload_count_code: &'static str,
     payload_type_name_code: &'static str,
     payload_type_code: &'static str,
+}
+
+impl VariantAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 5] {
+        [
+            (
+                symbol.variant_names.is_some(),
+                self.names_code,
+                "variant names",
+            ),
+            (
+                symbol.variant_owner_name.is_some(),
+                self.owner_code,
+                "variant owner",
+            ),
+            (
+                symbol.variant_payload_count.is_some(),
+                self.payload_count_code,
+                "variant payload count",
+            ),
+            (
+                symbol.variant_payload_type_name.is_some(),
+                self.payload_type_name_code,
+                "variant payload type",
+            ),
+            (
+                symbol.variant_payload_type.is_some(),
+                self.payload_type_code,
+                "typed variant payload type",
+            ),
+        ]
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -7181,38 +7214,8 @@ impl TypeChecker {
         validation: VariantAbsenceValidation,
         span: Span,
     ) {
-        self.validate_resolver_absent_metadata_entries(
-            symbol_kind,
-            name,
-            &[
-                (
-                    symbol.variant_names.is_some(),
-                    validation.names_code,
-                    "variant names",
-                ),
-                (
-                    symbol.variant_owner_name.is_some(),
-                    validation.owner_code,
-                    "variant owner",
-                ),
-                (
-                    symbol.variant_payload_count.is_some(),
-                    validation.payload_count_code,
-                    "variant payload count",
-                ),
-                (
-                    symbol.variant_payload_type_name.is_some(),
-                    validation.payload_type_name_code,
-                    "variant payload type",
-                ),
-                (
-                    symbol.variant_payload_type.is_some(),
-                    validation.payload_type_code,
-                    "typed variant payload type",
-                ),
-            ],
-            span,
-        );
+        let entries = validation.entries(symbol);
+        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
     }
 
     fn validate_resolver_absent_behavior_association_metadata(
@@ -9818,6 +9821,40 @@ Point: { x: i32, y: i32 }
                 (true, "COUNT", "field count"),
                 (true, "FIELD_TYPES", "field types"),
                 (true, "TYPED_FIELDS", "typed field types"),
+            ]
+        );
+    }
+
+    #[test]
+    fn variant_absence_validation_builds_entries() {
+        let program = parse_program(
+            r#"
+Option<T>: Some(T), None
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let symbol = symbols
+            .lookup_variant("Option", "Some")
+            .expect("variant symbol");
+        let entries = VariantAbsenceValidation {
+            names_code: "NAMES",
+            owner_code: "OWNER",
+            payload_count_code: "PAYLOAD_COUNT",
+            payload_type_name_code: "PAYLOAD_TYPE",
+            payload_type_code: "TYPED_PAYLOAD",
+        }
+        .entries(symbol);
+
+        assert_eq!(
+            entries,
+            [
+                (false, "NAMES", "variant names"),
+                (true, "OWNER", "variant owner"),
+                (true, "PAYLOAD_COUNT", "variant payload count"),
+                (true, "PAYLOAD_TYPE", "variant payload type"),
+                (true, "TYPED_PAYLOAD", "typed variant payload type"),
             ]
         );
     }
