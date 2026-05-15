@@ -915,6 +915,8 @@ checked-in docs, tests, and commits only.
   for counts, names, display bounds, and typed bound refs.
 - Resolver value-parameter validation now shares one expected metadata bundle
   for counts, names, display types, and typed AST types.
+- Resolver behavior-association list validation now shares one expected
+  metadata bundle for display names and typed refs.
 
 ## Current Phase
 

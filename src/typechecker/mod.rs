@@ -982,6 +982,20 @@ struct ExpectedBehaviorEdge {
     metadata: BehaviorRefMetadata,
 }
 
+struct ExpectedBehaviorEdgeMetadata {
+    names: Vec<String>,
+    refs: Vec<BehaviorRefMetadata>,
+}
+
+impl ExpectedBehaviorEdgeMetadata {
+    fn from_edges(edges: &[ExpectedBehaviorEdge]) -> Self {
+        Self {
+            names: edges.iter().map(|edge| edge.display.clone()).collect(),
+            refs: edges.iter().map(|edge| edge.metadata.clone()).collect(),
+        }
+    }
+}
+
 #[derive(Default)]
 struct ExpectedBehaviorEdges {
     edges: HashMap<String, Vec<ExpectedBehaviorEdge>>,
@@ -7632,10 +7646,10 @@ impl TypeChecker {
         expected: &[ExpectedBehaviorEdge],
         span: Span,
     ) {
-        let expected_names: Vec<_> = expected.iter().map(|edge| edge.display.clone()).collect();
-        if !behavior_ref_names_match(actual.names, &expected_names) {
+        let expected = ExpectedBehaviorEdgeMetadata::from_edges(expected);
+        if !behavior_ref_names_match(actual.names, &expected.names) {
             let actual = format_behavior_ref_names(actual.names);
-            let expected_names = format_behavior_ref_names(Some(&expected_names));
+            let expected_names = format_behavior_ref_names(Some(&expected.names));
             self.diagnostics.push(Diagnostic::error(
                 validation.name_code,
                 format!(
@@ -7645,10 +7659,9 @@ impl TypeChecker {
                 span,
             ));
         }
-        let expected_refs: Vec<_> = expected.iter().map(|edge| edge.metadata.clone()).collect();
-        if !behavior_refs_match(actual.refs, &expected_refs) {
+        if !behavior_refs_match(actual.refs, &expected.refs) {
             let actual = format_behavior_refs(actual.refs);
-            let expected_refs = format_behavior_refs(Some(&expected_refs));
+            let expected_refs = format_behavior_refs(Some(&expected.refs));
             self.diagnostics.push(Diagnostic::error(
                 validation.ref_code,
                 format!(
