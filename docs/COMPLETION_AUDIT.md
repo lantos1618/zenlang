@@ -1871,6 +1871,12 @@ and do not assume Phase 4 is ready without evidence.
   optional-metadata comparison helper for resolver-owned owner names, covered by
   `cargo test variant_owner_validation` and
   `cargo test check_program_with_symbols_validates_resolver_enum_variant_owner_names`.
+- Resolver declaration metadata task collection now gathers callable, type,
+  behavior, and behavior-impl block tasks in one declaration pass before
+  replaying the existing resolver-backed collection order, covered by
+  `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`
+  and
+  `cargo test collect_declarations_with_symbols_uses_resolver_behavior_impl_target_and_name_metadata`.
 
 ## Unresolved Gaps
 

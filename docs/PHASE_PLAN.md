@@ -1628,6 +1628,10 @@ checked-in docs, tests, and commits only.
 - Resolver enum variant owner-name validation now uses the shared
   optional-metadata comparison helper for resolver-owned owner names,
   preserving variant-specific resolver diagnostics.
+- Resolver declaration metadata task collection now gathers callable, type,
+  behavior, and behavior-impl block tasks in one declaration pass before
+  replaying the existing resolver-backed collection order, reducing another
+  duplicate declaration scan.
 
 ## Current Phase
 

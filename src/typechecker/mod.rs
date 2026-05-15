@@ -98,6 +98,21 @@ enum ResolverTypeDeclarationMetadataTask<'a> {
     },
 }
 
+#[derive(Default)]
+struct ResolverDeclarationMetadataTasks<'a> {
+    callable: Vec<ResolverCallableDeclarationMetadataTask<'a>>,
+    types: Vec<ResolverTypeDeclarationMetadataTask<'a>>,
+    behaviors: Vec<(&'a str, Span)>,
+    behavior_impl_blocks: Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
+}
+
+struct ResolverBehaviorImplBlockDeclarationTask<'a> {
+    ast_type_name: &'a str,
+    behavior: &'a str,
+    behavior_type_args: &'a [AstType],
+    methods: &'a [Declaration],
+}
+
 struct ResolverBehaviorImplBlockTask<'a> {
     ast_type_name: &'a str,
     restored_type_name: String,
@@ -3484,29 +3499,27 @@ impl TypeChecker {
     fn collect_declarations_with_symbols(&mut self, decls: &[Declaration], symbols: &SymbolTable) {
         self.with_resolver_backed_collection(|checker| checker.collect_declarations(decls));
 
-        self.collect_resolver_declaration_metadata(decls, symbols);
-        self.collect_resolver_behavior_impl_metadata(decls, symbols);
+        let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
+        self.collect_resolver_declaration_metadata(symbols, &tasks);
+        self.collect_resolver_behavior_impl_metadata(&tasks.behavior_impl_blocks, symbols);
         self.validate_resolver_collected_declaration_semantics(decls, symbols);
         self.clear_resolver_behavior_ref_state();
         self.refresh_resolver_type_behavior_impls(decls, symbols);
     }
 
-    fn collect_resolver_declaration_metadata(
-        &mut self,
+    fn collect_resolver_declaration_metadata_tasks(
         decls: &[Declaration],
-        symbols: &SymbolTable,
-    ) {
-        let mut callable_tasks = Vec::new();
-        let mut type_tasks = Vec::new();
-        let mut behavior_tasks = Vec::new();
-
+    ) -> ResolverDeclarationMetadataTasks<'_> {
+        let mut tasks = ResolverDeclarationMetadataTasks::default();
         for decl in decls {
             match decl {
                 Declaration::Function { name, span, .. } => {
-                    callable_tasks.push(ResolverCallableDeclarationMetadataTask::Function {
-                        name,
-                        span: *span,
-                    });
+                    tasks
+                        .callable
+                        .push(ResolverCallableDeclarationMetadataTask::Function {
+                            name,
+                            span: *span,
+                        });
                 }
                 Declaration::Method {
                     type_name,
@@ -3514,11 +3527,13 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    callable_tasks.push(ResolverCallableDeclarationMetadataTask::Method {
-                        type_name,
-                        method_name,
-                        span: *span,
-                    });
+                    tasks
+                        .callable
+                        .push(ResolverCallableDeclarationMetadataTask::Method {
+                            type_name,
+                            method_name,
+                            span: *span,
+                        });
                 }
                 Declaration::ImplBlock {
                     type_name,
@@ -3526,34 +3541,62 @@ impl TypeChecker {
                     methods,
                     ..
                 } => {
-                    callable_tasks.push(ResolverCallableDeclarationMetadataTask::TypeImpl {
-                        type_name,
-                        methods,
-                    });
+                    tasks
+                        .callable
+                        .push(ResolverCallableDeclarationMetadataTask::TypeImpl {
+                            type_name,
+                            methods,
+                        });
+                }
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior: Some(behavior),
+                    behavior_type_args,
+                    methods,
+                    ..
+                } => {
+                    tasks
+                        .behavior_impl_blocks
+                        .push(ResolverBehaviorImplBlockDeclarationTask {
+                            ast_type_name: type_name,
+                            behavior,
+                            behavior_type_args,
+                            methods,
+                        });
                 }
                 Declaration::Struct {
                     name, fields, span, ..
                 } => {
-                    type_tasks.push(ResolverTypeDeclarationMetadataTask::Struct {
-                        name,
-                        fields,
-                        span: *span,
-                    });
+                    tasks
+                        .types
+                        .push(ResolverTypeDeclarationMetadataTask::Struct {
+                            name,
+                            fields,
+                            span: *span,
+                        });
                 }
                 Declaration::Enum { name, span, .. } => {
-                    type_tasks
+                    tasks
+                        .types
                         .push(ResolverTypeDeclarationMetadataTask::Enum { name, span: *span });
                 }
                 Declaration::Behavior { name, span, .. } => {
-                    behavior_tasks.push((name.as_str(), *span));
+                    tasks.behaviors.push((name.as_str(), *span));
                 }
                 _ => {}
             }
         }
+        tasks
+    }
 
-        self.collect_resolver_callable_declaration_metadata(symbols, &callable_tasks);
-        self.collect_resolver_type_declaration_metadata(symbols, &type_tasks);
-        self.collect_resolver_behavior_declaration_metadata_pass(symbols, &behavior_tasks);
+    fn collect_resolver_declaration_metadata(
+        &mut self,
+        symbols: &SymbolTable,
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
+    ) {
+        self.collect_resolver_callable_declaration_metadata(symbols, &tasks.callable);
+        self.collect_resolver_type_declaration_metadata(symbols, &tasks.types);
+        self.collect_resolver_behavior_declaration_metadata_pass(symbols, &tasks.behaviors);
     }
 
     fn collect_resolver_behavior_declaration_metadata_pass(
@@ -3669,10 +3712,10 @@ impl TypeChecker {
 
     fn collect_resolver_behavior_impl_metadata(
         &mut self,
-        decls: &[Declaration],
+        raw_tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
         symbols: &SymbolTable,
     ) {
-        let tasks = self.resolver_behavior_impl_block_tasks(decls, symbols);
+        let tasks = self.resolver_behavior_impl_block_tasks(raw_tasks, symbols);
 
         self.with_resolver_backed_collection(|checker| {
             for task in &tasks {
@@ -3735,33 +3778,24 @@ impl TypeChecker {
 
     fn resolver_behavior_impl_block_tasks<'a>(
         &self,
-        decls: &'a [Declaration],
+        raw_tasks: &'a [ResolverBehaviorImplBlockDeclarationTask<'a>],
         symbols: &SymbolTable,
     ) -> Vec<ResolverBehaviorImplBlockTask<'a>> {
         let mut tasks = Vec::new();
-        for decl in decls {
-            if let Declaration::ImplBlock {
-                type_name,
-                behavior: Some(behavior),
-                behavior_type_args,
-                methods,
-                ..
-            } = decl
-            {
-                let restored_type_name = self.resolver_impl_type_name_for(
-                    symbols,
-                    type_name,
-                    methods,
-                    Some((behavior, behavior_type_args)),
-                );
-                tasks.push(ResolverBehaviorImplBlockTask {
-                    ast_type_name: type_name,
-                    restored_type_name,
-                    behavior,
-                    behavior_type_args,
-                    methods,
-                });
-            }
+        for raw_task in raw_tasks {
+            let restored_type_name = self.resolver_impl_type_name_for(
+                symbols,
+                raw_task.ast_type_name,
+                raw_task.methods,
+                Some((raw_task.behavior, raw_task.behavior_type_args)),
+            );
+            tasks.push(ResolverBehaviorImplBlockTask {
+                ast_type_name: raw_task.ast_type_name,
+                restored_type_name,
+                behavior: raw_task.behavior,
+                behavior_type_args: raw_task.behavior_type_args,
+                methods: raw_task.methods,
+            });
         }
         tasks
     }
@@ -13156,6 +13190,43 @@ Point.requires(Json<str>)
     }
 
     #[test]
+    fn resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Option: Some(i32), None
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.impl = {
+    x_value = (value: Point) i32 { return value.x }
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+
+main = () i32 { return 0 }
+"#,
+        );
+
+        let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+
+        assert_eq!(tasks.types.len(), 2);
+        assert_eq!(tasks.behaviors.len(), 1);
+        assert_eq!(tasks.behaviors[0].0, "Json");
+        assert_eq!(tasks.callable.len(), 2);
+        assert_eq!(tasks.behavior_impl_blocks.len(), 1);
+        let behavior_impl = &tasks.behavior_impl_blocks[0];
+        assert_eq!(behavior_impl.ast_type_name, "Point");
+        assert_eq!(behavior_impl.behavior, "Json");
+        assert_eq!(behavior_impl.methods.len(), 1);
+    }
+
+    #[test]
     fn expected_behavior_edges_build_parent_edges_from_extends_together() {
         let program = parse_program(
             r#"
@@ -17315,7 +17386,8 @@ Point.implements(Json) {
         tc.with_resolver_backed_collection(|checker| {
             checker.collect_declarations(&program.declarations);
         });
-        tc.collect_resolver_declaration_metadata(&program.declarations, &symbols);
+        let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+        tc.collect_resolver_declaration_metadata(&symbols, &tasks);
 
         assert!(
             tc.methods.contains_key("Point.get"),
