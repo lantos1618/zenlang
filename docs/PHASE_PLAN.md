@@ -36,6 +36,10 @@ checked-in docs, tests, and commits only.
   fixture also runs that generated-call scan before compiling C. Worklist dedup
   coverage now counts generated C function definitions directly, so prototypes
   no longer stand in for "emitted once" evidence.
+- Nested generic enum specialization is covered by
+  `tests/zen/generic_nested_result_enum.zen`, proving
+  `Result<Option<i32>, str>` runtime behavior and generated-C call/definition
+  consistency for both the outer result unwrap and inner option unwrap.
 - Resolver method symbols carry full value-signature metadata, including
   generic type-parameter names and bounds, and typechecker setup validates
   method signature handoff drift before method bodies are checked.

@@ -438,6 +438,11 @@ fn test_generic_result_enum() {
 }
 
 #[test]
+fn test_generic_nested_result_enum() {
+    run_test("generic_nested_result_enum");
+}
+
+#[test]
 fn test_generic_vec() {
     run_test("generic_vec");
 }
@@ -616,6 +621,21 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T unwrap_or"));
     assert!(!c_source.contains("unwrap_or(err"));
+
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_nested_result_enum.zen"));
+    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
+    assert!(c_source.contains("typedef struct Result_Option_i32_str Result_Option_i32_str;"));
+    assert!(c_source.contains(
+        "Option_i32 unwrap_result_Option_i32_str(Result_Option_i32_str value, Option_i32 fallback)"
+    ));
+    assert!(c_source.contains("unwrap_result_Option_i32_str(ok,"));
+    assert!(c_source.contains("unwrap_option_i32(some, 0LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_result_Option_i32_str");
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_option_i32");
+    assert!(!c_source.contains("Result_T"));
+    assert!(!c_source.contains("Option_T"));
+    assert!(!c_source.contains("T unwrap_result"));
 
     let c_source =
         compile_to_c_with_generated_call_check(&test_dir().join("multi_file_generic/main.zen"));

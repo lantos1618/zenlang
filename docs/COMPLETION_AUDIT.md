@@ -52,6 +52,11 @@ and do not assume Phase 4 is ready without evidence.
   `integration::generated_c_call_definition_scan_reports_missing_generated_calls`.
   Worklist dedup checks count generated function definitions directly, guarded
   by `integration::generated_c_definition_count_ignores_prototypes`.
+- Nested generic enum specialization now has executable and generated-C
+  evidence through `tests/zen/generic_nested_result_enum.zen`,
+  `integration::test_generic_nested_result_enum`, and
+  `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`,
+  proving `Result<Option<i32>, str>` does not leave undefined generated calls.
 - Generic method specialization preserves concrete `Self` receiver context in
   call-site typing and specialized method bodies for generic struct and enum
   receivers, with executable and generated-C coverage in

@@ -1,0 +1,31 @@
+{ io } = std
+
+Option<T>:
+    None,
+    Some(T)
+
+Result<T, E>:
+    Ok(T),
+    Err(E)
+
+unwrap_option<T> = (value: Option<T>, fallback: T) T {
+    value ?
+        | Some(inner) { inner }
+        | None { fallback }
+}
+
+unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
+    value ?
+        | Ok(inner) { inner }
+        | Err(_) { fallback }
+}
+
+main = () i32 {
+    ok = Result<Option<i32>, str>.Ok(Option<i32>.Some(42))
+    err = Result<Option<i32>, str>.Err("bad")
+    some = unwrap_result(ok, Option<i32>.None)
+    fallback = unwrap_result(err, Option<i32>.Some(7))
+    io.println("${unwrap_option(some, 0)}")
+    io.println("${unwrap_option(fallback, 0)}")
+    return 0
+}
