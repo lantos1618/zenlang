@@ -2571,13 +2571,8 @@ impl TypeChecker {
 
         if let Some(parents) = self.behavior_extends.get(behavior) {
             for parent in parents {
-                let parent_type_args: Vec<AstType> = parent
-                    .type_args
-                    .iter()
-                    .map(|type_arg| substitute_behavior_ast_type(type_arg, substitutions))
-                    .collect();
                 let parent_substitutions =
-                    self.behavior_type_param_substitutions(&parent.behavior, &parent_type_args);
+                    self.behavior_parent_type_param_substitutions(parent, substitutions);
                 self.collect_behavior_method_coherence_errors(
                     &parent.behavior,
                     root_behavior,
@@ -3084,13 +3079,8 @@ impl TypeChecker {
         let mut methods = Vec::new();
         if let Some(parents) = self.behavior_extends.get(behavior) {
             for parent in parents {
-                let parent_type_args: Vec<AstType> = parent
-                    .type_args
-                    .iter()
-                    .map(|type_arg| substitute_behavior_ast_type(type_arg, substitutions))
-                    .collect();
                 let parent_substitutions =
-                    self.behavior_type_param_substitutions(&parent.behavior, &parent_type_args);
+                    self.behavior_parent_type_param_substitutions(parent, substitutions);
                 methods.extend(self.behavior_methods_with_inherited_substituted(
                     &parent.behavior,
                     &parent_substitutions,
@@ -3154,6 +3144,19 @@ impl TypeChecker {
                     .collect()
             })
             .unwrap_or_default()
+    }
+
+    fn behavior_parent_type_param_substitutions(
+        &self,
+        parent: &BehaviorParentRef,
+        substitutions: &HashMap<String, AstType>,
+    ) -> HashMap<String, AstType> {
+        let parent_type_args: Vec<AstType> = parent
+            .type_args
+            .iter()
+            .map(|type_arg| substitute_behavior_ast_type(type_arg, substitutions))
+            .collect();
+        self.behavior_type_param_substitutions(&parent.behavior, &parent_type_args)
     }
 
     fn impl_ast_types_compatible(
