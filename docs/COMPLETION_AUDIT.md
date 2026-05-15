@@ -935,6 +935,9 @@ and do not assume Phase 4 is ready without evidence.
   absent-metadata entry helper.
 - Resolver absent value-signature detail validation now shares the same helper
   across module, import, local, type-like, and variant symbols.
+- Resolver absent value-signature metadata validation now lets the validation
+  bundle build its parameter and return metadata entries, covered by
+  `typechecker::tests::value_signature_absence_validation_builds_entries`.
 - Resolver absent type-parameter metadata validation now shares one helper
   across module, import, local, and variant symbols.
 - Resolver absent field metadata validation now shares one helper across

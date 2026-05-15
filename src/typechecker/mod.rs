@@ -332,6 +332,7 @@ struct TypeParameterAbsenceValidation {
     bound_ref_code: &'static str,
 }
 
+#[derive(Clone, Copy)]
 struct ValueSignatureAbsenceValidation {
     parameter_count_code: &'static str,
     parameter_name_code: &'static str,
@@ -339,6 +340,43 @@ struct ValueSignatureAbsenceValidation {
     parameter_type_code: &'static str,
     return_type_code: &'static str,
     typed_return_type_code: &'static str,
+}
+
+impl ValueSignatureAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 6] {
+        [
+            (
+                symbol.parameter_count.is_some(),
+                self.parameter_count_code,
+                "parameter count",
+            ),
+            (
+                symbol.parameter_names.is_some(),
+                self.parameter_name_code,
+                "parameter names",
+            ),
+            (
+                symbol.parameter_type_names.is_some(),
+                self.parameter_type_name_code,
+                "parameter types",
+            ),
+            (
+                symbol.parameter_types.is_some(),
+                self.parameter_type_code,
+                "typed parameter types",
+            ),
+            (
+                symbol.return_type_name.is_some(),
+                self.return_type_code,
+                "return type",
+            ),
+            (
+                symbol.return_type.is_some(),
+                self.typed_return_type_code,
+                "typed return type",
+            ),
+        ]
+    }
 }
 
 struct FieldAbsenceValidation {
@@ -7060,43 +7098,8 @@ impl TypeChecker {
         validation: ValueSignatureAbsenceValidation,
         span: Span,
     ) {
-        self.validate_resolver_absent_metadata_entries(
-            symbol_kind,
-            name,
-            &[
-                (
-                    symbol.parameter_count.is_some(),
-                    validation.parameter_count_code,
-                    "parameter count",
-                ),
-                (
-                    symbol.parameter_names.is_some(),
-                    validation.parameter_name_code,
-                    "parameter names",
-                ),
-                (
-                    symbol.parameter_type_names.is_some(),
-                    validation.parameter_type_name_code,
-                    "parameter types",
-                ),
-                (
-                    symbol.parameter_types.is_some(),
-                    validation.parameter_type_code,
-                    "typed parameter types",
-                ),
-                (
-                    symbol.return_type_name.is_some(),
-                    validation.return_type_code,
-                    "return type",
-                ),
-                (
-                    symbol.return_type.is_some(),
-                    validation.typed_return_type_code,
-                    "typed return type",
-                ),
-            ],
-            span,
-        );
+        let entries = validation.entries(symbol);
+        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
     }
 
     fn validate_resolver_absent_type_parameter_metadata(
@@ -9711,6 +9714,42 @@ PrettyJson.extends(Json)
                 (true, "TYPED_METHODS", "typed behavior methods"),
                 (true, "PARENTS", "behavior parents"),
                 (true, "TYPED_PARENTS", "typed behavior parents"),
+            ]
+        );
+    }
+
+    #[test]
+    fn value_signature_absence_validation_builds_entries() {
+        let program = parse_program(
+            r#"
+add = (left: i32, right: i32) i32 { return left + right }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let symbol = symbols
+            .lookup(Namespace::Value, "add")
+            .expect("value symbol");
+        let entries = ValueSignatureAbsenceValidation {
+            parameter_count_code: "PARAM_COUNT",
+            parameter_name_code: "PARAM_NAMES",
+            parameter_type_name_code: "PARAM_TYPES",
+            parameter_type_code: "TYPED_PARAM_TYPES",
+            return_type_code: "RETURN_TYPE",
+            typed_return_type_code: "TYPED_RETURN_TYPE",
+        }
+        .entries(symbol);
+
+        assert_eq!(
+            entries,
+            [
+                (true, "PARAM_COUNT", "parameter count"),
+                (true, "PARAM_NAMES", "parameter names"),
+                (true, "PARAM_TYPES", "parameter types"),
+                (true, "TYPED_PARAM_TYPES", "typed parameter types"),
+                (true, "RETURN_TYPE", "return type"),
+                (true, "TYPED_RETURN_TYPE", "typed return type"),
             ]
         );
     }

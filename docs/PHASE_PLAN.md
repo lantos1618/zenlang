@@ -997,6 +997,8 @@ checked-in docs, tests, and commits only.
   absent-metadata entry helper.
 - Resolver absent value-signature detail validation now shares the same helper
   across module, import, local, type-like, and variant symbols.
+- Resolver absent value-signature metadata validation now lets the validation
+  bundle build its parameter and return metadata entries.
 - Resolver absent type-parameter metadata validation now shares one helper
   across module, import, local, and variant symbols.
 - Resolver absent field metadata validation now shares one helper across
