@@ -947,6 +947,8 @@ checked-in docs, tests, and commits only.
   module, import, local, enum, variant, behavior, and value symbols.
 - Resolver absent variant metadata validation now shares one helper across
   module, import, local, struct/type, behavior, and value symbols.
+- Resolver absent behavior-association metadata validation now shares one
+  helper across module, import, local, variant, behavior, and value symbols.
 
 ## Current Phase
 

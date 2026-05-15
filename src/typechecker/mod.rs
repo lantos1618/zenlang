@@ -355,6 +355,13 @@ struct VariantAbsenceValidation {
     payload_type_code: &'static str,
 }
 
+struct BehaviorAssociationAbsenceValidation {
+    impl_name_code: &'static str,
+    impl_ref_code: &'static str,
+    required_name_code: &'static str,
+    required_ref_code: &'static str,
+}
+
 struct SourceValidation {
     code: &'static str,
     actual_missing: &'static str,
@@ -5148,6 +5155,19 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_behavior_association_metadata(
+            symbol,
+            "module",
+            &expected.name,
+            BehaviorAssociationAbsenceValidation {
+                impl_name_code: "E0279",
+                impl_ref_code: "E0378",
+                required_name_code: "E0280",
+                required_ref_code: "E0379",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "module",
             &expected.name,
@@ -5171,26 +5191,6 @@ impl TypeChecker {
                     symbol.behavior_parent_refs.is_some(),
                     "E0377",
                     "typed behavior parents",
-                ),
-                (
-                    symbol.behavior_impl_names.is_some(),
-                    "E0279",
-                    "behavior impls",
-                ),
-                (
-                    symbol.behavior_impl_refs.is_some(),
-                    "E0378",
-                    "typed behavior impls",
-                ),
-                (
-                    symbol.behavior_required_names.is_some(),
-                    "E0280",
-                    "behavior requires",
-                ),
-                (
-                    symbol.behavior_required_refs.is_some(),
-                    "E0379",
-                    "typed behavior requires",
                 ),
                 (symbol.is_mutable.is_some(), "E0345", "mutability"),
             ],
@@ -6215,6 +6215,19 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_behavior_association_metadata(
+            symbol,
+            "import",
+            name,
+            BehaviorAssociationAbsenceValidation {
+                impl_name_code: "E0295",
+                impl_ref_code: "E0369",
+                required_name_code: "E0296",
+                required_ref_code: "E0370",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "import",
             name,
@@ -6238,26 +6251,6 @@ impl TypeChecker {
                     symbol.behavior_parent_refs.is_some(),
                     "E0368",
                     "typed behavior parents",
-                ),
-                (
-                    symbol.behavior_impl_names.is_some(),
-                    "E0295",
-                    "behavior impls",
-                ),
-                (
-                    symbol.behavior_impl_refs.is_some(),
-                    "E0369",
-                    "typed behavior impls",
-                ),
-                (
-                    symbol.behavior_required_names.is_some(),
-                    "E0296",
-                    "behavior requires",
-                ),
-                (
-                    symbol.behavior_required_refs.is_some(),
-                    "E0370",
-                    "typed behavior requires",
                 ),
                 (symbol.is_mutable.is_some(), "E0344", "mutability"),
             ],
@@ -6669,6 +6662,19 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_behavior_association_metadata(
+            symbol,
+            "local",
+            name,
+            BehaviorAssociationAbsenceValidation {
+                impl_name_code: "E0263",
+                impl_ref_code: "E0387",
+                required_name_code: "E0264",
+                required_ref_code: "E0388",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "local",
             name,
@@ -6692,26 +6698,6 @@ impl TypeChecker {
                     symbol.behavior_parent_refs.is_some(),
                     "E0386",
                     "typed behavior parents",
-                ),
-                (
-                    symbol.behavior_impl_names.is_some(),
-                    "E0263",
-                    "behavior impls",
-                ),
-                (
-                    symbol.behavior_impl_refs.is_some(),
-                    "E0387",
-                    "typed behavior impls",
-                ),
-                (
-                    symbol.behavior_required_names.is_some(),
-                    "E0264",
-                    "behavior requires",
-                ),
-                (
-                    symbol.behavior_required_refs.is_some(),
-                    "E0388",
-                    "typed behavior requires",
                 ),
             ],
             span,
@@ -7000,6 +6986,43 @@ impl TypeChecker {
                     symbol.variant_payload_type.is_some(),
                     validation.payload_type_code,
                     "typed variant payload type",
+                ),
+            ],
+            span,
+        );
+    }
+
+    fn validate_resolver_absent_behavior_association_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        symbol_kind: &str,
+        name: &str,
+        validation: BehaviorAssociationAbsenceValidation,
+        span: Span,
+    ) {
+        self.validate_resolver_absent_metadata_entries(
+            symbol_kind,
+            name,
+            &[
+                (
+                    symbol.behavior_impl_names.is_some(),
+                    validation.impl_name_code,
+                    "behavior impls",
+                ),
+                (
+                    symbol.behavior_impl_refs.is_some(),
+                    validation.impl_ref_code,
+                    "typed behavior impls",
+                ),
+                (
+                    symbol.behavior_required_names.is_some(),
+                    validation.required_name_code,
+                    "behavior requires",
+                ),
+                (
+                    symbol.behavior_required_refs.is_some(),
+                    validation.required_ref_code,
+                    "typed behavior requires",
                 ),
             ],
             span,
@@ -7518,6 +7541,19 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_behavior_association_metadata(
+            symbol,
+            "variant",
+            name,
+            BehaviorAssociationAbsenceValidation {
+                impl_name_code: "E0341",
+                impl_ref_code: "E0395",
+                required_name_code: "E0342",
+                required_ref_code: "E0396",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "variant",
             name,
@@ -7542,26 +7578,6 @@ impl TypeChecker {
                     symbol.behavior_parent_refs.is_some(),
                     "E0394",
                     "typed behavior parents",
-                ),
-                (
-                    symbol.behavior_impl_names.is_some(),
-                    "E0341",
-                    "behavior impls",
-                ),
-                (
-                    symbol.behavior_impl_refs.is_some(),
-                    "E0395",
-                    "typed behavior impls",
-                ),
-                (
-                    symbol.behavior_required_names.is_some(),
-                    "E0342",
-                    "behavior requires",
-                ),
-                (
-                    symbol.behavior_required_refs.is_some(),
-                    "E0396",
-                    "typed behavior requires",
                 ),
                 (symbol.is_mutable.is_some(), "E0343", "mutability"),
             ],
@@ -7634,31 +7650,16 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_absent_metadata_entries(
+        self.validate_resolver_absent_behavior_association_metadata(
+            symbol,
             "behavior",
             name,
-            &[
-                (
-                    symbol.behavior_impl_names.is_some(),
-                    "E0327",
-                    "behavior impls",
-                ),
-                (
-                    symbol.behavior_impl_refs.is_some(),
-                    "E0401",
-                    "typed behavior impls",
-                ),
-                (
-                    symbol.behavior_required_names.is_some(),
-                    "E0328",
-                    "behavior requires",
-                ),
-                (
-                    symbol.behavior_required_refs.is_some(),
-                    "E0402",
-                    "typed behavior requires",
-                ),
-            ],
+            BehaviorAssociationAbsenceValidation {
+                impl_name_code: "E0327",
+                impl_ref_code: "E0401",
+                required_name_code: "E0328",
+                required_ref_code: "E0402",
+            },
             span,
         );
     }
@@ -8044,6 +8045,19 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_behavior_association_metadata(
+            symbol,
+            "value",
+            name,
+            BehaviorAssociationAbsenceValidation {
+                impl_name_code: "E0306",
+                impl_ref_code: "E0407",
+                required_name_code: "E0307",
+                required_ref_code: "E0408",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "value",
             name,
@@ -8067,26 +8081,6 @@ impl TypeChecker {
                     symbol.behavior_parent_refs.is_some(),
                     "E0406",
                     "typed behavior parents",
-                ),
-                (
-                    symbol.behavior_impl_names.is_some(),
-                    "E0306",
-                    "behavior impls",
-                ),
-                (
-                    symbol.behavior_impl_refs.is_some(),
-                    "E0407",
-                    "typed behavior impls",
-                ),
-                (
-                    symbol.behavior_required_names.is_some(),
-                    "E0307",
-                    "behavior requires",
-                ),
-                (
-                    symbol.behavior_required_refs.is_some(),
-                    "E0408",
-                    "typed behavior requires",
                 ),
                 (symbol.is_mutable.is_some(), "E0308", "mutability"),
             ],
