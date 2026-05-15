@@ -152,6 +152,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver behavior-ref validation now separates role labels from
   per-check diagnostic code mappings, avoiding duplicated label bundles across
   contains and full-list checks.
+- Typechecker resolver behavior-ref actual metadata selection now uses one
+  role selector for parent, impl, and required refs instead of separate
+  constructors for each association role.
 - Typechecker resolver validation now stores expected behavior display
   signatures and typed method metadata as paired per-method expectations before
   deriving the resolver comparison lists.

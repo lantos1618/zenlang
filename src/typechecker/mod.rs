@@ -2181,31 +2181,27 @@ struct BehaviorRefActual<'a> {
 
 impl<'a> BehaviorRefActual<'a> {
     fn for_role(symbol: &'a Symbol, role: BehaviorRefRole) -> Self {
+        let (names, refs) = Self::metadata_for_role(symbol, role);
+        Self { names, refs }
+    }
+
+    fn metadata_for_role(
+        symbol: &'a Symbol,
+        role: BehaviorRefRole,
+    ) -> (Option<&'a [String]>, Option<&'a [BehaviorRefMetadata]>) {
         match role {
-            BehaviorRefRole::Parent => Self::parents(symbol),
-            BehaviorRefRole::Impl => Self::impls(symbol),
-            BehaviorRefRole::Required => Self::required(symbol),
-        }
-    }
-
-    fn parents(symbol: &'a Symbol) -> Self {
-        Self {
-            names: symbol.behavior_parent_names.as_deref(),
-            refs: symbol.behavior_parent_refs.as_deref(),
-        }
-    }
-
-    fn impls(symbol: &'a Symbol) -> Self {
-        Self {
-            names: symbol.behavior_impl_names.as_deref(),
-            refs: symbol.behavior_impl_refs.as_deref(),
-        }
-    }
-
-    fn required(symbol: &'a Symbol) -> Self {
-        Self {
-            names: symbol.behavior_required_names.as_deref(),
-            refs: symbol.behavior_required_refs.as_deref(),
+            BehaviorRefRole::Parent => (
+                symbol.behavior_parent_names.as_deref(),
+                symbol.behavior_parent_refs.as_deref(),
+            ),
+            BehaviorRefRole::Impl => (
+                symbol.behavior_impl_names.as_deref(),
+                symbol.behavior_impl_refs.as_deref(),
+            ),
+            BehaviorRefRole::Required => (
+                symbol.behavior_required_names.as_deref(),
+                symbol.behavior_required_refs.as_deref(),
+            ),
         }
     }
 }
@@ -10696,6 +10692,55 @@ Point.requires(Json<str>)
         let required = BehaviorRefActual::for_role(ty, BehaviorRefRole::Required);
         assert_eq!(format_behavior_ref_names(required.names), "Json<str>");
         assert_eq!(format_behavior_refs(required.refs), "Json<str>");
+    }
+
+    #[test]
+    fn behavior_ref_actual_exposes_role_metadata_selection() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+
+Point.implements(PrettyJson) {
+    encode = (value: Point) str { return "point" }
+    pretty = (value: Point) str { return "pretty" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let behavior = symbols
+            .lookup(Namespace::Behavior, "PrettyJson")
+            .expect("behavior symbol");
+        let ty = symbols
+            .lookup(Namespace::Type, "Point")
+            .expect("type symbol");
+
+        let (parent_names, parent_refs) =
+            BehaviorRefActual::metadata_for_role(behavior, BehaviorRefRole::Parent);
+        let (impl_names, impl_refs) =
+            BehaviorRefActual::metadata_for_role(ty, BehaviorRefRole::Impl);
+        let (required_names, required_refs) =
+            BehaviorRefActual::metadata_for_role(ty, BehaviorRefRole::Required);
+
+        assert_eq!(format_behavior_ref_names(parent_names), "Json<str>");
+        assert_eq!(format_behavior_refs(parent_refs), "Json<str>");
+        assert_eq!(format_behavior_ref_names(impl_names), "PrettyJson");
+        assert_eq!(format_behavior_refs(impl_refs), "PrettyJson");
+        assert_eq!(format_behavior_ref_names(required_names), "Json<str>");
+        assert_eq!(format_behavior_refs(required_refs), "Json<str>");
     }
 
     #[test]
