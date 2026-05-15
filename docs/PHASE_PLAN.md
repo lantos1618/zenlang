@@ -383,6 +383,9 @@ checked-in docs, tests, and commits only.
 - Resolver behavior method metadata restoration now uses the same named queue
   selection family while preserving front AST methods needed by later resolver
   method metadata.
+- Behavior impl conformance now resolves effective method names through a
+  dedicated helper that shares resolver-owned name, AST-name, and collected
+  signature fallback selection.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths.
 - Generic method specialization preserves concrete `Self` receiver context in

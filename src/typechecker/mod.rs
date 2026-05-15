@@ -4887,43 +4887,12 @@ impl TypeChecker {
                 let resolver_owned_name = self.resolver_backed_collection.then(|| {
                     Self::validation_method_key(symbols, &ast_key, type_name, method.span())
                 });
-                let effective_name = if let Some(resolver_owned_key) = resolver_owned_name {
-                    let resolver_owned_name = resolver_owned_key
-                        .strip_prefix(&format!("{type_name}."))
-                        .unwrap_or(&resolver_owned_key)
-                        .to_string();
-                    match unmatched_required
-                        .iter()
-                        .position(|required| required == &resolver_owned_name)
-                    {
-                        Some(index) => unmatched_required
-                            .remove(index)
-                            .unwrap_or(resolver_owned_name),
-                        None => resolver_owned_name,
-                    }
-                } else {
-                    match unmatched_required
-                        .iter()
-                        .position(|required| required == ast_name)
-                    {
-                        Some(index) => unmatched_required
-                            .remove(index)
-                            .unwrap_or_else(|| ast_name.to_string()),
-                        None if self.resolver_backed_collection => {
-                            let resolved_index = unmatched_required.iter().position(|required| {
-                                self.methods
-                                    .contains_key(&format!("{type_name}.{required}"))
-                            });
-                            match resolved_index {
-                                Some(index) => unmatched_required
-                                    .remove(index)
-                                    .unwrap_or_else(|| ast_name.to_string()),
-                                None => ast_name.to_string(),
-                            }
-                        }
-                        None => ast_name.to_string(),
-                    }
-                };
+                let effective_name = self.impl_effective_method_name(
+                    &mut unmatched_required,
+                    ast_name,
+                    resolver_owned_name,
+                    type_name,
+                );
                 (method, effective_name)
             })
             .collect();
@@ -5285,6 +5254,47 @@ impl TypeChecker {
                 && self
                     .methods
                     .contains_key(&format!("{type_name}.{required_name}")))
+    }
+
+    fn impl_effective_method_name(
+        &self,
+        unmatched_required: &mut VecDeque<String>,
+        ast_name: &str,
+        resolver_owned_key: Option<String>,
+        type_name: &str,
+    ) -> String {
+        if let Some(resolver_owned_key) = resolver_owned_key {
+            let resolver_owned_name = resolver_owned_key
+                .strip_prefix(&format!("{type_name}."))
+                .unwrap_or(&resolver_owned_key)
+                .to_string();
+            return Self::remove_named_queue_entry(unmatched_required, &resolver_owned_name)
+                .unwrap_or(resolver_owned_name);
+        }
+
+        if let Some(name) = Self::remove_named_queue_entry(unmatched_required, ast_name) {
+            return name;
+        }
+
+        if self.resolver_backed_collection {
+            if let Some(index) = unmatched_required.iter().position(|required| {
+                self.methods
+                    .contains_key(&format!("{type_name}.{required}"))
+            }) {
+                return unmatched_required
+                    .remove(index)
+                    .unwrap_or_else(|| ast_name.to_string());
+            }
+        }
+
+        ast_name.to_string()
+    }
+
+    fn remove_named_queue_entry(items: &mut VecDeque<String>, name: &str) -> Option<String> {
+        items
+            .iter()
+            .position(|item| item == name)
+            .and_then(|index| items.remove(index))
     }
 
     fn behavior_methods_with_inherited_substituted(
@@ -10920,6 +10930,46 @@ Point.get = (self: Point) i32 { return self.x }
             ),
             Some(0)
         );
+    }
+
+    #[test]
+    fn impl_effective_method_name_prefers_resolver_then_ast_then_collected_signature() {
+        let mut tc = TypeChecker::new();
+        tc.resolver_backed_collection = true;
+        tc.methods.insert(
+            "Point.describe".to_string(),
+            FuncInfo {
+                name: "Point.describe".to_string(),
+                params: Vec::new(),
+                return_type: AstType::Void,
+                type_params: Vec::new(),
+                type_param_bounds: HashMap::new(),
+            },
+        );
+        let mut unmatched = VecDeque::from([
+            "encode".to_string(),
+            "debug".to_string(),
+            "describe".to_string(),
+        ]);
+
+        assert_eq!(
+            tc.impl_effective_method_name(
+                &mut unmatched,
+                "stale",
+                Some("Point.encode".to_string()),
+                "Point",
+            ),
+            "encode"
+        );
+        assert_eq!(
+            tc.impl_effective_method_name(&mut unmatched, "debug", None, "Point"),
+            "debug"
+        );
+        assert_eq!(
+            tc.impl_effective_method_name(&mut unmatched, "missing", None, "Point"),
+            "describe"
+        );
+        assert!(unmatched.is_empty());
     }
 
     #[test]
