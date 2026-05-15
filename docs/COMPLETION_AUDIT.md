@@ -964,6 +964,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver visibility validation now carries its diagnostic code and
   actual/expected display formatting through a validation bundle, covered by
   `typechecker::tests::visibility_validation_formats_actual_and_expected`.
+- Resolver visibility validation now owns its full diagnostic message
+  formatting through that bundle, keeping it aligned with source/count
+  validation helpers.
 - Resolver source validation now shares one diagnostic helper across module,
   import, and local symbols.
 - Resolver source validation now carries source diagnostic message formatting

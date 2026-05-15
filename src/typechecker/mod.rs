@@ -575,6 +575,13 @@ impl VisibilityValidation {
     fn display(self, actual: bool, expected: bool) -> (&'static str, &'static str) {
         (visibility_name(actual), visibility_name(expected))
     }
+
+    fn message(self, symbol_kind: &str, name: &str, actual: bool, expected: bool) -> String {
+        let (actual, expected) = self.display(actual, expected);
+        format!(
+            "resolver {symbol_kind} symbol '{name}' has visibility {actual}, expected {expected}"
+        )
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -7721,12 +7728,9 @@ impl TypeChecker {
         span: Span,
     ) {
         if actual != expected {
-            let (actual, expected) = validation.display(actual, expected);
             self.diagnostics.push(Diagnostic::error(
                 validation.code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has visibility {actual}, expected {expected}"
-                ),
+                validation.message(symbol_kind, name, actual, expected),
                 span,
             ));
         }
@@ -10256,6 +10260,10 @@ main = (mut input: i32) i32 {
         assert_eq!(validation.code, "VISIBLE");
         assert_eq!(validation.display(true, false), ("public", "private"));
         assert_eq!(validation.display(false, true), ("private", "public"));
+        assert_eq!(
+            validation.message("import", "io", true, false),
+            "resolver import symbol 'io' has visibility public, expected private"
+        );
     }
 
     #[test]

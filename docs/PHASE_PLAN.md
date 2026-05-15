@@ -1003,6 +1003,8 @@ checked-in docs, tests, and commits only.
   module, import, local, type-like, variant, and value symbols.
 - Resolver visibility validation now carries its diagnostic code and display
   formatting through a validation bundle.
+- Resolver visibility validation now also owns its full diagnostic message
+  formatting, matching the source/count validation helper shape.
 - Resolver source validation now shares one diagnostic helper across module,
   import, and local symbols.
 - Resolver source validation now carries source diagnostic message formatting
