@@ -677,6 +677,13 @@ impl ExpectedBehaviorEdges {
     fn refs_for(&self, owner: &str) -> &[BehaviorRefMetadata] {
         self.refs.get(owner).map(Vec::as_slice).unwrap_or(&[])
     }
+
+    fn list_for(&self, owner: &str) -> ExpectedBehaviorRefList<'_> {
+        ExpectedBehaviorRefList {
+            names: self.names_for(owner),
+            refs: self.refs_for(owner),
+        }
+    }
 }
 
 struct ExpectedBehaviorAssociations {
@@ -4400,15 +4407,13 @@ impl TypeChecker {
             self.validate_resolver_behavior_impl_list(
                 symbol,
                 name,
-                expected.impls.names_for(name),
-                expected.impls.refs_for(name),
+                expected.impls.list_for(name),
                 *span,
             );
             self.validate_resolver_behavior_required_list(
                 symbol,
                 name,
-                expected.required.names_for(name),
-                expected.required.refs_for(name),
+                expected.required.list_for(name),
                 *span,
             );
         }
@@ -4430,8 +4435,7 @@ impl TypeChecker {
             self.validate_resolver_behavior_parent_list(
                 symbol,
                 name,
-                expected.names_for(name),
-                expected.refs_for(name),
+                expected.list_for(name),
                 *span,
             );
         }
@@ -7142,8 +7146,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_parents: &[String],
-        expected_parent_refs: &[BehaviorRefMetadata],
+        expected: ExpectedBehaviorRefList<'_>,
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
@@ -7159,10 +7162,7 @@ impl TypeChecker {
                 names: symbol.behavior_parent_names.as_deref(),
                 refs: symbol.behavior_parent_refs.as_deref(),
             },
-            ExpectedBehaviorRefList {
-                names: expected_parents,
-                refs: expected_parent_refs,
-            },
+            expected,
             span,
         );
     }
@@ -7200,8 +7200,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_impls: &[String],
-        expected_impl_refs: &[BehaviorRefMetadata],
+        expected: ExpectedBehaviorRefList<'_>,
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
@@ -7217,10 +7216,7 @@ impl TypeChecker {
                 names: symbol.behavior_impl_names.as_deref(),
                 refs: symbol.behavior_impl_refs.as_deref(),
             },
-            ExpectedBehaviorRefList {
-                names: expected_impls,
-                refs: expected_impl_refs,
-            },
+            expected,
             span,
         );
     }
@@ -7258,8 +7254,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_required: &[String],
-        expected_required_refs: &[BehaviorRefMetadata],
+        expected: ExpectedBehaviorRefList<'_>,
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
@@ -7275,10 +7270,7 @@ impl TypeChecker {
                 names: symbol.behavior_required_names.as_deref(),
                 refs: symbol.behavior_required_refs.as_deref(),
             },
-            ExpectedBehaviorRefList {
-                names: expected_required,
-                refs: expected_required_refs,
-            },
+            expected,
             span,
         );
     }

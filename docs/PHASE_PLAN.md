@@ -108,6 +108,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver validation now carries enum variant owner, visibility,
   and payload metadata through one expected variant-symbol object, keeping
   variant handoff checks aligned.
+- Typechecker resolver validation now carries behavior parent, impl, and
+  required association list expectations as paired name/ref objects instead of
+  parallel loose slices.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, reducing
