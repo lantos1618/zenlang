@@ -191,6 +191,12 @@ struct ExpectedTypeLikeSymbol {
     is_public: Option<bool>,
 }
 
+#[derive(Default)]
+struct ExpectedFields {
+    types: Vec<(String, AstType)>,
+    type_names: Vec<(String, String)>,
+}
+
 struct ImportedMethodSignature<'a> {
     name: &'a str,
     type_params: &'a [ast::TypeParam],
@@ -4059,8 +4065,7 @@ impl TypeChecker {
                         symbol,
                         Namespace::Type,
                         name,
-                        expected_field_types(fields),
-                        expected_field_type_names(fields),
+                        expected_fields(fields),
                         *span,
                     );
                     self.validate_resolver_struct_absent_enum_metadata(symbol, name, *span);
@@ -6626,13 +6631,12 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         namespace: Namespace,
         name: &str,
-        expected_field_types: Vec<(String, AstType)>,
-        expected_field_type_names: Vec<(String, String)>,
+        expected_fields: ExpectedFields,
         span: Span,
     ) {
-        if symbol.field_types.as_deref() != Some(expected_field_types.as_slice()) {
+        if symbol.field_types.as_deref() != Some(expected_fields.types.as_slice()) {
             let actual = format_field_types(symbol.field_types.as_deref());
-            let expected = format_field_types(Some(&expected_field_types));
+            let expected = format_field_types(Some(&expected_fields.types));
             self.diagnostics.push(Diagnostic::error(
                 "E0358",
                 format!(
@@ -6642,9 +6646,9 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.field_type_names.as_deref() != Some(expected_field_type_names.as_slice()) {
+        if symbol.field_type_names.as_deref() != Some(expected_fields.type_names.as_slice()) {
             let actual = format_field_type_names(symbol.field_type_names.as_deref());
-            let expected = format_field_type_names(Some(&expected_field_type_names));
+            let expected = format_field_type_names(Some(&expected_fields.type_names));
             self.diagnostics.push(Diagnostic::error(
                 "E0217",
                 format!(
@@ -7719,18 +7723,15 @@ fn format_parameter_names(names: Option<&[String]>) -> String {
     }
 }
 
-fn expected_field_type_names(fields: &[StructField]) -> Vec<(String, String)> {
-    fields
-        .iter()
-        .map(|field| (field.name.clone(), field.ty.display_name()))
-        .collect()
-}
-
-fn expected_field_types(fields: &[StructField]) -> Vec<(String, AstType)> {
-    fields
-        .iter()
-        .map(|field| (field.name.clone(), field.ty.clone()))
-        .collect()
+fn expected_fields(fields: &[StructField]) -> ExpectedFields {
+    let mut expected = ExpectedFields::default();
+    for field in fields {
+        expected.types.push((field.name.clone(), field.ty.clone()));
+        expected
+            .type_names
+            .push((field.name.clone(), field.ty.display_name()));
+    }
+    expected
 }
 
 fn format_field_types(fields: Option<&[(String, AstType)]>) -> String {
