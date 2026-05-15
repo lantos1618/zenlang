@@ -1009,6 +1009,8 @@ checked-in docs, tests, and commits only.
   for display signatures and typed method metadata.
 - Resolver behavior-method validation now carries display-method and
   typed-method message formatting through a validation bundle.
+- Resolver behavior-method validation now owns its resolver diagnostic code
+  mapping instead of constructing those codes at the call site.
 - Resolver variant-payload validation now shares one expected metadata bundle
   for counts, display payload types, and typed AST payloads.
 - Resolver variant-payload validation now carries display-payload and

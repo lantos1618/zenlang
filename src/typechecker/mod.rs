@@ -278,6 +278,13 @@ struct BehaviorMethodValidation {
 }
 
 impl BehaviorMethodValidation {
+    fn resolver_codes() -> Self {
+        Self {
+            display_code: "E0219",
+            typed_code: "E0355",
+        }
+    }
+
     fn display_message(self, name: &str, actual: &str, expected: &str) -> String {
         format!("resolver behavior symbol '{name}' has methods '{actual}', expected '{expected}'")
     }
@@ -8337,10 +8344,7 @@ impl TypeChecker {
         span: Span,
     ) {
         let expected = ExpectedBehaviorMethodMetadata::from_methods(expected_methods);
-        let validation = BehaviorMethodValidation {
-            display_code: "E0219",
-            typed_code: "E0355",
-        };
+        let validation = BehaviorMethodValidation::resolver_codes();
         if symbol.behavior_method_signatures.as_deref() != Some(expected.signatures.as_slice()) {
             let actual =
                 format_behavior_method_signatures(symbol.behavior_method_signatures.as_deref());
@@ -9841,6 +9845,14 @@ Point.get = (self: Point) i32 { return self.x }
             ),
             "resolver behavior symbol 'Mapper' has typed methods '(map(__arg0: Self, __arg1: i32) i32)', expected '(map(__arg0: Self, __arg1: (i32) i32) i32)'"
         );
+    }
+
+    #[test]
+    fn behavior_method_validation_uses_resolver_codes() {
+        let validation = BehaviorMethodValidation::resolver_codes();
+
+        assert_eq!(validation.display_code, "E0219");
+        assert_eq!(validation.typed_code, "E0355");
     }
 
     #[test]
