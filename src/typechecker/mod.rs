@@ -1122,6 +1122,34 @@ struct ResolverSymbolPresenceValidation {
 }
 
 impl ResolverSymbolPresenceValidation {
+    fn missing_resolver_code() -> Self {
+        Self {
+            code: "E0210",
+            presence: ResolverSymbolPresence::Missing,
+        }
+    }
+
+    fn missing_local_resolver_code() -> Self {
+        Self {
+            code: "E0228",
+            presence: ResolverSymbolPresence::Missing,
+        }
+    }
+
+    fn extra_declaration_resolver_code() -> Self {
+        Self {
+            code: "E0243",
+            presence: ResolverSymbolPresence::Extra,
+        }
+    }
+
+    fn extra_local_resolver_code() -> Self {
+        Self {
+            code: "E0244",
+            presence: ResolverSymbolPresence::Extra,
+        }
+    }
+
     fn message(self, symbol_kind: &str, name: &str) -> String {
         let verb = match self.presence {
             ResolverSymbolPresence::Extra => "has extra",
@@ -6331,10 +6359,7 @@ impl TypeChecker {
                 self.validate_extra_resolver_symbol(
                     symbol.namespace.diagnostic_name(),
                     &symbol.name,
-                    ResolverSymbolPresenceValidation {
-                        code: "E0243",
-                        presence: ResolverSymbolPresence::Extra,
-                    },
+                    ResolverSymbolPresenceValidation::extra_declaration_resolver_code(),
                     symbol.definition_span,
                 );
             }
@@ -6355,10 +6380,7 @@ impl TypeChecker {
                 self.validate_extra_resolver_symbol(
                     "local",
                     &symbol.name,
-                    ResolverSymbolPresenceValidation {
-                        code: "E0244",
-                        presence: ResolverSymbolPresence::Extra,
-                    },
+                    ResolverSymbolPresenceValidation::extra_local_resolver_code(),
                     symbol.definition_span,
                 );
             }
@@ -7426,10 +7448,7 @@ impl TypeChecker {
             self.validate_missing_resolver_symbol(
                 namespace.diagnostic_name(),
                 name,
-                ResolverSymbolPresenceValidation {
-                    code: "E0210",
-                    presence: ResolverSymbolPresence::Missing,
-                },
+                ResolverSymbolPresenceValidation::missing_resolver_code(),
                 span,
             );
         }
@@ -7853,10 +7872,7 @@ impl TypeChecker {
             self.validate_missing_resolver_symbol(
                 "local",
                 name,
-                ResolverSymbolPresenceValidation {
-                    code: "E0228",
-                    presence: ResolverSymbolPresence::Missing,
-                },
+                ResolverSymbolPresenceValidation::missing_local_resolver_code(),
                 span,
             );
             return;
@@ -11400,6 +11416,32 @@ main = (mut input: i32) i32 {
             missing.message("local", "value"),
             "resolver symbol table missing local symbol 'value'"
         );
+    }
+
+    #[test]
+    fn resolver_symbol_presence_validation_uses_resolver_codes() {
+        let missing = ResolverSymbolPresenceValidation::missing_resolver_code();
+        let missing_local = ResolverSymbolPresenceValidation::missing_local_resolver_code();
+        let extra_declaration = ResolverSymbolPresenceValidation::extra_declaration_resolver_code();
+        let extra_local = ResolverSymbolPresenceValidation::extra_local_resolver_code();
+
+        assert_eq!(missing.code, "E0210");
+        assert!(matches!(missing.presence, ResolverSymbolPresence::Missing));
+        assert_eq!(missing_local.code, "E0228");
+        assert!(matches!(
+            missing_local.presence,
+            ResolverSymbolPresence::Missing
+        ));
+        assert_eq!(extra_declaration.code, "E0243");
+        assert!(matches!(
+            extra_declaration.presence,
+            ResolverSymbolPresence::Extra
+        ));
+        assert_eq!(extra_local.code, "E0244");
+        assert!(matches!(
+            extra_local.presence,
+            ResolverSymbolPresence::Extra
+        ));
     }
 
     #[test]

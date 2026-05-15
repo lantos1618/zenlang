@@ -141,6 +141,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver validation now shares absent source-metadata
   diagnostics across value, type-like, and variant resolver-symbol validators
   while preserving per-kind diagnostic codes.
+- Typechecker resolver validation now centralizes resolver symbol presence
+  diagnostic codes for missing declaration symbols, missing local symbols,
+  extra declaration symbols, and extra local symbols.
 - Typechecker resolver validation now stores expected behavior display
   signatures and typed method metadata as paired per-method expectations before
   deriving the resolver comparison lists.
