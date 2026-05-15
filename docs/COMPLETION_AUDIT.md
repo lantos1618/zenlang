@@ -932,6 +932,9 @@ and do not assume Phase 4 is ready without evidence.
   declaration/import/module/type/behavior/variant/value and local checks.
 - Resolver absent-source metadata validation now reuses the shared resolver
   source diagnostic helper.
+- Resolver absent-source metadata validation now uses a validation bundle to
+  build the source diagnostic configuration, covered by
+  `typechecker::tests::source_absence_validation_builds_source_validation`.
 - Resolver stripped-import validation now reuses the shared resolver
   visibility and source diagnostic helpers.
 - Resolver absent value-signature metadata validation now reuses the shared

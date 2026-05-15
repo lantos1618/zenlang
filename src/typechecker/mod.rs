@@ -554,6 +554,22 @@ impl MutabilityAbsenceValidation {
     }
 }
 
+#[derive(Clone, Copy)]
+struct SourceAbsenceValidation {
+    code: &'static str,
+}
+
+impl SourceAbsenceValidation {
+    fn source_validation(self) -> SourceValidation {
+        SourceValidation {
+            code: self.code,
+            actual_missing: "none",
+            expected_missing: "none",
+            quote_expected: false,
+        }
+    }
+}
+
 struct SourceValidation {
     code: &'static str,
     actual_missing: &'static str,
@@ -7276,7 +7292,7 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         symbol_kind: &str,
         name: &str,
-        code: &'static str,
+        validation: SourceAbsenceValidation,
         span: Span,
     ) {
         self.validate_resolver_source(
@@ -7284,12 +7300,7 @@ impl TypeChecker {
             name,
             symbol.import_source.as_deref(),
             None,
-            SourceValidation {
-                code,
-                actual_missing: "none",
-                expected_missing: "none",
-                quote_expected: false,
-            },
+            validation.source_validation(),
             span,
         );
     }
@@ -7524,7 +7535,7 @@ impl TypeChecker {
             symbol,
             namespace.diagnostic_name(),
             name,
-            "E0309",
+            SourceAbsenceValidation { code: "E0309" },
             span,
         );
 
@@ -7743,7 +7754,13 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        self.validate_resolver_absent_source_metadata(symbol, "variant", name, "E0329", span);
+        self.validate_resolver_absent_source_metadata(
+            symbol,
+            "variant",
+            name,
+            SourceAbsenceValidation { code: "E0329" },
+            span,
+        );
 
         self.validate_resolver_absent_value_signature_metadata(
             symbol,
@@ -8249,7 +8266,13 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        self.validate_resolver_absent_source_metadata(symbol, "value", name, "E0297", span);
+        self.validate_resolver_absent_source_metadata(
+            symbol,
+            "value",
+            name,
+            SourceAbsenceValidation { code: "E0297" },
+            span,
+        );
 
         self.validate_resolver_absent_field_metadata(
             symbol,
@@ -9901,6 +9924,16 @@ main = (mut input: i32) i32 {
         let entry = MutabilityAbsenceValidation { code: "MUTABLE" }.entry(symbol);
 
         assert_eq!(entry, (true, "MUTABLE", "mutability"));
+    }
+
+    #[test]
+    fn source_absence_validation_builds_source_validation() {
+        let validation = SourceAbsenceValidation { code: "SOURCE" }.source_validation();
+
+        assert_eq!(validation.code, "SOURCE");
+        assert_eq!(validation.actual_missing, "none");
+        assert_eq!(validation.expected_missing, "none");
+        assert!(!validation.quote_expected);
     }
 
     #[test]
