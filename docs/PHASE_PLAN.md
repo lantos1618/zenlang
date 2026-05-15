@@ -1001,6 +1001,8 @@ checked-in docs, tests, and commits only.
   bundle build its parameter and return metadata entries.
 - Resolver absent type-parameter metadata validation now shares one helper
   across module, import, local, and variant symbols.
+- Resolver absent type-parameter metadata validation now lets the validation
+  bundle build its count/name/bounds metadata entries.
 - Resolver absent field metadata validation now shares one helper across
   module, import, local, enum, variant, behavior, and value symbols.
 - Resolver absent variant metadata validation now shares one helper across

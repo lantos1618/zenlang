@@ -325,11 +325,39 @@ struct TypeParameterValidation {
     bound_ref_code: &'static str,
 }
 
+#[derive(Clone, Copy)]
 struct TypeParameterAbsenceValidation {
     count_code: &'static str,
     name_code: &'static str,
     bound_code: &'static str,
     bound_ref_code: &'static str,
+}
+
+impl TypeParameterAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 4] {
+        [
+            (
+                symbol.type_parameter_count.is_some(),
+                self.count_code,
+                "type parameter count",
+            ),
+            (
+                symbol.type_parameter_names.is_some(),
+                self.name_code,
+                "type parameter names",
+            ),
+            (
+                symbol.type_parameter_bounds.is_some(),
+                self.bound_code,
+                "type parameter bounds",
+            ),
+            (
+                symbol.type_parameter_bound_refs.is_some(),
+                self.bound_ref_code,
+                "typed type parameter bound refs",
+            ),
+        ]
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -7110,33 +7138,8 @@ impl TypeChecker {
         validation: TypeParameterAbsenceValidation,
         span: Span,
     ) {
-        self.validate_resolver_absent_metadata_entries(
-            symbol_kind,
-            name,
-            &[
-                (
-                    symbol.type_parameter_count.is_some(),
-                    validation.count_code,
-                    "type parameter count",
-                ),
-                (
-                    symbol.type_parameter_names.is_some(),
-                    validation.name_code,
-                    "type parameter names",
-                ),
-                (
-                    symbol.type_parameter_bounds.is_some(),
-                    validation.bound_code,
-                    "type parameter bounds",
-                ),
-                (
-                    symbol.type_parameter_bound_refs.is_some(),
-                    validation.bound_ref_code,
-                    "typed type parameter bound refs",
-                ),
-            ],
-            span,
-        );
+        let entries = validation.entries(symbol);
+        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
     }
 
     fn validate_resolver_absent_field_metadata(
@@ -9750,6 +9753,42 @@ add = (left: i32, right: i32) i32 { return left + right }
                 (true, "TYPED_PARAM_TYPES", "typed parameter types"),
                 (true, "RETURN_TYPE", "return type"),
                 (true, "TYPED_RETURN_TYPE", "typed return type"),
+            ]
+        );
+    }
+
+    #[test]
+    fn type_parameter_absence_validation_builds_entries() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+identity<T: Json> = (value: T) T { return value }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let symbol = symbols
+            .lookup(Namespace::Value, "identity")
+            .expect("value symbol");
+        let entries = TypeParameterAbsenceValidation {
+            count_code: "COUNT",
+            name_code: "NAMES",
+            bound_code: "BOUNDS",
+            bound_ref_code: "BOUND_REFS",
+        }
+        .entries(symbol);
+
+        assert_eq!(
+            entries,
+            [
+                (true, "COUNT", "type parameter count"),
+                (true, "NAMES", "type parameter names"),
+                (true, "BOUNDS", "type parameter bounds"),
+                (true, "BOUND_REFS", "typed type parameter bound refs"),
             ]
         );
     }
