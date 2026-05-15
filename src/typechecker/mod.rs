@@ -1418,9 +1418,10 @@ impl TypeChecker {
         {
             param.ty = ty;
         }
-        if template.return_type.is_some() {
-            template.return_type = Some(return_type.clone());
-        }
+        template.return_type = match return_type {
+            AstType::Void => None,
+            ty => Some(ty.clone()),
+        };
     }
 
     fn collect_resolver_top_level_method_signature(
@@ -8760,6 +8761,32 @@ apply<T: Json<T>> = (callback: (T) T) (T) T {
                 ret: Box::new(AstType::Named("T".to_string())),
             })
         );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_generic_function_template_return_presence() {
+        let mut program = parse_program(
+            r#"
+identity<T> = (value: T) T {
+    return value
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function { return_type, .. } = &mut program.declarations[0] {
+            *return_type = None;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc
+            .generic_functions
+            .get("identity")
+            .expect("generic template");
+        assert_eq!(template.return_type, Some(AstType::Named("T".to_string())));
     }
 
     #[test]

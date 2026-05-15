@@ -60,6 +60,10 @@ checked-in docs, tests, and commits only.
   bound-ref, parameter-type, and return metadata, so monomorphization templates
   no longer keep stale AST-only generic names, bounds, or function-type
   signatures after resolver validation.
+- Resolver-backed generic template collection now also derives return-type
+  presence from validated resolver metadata, so stale AST-only missing return
+  annotations cannot erase resolver-owned generic function or method returns
+  before monomorphization.
 - Resolver-backed struct and enum collection now also uses typed resolver
   generic bound refs, so generic type templates no longer retain stale AST-only
   behavior bounds after resolver validation.
