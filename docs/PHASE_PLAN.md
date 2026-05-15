@@ -106,6 +106,9 @@ checked-in docs, tests, and commits only.
   Typechecker setup also validates those structured behavior refs for generic
   parent, impl, and required-behavior associations before declaration
   collection, so display-name metadata cannot hide typed association drift.
+- Resolver-backed `.requires` conformance checks now read validated resolver
+  required-behavior refs, so stale AST-only required behavior type arguments
+  cannot produce false missing-impl diagnostics.
 - Inherited generic behavior dispatch has executable coverage through
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Concrete generic behavior association syntax in `.implements` and `.requires`,

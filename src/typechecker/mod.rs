@@ -15,7 +15,7 @@ mod patterns;
 mod resolve;
 mod statements;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::ast::typed::*;
 use crate::ast::{self, AstType, Declaration, EnumVariant, Expression, Param, StructField};
@@ -587,6 +587,7 @@ pub struct TypeChecker {
     current_self_type: Option<Type>,
     pending_defers: Vec<TypedExpression>,
     resolver_backed_collection: bool,
+    resolver_behavior_required_refs: HashMap<String, VecDeque<BehaviorRefMetadata>>,
 }
 
 impl Default for TypeChecker {
@@ -620,6 +621,7 @@ impl TypeChecker {
             current_self_type: None,
             pending_defers: Vec::new(),
             resolver_backed_collection: false,
+            resolver_behavior_required_refs: HashMap::new(),
         }
     }
 
@@ -1183,9 +1185,11 @@ impl TypeChecker {
                 }
                 Declaration::Struct { name, .. } => {
                     self.collect_resolver_struct_fields(symbols, name);
+                    self.collect_resolver_type_behavior_requires(symbols, name);
                 }
                 Declaration::Enum { name, .. } => {
                     self.collect_resolver_enum_variants(symbols, name);
+                    self.collect_resolver_type_behavior_requires(symbols, name);
                 }
                 Declaration::Behavior { name, .. } => {
                     self.collect_resolver_behavior_methods(symbols, name);
@@ -1216,6 +1220,7 @@ impl TypeChecker {
         self.resolver_backed_collection = true;
         self.validate_collected_declaration_semantics(decls);
         self.resolver_backed_collection = false;
+        self.resolver_behavior_required_refs.clear();
 
         for decl in decls {
             match decl {
@@ -1498,6 +1503,18 @@ impl TypeChecker {
         }
     }
 
+    fn collect_resolver_type_behavior_requires(&mut self, symbols: &SymbolTable, name: &str) {
+        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
+            return;
+        };
+        let Some(required_refs) = symbol.behavior_required_refs.as_ref() else {
+            return;
+        };
+
+        self.resolver_behavior_required_refs
+            .insert(name.to_string(), required_refs.iter().cloned().collect());
+    }
+
     fn behavior_parent_ref_from_metadata(
         &self,
         metadata: &BehaviorRefMetadata,
@@ -1664,6 +1681,16 @@ impl TypeChecker {
         behavior_type_args: &[AstType],
         span: Span,
     ) {
+        let resolver_required_ref = self.resolver_required_ref_for(type_name, behavior);
+        let behavior = resolver_required_ref
+            .as_ref()
+            .map(|required| required.name.as_str())
+            .unwrap_or(behavior);
+        let behavior_type_args = resolver_required_ref
+            .as_ref()
+            .map(|required| required.type_args.as_slice())
+            .unwrap_or(behavior_type_args);
+
         if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
             self.diagnostics.push(Diagnostic::error(
                 "E6005",
@@ -1697,6 +1724,29 @@ impl TypeChecker {
                 span,
             ));
         }
+    }
+
+    fn resolver_required_ref_for(
+        &mut self,
+        type_name: &str,
+        behavior: &str,
+    ) -> Option<BehaviorRefMetadata> {
+        if !self.resolver_backed_collection {
+            return None;
+        }
+
+        let required_refs = self.resolver_behavior_required_refs.get_mut(type_name)?;
+        if required_refs
+            .front()
+            .is_some_and(|required| required.name == behavior)
+        {
+            return required_refs.pop_front();
+        }
+
+        let index = required_refs
+            .iter()
+            .position(|required| required.name == behavior)?;
+        required_refs.remove(index)
     }
 
     fn check_behavior_extends(
@@ -8328,6 +8378,43 @@ Point.implements(Json<str>) {
             !tc.behavior_impls
                 .contains(&("Point".to_string(), "Json_i32".to_string())),
             "AST-only Json<i32> impl drift should not remain after resolver collection"
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_required_metadata() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Requires {
+            behavior_type_args, ..
+        } = &mut program.declarations[3]
+        {
+            behavior_type_args[0] = AstType::I32;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored requires metadata should avoid stale AST requires diagnostics: {:?}",
+            tc.diagnostics
         );
     }
 

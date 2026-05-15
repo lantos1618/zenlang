@@ -221,6 +221,9 @@ and do not assume Phase 4 is ready without evidence.
   before collecting behavior impls/requires from the AST. Specialized behavior
   references such as `Json<str>` are included in this resolver handoff
   validation.
+- Resolver-backed `.requires` conformance checks read validated resolver
+  required-behavior refs, so stale AST-only required behavior type arguments
+  cannot produce false missing-impl diagnostics.
 - Generic behavior bounds use the same inheritance-aware behavior satisfaction
   check as `.requires`.
 - Inherited generic behavior dispatch is covered by the executable fixture
