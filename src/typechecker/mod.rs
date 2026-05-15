@@ -1359,8 +1359,8 @@ impl TypeChecker {
 
         for decl in decls {
             match decl {
-                Declaration::Function { name, .. } => {
-                    self.collect_resolver_value_signature(symbols, name);
+                Declaration::Function { name, span, .. } => {
+                    self.collect_resolver_function_signature(symbols, name, *span);
                 }
                 Declaration::Method {
                     type_name,
@@ -1645,6 +1645,38 @@ impl TypeChecker {
             }
         }
         self.collect_resolver_value_signature(symbols, &restored_key);
+    }
+
+    fn collect_resolver_function_signature(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        span: Span,
+    ) {
+        let restored_name = symbols
+            .lookup(Namespace::Value, name)
+            .map(|symbol| symbol.name.clone())
+            .or_else(|| {
+                symbols
+                    .symbols()
+                    .iter()
+                    .find(|symbol| {
+                        symbol.namespace == Namespace::Value
+                            && !symbol.name.contains('.')
+                            && symbol.definition_span == span
+                    })
+                    .map(|symbol| symbol.name.clone())
+            })
+            .unwrap_or_else(|| name.to_string());
+
+        if restored_name != name {
+            self.functions.remove(name);
+            if let Some(template) = self.generic_functions.remove(name) {
+                self.generic_functions
+                    .insert(restored_name.clone(), template);
+            }
+        }
+        self.collect_resolver_value_signature(symbols, &restored_name);
     }
 
     fn collect_resolver_struct_fields(&mut self, symbols: &SymbolTable, name: &str) {
@@ -8805,6 +8837,48 @@ Point.get = (self: Point) i32 { return self.x }
 
         assert!(tc.methods.contains_key("Point.get"));
         assert!(!tc.methods.contains_key("Point.missing"));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_function_name_metadata() {
+        let mut program = parse_program(
+            r#"
+main = () i32 { return 1 }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function { name, .. } = &mut program.declarations[0] {
+            *name = "missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(tc.functions.contains_key("main"));
+        assert!(!tc.functions.contains_key("missing"));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_generic_function_template_name_metadata() {
+        let mut program = parse_program(
+            r#"
+identity<T> = (value: T) T { return value }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function { name, .. } = &mut program.declarations[0] {
+            *name = "missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(tc.generic_functions.contains_key("identity"));
+        assert!(!tc.generic_functions.contains_key("missing"));
     }
 
     #[test]
