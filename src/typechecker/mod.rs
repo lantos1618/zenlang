@@ -1408,6 +1408,15 @@ struct ExpectedVariantPayloadType {
     display: Option<String>,
 }
 
+impl ExpectedVariantPayloadType {
+    fn new(payload: &Option<AstType>) -> Self {
+        Self {
+            typed: payload.clone(),
+            display: payload.as_ref().map(AstType::display_name),
+        }
+    }
+}
+
 struct ExpectedVariantPayloadMetadata {
     count: usize,
     typed: Option<AstType>,
@@ -9410,10 +9419,7 @@ fn format_resolver_named_list<T>(
 }
 
 fn expected_variant_payload_metadata(payload: &Option<AstType>) -> ExpectedVariantPayloadType {
-    ExpectedVariantPayloadType {
-        typed: payload.clone(),
-        display: payload.as_ref().map(AstType::display_name),
-    }
+    ExpectedVariantPayloadType::new(payload)
 }
 
 fn expected_behavior_method_metadata(
@@ -10950,6 +10956,26 @@ Point.requires(Json<str>)
                 }
             )
         );
+    }
+
+    #[test]
+    fn expected_variant_payload_builds_display_and_type_together() {
+        let payload = ExpectedVariantPayloadType::new(&Some(AstType::Function {
+            params: vec![AstType::I32],
+            ret: Box::new(AstType::Bool),
+        }));
+        let empty_payload = ExpectedVariantPayloadType::new(&None);
+
+        assert_eq!(payload.display, Some("(i32) bool".to_string()));
+        assert_eq!(
+            payload.typed,
+            Some(AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::Bool),
+            })
+        );
+        assert_eq!(empty_payload.display, None);
+        assert_eq!(empty_payload.typed, None);
     }
 
     #[test]

@@ -161,6 +161,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver expected struct-field construction now pairs field
   display metadata and typed field metadata through one expected-field
   constructor.
+- Typechecker resolver expected enum-variant payload construction now pairs
+  optional payload display metadata and typed payload metadata through one
+  expected-payload constructor.
 - Typechecker resolver behavior-ref validation now separates role labels from
   per-check diagnostic code mappings, avoiding duplicated label bundles across
   contains and full-list checks.
