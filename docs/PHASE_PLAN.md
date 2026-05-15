@@ -102,7 +102,7 @@ checked-in docs, tests, and commits only.
   direct diagnostics instead of relying only on substituted argument mismatch
   errors.
   Generic inference now also walks function, array, and raw-pointer parameter
-  shapes, so nested type parameters inside function-typed arguments can produce
+  shapes, so nested type parameters inside compound arguments can produce
   direct conflict diagnostics.
   Resolver now rejects duplicate generic type-parameter names across value,
   type, and behavior declarations, covered by

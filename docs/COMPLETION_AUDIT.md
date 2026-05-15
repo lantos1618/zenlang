@@ -116,7 +116,7 @@ and do not assume Phase 4 is ready without evidence.
   Generic function and method type-argument inference conflicts now report
   direct diagnostics for the conflicting parameter and concrete types.
   Generic inference also walks function, array, and raw-pointer parameter
-  shapes, so nested type parameters inside function-typed arguments can produce
+  shapes, so nested type parameters inside compound arguments can produce
   direct conflict diagnostics.
   Resolver rejects duplicate generic type-parameter names across value, type,
   and behavior declarations, covered by

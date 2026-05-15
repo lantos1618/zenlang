@@ -179,6 +179,29 @@ main = () i32 {
 }
 
 #[test]
+fn generic_function_inference_conflict_through_raw_pointer_type_is_error() {
+    let errors = typecheck_errors(
+        r#"
+choose_raw<T> = (left: T, ptr: RawPtr<T>) T {
+    return left
+}
+
+main = () i32 {
+    ptr = cast("bad", RawPtr<str>)
+    return choose_raw(1, ptr)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic function `choose_raw`: inferred `i32` and `str`"
+        )),
+        "expected generic function raw-pointer inference conflict diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_method_inference_conflict_is_error() {
     let errors = typecheck_errors(
         r#"
