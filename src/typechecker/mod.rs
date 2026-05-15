@@ -413,6 +413,15 @@ struct TypeParameterValidation {
 }
 
 impl TypeParameterValidation {
+    fn type_like_resolver_codes() -> Self {
+        Self {
+            count_code: "E0213",
+            name_code: "E0346",
+            bound_code: "E0222",
+            bound_ref_code: "E0350",
+        }
+    }
+
     fn name_message(self, symbol_kind: &str, name: &str, actual: &str, expected: &str) -> String {
         format!(
             "resolver {symbol_kind} symbol '{name}' has type parameter names '{actual}', expected '{expected}'"
@@ -7933,12 +7942,7 @@ impl TypeChecker {
             namespace.diagnostic_name(),
             name,
             &expected.type_params,
-            TypeParameterValidation {
-                count_code: "E0213",
-                name_code: "E0346",
-                bound_code: "E0222",
-                bound_ref_code: "E0350",
-            },
+            TypeParameterValidation::type_like_resolver_codes(),
             span,
         );
 
@@ -9998,6 +10002,16 @@ Point.get = (self: Point) i32 { return self.x }
             validation.bound_ref_message("behavior", "Serializable", "(T: Json<i32>)", "(T: Json<T>)"),
             "resolver behavior symbol 'Serializable' has type parameter bound refs '(T: Json<i32>)', expected '(T: Json<T>)'"
         );
+    }
+
+    #[test]
+    fn type_parameter_validation_uses_type_like_resolver_codes() {
+        let validation = TypeParameterValidation::type_like_resolver_codes();
+
+        assert_eq!(validation.count_code, "E0213");
+        assert_eq!(validation.name_code, "E0346");
+        assert_eq!(validation.bound_code, "E0222");
+        assert_eq!(validation.bound_ref_code, "E0350");
     }
 
     #[test]
