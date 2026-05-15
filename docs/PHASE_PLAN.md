@@ -452,6 +452,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed `.implements` conformance checks now read validated resolver
   behavior impl refs before method conformance, so stale AST-only impl behavior
   type arguments cannot produce false method signature diagnostics.
+  Overlap diagnostics also use restored generic impl refs, so stale AST-only
+  impl type arguments cannot hide parent/child behavior conflicts.
   Missing-method diagnostics also use restored target type names, behavior
   names, and behavior type arguments when all AST-only `.implements` parts are
   stale.

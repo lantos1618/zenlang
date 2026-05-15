@@ -702,6 +702,9 @@ and do not assume Phase 4 is ready without evidence.
   the same type.
 - Behavior impl coherence is covered for specialized generic parent/child
   overlap and for distinct generic specializations that must remain independent.
+  Resolver-restored generic impl refs also drive overlap diagnostics when
+  AST-only impl type arguments are stale, covered by
+  `typechecker::tests::collect_declarations_with_symbols_reports_overlap_from_restored_impl_type_args`.
 - Inherited behavior default methods are emitted and callable in the executable
   fixture `tests/zen/behavior_inherited_default_method.zen`.
 - Behavior impl methods are recorded and validated through resolver

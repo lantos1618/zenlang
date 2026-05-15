@@ -15940,6 +15940,77 @@ Point.implements(Json<str>) {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_reports_overlap_from_restored_impl_type_args() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+Point: { x: i32 }
+
+PrettyJson.extends(Json<str>)
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.implements(PrettyJson) {
+    pretty = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let first_impl = program
+            .declarations
+            .iter_mut()
+            .find(|declaration| {
+                matches!(
+                    declaration,
+                    Declaration::ImplBlock {
+                        behavior: Some(behavior),
+                        ..
+                    } if behavior == "Json"
+                )
+            })
+            .expect("Json impl declaration");
+        if let Declaration::ImplBlock {
+            behavior_type_args, ..
+        } = first_impl
+        {
+            behavior_type_args[0] = AstType::I32;
+        } else {
+            panic!("expected Json impl declaration");
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let messages: Vec<_> = tc
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.message.as_str())
+            .collect();
+        assert!(
+            messages.iter().any(|message| {
+                *message
+                    == "overlapping implementations of behaviors `Json_str` and `PrettyJson` for type `Point`"
+            }),
+            "resolver-restored impl type args should drive overlap diagnostics, got {:?}",
+            messages
+        );
+        assert!(
+            messages.iter().all(|message| !message.contains("Json_i32")),
+            "stale AST-only impl type args should not leak into overlap diagnostics: {:?}",
+            messages
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_behavior_required_metadata() {
         let mut program = parse_program(
             r#"
