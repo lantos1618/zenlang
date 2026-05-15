@@ -124,6 +124,8 @@ and do not assume Phase 4 is ready without evidence.
   resolver-restored type and behavior constructors.
 - Resolver-backed callable signature restoration now shares one function vs
   method key classifier for concrete value metadata and generic templates.
+- Resolver-backed method key restoration now uses the same callable key
+  classifier for resolver value-symbol declaration-span matching.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only

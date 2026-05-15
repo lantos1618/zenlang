@@ -214,6 +214,8 @@ checked-in docs, tests, and commits only.
   helper pattern as resolver-restored struct, enum, and behavior metadata.
 - Resolver-backed callable signature restoration now shares the function vs
   method key classifier between value metadata and generic template refresh.
+- Resolver-backed method key restoration now also reuses that callable key
+  classifier when matching resolver value symbols by declaration span.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

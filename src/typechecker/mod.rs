@@ -2128,7 +2128,7 @@ impl TypeChecker {
                     .iter()
                     .find(|symbol| {
                         symbol.namespace == Namespace::Value
-                            && symbol.name.contains('.')
+                            && is_method_signature_key(&symbol.name)
                             && symbol.definition_span == span
                     })
                     .map(|symbol| symbol.name.clone())
@@ -2206,7 +2206,7 @@ impl TypeChecker {
                 .iter()
                 .find(|symbol| {
                     symbol.namespace == Namespace::Value
-                        && symbol.name.contains('.')
+                        && is_method_signature_key(&symbol.name)
                         && symbol.definition_span == *span
                 })
                 .and_then(|symbol| symbol.name.rsplit_once('.'))
