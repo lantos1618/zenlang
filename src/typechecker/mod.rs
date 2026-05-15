@@ -335,24 +335,24 @@ struct TypeParameterAbsenceValidation {
 }
 
 impl TypeParameterAbsenceValidation {
-    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 4] {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
         [
-            (
+            AbsentMetadataEntry::new(
                 symbol.type_parameter_count.is_some(),
                 self.count_code,
                 "type parameter count",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.type_parameter_names.is_some(),
                 self.name_code,
                 "type parameter names",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.type_parameter_bounds.is_some(),
                 self.bound_code,
                 "type parameter bounds",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.type_parameter_bound_refs.is_some(),
                 self.bound_ref_code,
                 "typed type parameter bound refs",
@@ -372,34 +372,34 @@ struct ValueSignatureAbsenceValidation {
 }
 
 impl ValueSignatureAbsenceValidation {
-    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 6] {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 6] {
         [
-            (
+            AbsentMetadataEntry::new(
                 symbol.parameter_count.is_some(),
                 self.parameter_count_code,
                 "parameter count",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.parameter_names.is_some(),
                 self.parameter_name_code,
                 "parameter names",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.parameter_type_names.is_some(),
                 self.parameter_type_name_code,
                 "parameter types",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.parameter_types.is_some(),
                 self.parameter_type_code,
                 "typed parameter types",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.return_type_name.is_some(),
                 self.return_type_code,
                 "return type",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.return_type.is_some(),
                 self.typed_return_type_code,
                 "typed return type",
@@ -416,15 +416,15 @@ struct FieldAbsenceValidation {
 }
 
 impl FieldAbsenceValidation {
-    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 3] {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 3] {
         [
-            (symbol.field_count.is_some(), self.count_code, "field count"),
-            (
+            AbsentMetadataEntry::new(symbol.field_count.is_some(), self.count_code, "field count"),
+            AbsentMetadataEntry::new(
                 symbol.field_type_names.is_some(),
                 self.type_name_code,
                 "field types",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.field_types.is_some(),
                 self.typed_code,
                 "typed field types",
@@ -443,29 +443,29 @@ struct VariantAbsenceValidation {
 }
 
 impl VariantAbsenceValidation {
-    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 5] {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 5] {
         [
-            (
+            AbsentMetadataEntry::new(
                 symbol.variant_names.is_some(),
                 self.names_code,
                 "variant names",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.variant_owner_name.is_some(),
                 self.owner_code,
                 "variant owner",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.variant_payload_count.is_some(),
                 self.payload_count_code,
                 "variant payload count",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.variant_payload_type_name.is_some(),
                 self.payload_type_name_code,
                 "variant payload type",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.variant_payload_type.is_some(),
                 self.payload_type_code,
                 "typed variant payload type",
@@ -483,24 +483,24 @@ struct BehaviorAssociationAbsenceValidation {
 }
 
 impl BehaviorAssociationAbsenceValidation {
-    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 4] {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
         [
-            (
+            AbsentMetadataEntry::new(
                 symbol.behavior_impl_names.is_some(),
                 self.impl_name_code,
                 "behavior impls",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.behavior_impl_refs.is_some(),
                 self.impl_ref_code,
                 "typed behavior impls",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.behavior_required_names.is_some(),
                 self.required_name_code,
                 "behavior requires",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.behavior_required_refs.is_some(),
                 self.required_ref_code,
                 "typed behavior requires",
@@ -518,24 +518,24 @@ struct BehaviorDeclarationAbsenceValidation {
 }
 
 impl BehaviorDeclarationAbsenceValidation {
-    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 4] {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
         [
-            (
+            AbsentMetadataEntry::new(
                 symbol.behavior_method_signatures.is_some(),
                 self.method_signature_code,
                 "behavior methods",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.behavior_method_types.is_some(),
                 self.method_type_code,
                 "typed behavior methods",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.behavior_parent_names.is_some(),
                 self.parent_name_code,
                 "behavior parents",
             ),
-            (
+            AbsentMetadataEntry::new(
                 symbol.behavior_parent_refs.is_some(),
                 self.parent_ref_code,
                 "typed behavior parents",
@@ -550,8 +550,8 @@ struct MutabilityAbsenceValidation {
 }
 
 impl MutabilityAbsenceValidation {
-    fn entry(self, symbol: &Symbol) -> (bool, &'static str, &'static str) {
-        (symbol.is_mutable.is_some(), self.code, "mutability")
+    fn entry(self, symbol: &Symbol) -> AbsentMetadataEntry {
+        AbsentMetadataEntry::new(symbol.is_mutable.is_some(), self.code, "mutability")
     }
 }
 
@@ -615,7 +615,7 @@ impl ResolverSymbolPresenceValidation {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct AbsentMetadataEntry {
     present: bool,
     code: &'static str,
@@ -623,6 +623,14 @@ struct AbsentMetadataEntry {
 }
 
 impl AbsentMetadataEntry {
+    fn new(present: bool, code: &'static str, label: &'static str) -> Self {
+        Self {
+            present,
+            code,
+            label,
+        }
+    }
+
     fn message(self, symbol_kind: &str, name: &str) -> String {
         format!(
             "resolver {symbol_kind} symbol '{name}' has {} metadata, expected none",
@@ -7695,20 +7703,11 @@ impl TypeChecker {
         &mut self,
         symbol_kind: &str,
         name: &str,
-        entries: &[(bool, &'static str, &'static str)],
+        entries: &[AbsentMetadataEntry],
         span: Span,
     ) {
-        for (present, code, label) in entries {
-            self.validate_resolver_absent_metadata_entry(
-                symbol_kind,
-                name,
-                AbsentMetadataEntry {
-                    present: *present,
-                    code,
-                    label,
-                },
-                span,
-            );
+        for entry in entries {
+            self.validate_resolver_absent_metadata_entry(symbol_kind, name, *entry, span);
         }
     }
 
@@ -8117,7 +8116,11 @@ impl TypeChecker {
         self.validate_resolver_absent_metadata_entries(
             "variant",
             name,
-            &[(symbol.variant_names.is_some(), "E0338", "variant names")],
+            &[AbsentMetadataEntry::new(
+                symbol.variant_names.is_some(),
+                "E0338",
+                "variant names",
+            )],
             span,
         );
         self.validate_resolver_absent_mutability_metadata(
@@ -10025,10 +10028,10 @@ Point.requires(Json)
         assert_eq!(
             entries,
             [
-                (true, "IMPL_NAMES", "behavior impls"),
-                (true, "IMPL_REFS", "typed behavior impls"),
-                (true, "REQUIRED_NAMES", "behavior requires"),
-                (true, "REQUIRED_REFS", "typed behavior requires"),
+                AbsentMetadataEntry::new(true, "IMPL_NAMES", "behavior impls"),
+                AbsentMetadataEntry::new(true, "IMPL_REFS", "typed behavior impls"),
+                AbsentMetadataEntry::new(true, "REQUIRED_NAMES", "behavior requires"),
+                AbsentMetadataEntry::new(true, "REQUIRED_REFS", "typed behavior requires"),
             ]
         );
     }
@@ -10065,10 +10068,10 @@ PrettyJson.extends(Json)
         assert_eq!(
             entries,
             [
-                (true, "METHODS", "behavior methods"),
-                (true, "TYPED_METHODS", "typed behavior methods"),
-                (true, "PARENTS", "behavior parents"),
-                (true, "TYPED_PARENTS", "typed behavior parents"),
+                AbsentMetadataEntry::new(true, "METHODS", "behavior methods"),
+                AbsentMetadataEntry::new(true, "TYPED_METHODS", "typed behavior methods"),
+                AbsentMetadataEntry::new(true, "PARENTS", "behavior parents"),
+                AbsentMetadataEntry::new(true, "TYPED_PARENTS", "typed behavior parents"),
             ]
         );
     }
@@ -10096,15 +10099,16 @@ add = (left: i32, right: i32) i32 { return left + right }
         }
         .entries(symbol);
 
+        assert!(entries.iter().all(|entry| entry.present));
         assert_eq!(
-            entries,
+            entries.map(|entry| entry.message("value", "add")),
             [
-                (true, "PARAM_COUNT", "parameter count"),
-                (true, "PARAM_NAMES", "parameter names"),
-                (true, "PARAM_TYPES", "parameter types"),
-                (true, "TYPED_PARAM_TYPES", "typed parameter types"),
-                (true, "RETURN_TYPE", "return type"),
-                (true, "TYPED_RETURN_TYPE", "typed return type"),
+                "resolver value symbol 'add' has parameter count metadata, expected none",
+                "resolver value symbol 'add' has parameter names metadata, expected none",
+                "resolver value symbol 'add' has parameter types metadata, expected none",
+                "resolver value symbol 'add' has typed parameter types metadata, expected none",
+                "resolver value symbol 'add' has return type metadata, expected none",
+                "resolver value symbol 'add' has typed return type metadata, expected none",
             ]
         );
     }
@@ -10137,10 +10141,10 @@ identity<T: Json> = (value: T) T { return value }
         assert_eq!(
             entries,
             [
-                (true, "COUNT", "type parameter count"),
-                (true, "NAMES", "type parameter names"),
-                (true, "BOUNDS", "type parameter bounds"),
-                (true, "BOUND_REFS", "typed type parameter bound refs"),
+                AbsentMetadataEntry::new(true, "COUNT", "type parameter count"),
+                AbsentMetadataEntry::new(true, "NAMES", "type parameter names"),
+                AbsentMetadataEntry::new(true, "BOUNDS", "type parameter bounds"),
+                AbsentMetadataEntry::new(true, "BOUND_REFS", "typed type parameter bound refs"),
             ]
         );
     }
@@ -10168,9 +10172,9 @@ Point: { x: i32, y: i32 }
         assert_eq!(
             entries,
             [
-                (true, "COUNT", "field count"),
-                (true, "FIELD_TYPES", "field types"),
-                (true, "TYPED_FIELDS", "typed field types"),
+                AbsentMetadataEntry::new(true, "COUNT", "field count"),
+                AbsentMetadataEntry::new(true, "FIELD_TYPES", "field types"),
+                AbsentMetadataEntry::new(true, "TYPED_FIELDS", "typed field types"),
             ]
         );
     }
@@ -10200,11 +10204,11 @@ Option<T>: Some(T), None
         assert_eq!(
             entries,
             [
-                (false, "NAMES", "variant names"),
-                (true, "OWNER", "variant owner"),
-                (true, "PAYLOAD_COUNT", "variant payload count"),
-                (true, "PAYLOAD_TYPE", "variant payload type"),
-                (true, "TYPED_PAYLOAD", "typed variant payload type"),
+                AbsentMetadataEntry::new(false, "NAMES", "variant names"),
+                AbsentMetadataEntry::new(true, "OWNER", "variant owner"),
+                AbsentMetadataEntry::new(true, "PAYLOAD_COUNT", "variant payload count"),
+                AbsentMetadataEntry::new(true, "PAYLOAD_TYPE", "variant payload type"),
+                AbsentMetadataEntry::new(true, "TYPED_PAYLOAD", "typed variant payload type"),
             ]
         );
     }
@@ -10227,7 +10231,10 @@ main = (mut input: i32) i32 {
             .expect("local symbol");
         let entry = MutabilityAbsenceValidation { code: "MUTABLE" }.entry(symbol);
 
-        assert_eq!(entry, (true, "MUTABLE", "mutability"));
+        assert_eq!(
+            entry,
+            AbsentMetadataEntry::new(true, "MUTABLE", "mutability")
+        );
     }
 
     #[test]

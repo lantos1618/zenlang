@@ -1027,6 +1027,9 @@ checked-in docs, tests, and commits only.
   absent-metadata entry helper.
 - Resolver absent-metadata entry validation now carries diagnostic message
   formatting through an explicit absent metadata entry object.
+- Resolver absent-metadata validation bundles now build typed absent metadata
+  entries directly, so the validation path no longer rewraps raw
+  present/code/label tuples before emitting diagnostics.
 - Resolver absent value-signature detail validation now shares the same helper
   across module, import, local, type-like, and variant symbols.
 - Resolver absent value-signature metadata validation now lets the validation

@@ -993,6 +993,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver absent-metadata entry validation now carries diagnostic message
   formatting through an explicit absent metadata entry object, covered by
   `typechecker::tests::absent_metadata_entry_formats_message`.
+- Resolver absent-metadata validation bundles now return typed absent metadata
+  entries directly instead of raw present/code/label tuples, covered by
+  `typechecker::tests::value_signature_absence_validation_builds_entries` and
+  the related absence validation entry tests.
 - Resolver absent value-signature detail validation now shares the same helper
   across module, import, local, type-like, and variant symbols.
 - Resolver absent value-signature metadata validation now lets the validation
