@@ -1609,6 +1609,9 @@ checked-in docs, tests, and commits only.
 - Resolver type-parameter and value-parameter validation now share one
   metadata-list comparison helper for names, display metadata, and typed
   metadata after each count check, preserving each diagnostic code and message.
+- Resolver behavior-method validation now uses the same metadata-list
+  comparison helper for display signatures and typed method metadata,
+  preserving behavior-specific resolver diagnostics.
 
 ## Current Phase
 

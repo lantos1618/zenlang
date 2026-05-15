@@ -1845,6 +1845,9 @@ and do not assume Phase 4 is ready without evidence.
   metadata, covered by
   `cargo test type_parameter_validation` and
   `cargo test value_parameter_validation`.
+- Resolver behavior-method validation now uses the shared metadata-list
+  comparison helper for display signatures and typed method metadata, covered
+  by `cargo test behavior_method_validation`.
 
 ## Unresolved Gaps
 

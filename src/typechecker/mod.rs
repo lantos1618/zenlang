@@ -9811,25 +9811,22 @@ impl TypeChecker {
     ) {
         let expected = ExpectedBehaviorMethodMetadata::from_methods(expected_methods);
         let validation = BehaviorMethodValidation::resolver_codes();
-        if symbol.behavior_method_signatures.as_deref() != Some(expected.signatures.as_slice()) {
-            let actual =
-                format_behavior_method_signatures(symbol.behavior_method_signatures.as_deref());
-            let expected = format_behavior_method_signatures(Some(&expected.signatures));
-            self.diagnostics.push(Diagnostic::error(
-                validation.display_code,
-                validation.display_message(name, &actual, &expected),
-                span,
-            ));
-        }
-        if symbol.behavior_method_types.as_deref() != Some(expected.typed.as_slice()) {
-            let actual = format_behavior_method_types(symbol.behavior_method_types.as_deref());
-            let expected = format_behavior_method_types(Some(&expected.typed));
-            self.diagnostics.push(Diagnostic::error(
-                validation.typed_code,
-                validation.typed_message(name, &actual, &expected),
-                span,
-            ));
-        }
+        self.validate_resolver_metadata_list(
+            symbol.behavior_method_signatures.as_deref(),
+            &expected.signatures,
+            format_behavior_method_signatures,
+            validation.display_code,
+            |actual, expected| validation.display_message(name, actual, expected),
+            span,
+        );
+        self.validate_resolver_metadata_list(
+            symbol.behavior_method_types.as_deref(),
+            &expected.typed,
+            format_behavior_method_types,
+            validation.typed_code,
+            |actual, expected| validation.typed_message(name, actual, expected),
+            span,
+        );
     }
 
     fn validate_resolver_behavior_absent_type_metadata(
