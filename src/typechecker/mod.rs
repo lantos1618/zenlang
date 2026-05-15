@@ -448,6 +448,19 @@ fn enum_info_from_ast_variants(
     }
 }
 
+fn behavior_info_from_ast_methods(
+    name: String,
+    type_params: &[ast::TypeParam],
+    methods: &[ast::BehaviorMethod],
+) -> BehaviorInfo {
+    BehaviorInfo {
+        name,
+        type_params: type_param_names(type_params),
+        type_param_bounds: type_param_bounds(type_params),
+        methods: methods.to_vec(),
+    }
+}
+
 fn type_param_bounds_from_resolver_refs(
     bounds: &[TypeParameterBoundRefMetadata],
 ) -> HashMap<String, BehaviorBound> {
@@ -1187,12 +1200,7 @@ impl TypeChecker {
             {
                 self.behaviors.insert(
                     name.clone(),
-                    BehaviorInfo {
-                        name: name.clone(),
-                        type_params: type_param_names(type_params),
-                        type_param_bounds: type_param_bounds(type_params),
-                        methods: methods.clone(),
-                    },
+                    behavior_info_from_ast_methods(name.clone(), type_params, methods),
                 );
             }
         }
@@ -5183,12 +5191,7 @@ impl TypeChecker {
             } => {
                 self.behaviors.insert(
                     local_name.to_string(),
-                    BehaviorInfo {
-                        name: local_name.to_string(),
-                        type_params: type_param_names(type_params),
-                        type_param_bounds: type_param_bounds(type_params),
-                        methods: methods.clone(),
-                    },
+                    behavior_info_from_ast_methods(local_name.to_string(), type_params, methods),
                 );
             }
             Declaration::Function {

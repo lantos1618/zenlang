@@ -881,6 +881,8 @@ checked-in docs, tests, and commits only.
   impl, imported, and dependency function/method signatures.
 - AST type metadata collection now uses shared struct and enum helpers across
   local declaration, module-graph import, and source-dependency seeding paths.
+- AST behavior metadata collection now uses a shared helper across local
+  declaration and module-graph import seeding paths.
 
 ## Current Phase
 
