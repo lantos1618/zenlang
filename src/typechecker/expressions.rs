@@ -187,114 +187,120 @@ impl TypeChecker {
                     name.clone()
                 };
 
-                let (resolved_name, ret_type) =
-                    if let Some(info) = self.functions.get(&full_name).cloned() {
-                        if !info.type_params.is_empty() {
-                            let subs = if type_args.is_empty() {
-                                let arg_types: Vec<Type> =
-                                    typed_args.iter().map(|a| a.ty.clone()).collect();
-                                let (subs, conflicts) = self.infer_type_args_with_conflicts(
-                                    &info.type_params,
-                                    &info.params,
-                                    &arg_types,
-                                );
-                                self.report_inference_conflicts(
-                                    "function", &full_name, conflicts, *span,
-                                );
-                                subs
-                            } else {
-                                self.explicit_type_arg_substitutions(
-                                    &full_name,
-                                    &info.type_params,
-                                    type_args,
-                                    *span,
-                                )
-                            };
-                            self.check_call_signature_with_substitutions(
-                                "function",
-                                &full_name,
+                let (resolved_name, ret_type) = if let Some(info) =
+                    self.functions.get(&full_name).cloned()
+                {
+                    if !info.type_params.is_empty() {
+                        let explicit_type_args_valid =
+                            Self::explicit_type_args_valid(type_args, &info.type_params);
+                        let subs = if type_args.is_empty() {
+                            let arg_types: Vec<Type> =
+                                typed_args.iter().map(|a| a.ty.clone()).collect();
+                            let (subs, conflicts) = self.infer_type_args_with_conflicts(
+                                &info.type_params,
                                 &info.params,
-                                &typed_args,
-                                &subs,
-                                span,
+                                &arg_types,
                             );
-                            self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
-                            let ret = self.substitute_type(&info.return_type, &subs);
-                            let mangled = self
-                                .specialize_generic_function(&full_name, &subs, *span)
+                            self.report_inference_conflicts(
+                                "function", &full_name, conflicts, *span,
+                            );
+                            subs
+                        } else {
+                            self.explicit_type_arg_substitutions(
+                                &full_name,
+                                &info.type_params,
+                                type_args,
+                                *span,
+                            )
+                        };
+                        self.check_call_signature_with_substitutions(
+                            "function",
+                            &full_name,
+                            &info.params,
+                            &typed_args,
+                            &subs,
+                            span,
+                        );
+                        self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
+                        let ret = self.substitute_type(&info.return_type, &subs);
+                        let mangled = if explicit_type_args_valid {
+                            self.specialize_generic_function(&full_name, &subs, *span)
                                 .unwrap_or_else(|| {
                                     self.generic_function_mangled_name(
                                         &full_name,
                                         &info.type_params,
                                         &subs,
                                     )
-                                });
-                            (mangled, ret)
+                                })
                         } else {
-                            if !type_args.is_empty() {
-                                self.diagnostics.push(Diagnostic::error(
-                                    "E5001",
-                                    format!(
-                                        "non-generic function `{}` does not accept type arguments",
-                                        full_name
-                                    ),
-                                    *span,
-                                ));
-                            }
-                            self.check_call_signature(
-                                "function",
-                                &full_name,
-                                &info.params,
-                                &typed_args,
-                                span,
-                            );
-                            (full_name.clone(), self.resolve_type(&info.return_type))
-                        }
-                    } else if name == "cast" && typed_args.len() == 1 && !type_args.is_empty() {
-                        // cast(expr, Type) — handled specially
-                        (full_name.clone(), self.resolve_type(&type_args[0]))
-                    } else if module.is_some() {
-                        // Try looking up module-qualified names in methods/functions maps
-                        let mangled = if let Some(m) = module {
-                            format!("{}_{}", m, name)
-                        } else {
-                            name.clone()
+                            self.generic_function_mangled_name(&full_name, &info.type_params, &subs)
                         };
-                        if let Some(info) = self.methods.get(&full_name).cloned() {
-                            self.check_call_signature(
-                                "method",
-                                &full_name,
-                                &info.params,
-                                &typed_args,
-                                span,
-                            );
-                            (full_name.clone(), self.resolve_type(&info.return_type))
-                        } else if let Some(info) = self.functions.get(&mangled).cloned() {
-                            self.check_call_signature(
-                                "function",
-                                &mangled,
-                                &info.params,
-                                &typed_args,
-                                span,
-                            );
-                            (full_name.clone(), self.resolve_type(&info.return_type))
-                        } else {
-                            let m = module.as_deref().unwrap_or("");
-                            self.diagnostics.push(Diagnostic::warning(
-                                "W3041",
-                                format!("unknown function `{}.{}`, assuming void return", m, name),
+                        (mangled, ret)
+                    } else {
+                        if !type_args.is_empty() {
+                            self.diagnostics.push(Diagnostic::error(
+                                "E5001",
+                                format!(
+                                    "non-generic function `{}` does not accept type arguments",
+                                    full_name
+                                ),
                                 *span,
                             ));
-                            (full_name.clone(), Type::Void)
                         }
+                        self.check_call_signature(
+                            "function",
+                            &full_name,
+                            &info.params,
+                            &typed_args,
+                            span,
+                        );
+                        (full_name.clone(), self.resolve_type(&info.return_type))
+                    }
+                } else if name == "cast" && typed_args.len() == 1 && !type_args.is_empty() {
+                    // cast(expr, Type) — handled specially
+                    (full_name.clone(), self.resolve_type(&type_args[0]))
+                } else if module.is_some() {
+                    // Try looking up module-qualified names in methods/functions maps
+                    let mangled = if let Some(m) = module {
+                        format!("{}_{}", m, name)
                     } else {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E3020",
-                            format!("undefined function `{}`", name),
+                        name.clone()
+                    };
+                    if let Some(info) = self.methods.get(&full_name).cloned() {
+                        self.check_call_signature(
+                            "method",
+                            &full_name,
+                            &info.params,
+                            &typed_args,
+                            span,
+                        );
+                        (full_name.clone(), self.resolve_type(&info.return_type))
+                    } else if let Some(info) = self.functions.get(&mangled).cloned() {
+                        self.check_call_signature(
+                            "function",
+                            &mangled,
+                            &info.params,
+                            &typed_args,
+                            span,
+                        );
+                        (full_name.clone(), self.resolve_type(&info.return_type))
+                    } else {
+                        let m = module.as_deref().unwrap_or("");
+                        self.diagnostics.push(Diagnostic::warning(
+                            "W3041",
+                            format!("unknown function `{}.{}`, assuming void return", m, name),
                             *span,
                         ));
-                        (full_name.clone(), Type::Unknown)
-                    };
+                        (full_name.clone(), Type::Void)
+                    }
+                } else {
+                    self.diagnostics.push(Diagnostic::error(
+                        "E3020",
+                        format!("undefined function `{}`", name),
+                        *span,
+                    ));
+                    (full_name.clone(), Type::Unknown)
+                };
 
                 Ok(TypedExpression {
                     kind: TypedExprKind::FunctionCall {
@@ -389,6 +395,8 @@ impl TypeChecker {
                 if let Some(info) = self.methods.get(&method_key).cloned() {
                     // Found as a type method — handle generics
                     let (resolved_method, ret_type) = if !info.type_params.is_empty() {
+                        let explicit_type_args_valid =
+                            Self::explicit_type_args_valid(type_args, &info.type_params);
                         let subs = if type_args.is_empty() {
                             let arg_types: Vec<Type> =
                                 typed_args.iter().map(|a| a.ty.clone()).collect();
@@ -426,15 +434,22 @@ impl TypeChecker {
                         );
                         self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
                         let ret = self.substitute_type(&info.return_type, &subs);
-                        let mangled = self
-                            .specialize_generic_method(&method_key, &subs, *span)
-                            .unwrap_or_else(|| {
-                                self.generic_function_mangled_name(
-                                    &method_key,
-                                    &info.type_params,
-                                    &subs,
-                                )
-                            });
+                        let mangled = if explicit_type_args_valid {
+                            self.specialize_generic_method(&method_key, &subs, *span)
+                                .unwrap_or_else(|| {
+                                    self.generic_function_mangled_name(
+                                        &method_key,
+                                        &info.type_params,
+                                        &subs,
+                                    )
+                                })
+                        } else {
+                            self.generic_function_mangled_name(
+                                &method_key,
+                                &info.type_params,
+                                &subs,
+                            )
+                        };
                         self.current_self_type = saved_self_type;
                         (mangled, ret)
                     } else {
@@ -472,6 +487,8 @@ impl TypeChecker {
                     let generic_method_key = format!("{}.{}", generic_base, method);
                     if let Some(info) = self.methods.get(&generic_method_key).cloned() {
                         if !info.type_params.is_empty() {
+                            let explicit_type_args_valid =
+                                Self::explicit_type_args_valid(type_args, &info.type_params);
                             let subs = if type_args.is_empty() {
                                 let arg_types: Vec<Type> =
                                     typed_args.iter().map(|a| a.ty.clone()).collect();
@@ -510,15 +527,22 @@ impl TypeChecker {
                             );
                             self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
                             let ret_type = self.substitute_type(&info.return_type, &subs);
-                            let mangled = self
-                                .specialize_generic_method(&generic_method_key, &subs, *span)
-                                .unwrap_or_else(|| {
-                                    self.generic_function_mangled_name(
-                                        &generic_method_key,
-                                        &info.type_params,
-                                        &subs,
-                                    )
-                                });
+                            let mangled = if explicit_type_args_valid {
+                                self.specialize_generic_method(&generic_method_key, &subs, *span)
+                                    .unwrap_or_else(|| {
+                                        self.generic_function_mangled_name(
+                                            &generic_method_key,
+                                            &info.type_params,
+                                            &subs,
+                                        )
+                                    })
+                            } else {
+                                self.generic_function_mangled_name(
+                                    &generic_method_key,
+                                    &info.type_params,
+                                    &subs,
+                                )
+                            };
                             self.current_self_type = saved_self_type;
                             Ok(TypedExpression {
                                 kind: TypedExprKind::FunctionCall {
@@ -561,6 +585,8 @@ impl TypeChecker {
                 } else if let Some(info) = self.functions.get(method).cloned() {
                     // UFC: x.f(args) -> f(x, args)
                     let (resolved_function, ret_type) = if !info.type_params.is_empty() {
+                        let explicit_type_args_valid =
+                            Self::explicit_type_args_valid(type_args, &info.type_params);
                         let subs = if type_args.is_empty() {
                             let arg_types: Vec<Type> =
                                 typed_args.iter().map(|a| a.ty.clone()).collect();
@@ -589,11 +615,18 @@ impl TypeChecker {
                         );
                         self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
                         let ret = self.substitute_type(&info.return_type, &subs);
-                        let mangled = self
-                            .specialize_generic_function(method, &subs, *span)
-                            .unwrap_or_else(|| {
-                                self.generic_function_mangled_name(method, &info.type_params, &subs)
-                            });
+                        let mangled = if explicit_type_args_valid {
+                            self.specialize_generic_function(method, &subs, *span)
+                                .unwrap_or_else(|| {
+                                    self.generic_function_mangled_name(
+                                        method,
+                                        &info.type_params,
+                                        &subs,
+                                    )
+                                })
+                        } else {
+                            self.generic_function_mangled_name(method, &info.type_params, &subs)
+                        };
                         (mangled, ret)
                     } else {
                         if !type_args.is_empty() {
@@ -1480,6 +1513,10 @@ impl TypeChecker {
         span: Span,
     ) -> std::collections::HashMap<String, Type> {
         self.type_param_substitutions(type_params, type_args, "function", callee, span)
+    }
+
+    fn explicit_type_args_valid(type_args: &[AstType], type_params: &[String]) -> bool {
+        type_args.is_empty() || type_args.len() == type_params.len()
     }
 
     fn field_access_type_name(&self, ty: &Type) -> Option<String> {

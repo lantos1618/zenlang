@@ -1044,6 +1044,8 @@ checked-in docs, tests, and commits only.
   type arguments instead of degrading to `void`.
 - Generic method call arity diagnostics now preserve method wording through
   the shared call-signature checker.
+- Explicit generic function and method type-argument arity failures now stop
+  before specialization emits misleading follow-up inference diagnostics.
 
 ## Current Phase
 

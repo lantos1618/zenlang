@@ -999,6 +999,12 @@ and do not assume Phase 4 is ready without evidence.
 - Generic method call arity diagnostics now preserve method wording through
   the shared call-signature checker, covered by
   `generic_diagnostics::generic_method_argument_arity_uses_method_diagnostic`.
+- Explicit generic function and method type-argument arity failures now stop
+  before specialization emits misleading follow-up inference diagnostics,
+  covered by
+  `generic_diagnostics::generic_function_explicit_type_arg_arity_does_not_emit_inference_followup`
+  and
+  `generic_diagnostics::generic_method_explicit_type_arg_arity_does_not_emit_inference_followup`.
 
 ## Unresolved Gaps
 

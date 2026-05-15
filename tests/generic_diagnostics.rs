@@ -135,6 +135,67 @@ main = () i32 {
 }
 
 #[test]
+fn generic_function_explicit_type_arg_arity_does_not_emit_inference_followup() {
+    let errors = typecheck_errors(
+        r#"
+pick<T, U> = (value: T) T {
+    return value
+}
+
+main = () i32 {
+    return pick<i32>(1)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic function `pick` expects 2 type arguments, found 1")),
+        "expected explicit generic arity diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("cannot infer type argument")),
+        "explicit generic arity failure should not also report inference, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_method_explicit_type_arg_arity_does_not_emit_inference_followup() {
+    let errors = typecheck_errors(
+        r#"
+Box: {
+    value: i32
+}
+
+Box.pick<T, U> = (self: Box, value: T) T {
+    return value
+}
+
+main = () i32 {
+    box = Box { value: 1 }
+    return box.pick<i32>(1)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic method `Box.pick` expects 2 type arguments, found 1")),
+        "expected explicit generic method arity diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("cannot infer type argument")),
+        "explicit generic method arity failure should not also report inference, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_function_inference_conflict_is_error() {
     let errors = typecheck_errors(
         r#"
