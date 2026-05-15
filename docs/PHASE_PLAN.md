@@ -482,6 +482,9 @@ checked-in docs, tests, and commits only.
   metadata refresh, behavior impl metadata refresh, semantic validation, and
   final impl association refresh into named passes instead of one mixed
   collection loop.
+  The declaration metadata refresh pass also routes callable signatures,
+  type declarations, and behavior declarations through focused helpers instead
+  of one mixed match arm.
 - Inherited generic behavior dispatch has executable coverage through
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Concrete generic behavior association syntax in `.implements` and `.requires`,

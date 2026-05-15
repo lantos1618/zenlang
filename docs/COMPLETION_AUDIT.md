@@ -909,6 +909,9 @@ and do not assume Phase 4 is ready without evidence.
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed
   declaration collection surface that later Phase 2 slices still need to shrink.
+  Callable signatures, type declarations, and behavior declarations now route
+  through focused declaration metadata helpers within that resolver refresh
+  pass.
 - Resolver-backed `.requires` conformance uses restored required-behavior refs
   together with inherited child behavior impl satisfaction, covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_restored_requires_ref_for_inherited_impl`.

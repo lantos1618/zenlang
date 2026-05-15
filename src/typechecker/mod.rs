@@ -3154,43 +3154,71 @@ impl TypeChecker {
     ) {
         for decl in decls {
             match decl {
-                Declaration::Function { name, span, .. } => {
-                    self.collect_resolver_function_signature(symbols, name, *span);
+                Declaration::Function { .. }
+                | Declaration::Method { .. }
+                | Declaration::ImplBlock { .. } => {
+                    self.collect_resolver_callable_declaration_metadata(decl, symbols);
                 }
-                Declaration::Method {
-                    type_name,
-                    method_name,
-                    span,
-                    ..
-                } => {
-                    self.collect_resolver_method_signature(symbols, type_name, method_name, *span);
-                }
-                Declaration::ImplBlock {
-                    type_name, methods, ..
-                } => {
-                    for method in methods {
-                        if let Declaration::Function { name, span, .. } = method {
-                            self.collect_resolver_method_signature(symbols, type_name, name, *span);
-                        }
-                    }
-                }
-                Declaration::Struct {
-                    name, fields, span, ..
-                } => {
-                    let restored_name = self
-                        .collect_resolver_type_behavior_refs_for_declaration(symbols, name, *span);
-                    self.collect_resolver_struct_fields(symbols, &restored_name, fields);
-                }
-                Declaration::Enum { name, span, .. } => {
-                    let restored_name = self
-                        .collect_resolver_type_behavior_refs_for_declaration(symbols, name, *span);
-                    self.collect_resolver_enum_variants(symbols, &restored_name);
+                Declaration::Struct { .. } | Declaration::Enum { .. } => {
+                    self.collect_resolver_type_declaration_metadata(decl, symbols);
                 }
                 Declaration::Behavior { name, span, .. } => {
                     self.collect_resolver_behavior_declaration(symbols, name, *span);
                 }
                 _ => {}
             }
+        }
+    }
+
+    fn collect_resolver_callable_declaration_metadata(
+        &mut self,
+        decl: &Declaration,
+        symbols: &SymbolTable,
+    ) {
+        match decl {
+            Declaration::Function { name, span, .. } => {
+                self.collect_resolver_function_signature(symbols, name, *span);
+            }
+            Declaration::Method {
+                type_name,
+                method_name,
+                span,
+                ..
+            } => {
+                self.collect_resolver_method_signature(symbols, type_name, method_name, *span);
+            }
+            Declaration::ImplBlock {
+                type_name, methods, ..
+            } => {
+                for method in methods {
+                    if let Declaration::Function { name, span, .. } = method {
+                        self.collect_resolver_method_signature(symbols, type_name, name, *span);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn collect_resolver_type_declaration_metadata(
+        &mut self,
+        decl: &Declaration,
+        symbols: &SymbolTable,
+    ) {
+        match decl {
+            Declaration::Struct {
+                name, fields, span, ..
+            } => {
+                let restored_name =
+                    self.collect_resolver_type_behavior_refs_for_declaration(symbols, name, *span);
+                self.collect_resolver_struct_fields(symbols, &restored_name, fields);
+            }
+            Declaration::Enum { name, span, .. } => {
+                let restored_name =
+                    self.collect_resolver_type_behavior_refs_for_declaration(symbols, name, *span);
+                self.collect_resolver_enum_variants(symbols, &restored_name);
+            }
+            _ => {}
         }
     }
 
