@@ -190,6 +190,11 @@ and do not assume Phase 4 is ready without evidence.
   method names from causing default methods to overwrite explicit impl
   signatures, covered by
   `typechecker::tests::collect_declarations_with_symbols_skips_default_when_resolver_restores_impl_method_name`.
+- Resolver-backed behavior default synthesis also uses the resolver-owned
+  behavior impl ref when AST-only impl behavior names or type arguments are
+  stale, so omitted defaults are synthesized from the validated behavior
+  association, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_behavior_for_defaults`.
 - Resolver-backed declaration collection now defers impl/requires semantic
   checks until after resolver value and behavior metadata has been restored, so
   stale AST-only behavior signatures cannot produce false impl diagnostics.

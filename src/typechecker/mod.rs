@@ -1867,6 +1867,14 @@ impl TypeChecker {
         behavior_type_args: &[AstType],
         methods: &[Declaration],
     ) {
+        let (behavior, behavior_type_args) =
+            match self.resolver_behavior_impl_ref_for_peek(type_name, behavior) {
+                Some(implementation) => (
+                    implementation.name.as_str(),
+                    implementation.type_args.as_slice(),
+                ),
+                None => (behavior, behavior_type_args),
+            };
         for default in
             self.behavior_default_methods_for_impl(type_name, behavior, behavior_type_args, methods)
         {
@@ -9497,6 +9505,49 @@ Point.implements(Json) {
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored impl method name should suppress default insertion: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_impl_behavior_for_defaults() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (self: Self) str { return "default" }
+}
+Debug: behavior {
+    describe: (Self) str
+}
+
+Point.implements(Json) {
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { behavior, .. } = &mut program.declarations[3] {
+            *behavior = Some("Debug".to_string());
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let method = tc
+            .methods
+            .get("Point.encode")
+            .expect("resolver-restored behavior default");
+        assert_eq!(method.params[0].0, "self");
+        assert_eq!(method.return_type, AstType::Str);
+        assert!(
+            !tc.methods.contains_key("Point.describe"),
+            "stale AST-only behavior default should not be synthesized"
+        );
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior impl metadata should drive default synthesis: {:?}",
             tc.diagnostics
         );
     }
