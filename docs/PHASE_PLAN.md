@@ -210,6 +210,8 @@ checked-in docs, tests, and commits only.
   type-name restoration pass.
 - Resolver-backed behavior declaration collection now owns behavior name
   rekeying before restoring resolver-owned method and parent metadata.
+- Resolver-backed value signature restoration now uses the same constructor
+  helper pattern as resolver-restored struct, enum, and behavior metadata.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

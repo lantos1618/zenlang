@@ -639,6 +639,26 @@ fn func_info_from_ast_signature(
     }
 }
 
+fn func_info_from_resolver_signature(
+    name: String,
+    symbol: &Symbol,
+    parameter_names: &[String],
+    parameter_types: &[AstType],
+    return_type: &AstType,
+) -> FuncInfo {
+    FuncInfo {
+        name,
+        params: parameter_names
+            .iter()
+            .cloned()
+            .zip(parameter_types.iter().cloned())
+            .collect(),
+        return_type: return_type.clone(),
+        type_params: resolver_type_param_names(symbol),
+        type_param_bounds: resolver_type_param_bounds(symbol),
+    }
+}
+
 fn struct_info_from_ast_fields(
     name: String,
     type_params: &[ast::TypeParam],
@@ -2002,17 +2022,13 @@ impl TypeChecker {
             self.remove_callable_signature(name);
             return;
         };
-        let info = FuncInfo {
-            name: name.to_string(),
-            params: parameter_names
-                .iter()
-                .cloned()
-                .zip(parameter_types.iter().cloned())
-                .collect(),
-            return_type: return_type.clone(),
-            type_params: resolver_type_param_names(symbol),
-            type_param_bounds: resolver_type_param_bounds(symbol),
-        };
+        let info = func_info_from_resolver_signature(
+            name.to_string(),
+            symbol,
+            parameter_names,
+            parameter_types,
+            return_type,
+        );
         self.functions.remove(name);
         self.methods.remove(name);
         if name.contains('.') {

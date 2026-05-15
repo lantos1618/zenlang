@@ -119,6 +119,9 @@ and do not assume Phase 4 is ready without evidence.
   declaration traversal for the final type-name restoration pass.
 - Resolver-backed behavior declaration collection now centralizes behavior
   name rekeying before method and parent metadata restoration.
+- Resolver-backed value signature restoration now constructs `FuncInfo`
+  through a dedicated resolver metadata helper, aligning callable metadata with
+  resolver-restored type and behavior constructors.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
