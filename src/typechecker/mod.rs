@@ -838,6 +838,13 @@ struct FieldValidation {
 }
 
 impl FieldValidation {
+    fn resolver_codes() -> Self {
+        Self {
+            display_code: "E0217",
+            typed_code: "E0358",
+        }
+    }
+
     fn display_message(
         self,
         symbol_kind: &str,
@@ -8090,10 +8097,7 @@ impl TypeChecker {
             },
             span,
         );
-        let validation = FieldValidation {
-            display_code: "E0217",
-            typed_code: "E0358",
-        };
+        let validation = FieldValidation::resolver_codes();
         let symbol_kind = namespace.diagnostic_name();
         if symbol.field_types.as_deref() != Some(expected.typed.as_slice()) {
             let actual = format_field_types(symbol.field_types.as_deref());
@@ -9896,6 +9900,14 @@ Point.get = (self: Point) i32 { return self.x }
             validation.typed_message("type", "Pipeline", "(callback: i32)", "(callback: (i32) i32)"),
             "resolver type symbol 'Pipeline' has typed fields '(callback: i32)', expected '(callback: (i32) i32)'"
         );
+    }
+
+    #[test]
+    fn field_validation_uses_resolver_codes() {
+        let validation = FieldValidation::resolver_codes();
+
+        assert_eq!(validation.display_code, "E0217");
+        assert_eq!(validation.typed_code, "E0358");
     }
 
     #[test]

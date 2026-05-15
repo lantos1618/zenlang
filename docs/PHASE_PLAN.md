@@ -1007,6 +1007,8 @@ checked-in docs, tests, and commits only.
   for counts, display fields, and typed AST fields.
 - Resolver struct-field validation now carries display-field and typed-field
   message formatting through a validation bundle.
+- Resolver struct-field validation now owns its resolver diagnostic code
+  mapping instead of constructing those codes at the call site.
 - Resolver behavior-method validation now shares one expected metadata bundle
   for display signatures and typed method metadata.
 - Resolver behavior-method validation now carries display-method and
