@@ -839,6 +839,17 @@ struct ExpectedVariantPayloadMetadata {
 }
 
 #[derive(Clone, Copy)]
+struct VariantOwnerValidation {
+    code: &'static str,
+}
+
+impl VariantOwnerValidation {
+    fn message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!("resolver variant symbol '{name}' has owner '{actual}', expected '{expected}'")
+    }
+}
+
+#[derive(Clone, Copy)]
 struct VariantPayloadValidation {
     display_code: &'static str,
     typed_code: &'static str,
@@ -8164,12 +8175,11 @@ impl TypeChecker {
         span: Span,
     ) {
         if symbol.variant_owner_name.as_deref() != Some(expected_owner_name) {
+            let validation = VariantOwnerValidation { code: "E0242" };
             let actual = resolver_metadata_display(symbol.variant_owner_name.as_deref());
             self.diagnostics.push(Diagnostic::error(
-                "E0242",
-                format!(
-                    "resolver variant symbol '{name}' has owner '{actual}', expected '{expected_owner_name}'"
-                ),
+                validation.code,
+                validation.message(name, actual, expected_owner_name),
                 span,
             ));
         }
@@ -9816,6 +9826,17 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(
             validation.typed_message("Wrap", "i32", "(i32) i32"),
             "resolver variant symbol 'Wrap' has typed payload type 'i32', expected '(i32) i32'"
+        );
+    }
+
+    #[test]
+    fn variant_owner_validation_formats_message() {
+        let validation = VariantOwnerValidation { code: "OWNER" };
+
+        assert_eq!(validation.code, "OWNER");
+        assert_eq!(
+            validation.message("Some", "Result", "Option"),
+            "resolver variant symbol 'Some' has owner 'Result', expected 'Option'"
         );
     }
 
