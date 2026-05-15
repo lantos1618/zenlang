@@ -13929,6 +13929,32 @@ PrettyJson.extends(Json<str>)
     }
 
     #[test]
+    fn check_program_with_symbols_accepts_resolver_behavior_parent_child_type_param_refs() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Serializable<T: Json<T>>: behavior {
+    serialize: (Self) T
+}
+Pretty<T: Json<T>>: behavior {
+    pretty: (Self) T
+}
+
+Pretty.extends(Serializable<T>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let mut tc = TypeChecker::new();
+
+        tc.check_program_with_symbols(&program, &symbols)
+            .expect("resolver parent type arg using child type parameter should validate");
+    }
+
+    #[test]
     fn check_program_with_symbols_rejects_extra_resolver_behavior_parent_names() {
         let program = parse_program(
             r#"

@@ -405,6 +405,9 @@ checked-in docs, tests, and commits only.
   `Pretty<T>.extends(Serializable<T>)` resolves before typechecker handoff.
   A paired resolver negative test rejects parent type arguments outside that
   child behavior parameter scope.
+- Resolver/typechecker handoff also has `check_program_with_symbols` coverage
+  for `.extends(...)` parent type arguments that reference the child behavior's
+  generic parameters.
 - Resolver behavior symbols now carry parent behavior metadata, and typechecker
   setup rejects missing or extra resolver parent-edge metadata. Specialized
   parent references such as `Json<str>` are included in this resolver handoff
