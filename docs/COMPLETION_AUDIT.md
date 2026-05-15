@@ -210,6 +210,9 @@ and do not assume Phase 4 is ready without evidence.
   payload display metadata and typed payload metadata through one constructor,
   covered by
   `typechecker::tests::expected_variant_payload_builds_display_and_type_together`.
+- Resolver expected behavior-method construction now pairs display method
+  signatures and typed method metadata through one constructor, covered by
+  `typechecker::tests::expected_behavior_method_builds_signature_and_metadata_together`.
 - Resolver expected behavior association construction now pairs display names
   and typed refs through one constructor, covered by
   `typechecker::tests::expected_behavior_edge_builds_display_and_metadata_together`.

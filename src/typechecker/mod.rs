@@ -301,6 +301,41 @@ struct ExpectedBehaviorMethod {
     metadata: BehaviorMethodTypeMetadata,
 }
 
+impl ExpectedBehaviorMethod {
+    fn new(method: &ast::BehaviorMethod) -> Self {
+        let signature = expected_value_signature_metadata(&method.params, &method.return_type, &[]);
+        let parameter_type_names: Vec<_> = signature
+            .params
+            .iter()
+            .map(|param| param.display.clone())
+            .collect();
+        let parameter_names: Vec<_> = signature
+            .params
+            .iter()
+            .map(|param| param.name.clone())
+            .collect();
+        let parameter_types: Vec<_> = signature
+            .params
+            .into_iter()
+            .map(|param| param.typed)
+            .collect();
+
+        Self {
+            signature: (
+                method.name.clone(),
+                parameter_type_names,
+                signature.return_type.display,
+            ),
+            metadata: BehaviorMethodTypeMetadata {
+                name: method.name.clone(),
+                parameter_names,
+                parameter_types,
+                return_type: signature.return_type.typed,
+            },
+        }
+    }
+}
+
 struct ExpectedBehaviorMethodMetadata {
     signatures: Vec<MethodSignatureMetadata>,
     typed: Vec<BehaviorMethodTypeMetadata>,
@@ -9427,35 +9462,7 @@ fn expected_behavior_method_metadata(
 ) -> Vec<ExpectedBehaviorMethod> {
     let mut expected = Vec::new();
     for method in methods {
-        let signature = expected_value_signature_metadata(&method.params, &method.return_type, &[]);
-        let parameter_type_names: Vec<_> = signature
-            .params
-            .iter()
-            .map(|param| param.display.clone())
-            .collect();
-        let parameter_names: Vec<_> = signature
-            .params
-            .iter()
-            .map(|param| param.name.clone())
-            .collect();
-        let parameter_types: Vec<_> = signature
-            .params
-            .into_iter()
-            .map(|param| param.typed)
-            .collect();
-        expected.push(ExpectedBehaviorMethod {
-            signature: (
-                method.name.clone(),
-                parameter_type_names,
-                signature.return_type.display,
-            ),
-            metadata: BehaviorMethodTypeMetadata {
-                name: method.name.clone(),
-                parameter_names,
-                parameter_types,
-                return_type: signature.return_type.typed,
-            },
-        });
+        expected.push(ExpectedBehaviorMethod::new(method));
     }
     expected
 }
@@ -10976,6 +10983,49 @@ Point.requires(Json<str>)
         );
         assert_eq!(empty_payload.display, None);
         assert_eq!(empty_payload.typed, None);
+    }
+
+    #[test]
+    fn expected_behavior_method_builds_signature_and_metadata_together() {
+        let method = ast::BehaviorMethod {
+            name: "map".to_string(),
+            params: vec![Param {
+                name: "mapper".to_string(),
+                ty: AstType::Function {
+                    params: vec![AstType::I32],
+                    ret: Box::new(AstType::Str),
+                },
+                mutable: false,
+                span: Span::dummy(),
+            }],
+            return_type: Some(AstType::Str),
+            default_body: None,
+            span: Span::dummy(),
+        };
+
+        let expected = ExpectedBehaviorMethod::new(&method);
+
+        assert_eq!(
+            expected.signature,
+            (
+                "map".to_string(),
+                vec!["(i32) str".to_string()],
+                "str".to_string(),
+            )
+        );
+        assert_eq!(expected.metadata.name, "map");
+        assert_eq!(
+            expected.metadata.parameter_names,
+            vec!["mapper".to_string()]
+        );
+        assert_eq!(
+            expected.metadata.parameter_types,
+            vec![AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::Str),
+            }]
+        );
+        assert_eq!(expected.metadata.return_type, AstType::Str);
     }
 
     #[test]
