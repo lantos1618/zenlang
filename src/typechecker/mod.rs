@@ -9489,32 +9489,49 @@ impl TypeChecker {
             span,
         );
 
-        if symbol.type_parameter_names.as_deref() != Some(expected.names.as_slice()) {
-            let actual = format_type_parameter_names(symbol.type_parameter_names.as_deref());
-            let expected_names_display = format_type_parameter_names(Some(&expected.names));
-            self.diagnostics.push(Diagnostic::error(
-                validation.name_code,
-                validation.name_message(symbol_kind, name, &actual, &expected_names_display),
-                span,
-            ));
-        }
+        self.validate_resolver_type_parameter_metadata_list(
+            symbol.type_parameter_names.as_deref(),
+            &expected.names,
+            format_type_parameter_names,
+            validation.name_code,
+            |actual, expected| validation.name_message(symbol_kind, name, actual, expected),
+            span,
+        );
 
-        if symbol.type_parameter_bounds.as_deref() != Some(expected.bounds.as_slice()) {
-            let actual = format_type_parameter_bounds(symbol.type_parameter_bounds.as_deref());
-            let expected_bounds_display = format_type_parameter_bounds(Some(&expected.bounds));
+        self.validate_resolver_type_parameter_metadata_list(
+            symbol.type_parameter_bounds.as_deref(),
+            &expected.bounds,
+            format_type_parameter_bounds,
+            validation.bound_code,
+            |actual, expected| validation.bound_message(symbol_kind, name, actual, expected),
+            span,
+        );
+
+        self.validate_resolver_type_parameter_metadata_list(
+            symbol.type_parameter_bound_refs.as_deref(),
+            &expected.bound_refs,
+            format_type_parameter_bound_refs,
+            validation.bound_ref_code,
+            |actual, expected| validation.bound_ref_message(symbol_kind, name, actual, expected),
+            span,
+        );
+    }
+
+    fn validate_resolver_type_parameter_metadata_list<T: PartialEq>(
+        &mut self,
+        actual: Option<&[T]>,
+        expected: &[T],
+        display: impl Fn(Option<&[T]>) -> String,
+        code: &'static str,
+        message: impl Fn(&str, &str) -> String,
+        span: Span,
+    ) {
+        if actual != Some(expected) {
+            let actual_display = display(actual);
+            let expected_display = display(Some(expected));
             self.diagnostics.push(Diagnostic::error(
-                validation.bound_code,
-                validation.bound_message(symbol_kind, name, &actual, &expected_bounds_display),
-                span,
-            ));
-        }
-        if symbol.type_parameter_bound_refs.as_deref() != Some(expected.bound_refs.as_slice()) {
-            let actual =
-                format_type_parameter_bound_refs(symbol.type_parameter_bound_refs.as_deref());
-            let expected_refs = format_type_parameter_bound_refs(Some(&expected.bound_refs));
-            self.diagnostics.push(Diagnostic::error(
-                validation.bound_ref_code,
-                validation.bound_ref_message(symbol_kind, name, &actual, &expected_refs),
+                code,
+                message(&actual_display, &expected_display),
                 span,
             ));
         }
