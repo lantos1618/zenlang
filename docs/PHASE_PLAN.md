@@ -1625,6 +1625,9 @@ checked-in docs, tests, and commits only.
 - Resolver enum variant-name validation now uses the shared metadata-list
   comparison helper for resolver-owned variant names, preserving
   type-specific resolver diagnostics.
+- Resolver enum variant owner-name validation now uses the shared
+  optional-metadata comparison helper for resolver-owned owner names,
+  preserving variant-specific resolver diagnostics.
 
 ## Current Phase
 

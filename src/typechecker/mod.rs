@@ -9716,15 +9716,15 @@ impl TypeChecker {
         expected_owner_name: &str,
         span: Span,
     ) {
-        if symbol.variant_owner_name.as_deref() != Some(expected_owner_name) {
-            let validation = VariantOwnerValidation::resolver_code();
-            let actual = resolver_metadata_display(symbol.variant_owner_name.as_deref());
-            self.diagnostics.push(Diagnostic::error(
-                validation.code,
-                validation.message(name, actual, expected_owner_name),
-                span,
-            ));
-        }
+        let validation = VariantOwnerValidation::resolver_code();
+        self.validate_resolver_metadata_value(
+            symbol.variant_owner_name.as_deref(),
+            Some(expected_owner_name),
+            |value| resolver_metadata_display(value).to_string(),
+            validation.code,
+            |actual, expected| validation.message(name, actual, expected),
+            span,
+        );
     }
 
     fn validate_resolver_variant_visibility(

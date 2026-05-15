@@ -1867,6 +1867,10 @@ and do not assume Phase 4 is ready without evidence.
   comparison helper for resolver-owned variant names, covered by
   `cargo test variant_name_validation` and
   `cargo test check_program_with_symbols_validates_resolver_enum_variant_names`.
+- Resolver enum variant owner-name validation now uses the shared
+  optional-metadata comparison helper for resolver-owned owner names, covered by
+  `cargo test variant_owner_validation` and
+  `cargo test check_program_with_symbols_validates_resolver_enum_variant_owner_names`.
 
 ## Unresolved Gaps
 
