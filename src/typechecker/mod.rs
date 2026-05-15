@@ -377,6 +377,27 @@ fn type_param_names(type_params: &[ast::TypeParam]) -> Vec<String> {
     type_params.iter().map(|param| param.name.clone()).collect()
 }
 
+fn generic_template_from_type_params(
+    type_params: &[ast::TypeParam],
+    params: &[Param],
+    return_type: &Option<AstType>,
+    body: &Expression,
+    span: Span,
+) -> Option<GenericFunctionTemplate> {
+    let collected_type_params = type_param_names(type_params);
+    if collected_type_params.is_empty() {
+        return None;
+    }
+
+    Some(GenericFunctionTemplate::new(
+        collected_type_params,
+        params.to_vec(),
+        return_type.clone(),
+        body.clone(),
+        span,
+    ))
+}
+
 fn type_param_bounds_from_resolver_refs(
     bounds: &[TypeParameterBoundRefMetadata],
 ) -> HashMap<String, BehaviorBound> {
@@ -426,7 +447,7 @@ fn type_param_bound_display(type_param: &ast::TypeParam) -> Option<String> {
 }
 
 fn type_param_name_set(type_params: &[ast::TypeParam]) -> HashSet<String> {
-    type_params.iter().map(|param| param.name.clone()).collect()
+    type_param_names(type_params).into_iter().collect()
 }
 
 fn ast_type_references_type_param(
@@ -1222,18 +1243,14 @@ impl TypeChecker {
                         self.validate_generic_bounds(type_params);
                     }
                     if self.resolver_backed_collection {
-                        let collected_type_params = type_param_names(type_params);
-                        if !collected_type_params.is_empty() {
-                            self.generic_functions.insert(
-                                name.clone(),
-                                GenericFunctionTemplate::new(
-                                    collected_type_params,
-                                    params.clone(),
-                                    return_type.clone(),
-                                    body.clone(),
-                                    *span,
-                                ),
-                            );
+                        if let Some(template) = generic_template_from_type_params(
+                            type_params,
+                            params,
+                            return_type,
+                            body,
+                            *span,
+                        ) {
+                            self.generic_functions.insert(name.clone(), template);
                         }
                         continue;
                     }
@@ -1253,17 +1270,14 @@ impl TypeChecker {
                             type_param_bounds: type_param_bounds.clone(),
                         },
                     );
-                    if !collected_type_params.is_empty() {
-                        self.generic_functions.insert(
-                            name.clone(),
-                            GenericFunctionTemplate::new(
-                                collected_type_params,
-                                params.clone(),
-                                return_type.clone(),
-                                body.clone(),
-                                *span,
-                            ),
-                        );
+                    if let Some(template) = generic_template_from_type_params(
+                        type_params,
+                        params,
+                        return_type,
+                        body,
+                        *span,
+                    ) {
+                        self.generic_functions.insert(name.clone(), template);
                     }
                 }
                 Declaration::Method {
@@ -1280,18 +1294,15 @@ impl TypeChecker {
                         self.validate_generic_bounds(type_params);
                     }
                     if self.resolver_backed_collection {
-                        let collected_type_params = type_param_names(type_params);
-                        if !collected_type_params.is_empty() {
-                            self.generic_methods.insert(
-                                format!("{}.{}", type_name, method_name),
-                                GenericFunctionTemplate::new(
-                                    collected_type_params,
-                                    params.clone(),
-                                    return_type.clone(),
-                                    body.clone(),
-                                    *span,
-                                ),
-                            );
+                        if let Some(template) = generic_template_from_type_params(
+                            type_params,
+                            params,
+                            return_type,
+                            body,
+                            *span,
+                        ) {
+                            self.generic_methods
+                                .insert(format!("{}.{}", type_name, method_name), template);
                         }
                         continue;
                     }
@@ -1312,17 +1323,15 @@ impl TypeChecker {
                             type_param_bounds: type_param_bounds.clone(),
                         },
                     );
-                    if !collected_type_params.is_empty() {
-                        self.generic_methods.insert(
-                            format!("{}.{}", type_name, method_name),
-                            GenericFunctionTemplate::new(
-                                collected_type_params,
-                                params.clone(),
-                                return_type.clone(),
-                                body.clone(),
-                                *span,
-                            ),
-                        );
+                    if let Some(template) = generic_template_from_type_params(
+                        type_params,
+                        params,
+                        return_type,
+                        body,
+                        *span,
+                    ) {
+                        self.generic_methods
+                            .insert(format!("{}.{}", type_name, method_name), template);
                     }
                 }
                 Declaration::Behavior { type_params, .. } => {
@@ -2146,17 +2155,10 @@ impl TypeChecker {
                 type_param_bounds: type_param_bounds(type_params),
             },
         );
-        if !collected_type_params.is_empty() {
-            self.generic_methods.insert(
-                key,
-                GenericFunctionTemplate::new(
-                    collected_type_params,
-                    params.to_vec(),
-                    return_type.clone(),
-                    body.clone(),
-                    *span,
-                ),
-            );
+        if let Some(template) =
+            generic_template_from_type_params(type_params, params, return_type, body, *span)
+        {
+            self.generic_methods.insert(key, template);
         }
     }
 
@@ -2177,20 +2179,12 @@ impl TypeChecker {
         else {
             return;
         };
-        let collected_type_params = type_param_names(type_params);
-        if collected_type_params.is_empty() {
-            return;
+        if let Some(template) =
+            generic_template_from_type_params(type_params, params, return_type, body, *span)
+        {
+            self.generic_methods
+                .insert(format!("{}.{}", type_name, name), template);
         }
-        self.generic_methods.insert(
-            format!("{}.{}", type_name, name),
-            GenericFunctionTemplate::new(
-                collected_type_params,
-                params.clone(),
-                return_type.clone(),
-                body.clone(),
-                *span,
-            ),
-        );
     }
 
     fn collect_resolver_behavior_impl_method_signatures(
@@ -5170,7 +5164,7 @@ impl TypeChecker {
                             .iter()
                             .map(|field| (field.name.clone(), field.ty.clone()))
                             .collect(),
-                        type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        type_params: type_param_names(type_params),
                         type_param_bounds: type_param_bounds(type_params),
                     },
                 );
@@ -5188,7 +5182,7 @@ impl TypeChecker {
                             .iter()
                             .map(|variant| (variant.name.clone(), variant.payload.clone()))
                             .collect(),
-                        type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        type_params: type_param_names(type_params),
                         type_param_bounds: type_param_bounds(type_params),
                     },
                 );
@@ -5202,7 +5196,7 @@ impl TypeChecker {
                     local_name.to_string(),
                     BehaviorInfo {
                         name: local_name.to_string(),
-                        type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        type_params: type_param_names(type_params),
                         type_param_bounds: type_param_bounds(type_params),
                         methods: methods.clone(),
                     },
@@ -5216,8 +5210,7 @@ impl TypeChecker {
                 span,
                 ..
             } => {
-                let collected_type_params: Vec<String> =
-                    type_params.iter().map(|param| param.name.clone()).collect();
+                let collected_type_params = type_param_names(type_params);
                 self.functions.insert(
                     local_name.to_string(),
                     FuncInfo {
@@ -5231,17 +5224,11 @@ impl TypeChecker {
                         type_param_bounds: type_param_bounds(type_params),
                     },
                 );
-                if !collected_type_params.is_empty() {
-                    self.generic_functions.insert(
-                        local_name.to_string(),
-                        GenericFunctionTemplate::new(
-                            collected_type_params,
-                            params.clone(),
-                            return_type.clone(),
-                            body.clone(),
-                            *span,
-                        ),
-                    );
+                if let Some(template) =
+                    generic_template_from_type_params(type_params, params, return_type, body, *span)
+                {
+                    self.generic_functions
+                        .insert(local_name.to_string(), template);
                 }
             }
             Declaration::Method {
@@ -5255,8 +5242,7 @@ impl TypeChecker {
                 ..
             } => {
                 let key = format!("{}.{}", type_name, method_name);
-                let collected_type_params: Vec<String> =
-                    type_params.iter().map(|param| param.name.clone()).collect();
+                let collected_type_params = type_param_names(type_params);
                 self.methods.insert(
                     key.clone(),
                     FuncInfo {
@@ -5270,17 +5256,10 @@ impl TypeChecker {
                         type_param_bounds: type_param_bounds(type_params),
                     },
                 );
-                if !collected_type_params.is_empty() {
-                    self.generic_methods.insert(
-                        key,
-                        GenericFunctionTemplate::new(
-                            collected_type_params,
-                            params.clone(),
-                            return_type.clone(),
-                            body.clone(),
-                            *span,
-                        ),
-                    );
+                if let Some(template) =
+                    generic_template_from_type_params(type_params, params, return_type, body, *span)
+                {
+                    self.generic_methods.insert(key, template);
                 }
             }
             _ => {}
@@ -5700,7 +5679,7 @@ impl TypeChecker {
                             .iter()
                             .map(|field| (field.name.clone(), field.ty.clone()))
                             .collect(),
-                        type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        type_params: type_param_names(type_params),
                         type_param_bounds: type_param_bounds(type_params),
                     },
                 );
@@ -5718,7 +5697,7 @@ impl TypeChecker {
                             .iter()
                             .map(|variant| (variant.name.clone(), variant.payload.clone()))
                             .collect(),
-                        type_params: type_params.iter().map(|param| param.name.clone()).collect(),
+                        type_params: type_param_names(type_params),
                         type_param_bounds: type_param_bounds(type_params),
                     },
                 );
@@ -5862,11 +5841,7 @@ impl TypeChecker {
         callables: &mut HashMap<String, FuncInfo>,
         generic_callables: &mut HashMap<String, GenericFunctionTemplate>,
     ) {
-        let collected_type_params: Vec<String> = signature
-            .type_params
-            .iter()
-            .map(|param| param.name.clone())
-            .collect();
+        let collected_type_params = type_param_names(signature.type_params);
         callables.insert(
             signature.name.to_string(),
             FuncInfo {
@@ -5881,17 +5856,14 @@ impl TypeChecker {
                 type_param_bounds: type_param_bounds(signature.type_params),
             },
         );
-        if !collected_type_params.is_empty() {
-            generic_callables.insert(
-                signature.name.to_string(),
-                GenericFunctionTemplate::new(
-                    collected_type_params,
-                    signature.params.to_vec(),
-                    signature.return_type.clone(),
-                    signature.body.clone(),
-                    signature.span,
-                ),
-            );
+        if let Some(template) = generic_template_from_type_params(
+            signature.type_params,
+            signature.params,
+            signature.return_type,
+            signature.body,
+            signature.span,
+        ) {
+            generic_callables.insert(signature.name.to_string(), template);
         }
     }
 
@@ -5987,11 +5959,7 @@ impl TypeChecker {
         dependencies: ImportedMethodDependencies<'_>,
     ) {
         let key = format!("{}.{}", local_type_name, signature.name);
-        let collected_type_params: Vec<String> = signature
-            .type_params
-            .iter()
-            .map(|param| param.name.clone())
-            .collect();
+        let collected_type_params = type_param_names(signature.type_params);
         self.methods.insert(
             key.clone(),
             FuncInfo {
@@ -6006,17 +5974,16 @@ impl TypeChecker {
                 type_param_bounds: type_param_bounds(signature.type_params),
             },
         );
-        if !collected_type_params.is_empty() {
+        if let Some(template) = generic_template_from_type_params(
+            signature.type_params,
+            signature.params,
+            signature.return_type,
+            signature.body,
+            signature.span,
+        ) {
             self.generic_methods.insert(
                 key,
-                GenericFunctionTemplate::new(
-                    collected_type_params,
-                    signature.params.to_vec(),
-                    signature.return_type.clone(),
-                    signature.body.clone(),
-                    signature.span,
-                )
-                .with_dependencies(
+                template.with_dependencies(
                     dependencies.structs.clone(),
                     dependencies.enums.clone(),
                     dependencies.functions.clone(),

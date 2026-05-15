@@ -798,6 +798,8 @@ and do not assume Phase 4 is ready without evidence.
   collection.
 - AST declaration collection now uses the same type-parameter-name helper for
   behavior, struct, enum, function, method, and impl-method metadata.
+- Generic template collection now uses one helper for local and imported
+  function, method, and impl-method templates.
 
 ## Unresolved Gaps
 
