@@ -190,9 +190,7 @@ impl TypeChecker {
                 let (resolved_name, ret_type) =
                     if let Some(info) = self.functions.get(&full_name).cloned() {
                         if !info.type_params.is_empty() {
-                            let explicit_type_args_valid =
-                                Self::explicit_type_args_valid(type_args, &info.type_params);
-                            let subs = if type_args.is_empty() {
+                            let (subs, explicit_type_args_valid) = if type_args.is_empty() {
                                 let arg_types: Vec<Type> =
                                     typed_args.iter().map(|a| a.ty.clone()).collect();
                                 let (subs, conflicts) = self.infer_type_args_with_conflicts(
@@ -203,9 +201,10 @@ impl TypeChecker {
                                 self.report_inference_conflicts(
                                     "function", &full_name, conflicts, *span,
                                 );
-                                subs
+                                (subs, true)
                             } else {
                                 self.explicit_type_arg_substitutions(
+                                    "function",
                                     &full_name,
                                     &info.type_params,
                                     type_args,
@@ -403,9 +402,7 @@ impl TypeChecker {
                 if let Some(info) = self.methods.get(&method_key).cloned() {
                     // Found as a type method — handle generics
                     let (resolved_method, ret_type) = if !info.type_params.is_empty() {
-                        let explicit_type_args_valid =
-                            Self::explicit_type_args_valid(type_args, &info.type_params);
-                        let subs = if type_args.is_empty() {
+                        let (subs, explicit_type_args_valid) = if type_args.is_empty() {
                             let arg_types: Vec<Type> =
                                 typed_args.iter().map(|a| a.ty.clone()).collect();
                             let (subs, conflicts) = self.infer_method_type_args(
@@ -420,13 +417,13 @@ impl TypeChecker {
                                 conflicts,
                                 *span,
                             );
-                            subs
+                            (subs, true)
                         } else {
-                            self.type_param_substitutions(
-                                &info.type_params,
-                                type_args,
+                            self.explicit_type_arg_substitutions(
                                 "method",
                                 &method_key,
+                                &info.type_params,
+                                type_args,
                                 *span,
                             )
                         };
@@ -501,9 +498,7 @@ impl TypeChecker {
                     let generic_method_key = format!("{}.{}", generic_base, method);
                     if let Some(info) = self.methods.get(&generic_method_key).cloned() {
                         if !info.type_params.is_empty() {
-                            let explicit_type_args_valid =
-                                Self::explicit_type_args_valid(type_args, &info.type_params);
-                            let subs = if type_args.is_empty() {
+                            let (subs, explicit_type_args_valid) = if type_args.is_empty() {
                                 let arg_types: Vec<Type> =
                                     typed_args.iter().map(|a| a.ty.clone()).collect();
                                 let (subs, conflicts) = self.infer_method_type_args(
@@ -518,13 +513,13 @@ impl TypeChecker {
                                     conflicts,
                                     *span,
                                 );
-                                subs
+                                (subs, true)
                             } else {
-                                self.type_param_substitutions(
-                                    &info.type_params,
-                                    type_args,
+                                self.explicit_type_arg_substitutions(
                                     "method",
                                     &generic_method_key,
+                                    &info.type_params,
+                                    type_args,
                                     *span,
                                 )
                             };
@@ -604,9 +599,7 @@ impl TypeChecker {
                 } else if let Some(info) = self.functions.get(method).cloned() {
                     // UFC: x.f(args) -> f(x, args)
                     let (resolved_function, ret_type) = if !info.type_params.is_empty() {
-                        let explicit_type_args_valid =
-                            Self::explicit_type_args_valid(type_args, &info.type_params);
-                        let subs = if type_args.is_empty() {
+                        let (subs, explicit_type_args_valid) = if type_args.is_empty() {
                             let arg_types: Vec<Type> =
                                 typed_args.iter().map(|a| a.ty.clone()).collect();
                             let (subs, conflicts) = self.infer_type_args_with_conflicts(
@@ -615,9 +608,10 @@ impl TypeChecker {
                                 &arg_types,
                             );
                             self.report_inference_conflicts("function", method, conflicts, *span);
-                            subs
+                            (subs, true)
                         } else {
                             self.explicit_type_arg_substitutions(
+                                "function",
                                 method,
                                 &info.type_params,
                                 type_args,
@@ -1535,16 +1529,57 @@ impl TypeChecker {
 
     fn explicit_type_arg_substitutions(
         &mut self,
+        kind: &str,
         callee: &str,
         type_params: &[String],
         type_args: &[AstType],
         span: Span,
-    ) -> std::collections::HashMap<String, Type> {
-        self.type_param_substitutions(type_params, type_args, "function", callee, span)
+    ) -> (std::collections::HashMap<String, Type>, bool) {
+        let arity_valid = Self::explicit_type_args_valid(type_args, type_params);
+        let diagnostic_count = self.diagnostics.len();
+        let substitutions =
+            self.type_param_substitutions(type_params, type_args, kind, callee, span);
+        let resolved_without_errors = self.diagnostics.len() == diagnostic_count;
+        let annotations_valid = type_args
+            .iter()
+            .all(|type_arg| self.generic_type_annotation_arities_valid(type_arg));
+        (
+            substitutions,
+            arity_valid && annotations_valid && resolved_without_errors,
+        )
     }
 
     fn explicit_type_args_valid(type_args: &[AstType], type_params: &[String]) -> bool {
         type_args.is_empty() || type_args.len() == type_params.len()
+    }
+
+    fn generic_type_annotation_arities_valid(&self, ast_type: &AstType) -> bool {
+        match ast_type {
+            AstType::Generic { name, type_args } => {
+                let own_arity_valid = self
+                    .structs
+                    .get(name)
+                    .map(|info| info.type_params.len())
+                    .or_else(|| self.enums.get(name).map(|info| info.type_params.len()))
+                    .is_none_or(|expected| expected == type_args.len());
+                own_arity_valid
+                    && type_args
+                        .iter()
+                        .all(|type_arg| self.generic_type_annotation_arities_valid(type_arg))
+            }
+            AstType::Ptr(inner)
+            | AstType::MutPtr(inner)
+            | AstType::RawPtr(inner)
+            | AstType::Slice(inner) => self.generic_type_annotation_arities_valid(inner),
+            AstType::Array { elem, .. } => self.generic_type_annotation_arities_valid(elem),
+            AstType::Function { params, ret } => {
+                params
+                    .iter()
+                    .all(|param| self.generic_type_annotation_arities_valid(param))
+                    && self.generic_type_annotation_arities_valid(ret)
+            }
+            _ => true,
+        }
     }
 
     fn field_access_type_name(&self, ty: &Type) -> Option<String> {

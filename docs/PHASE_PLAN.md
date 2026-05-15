@@ -259,6 +259,8 @@ checked-in docs, tests, and commits only.
   behavior bounds.
   Explicit generic call type arguments, closure signatures, and cast targets
   are included in the same annotation validation path.
+  Malformed nested generic type annotations inside explicit call type
+  arguments stop before dependent call-signature checks.
   Generic method explicit type arguments also reject bare generic type
   annotations with missing type arguments.
   Generic function and method type-argument inference conflicts now produce
@@ -1049,6 +1051,8 @@ checked-in docs, tests, and commits only.
 - Invalid explicit generic function and method type-argument arity now also
   skips dependent signature checks so bare omitted type parameters do not
   cascade into argument or return mismatches.
+- Malformed nested generic type annotations inside explicit function and
+  method call type arguments now also skip dependent signature checks.
 
 ## Current Phase
 

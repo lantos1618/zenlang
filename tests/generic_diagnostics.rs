@@ -426,6 +426,10 @@ main = () i32 {
             .contains("generic struct `Box` expects 1 type arguments, found 2")),
         "expected generic function type-argument annotation arity diagnostic, got {errors:?}"
     );
+    assert!(
+        errors.iter().all(|d| !d.message.contains("argument 1")),
+        "malformed generic function type argument should not also report argument mismatch, got {errors:?}"
+    );
 }
 
 #[test]
@@ -458,6 +462,10 @@ main = () i32 {
             .message
             .contains("generic struct `Box` expects 1 type arguments, found 2")),
         "expected generic method type-argument annotation arity diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors.iter().all(|d| !d.message.contains("argument 2")),
+        "malformed generic method type argument should not also report argument mismatch, got {errors:?}"
     );
 }
 

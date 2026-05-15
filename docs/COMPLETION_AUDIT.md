@@ -183,6 +183,8 @@ and do not assume Phase 4 is ready without evidence.
   behavior bounds.
   Explicit generic call type arguments, closure signatures, and cast targets
   are included in the same annotation validation path.
+  Malformed nested generic type annotations inside explicit call type
+  arguments stop before dependent call-signature checks.
   Generic method explicit type arguments also reject bare generic type
   annotations with missing type arguments.
   Generic function and method type-argument inference conflicts now report
@@ -1011,6 +1013,10 @@ and do not assume Phase 4 is ready without evidence.
   `generic_diagnostics::generic_function_explicit_type_arg_arity_does_not_emit_argument_followup`
   and
   `generic_diagnostics::generic_method_explicit_type_arg_arity_does_not_emit_argument_followup`.
+- Malformed nested generic type annotations inside explicit function and
+  method call type arguments now also skip dependent signature checks, covered
+  by `generic_diagnostics::generic_function_type_arg_annotation_arity_is_error`
+  and `generic_diagnostics::generic_method_type_arg_annotation_arity_is_error`.
 
 ## Unresolved Gaps
 
