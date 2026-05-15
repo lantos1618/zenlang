@@ -9124,6 +9124,43 @@ identity<T> = (value: T) T { return value }
     }
 
     #[test]
+    fn collect_declarations_with_symbols_clears_stale_generic_function_template_after_name_restore()
+    {
+        let mut program = parse_program(
+            r#"
+identity<T> = (value: T) T { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "identity", None);
+        if let Declaration::Function {
+            name,
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[0]
+        {
+            *name = "missing".to_string();
+            params[0].ty = AstType::Named("Stale".to_string());
+            *return_type = Some(AstType::Named("AlsoStale".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.generic_functions.contains_key("missing"),
+            "resolver-backed collection should clear the stale AST generic function template key after resolver name restoration"
+        );
+        assert!(
+            !tc.generic_functions.contains_key("identity"),
+            "resolver-backed collection should clear the restored generic function template key when resolver signature metadata is incomplete"
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_function_type_params_for_type_refs() {
         let mut program = parse_program(
             r#"
