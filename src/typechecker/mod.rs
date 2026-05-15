@@ -227,8 +227,12 @@ struct ExpectedLocalSymbol {
 struct ExpectedTypeParameters {
     count: usize,
     names: Vec<String>,
-    bounds: Vec<TypeParameterBoundMetadata>,
-    bound_refs: Vec<TypeParameterBoundRefMetadata>,
+    bounds: Vec<ExpectedTypeParameterBound>,
+}
+
+struct ExpectedTypeParameterBound {
+    display: TypeParameterBoundMetadata,
+    reference: TypeParameterBoundRefMetadata,
 }
 
 struct ExpectedTypeLikeSymbol {
@@ -6658,21 +6662,31 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.type_parameter_bounds.as_deref() != Some(expected.bounds.as_slice()) {
+        let expected_bounds: Vec<_> = expected
+            .bounds
+            .iter()
+            .map(|bound| bound.display.clone())
+            .collect();
+        if symbol.type_parameter_bounds.as_deref() != Some(expected_bounds.as_slice()) {
             let actual = format_type_parameter_bounds(symbol.type_parameter_bounds.as_deref());
-            let expected_bounds = format_type_parameter_bounds(Some(&expected.bounds));
+            let expected_bounds_display = format_type_parameter_bounds(Some(&expected_bounds));
             self.diagnostics.push(Diagnostic::error(
                 validation.bound_code,
                 format!(
-                    "resolver {symbol_kind} symbol '{name}' has type parameter bounds '{actual}', expected '{expected_bounds}'"
+                    "resolver {symbol_kind} symbol '{name}' has type parameter bounds '{actual}', expected '{expected_bounds_display}'"
                 ),
                 span,
             ));
         }
-        if symbol.type_parameter_bound_refs.as_deref() != Some(expected.bound_refs.as_slice()) {
+        let expected_bound_refs: Vec<_> = expected
+            .bounds
+            .iter()
+            .map(|bound| bound.reference.clone())
+            .collect();
+        if symbol.type_parameter_bound_refs.as_deref() != Some(expected_bound_refs.as_slice()) {
             let actual =
                 format_type_parameter_bound_refs(symbol.type_parameter_bound_refs.as_deref());
-            let expected_refs = format_type_parameter_bound_refs(Some(&expected.bound_refs));
+            let expected_refs = format_type_parameter_bound_refs(Some(&expected_bound_refs));
             self.diagnostics.push(Diagnostic::error(
                 validation.bound_ref_code,
                 format!(
@@ -7674,18 +7688,20 @@ fn expected_type_parameters(type_params: &[ast::TypeParam]) -> ExpectedTypeParam
         count: type_params.len(),
         names: Vec::new(),
         bounds: Vec::new(),
-        bound_refs: Vec::new(),
     };
     for type_param in type_params {
         expected.names.push(type_param.name.clone());
-        if let Some(constraint) = type_param_bound_display(type_param) {
-            expected.bounds.push((type_param.name.clone(), constraint));
-        }
         if let Some(behavior) = &type_param.constraint {
-            expected.bound_refs.push(TypeParameterBoundRefMetadata {
-                type_parameter: type_param.name.clone(),
-                behavior: behavior.clone(),
-                type_args: type_param.constraint_type_args.clone(),
+            let Some(display) = type_param_bound_display(type_param) else {
+                continue;
+            };
+            expected.bounds.push(ExpectedTypeParameterBound {
+                display: (type_param.name.clone(), display),
+                reference: TypeParameterBoundRefMetadata {
+                    type_parameter: type_param.name.clone(),
+                    behavior: behavior.clone(),
+                    type_args: type_param.constraint_type_args.clone(),
+                },
             });
         }
     }
