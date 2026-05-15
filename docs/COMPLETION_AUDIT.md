@@ -844,6 +844,8 @@ and do not assume Phase 4 is ready without evidence.
   for counts, display fields, and typed AST fields.
 - Resolver behavior-method validation now shares one expected metadata bundle
   for display signatures and typed method metadata.
+- Resolver variant-payload validation now shares one expected metadata bundle
+  for counts, display payload types, and typed AST payloads.
 
 ## Unresolved Gaps
 

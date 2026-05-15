@@ -356,6 +356,22 @@ struct ExpectedVariantPayloadType {
     display: Option<String>,
 }
 
+struct ExpectedVariantPayloadMetadata {
+    count: usize,
+    typed: Option<AstType>,
+    display: Option<String>,
+}
+
+impl ExpectedVariantPayloadMetadata {
+    fn from_payload(payload: ExpectedVariantPayloadType) -> Self {
+        Self {
+            count: usize::from(payload.typed.is_some()),
+            typed: payload.typed,
+            display: payload.display,
+        }
+    }
+}
+
 struct ImportedMethodSignature<'a> {
     name: &'a str,
     type_params: &'a [ast::TypeParam],
@@ -7201,8 +7217,8 @@ impl TypeChecker {
         expected_payload: ExpectedVariantPayloadType,
         span: Span,
     ) {
-        let expected_count = usize::from(expected_payload.typed.is_some());
-        if symbol.variant_payload_count != Some(expected_count) {
+        let expected = ExpectedVariantPayloadMetadata::from_payload(expected_payload);
+        if symbol.variant_payload_count != Some(expected.count) {
             let actual = symbol
                 .variant_payload_count
                 .map(|count| count.to_string())
@@ -7211,18 +7227,18 @@ impl TypeChecker {
                 "E0215",
                 format!(
                     "resolver variant symbol '{name}' has payload count {actual}, expected {}",
-                    expected_count
+                    expected.count
                 ),
                 span,
             ));
         }
-        if symbol.variant_payload_type != expected_payload.typed {
+        if symbol.variant_payload_type != expected.typed {
             let actual = symbol
                 .variant_payload_type
                 .as_ref()
                 .map(AstType::display_name)
                 .unwrap_or_else(|| "none".to_string());
-            let expected = expected_payload
+            let expected = expected
                 .typed
                 .as_ref()
                 .map(AstType::display_name)
@@ -7235,12 +7251,12 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.variant_payload_type_name != expected_payload.display {
+        if symbol.variant_payload_type_name != expected.display {
             let actual = symbol
                 .variant_payload_type_name
                 .as_deref()
                 .unwrap_or("unknown");
-            let expected = expected_payload.display.as_deref().unwrap_or("none");
+            let expected = expected.display.as_deref().unwrap_or("none");
             self.diagnostics.push(Diagnostic::error(
                 "E0218",
                 format!(
