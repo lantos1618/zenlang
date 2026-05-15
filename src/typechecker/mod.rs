@@ -263,6 +263,22 @@ struct ImportedMethodSignature<'a> {
     span: Span,
 }
 
+impl ImportedMethodSignature<'_> {
+    fn func_info(&self, key: String) -> FuncInfo {
+        func_info_from_ast_signature(key, self.type_params, self.params, self.return_type)
+    }
+
+    fn generic_template(&self) -> Option<GenericFunctionTemplate> {
+        generic_template_from_type_params(
+            self.type_params,
+            self.params,
+            self.return_type,
+            self.body,
+            self.span,
+        )
+    }
+}
+
 struct ImportedMethodDependencies<'a> {
     structs: &'a HashMap<String, StructInfo>,
     enums: &'a HashMap<String, EnumInfo>,
@@ -5857,20 +5873,9 @@ impl TypeChecker {
     ) {
         callables.insert(
             signature.name.to_string(),
-            func_info_from_ast_signature(
-                signature.name.to_string(),
-                signature.type_params,
-                signature.params,
-                signature.return_type,
-            ),
+            signature.func_info(signature.name.to_string()),
         );
-        if let Some(template) = generic_template_from_type_params(
-            signature.type_params,
-            signature.params,
-            signature.return_type,
-            signature.body,
-            signature.span,
-        ) {
+        if let Some(template) = signature.generic_template() {
             generic_callables.insert(signature.name.to_string(), template);
         }
     }
@@ -5953,22 +5958,9 @@ impl TypeChecker {
         dependencies: ImportedMethodDependencies<'_>,
     ) {
         let key = format!("{}.{}", local_type_name, signature.name);
-        self.methods.insert(
-            key.clone(),
-            func_info_from_ast_signature(
-                key.clone(),
-                signature.type_params,
-                signature.params,
-                signature.return_type,
-            ),
-        );
-        if let Some(template) = generic_template_from_type_params(
-            signature.type_params,
-            signature.params,
-            signature.return_type,
-            signature.body,
-            signature.span,
-        ) {
+        self.methods
+            .insert(key.clone(), signature.func_info(key.clone()));
+        if let Some(template) = signature.generic_template() {
             self.generic_methods
                 .insert(key, dependencies.apply_to_template(template));
         }
