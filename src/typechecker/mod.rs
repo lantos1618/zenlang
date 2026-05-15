@@ -4210,21 +4210,29 @@ impl TypeChecker {
             return;
         };
 
-        let variants = variant_names
+        let variants = Self::resolver_enum_variants_from_metadata(symbols, name, variant_names);
+        self.enums.insert(
+            name.to_string(),
+            enum_info_from_resolver_variants(name.to_string(), symbol, variants),
+        );
+    }
+
+    fn resolver_enum_variants_from_metadata(
+        symbols: &SymbolTable,
+        enum_name: &str,
+        variant_names: &[String],
+    ) -> Vec<(String, Option<AstType>)> {
+        variant_names
             .iter()
             .map(|variant_name| {
                 (
                     variant_name.clone(),
                     symbols
-                        .lookup_variant(name, variant_name)
+                        .lookup_variant(enum_name, variant_name)
                         .and_then(|variant| variant.variant_payload_type.clone()),
                 )
             })
-            .collect();
-        self.enums.insert(
-            name.to_string(),
-            enum_info_from_resolver_variants(name.to_string(), symbol, variants),
-        );
+            .collect()
     }
 
     fn collect_resolver_behavior_methods(&mut self, symbols: &SymbolTable, name: &str) {
@@ -11142,6 +11150,36 @@ Point.get = (self: Point) i32 { return self.x }
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::Str),
             })
+        );
+    }
+
+    #[test]
+    fn resolver_enum_variants_from_metadata_uses_owner_scoped_payloads() {
+        let program = parse_program(
+            r#"
+First: Wrap(i32), None
+Second: Wrap(str)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let variants = vec!["Wrap".to_string(), "None".to_string()];
+
+        assert_eq!(
+            TypeChecker::resolver_enum_variants_from_metadata(&symbols, "First", &variants),
+            vec![
+                ("Wrap".to_string(), Some(AstType::I32)),
+                ("None".to_string(), None),
+            ]
+        );
+        assert_eq!(
+            TypeChecker::resolver_enum_variants_from_metadata(
+                &symbols,
+                "Second",
+                &["Wrap".to_string()]
+            ),
+            vec![("Wrap".to_string(), Some(AstType::Str))]
         );
     }
 

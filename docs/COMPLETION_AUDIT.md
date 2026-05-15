@@ -1302,6 +1302,9 @@ and do not assume Phase 4 is ready without evidence.
   resolver return-type restoration for `void` versus annotated returns, covered
   by
   `typechecker::tests::resolver_optional_return_type_maps_void_to_missing_annotation`.
+- Resolver-backed enum collection now uses one helper to restore resolver-owned
+  variant names and owner-scoped typed payload metadata, covered by
+  `typechecker::tests::resolver_enum_variants_from_metadata_uses_owner_scoped_payloads`.
 - Resolver behavior-association validation now derives display-name and typed
   ref expectations together, avoiding duplicate AST scans for the same edges.
 - Resolver behavior-association expectation storage now uses one shared edge
