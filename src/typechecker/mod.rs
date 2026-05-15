@@ -743,6 +743,10 @@ struct SourceAbsenceValidation {
 }
 
 impl SourceAbsenceValidation {
+    fn type_like_resolver_code() -> Self {
+        Self { code: "E0309" }
+    }
+
     fn source_validation(self) -> SourceValidation {
         SourceValidation {
             code: self.code,
@@ -8092,7 +8096,7 @@ impl TypeChecker {
             symbol,
             namespace.diagnostic_name(),
             name,
-            SourceAbsenceValidation { code: "E0309" },
+            SourceAbsenceValidation::type_like_resolver_code(),
             span,
         );
 
@@ -10830,6 +10834,13 @@ main = (mut input: i32) i32 {
         assert_eq!(validation.actual_missing, "none");
         assert_eq!(validation.expected_missing, "none");
         assert!(!validation.quote_expected);
+    }
+
+    #[test]
+    fn source_absence_validation_uses_type_like_resolver_code() {
+        let validation = SourceAbsenceValidation::type_like_resolver_code();
+
+        assert_eq!(validation.code, "E0309");
     }
 
     #[test]
