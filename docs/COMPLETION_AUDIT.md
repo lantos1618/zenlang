@@ -116,6 +116,11 @@ and do not assume Phase 4 is ready without evidence.
   declaration instead of falling back to stale AST generic parameters, covered
   by
   `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_generic_function_body_refs_when_signature_incomplete`.
+- Resolver-backed function type-reference validation now runs through a
+  dedicated restored-function helper, with focused coverage from
+  `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_generic_function_body_refs_when_signature_incomplete`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_function_signature_for_type_refs`.
 - Resolver-backed top-level method collection also restores method names from
   resolver value symbols by declaration span when AST-only method names are
   stale, so collected `Type.method` signatures use resolver-owned names.

@@ -5503,17 +5503,7 @@ impl TypeChecker {
                     ..
                 } => {
                     if self.resolver_backed_collection {
-                        let restored_name =
-                            Self::validation_symbol_name(symbols, Namespace::Value, name, *span);
-                        if let Some(scoped) = self.collected_value_type_param_scope(&restored_name)
-                        {
-                            self.validate_collected_value_type_references(
-                                &restored_name,
-                                &scoped,
-                                *span,
-                            );
-                            self.validate_generic_expr_type_references(body, &scoped);
-                        }
+                        self.validate_resolver_function_type_references(symbols, name, body, *span);
                     } else {
                         let scoped = type_param_name_set(type_params);
                         for param in params {
@@ -5669,6 +5659,20 @@ impl TypeChecker {
                 }
                 _ => {}
             }
+        }
+    }
+
+    fn validate_resolver_function_type_references(
+        &mut self,
+        symbols: Option<&SymbolTable>,
+        name: &str,
+        body: &Expression,
+        span: Span,
+    ) {
+        let restored_name = Self::validation_symbol_name(symbols, Namespace::Value, name, span);
+        if let Some(scoped) = self.collected_value_type_param_scope(&restored_name) {
+            self.validate_collected_value_type_references(&restored_name, &scoped, span);
+            self.validate_generic_expr_type_references(body, &scoped);
         }
     }
 
