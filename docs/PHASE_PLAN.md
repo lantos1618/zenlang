@@ -735,6 +735,8 @@ checked-in docs, tests, and commits only.
   container for impl, requires, and parent validation inputs.
 - Resolver behavior-association expectation storage now stores display names
   and typed refs as paired edges before deriving resolver comparison lists.
+- Resolver behavior-association list validation now receives paired edge slices
+  directly instead of wrapping the expected edge list.
 - Resolver value-signature expectation building now derives parameter names,
   display types, and typed metadata in one parameter pass.
 

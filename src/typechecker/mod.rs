@@ -668,10 +668,6 @@ struct ExpectedBehaviorRef {
     reference: BehaviorRefMetadata,
 }
 
-struct ExpectedBehaviorRefList<'a> {
-    refs: &'a [ExpectedBehaviorRef],
-}
-
 #[derive(Default)]
 struct ExpectedBehaviorEdges {
     refs: HashMap<String, Vec<ExpectedBehaviorRef>>,
@@ -693,12 +689,6 @@ impl ExpectedBehaviorEdges {
 
     fn refs_for(&self, owner: &str) -> &[ExpectedBehaviorRef] {
         self.refs.get(owner).map(Vec::as_slice).unwrap_or(&[])
-    }
-
-    fn list_for(&self, owner: &str) -> ExpectedBehaviorRefList<'_> {
-        ExpectedBehaviorRefList {
-            refs: self.refs_for(owner),
-        }
     }
 }
 
@@ -4415,13 +4405,13 @@ impl TypeChecker {
             self.validate_resolver_behavior_impl_list(
                 symbol,
                 name,
-                expected.impls.list_for(name),
+                expected.impls.refs_for(name),
                 *span,
             );
             self.validate_resolver_behavior_required_list(
                 symbol,
                 name,
-                expected.required.list_for(name),
+                expected.required.refs_for(name),
                 *span,
             );
         }
@@ -4443,7 +4433,7 @@ impl TypeChecker {
             self.validate_resolver_behavior_parent_list(
                 symbol,
                 name,
-                expected.list_for(name),
+                expected.refs_for(name),
                 *span,
             );
         }
@@ -7184,7 +7174,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected: ExpectedBehaviorRefList<'_>,
+        expected: &[ExpectedBehaviorRef],
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
@@ -7234,7 +7224,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected: ExpectedBehaviorRefList<'_>,
+        expected: &[ExpectedBehaviorRef],
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
@@ -7284,7 +7274,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected: ExpectedBehaviorRefList<'_>,
+        expected: &[ExpectedBehaviorRef],
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
@@ -7350,10 +7340,10 @@ impl TypeChecker {
         validation: BehaviorRefValidation,
         name: &str,
         actual: BehaviorRefActual<'_>,
-        expected: ExpectedBehaviorRefList<'_>,
+        expected: &[ExpectedBehaviorRef],
         span: Span,
     ) {
-        let expected_names: Vec<_> = expected.refs.iter().map(|edge| edge.name.clone()).collect();
+        let expected_names: Vec<_> = expected.iter().map(|edge| edge.name.clone()).collect();
         if !behavior_ref_names_match(actual.names, &expected_names) {
             let actual = format_behavior_ref_names(actual.names);
             let expected_names = format_behavior_ref_names(Some(&expected_names));
@@ -7366,11 +7356,7 @@ impl TypeChecker {
                 span,
             ));
         }
-        let expected_refs: Vec<_> = expected
-            .refs
-            .iter()
-            .map(|edge| edge.reference.clone())
-            .collect();
+        let expected_refs: Vec<_> = expected.iter().map(|edge| edge.reference.clone()).collect();
         if !behavior_refs_match(actual.refs, &expected_refs) {
             let actual = format_behavior_refs(actual.refs);
             let expected_refs = format_behavior_refs(Some(&expected_refs));
