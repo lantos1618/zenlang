@@ -17996,6 +17996,47 @@ describe = (flag: bool) StaticString {
     }
 
     #[test]
+    fn substitute_type_covers_all_composite_type_shapes() {
+        let tc = TypeChecker::new();
+        let mut subs = HashMap::new();
+        subs.insert("T".to_string(), Type::I32);
+
+        assert_eq!(
+            tc.substitute_type(
+                &AstType::RawPtr(Box::new(AstType::Named("T".into()))),
+                &subs
+            ),
+            Type::RawPtr(Box::new(Type::I32))
+        );
+        assert_eq!(
+            tc.substitute_type(
+                &AstType::Array {
+                    elem: Box::new(AstType::Named("T".into())),
+                    size: Some(3),
+                },
+                &subs,
+            ),
+            Type::Array {
+                elem: Box::new(Type::I32),
+                size: Some(3),
+            }
+        );
+        assert_eq!(
+            tc.substitute_type(
+                &AstType::Function {
+                    params: vec![AstType::Named("T".into())],
+                    ret: Box::new(AstType::Named("T".into())),
+                },
+                &subs,
+            ),
+            Type::Function {
+                params: vec![Type::I32],
+                ret: Box::new(Type::I32),
+            }
+        );
+    }
+
+    #[test]
     fn generic_function_collection() {
         use crate::ast::Expression;
         let mut tc = TypeChecker::new();

@@ -727,9 +727,23 @@ impl TypeChecker {
             AstType::MutPtr(inner) => {
                 Type::MutPtr(Box::new(self.substitute_type(inner, substitutions)))
             }
+            AstType::RawPtr(inner) => {
+                Type::RawPtr(Box::new(self.substitute_type(inner, substitutions)))
+            }
             AstType::Slice(inner) => {
                 Type::Slice(Box::new(self.substitute_type(inner, substitutions)))
             }
+            AstType::Array { elem, size } => Type::Array {
+                elem: Box::new(self.substitute_type(elem, substitutions)),
+                size: *size,
+            },
+            AstType::Function { params, ret } => Type::Function {
+                params: params
+                    .iter()
+                    .map(|param| self.substitute_type(param, substitutions))
+                    .collect(),
+                ret: Box::new(self.substitute_type(ret, substitutions)),
+            },
             AstType::Generic { name, type_args } => {
                 let subst_args: Vec<AstType> = type_args
                     .iter()
@@ -816,9 +830,23 @@ fn substitute_ast_type(ast_type: &AstType, substitutions: &HashMap<String, Type>
         AstType::MutPtr(inner) => {
             AstType::MutPtr(Box::new(substitute_ast_type(inner, substitutions)))
         }
+        AstType::RawPtr(inner) => {
+            AstType::RawPtr(Box::new(substitute_ast_type(inner, substitutions)))
+        }
         AstType::Slice(inner) => {
             AstType::Slice(Box::new(substitute_ast_type(inner, substitutions)))
         }
+        AstType::Array { elem, size } => AstType::Array {
+            elem: Box::new(substitute_ast_type(elem, substitutions)),
+            size: *size,
+        },
+        AstType::Function { params, ret } => AstType::Function {
+            params: params
+                .iter()
+                .map(|param| substitute_ast_type(param, substitutions))
+                .collect(),
+            ret: Box::new(substitute_ast_type(ret, substitutions)),
+        },
         AstType::Generic { name, type_args } => AstType::Generic {
             name: name.clone(),
             type_args: type_args

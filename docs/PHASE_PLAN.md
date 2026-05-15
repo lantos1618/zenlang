@@ -1037,6 +1037,9 @@ checked-in docs, tests, and commits only.
   module, import, type-like, variant, and value symbols.
 - Resolver absent mutability metadata validation now lets the validation bundle
   build its mutability metadata entry.
+- Generic type substitution now covers raw pointers, arrays, and function
+  signatures so Phase 5 specializations do not leave nested type parameters
+  inside composite type shapes.
 
 ## Current Phase
 
