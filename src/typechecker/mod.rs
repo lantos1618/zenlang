@@ -362,6 +362,13 @@ struct BehaviorAssociationAbsenceValidation {
     required_ref_code: &'static str,
 }
 
+struct BehaviorDeclarationAbsenceValidation {
+    method_signature_code: &'static str,
+    method_type_code: &'static str,
+    parent_name_code: &'static str,
+    parent_ref_code: &'static str,
+}
+
 struct SourceValidation {
     code: &'static str,
     actual_missing: &'static str,
@@ -5168,32 +5175,23 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_behavior_declaration_metadata(
+            symbol,
+            "module",
+            &expected.name,
+            BehaviorDeclarationAbsenceValidation {
+                method_signature_code: "E0277",
+                method_type_code: "E0376",
+                parent_name_code: "E0278",
+                parent_ref_code: "E0377",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "module",
             &expected.name,
-            &[
-                (
-                    symbol.behavior_method_signatures.is_some(),
-                    "E0277",
-                    "behavior methods",
-                ),
-                (
-                    symbol.behavior_method_types.is_some(),
-                    "E0376",
-                    "typed behavior methods",
-                ),
-                (
-                    symbol.behavior_parent_names.is_some(),
-                    "E0278",
-                    "behavior parents",
-                ),
-                (
-                    symbol.behavior_parent_refs.is_some(),
-                    "E0377",
-                    "typed behavior parents",
-                ),
-                (symbol.is_mutable.is_some(), "E0345", "mutability"),
-            ],
+            &[(symbol.is_mutable.is_some(), "E0345", "mutability")],
             span,
         );
     }
@@ -6228,32 +6226,23 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_behavior_declaration_metadata(
+            symbol,
+            "import",
+            name,
+            BehaviorDeclarationAbsenceValidation {
+                method_signature_code: "E0293",
+                method_type_code: "E0367",
+                parent_name_code: "E0294",
+                parent_ref_code: "E0368",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "import",
             name,
-            &[
-                (
-                    symbol.behavior_method_signatures.is_some(),
-                    "E0293",
-                    "behavior methods",
-                ),
-                (
-                    symbol.behavior_method_types.is_some(),
-                    "E0367",
-                    "typed behavior methods",
-                ),
-                (
-                    symbol.behavior_parent_names.is_some(),
-                    "E0294",
-                    "behavior parents",
-                ),
-                (
-                    symbol.behavior_parent_refs.is_some(),
-                    "E0368",
-                    "typed behavior parents",
-                ),
-                (symbol.is_mutable.is_some(), "E0344", "mutability"),
-            ],
+            &[(symbol.is_mutable.is_some(), "E0344", "mutability")],
             span,
         );
     }
@@ -6675,31 +6664,16 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_absent_metadata_entries(
+        self.validate_resolver_absent_behavior_declaration_metadata(
+            symbol,
             "local",
             name,
-            &[
-                (
-                    symbol.behavior_method_signatures.is_some(),
-                    "E0261",
-                    "behavior methods",
-                ),
-                (
-                    symbol.behavior_method_types.is_some(),
-                    "E0385",
-                    "typed behavior methods",
-                ),
-                (
-                    symbol.behavior_parent_names.is_some(),
-                    "E0262",
-                    "behavior parents",
-                ),
-                (
-                    symbol.behavior_parent_refs.is_some(),
-                    "E0386",
-                    "typed behavior parents",
-                ),
-            ],
+            BehaviorDeclarationAbsenceValidation {
+                method_signature_code: "E0261",
+                method_type_code: "E0385",
+                parent_name_code: "E0262",
+                parent_ref_code: "E0386",
+            },
             span,
         );
     }
@@ -7023,6 +6997,43 @@ impl TypeChecker {
                     symbol.behavior_required_refs.is_some(),
                     validation.required_ref_code,
                     "typed behavior requires",
+                ),
+            ],
+            span,
+        );
+    }
+
+    fn validate_resolver_absent_behavior_declaration_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        symbol_kind: &str,
+        name: &str,
+        validation: BehaviorDeclarationAbsenceValidation,
+        span: Span,
+    ) {
+        self.validate_resolver_absent_metadata_entries(
+            symbol_kind,
+            name,
+            &[
+                (
+                    symbol.behavior_method_signatures.is_some(),
+                    validation.method_signature_code,
+                    "behavior methods",
+                ),
+                (
+                    symbol.behavior_method_types.is_some(),
+                    validation.method_type_code,
+                    "typed behavior methods",
+                ),
+                (
+                    symbol.behavior_parent_names.is_some(),
+                    validation.parent_name_code,
+                    "behavior parents",
+                ),
+                (
+                    symbol.behavior_parent_refs.is_some(),
+                    validation.parent_ref_code,
+                    "typed behavior parents",
                 ),
             ],
             span,
@@ -7554,31 +7565,24 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_behavior_declaration_metadata(
+            symbol,
+            "variant",
+            name,
+            BehaviorDeclarationAbsenceValidation {
+                method_signature_code: "E0339",
+                method_type_code: "E0393",
+                parent_name_code: "E0340",
+                parent_ref_code: "E0394",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "variant",
             name,
             &[
                 (symbol.variant_names.is_some(), "E0338", "variant names"),
-                (
-                    symbol.behavior_method_signatures.is_some(),
-                    "E0339",
-                    "behavior methods",
-                ),
-                (
-                    symbol.behavior_method_types.is_some(),
-                    "E0393",
-                    "typed behavior methods",
-                ),
-                (
-                    symbol.behavior_parent_names.is_some(),
-                    "E0340",
-                    "behavior parents",
-                ),
-                (
-                    symbol.behavior_parent_refs.is_some(),
-                    "E0394",
-                    "typed behavior parents",
-                ),
                 (symbol.is_mutable.is_some(), "E0343", "mutability"),
             ],
             span,
@@ -8058,32 +8062,23 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_behavior_declaration_metadata(
+            symbol,
+            "value",
+            name,
+            BehaviorDeclarationAbsenceValidation {
+                method_signature_code: "E0304",
+                method_type_code: "E0405",
+                parent_name_code: "E0305",
+                parent_ref_code: "E0406",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "value",
             name,
-            &[
-                (
-                    symbol.behavior_method_signatures.is_some(),
-                    "E0304",
-                    "behavior methods",
-                ),
-                (
-                    symbol.behavior_method_types.is_some(),
-                    "E0405",
-                    "typed behavior methods",
-                ),
-                (
-                    symbol.behavior_parent_names.is_some(),
-                    "E0305",
-                    "behavior parents",
-                ),
-                (
-                    symbol.behavior_parent_refs.is_some(),
-                    "E0406",
-                    "typed behavior parents",
-                ),
-                (symbol.is_mutable.is_some(), "E0308", "mutability"),
-            ],
+            &[(symbol.is_mutable.is_some(), "E0308", "mutability")],
             span,
         );
     }
