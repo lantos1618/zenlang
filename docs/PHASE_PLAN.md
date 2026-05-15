@@ -737,6 +737,8 @@ checked-in docs, tests, and commits only.
   and typed refs as paired edges before deriving resolver comparison lists.
 - Resolver behavior-association list validation now receives paired edge slices
   directly instead of wrapping the expected edge list.
+- Resolver behavior-association expectation storage now names its paired
+  storage and lookup after behavior edges rather than raw typed refs.
 - Resolver value-signature expectation building now derives parameter names,
   display types, and typed metadata in one parameter pass.
 

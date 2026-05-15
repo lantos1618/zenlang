@@ -670,12 +670,12 @@ struct ExpectedBehaviorRef {
 
 #[derive(Default)]
 struct ExpectedBehaviorEdges {
-    refs: HashMap<String, Vec<ExpectedBehaviorRef>>,
+    edges: HashMap<String, Vec<ExpectedBehaviorRef>>,
 }
 
 impl ExpectedBehaviorEdges {
     fn push(&mut self, owner: &str, behavior: &str, type_args: &[AstType]) {
-        self.refs
+        self.edges
             .entry(owner.to_string())
             .or_default()
             .push(ExpectedBehaviorRef {
@@ -687,8 +687,8 @@ impl ExpectedBehaviorEdges {
             });
     }
 
-    fn refs_for(&self, owner: &str) -> &[ExpectedBehaviorRef] {
-        self.refs.get(owner).map(Vec::as_slice).unwrap_or(&[])
+    fn edges_for(&self, owner: &str) -> &[ExpectedBehaviorRef] {
+        self.edges.get(owner).map(Vec::as_slice).unwrap_or(&[])
     }
 }
 
@@ -4405,13 +4405,13 @@ impl TypeChecker {
             self.validate_resolver_behavior_impl_list(
                 symbol,
                 name,
-                expected.impls.refs_for(name),
+                expected.impls.edges_for(name),
                 *span,
             );
             self.validate_resolver_behavior_required_list(
                 symbol,
                 name,
-                expected.required.refs_for(name),
+                expected.required.edges_for(name),
                 *span,
             );
         }
@@ -4433,7 +4433,7 @@ impl TypeChecker {
             self.validate_resolver_behavior_parent_list(
                 symbol,
                 name,
-                expected.refs_for(name),
+                expected.edges_for(name),
                 *span,
             );
         }
