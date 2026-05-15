@@ -810,6 +810,8 @@ and do not assume Phase 4 is ready without evidence.
   and imported behavior implementation paths.
 - Imported generic method template dependency attachment now uses the canonical
   source-module dependency bundle directly instead of a second wrapper type.
+- Generic function templates now own source-module dependency attachment, so
+  imported generic function and method templates share the same dependency path.
 
 ## Unresolved Gaps
 

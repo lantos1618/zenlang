@@ -125,6 +125,26 @@ impl GenericFunctionTemplate {
         self.dependency_generic_methods = dependency_generic_methods;
         self
     }
+
+    fn with_source_dependencies(self, dependencies: SourceModuleDependencies) -> Self {
+        self.with_dependencies(
+            dependencies.structs,
+            dependencies.enums,
+            dependencies.functions,
+            dependencies.generic_functions,
+            dependencies.methods,
+            dependencies.generic_methods,
+        )
+    }
+
+    fn attach_source_dependencies(&mut self, dependencies: SourceModuleDependencies) {
+        self.dependency_structs = dependencies.structs;
+        self.dependency_enums = dependencies.enums;
+        self.dependency_functions = dependencies.functions;
+        self.dependency_generic_functions = dependencies.generic_functions;
+        self.dependency_methods = dependencies.methods;
+        self.dependency_generic_methods = dependencies.generic_methods;
+    }
 }
 
 pub(crate) type TemplateStructDependencyState = Vec<(String, Option<StructInfo>)>;
@@ -325,7 +345,7 @@ impl<'a> ImportedMethodSignature<'a> {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 struct SourceModuleDependencies {
     structs: HashMap<String, StructInfo>,
     enums: HashMap<String, EnumInfo>,
@@ -337,14 +357,7 @@ struct SourceModuleDependencies {
 
 impl SourceModuleDependencies {
     fn apply_to_template(&self, template: GenericFunctionTemplate) -> GenericFunctionTemplate {
-        template.with_dependencies(
-            self.structs.clone(),
-            self.enums.clone(),
-            self.functions.clone(),
-            self.generic_functions.clone(),
-            self.methods.clone(),
-            self.generic_methods.clone(),
-        )
+        template.with_source_dependencies(self.clone())
     }
 }
 
@@ -5262,12 +5275,7 @@ impl TypeChecker {
         template: &mut GenericFunctionTemplate,
         dependencies: SourceModuleDependencies,
     ) {
-        template.dependency_structs = dependencies.structs;
-        template.dependency_enums = dependencies.enums;
-        template.dependency_functions = dependencies.functions;
-        template.dependency_generic_functions = dependencies.generic_functions;
-        template.dependency_methods = dependencies.methods;
-        template.dependency_generic_methods = dependencies.generic_methods;
+        template.attach_source_dependencies(dependencies);
     }
 
     fn seed_module_graph_import(&mut self, local_name: &str, decl: &Declaration) {
