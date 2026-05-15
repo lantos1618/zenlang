@@ -446,6 +446,15 @@ struct ExpectedEnumSymbol {
     variant_names: Vec<String>,
 }
 
+impl ExpectedEnumSymbol {
+    fn new(type_params: &[ast::TypeParam], variants: &[EnumVariant], is_public: bool) -> Self {
+        Self {
+            type_like: ExpectedTypeLikeSymbol::new(type_params, Some(is_public)),
+            variant_names: expected_variant_name_metadata(variants),
+        }
+    }
+}
+
 struct ExpectedVariantSymbol {
     owner_name: String,
     is_public: bool,
@@ -9329,13 +9338,6 @@ fn expected_type_parameter_metadata(type_params: &[ast::TypeParam]) -> Vec<Expec
     expected
 }
 
-fn expected_type_like_metadata(
-    type_params: &[ast::TypeParam],
-    is_public: Option<bool>,
-) -> ExpectedTypeLikeSymbol {
-    ExpectedTypeLikeSymbol::new(type_params, is_public)
-}
-
 fn expected_behavior_symbol(
     type_params: &[ast::TypeParam],
     methods: &[ast::BehaviorMethod],
@@ -9357,10 +9359,7 @@ fn expected_enum_symbol(
     variants: &[EnumVariant],
     is_public: bool,
 ) -> ExpectedEnumSymbol {
-    ExpectedEnumSymbol {
-        type_like: expected_type_like_metadata(type_params, Some(is_public)),
-        variant_names: expected_variant_name_metadata(variants),
-    }
+    ExpectedEnumSymbol::new(type_params, variants, is_public)
 }
 
 fn expected_variant_symbol(
@@ -11217,6 +11216,37 @@ Point.requires(Json<str>)
         assert_eq!(
             symbol.fields[0].typed,
             ("value".to_string(), AstType::Named("T".to_string()))
+        );
+    }
+
+    #[test]
+    fn expected_enum_symbol_builds_type_like_and_variants_together() {
+        let type_params = vec![ast::TypeParam {
+            name: "T".to_string(),
+            constraint: None,
+            constraint_type_args: vec![],
+            span: Span::dummy(),
+        }];
+        let variants = vec![
+            EnumVariant {
+                name: "Some".to_string(),
+                payload: Some(AstType::Named("T".to_string())),
+                span: Span::dummy(),
+            },
+            EnumVariant {
+                name: "None".to_string(),
+                payload: None,
+                span: Span::dummy(),
+            },
+        ];
+
+        let symbol = ExpectedEnumSymbol::new(&type_params, &variants, true);
+
+        assert_eq!(symbol.type_like.is_public, Some(true));
+        assert_eq!(symbol.type_like.type_params[0].name, "T");
+        assert_eq!(
+            symbol.variant_names,
+            vec!["Some".to_string(), "None".to_string()]
         );
     }
 
