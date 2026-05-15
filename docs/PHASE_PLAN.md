@@ -885,6 +885,8 @@ checked-in docs, tests, and commits only.
   declaration and module-graph import seeding paths.
 - Behavior default method signature seeding now shares one helper across local
   and imported behavior implementation paths.
+- Imported generic method template dependency attachment now uses the canonical
+  source-module dependency bundle directly instead of a second wrapper type.
 
 ## Current Phase
 

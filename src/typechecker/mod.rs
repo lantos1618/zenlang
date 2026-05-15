@@ -325,28 +325,6 @@ impl<'a> ImportedMethodSignature<'a> {
     }
 }
 
-struct ImportedMethodDependencies<'a> {
-    structs: &'a HashMap<String, StructInfo>,
-    enums: &'a HashMap<String, EnumInfo>,
-    functions: &'a HashMap<String, FuncInfo>,
-    generic_functions: &'a HashMap<String, GenericFunctionTemplate>,
-    methods: &'a HashMap<String, FuncInfo>,
-    generic_methods: &'a HashMap<String, GenericFunctionTemplate>,
-}
-
-impl ImportedMethodDependencies<'_> {
-    fn apply_to_template(self, template: GenericFunctionTemplate) -> GenericFunctionTemplate {
-        template.with_dependencies(
-            self.structs.clone(),
-            self.enums.clone(),
-            self.functions.clone(),
-            self.generic_functions.clone(),
-            self.methods.clone(),
-            self.generic_methods.clone(),
-        )
-    }
-}
-
 #[derive(Default)]
 struct SourceModuleDependencies {
     structs: HashMap<String, StructInfo>,
@@ -358,15 +336,15 @@ struct SourceModuleDependencies {
 }
 
 impl SourceModuleDependencies {
-    fn as_imported_method_dependencies(&self) -> ImportedMethodDependencies<'_> {
-        ImportedMethodDependencies {
-            structs: &self.structs,
-            enums: &self.enums,
-            functions: &self.functions,
-            generic_functions: &self.generic_functions,
-            methods: &self.methods,
-            generic_methods: &self.generic_methods,
-        }
+    fn apply_to_template(&self, template: GenericFunctionTemplate) -> GenericFunctionTemplate {
+        template.with_dependencies(
+            self.structs.clone(),
+            self.enums.clone(),
+            self.functions.clone(),
+            self.generic_functions.clone(),
+            self.methods.clone(),
+            self.generic_methods.clone(),
+        )
     }
 }
 
@@ -5903,11 +5881,7 @@ impl TypeChecker {
             return;
         };
 
-        self.seed_imported_method_signature(
-            local_type_name,
-            signature,
-            dependencies.as_imported_method_dependencies(),
-        );
+        self.seed_imported_method_signature(local_type_name, signature, dependencies);
     }
 
     fn seed_imported_impl_method(
@@ -5928,18 +5902,14 @@ impl TypeChecker {
             return;
         };
 
-        self.seed_imported_method_signature(
-            local_type_name,
-            signature,
-            dependencies.as_imported_method_dependencies(),
-        );
+        self.seed_imported_method_signature(local_type_name, signature, dependencies);
     }
 
     fn seed_imported_method_signature(
         &mut self,
         local_type_name: &str,
         signature: ImportedMethodSignature<'_>,
-        dependencies: ImportedMethodDependencies<'_>,
+        dependencies: &SourceModuleDependencies,
     ) {
         let key = format!("{}.{}", local_type_name, signature.name);
         self.methods
