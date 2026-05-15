@@ -7024,30 +7024,26 @@ impl TypeChecker {
             span,
         );
 
-        for (present, code, label) in [
-            (symbol.parameter_names.is_some(), "E0312", "parameter names"),
-            (
-                symbol.parameter_type_names.is_some(),
-                "E0313",
-                "parameter types",
-            ),
-            (
-                symbol.parameter_types.is_some(),
-                "E0360",
-                "typed parameter types",
-            ),
-            (symbol.return_type.is_some(), "E0361", "typed return type"),
-            (symbol.is_mutable.is_some(), "E0314", "mutability"),
-        ] {
-            self.validate_resolver_absent_metadata_entry(
-                namespace.diagnostic_name(),
-                name,
-                present,
-                code,
-                label,
-                span,
-            );
-        }
+        self.validate_resolver_absent_metadata_entries(
+            namespace.diagnostic_name(),
+            name,
+            &[
+                (symbol.parameter_names.is_some(), "E0312", "parameter names"),
+                (
+                    symbol.parameter_type_names.is_some(),
+                    "E0313",
+                    "parameter types",
+                ),
+                (
+                    symbol.parameter_types.is_some(),
+                    "E0360",
+                    "typed parameter types",
+                ),
+                (symbol.return_type.is_some(), "E0361", "typed return type"),
+                (symbol.is_mutable.is_some(), "E0314", "mutability"),
+            ],
+            span,
+        );
     }
 
     fn validate_resolver_fields(
@@ -7134,31 +7130,34 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        for (present, code, label) in [
-            (symbol.variant_names.is_some(), "E0315", "variant names"),
-            (
-                symbol.variant_owner_name.is_some(),
-                "E0316",
-                "variant owner",
-            ),
-            (
-                symbol.variant_payload_count.is_some(),
-                "E0317",
-                "variant payload count",
-            ),
-            (
-                symbol.variant_payload_type_name.is_some(),
-                "E0318",
-                "variant payload type",
-            ),
-            (
-                symbol.variant_payload_type.is_some(),
-                "E0397",
-                "typed variant payload type",
-            ),
-        ] {
-            self.validate_resolver_absent_metadata_entry("type", name, present, code, label, span);
-        }
+        self.validate_resolver_absent_metadata_entries(
+            "type",
+            name,
+            &[
+                (symbol.variant_names.is_some(), "E0315", "variant names"),
+                (
+                    symbol.variant_owner_name.is_some(),
+                    "E0316",
+                    "variant owner",
+                ),
+                (
+                    symbol.variant_payload_count.is_some(),
+                    "E0317",
+                    "variant payload count",
+                ),
+                (
+                    symbol.variant_payload_type_name.is_some(),
+                    "E0318",
+                    "variant payload type",
+                ),
+                (
+                    symbol.variant_payload_type.is_some(),
+                    "E0397",
+                    "typed variant payload type",
+                ),
+            ],
+            span,
+        );
     }
 
     fn validate_resolver_enum_absent_struct_metadata(
@@ -7167,13 +7166,16 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        for (present, code, label) in [
-            (symbol.field_count.is_some(), "E0319", "field count"),
-            (symbol.field_type_names.is_some(), "E0320", "field types"),
-            (symbol.field_types.is_some(), "E0398", "typed field types"),
-        ] {
-            self.validate_resolver_absent_metadata_entry("type", name, present, code, label, span);
-        }
+        self.validate_resolver_absent_metadata_entries(
+            "type",
+            name,
+            &[
+                (symbol.field_count.is_some(), "E0319", "field count"),
+                (symbol.field_type_names.is_some(), "E0320", "field types"),
+                (symbol.field_types.is_some(), "E0398", "typed field types"),
+            ],
+            span,
+        );
     }
 
     fn validate_resolver_variant_payload(
@@ -7423,56 +7425,57 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        for (present, code, label) in [
-            (symbol.field_count.is_some(), "E0321", "field count"),
-            (symbol.field_type_names.is_some(), "E0322", "field types"),
-            (symbol.field_types.is_some(), "E0399", "typed field types"),
-            (symbol.variant_names.is_some(), "E0323", "variant names"),
-            (
-                symbol.variant_owner_name.is_some(),
-                "E0324",
-                "variant owner",
-            ),
-            (
-                symbol.variant_payload_count.is_some(),
-                "E0325",
-                "variant payload count",
-            ),
-            (
-                symbol.variant_payload_type_name.is_some(),
-                "E0326",
-                "variant payload type",
-            ),
-            (
-                symbol.variant_payload_type.is_some(),
-                "E0400",
-                "typed variant payload type",
-            ),
-            (
-                symbol.behavior_impl_names.is_some(),
-                "E0327",
-                "behavior impls",
-            ),
-            (
-                symbol.behavior_impl_refs.is_some(),
-                "E0401",
-                "typed behavior impls",
-            ),
-            (
-                symbol.behavior_required_names.is_some(),
-                "E0328",
-                "behavior requires",
-            ),
-            (
-                symbol.behavior_required_refs.is_some(),
-                "E0402",
-                "typed behavior requires",
-            ),
-        ] {
-            self.validate_resolver_absent_metadata_entry(
-                "behavior", name, present, code, label, span,
-            );
-        }
+        self.validate_resolver_absent_metadata_entries(
+            "behavior",
+            name,
+            &[
+                (symbol.field_count.is_some(), "E0321", "field count"),
+                (symbol.field_type_names.is_some(), "E0322", "field types"),
+                (symbol.field_types.is_some(), "E0399", "typed field types"),
+                (symbol.variant_names.is_some(), "E0323", "variant names"),
+                (
+                    symbol.variant_owner_name.is_some(),
+                    "E0324",
+                    "variant owner",
+                ),
+                (
+                    symbol.variant_payload_count.is_some(),
+                    "E0325",
+                    "variant payload count",
+                ),
+                (
+                    symbol.variant_payload_type_name.is_some(),
+                    "E0326",
+                    "variant payload type",
+                ),
+                (
+                    symbol.variant_payload_type.is_some(),
+                    "E0400",
+                    "typed variant payload type",
+                ),
+                (
+                    symbol.behavior_impl_names.is_some(),
+                    "E0327",
+                    "behavior impls",
+                ),
+                (
+                    symbol.behavior_impl_refs.is_some(),
+                    "E0401",
+                    "typed behavior impls",
+                ),
+                (
+                    symbol.behavior_required_names.is_some(),
+                    "E0328",
+                    "behavior requires",
+                ),
+                (
+                    symbol.behavior_required_refs.is_some(),
+                    "E0402",
+                    "typed behavior requires",
+                ),
+            ],
+            span,
+        );
     }
 
     fn validate_resolver_behavior_parent_names(
@@ -7856,75 +7859,78 @@ impl TypeChecker {
     ) {
         self.validate_resolver_absent_source_metadata(symbol, "value", name, "E0297", span);
 
-        for (present, code, label) in [
-            (symbol.field_count.is_some(), "E0298", "field count"),
-            (symbol.field_type_names.is_some(), "E0299", "field types"),
-            (symbol.field_types.is_some(), "E0403", "typed field types"),
-            (symbol.variant_names.is_some(), "E0300", "variant names"),
-            (
-                symbol.variant_owner_name.is_some(),
-                "E0301",
-                "variant owner",
-            ),
-            (
-                symbol.variant_payload_count.is_some(),
-                "E0302",
-                "variant payload count",
-            ),
-            (
-                symbol.variant_payload_type_name.is_some(),
-                "E0303",
-                "variant payload type",
-            ),
-            (
-                symbol.variant_payload_type.is_some(),
-                "E0404",
-                "typed variant payload type",
-            ),
-            (
-                symbol.behavior_method_signatures.is_some(),
-                "E0304",
-                "behavior methods",
-            ),
-            (
-                symbol.behavior_method_types.is_some(),
-                "E0405",
-                "typed behavior methods",
-            ),
-            (
-                symbol.behavior_parent_names.is_some(),
-                "E0305",
-                "behavior parents",
-            ),
-            (
-                symbol.behavior_parent_refs.is_some(),
-                "E0406",
-                "typed behavior parents",
-            ),
-            (
-                symbol.behavior_impl_names.is_some(),
-                "E0306",
-                "behavior impls",
-            ),
-            (
-                symbol.behavior_impl_refs.is_some(),
-                "E0407",
-                "typed behavior impls",
-            ),
-            (
-                symbol.behavior_required_names.is_some(),
-                "E0307",
-                "behavior requires",
-            ),
-            (
-                symbol.behavior_required_refs.is_some(),
-                "E0408",
-                "typed behavior requires",
-            ),
-            (symbol.is_mutable.is_some(), "E0308", "mutability"),
-        ] {
-            self.validate_resolver_absent_metadata_entry("value", name, present, code, label, span);
-        }
+        self.validate_resolver_absent_metadata_entries(
+            "value",
+            name,
+            &[
+                (symbol.field_count.is_some(), "E0298", "field count"),
+                (symbol.field_type_names.is_some(), "E0299", "field types"),
+                (symbol.field_types.is_some(), "E0403", "typed field types"),
+                (symbol.variant_names.is_some(), "E0300", "variant names"),
+                (
+                    symbol.variant_owner_name.is_some(),
+                    "E0301",
+                    "variant owner",
+                ),
+                (
+                    symbol.variant_payload_count.is_some(),
+                    "E0302",
+                    "variant payload count",
+                ),
+                (
+                    symbol.variant_payload_type_name.is_some(),
+                    "E0303",
+                    "variant payload type",
+                ),
+                (
+                    symbol.variant_payload_type.is_some(),
+                    "E0404",
+                    "typed variant payload type",
+                ),
+                (
+                    symbol.behavior_method_signatures.is_some(),
+                    "E0304",
+                    "behavior methods",
+                ),
+                (
+                    symbol.behavior_method_types.is_some(),
+                    "E0405",
+                    "typed behavior methods",
+                ),
+                (
+                    symbol.behavior_parent_names.is_some(),
+                    "E0305",
+                    "behavior parents",
+                ),
+                (
+                    symbol.behavior_parent_refs.is_some(),
+                    "E0406",
+                    "typed behavior parents",
+                ),
+                (
+                    symbol.behavior_impl_names.is_some(),
+                    "E0306",
+                    "behavior impls",
+                ),
+                (
+                    symbol.behavior_impl_refs.is_some(),
+                    "E0407",
+                    "typed behavior impls",
+                ),
+                (
+                    symbol.behavior_required_names.is_some(),
+                    "E0307",
+                    "behavior requires",
+                ),
+                (
+                    symbol.behavior_required_refs.is_some(),
+                    "E0408",
+                    "typed behavior requires",
+                ),
+                (symbol.is_mutable.is_some(), "E0308", "mutability"),
+            ],
+            span,
+        );
     }
 }
 

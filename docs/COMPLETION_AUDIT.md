@@ -788,6 +788,8 @@ and do not assume Phase 4 is ready without evidence.
   expectation slices instead of taking ownership of rebuilt expectation vectors.
 - Resolver absent-metadata validation now shares a list-level helper for
   module, import, local, and variant symbol metadata entries.
+- The same absent-metadata helper now covers the remaining type-like, kind,
+  behavior, and value declaration validation paths.
 
 ## Unresolved Gaps
 
