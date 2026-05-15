@@ -4173,22 +4173,19 @@ impl TypeChecker {
             return;
         };
 
+        let (fields, field_defaults) =
+            Self::resolver_struct_fields_from_metadata(field_types, ast_fields);
         self.structs.insert(
             name.to_string(),
-            struct_info_from_resolver_fields(
-                name.to_string(),
-                symbol,
-                field_types.to_vec(),
-                Self::resolver_struct_field_defaults(field_types, ast_fields),
-            ),
+            struct_info_from_resolver_fields(name.to_string(), symbol, fields, field_defaults),
         );
     }
 
-    fn resolver_struct_field_defaults(
+    fn resolver_struct_fields_from_metadata(
         fields: &[(String, AstType)],
         ast_fields: &[StructField],
-    ) -> HashMap<String, Expression> {
-        ast_fields
+    ) -> (Vec<(String, AstType)>, HashMap<String, Expression>) {
+        let field_defaults = ast_fields
             .iter()
             .zip(fields.iter())
             .filter_map(|(field, (restored_name, _))| {
@@ -4197,7 +4194,8 @@ impl TypeChecker {
                     .as_ref()
                     .map(|default| (restored_name.clone(), default.clone()))
             })
-            .collect()
+            .collect();
+        (fields.to_vec(), field_defaults)
     }
 
     fn collect_resolver_enum_variants(&mut self, symbols: &SymbolTable, name: &str) {
@@ -11181,6 +11179,47 @@ Second: Wrap(str)
             ),
             vec![("Wrap".to_string(), Some(AstType::Str))]
         );
+    }
+
+    #[test]
+    fn resolver_struct_fields_from_metadata_restores_field_names_and_defaults() {
+        let fields = vec![
+            ("x".to_string(), AstType::I32),
+            (
+                "callback".to_string(),
+                AstType::Function {
+                    params: vec![AstType::I32],
+                    ret: Box::new(AstType::Str),
+                },
+            ),
+        ];
+        let ast_fields = vec![
+            StructField {
+                name: "stale_x".to_string(),
+                ty: AstType::Bool,
+                default: Some(Expression::BoolLiteral {
+                    value: true,
+                    span: Span::dummy(),
+                }),
+                mutable: false,
+                span: Span::dummy(),
+            },
+            StructField {
+                name: "stale_callback".to_string(),
+                ty: AstType::Bool,
+                default: None,
+                mutable: false,
+                span: Span::dummy(),
+            },
+        ];
+
+        let (restored_fields, defaults) =
+            TypeChecker::resolver_struct_fields_from_metadata(&fields, &ast_fields);
+
+        assert_eq!(restored_fields, fields);
+        assert!(defaults.contains_key("x"));
+        assert!(!defaults.contains_key("stale_x"));
+        assert!(!defaults.contains_key("callback"));
     }
 
     #[test]

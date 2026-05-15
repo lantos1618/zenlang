@@ -1090,6 +1090,8 @@ checked-in docs, tests, and commits only.
   resolver return-type restoration for `void` versus annotated returns.
 - Resolver-backed enum collection now uses one helper to restore resolver-owned
   variant names and owner-scoped typed payload metadata.
+- Resolver-backed struct collection now restores resolver-owned field names,
+  typed field metadata, and field defaults through one helper.
 - Resolver behavior-association validation now builds expected display names
   and typed refs in the same AST pass for impl/requires and parent edges.
 - Resolver behavior-association expectation storage now uses a shared edge
