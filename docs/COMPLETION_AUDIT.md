@@ -995,6 +995,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver variant owner-name validation now carries its diagnostic code and
   message formatting through a validation bundle, covered by
   `typechecker::tests::variant_owner_validation_formats_message`.
+- Resolver variant owner-name validation now owns its resolver diagnostic code
+  mapping, covered by
+  `typechecker::tests::variant_owner_validation_uses_resolver_code`.
 - Resolver variant-name validation now carries its diagnostic code and message
   formatting through a validation bundle, covered by
   `typechecker::tests::variant_name_validation_formats_message`.

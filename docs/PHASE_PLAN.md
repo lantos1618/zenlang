@@ -1023,6 +1023,8 @@ checked-in docs, tests, and commits only.
   mapping instead of constructing those codes at the call site.
 - Resolver variant owner-name validation now carries its diagnostic code and
   message formatting through a validation bundle.
+- Resolver variant owner-name validation now owns its resolver diagnostic code
+  mapping instead of constructing that code at the call site.
 - Resolver variant-name validation now carries its diagnostic code and message
   formatting through a validation bundle.
 - Resolver visibility validation now shares one diagnostic helper across

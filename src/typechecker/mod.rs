@@ -902,6 +902,10 @@ struct VariantOwnerValidation {
 }
 
 impl VariantOwnerValidation {
+    fn resolver_code() -> Self {
+        Self { code: "E0242" }
+    }
+
     fn message(self, name: &str, actual: &str, expected: &str) -> String {
         format!("resolver variant symbol '{name}' has owner '{actual}', expected '{expected}'")
     }
@@ -8233,7 +8237,7 @@ impl TypeChecker {
         span: Span,
     ) {
         if symbol.variant_owner_name.as_deref() != Some(expected_owner_name) {
-            let validation = VariantOwnerValidation { code: "E0242" };
+            let validation = VariantOwnerValidation::resolver_code();
             let actual = resolver_metadata_display(symbol.variant_owner_name.as_deref());
             self.diagnostics.push(Diagnostic::error(
                 validation.code,
@@ -9949,6 +9953,13 @@ Point.get = (self: Point) i32 { return self.x }
             validation.message("Some", "Result", "Option"),
             "resolver variant symbol 'Some' has owner 'Result', expected 'Option'"
         );
+    }
+
+    #[test]
+    fn variant_owner_validation_uses_resolver_code() {
+        let validation = VariantOwnerValidation::resolver_code();
+
+        assert_eq!(validation.code, "E0242");
     }
 
     #[test]
