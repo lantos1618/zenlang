@@ -5188,10 +5188,11 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_absent_metadata_entries(
+        self.validate_resolver_absent_mutability_metadata(
+            symbol,
             "module",
             &expected.name,
-            &[(symbol.is_mutable.is_some(), "E0345", "mutability")],
+            "E0345",
             span,
         );
     }
@@ -6239,12 +6240,7 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_absent_metadata_entries(
-            "import",
-            name,
-            &[(symbol.is_mutable.is_some(), "E0344", "mutability")],
-            span,
-        );
+        self.validate_resolver_absent_mutability_metadata(symbol, "import", name, "E0344", span);
     }
 
     fn require_resolver_parameter_locals(
@@ -7040,6 +7036,24 @@ impl TypeChecker {
         );
     }
 
+    fn validate_resolver_absent_mutability_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        symbol_kind: &str,
+        name: &str,
+        code: &'static str,
+        span: Span,
+    ) {
+        self.validate_resolver_absent_metadata_entry(
+            symbol_kind,
+            name,
+            symbol.is_mutable.is_some(),
+            code,
+            "mutability",
+            span,
+        );
+    }
+
     fn validate_resolver_absent_source_metadata(
         &mut self,
         symbol: &crate::resolver::Symbol,
@@ -7293,10 +7307,11 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_absent_metadata_entries(
+        self.validate_resolver_absent_mutability_metadata(
+            symbol,
             namespace.diagnostic_name(),
             name,
-            &[(symbol.is_mutable.is_some(), "E0314", "mutability")],
+            "E0314",
             span,
         );
     }
@@ -7581,12 +7596,10 @@ impl TypeChecker {
         self.validate_resolver_absent_metadata_entries(
             "variant",
             name,
-            &[
-                (symbol.variant_names.is_some(), "E0338", "variant names"),
-                (symbol.is_mutable.is_some(), "E0343", "mutability"),
-            ],
+            &[(symbol.variant_names.is_some(), "E0338", "variant names")],
             span,
         );
+        self.validate_resolver_absent_mutability_metadata(symbol, "variant", name, "E0343", span);
     }
 
     fn validate_resolver_behavior_methods(
@@ -8075,12 +8088,7 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_absent_metadata_entries(
-            "value",
-            name,
-            &[(symbol.is_mutable.is_some(), "E0308", "mutability")],
-            span,
-        );
+        self.validate_resolver_absent_mutability_metadata(symbol, "value", name, "E0308", span);
     }
 }
 

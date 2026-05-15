@@ -874,6 +874,8 @@ and do not assume Phase 4 is ready without evidence.
   helper across module, import, local, variant, behavior, and value symbols.
 - Resolver absent behavior-declaration metadata validation now shares one
   helper across module, import, local, variant, and value symbols.
+- Resolver absent mutability metadata validation now shares one helper across
+  module, import, type-like, variant, and value symbols.
 
 ## Unresolved Gaps
 
