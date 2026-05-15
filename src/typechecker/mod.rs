@@ -104,6 +104,7 @@ struct ResolverDeclarationMetadataTasks<'a> {
     types: Vec<ResolverTypeDeclarationMetadataTask<'a>>,
     behaviors: Vec<(&'a str, Span)>,
     behavior_impl_blocks: Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
+    behavior_requires: Vec<BehaviorRequiresValidationTask<'a>>,
 }
 
 struct ResolverBehaviorImplBlockDeclarationTask<'a> {
@@ -3507,6 +3508,7 @@ impl TypeChecker {
             decls,
             symbols,
             &tasks.behavior_impl_blocks,
+            &tasks.behavior_requires,
         );
         self.clear_resolver_behavior_ref_state();
         self.refresh_resolver_type_behavior_impls(&tasks.types, symbols);
@@ -3568,6 +3570,21 @@ impl TypeChecker {
                             behavior,
                             behavior_type_args,
                             methods,
+                            span: *span,
+                        });
+                }
+                Declaration::Requires {
+                    type_name,
+                    behavior,
+                    behavior_type_args,
+                    span,
+                } => {
+                    tasks
+                        .behavior_requires
+                        .push(BehaviorRequiresValidationTask {
+                            type_name,
+                            behavior,
+                            behavior_type_args,
                             span: *span,
                         });
                 }
@@ -3754,13 +3771,14 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: &SymbolTable,
         behavior_impl_tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
+        behavior_requires_tasks: &[BehaviorRequiresValidationTask<'_>],
     ) {
         self.with_resolver_backed_collection(|checker| {
             checker.validate_resolver_collected_behavior_impl_declarations(
                 symbols,
                 behavior_impl_tasks,
             );
-            checker.validate_collected_behavior_requires_declarations(decls, Some(symbols));
+            checker.validate_behavior_requires_tasks(behavior_requires_tasks, Some(symbols));
             checker.validate_generic_type_references(decls, Some(symbols));
             checker.validate_struct_field_defaults(decls, Some(symbols));
         });
@@ -3956,6 +3974,14 @@ impl TypeChecker {
             }
         }
 
+        self.validate_behavior_requires_tasks(&requires_tasks, symbols);
+    }
+
+    fn validate_behavior_requires_tasks(
+        &mut self,
+        requires_tasks: &[BehaviorRequiresValidationTask<'_>],
+        symbols: Option<&SymbolTable>,
+    ) {
         for task in requires_tasks {
             self.validate_collected_behavior_requires_declaration(
                 symbols,
@@ -13249,6 +13275,8 @@ Point.implements(Json) {
     encode = (value: Point) str { return "point" }
 }
 
+Point.requires(Json)
+
 main = () i32 { return 0 }
 "#,
         );
@@ -13267,6 +13295,10 @@ main = () i32 { return 0 }
         assert_eq!(behavior_impl.ast_type_name, "Point");
         assert_eq!(behavior_impl.behavior, "Json");
         assert_eq!(behavior_impl.methods.len(), 1);
+        assert_eq!(tasks.behavior_requires.len(), 1);
+        let requires = &tasks.behavior_requires[0];
+        assert_eq!(requires.type_name, "Point");
+        assert_eq!(requires.behavior, "Json");
 
         let tc = TypeChecker::new();
         let refresh_tasks = tc.resolver_type_behavior_refresh_tasks(&tasks.types, &symbols);

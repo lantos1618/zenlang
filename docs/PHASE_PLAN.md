@@ -1636,6 +1636,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior impl semantic validation now reuses the collected
   behavior-impl block tasks instead of rebuilding impl tasks from declarations
   during the semantic replay pass.
+- Resolver-backed behavior requires semantic validation now reuses collected
+  requires tasks from the declaration metadata pass instead of rebuilding
+  requires tasks during semantic replay.
 
 ## Current Phase
 

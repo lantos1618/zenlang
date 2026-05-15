@@ -1882,6 +1882,12 @@ and do not assume Phase 4 is ready without evidence.
   behavior-impl block tasks instead of rebuilding impl tasks from declarations,
   covered by
   `cargo test collect_declarations_with_symbols_reports_resolver_restored_impl_target_and_name`.
+- Resolver-backed behavior requires semantic validation now reuses collected
+  requires tasks from the declaration metadata pass, covered by
+  `cargo test collect_declarations_with_symbols_uses_restored_requires_ref_for_inherited_impl`,
+  `cargo test collect_declarations_with_symbols_uses_distinct_restored_requires_type_args`,
+  and
+  `cargo test collect_declarations_with_symbols_does_not_validate_stale_requires_after_target_restore`.
 
 ## Unresolved Gaps
 
