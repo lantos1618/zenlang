@@ -33,6 +33,7 @@ use crate::resolver::{
 pub struct StructInfo {
     pub name: String,
     pub fields: Vec<(String, AstType)>,
+    pub field_defaults: HashMap<String, Expression>,
     pub type_params: Vec<String>,
     pub type_param_bounds: HashMap<String, BehaviorBound>,
 }
@@ -973,6 +974,15 @@ fn struct_info_from_ast_fields(
             .iter()
             .map(|field| (field.name.clone(), field.ty.clone()))
             .collect(),
+        field_defaults: fields
+            .iter()
+            .filter_map(|field| {
+                field
+                    .default
+                    .as_ref()
+                    .map(|default| (field.name.clone(), default.clone()))
+            })
+            .collect(),
         type_params: type_param_names(type_params),
         type_param_bounds: type_param_bounds(type_params),
     }
@@ -1011,10 +1021,12 @@ fn struct_info_from_resolver_fields(
     name: String,
     symbol: &Symbol,
     fields: Vec<(String, AstType)>,
+    field_defaults: HashMap<String, Expression>,
 ) -> StructInfo {
     StructInfo {
         name,
         fields,
+        field_defaults,
         type_params: resolver_type_param_names(symbol),
         type_param_bounds: resolver_type_param_bounds(symbol),
     }
@@ -2152,10 +2164,12 @@ impl TypeChecker {
                         }
                     }
                 }
-                Declaration::Struct { name, span, .. } => {
+                Declaration::Struct {
+                    name, fields, span, ..
+                } => {
                     let restored_name = self
                         .collect_resolver_type_behavior_refs_for_declaration(symbols, name, *span);
-                    self.collect_resolver_struct_fields(symbols, &restored_name);
+                    self.collect_resolver_struct_fields(symbols, &restored_name, fields);
                 }
                 Declaration::Enum { name, span, .. } => {
                     let restored_name = self
@@ -2762,7 +2776,12 @@ impl TypeChecker {
         candidates.next().is_none().then_some(candidate)
     }
 
-    fn collect_resolver_struct_fields(&mut self, symbols: &SymbolTable, name: &str) {
+    fn collect_resolver_struct_fields(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        ast_fields: &[StructField],
+    ) {
         let Some((symbol, field_types)) =
             Self::resolver_symbol_metadata(symbols, Namespace::Type, name, |symbol| {
                 symbol.field_types.as_ref()
@@ -2774,7 +2793,20 @@ impl TypeChecker {
 
         self.structs.insert(
             name.to_string(),
-            struct_info_from_resolver_fields(name.to_string(), symbol, field_types.to_vec()),
+            struct_info_from_resolver_fields(
+                name.to_string(),
+                symbol,
+                field_types.to_vec(),
+                ast_fields
+                    .iter()
+                    .filter_map(|field| {
+                        field
+                            .default
+                            .as_ref()
+                            .map(|default| (field.name.clone(), default.clone()))
+                    })
+                    .collect(),
+            ),
         );
     }
 
@@ -17720,6 +17752,89 @@ Option: Some(i32), None
     }
 
     #[test]
+    fn struct_literal_uses_default_for_omitted_field() {
+        use crate::ast::declarations::StructField;
+        use crate::ast::typed::{TypedExprKind, TypedStatementKind};
+        use crate::ast::{Expression, Program, Statement};
+        let mut tc = TypeChecker::new();
+        let program = Program {
+            declarations: vec![
+                Declaration::Struct {
+                    name: "Point".into(),
+                    type_params: Vec::new(),
+                    fields: vec![
+                        StructField {
+                            name: "x".into(),
+                            ty: AstType::I32,
+                            default: None,
+                            mutable: false,
+                            span: Span::dummy(),
+                        },
+                        StructField {
+                            name: "y".into(),
+                            ty: AstType::I32,
+                            default: Some(Expression::IntLiteral {
+                                value: 2,
+                                span: Span::dummy(),
+                            }),
+                            mutable: false,
+                            span: Span::dummy(),
+                        },
+                    ],
+                    public: false,
+                    span: Span::dummy(),
+                },
+                Declaration::Function {
+                    name: "main".into(),
+                    type_params: Vec::new(),
+                    params: Vec::new(),
+                    return_type: Some(AstType::Void),
+                    body: Expression::Block {
+                        statements: vec![Statement::VarDecl {
+                            name: "p".into(),
+                            ty: None,
+                            value: Expression::StructLiteral {
+                                name: "Point".into(),
+                                type_args: Vec::new(),
+                                fields: vec![(
+                                    "x".into(),
+                                    Expression::IntLiteral {
+                                        value: 1,
+                                        span: Span::dummy(),
+                                    },
+                                )],
+                                span: Span::dummy(),
+                            },
+                            mutable: false,
+                            constant: false,
+                            span: Span::dummy(),
+                        }],
+                        expr: None,
+                        span: Span::dummy(),
+                    },
+                    public: false,
+                    span: Span::dummy(),
+                },
+            ],
+            file_id: 0,
+        };
+
+        let typed = tc
+            .check_program(&program)
+            .expect("defaulted struct field may be omitted");
+        let TypedStatementKind::VarDecl { value, .. } = &typed.functions[0].body.statements[0].kind
+        else {
+            panic!("expected var decl");
+        };
+        let TypedExprKind::StructLiteral { fields, .. } = &value.kind else {
+            panic!("expected struct literal");
+        };
+        assert_eq!(fields.len(), 2);
+        assert_eq!(fields[1].0, "y");
+        assert!(matches!(fields[1].1.kind, TypedExprKind::IntLiteral(2)));
+    }
+
+    #[test]
     fn struct_literal_field_type_mismatch_is_error() {
         use crate::ast::declarations::StructField;
         use crate::ast::{Expression, Program, Statement};
@@ -18416,6 +18531,7 @@ describe = (flag: bool) StaticString {
             StructInfo {
                 name: "Box".to_string(),
                 fields: vec![("value".to_string(), AstType::Named("T".to_string()))],
+                field_defaults: HashMap::new(),
                 type_params: vec!["T".to_string()],
                 type_param_bounds: HashMap::new(),
             },

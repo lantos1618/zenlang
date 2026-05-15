@@ -887,6 +887,39 @@ impl TypeChecker {
                 if let Some(info) = &struct_info {
                     for (field_name, _) in &info.fields {
                         if !provided.contains(field_name.as_str()) {
+                            if type_args.is_empty() {
+                                if let Some(default) = info.field_defaults.get(field_name) {
+                                    let typed = self.check_expr(default)?;
+                                    if let Some(expected) = field_defs.get(field_name) {
+                                        let actual_ty = if (expected.is_integer()
+                                            && matches!(typed.kind, TypedExprKind::IntLiteral(_)))
+                                            || (expected.is_float()
+                                                && matches!(
+                                                    typed.kind,
+                                                    TypedExprKind::FloatLiteral(_)
+                                                )) {
+                                            expected.clone()
+                                        } else {
+                                            typed.ty.clone()
+                                        };
+                                        if !self.types_compatible(expected, &actual_ty) {
+                                            self.diagnostics.push(Diagnostic::error(
+                                                "E3036",
+                                                format!(
+                                                    "field `{}` for struct `{}` expects `{}`, found `{}`",
+                                                    field_name,
+                                                    name,
+                                                    expected.display_name(),
+                                                    typed.ty.display_name()
+                                                ),
+                                                typed.span,
+                                            ));
+                                        }
+                                    }
+                                    typed_fields.push((field_name.clone(), typed));
+                                    continue;
+                                }
+                            }
                             self.diagnostics.push(Diagnostic::error(
                                 "E3037",
                                 format!("missing field `{}` for struct `{}`", field_name, name),
