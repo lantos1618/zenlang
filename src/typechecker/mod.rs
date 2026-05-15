@@ -414,6 +414,19 @@ struct ExpectedBehaviorSymbol {
     methods: Vec<ExpectedBehaviorMethod>,
 }
 
+impl ExpectedBehaviorSymbol {
+    fn new(
+        type_params: &[ast::TypeParam],
+        methods: &[ast::BehaviorMethod],
+        is_public: bool,
+    ) -> Self {
+        Self {
+            type_like: ExpectedTypeLikeSymbol::new(type_params, Some(is_public)),
+            methods: expected_behavior_method_metadata(methods),
+        }
+    }
+}
+
 struct ExpectedStructSymbol {
     type_like: ExpectedTypeLikeSymbol,
     fields: Vec<ExpectedField>,
@@ -9319,10 +9332,7 @@ fn expected_behavior_symbol(
     methods: &[ast::BehaviorMethod],
     is_public: bool,
 ) -> ExpectedBehaviorSymbol {
-    ExpectedBehaviorSymbol {
-        type_like: expected_type_like_metadata(type_params, Some(is_public)),
-        methods: expected_behavior_method_metadata(methods),
-    }
+    ExpectedBehaviorSymbol::new(type_params, methods, is_public)
 }
 
 fn expected_struct_symbol(
@@ -11132,6 +11142,45 @@ Point.requires(Json<str>)
         assert_eq!(
             bound.reference.type_args,
             vec![AstType::Named("T".to_string())]
+        );
+    }
+
+    #[test]
+    fn expected_behavior_symbol_builds_type_like_and_methods_together() {
+        let type_params = vec![ast::TypeParam {
+            name: "T".to_string(),
+            constraint: None,
+            constraint_type_args: vec![],
+            span: Span::dummy(),
+        }];
+        let methods = vec![ast::BehaviorMethod {
+            name: "encode".to_string(),
+            params: vec![Param {
+                name: "value".to_string(),
+                ty: AstType::Named("Self".to_string()),
+                mutable: false,
+                span: Span::dummy(),
+            }],
+            return_type: Some(AstType::Named("T".to_string())),
+            default_body: None,
+            span: Span::dummy(),
+        }];
+
+        let symbol = ExpectedBehaviorSymbol::new(&type_params, &methods, true);
+
+        assert_eq!(symbol.type_like.is_public, Some(true));
+        assert_eq!(symbol.type_like.type_params[0].name, "T");
+        assert_eq!(symbol.methods[0].signature.0, "encode");
+        assert_eq!(symbol.methods[0].signature.1, vec!["Self".to_string()]);
+        assert_eq!(symbol.methods[0].signature.2, "T");
+        assert_eq!(symbol.methods[0].metadata.name, "encode");
+        assert_eq!(
+            symbol.methods[0].metadata.parameter_names,
+            vec!["value".to_string()]
+        );
+        assert_eq!(
+            symbol.methods[0].metadata.return_type,
+            AstType::Named("T".to_string())
         );
     }
 

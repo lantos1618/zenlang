@@ -176,6 +176,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver expected type-like symbol construction now pairs generic
   type-parameter expectations with optional visibility through one
   expected-type-like constructor.
+- Typechecker resolver expected behavior-symbol construction now pairs
+  type-like expectations and behavior-method expectations through one
+  expected-behavior constructor.
 - Typechecker resolver behavior-ref validation now separates role labels from
   per-check diagnostic code mappings, avoiding duplicated label bundles across
   contains and full-list checks.

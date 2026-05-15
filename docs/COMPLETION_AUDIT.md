@@ -223,6 +223,10 @@ and do not assume Phase 4 is ready without evidence.
   type-parameter expectations with optional visibility through one constructor,
   covered by
   `typechecker::tests::expected_type_like_symbol_builds_type_params_and_visibility_together`.
+- Resolver expected behavior-symbol construction now pairs type-like
+  expectations and behavior-method expectations through one constructor,
+  covered by
+  `typechecker::tests::expected_behavior_symbol_builds_type_like_and_methods_together`.
 - Resolver expected behavior association construction now pairs display names
   and typed refs through one constructor, covered by
   `typechecker::tests::expected_behavior_edge_builds_display_and_metadata_together`.
