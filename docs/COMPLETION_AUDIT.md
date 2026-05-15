@@ -67,8 +67,8 @@ and do not assume Phase 4 is ready without evidence.
   by `tests/zen/generic_method_nested_result.zen`,
   `integration::test_generic_method_nested_result`, and
   `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`,
-  proving `Box<T>.wrap_result` can specialize
-  `Result<Option<T>, str>` without unresolved generated C calls.
+  proving `Box<T>.wrap_result` can infer `T` from the concrete receiver and
+  specialize `Result<Option<T>, str>` without unresolved generated C calls.
 - Generic method specializations that call generic functions have executable
   and generated-C coverage in `tests/zen/generic_method_worklist.zen`, including
   call-resolution assertions for the reached generic function dependency.
