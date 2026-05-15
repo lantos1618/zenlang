@@ -771,6 +771,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed value declaration collection no longer seeds AST-only
   function or method signatures before resolver metadata restoration, while
   preserving generic template bodies for later metadata replacement.
+- Resolver-backed impl-block collection no longer seeds AST-only method
+  signatures before resolver metadata restoration, while preserving generic
+  impl method template bodies for later metadata replacement.
 
 ## Current Phase
 

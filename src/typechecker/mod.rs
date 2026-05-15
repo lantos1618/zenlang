@@ -1321,11 +1321,10 @@ impl TypeChecker {
                     methods,
                     ..
                 } => {
-                    for method in methods {
-                        self.collect_impl_method_signature(type_name, method);
-                    }
-
                     if !self.resolver_backed_collection {
+                        for method in methods {
+                            self.collect_impl_method_signature(type_name, method);
+                        }
                         if let Some(behavior) = behavior {
                             self.collect_behavior_default_method_signatures(
                                 type_name,
@@ -1333,6 +1332,10 @@ impl TypeChecker {
                                 behavior_type_args,
                                 methods,
                             );
+                        }
+                    } else {
+                        for method in methods {
+                            self.collect_resolver_backed_impl_method_template(type_name, method);
                         }
                     }
                 }
@@ -1939,6 +1942,40 @@ impl TypeChecker {
                 ),
             );
         }
+    }
+
+    fn collect_resolver_backed_impl_method_template(
+        &mut self,
+        type_name: &str,
+        method: &Declaration,
+    ) {
+        let Declaration::Function {
+            name,
+            type_params,
+            params,
+            return_type,
+            body,
+            span,
+            ..
+        } = method
+        else {
+            return;
+        };
+        let collected_type_params: Vec<String> =
+            type_params.iter().map(|tp| tp.name.clone()).collect();
+        if collected_type_params.is_empty() {
+            return;
+        }
+        self.generic_methods.insert(
+            format!("{}.{}", type_name, name),
+            GenericFunctionTemplate::new(
+                collected_type_params,
+                params.clone(),
+                return_type.clone(),
+                body.clone(),
+                *span,
+            ),
+        );
     }
 
     fn collect_resolver_behavior_impl_method_signatures(
@@ -8977,6 +9014,42 @@ Point.impl = {
 
         assert!(tc.methods.contains_key("Point.get"));
         assert!(!tc.methods.contains_key("Point.missing"));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_impl_method_signature() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Point.impl = {
+    get = (self: Point) i32 { return self.x }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "Point.get", None);
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[1] {
+            if let Declaration::Function {
+                params,
+                return_type,
+                ..
+            } = &mut methods[0]
+            {
+                params[0].ty = AstType::Named("Stale".to_string());
+                *return_type = Some(AstType::Named("AlsoStale".to_string()));
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.methods.contains_key("Point.get"),
+            "resolver-backed collection should not keep AST-only impl method metadata when resolver signature metadata is incomplete"
+        );
     }
 
     #[test]
