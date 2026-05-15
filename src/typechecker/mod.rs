@@ -664,8 +664,8 @@ struct BehaviorRefActual<'a> {
 }
 
 struct ExpectedBehaviorRef {
-    name: String,
-    reference: BehaviorRefMetadata,
+    display: String,
+    metadata: BehaviorRefMetadata,
 }
 
 #[derive(Default)]
@@ -679,8 +679,8 @@ impl ExpectedBehaviorEdges {
             .entry(owner.to_string())
             .or_default()
             .push(ExpectedBehaviorRef {
-                name: behavior_ref_display(behavior, type_args),
-                reference: BehaviorRefMetadata {
+                display: behavior_ref_display(behavior, type_args),
+                metadata: BehaviorRefMetadata {
                     name: behavior.to_string(),
                     type_args: type_args.to_vec(),
                 },
@@ -7305,25 +7305,25 @@ impl TypeChecker {
     ) {
         if !actual
             .names
-            .is_some_and(|names| names.iter().any(|name| name == &expected.name))
+            .is_some_and(|names| names.iter().any(|name| name == &expected.display))
         {
             let actual = format_behavior_ref_names(actual.names);
             self.diagnostics.push(Diagnostic::error(
                 validation.name_code,
                 format!(
                     "resolver {} symbol '{name}' has {} '{actual}', expected to include '{}'",
-                    validation.symbol_kind, validation.name_label, expected.name
+                    validation.symbol_kind, validation.name_label, expected.display
                 ),
                 span,
             ));
         }
         if !actual
             .refs
-            .is_some_and(|refs| refs.iter().any(|behavior| behavior == &expected.reference))
+            .is_some_and(|refs| refs.iter().any(|behavior| behavior == &expected.metadata))
         {
             let actual = format_behavior_refs(actual.refs);
             let expected_ref =
-                behavior_ref_display(&expected.reference.name, &expected.reference.type_args);
+                behavior_ref_display(&expected.metadata.name, &expected.metadata.type_args);
             self.diagnostics.push(Diagnostic::error(
                 validation.ref_code,
                 format!(
@@ -7343,7 +7343,7 @@ impl TypeChecker {
         expected: &[ExpectedBehaviorRef],
         span: Span,
     ) {
-        let expected_names: Vec<_> = expected.iter().map(|edge| edge.name.clone()).collect();
+        let expected_names: Vec<_> = expected.iter().map(|edge| edge.display.clone()).collect();
         if !behavior_ref_names_match(actual.names, &expected_names) {
             let actual = format_behavior_ref_names(actual.names);
             let expected_names = format_behavior_ref_names(Some(&expected_names));
@@ -7356,7 +7356,7 @@ impl TypeChecker {
                 span,
             ));
         }
-        let expected_refs: Vec<_> = expected.iter().map(|edge| edge.reference.clone()).collect();
+        let expected_refs: Vec<_> = expected.iter().map(|edge| edge.metadata.clone()).collect();
         if !behavior_refs_match(actual.refs, &expected_refs) {
             let actual = format_behavior_refs(actual.refs);
             let expected_refs = format_behavior_refs(Some(&expected_refs));
@@ -7942,8 +7942,8 @@ fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAss
 
 fn expected_behavior_ref(behavior: &str, type_args: &[AstType]) -> ExpectedBehaviorRef {
     ExpectedBehaviorRef {
-        name: behavior_ref_display(behavior, type_args),
-        reference: BehaviorRefMetadata {
+        display: behavior_ref_display(behavior, type_args),
+        metadata: BehaviorRefMetadata {
             name: behavior.to_string(),
             type_args: type_args.to_vec(),
         },

@@ -739,6 +739,8 @@ checked-in docs, tests, and commits only.
   directly instead of wrapping the expected edge list.
 - Resolver behavior-association expectation storage now names its paired
   storage and lookup after behavior edges rather than raw typed refs.
+- Resolver behavior-association edge expectations now name their paired
+  display string and typed metadata directly.
 - Resolver value-signature expectation building now derives parameter names,
   display types, and typed metadata in one parameter pass.
 
