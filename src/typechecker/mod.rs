@@ -621,9 +621,26 @@ struct SourceValidation {
     quote_expected: bool,
 }
 
+#[derive(Clone, Copy)]
 struct CountValidation {
     label: &'static str,
     code: &'static str,
+}
+
+impl CountValidation {
+    fn message(
+        self,
+        symbol_kind: &str,
+        name: &str,
+        actual: Option<usize>,
+        expected: usize,
+    ) -> String {
+        let actual = resolver_count_display(actual);
+        format!(
+            "resolver {symbol_kind} symbol '{name}' has {} {actual}, expected {expected}",
+            self.label
+        )
+    }
 }
 
 struct ExpectedField {
@@ -7517,13 +7534,9 @@ impl TypeChecker {
         span: Span,
     ) {
         if actual != Some(expected) {
-            let actual = resolver_count_display(actual);
             self.diagnostics.push(Diagnostic::error(
                 validation.code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has {} {actual}, expected {expected}",
-                    validation.label
-                ),
+                validation.message(symbol_kind, name, actual, expected),
                 span,
             ));
         }
@@ -9326,6 +9339,24 @@ Point.get = (self: Point) i32 { return self.x }
     fn resolver_count_display_formats_known_and_missing_counts() {
         assert_eq!(resolver_count_display(Some(2)), "2");
         assert_eq!(resolver_count_display(None), "unknown");
+    }
+
+    #[test]
+    fn count_validation_formats_message() {
+        let validation = CountValidation {
+            label: "parameter count",
+            code: "COUNT",
+        };
+
+        assert_eq!(validation.code, "COUNT");
+        assert_eq!(
+            validation.message("value", "add", Some(1), 2),
+            "resolver value symbol 'add' has parameter count 1, expected 2"
+        );
+        assert_eq!(
+            validation.message("variant", "Some", None, 1),
+            "resolver variant symbol 'Some' has parameter count unknown, expected 1"
+        );
     }
 
     #[test]

@@ -963,6 +963,8 @@ checked-in docs, tests, and commits only.
   source selection for names and typed refs.
 - Resolver type-parameter validation now shares one expected metadata bundle
   for counts, names, display bounds, and typed bound refs.
+- Resolver count validation now carries count diagnostic message formatting
+  through the shared count validation bundle.
 - Resolver value-parameter validation now shares one expected metadata bundle
   for counts, names, display types, and typed AST types.
 - Resolver behavior-association list validation now shares one expected
