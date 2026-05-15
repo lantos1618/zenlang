@@ -909,6 +909,8 @@ checked-in docs, tests, and commits only.
   owner-selection helper for exact refs, unique refs, and missing-ref fallback.
 - Behavior impl and requires validation now share resolver-ref override
   selection for restored behavior names and type arguments.
+- Resolver behavior parent, impl, and requires validation now share metadata
+  source selection for names and typed refs.
 
 ## Current Phase
 

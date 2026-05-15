@@ -909,6 +909,29 @@ struct BehaviorRefActual<'a> {
     refs: Option<&'a [BehaviorRefMetadata]>,
 }
 
+impl<'a> BehaviorRefActual<'a> {
+    fn parents(symbol: &'a Symbol) -> Self {
+        Self {
+            names: symbol.behavior_parent_names.as_deref(),
+            refs: symbol.behavior_parent_refs.as_deref(),
+        }
+    }
+
+    fn impls(symbol: &'a Symbol) -> Self {
+        Self {
+            names: symbol.behavior_impl_names.as_deref(),
+            refs: symbol.behavior_impl_refs.as_deref(),
+        }
+    }
+
+    fn required(symbol: &'a Symbol) -> Self {
+        Self {
+            names: symbol.behavior_required_names.as_deref(),
+            refs: symbol.behavior_required_refs.as_deref(),
+        }
+    }
+}
+
 struct ExpectedBehaviorEdge {
     display: String,
     metadata: BehaviorRefMetadata,
@@ -7409,10 +7432,7 @@ impl TypeChecker {
                 ref_code: "E0245",
             },
             name,
-            BehaviorRefActual {
-                names: symbol.behavior_parent_names.as_deref(),
-                refs: symbol.behavior_parent_refs.as_deref(),
-            },
+            BehaviorRefActual::parents(symbol),
             expected,
             span,
         );
@@ -7434,10 +7454,7 @@ impl TypeChecker {
                 ref_code: "E0246",
             },
             name,
-            BehaviorRefActual {
-                names: symbol.behavior_parent_names.as_deref(),
-                refs: symbol.behavior_parent_refs.as_deref(),
-            },
+            BehaviorRefActual::parents(symbol),
             expected,
             span,
         );
@@ -7459,10 +7476,7 @@ impl TypeChecker {
                 ref_code: "E0247",
             },
             name,
-            BehaviorRefActual {
-                names: symbol.behavior_impl_names.as_deref(),
-                refs: symbol.behavior_impl_refs.as_deref(),
-            },
+            BehaviorRefActual::impls(symbol),
             expected,
             span,
         );
@@ -7484,10 +7498,7 @@ impl TypeChecker {
                 ref_code: "E0248",
             },
             name,
-            BehaviorRefActual {
-                names: symbol.behavior_impl_names.as_deref(),
-                refs: symbol.behavior_impl_refs.as_deref(),
-            },
+            BehaviorRefActual::impls(symbol),
             expected,
             span,
         );
@@ -7509,10 +7520,7 @@ impl TypeChecker {
                 ref_code: "E0249",
             },
             name,
-            BehaviorRefActual {
-                names: symbol.behavior_required_names.as_deref(),
-                refs: symbol.behavior_required_refs.as_deref(),
-            },
+            BehaviorRefActual::required(symbol),
             expected,
             span,
         );
@@ -7534,10 +7542,7 @@ impl TypeChecker {
                 ref_code: "E0250",
             },
             name,
-            BehaviorRefActual {
-                names: symbol.behavior_required_names.as_deref(),
-                refs: symbol.behavior_required_refs.as_deref(),
-            },
+            BehaviorRefActual::required(symbol),
             expected,
             span,
         );
