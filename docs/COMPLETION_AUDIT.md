@@ -830,6 +830,8 @@ and do not assume Phase 4 is ready without evidence.
   resolver-restored local impls and imported impl seeding.
 - Resolver-backed behavior impl and requires target restoration now share one
   owner-selection helper for exact refs, unique refs, and missing-ref fallback.
+- Behavior impl and requires validation now share resolver-ref override
+  selection for restored behavior names and type arguments.
 
 ## Unresolved Gaps
 

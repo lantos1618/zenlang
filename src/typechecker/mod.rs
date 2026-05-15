@@ -2499,14 +2499,8 @@ impl TypeChecker {
         ) {
             return;
         }
-        let behavior = resolver_required_ref
-            .as_ref()
-            .map(|required| required.name.as_str())
-            .unwrap_or(behavior);
-        let behavior_type_args = resolver_required_ref
-            .as_ref()
-            .map(|required| required.type_args.as_slice())
-            .unwrap_or(behavior_type_args);
+        let (behavior, behavior_type_args) =
+            Self::behavior_ref_parts(resolver_required_ref.as_ref(), behavior, behavior_type_args);
 
         if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
             self.diagnostics.push(Diagnostic::error(
@@ -2777,14 +2771,8 @@ impl TypeChecker {
         ) {
             return;
         }
-        let behavior = resolver_impl_ref
-            .as_ref()
-            .map(|implementation| implementation.name.as_str())
-            .unwrap_or(behavior);
-        let behavior_type_args = resolver_impl_ref
-            .as_ref()
-            .map(|implementation| implementation.type_args.as_slice())
-            .unwrap_or(behavior_type_args);
+        let (behavior, behavior_type_args) =
+            Self::behavior_ref_parts(resolver_impl_ref.as_ref(), behavior, behavior_type_args);
 
         if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
             self.diagnostics.push(Diagnostic::error(
@@ -3008,6 +2996,16 @@ impl TypeChecker {
             type_name,
             behavior,
         )
+    }
+
+    fn behavior_ref_parts<'a>(
+        resolver_ref: Option<&'a BehaviorRefMetadata>,
+        behavior: &'a str,
+        behavior_type_args: &'a [AstType],
+    ) -> (&'a str, &'a [AstType]) {
+        resolver_ref
+            .map(|reference| (reference.name.as_str(), reference.type_args.as_slice()))
+            .unwrap_or((behavior, behavior_type_args))
     }
 
     fn pop_resolver_behavior_ref_for(

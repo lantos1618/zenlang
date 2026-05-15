@@ -907,6 +907,8 @@ checked-in docs, tests, and commits only.
   resolver-restored local impls and imported impl seeding.
 - Resolver-backed behavior impl and requires target restoration now share one
   owner-selection helper for exact refs, unique refs, and missing-ref fallback.
+- Behavior impl and requires validation now share resolver-ref override
+  selection for restored behavior names and type arguments.
 
 ## Current Phase
 
