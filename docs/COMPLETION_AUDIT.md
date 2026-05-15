@@ -899,6 +899,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior association collection skips AST-only parent, impl,
   and required refs when resolver association metadata is missing, so stale AST
   associations cannot survive incomplete resolver handoff.
+- Resolver-backed `.requires` conformance uses restored required-behavior refs
+  together with inherited child behavior impl satisfaction, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_restored_requires_ref_for_inherited_impl`.
 - Resolver-backed behavior inheritance checks validate restored resolver parent
   refs before cycle and method-coherence checks, so stale AST-only parent names
   or type arguments cannot leak false extends diagnostics.

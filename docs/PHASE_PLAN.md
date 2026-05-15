@@ -447,6 +447,8 @@ checked-in docs, tests, and commits only.
   cannot produce false missing-impl diagnostics.
   Missing-impl diagnostics also use restored target type names, behavior names,
   and behavior type arguments when all AST-only `.requires` parts are stale.
+  Restored `.requires` behavior refs also use inherited child behavior impls
+  when checking whether the required parent behavior is satisfied.
 - Resolver-backed `.implements` conformance checks now read validated resolver
   behavior impl refs before method conformance, so stale AST-only impl behavior
   type arguments cannot produce false method signature diagnostics.

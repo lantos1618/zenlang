@@ -16106,6 +16106,58 @@ Point.requires(Json<str>)
     }
 
     #[test]
+    fn collect_declarations_with_symbols_uses_restored_requires_ref_for_inherited_impl() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+Point: { x: i32 }
+
+PrettyJson.extends(Json<str>)
+
+Point.implements(PrettyJson) {
+    encode = (value: Point) str { return "point" }
+    pretty = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let requires = program
+            .declarations
+            .iter_mut()
+            .find(|declaration| matches!(declaration, Declaration::Requires { .. }))
+            .expect("requires declaration");
+        if let Declaration::Requires {
+            behavior,
+            behavior_type_args,
+            ..
+        } = requires
+        {
+            *behavior = "Missing".to_string();
+            behavior_type_args[0] = AstType::I32;
+        } else {
+            panic!("expected requires declaration");
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored requires ref should be satisfied by inherited child impl: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_behavior_required_metadata()
     {
         let mut program = parse_program(
