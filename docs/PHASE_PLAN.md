@@ -1229,6 +1229,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed callable signature collection now reads resolver parameter
   names, parameter types, and return types through one complete-signature
   helper.
+- Resolver-backed struct field collection now reads resolver field metadata
+  through one dedicated helper before restoring fields and defaults.
 - The docs truth gate now locks the quiet draft-PR CI trigger shape: no
   `pull_request.synchronize`, manual dispatch retained, and fmt/clippy/test
   jobs guarded by the draft-PR condition.

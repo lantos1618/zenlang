@@ -1348,6 +1348,9 @@ and do not assume Phase 4 is ready without evidence.
   names, parameter types, and return types through one complete-signature
   helper, covered by
   `typechecker::tests::resolver_callable_signature_metadata_requires_complete_signature`.
+- Resolver-backed struct field collection now reads resolver field metadata
+  through one dedicated helper before restoring fields and defaults, covered by
+  `typechecker::tests::resolver_struct_field_metadata_requires_field_types`.
 - The docs truth gate now covers the quiet draft-PR CI trigger shape by
   rejecting `pull_request.synchronize`, requiring manual dispatch, and requiring
   the draft-PR guard on fmt, clippy, and test jobs.

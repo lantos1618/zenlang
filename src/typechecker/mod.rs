@@ -4178,7 +4178,7 @@ impl TypeChecker {
     ) {
         let Some((symbol, field_types)) =
             Self::resolver_symbol_metadata(symbols, Namespace::Type, name, |symbol| {
-                symbol.field_types.as_ref()
+                Self::resolver_struct_field_metadata(symbol)
             })
         else {
             self.structs.remove(name);
@@ -4191,6 +4191,10 @@ impl TypeChecker {
             name.to_string(),
             struct_info_from_resolver_fields(name.to_string(), symbol, fields, field_defaults),
         );
+    }
+
+    fn resolver_struct_field_metadata(symbol: &Symbol) -> Option<&[(String, AstType)]> {
+        symbol.field_types.as_deref()
     }
 
     fn resolver_struct_fields_from_metadata(
@@ -11775,6 +11779,34 @@ identity<T> = (value: T) T { return value }
             symbols
                 .lookup(Namespace::Value, "identity")
                 .expect("identity symbol")
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn resolver_struct_field_metadata_requires_field_types() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let fields = TypeChecker::resolver_struct_field_metadata(
+            symbols
+                .lookup(Namespace::Type, "Point")
+                .expect("Point symbol"),
+        )
+        .expect("complete resolver fields");
+
+        assert_eq!(fields, [("x".to_string(), AstType::I32)]);
+
+        symbols.set_field_types_for_test(Namespace::Type, "Point", None);
+        assert!(TypeChecker::resolver_struct_field_metadata(
+            symbols
+                .lookup(Namespace::Type, "Point")
+                .expect("Point symbol")
         )
         .is_none());
     }
