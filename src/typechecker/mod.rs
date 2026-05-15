@@ -742,6 +742,16 @@ impl VariantAbsenceValidation {
         }
     }
 
+    fn behavior_resolver_codes() -> Self {
+        Self {
+            names_code: "E0323",
+            owner_code: "E0324",
+            payload_count_code: "E0325",
+            payload_type_name_code: "E0326",
+            payload_type_code: "E0400",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 5] {
         [
             AbsentMetadataEntry::new(
@@ -8622,13 +8632,7 @@ impl TypeChecker {
             symbol,
             "behavior",
             name,
-            VariantAbsenceValidation {
-                names_code: "E0323",
-                owner_code: "E0324",
-                payload_count_code: "E0325",
-                payload_type_name_code: "E0326",
-                payload_type_code: "E0400",
-            },
+            VariantAbsenceValidation::behavior_resolver_codes(),
             span,
         );
 
@@ -11146,6 +11150,17 @@ Option<T>: Some(T), None
         assert_eq!(validation.payload_count_code, "E0317");
         assert_eq!(validation.payload_type_name_code, "E0318");
         assert_eq!(validation.payload_type_code, "E0397");
+    }
+
+    #[test]
+    fn variant_absence_validation_uses_behavior_resolver_codes() {
+        let validation = VariantAbsenceValidation::behavior_resolver_codes();
+
+        assert_eq!(validation.names_code, "E0323");
+        assert_eq!(validation.owner_code, "E0324");
+        assert_eq!(validation.payload_count_code, "E0325");
+        assert_eq!(validation.payload_type_name_code, "E0326");
+        assert_eq!(validation.payload_type_code, "E0400");
     }
 
     #[test]
