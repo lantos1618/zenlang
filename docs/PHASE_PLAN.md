@@ -1043,6 +1043,8 @@ checked-in docs, tests, and commits only.
   mapping instead of constructing that code at the call site.
 - Resolver variant visibility validation now owns its resolver diagnostic code
   mapping instead of constructing that code at the call site.
+- Resolver value visibility validation now owns its resolver diagnostic code
+  mapping instead of constructing that code at the call site.
 - Resolver local visibility validation now owns its resolver diagnostic code
   mapping instead of constructing that code at the call site.
 - Resolver source validation now shares one diagnostic helper across module,
