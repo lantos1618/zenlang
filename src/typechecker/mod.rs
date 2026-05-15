@@ -8822,6 +8822,50 @@ Point.impl = {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_name_metadata(
+    ) {
+        let mut program = parse_program(
+            r#"
+Box: { value: i32 }
+
+Box.impl = {
+    keep<T> = (self: Box, value: T) T { return value }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[1] {
+            if let Declaration::Function {
+                name,
+                params,
+                return_type,
+                ..
+            } = &mut methods[0]
+            {
+                *name = "missing".to_string();
+                params.pop();
+                *return_type = None;
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc
+            .generic_methods
+            .get("Box.keep")
+            .expect("generic impl method template");
+        assert!(!tc.generic_methods.contains_key("Box.missing"));
+        assert_eq!(template.params.len(), 2);
+        assert_eq!(template.params[0].name, "self");
+        assert_eq!(template.params[1].name, "value");
+        assert_eq!(template.params[1].ty, AstType::Named("T".to_string()));
+        assert_eq!(template.return_type, Some(AstType::Named("T".to_string())));
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_generic_function_template_metadata() {
         let mut program = parse_program(
             r#"

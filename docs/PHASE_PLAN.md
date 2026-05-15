@@ -49,7 +49,9 @@ checked-in docs, tests, and commits only.
   stale, so collected `Type.method` signatures use resolver-owned names.
 - Resolver-backed non-behavior `Type.impl` method collection now uses the same
   resolver-owned declaration-span handoff, so stale AST-only impl method names
-  cannot leave stale `Type.missing` method entries during setup.
+  cannot leave stale `Type.missing` method entries during setup. Generic
+  `Type.impl` method templates are covered by the same resolver-restored key,
+  parameter, and return metadata path.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so
