@@ -1359,6 +1359,9 @@ and do not assume Phase 4 is ready without evidence.
   through one dedicated helper before restoring method signatures and defaults,
   covered by
   `typechecker::tests::resolver_behavior_method_metadata_requires_method_types`.
+- Resolver-backed declaration info now reads resolver type-parameter names and
+  typed bound refs through one shared metadata helper, covered by
+  `typechecker::tests::resolver_type_parameter_metadata_requires_names_and_bound_refs`.
 - The docs truth gate now covers the quiet draft-PR CI trigger shape by
   rejecting `pull_request.synchronize`, requiring manual dispatch, and requiring
   the draft-PR guard on fmt, clippy, and test jobs.

@@ -1235,6 +1235,8 @@ checked-in docs, tests, and commits only.
   metadata through one dedicated helper before restoring owner-scoped payloads.
 - Resolver-backed behavior method collection now reads resolver method metadata
   through one dedicated helper before restoring method signatures and defaults.
+- Resolver-backed declaration info now reads resolver type-parameter names and
+  typed bound refs through one shared metadata helper.
 - The docs truth gate now locks the quiet draft-PR CI trigger shape: no
   `pull_request.synchronize`, manual dispatch retained, and fmt/clippy/test
   jobs guarded by the draft-PR condition.

@@ -65,6 +65,11 @@ struct ResolverCallableSignature<'a> {
     return_type: &'a AstType,
 }
 
+struct ResolverTypeParameterMetadata<'a> {
+    names: &'a [String],
+    bound_refs: &'a [TypeParameterBoundRefMetadata],
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorBound {
     pub behavior: String,
@@ -2052,15 +2057,24 @@ fn type_param_bounds_from_resolver_refs(
 }
 
 fn resolver_type_param_bounds(symbol: &crate::resolver::Symbol) -> HashMap<String, BehaviorBound> {
-    symbol
-        .type_parameter_bound_refs
-        .as_deref()
-        .map(type_param_bounds_from_resolver_refs)
+    resolver_type_parameter_metadata(symbol)
+        .map(|metadata| type_param_bounds_from_resolver_refs(metadata.bound_refs))
         .unwrap_or_default()
 }
 
 fn resolver_type_param_names(symbol: &crate::resolver::Symbol) -> Vec<String> {
-    symbol.type_parameter_names.clone().unwrap_or_default()
+    resolver_type_parameter_metadata(symbol)
+        .map(|metadata| metadata.names.to_vec())
+        .unwrap_or_default()
+}
+
+fn resolver_type_parameter_metadata(
+    symbol: &crate::resolver::Symbol,
+) -> Option<ResolverTypeParameterMetadata<'_>> {
+    Some(ResolverTypeParameterMetadata {
+        names: symbol.type_parameter_names.as_deref()?,
+        bound_refs: symbol.type_parameter_bound_refs.as_deref()?,
+    })
 }
 
 fn method_signature_key(type_name: &str, method_name: &str) -> String {
@@ -11876,6 +11890,45 @@ Json: behavior {
             symbols
                 .lookup(Namespace::Behavior, "Json")
                 .expect("Json symbol")
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn resolver_type_parameter_metadata_requires_names_and_bound_refs() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+identity<T: Json<T>> = (value: T) T { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let metadata = resolver_type_parameter_metadata(
+            symbols
+                .lookup(Namespace::Value, "identity")
+                .expect("identity symbol"),
+        )
+        .expect("complete resolver type-parameter metadata");
+
+        assert_eq!(metadata.names, ["T"]);
+        assert_eq!(metadata.bound_refs.len(), 1);
+        assert_eq!(metadata.bound_refs[0].type_parameter, "T");
+        assert_eq!(metadata.bound_refs[0].behavior, "Json");
+        assert_eq!(
+            metadata.bound_refs[0].type_args,
+            [AstType::Named("T".to_string())]
+        );
+
+        symbols.set_type_parameter_bound_refs_for_test(Namespace::Value, "identity", None);
+        assert!(resolver_type_parameter_metadata(
+            symbols
+                .lookup(Namespace::Value, "identity")
+                .expect("identity symbol")
         )
         .is_none());
     }
