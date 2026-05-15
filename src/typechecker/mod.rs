@@ -176,6 +176,13 @@ struct ExpectedBehaviorMethods {
     types: Vec<BehaviorMethodTypeMetadata>,
 }
 
+struct ExpectedTypeParameters {
+    count: usize,
+    names: Vec<String>,
+    bounds: Vec<TypeParameterBoundMetadata>,
+    bound_refs: Vec<TypeParameterBoundRefMetadata>,
+}
+
 struct ExpectedTypeLikeSymbol {
     type_parameter_count: usize,
     type_parameter_names: Vec<String>,
@@ -7594,65 +7601,53 @@ fn expected_value_signature(
     type_params: &[ast::TypeParam],
 ) -> ExpectedValueSignature {
     let params = expected_parameters(params);
+    let type_params = expected_type_parameters(type_params);
     ExpectedValueSignature {
         parameter_names: params.names,
         parameter_types: params.types,
         parameter_type_names: params.type_names,
         return_type: return_type.clone().unwrap_or(AstType::Void),
         return_type_name: expected_return_type_name(return_type),
-        type_parameter_count: type_params.len(),
-        type_parameter_names: expected_type_parameter_names(type_params),
-        type_parameter_bounds: expected_type_parameter_bounds(type_params),
-        type_parameter_bound_refs: expected_type_parameter_bound_refs(type_params),
+        type_parameter_count: type_params.count,
+        type_parameter_names: type_params.names,
+        type_parameter_bounds: type_params.bounds,
+        type_parameter_bound_refs: type_params.bound_refs,
     }
 }
 
-fn expected_type_parameter_names(type_params: &[ast::TypeParam]) -> Vec<String> {
-    type_params
-        .iter()
-        .map(|type_param| type_param.name.clone())
-        .collect()
-}
-
-fn expected_type_parameter_bounds(
-    type_params: &[ast::TypeParam],
-) -> Vec<TypeParameterBoundMetadata> {
-    type_params
-        .iter()
-        .filter_map(|type_param| {
-            type_param_bound_display(type_param)
-                .map(|constraint| (type_param.name.clone(), constraint))
-        })
-        .collect()
-}
-
-fn expected_type_parameter_bound_refs(
-    type_params: &[ast::TypeParam],
-) -> Vec<TypeParameterBoundRefMetadata> {
-    type_params
-        .iter()
-        .filter_map(|type_param| {
-            type_param
-                .constraint
-                .as_ref()
-                .map(|behavior| TypeParameterBoundRefMetadata {
-                    type_parameter: type_param.name.clone(),
-                    behavior: behavior.clone(),
-                    type_args: type_param.constraint_type_args.clone(),
-                })
-        })
-        .collect()
+fn expected_type_parameters(type_params: &[ast::TypeParam]) -> ExpectedTypeParameters {
+    let mut expected = ExpectedTypeParameters {
+        count: type_params.len(),
+        names: Vec::new(),
+        bounds: Vec::new(),
+        bound_refs: Vec::new(),
+    };
+    for type_param in type_params {
+        expected.names.push(type_param.name.clone());
+        if let Some(constraint) = type_param_bound_display(type_param) {
+            expected.bounds.push((type_param.name.clone(), constraint));
+        }
+        if let Some(behavior) = &type_param.constraint {
+            expected.bound_refs.push(TypeParameterBoundRefMetadata {
+                type_parameter: type_param.name.clone(),
+                behavior: behavior.clone(),
+                type_args: type_param.constraint_type_args.clone(),
+            });
+        }
+    }
+    expected
 }
 
 fn expected_type_like_symbol(
     type_params: &[ast::TypeParam],
     is_public: Option<bool>,
 ) -> ExpectedTypeLikeSymbol {
+    let type_params = expected_type_parameters(type_params);
     ExpectedTypeLikeSymbol {
-        type_parameter_count: type_params.len(),
-        type_parameter_names: expected_type_parameter_names(type_params),
-        type_parameter_bounds: expected_type_parameter_bounds(type_params),
-        type_parameter_bound_refs: expected_type_parameter_bound_refs(type_params),
+        type_parameter_count: type_params.count,
+        type_parameter_names: type_params.names,
+        type_parameter_bounds: type_params.bounds,
+        type_parameter_bound_refs: type_params.bound_refs,
         is_public,
     }
 }

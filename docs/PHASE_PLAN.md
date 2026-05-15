@@ -86,6 +86,10 @@ checked-in docs, tests, and commits only.
   signatures and typed method metadata from one shared expectation pass, so the
   two resolver handoff checks cannot drift while scanning the same behavior
   method list.
+- Typechecker resolver validation now derives type-parameter counts, names,
+  display bounds, and typed bound refs from one shared expectation pass for
+  value and type-like symbols, reducing duplicate resolver metadata handoff
+  construction.
 - Resolver-backed struct and enum collection now also uses typed resolver
   generic bound refs, so generic type templates no longer retain stale AST-only
   behavior bounds after resolver validation.
