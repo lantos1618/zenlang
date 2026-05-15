@@ -883,6 +883,8 @@ checked-in docs, tests, and commits only.
   local declaration, module-graph import, and source-dependency seeding paths.
 - AST behavior metadata collection now uses a shared helper across local
   declaration and module-graph import seeding paths.
+- Behavior default method signature seeding now shares one helper across local
+  and imported behavior implementation paths.
 
 ## Current Phase
 

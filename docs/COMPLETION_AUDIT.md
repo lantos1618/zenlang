@@ -806,6 +806,8 @@ and do not assume Phase 4 is ready without evidence.
   local declaration, module-graph import, and source-dependency seeding paths.
 - AST behavior metadata collection now uses a shared helper across local
   declaration and module-graph import seeding paths.
+- Behavior default method signature seeding now shares one helper across local
+  and imported behavior implementation paths.
 
 ## Unresolved Gaps
 

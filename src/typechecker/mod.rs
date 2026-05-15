@@ -461,6 +461,23 @@ fn behavior_info_from_ast_methods(
     }
 }
 
+fn func_info_from_behavior_method(
+    name: String,
+    params: &[Param],
+    return_type: &Option<AstType>,
+) -> FuncInfo {
+    FuncInfo {
+        name,
+        params: params
+            .iter()
+            .map(|param| (param.name.clone(), param.ty.clone()))
+            .collect(),
+        return_type: return_type.clone().unwrap_or(AstType::Void),
+        type_params: Vec::new(),
+        type_param_bounds: HashMap::new(),
+    }
+}
+
 fn type_param_bounds_from_resolver_refs(
     bounds: &[TypeParameterBoundRefMetadata],
 ) -> HashMap<String, BehaviorBound> {
@@ -2286,17 +2303,7 @@ impl TypeChecker {
             let key = format!("{}.{}", type_name, default.name);
             self.methods.insert(
                 key.clone(),
-                FuncInfo {
-                    name: key,
-                    params: default
-                        .params
-                        .iter()
-                        .map(|p| (p.name.clone(), p.ty.clone()))
-                        .collect(),
-                    return_type: default.return_type.unwrap_or(AstType::Void),
-                    type_params: Vec::new(),
-                    type_param_bounds: HashMap::new(),
-                },
+                func_info_from_behavior_method(key, &default.params, &default.return_type),
             );
         }
     }
@@ -5429,17 +5436,7 @@ impl TypeChecker {
                 let key = format!("{}.{}", local_name, default.name);
                 self.methods.insert(
                     key.clone(),
-                    FuncInfo {
-                        name: key,
-                        params: default
-                            .params
-                            .iter()
-                            .map(|param| (param.name.clone(), param.ty.clone()))
-                            .collect(),
-                        return_type: default.return_type.unwrap_or(AstType::Void),
-                        type_params: Vec::new(),
-                        type_param_bounds: HashMap::new(),
-                    },
+                    func_info_from_behavior_method(key, &default.params, &default.return_type),
                 );
             }
         }
