@@ -1189,6 +1189,13 @@ struct CountValidation {
 }
 
 impl CountValidation {
+    fn value_parameter_resolver_code() -> Self {
+        Self {
+            label: "parameter count",
+            code: "E0211",
+        }
+    }
+
     fn message(
         self,
         symbol_kind: &str,
@@ -8915,10 +8922,7 @@ impl TypeChecker {
             name,
             symbol.parameter_count,
             expected.count,
-            CountValidation {
-                label: "parameter count",
-                code: "E0211",
-            },
+            CountValidation::value_parameter_resolver_code(),
             span,
         );
 
@@ -9982,6 +9986,14 @@ Point.get = (self: Point) i32 { return self.x }
             validation.message("variant", "Some", None, 1),
             "resolver variant symbol 'Some' has parameter count unknown, expected 1"
         );
+    }
+
+    #[test]
+    fn count_validation_uses_value_parameter_resolver_code() {
+        let validation = CountValidation::value_parameter_resolver_code();
+
+        assert_eq!(validation.label, "parameter count");
+        assert_eq!(validation.code, "E0211");
     }
 
     #[test]
