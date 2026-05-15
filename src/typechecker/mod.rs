@@ -111,6 +111,7 @@ struct ResolverBehaviorImplBlockDeclarationTask<'a> {
     behavior: &'a str,
     behavior_type_args: &'a [AstType],
     methods: &'a [Declaration],
+    span: Span,
 }
 
 struct ResolverBehaviorImplBlockTask<'a> {
@@ -3502,7 +3503,11 @@ impl TypeChecker {
         let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
         self.collect_resolver_declaration_metadata(symbols, &tasks);
         self.collect_resolver_behavior_impl_metadata(&tasks.behavior_impl_blocks, symbols);
-        self.validate_resolver_collected_declaration_semantics(decls, symbols);
+        self.validate_resolver_collected_declaration_semantics(
+            decls,
+            symbols,
+            &tasks.behavior_impl_blocks,
+        );
         self.clear_resolver_behavior_ref_state();
         self.refresh_resolver_type_behavior_impls(&tasks.types, symbols);
     }
@@ -3553,6 +3558,7 @@ impl TypeChecker {
                     behavior: Some(behavior),
                     behavior_type_args,
                     methods,
+                    span,
                     ..
                 } => {
                     tasks
@@ -3562,6 +3568,7 @@ impl TypeChecker {
                             behavior,
                             behavior_type_args,
                             methods,
+                            span: *span,
                         });
                 }
                 Declaration::Struct {
@@ -3746,9 +3753,16 @@ impl TypeChecker {
         &mut self,
         decls: &[Declaration],
         symbols: &SymbolTable,
+        behavior_impl_tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
     ) {
         self.with_resolver_backed_collection(|checker| {
-            checker.validate_collected_declaration_semantics(decls, Some(symbols));
+            checker.validate_resolver_collected_behavior_impl_declarations(
+                symbols,
+                behavior_impl_tasks,
+            );
+            checker.validate_collected_behavior_requires_declarations(decls, Some(symbols));
+            checker.validate_generic_type_references(decls, Some(symbols));
+            checker.validate_struct_field_defaults(decls, Some(symbols));
         });
     }
 
@@ -3865,40 +3879,24 @@ impl TypeChecker {
         symbols: Option<&SymbolTable>,
     ) {
         let mut impl_tasks = Vec::new();
-        let mut requires_tasks = Vec::new();
 
         for decl in decls {
-            match decl {
-                Declaration::ImplBlock {
-                    type_name,
-                    behavior: Some(behavior),
-                    behavior_type_args,
-                    methods,
-                    span,
-                    ..
-                } => {
-                    impl_tasks.push(BehaviorImplValidationTask {
-                        type_name,
-                        behavior,
-                        behavior_type_args,
-                        methods,
-                        span: *span,
-                    });
-                }
-                Declaration::Requires {
+            if let Declaration::ImplBlock {
+                type_name,
+                behavior: Some(behavior),
+                behavior_type_args,
+                methods,
+                span,
+                ..
+            } = decl
+            {
+                impl_tasks.push(BehaviorImplValidationTask {
                     type_name,
                     behavior,
                     behavior_type_args,
-                    span,
-                } => {
-                    requires_tasks.push(BehaviorRequiresValidationTask {
-                        type_name,
-                        behavior,
-                        behavior_type_args,
-                        span: *span,
-                    });
-                }
-                _ => {}
+                    methods,
+                    span: *span,
+                });
             }
         }
 
@@ -3913,6 +3911,51 @@ impl TypeChecker {
             );
         }
 
+        self.validate_collected_behavior_requires_declarations(decls, symbols);
+        self.validate_generic_type_references(decls, symbols);
+        self.validate_struct_field_defaults(decls, symbols);
+    }
+
+    fn validate_resolver_collected_behavior_impl_declarations(
+        &mut self,
+        symbols: &SymbolTable,
+        tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
+    ) {
+        for task in tasks {
+            self.validate_collected_behavior_impl_declaration(
+                Some(symbols),
+                task.ast_type_name,
+                task.behavior,
+                task.behavior_type_args,
+                task.methods,
+                task.span,
+            );
+        }
+    }
+
+    fn validate_collected_behavior_requires_declarations(
+        &mut self,
+        decls: &[Declaration],
+        symbols: Option<&SymbolTable>,
+    ) {
+        let mut requires_tasks = Vec::new();
+        for decl in decls {
+            if let Declaration::Requires {
+                type_name,
+                behavior,
+                behavior_type_args,
+                span,
+            } = decl
+            {
+                requires_tasks.push(BehaviorRequiresValidationTask {
+                    type_name,
+                    behavior,
+                    behavior_type_args,
+                    span: *span,
+                });
+            }
+        }
+
         for task in requires_tasks {
             self.validate_collected_behavior_requires_declaration(
                 symbols,
@@ -3922,9 +3965,6 @@ impl TypeChecker {
                 task.span,
             );
         }
-
-        self.validate_generic_type_references(decls, symbols);
-        self.validate_struct_field_defaults(decls, symbols);
     }
 
     fn validate_collected_behavior_impl_declaration(

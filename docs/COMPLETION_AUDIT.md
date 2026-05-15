@@ -1878,6 +1878,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`
   and
   `cargo test collect_declarations_with_symbols_uses_resolver_behavior_impl_target_and_name_metadata`.
+- Resolver-backed behavior impl semantic validation now reuses the collected
+  behavior-impl block tasks instead of rebuilding impl tasks from declarations,
+  covered by
+  `cargo test collect_declarations_with_symbols_reports_resolver_restored_impl_target_and_name`.
 
 ## Unresolved Gaps
 

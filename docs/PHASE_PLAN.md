@@ -1633,6 +1633,9 @@ checked-in docs, tests, and commits only.
   replaying the existing resolver-backed collection order. Type behavior-ref
   refresh now reuses the collected type tasks, reducing another duplicate
   declaration scan.
+- Resolver-backed behavior impl semantic validation now reuses the collected
+  behavior-impl block tasks instead of rebuilding impl tasks from declarations
+  during the semantic replay pass.
 
 ## Current Phase
 
