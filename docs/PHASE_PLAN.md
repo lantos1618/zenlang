@@ -155,6 +155,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver behavior-ref actual metadata selection now uses one
   role selector for parent, impl, and required refs instead of separate
   constructors for each association role.
+- Typechecker resolver behavior-ref validation now asks the selected actual
+  metadata to perform contains and full-list matching, keeping name/ref match
+  semantics local to the resolver-owned metadata selection.
 - Typechecker resolver validation now stores expected behavior display
   signatures and typed method metadata as paired per-method expectations before
   deriving the resolver comparison lists.

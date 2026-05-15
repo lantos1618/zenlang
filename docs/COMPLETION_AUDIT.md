@@ -187,6 +187,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-ref actual metadata selection now uses one role selector
   for parent, impl, and required refs, covered by
   `typechecker::tests::behavior_ref_actual_exposes_role_metadata_selection`.
+- Resolver behavior-ref actual metadata now owns contains and full-list
+  matching for display names and typed refs, covered by
+  `typechecker::tests::behavior_ref_actual_matches_expected_edges`.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths, covered by
   `typechecker::tests::resolver_symbol_metadata_helper_requires_symbol_and_selected_metadata`.

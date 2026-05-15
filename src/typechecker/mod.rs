@@ -2204,6 +2204,24 @@ impl<'a> BehaviorRefActual<'a> {
             ),
         }
     }
+
+    fn contains_display(&self, expected: &str) -> bool {
+        self.names
+            .is_some_and(|names| names.iter().any(|name| name == expected))
+    }
+
+    fn contains_metadata(&self, expected: &BehaviorRefMetadata) -> bool {
+        self.refs
+            .is_some_and(|refs| refs.iter().any(|behavior| behavior == expected))
+    }
+
+    fn names_match(&self, expected: &[String]) -> bool {
+        behavior_ref_names_match(self.names, expected)
+    }
+
+    fn refs_match(&self, expected: &[BehaviorRefMetadata]) -> bool {
+        behavior_refs_match(self.refs, expected)
+    }
 }
 
 struct ExpectedBehaviorEdge {
@@ -8837,10 +8855,7 @@ impl TypeChecker {
         expected: ExpectedBehaviorEdge,
         span: Span,
     ) {
-        if !actual
-            .names
-            .is_some_and(|names| names.iter().any(|name| name == &expected.display))
-        {
+        if !actual.contains_display(&expected.display) {
             let actual = format_behavior_ref_names(actual.names);
             self.diagnostics.push(Diagnostic::error(
                 validation.name_code,
@@ -8848,10 +8863,7 @@ impl TypeChecker {
                 span,
             ));
         }
-        if !actual
-            .refs
-            .is_some_and(|refs| refs.iter().any(|behavior| behavior == &expected.metadata))
-        {
+        if !actual.contains_metadata(&expected.metadata) {
             let actual = format_behavior_refs(actual.refs);
             let expected_ref =
                 behavior_ref_display(&expected.metadata.name, &expected.metadata.type_args);
@@ -8872,7 +8884,7 @@ impl TypeChecker {
         span: Span,
     ) {
         let expected = ExpectedBehaviorEdgeMetadata::from_edges(expected);
-        if !behavior_ref_names_match(actual.names, &expected.names) {
+        if !actual.names_match(&expected.names) {
             let actual = format_behavior_ref_names(actual.names);
             let expected_names = format_behavior_ref_names(Some(&expected.names));
             self.diagnostics.push(Diagnostic::error(
@@ -8881,7 +8893,7 @@ impl TypeChecker {
                 span,
             ));
         }
-        if !behavior_refs_match(actual.refs, &expected.refs) {
+        if !actual.refs_match(&expected.refs) {
             let actual = format_behavior_refs(actual.refs);
             let expected_refs = format_behavior_refs(Some(&expected.refs));
             self.diagnostics.push(Diagnostic::error(
@@ -10741,6 +10753,30 @@ Point.requires(Json<str>)
         assert_eq!(format_behavior_refs(impl_refs), "PrettyJson");
         assert_eq!(format_behavior_ref_names(required_names), "Json<str>");
         assert_eq!(format_behavior_refs(required_refs), "Json<str>");
+    }
+
+    #[test]
+    fn behavior_ref_actual_matches_expected_edges() {
+        let names = vec!["Json<i32>".to_string()];
+        let refs = vec![BehaviorRefMetadata {
+            name: "Json".to_string(),
+            type_args: vec![AstType::I32],
+        }];
+        let actual = BehaviorRefActual {
+            names: Some(&names),
+            refs: Some(&refs),
+        };
+        let expected = expected_behavior_edge("Json", &[AstType::I32]);
+        let mismatch = expected_behavior_edge("Debug", &[]);
+        let expected_list =
+            ExpectedBehaviorEdgeMetadata::from_edges(std::slice::from_ref(&expected));
+
+        assert!(actual.contains_display(&expected.display));
+        assert!(actual.contains_metadata(&expected.metadata));
+        assert!(!actual.contains_display(&mismatch.display));
+        assert!(!actual.contains_metadata(&mismatch.metadata));
+        assert!(actual.names_match(&expected_list.names));
+        assert!(actual.refs_match(&expected_list.refs));
     }
 
     #[test]
