@@ -903,6 +903,8 @@ checked-in docs, tests, and commits only.
   constructors for resolver type parameters, bounds, fields, and variants.
 - Resolver-backed behavior metadata restoration now uses the same constructor
   pattern for resolver type parameters, bounds, and restored method signatures.
+- Behavior implementation ref insertion now shares one helper across
+  resolver-restored local impls and imported impl seeding.
 
 ## Current Phase
 

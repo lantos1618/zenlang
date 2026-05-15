@@ -2219,10 +2219,7 @@ impl TypeChecker {
         };
 
         for behavior in impl_refs {
-            self.behavior_impls.insert((
-                name.to_string(),
-                self.behavior_reference_key(&behavior.name, &behavior.type_args),
-            ));
+            self.insert_behavior_impl_ref(name, &behavior.name, &behavior.type_args);
         }
     }
 
@@ -2417,6 +2414,17 @@ impl TypeChecker {
         } else {
             self.mangle_generic_type_name(behavior, type_args)
         }
+    }
+
+    fn insert_behavior_impl_ref(
+        &mut self,
+        type_name: &str,
+        behavior: &str,
+        behavior_type_args: &[AstType],
+    ) {
+        let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
+        self.behavior_impls
+            .insert((type_name.to_string(), behavior_key));
     }
 
     fn behavior_type_arg_substitutions(
@@ -5558,9 +5566,7 @@ impl TypeChecker {
             self.seed_behavior_decl_for_imported_impl(behavior, behavior, source_module, graph);
             self.seed_behavior_decl_for_imported_impl_from_imports(behavior, source_module, graph);
 
-            let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
-            self.behavior_impls
-                .insert((local_name.to_string(), behavior_key));
+            self.insert_behavior_impl_ref(local_name, behavior, behavior_type_args);
 
             let dependencies = Self::source_module_dependencies(source_module, graph);
             for method in methods {
