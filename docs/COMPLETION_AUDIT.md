@@ -162,6 +162,13 @@ and do not assume Phase 4 is ready without evidence.
   method once for both AST collection and resolver-backed template stubs,
   shrinking another duplicate function/method declaration walk while preserving
   generic callable template coverage.
+- Resolver-backed callable type-reference validation now shares the same
+  collected signature/body helper after each caller restores the resolver-owned
+  function or method key, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_generic_function_name_for_body_type_refs`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_generic_method_name_for_body_type_refs`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_name_for_body_type_refs`.
 - AST type declaration collection now validates struct/enum generic bounds in
   the same declaration dispatch that builds type metadata, removing the
   separate type-generic-bound pass while preserving generic type diagnostics.

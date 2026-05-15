@@ -6077,10 +6077,7 @@ impl TypeChecker {
         span: Span,
     ) {
         let restored_key = Self::validation_method_key(symbols, ast_key, type_name, span);
-        if let Some(scoped) = self.collected_value_type_param_scope(&restored_key) {
-            self.validate_collected_value_type_references(&restored_key, &scoped, span);
-            self.validate_generic_expr_type_references(body, &scoped);
-        }
+        self.validate_resolver_callable_type_references(&restored_key, body, span);
     }
 
     fn validate_resolver_function_type_references(
@@ -6091,8 +6088,17 @@ impl TypeChecker {
         span: Span,
     ) {
         let restored_name = Self::validation_symbol_name(symbols, Namespace::Value, name, span);
-        if let Some(scoped) = self.collected_value_type_param_scope(&restored_name) {
-            self.validate_collected_value_type_references(&restored_name, &scoped, span);
+        self.validate_resolver_callable_type_references(&restored_name, body, span);
+    }
+
+    fn validate_resolver_callable_type_references(
+        &mut self,
+        restored_key: &str,
+        body: &Expression,
+        span: Span,
+    ) {
+        if let Some(scoped) = self.collected_value_type_param_scope(restored_key) {
+            self.validate_collected_value_type_references(restored_key, &scoped, span);
             self.validate_generic_expr_type_references(body, &scoped);
         }
     }
@@ -15331,6 +15337,37 @@ apply<T: Json<T>> = (callback: (T) T) (T) T {
                 params: vec![AstType::Named("T".to_string())],
                 ret: Box::new(AstType::Named("T".to_string())),
             })
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_generic_function_name_for_body_type_refs() {
+        let mut program = parse_program(
+            r#"
+keep<T> = (value: T) T {
+    same: T = value
+    return same
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function {
+            name, type_params, ..
+        } = &mut program.declarations[0]
+        {
+            *name = "missing".to_string();
+            type_params[0].name = "Stale".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored generic function name and type parameters should avoid stale AST body type-ref diagnostics: {:?}",
+            tc.diagnostics
         );
     }
 

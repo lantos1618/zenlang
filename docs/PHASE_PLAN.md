@@ -74,6 +74,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed `Type.impl` method type-reference validation now shares the
   restored-method helper, so top-level and impl method body type-ref checks use
   the same resolver-owned key path.
+- Resolver-backed callable type-reference validation now shares the collected
+  signature/body validation helper after function, top-level method, and
+  `Type.impl` method dispatch restore the resolver-owned callable key, with
+  focused coverage for stale callable names in body type refs.
 - Resolver-backed top-level method collection also restores method names from
   resolver value symbols by declaration span when AST-only method names are
   stale, so collected `Type.method` signatures use resolver-owned names.
