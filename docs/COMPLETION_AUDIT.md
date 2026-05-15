@@ -589,8 +589,9 @@ and do not assume Phase 4 is ready without evidence.
   missing-method diagnostics and generated-C assertions for a positive
   inherited-bound specialization.
 - Resolver-backed behavior association validation rejects extra typed behavior
-  impl and requires refs even when display-name metadata still matches the AST,
-  covered by
+  parent, impl, and requires refs even when display-name metadata still matches
+  the AST, covered by
+  `typechecker::tests::check_program_with_symbols_rejects_extra_resolver_behavior_parent_refs`,
   `typechecker::tests::check_program_with_symbols_rejects_extra_resolver_behavior_impl_refs`
   and
   `typechecker::tests::check_program_with_symbols_rejects_extra_resolver_behavior_required_refs`.
