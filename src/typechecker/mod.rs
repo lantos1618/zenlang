@@ -165,9 +165,13 @@ struct ExpectedValueSymbol {
 #[derive(Default)]
 struct ExpectedParameters {
     count: usize,
-    names: Vec<String>,
-    types: Vec<AstType>,
-    type_names: Vec<String>,
+    params: Vec<ExpectedParameter>,
+}
+
+struct ExpectedParameter {
+    name: String,
+    typed: AstType,
+    display: String,
 }
 
 struct ExpectedReturnType {
@@ -7471,21 +7475,31 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.parameter_names.as_deref() != Some(expected.names.as_slice()) {
+        let expected_names: Vec<_> = expected
+            .params
+            .iter()
+            .map(|param| param.name.clone())
+            .collect();
+        if symbol.parameter_names.as_deref() != Some(expected_names.as_slice()) {
             let actual = format_parameter_names(symbol.parameter_names.as_deref());
-            let expected_names = format_parameter_names(Some(&expected.names));
+            let expected_names_display = format_parameter_names(Some(&expected_names));
             self.diagnostics.push(Diagnostic::error(
                 "E0223",
                 format!(
-                    "resolver value symbol '{name}' has parameter names '{actual}', expected '{expected_names}'"
+                    "resolver value symbol '{name}' has parameter names '{actual}', expected '{expected_names_display}'"
                 ),
                 span,
             ));
         }
 
-        if symbol.parameter_type_names.as_deref() != Some(expected.type_names.as_slice()) {
+        let expected_type_names: Vec<_> = expected
+            .params
+            .iter()
+            .map(|param| param.display.clone())
+            .collect();
+        if symbol.parameter_type_names.as_deref() != Some(expected_type_names.as_slice()) {
             let actual = format_parameter_type_names(symbol.parameter_type_names.as_deref());
-            let expected_types = format_parameter_type_names(Some(&expected.type_names));
+            let expected_types = format_parameter_type_names(Some(&expected_type_names));
             self.diagnostics.push(Diagnostic::error(
                 "E0216",
                 format!(
@@ -7494,9 +7508,14 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.parameter_types.as_deref() != Some(expected.types.as_slice()) {
+        let expected_types: Vec<_> = expected
+            .params
+            .iter()
+            .map(|param| param.typed.clone())
+            .collect();
+        if symbol.parameter_types.as_deref() != Some(expected_types.as_slice()) {
             let actual = format_ast_type_list(symbol.parameter_types.as_deref());
-            let expected_types = format_ast_type_list(Some(&expected.types));
+            let expected_types = format_ast_type_list(Some(&expected_types));
             self.diagnostics.push(Diagnostic::error(
                 "E0356",
                 format!(
@@ -7650,9 +7669,11 @@ fn expected_parameters(params: &[Param]) -> ExpectedParameters {
         ..ExpectedParameters::default()
     };
     for param in params {
-        expected.names.push(param.name.clone());
-        expected.types.push(param.ty.clone());
-        expected.type_names.push(param.ty.display_name());
+        expected.params.push(ExpectedParameter {
+            name: param.name.clone(),
+            typed: param.ty.clone(),
+            display: param.ty.display_name(),
+        });
     }
     expected
 }
@@ -7926,16 +7947,27 @@ fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> ExpectedBehavio
     for method in methods {
         let params = expected_parameters(&method.params);
         let return_type = expected_return_type(&method.return_type);
+        let parameter_type_names: Vec<_> = params
+            .params
+            .iter()
+            .map(|param| param.display.clone())
+            .collect();
+        let parameter_names: Vec<_> = params
+            .params
+            .iter()
+            .map(|param| param.name.clone())
+            .collect();
+        let parameter_types: Vec<_> = params.params.into_iter().map(|param| param.typed).collect();
         expected.methods.push(ExpectedBehaviorMethod {
             signature: (
                 method.name.clone(),
-                params.type_names.clone(),
+                parameter_type_names,
                 return_type.type_name,
             ),
             metadata: BehaviorMethodTypeMetadata {
                 name: method.name.clone(),
-                parameter_names: params.names,
-                parameter_types: params.types,
+                parameter_names,
+                parameter_types,
                 return_type: return_type.ty,
             },
         });

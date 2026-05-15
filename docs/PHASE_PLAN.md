@@ -143,6 +143,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver validation now stores expected type-parameter display
   bounds and typed bound refs as paired per-bound expectations before deriving
   resolver comparison lists.
+- Typechecker resolver validation now stores expected value parameter names,
+  display types, and typed metadata as paired per-parameter expectations before
+  deriving resolver comparison lists.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, reducing
