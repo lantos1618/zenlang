@@ -773,7 +773,7 @@ impl TypeChecker {
     ) -> Result<TypedProgram, Vec<Diagnostic>> {
         // Phase 1: Collect type definitions and function signatures
         self.collect_declarations(&program.declarations);
-        self.validate_collected_declaration_semantics(&program.declarations);
+        self.validate_collected_declaration_semantics(&program.declarations, None);
         self.check_program_after_collection(program)
     }
 
@@ -1424,9 +1424,10 @@ impl TypeChecker {
                 ..
             } = decl
             {
+                let type_name = self.resolver_impl_type_name_for(symbols, type_name, methods);
                 self.collect_resolver_behavior_impl_method_signatures(
                     symbols,
-                    type_name,
+                    &type_name,
                     behavior,
                     behavior_type_args,
                     methods,
@@ -1445,8 +1446,9 @@ impl TypeChecker {
                 ..
             } = decl
             {
+                let type_name = self.resolver_impl_type_name_for(symbols, type_name, methods);
                 self.collect_behavior_default_method_signatures(
-                    type_name,
+                    &type_name,
                     behavior,
                     behavior_type_args,
                     methods,
@@ -1456,7 +1458,7 @@ impl TypeChecker {
         self.resolver_backed_collection = false;
 
         self.resolver_backed_collection = true;
-        self.validate_collected_declaration_semantics(decls);
+        self.validate_collected_declaration_semantics(decls, Some(symbols));
         self.resolver_backed_collection = false;
         self.resolver_behavior_impl_refs.clear();
         self.resolver_behavior_required_refs.clear();
@@ -1475,7 +1477,11 @@ impl TypeChecker {
         }
     }
 
-    fn validate_collected_declaration_semantics(&mut self, decls: &[Declaration]) {
+    fn validate_collected_declaration_semantics(
+        &mut self,
+        decls: &[Declaration],
+        symbols: Option<&SymbolTable>,
+    ) {
         for decl in decls {
             if let Declaration::ImplBlock {
                 type_name,
@@ -1486,7 +1492,10 @@ impl TypeChecker {
                 ..
             } = decl
             {
-                self.check_behavior_impl(type_name, behavior, behavior_type_args, methods, *span);
+                let type_name = symbols
+                    .map(|symbols| self.resolver_impl_type_name_for(symbols, type_name, methods))
+                    .unwrap_or_else(|| type_name.clone());
+                self.check_behavior_impl(&type_name, behavior, behavior_type_args, methods, *span);
             }
         }
 
@@ -1712,6 +1721,36 @@ impl TypeChecker {
                     .map(|symbol| symbol.name.clone())
             })
             .unwrap_or_else(|| name.to_string())
+    }
+
+    fn resolver_impl_type_name_for(
+        &self,
+        symbols: &SymbolTable,
+        type_name: &str,
+        methods: &[Declaration],
+    ) -> String {
+        if symbols.lookup(Namespace::Type, type_name).is_some() {
+            return type_name.to_string();
+        }
+
+        methods
+            .iter()
+            .find_map(|method| {
+                let Declaration::Function { span, .. } = method else {
+                    return None;
+                };
+                symbols
+                    .symbols()
+                    .iter()
+                    .find(|symbol| {
+                        symbol.namespace == Namespace::Value
+                            && symbol.name.contains('.')
+                            && symbol.definition_span == *span
+                    })
+                    .and_then(|symbol| symbol.name.rsplit_once('.'))
+                    .map(|(type_name, _)| type_name.to_string())
+            })
+            .unwrap_or_else(|| type_name.to_string())
     }
 
     fn collect_resolver_struct_fields(&mut self, symbols: &SymbolTable, name: &str) {
@@ -10222,6 +10261,39 @@ Point.implements(Json) {
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored impl method name metadata should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_impl_target_name_metadata() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { type_name, .. } = &mut program.declarations[2] {
+            *type_name = "Missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(tc.methods.contains_key("Point.encode"));
+        assert!(!tc.methods.contains_key("Missing.encode"));
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior impl target should avoid stale AST impl diagnostics: {:?}",
             tc.diagnostics
         );
     }

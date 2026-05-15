@@ -786,6 +786,10 @@ checked-in docs, tests, and commits only.
   impl method template bodies for later metadata replacement.
 - Resolver-backed `Type.impl` method collection now restores method keys by
   declaration span even when the AST-only impl target type name is stale.
+- Resolver-backed behavior impl method collection and conformance now restore
+  the impl target type name from resolver method symbols by declaration span,
+  so stale AST-only impl target names cannot produce false undefined-type
+  diagnostics.
 - Resolver-backed struct collection no longer seeds AST-only field metadata
   before resolver metadata restoration.
 - Resolver-backed enum collection no longer seeds AST-only variant metadata
