@@ -2395,12 +2395,11 @@ impl TypeChecker {
         span: Span,
     ) {
         let resolver_required_ref = self.resolver_required_ref_for(type_name, behavior);
-        if self.resolver_backed_collection
-            && resolver_required_ref.is_none()
-            && self
-                .resolver_missing_behavior_required_refs
-                .contains(type_name)
-        {
+        if self.should_skip_missing_resolver_behavior_ref(
+            resolver_required_ref.as_ref(),
+            type_name,
+            &self.resolver_missing_behavior_required_refs,
+        ) {
             return;
         }
         let behavior = resolver_required_ref
@@ -2695,10 +2694,11 @@ impl TypeChecker {
         span: Span,
     ) {
         let resolver_impl_ref = self.resolver_impl_ref_for(type_name, behavior);
-        if self.resolver_backed_collection
-            && resolver_impl_ref.is_none()
-            && self.resolver_missing_behavior_impl_refs.contains(type_name)
-        {
+        if self.should_skip_missing_resolver_behavior_ref(
+            resolver_impl_ref.as_ref(),
+            type_name,
+            &self.resolver_missing_behavior_impl_refs,
+        ) {
             return;
         }
         let behavior = resolver_impl_ref
@@ -2946,6 +2946,17 @@ impl TypeChecker {
 
         let refs = refs_by_type.get_mut(type_name)?;
         Self::pop_resolver_behavior_ref(refs, behavior)
+    }
+
+    fn should_skip_missing_resolver_behavior_ref(
+        &self,
+        resolver_ref: Option<&BehaviorRefMetadata>,
+        type_name: &str,
+        missing_refs: &HashSet<String>,
+    ) -> bool {
+        self.resolver_backed_collection
+            && resolver_ref.is_none()
+            && missing_refs.contains(type_name)
     }
 
     fn pop_resolver_behavior_ref(
