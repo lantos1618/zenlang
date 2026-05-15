@@ -562,6 +562,30 @@ fn behavior_method_signatures_match(
             .all(|(left, right)| left.mutable == right.mutable && left.ty == right.ty)
 }
 
+#[derive(Clone, Copy)]
+struct BehaviorRefValidation {
+    symbol_kind: &'static str,
+    name_label: &'static str,
+    ref_label: &'static str,
+    name_code: &'static str,
+    ref_code: &'static str,
+}
+
+struct BehaviorRefActual<'a> {
+    names: Option<&'a [String]>,
+    refs: Option<&'a [BehaviorRefMetadata]>,
+}
+
+struct ExpectedBehaviorRef<'a> {
+    name: &'a str,
+    reference: &'a BehaviorRefMetadata,
+}
+
+struct ExpectedBehaviorRefList<'a> {
+    names: &'a [String],
+    refs: &'a [BehaviorRefMetadata],
+}
+
 // ── TypeChecker ───────────────────────────────────────────────────
 
 pub struct TypeChecker {
@@ -6995,36 +7019,25 @@ impl TypeChecker {
         expected_parent_ref: &BehaviorRefMetadata,
         span: Span,
     ) {
-        if !symbol
-            .behavior_parent_names
-            .as_deref()
-            .is_some_and(|parents| parents.iter().any(|parent| parent == expected_parent))
-        {
-            let actual = format_behavior_parent_names(symbol.behavior_parent_names.as_deref());
-            self.diagnostics.push(Diagnostic::error(
-                "E0235",
-                format!(
-                    "resolver behavior symbol '{name}' has parents '{actual}', expected to include '{expected_parent}'"
-                ),
-                span,
-            ));
-        }
-        if !symbol
-            .behavior_parent_refs
-            .as_deref()
-            .is_some_and(|parents| parents.iter().any(|parent| parent == expected_parent_ref))
-        {
-            let actual = format_behavior_refs(symbol.behavior_parent_refs.as_deref());
-            let expected =
-                behavior_ref_display(&expected_parent_ref.name, &expected_parent_ref.type_args);
-            self.diagnostics.push(Diagnostic::error(
-                "E0245",
-                format!(
-                    "resolver behavior symbol '{name}' has parent refs '{actual}', expected to include '{expected}'"
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_behavior_ref_contains(
+            BehaviorRefValidation {
+                symbol_kind: "behavior",
+                name_label: "parents",
+                ref_label: "parent refs",
+                name_code: "E0235",
+                ref_code: "E0245",
+            },
+            name,
+            BehaviorRefActual {
+                names: symbol.behavior_parent_names.as_deref(),
+                refs: symbol.behavior_parent_refs.as_deref(),
+            },
+            ExpectedBehaviorRef {
+                name: expected_parent,
+                reference: expected_parent_ref,
+            },
+            span,
+        );
     }
 
     fn validate_resolver_behavior_parent_list(
@@ -7035,28 +7048,25 @@ impl TypeChecker {
         expected_parent_refs: &[BehaviorRefMetadata],
         span: Span,
     ) {
-        if !behavior_ref_names_match(symbol.behavior_parent_names.as_deref(), expected_parents) {
-            let actual = format_behavior_parent_names(symbol.behavior_parent_names.as_deref());
-            let expected = format_behavior_parent_names(Some(expected_parents));
-            self.diagnostics.push(Diagnostic::error(
-                "E0240",
-                format!(
-                    "resolver behavior symbol '{name}' has parents '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
-        if !behavior_refs_match(symbol.behavior_parent_refs.as_deref(), expected_parent_refs) {
-            let actual = format_behavior_refs(symbol.behavior_parent_refs.as_deref());
-            let expected = format_behavior_refs(Some(expected_parent_refs));
-            self.diagnostics.push(Diagnostic::error(
-                "E0246",
-                format!(
-                    "resolver behavior symbol '{name}' has parent refs '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_behavior_ref_list(
+            BehaviorRefValidation {
+                symbol_kind: "behavior",
+                name_label: "parents",
+                ref_label: "parent refs",
+                name_code: "E0240",
+                ref_code: "E0246",
+            },
+            name,
+            BehaviorRefActual {
+                names: symbol.behavior_parent_names.as_deref(),
+                refs: symbol.behavior_parent_refs.as_deref(),
+            },
+            ExpectedBehaviorRefList {
+                names: expected_parents,
+                refs: expected_parent_refs,
+            },
+            span,
+        );
     }
 
     fn validate_resolver_behavior_impl_names(
@@ -7067,36 +7077,25 @@ impl TypeChecker {
         expected_impl_ref: &BehaviorRefMetadata,
         span: Span,
     ) {
-        if !symbol
-            .behavior_impl_names
-            .as_deref()
-            .is_some_and(|impls| impls.iter().any(|behavior| behavior == expected_impl))
-        {
-            let actual = format_behavior_ref_names(symbol.behavior_impl_names.as_deref());
-            self.diagnostics.push(Diagnostic::error(
-                "E0236",
-                format!(
-                    "resolver type symbol '{name}' has behavior impls '{actual}', expected to include '{expected_impl}'"
-                ),
-                span,
-            ));
-        }
-        if !symbol
-            .behavior_impl_refs
-            .as_deref()
-            .is_some_and(|impls| impls.iter().any(|behavior| behavior == expected_impl_ref))
-        {
-            let actual = format_behavior_refs(symbol.behavior_impl_refs.as_deref());
-            let expected =
-                behavior_ref_display(&expected_impl_ref.name, &expected_impl_ref.type_args);
-            self.diagnostics.push(Diagnostic::error(
-                "E0247",
-                format!(
-                    "resolver type symbol '{name}' has behavior impl refs '{actual}', expected to include '{expected}'"
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_behavior_ref_contains(
+            BehaviorRefValidation {
+                symbol_kind: "type",
+                name_label: "behavior impls",
+                ref_label: "behavior impl refs",
+                name_code: "E0236",
+                ref_code: "E0247",
+            },
+            name,
+            BehaviorRefActual {
+                names: symbol.behavior_impl_names.as_deref(),
+                refs: symbol.behavior_impl_refs.as_deref(),
+            },
+            ExpectedBehaviorRef {
+                name: expected_impl,
+                reference: expected_impl_ref,
+            },
+            span,
+        );
     }
 
     fn validate_resolver_behavior_impl_list(
@@ -7107,28 +7106,25 @@ impl TypeChecker {
         expected_impl_refs: &[BehaviorRefMetadata],
         span: Span,
     ) {
-        if !behavior_ref_names_match(symbol.behavior_impl_names.as_deref(), expected_impls) {
-            let actual = format_behavior_ref_names(symbol.behavior_impl_names.as_deref());
-            let expected = format_behavior_ref_names(Some(expected_impls));
-            self.diagnostics.push(Diagnostic::error(
-                "E0238",
-                format!(
-                    "resolver type symbol '{name}' has behavior impls '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
-        if !behavior_refs_match(symbol.behavior_impl_refs.as_deref(), expected_impl_refs) {
-            let actual = format_behavior_refs(symbol.behavior_impl_refs.as_deref());
-            let expected = format_behavior_refs(Some(expected_impl_refs));
-            self.diagnostics.push(Diagnostic::error(
-                "E0248",
-                format!(
-                    "resolver type symbol '{name}' has behavior impl refs '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_behavior_ref_list(
+            BehaviorRefValidation {
+                symbol_kind: "type",
+                name_label: "behavior impls",
+                ref_label: "behavior impl refs",
+                name_code: "E0238",
+                ref_code: "E0248",
+            },
+            name,
+            BehaviorRefActual {
+                names: symbol.behavior_impl_names.as_deref(),
+                refs: symbol.behavior_impl_refs.as_deref(),
+            },
+            ExpectedBehaviorRefList {
+                names: expected_impls,
+                refs: expected_impl_refs,
+            },
+            span,
+        );
     }
 
     fn validate_resolver_behavior_required_names(
@@ -7139,46 +7135,25 @@ impl TypeChecker {
         expected_required_ref: &BehaviorRefMetadata,
         span: Span,
     ) {
-        if !symbol
-            .behavior_required_names
-            .as_deref()
-            .is_some_and(|required| {
-                required
-                    .iter()
-                    .any(|behavior| behavior == expected_required)
-            })
-        {
-            let actual = format_behavior_ref_names(symbol.behavior_required_names.as_deref());
-            self.diagnostics.push(Diagnostic::error(
-                "E0237",
-                format!(
-                    "resolver type symbol '{name}' has behavior requires '{actual}', expected to include '{expected_required}'"
-                ),
-                span,
-            ));
-        }
-        if !symbol
-            .behavior_required_refs
-            .as_deref()
-            .is_some_and(|required| {
-                required
-                    .iter()
-                    .any(|behavior| behavior == expected_required_ref)
-            })
-        {
-            let actual = format_behavior_refs(symbol.behavior_required_refs.as_deref());
-            let expected = behavior_ref_display(
-                &expected_required_ref.name,
-                &expected_required_ref.type_args,
-            );
-            self.diagnostics.push(Diagnostic::error(
-                "E0249",
-                format!(
-                    "resolver type symbol '{name}' has behavior requires refs '{actual}', expected to include '{expected}'"
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_behavior_ref_contains(
+            BehaviorRefValidation {
+                symbol_kind: "type",
+                name_label: "behavior requires",
+                ref_label: "behavior requires refs",
+                name_code: "E0237",
+                ref_code: "E0249",
+            },
+            name,
+            BehaviorRefActual {
+                names: symbol.behavior_required_names.as_deref(),
+                refs: symbol.behavior_required_refs.as_deref(),
+            },
+            ExpectedBehaviorRef {
+                name: expected_required,
+                reference: expected_required_ref,
+            },
+            span,
+        );
     }
 
     fn validate_resolver_behavior_required_list(
@@ -7189,27 +7164,95 @@ impl TypeChecker {
         expected_required_refs: &[BehaviorRefMetadata],
         span: Span,
     ) {
-        if !behavior_ref_names_match(symbol.behavior_required_names.as_deref(), expected_required) {
-            let actual = format_behavior_ref_names(symbol.behavior_required_names.as_deref());
-            let expected = format_behavior_ref_names(Some(expected_required));
+        self.validate_resolver_behavior_ref_list(
+            BehaviorRefValidation {
+                symbol_kind: "type",
+                name_label: "behavior requires",
+                ref_label: "behavior requires refs",
+                name_code: "E0239",
+                ref_code: "E0250",
+            },
+            name,
+            BehaviorRefActual {
+                names: symbol.behavior_required_names.as_deref(),
+                refs: symbol.behavior_required_refs.as_deref(),
+            },
+            ExpectedBehaviorRefList {
+                names: expected_required,
+                refs: expected_required_refs,
+            },
+            span,
+        );
+    }
+
+    fn validate_resolver_behavior_ref_contains(
+        &mut self,
+        validation: BehaviorRefValidation,
+        name: &str,
+        actual: BehaviorRefActual<'_>,
+        expected: ExpectedBehaviorRef<'_>,
+        span: Span,
+    ) {
+        if !actual
+            .names
+            .is_some_and(|names| names.iter().any(|name| name == expected.name))
+        {
+            let actual = format_behavior_ref_names(actual.names);
             self.diagnostics.push(Diagnostic::error(
-                "E0239",
+                validation.name_code,
                 format!(
-                    "resolver type symbol '{name}' has behavior requires '{actual}', expected '{expected}'"
+                    "resolver {} symbol '{name}' has {} '{actual}', expected to include '{}'",
+                    validation.symbol_kind, validation.name_label, expected.name
                 ),
                 span,
             ));
         }
-        if !behavior_refs_match(
-            symbol.behavior_required_refs.as_deref(),
-            expected_required_refs,
-        ) {
-            let actual = format_behavior_refs(symbol.behavior_required_refs.as_deref());
-            let expected = format_behavior_refs(Some(expected_required_refs));
+        if !actual
+            .refs
+            .is_some_and(|refs| refs.iter().any(|behavior| behavior == expected.reference))
+        {
+            let actual = format_behavior_refs(actual.refs);
+            let expected_ref =
+                behavior_ref_display(&expected.reference.name, &expected.reference.type_args);
             self.diagnostics.push(Diagnostic::error(
-                "E0250",
+                validation.ref_code,
                 format!(
-                    "resolver type symbol '{name}' has behavior requires refs '{actual}', expected '{expected}'"
+                    "resolver {} symbol '{name}' has {} '{actual}', expected to include '{expected_ref}'",
+                    validation.symbol_kind, validation.ref_label
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn validate_resolver_behavior_ref_list(
+        &mut self,
+        validation: BehaviorRefValidation,
+        name: &str,
+        actual: BehaviorRefActual<'_>,
+        expected: ExpectedBehaviorRefList<'_>,
+        span: Span,
+    ) {
+        if !behavior_ref_names_match(actual.names, expected.names) {
+            let actual = format_behavior_ref_names(actual.names);
+            let expected_names = format_behavior_ref_names(Some(expected.names));
+            self.diagnostics.push(Diagnostic::error(
+                validation.name_code,
+                format!(
+                    "resolver {} symbol '{name}' has {} '{actual}', expected '{expected_names}'",
+                    validation.symbol_kind, validation.name_label
+                ),
+                span,
+            ));
+        }
+        if !behavior_refs_match(actual.refs, expected.refs) {
+            let actual = format_behavior_refs(actual.refs);
+            let expected_refs = format_behavior_refs(Some(expected.refs));
+            self.diagnostics.push(Diagnostic::error(
+                validation.ref_code,
+                format!(
+                    "resolver {} symbol '{name}' has {} '{actual}', expected '{expected_refs}'",
+                    validation.symbol_kind, validation.ref_label
                 ),
                 span,
             ));
@@ -8288,10 +8331,6 @@ fn format_behavior_method_types(methods: Option<&[BehaviorMethodTypeMetadata]>) 
         ),
         None => "unknown".to_string(),
     }
-}
-
-fn format_behavior_parent_names(parents: Option<&[String]>) -> String {
-    format_behavior_ref_names(parents)
 }
 
 fn format_behavior_ref_names(parents: Option<&[String]>) -> String {

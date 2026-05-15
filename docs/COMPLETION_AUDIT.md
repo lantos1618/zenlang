@@ -622,6 +622,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::check_program_with_symbols_rejects_extra_resolver_behavior_impl_refs`
   and
   `typechecker::tests::check_program_with_symbols_rejects_extra_resolver_behavior_required_refs`.
+- Resolver behavior-association diagnostics now use shared parent/impl/requires
+  name/ref validation plumbing, reducing duplicate handoff code while preserving
+  the existing explicit diagnostic labels and error codes.
 
 ## Unresolved Gaps
 
