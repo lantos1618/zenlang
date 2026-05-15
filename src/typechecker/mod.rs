@@ -839,6 +839,17 @@ struct ExpectedVariantPayloadMetadata {
 }
 
 #[derive(Clone, Copy)]
+struct VariantNameValidation {
+    code: &'static str,
+}
+
+impl VariantNameValidation {
+    fn message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!("resolver type symbol '{name}' has variants '{actual}', expected '{expected}'")
+    }
+}
+
+#[derive(Clone, Copy)]
 struct VariantOwnerValidation {
     code: &'static str,
 }
@@ -8072,13 +8083,12 @@ impl TypeChecker {
         span: Span,
     ) {
         if symbol.variant_names.as_deref() != Some(expected_variant_names) {
+            let validation = VariantNameValidation { code: "E0241" };
             let actual = format_variant_names(symbol.variant_names.as_deref());
             let expected = format_variant_names(Some(expected_variant_names));
             self.diagnostics.push(Diagnostic::error(
-                "E0241",
-                format!(
-                    "resolver type symbol '{name}' has variants '{actual}', expected '{expected}'"
-                ),
+                validation.code,
+                validation.message(name, &actual, &expected),
                 span,
             ));
         }
@@ -9837,6 +9847,17 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(
             validation.message("Some", "Result", "Option"),
             "resolver variant symbol 'Some' has owner 'Result', expected 'Option'"
+        );
+    }
+
+    #[test]
+    fn variant_name_validation_formats_message() {
+        let validation = VariantNameValidation { code: "VARIANTS" };
+
+        assert_eq!(validation.code, "VARIANTS");
+        assert_eq!(
+            validation.message("Option", "(Some)", "(Some, None)"),
+            "resolver type symbol 'Option' has variants '(Some)', expected '(Some, None)'"
         );
     }
 

@@ -1013,6 +1013,8 @@ checked-in docs, tests, and commits only.
   typed-payload message formatting through a validation bundle.
 - Resolver variant owner-name validation now carries its diagnostic code and
   message formatting through a validation bundle.
+- Resolver variant-name validation now carries its diagnostic code and message
+  formatting through a validation bundle.
 - Resolver visibility validation now shares one diagnostic helper across
   module, import, local, type-like, variant, and value symbols.
 - Resolver visibility validation now carries its diagnostic code and display
