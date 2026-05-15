@@ -440,6 +440,9 @@ checked-in docs, tests, and commits only.
   Duplicate-parent checks also use restored generic parent refs, so stale
   AST-only parent type arguments cannot collapse distinct parent
   specializations.
+  Inherited method-coherence diagnostics also use restored generic parent refs,
+  so stale AST-only parent type arguments cannot hide conflicting inherited
+  method signatures.
   Inherited missing-method diagnostics also use restored parent behavior refs
   when AST-only `.extends` parent names or type arguments are stale.
   Inherited behavior default synthesis also uses restored parent refs instead

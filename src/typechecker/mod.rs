@@ -15634,6 +15634,65 @@ Point.implements(PrettyJson) {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_reports_conflict_from_restored_parent_type_args() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Debug<T>: behavior {
+    encode: (Self) T
+}
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+PrettyJson.extends(Debug<i32>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let second_parent = program
+            .declarations
+            .iter_mut()
+            .filter(|declaration| matches!(declaration, Declaration::BehaviorExtends { .. }))
+            .nth(1)
+            .expect("second parent declaration");
+        if let Declaration::BehaviorExtends {
+            parent_type_args, ..
+        } = second_parent
+        {
+            parent_type_args[0] = AstType::Str;
+        } else {
+            panic!("expected behavior extends declaration");
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let messages: Vec<_> = tc
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.message.as_str())
+            .collect();
+        assert!(
+            messages.iter().any(|message| {
+                *message == "conflicting behavior method `encode` inherited by `PrettyJson`"
+            }),
+            "resolver-restored parent type args should drive inherited method coherence diagnostics, got {:?}",
+            messages
+        );
+        let parents = tc
+            .behavior_extends
+            .get("PrettyJson")
+            .expect("behavior parents");
+        let parent_keys: Vec<_> = parents.iter().map(|parent| parent.key.as_str()).collect();
+        assert_eq!(parent_keys, vec!["Json_str", "Debug_i32"]);
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_synthesizes_defaults_from_restored_behavior_parent() {
         let mut program = parse_program(
             r#"
