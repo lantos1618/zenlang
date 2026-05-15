@@ -390,9 +390,33 @@ struct ExpectedTypeParameter {
     bound: Option<ExpectedTypeParameterBound>,
 }
 
+impl ExpectedTypeParameter {
+    fn new(type_param: &ast::TypeParam) -> Self {
+        Self {
+            name: type_param.name.clone(),
+            bound: ExpectedTypeParameterBound::new(type_param),
+        }
+    }
+}
+
 struct ExpectedTypeParameterBound {
     display: TypeParameterBoundMetadata,
     reference: TypeParameterBoundRefMetadata,
+}
+
+impl ExpectedTypeParameterBound {
+    fn new(type_param: &ast::TypeParam) -> Option<Self> {
+        let behavior = type_param.constraint.as_ref()?;
+        let display = type_param_bound_display(type_param)?;
+        Some(Self {
+            display: (type_param.name.clone(), display),
+            reference: TypeParameterBoundRefMetadata {
+                type_parameter: type_param.name.clone(),
+                behavior: behavior.clone(),
+                type_args: type_param.constraint_type_args.clone(),
+            },
+        })
+    }
 }
 
 struct ExpectedTypeParameterMetadata {
@@ -9197,21 +9221,7 @@ fn expected_value_symbol(
 fn expected_type_parameter_metadata(type_params: &[ast::TypeParam]) -> Vec<ExpectedTypeParameter> {
     let mut expected = Vec::new();
     for type_param in type_params {
-        let bound = type_param.constraint.as_ref().and_then(|behavior| {
-            let display = type_param_bound_display(type_param)?;
-            Some(ExpectedTypeParameterBound {
-                display: (type_param.name.clone(), display),
-                reference: TypeParameterBoundRefMetadata {
-                    type_parameter: type_param.name.clone(),
-                    behavior: behavior.clone(),
-                    type_args: type_param.constraint_type_args.clone(),
-                },
-            })
-        });
-        expected.push(ExpectedTypeParameter {
-            name: type_param.name.clone(),
-            bound,
-        });
+        expected.push(ExpectedTypeParameter::new(type_param));
     }
     expected
 }
@@ -10886,6 +10896,28 @@ Point.requires(Json<str>)
         assert_eq!(explicit.typed, AstType::Named("Point".to_string()));
         assert_eq!(implicit.display, "void");
         assert_eq!(implicit.typed, AstType::Void);
+    }
+
+    #[test]
+    fn expected_type_parameter_builds_bound_display_and_ref_together() {
+        let type_param = ast::TypeParam {
+            name: "T".to_string(),
+            constraint: Some("Json".to_string()),
+            constraint_type_args: vec![AstType::Named("T".to_string())],
+            span: Span::dummy(),
+        };
+
+        let expected = ExpectedTypeParameter::new(&type_param);
+        let bound = expected.bound.expect("expected bound");
+
+        assert_eq!(expected.name, "T");
+        assert_eq!(bound.display, ("T".to_string(), "Json<T>".to_string()));
+        assert_eq!(bound.reference.type_parameter, "T");
+        assert_eq!(bound.reference.behavior, "Json");
+        assert_eq!(
+            bound.reference.type_args,
+            vec![AstType::Named("T".to_string())]
+        );
     }
 
     #[test]
