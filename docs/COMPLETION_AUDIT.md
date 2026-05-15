@@ -95,6 +95,11 @@ and do not assume Phase 4 is ready without evidence.
   It also resolves stale AST declaration names through resolver symbols before
   validating collected type references and body type annotations, covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_generic_method_name_for_body_type_refs`.
+  When resolver value-signature metadata is incomplete and the collected
+  signature/template is removed, body type-reference validation skips that
+  declaration instead of falling back to stale AST generic parameters, covered
+  by
+  `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_generic_function_body_refs_when_signature_incomplete`.
 - Resolver-backed top-level method collection also restores method names from
   resolver value symbols by declaration span when AST-only method names are
   stale, so collected `Type.method` signatures use resolver-owned names.

@@ -4076,14 +4076,15 @@ impl TypeChecker {
                     if self.resolver_backed_collection {
                         let restored_name =
                             Self::validation_symbol_name(symbols, Namespace::Value, name, *span);
-                        let scoped =
-                            self.collected_value_type_param_scope(&restored_name, type_params);
-                        self.validate_collected_value_type_references(
-                            &restored_name,
-                            &scoped,
-                            *span,
-                        );
-                        self.validate_generic_expr_type_references(body, &scoped);
+                        if let Some(scoped) = self.collected_value_type_param_scope(&restored_name)
+                        {
+                            self.validate_collected_value_type_references(
+                                &restored_name,
+                                &scoped,
+                                *span,
+                            );
+                            self.validate_generic_expr_type_references(body, &scoped);
+                        }
                     } else {
                         let scoped = type_param_name_set(type_params);
                         for param in params {
@@ -4113,14 +4114,14 @@ impl TypeChecker {
                     if self.resolver_backed_collection {
                         let restored_key =
                             Self::validation_method_key(symbols, &ast_key, type_name, *span);
-                        let scoped =
-                            self.collected_value_type_param_scope(&restored_key, type_params);
-                        self.validate_collected_value_type_references(
-                            &restored_key,
-                            &scoped,
-                            *span,
-                        );
-                        self.validate_generic_expr_type_references(body, &scoped);
+                        if let Some(scoped) = self.collected_value_type_param_scope(&restored_key) {
+                            self.validate_collected_value_type_references(
+                                &restored_key,
+                                &scoped,
+                                *span,
+                            );
+                            self.validate_generic_expr_type_references(body, &scoped);
+                        }
                     } else {
                         let scoped = type_param_name_set(type_params);
                         for param in params {
@@ -4200,14 +4201,16 @@ impl TypeChecker {
                                     type_name,
                                     method.span(),
                                 );
-                                let scoped = self
-                                    .collected_value_type_param_scope(&restored_key, type_params);
-                                self.validate_collected_value_type_references(
-                                    &restored_key,
-                                    &scoped,
-                                    method.span(),
-                                );
-                                self.validate_generic_expr_type_references(body, &scoped);
+                                if let Some(scoped) =
+                                    self.collected_value_type_param_scope(&restored_key)
+                                {
+                                    self.validate_collected_value_type_references(
+                                        &restored_key,
+                                        &scoped,
+                                        method.span(),
+                                    );
+                                    self.validate_generic_expr_type_references(body, &scoped);
+                                }
                             } else {
                                 let scoped = type_param_name_set(type_params);
                                 for param in params {
@@ -4259,16 +4262,11 @@ impl TypeChecker {
             .unwrap_or_else(|| ast_key.to_string())
     }
 
-    fn collected_value_type_param_scope(
-        &self,
-        name: &str,
-        ast_type_params: &[ast::TypeParam],
-    ) -> HashSet<String> {
+    fn collected_value_type_param_scope(&self, name: &str) -> Option<HashSet<String>> {
         self.functions
             .get(name)
             .or_else(|| self.methods.get(name))
             .map(|info| info.type_params.iter().cloned().collect())
-            .unwrap_or_else(|| type_param_name_set(ast_type_params))
     }
 
     fn collected_type_type_param_scope(
@@ -10444,6 +10442,39 @@ identity<T> = (value: T) T { return value }
         assert!(
             !tc.generic_functions.contains_key("identity"),
             "resolver-backed collection should not keep AST-only generic function templates when resolver signature metadata is incomplete"
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_validate_stale_generic_function_body_refs_when_signature_incomplete(
+    ) {
+        let mut program = parse_program(
+            r#"
+identity<T> = (value: T) T {
+    same: T = value
+    return same
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "identity", None);
+        if let Declaration::Function { type_params, .. } = &mut program.declarations[0] {
+            type_params[0].name = "Stale".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.generic_functions.contains_key("identity"),
+            "resolver-backed collection should remove generic template when resolver signature metadata is incomplete"
+        );
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-backed collection should not validate stale AST generic body refs when resolver signature metadata is incomplete: {:?}",
+            tc.diagnostics
         );
     }
 
