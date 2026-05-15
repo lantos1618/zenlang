@@ -2115,49 +2115,33 @@ enum BehaviorRefCheck {
 
 impl BehaviorRefValidation {
     fn for_role(role: BehaviorRefRole, check: BehaviorRefCheck) -> Self {
+        let (symbol_kind, name_label, ref_label) = Self::role_labels(role);
+        let (name_code, ref_code) = Self::codes_for(role, check);
+        Self {
+            symbol_kind,
+            name_label,
+            ref_label,
+            name_code,
+            ref_code,
+        }
+    }
+
+    fn role_labels(role: BehaviorRefRole) -> (&'static str, &'static str, &'static str) {
+        match role {
+            BehaviorRefRole::Parent => ("behavior", "parents", "parent refs"),
+            BehaviorRefRole::Impl => ("type", "behavior impls", "behavior impl refs"),
+            BehaviorRefRole::Required => ("type", "behavior requires", "behavior requires refs"),
+        }
+    }
+
+    fn codes_for(role: BehaviorRefRole, check: BehaviorRefCheck) -> (&'static str, &'static str) {
         match (role, check) {
-            (BehaviorRefRole::Parent, BehaviorRefCheck::Contains) => Self {
-                symbol_kind: "behavior",
-                name_label: "parents",
-                ref_label: "parent refs",
-                name_code: "E0235",
-                ref_code: "E0245",
-            },
-            (BehaviorRefRole::Parent, BehaviorRefCheck::List) => Self {
-                symbol_kind: "behavior",
-                name_label: "parents",
-                ref_label: "parent refs",
-                name_code: "E0240",
-                ref_code: "E0246",
-            },
-            (BehaviorRefRole::Impl, BehaviorRefCheck::Contains) => Self {
-                symbol_kind: "type",
-                name_label: "behavior impls",
-                ref_label: "behavior impl refs",
-                name_code: "E0236",
-                ref_code: "E0247",
-            },
-            (BehaviorRefRole::Impl, BehaviorRefCheck::List) => Self {
-                symbol_kind: "type",
-                name_label: "behavior impls",
-                ref_label: "behavior impl refs",
-                name_code: "E0238",
-                ref_code: "E0248",
-            },
-            (BehaviorRefRole::Required, BehaviorRefCheck::Contains) => Self {
-                symbol_kind: "type",
-                name_label: "behavior requires",
-                ref_label: "behavior requires refs",
-                name_code: "E0237",
-                ref_code: "E0249",
-            },
-            (BehaviorRefRole::Required, BehaviorRefCheck::List) => Self {
-                symbol_kind: "type",
-                name_label: "behavior requires",
-                ref_label: "behavior requires refs",
-                name_code: "E0239",
-                ref_code: "E0250",
-            },
+            (BehaviorRefRole::Parent, BehaviorRefCheck::Contains) => ("E0235", "E0245"),
+            (BehaviorRefRole::Parent, BehaviorRefCheck::List) => ("E0240", "E0246"),
+            (BehaviorRefRole::Impl, BehaviorRefCheck::Contains) => ("E0236", "E0247"),
+            (BehaviorRefRole::Impl, BehaviorRefCheck::List) => ("E0238", "E0248"),
+            (BehaviorRefRole::Required, BehaviorRefCheck::Contains) => ("E0237", "E0249"),
+            (BehaviorRefRole::Required, BehaviorRefCheck::List) => ("E0239", "E0250"),
         }
     }
 
@@ -10639,6 +10623,29 @@ Box.get<T> = (self: Box<T>) T { return self.value }
             list.list_ref_message("PrettyJson", "Json, Debug", "Json"),
             "resolver behavior symbol 'PrettyJson' has parent refs 'Json, Debug', expected 'Json'"
         );
+    }
+
+    #[test]
+    fn behavior_ref_validation_separates_role_labels_from_check_codes() {
+        let parent = BehaviorRefValidation::role_labels(BehaviorRefRole::Parent);
+        let implementation = BehaviorRefValidation::role_labels(BehaviorRefRole::Impl);
+        let required = BehaviorRefValidation::role_labels(BehaviorRefRole::Required);
+        let parent_contains =
+            BehaviorRefValidation::codes_for(BehaviorRefRole::Parent, BehaviorRefCheck::Contains);
+        let parent_list =
+            BehaviorRefValidation::codes_for(BehaviorRefRole::Parent, BehaviorRefCheck::List);
+
+        assert_eq!(parent, ("behavior", "parents", "parent refs"));
+        assert_eq!(
+            implementation,
+            ("type", "behavior impls", "behavior impl refs")
+        );
+        assert_eq!(
+            required,
+            ("type", "behavior requires", "behavior requires refs")
+        );
+        assert_eq!(parent_contains, ("E0235", "E0245"));
+        assert_eq!(parent_list, ("E0240", "E0246"));
     }
 
     #[test]

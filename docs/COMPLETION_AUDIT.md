@@ -181,6 +181,9 @@ and do not assume Phase 4 is ready without evidence.
 - Type-parameter resolver validation now adapts into shared count diagnostics
   through its validation helper, covered by
   `typechecker::tests::type_parameter_validation_builds_count_validation`.
+- Resolver behavior-ref validation now separates role labels from per-check
+  diagnostic codes, covered by
+  `typechecker::tests::behavior_ref_validation_separates_role_labels_from_check_codes`.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths, covered by
   `typechecker::tests::resolver_symbol_metadata_helper_requires_symbol_and_selected_metadata`.
