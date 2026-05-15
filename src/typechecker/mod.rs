@@ -190,7 +190,7 @@ struct ExpectedBehaviorSymbol {
 
 struct ExpectedStructSymbol {
     type_like: ExpectedTypeLikeSymbol,
-    fields: ExpectedFields,
+    fields: Vec<ExpectedField>,
 }
 
 struct ExpectedEnumSymbol {
@@ -251,11 +251,6 @@ struct TypeParameterValidation {
 struct ValueSignatureAbsenceValidation {
     parameter_count_code: &'static str,
     return_type_code: &'static str,
-}
-
-#[derive(Default)]
-struct ExpectedFields {
-    fields: Vec<ExpectedField>,
 }
 
 struct ExpectedField {
@@ -6759,10 +6754,10 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         namespace: Namespace,
         name: &str,
-        expected_fields: ExpectedFields,
+        expected_fields: Vec<ExpectedField>,
         span: Span,
     ) {
-        let expected_count = expected_fields.fields.len();
+        let expected_count = expected_fields.len();
         if symbol.field_count != Some(expected_count) {
             let actual = symbol
                 .field_count
@@ -6779,7 +6774,6 @@ impl TypeChecker {
             ));
         }
         let expected_types: Vec<_> = expected_fields
-            .fields
             .iter()
             .map(|field| field.typed.clone())
             .collect();
@@ -6796,7 +6790,6 @@ impl TypeChecker {
             ));
         }
         let expected_type_names: Vec<_> = expected_fields
-            .fields
             .into_iter()
             .map(|field| field.display)
             .collect();
@@ -7870,10 +7863,10 @@ fn format_parameter_names(names: Option<&[String]>) -> String {
     }
 }
 
-fn expected_fields(fields: &[StructField]) -> ExpectedFields {
-    let mut expected = ExpectedFields::default();
+fn expected_fields(fields: &[StructField]) -> Vec<ExpectedField> {
+    let mut expected = Vec::new();
     for field in fields {
-        expected.fields.push(ExpectedField {
+        expected.push(ExpectedField {
             typed: (field.name.clone(), field.ty.clone()),
             display: (field.name.clone(), field.ty.display_name()),
         });
