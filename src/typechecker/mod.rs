@@ -264,7 +264,6 @@ struct ValueSignatureAbsenceValidation {
 
 #[derive(Default)]
 struct ExpectedFields {
-    count: usize,
     fields: Vec<ExpectedField>,
 }
 
@@ -6773,7 +6772,8 @@ impl TypeChecker {
         expected_fields: ExpectedFields,
         span: Span,
     ) {
-        if symbol.field_count != Some(expected_fields.count) {
+        let expected_count = expected_fields.fields.len();
+        if symbol.field_count != Some(expected_count) {
             let actual = symbol
                 .field_count
                 .map(|count| count.to_string())
@@ -6783,7 +6783,7 @@ impl TypeChecker {
                 format!(
                     "resolver {} symbol '{name}' has field count {actual}, expected {}",
                     namespace.diagnostic_name(),
-                    expected_fields.count
+                    expected_count
                 ),
                 span,
             ));
@@ -7886,10 +7886,7 @@ fn format_parameter_names(names: Option<&[String]>) -> String {
 }
 
 fn expected_fields(fields: &[StructField]) -> ExpectedFields {
-    let mut expected = ExpectedFields {
-        count: fields.len(),
-        ..ExpectedFields::default()
-    };
+    let mut expected = ExpectedFields::default();
     for field in fields {
         expected.fields.push(ExpectedField {
             typed: (field.name.clone(), field.ty.clone()),

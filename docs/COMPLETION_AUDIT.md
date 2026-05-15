@@ -239,6 +239,8 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker resolver validation now stores expected struct field display and
   typed metadata as paired per-field expectations before deriving resolver
   comparison lists.
+- Typechecker resolver validation now derives expected struct field counts from
+  the per-field expectation list instead of storing a separate count.
 - Typechecker resolver validation now stores expected enum variant payload
   display and typed metadata as one paired payload-type expectation.
 - Typechecker resolver validation now stores expected type-parameter display
