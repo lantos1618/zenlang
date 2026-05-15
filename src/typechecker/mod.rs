@@ -373,6 +373,10 @@ fn type_param_bounds(type_params: &[ast::TypeParam]) -> HashMap<String, Behavior
         .collect()
 }
 
+fn type_param_names(type_params: &[ast::TypeParam]) -> Vec<String> {
+    type_params.iter().map(|param| param.name.clone()).collect()
+}
+
 fn type_param_bounds_from_resolver_refs(
     bounds: &[TypeParameterBoundRefMetadata],
 ) -> HashMap<String, BehaviorBound> {
@@ -1114,7 +1118,7 @@ impl TypeChecker {
                     name.clone(),
                     BehaviorInfo {
                         name: name.clone(),
-                        type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
+                        type_params: type_param_names(type_params),
                         type_param_bounds: type_param_bounds(type_params),
                         methods: methods.clone(),
                     },
@@ -1169,7 +1173,7 @@ impl TypeChecker {
                                 .iter()
                                 .map(|f| (f.name.clone(), f.ty.clone()))
                                 .collect(),
-                            type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
+                            type_params: type_param_names(type_params),
                             type_param_bounds: type_param_bounds(type_params),
                         },
                     );
@@ -1193,7 +1197,7 @@ impl TypeChecker {
                                 .iter()
                                 .map(|v| (v.name.clone(), v.payload.clone()))
                                 .collect(),
-                            type_params: type_params.iter().map(|tp| tp.name.clone()).collect(),
+                            type_params: type_param_names(type_params),
                             type_param_bounds: type_param_bounds(type_params),
                         },
                     );
@@ -1218,8 +1222,7 @@ impl TypeChecker {
                         self.validate_generic_bounds(type_params);
                     }
                     if self.resolver_backed_collection {
-                        let collected_type_params: Vec<String> =
-                            type_params.iter().map(|tp| tp.name.clone()).collect();
+                        let collected_type_params = type_param_names(type_params);
                         if !collected_type_params.is_empty() {
                             self.generic_functions.insert(
                                 name.clone(),
@@ -1235,8 +1238,7 @@ impl TypeChecker {
                         continue;
                     }
                     let ret = return_type.clone().unwrap_or(AstType::Void);
-                    let collected_type_params: Vec<String> =
-                        type_params.iter().map(|tp| tp.name.clone()).collect();
+                    let collected_type_params = type_param_names(type_params);
                     let type_param_bounds = type_param_bounds(type_params);
                     self.functions.insert(
                         name.clone(),
@@ -1278,8 +1280,7 @@ impl TypeChecker {
                         self.validate_generic_bounds(type_params);
                     }
                     if self.resolver_backed_collection {
-                        let collected_type_params: Vec<String> =
-                            type_params.iter().map(|tp| tp.name.clone()).collect();
+                        let collected_type_params = type_param_names(type_params);
                         if !collected_type_params.is_empty() {
                             self.generic_methods.insert(
                                 format!("{}.{}", type_name, method_name),
@@ -1296,8 +1297,7 @@ impl TypeChecker {
                     }
                     let key = format!("{}.{}", type_name, method_name);
                     let ret = return_type.clone().unwrap_or(AstType::Void);
-                    let collected_type_params: Vec<String> =
-                        type_params.iter().map(|tp| tp.name.clone()).collect();
+                    let collected_type_params = type_param_names(type_params);
                     let type_param_bounds = type_param_bounds(type_params);
                     self.methods.insert(
                         key.clone(),
@@ -2132,8 +2132,7 @@ impl TypeChecker {
             self.validate_generic_bounds(type_params);
         }
         let key = format!("{}.{}", type_name, name);
-        let collected_type_params: Vec<String> =
-            type_params.iter().map(|tp| tp.name.clone()).collect();
+        let collected_type_params = type_param_names(type_params);
         self.methods.insert(
             key.clone(),
             FuncInfo {
@@ -2178,8 +2177,7 @@ impl TypeChecker {
         else {
             return;
         };
-        let collected_type_params: Vec<String> =
-            type_params.iter().map(|tp| tp.name.clone()).collect();
+        let collected_type_params = type_param_names(type_params);
         if collected_type_params.is_empty() {
             return;
         }

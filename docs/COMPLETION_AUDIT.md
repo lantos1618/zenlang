@@ -796,6 +796,8 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed declaration collection now restores type-parameter names
   through the same helper pattern across value, struct, enum, and behavior
   collection.
+- AST declaration collection now uses the same type-parameter-name helper for
+  behavior, struct, enum, function, method, and impl-method metadata.
 
 ## Unresolved Gaps
 
