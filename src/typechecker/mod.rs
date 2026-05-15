@@ -4962,9 +4962,12 @@ impl TypeChecker {
                     _ => "",
                 };
                 let ast_key = Self::method_key(type_name, ast_name);
-                let resolver_owned_name = self.resolver_backed_collection.then(|| {
-                    Self::validation_method_key(symbols, &ast_key, type_name, method.span())
-                });
+                let resolver_owned_name = self.resolver_backed_impl_method_key(
+                    symbols,
+                    &ast_key,
+                    type_name,
+                    method.span(),
+                );
                 let effective_name = self.impl_effective_method_name(
                     &mut unmatched_required,
                     ast_name,
@@ -5363,6 +5366,17 @@ impl TypeChecker {
         }
 
         ast_name.to_string()
+    }
+
+    fn resolver_backed_impl_method_key(
+        &self,
+        symbols: Option<&SymbolTable>,
+        ast_key: &str,
+        type_name: &str,
+        span: Span,
+    ) -> Option<String> {
+        self.resolver_backed_collection
+            .then(|| Self::validation_method_key(symbols, ast_key, type_name, span))
     }
 
     fn resolver_backed_method_signature(
@@ -11068,6 +11082,50 @@ Point.get = (self: Point) i32 { return self.x }
             "describe"
         );
         assert!(unmatched.is_empty());
+    }
+
+    #[test]
+    fn resolver_backed_impl_method_key_requires_resolver_collection() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let (span, ast_key) = if let Declaration::ImplBlock {
+            type_name, methods, ..
+        } = &mut program.declarations[2]
+        {
+            *type_name = "Missing".to_string();
+            if let Declaration::Function { name, span, .. } = &mut methods[0] {
+                *name = "missing".to_string();
+                (*span, TypeChecker::method_key(type_name, name))
+            } else {
+                panic!("expected impl method");
+            }
+        } else {
+            panic!("expected impl block");
+        };
+        let mut tc = TypeChecker::new();
+
+        assert_eq!(
+            tc.resolver_backed_impl_method_key(Some(&symbols), &ast_key, "Missing", span),
+            None
+        );
+        tc.resolver_backed_collection = true;
+        assert_eq!(
+            tc.resolver_backed_impl_method_key(Some(&symbols), &ast_key, "Missing", span),
+            Some("Point.encode".to_string())
+        );
     }
 
     #[test]

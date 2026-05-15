@@ -389,6 +389,10 @@ checked-in docs, tests, and commits only.
 - Behavior impl conformance now resolves effective method names through a
   dedicated helper that shares resolver-owned name, AST-name, and collected
   signature fallback selection.
+- Resolver-backed impl method-key restoration now has its own gated helper,
+  keeping resolver-owned span lookup disabled during AST-only collection while
+  feeding behavior impl conformance the restored key during resolver-backed
+  collection.
 - Resolver-backed behavior impl conformance and default-method suppression now
   share one collected method-signature lookup helper.
 - Impl method collection, resolver-backed impl restoration, default seeding,
@@ -400,6 +404,9 @@ checked-in docs, tests, and commits only.
   the shared type-qualified method key helper.
 - Behavior impl conformance now uses the shared type-qualified method key
   helper before resolver-owned method name restoration.
+- Resolver-backed behavior impl conformance now routes resolver-owned
+  impl-method key selection through a dedicated gated helper before effective
+  method-name selection.
 - AST, resolver-backed, graph-import, dependency, and typed body method-key
   construction now route through the same type-qualified method key helper.
 - Expression method lookup for module fallbacks, concrete receivers, and
