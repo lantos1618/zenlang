@@ -7726,7 +7726,7 @@ fn expected_variant_symbol(
     ExpectedVariantSymbol {
         owner_name: owner_name.to_string(),
         is_public,
-        payload: expected_variant_payload(payload),
+        payload: expected_variant_payload_metadata(payload),
     }
 }
 
@@ -7874,7 +7874,7 @@ fn format_variant_names(variants: Option<&[String]>) -> String {
     }
 }
 
-fn expected_variant_payload(payload: &Option<AstType>) -> ExpectedVariantPayload {
+fn expected_variant_payload_metadata(payload: &Option<AstType>) -> ExpectedVariantPayload {
     ExpectedVariantPayload {
         metadata: ExpectedVariantPayloadType {
             typed: payload.clone(),

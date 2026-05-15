@@ -757,6 +757,8 @@ checked-in docs, tests, and commits only.
   expectations.
 - Resolver struct-field expectation construction now uses metadata terminology
   consistently with paired display and typed field expectations.
+- Resolver enum variant payload expectation construction now uses metadata
+  terminology consistently with paired display and typed payload expectations.
 
 ## Current Phase
 
