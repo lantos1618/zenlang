@@ -824,6 +824,8 @@ and do not assume Phase 4 is ready without evidence.
   and generic-template rekey helpers across function and method paths.
 - Resolver-backed struct and enum metadata restoration now use shared
   constructors for resolver type parameters, bounds, fields, and variants.
+- Resolver-backed behavior metadata restoration now uses the same constructor
+  pattern for resolver type parameters, bounds, and restored method signatures.
 
 ## Unresolved Gaps
 

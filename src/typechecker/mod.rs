@@ -567,6 +567,19 @@ fn enum_info_from_resolver_variants(
     }
 }
 
+fn behavior_info_from_resolver_methods(
+    name: String,
+    symbol: &Symbol,
+    methods: Vec<ast::BehaviorMethod>,
+) -> BehaviorInfo {
+    BehaviorInfo {
+        name,
+        type_params: resolver_type_param_names(symbol),
+        type_param_bounds: resolver_type_param_bounds(symbol),
+        methods,
+    }
+}
+
 fn func_info_from_behavior_method(
     name: String,
     params: &[Param],
@@ -2118,12 +2131,7 @@ impl TypeChecker {
         }
         self.behaviors.insert(
             name.to_string(),
-            BehaviorInfo {
-                name: name.to_string(),
-                type_params: resolver_type_param_names(symbol),
-                type_param_bounds: resolver_type_param_bounds(symbol),
-                methods,
-            },
+            behavior_info_from_resolver_methods(name.to_string(), symbol, methods),
         );
     }
 
