@@ -911,6 +911,8 @@ and do not assume Phase 4 is ready without evidence.
   declaration collection surface that later Phase 2 slices still need to shrink.
   AST behavior declaration seeding, behavior generic-bound validation, and
   AST-only behavior inheritance validation now also have named helper passes.
+  Behavior generic-bound validation is owned by that named pass, avoiding
+  duplicate AST-only diagnostics from the remaining collection loop.
   AST struct/enum generic-bound validation and type declaration seeding now
   also have named helper passes.
   AST callable generic-bound validation, callable signature seeding, and

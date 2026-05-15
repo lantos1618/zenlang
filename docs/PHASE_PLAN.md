@@ -484,6 +484,8 @@ checked-in docs, tests, and commits only.
   collection loop.
   AST behavior declaration seeding, behavior generic-bound validation, and
   AST-only behavior inheritance validation now also have named helper passes.
+  Behavior generic-bound validation is owned by that named pass, avoiding
+  duplicate AST-only diagnostics from the remaining collection loop.
   AST struct/enum generic-bound validation and type declaration seeding now
   also have named helper passes.
   AST callable generic-bound validation, callable signature seeding, and
