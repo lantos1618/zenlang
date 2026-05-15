@@ -207,6 +207,12 @@ struct ExpectedImportSymbol {
     is_public: bool,
 }
 
+struct ExpectedModuleSymbol {
+    name: String,
+    source: Option<String>,
+    is_public: bool,
+}
+
 struct ExpectedTypeParameters {
     count: usize,
     names: Vec<String>,
@@ -4179,7 +4185,11 @@ impl TypeChecker {
                     module_path,
                     span,
                 } => {
-                    self.require_resolver_module_symbol(symbols, &module_path.join("."), *span);
+                    self.require_resolver_module_symbol(
+                        symbols,
+                        expected_module_symbol(&module_path.join(".")),
+                        *span,
+                    );
                     for name in names {
                         self.require_resolver_import_symbol(
                             symbols,
@@ -4437,28 +4447,36 @@ impl TypeChecker {
     fn require_resolver_module_symbol(
         &mut self,
         symbols: &SymbolTable,
-        expected_module: &str,
+        expected: ExpectedModuleSymbol,
         span: Span,
     ) {
-        let Some(symbol) = symbols.lookup(Namespace::Module, expected_module) else {
-            self.require_resolver_symbol(symbols, Namespace::Module, expected_module, span);
+        let Some(symbol) = symbols.lookup(Namespace::Module, &expected.name) else {
+            self.require_resolver_symbol(symbols, Namespace::Module, &expected.name, span);
             return;
         };
 
-        if symbol.is_public {
+        if symbol.is_public != expected.is_public {
             self.diagnostics.push(Diagnostic::error(
                 "E0229",
                 format!(
-                    "resolver module symbol '{expected_module}' has visibility public, expected private"
+                    "resolver module symbol '{}' has visibility {}, expected {}",
+                    expected.name,
+                    visibility_name(symbol.is_public),
+                    visibility_name(expected.is_public)
                 ),
                 span,
             ));
         }
 
-        if let Some(actual) = symbol.import_source.as_deref() {
+        if symbol.import_source != expected.source {
+            let actual = symbol.import_source.as_deref().unwrap_or("none");
+            let expected_source = expected.source.as_deref().unwrap_or("none");
             self.diagnostics.push(Diagnostic::error(
                 "E0230",
-                format!("resolver module symbol '{expected_module}' has source '{actual}', expected none"),
+                format!(
+                    "resolver module symbol '{}' has source '{actual}', expected {expected_source}",
+                    expected.name
+                ),
                 span,
             ));
         }
@@ -4467,7 +4485,8 @@ impl TypeChecker {
             self.diagnostics.push(Diagnostic::error(
                 "E0265",
                 format!(
-                    "resolver module symbol '{expected_module}' has parameter count metadata, expected none"
+                    "resolver module symbol '{}' has parameter count metadata, expected none",
+                    expected.name
                 ),
                 span,
             ));
@@ -4477,7 +4496,8 @@ impl TypeChecker {
             self.diagnostics.push(Diagnostic::error(
                 "E0266",
                 format!(
-                    "resolver module symbol '{expected_module}' has return type metadata, expected none"
+                    "resolver module symbol '{}' has return type metadata, expected none",
+                    expected.name
                 ),
                 span,
             ));
@@ -4586,7 +4606,8 @@ impl TypeChecker {
                 self.diagnostics.push(Diagnostic::error(
                     code,
                     format!(
-                        "resolver module symbol '{expected_module}' has {label} metadata, expected none"
+                        "resolver module symbol '{}' has {label} metadata, expected none",
+                        expected.name
                     ),
                     span,
                 ));
@@ -4631,7 +4652,11 @@ impl TypeChecker {
                     symbol.definition_span,
                 ));
             } else if let Some(source) = symbol.import_source.as_deref() {
-                self.require_resolver_module_symbol(symbols, source, symbol.definition_span);
+                self.require_resolver_module_symbol(
+                    symbols,
+                    expected_module_symbol(source),
+                    symbol.definition_span,
+                );
             }
             self.validate_resolver_import_absent_declaration_metadata(
                 symbol,
@@ -7712,6 +7737,14 @@ fn expected_variant_symbol(
 fn expected_import_symbol(source: &str) -> ExpectedImportSymbol {
     ExpectedImportSymbol {
         source: source.to_string(),
+        is_public: false,
+    }
+}
+
+fn expected_module_symbol(name: &str) -> ExpectedModuleSymbol {
+    ExpectedModuleSymbol {
+        name: name.to_string(),
+        source: None,
         is_public: false,
     }
 }
