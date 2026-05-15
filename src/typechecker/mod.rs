@@ -152,10 +152,7 @@ struct DefaultBehaviorMethod {
 }
 
 struct ExpectedValueSignature {
-    parameter_count: usize,
-    parameter_names: Vec<String>,
-    parameter_types: Vec<AstType>,
-    parameter_type_names: Vec<String>,
+    params: ExpectedParameters,
     return_type: AstType,
     return_type_name: String,
     type_params: ExpectedTypeParameters,
@@ -7328,7 +7325,7 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.parameter_count != Some(expected_signature.parameter_count) {
+        if symbol.parameter_count != Some(expected_signature.params.count) {
             let actual = symbol
                 .parameter_count
                 .map(|count| count.to_string())
@@ -7337,16 +7334,15 @@ impl TypeChecker {
                 "E0211",
                 format!(
                     "resolver value symbol '{name}' has parameter count {actual}, expected {}",
-                    expected_signature.parameter_count
+                    expected_signature.params.count
                 ),
                 span,
             ));
         }
 
-        if symbol.parameter_names.as_deref() != Some(expected_signature.parameter_names.as_slice())
-        {
+        if symbol.parameter_names.as_deref() != Some(expected_signature.params.names.as_slice()) {
             let actual = format_parameter_names(symbol.parameter_names.as_deref());
-            let expected = format_parameter_names(Some(&expected_signature.parameter_names));
+            let expected = format_parameter_names(Some(&expected_signature.params.names));
             self.diagnostics.push(Diagnostic::error(
                 "E0223",
                 format!(
@@ -7357,11 +7353,10 @@ impl TypeChecker {
         }
 
         if symbol.parameter_type_names.as_deref()
-            != Some(expected_signature.parameter_type_names.as_slice())
+            != Some(expected_signature.params.type_names.as_slice())
         {
             let actual = format_parameter_type_names(symbol.parameter_type_names.as_deref());
-            let expected =
-                format_parameter_type_names(Some(&expected_signature.parameter_type_names));
+            let expected = format_parameter_type_names(Some(&expected_signature.params.type_names));
             self.diagnostics.push(Diagnostic::error(
                 "E0216",
                 format!(
@@ -7370,10 +7365,9 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.parameter_types.as_deref() != Some(expected_signature.parameter_types.as_slice())
-        {
+        if symbol.parameter_types.as_deref() != Some(expected_signature.params.types.as_slice()) {
             let actual = format_ast_type_list(symbol.parameter_types.as_deref());
-            let expected = format_ast_type_list(Some(&expected_signature.parameter_types));
+            let expected = format_ast_type_list(Some(&expected_signature.params.types));
             self.diagnostics.push(Diagnostic::error(
                 "E0356",
                 format!(
@@ -7556,10 +7550,7 @@ fn expected_value_signature(
     let params = expected_parameters(params);
     let type_params = expected_type_parameters(type_params);
     ExpectedValueSignature {
-        parameter_count: params.count,
-        parameter_names: params.names,
-        parameter_types: params.types,
-        parameter_type_names: params.type_names,
+        params,
         return_type: return_type.clone().unwrap_or(AstType::Void),
         return_type_name: expected_return_type_name(return_type),
         type_params,

@@ -86,9 +86,10 @@ checked-in docs, tests, and commits only.
   signatures and typed method metadata from one shared expectation pass, so the
   two resolver handoff checks cannot drift while scanning the same behavior
   method list.
-- Typechecker resolver validation now derives value parameter count, names,
-  display types, and typed parameter metadata from one shared expectation pass,
-  keeping those resolver value-signature handoff checks aligned.
+- Typechecker resolver validation now carries value parameter count, names,
+  display types, and typed parameter metadata through one shared parameter
+  expectation object, keeping those resolver value-signature handoff checks
+  aligned.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, reducing
