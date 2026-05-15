@@ -115,7 +115,9 @@ and do not assume Phase 4 is ready without evidence.
   Generic method explicit type arguments also reject bare generic type
   annotations with missing type arguments.
   Generic function and method type-argument inference conflicts now report
-  direct diagnostics for the conflicting parameter and concrete types.
+  direct diagnostics for the conflicting parameter and concrete types,
+  including receiver-derived generic method type arguments that conflict with
+  later call arguments.
   Generic inference also walks function, array, and raw-pointer parameter
   shapes, so nested type parameters inside compound arguments can produce
   direct conflict diagnostics.

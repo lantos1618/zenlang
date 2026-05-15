@@ -229,6 +229,33 @@ main = () i32 {
 }
 
 #[test]
+fn generic_method_inference_conflict_from_receiver_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+Box.replace<T> = (self: Box<T>, value: T) T {
+    return value
+}
+
+main = () i32 {
+    box = Box<i32> { value: 1 }
+    return box.replace("bad")
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic method `Box.replace`: inferred `i32` and `str`"
+        )),
+        "expected generic method receiver inference conflict diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_function_type_arg_annotation_arity_is_error() {
     let errors = typecheck_errors(
         r#"

@@ -101,7 +101,8 @@ checked-in docs, tests, and commits only.
   annotations with missing type arguments.
   Generic function and method type-argument inference conflicts now produce
   direct diagnostics instead of relying only on substituted argument mismatch
-  errors.
+  errors, including receiver-derived generic method type arguments that
+  conflict with later call arguments.
   Generic inference now also walks function, array, and raw-pointer parameter
   shapes, so nested type parameters inside compound arguments can produce
   direct conflict diagnostics.
