@@ -1888,6 +1888,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test collect_declarations_with_symbols_uses_distinct_restored_requires_type_args`,
   and
   `cargo test collect_declarations_with_symbols_does_not_validate_stale_requires_after_target_restore`.
+- Resolver-backed struct field default validation now reuses collected type
+  metadata tasks instead of rescanning declarations during semantic replay,
+  covered by
+  `cargo test resolver_struct_field_defaults_validate_from_type_metadata_tasks`.
 
 ## Unresolved Gaps
 

@@ -3509,6 +3509,7 @@ impl TypeChecker {
             symbols,
             &tasks.behavior_impl_blocks,
             &tasks.behavior_requires,
+            &tasks.types,
         );
         self.clear_resolver_behavior_ref_state();
         self.refresh_resolver_type_behavior_impls(&tasks.types, symbols);
@@ -3772,6 +3773,7 @@ impl TypeChecker {
         symbols: &SymbolTable,
         behavior_impl_tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
         behavior_requires_tasks: &[BehaviorRequiresValidationTask<'_>],
+        type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
     ) {
         self.with_resolver_backed_collection(|checker| {
             checker.validate_resolver_collected_behavior_impl_declarations(
@@ -3780,7 +3782,7 @@ impl TypeChecker {
             );
             checker.validate_behavior_requires_tasks(behavior_requires_tasks, Some(symbols));
             checker.validate_generic_type_references(decls, Some(symbols));
-            checker.validate_struct_field_defaults(decls, Some(symbols));
+            checker.validate_resolver_struct_field_default_tasks(type_tasks, symbols);
         });
     }
 
@@ -4084,6 +4086,18 @@ impl TypeChecker {
         for (field_name, expected) in &info.fields {
             if let Some(default) = info.field_defaults.get(field_name) {
                 self.validate_struct_field_default(field_name, expected, default);
+            }
+        }
+    }
+
+    fn validate_resolver_struct_field_default_tasks(
+        &mut self,
+        type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
+        symbols: &SymbolTable,
+    ) {
+        for task in type_tasks {
+            if let ResolverTypeDeclarationMetadataTask::Struct { name, span, .. } = task {
+                self.validate_resolver_struct_field_defaults(Some(symbols), name, *span);
             }
         }
     }
@@ -16325,6 +16339,43 @@ Point: { x: i32 = true }
                         .contains("field `x` default expects `i32`, found `bool`")
             }),
             "resolver-backed default validation should use resolver-restored field names: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn resolver_struct_field_defaults_validate_from_type_metadata_tasks() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 = true }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+        let mut stale_declarations = program.declarations.clone();
+        if let Declaration::Struct { fields, .. } = &mut stale_declarations[0] {
+            fields.clear();
+        }
+        let mut tc = TypeChecker::new();
+        tc.with_resolver_backed_collection(|checker| {
+            checker.collect_declarations(&stale_declarations)
+        });
+        tc.collect_resolver_declaration_metadata(&symbols, &tasks);
+
+        tc.with_resolver_backed_collection(|checker| {
+            checker.validate_resolver_struct_field_default_tasks(&tasks.types, &symbols);
+        });
+
+        assert!(
+            tc.diagnostics.iter().any(|diag| {
+                diag.code == "E3073"
+                    && diag
+                        .message
+                        .contains("field `x` default expects `i32`, found `bool`")
+            }),
+            "resolver-backed default validation should use precollected type tasks: {:?}",
             tc.diagnostics
         );
     }
