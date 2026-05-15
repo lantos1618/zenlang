@@ -1992,20 +1992,7 @@ impl TypeChecker {
         }
 
         let required_refs = self.resolver_behavior_required_refs.get_mut(type_name)?;
-        if required_refs
-            .front()
-            .is_some_and(|required| required.name == behavior)
-        {
-            return required_refs.pop_front();
-        }
-
-        match required_refs
-            .iter()
-            .position(|required| required.name == behavior)
-        {
-            Some(index) => required_refs.remove(index),
-            None => required_refs.pop_front(),
-        }
+        Self::pop_resolver_behavior_ref(required_refs, behavior)
     }
 
     fn check_behavior_extends(
@@ -2474,19 +2461,23 @@ impl TypeChecker {
         }
 
         let impl_refs = self.resolver_behavior_impl_refs.get_mut(type_name)?;
-        if impl_refs
+        Self::pop_resolver_behavior_ref(impl_refs, behavior)
+    }
+
+    fn pop_resolver_behavior_ref(
+        refs: &mut VecDeque<BehaviorRefMetadata>,
+        behavior: &str,
+    ) -> Option<BehaviorRefMetadata> {
+        if refs
             .front()
-            .is_some_and(|implementation| implementation.name == behavior)
+            .is_some_and(|reference| reference.name == behavior)
         {
-            return impl_refs.pop_front();
+            return refs.pop_front();
         }
 
-        match impl_refs
-            .iter()
-            .position(|implementation| implementation.name == behavior)
-        {
-            Some(index) => impl_refs.remove(index),
-            None => impl_refs.pop_front(),
+        match refs.iter().position(|reference| reference.name == behavior) {
+            Some(index) => refs.remove(index),
+            None => refs.pop_front(),
         }
     }
 
