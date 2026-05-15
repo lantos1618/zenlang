@@ -3259,7 +3259,14 @@ impl TypeChecker {
     ) {
         self.collect_resolver_callable_declaration_metadata(decls, symbols);
         self.collect_resolver_type_declaration_metadata(decls, symbols);
+        self.collect_resolver_behavior_declaration_metadata_pass(decls, symbols);
+    }
 
+    fn collect_resolver_behavior_declaration_metadata_pass(
+        &mut self,
+        decls: &[Declaration],
+        symbols: &SymbolTable,
+    ) {
         for decl in decls {
             if let Declaration::Behavior { name, span, .. } = decl {
                 self.collect_resolver_behavior_declaration_metadata(symbols, name, *span);

@@ -1032,6 +1032,12 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_enum_payload_metadata`,
   and
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_enum_name_metadata`.
+  Behavior resolver declaration metadata now has a focused traversal for
+  behavior declarations, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_method_metadata`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_name_metadata`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_method_name_metadata`.
   Behavior impl method signatures are skipped by the generic declaration
   metadata refresh and owned by the behavior impl metadata pass, covered by
   `typechecker::tests::resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass`.
