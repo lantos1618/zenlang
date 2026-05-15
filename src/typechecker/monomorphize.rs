@@ -887,6 +887,10 @@ pub(crate) fn type_to_ast(ty: &Type) -> AstType {
             elem: Box::new(type_to_ast(elem)),
             size: *size,
         },
-        _ => AstType::Void,
+        Type::Function { params, ret } => AstType::Function {
+            params: params.iter().map(type_to_ast).collect(),
+            ret: Box::new(type_to_ast(ret)),
+        },
+        Type::Never | Type::Unknown => AstType::Void,
     }
 }

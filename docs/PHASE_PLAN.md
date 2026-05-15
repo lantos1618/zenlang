@@ -1040,6 +1040,8 @@ checked-in docs, tests, and commits only.
 - Generic type substitution now covers raw pointers, arrays, and function
   signatures so Phase 5 specializations do not leave nested type parameters
   inside composite type shapes.
+- Generic function-type substitutions now round-trip through nested generic
+  type arguments instead of degrading to `void`.
 
 ## Current Phase
 

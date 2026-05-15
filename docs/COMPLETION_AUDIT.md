@@ -993,6 +993,9 @@ and do not assume Phase 4 is ready without evidence.
   signatures so Phase 5 specializations do not leave nested type parameters
   inside composite type shapes, covered by
   `typechecker::tests::substitute_type_covers_all_composite_type_shapes`.
+- Generic function-type substitutions now round-trip through nested generic
+  type arguments instead of degrading to `void`, covered by
+  `typechecker::tests::substitute_type_preserves_function_type_arguments_in_nested_generics`.
 
 ## Unresolved Gaps
 
