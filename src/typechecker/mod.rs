@@ -3638,31 +3638,47 @@ impl TypeChecker {
             };
 
             if self.resolver_backed_collection {
-                let restored_name =
-                    Self::validation_symbol_name(symbols, Namespace::Type, name, *span);
-                let Some(info) = self.structs.get(&restored_name).cloned() else {
-                    continue;
-                };
-                if !info.type_params.is_empty() {
-                    continue;
-                }
-                let field_types: HashMap<_, _> = info.fields.into_iter().collect();
-                for field in fields {
-                    if let (Some(default), Some(expected)) =
-                        (&field.default, field_types.get(&field.name))
-                    {
-                        self.validate_struct_field_default(&field.name, expected, default);
-                    }
-                }
+                self.validate_resolver_struct_field_defaults(symbols, name, fields, *span);
             } else {
-                if !type_params.is_empty() {
-                    continue;
-                }
-                for field in fields {
-                    if let Some(default) = &field.default {
-                        self.validate_struct_field_default(&field.name, &field.ty, default);
-                    }
-                }
+                self.validate_ast_struct_field_defaults(!type_params.is_empty(), fields);
+            }
+        }
+    }
+
+    fn validate_resolver_struct_field_defaults(
+        &mut self,
+        symbols: Option<&SymbolTable>,
+        name: &str,
+        fields: &[StructField],
+        span: Span,
+    ) {
+        let restored_name = Self::validation_symbol_name(symbols, Namespace::Type, name, span);
+        let Some(info) = self.structs.get(&restored_name).cloned() else {
+            return;
+        };
+        if !info.type_params.is_empty() {
+            return;
+        }
+        let field_types: HashMap<_, _> = info.fields.into_iter().collect();
+        for field in fields {
+            if let (Some(default), Some(expected)) = (&field.default, field_types.get(&field.name))
+            {
+                self.validate_struct_field_default(&field.name, expected, default);
+            }
+        }
+    }
+
+    fn validate_ast_struct_field_defaults(
+        &mut self,
+        has_type_params: bool,
+        fields: &[StructField],
+    ) {
+        if has_type_params {
+            return;
+        }
+        for field in fields {
+            if let Some(default) = &field.default {
+                self.validate_struct_field_default(&field.name, &field.ty, default);
             }
         }
     }

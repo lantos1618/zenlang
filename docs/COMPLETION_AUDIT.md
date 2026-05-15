@@ -1025,6 +1025,12 @@ and do not assume Phase 4 is ready without evidence.
 - The resolver-backed typechecker path collects struct field metadata from
   validated resolver type symbols, including typed function-field metadata,
   reducing duplicate AST-only declaration collection for struct fields.
+- Resolver-backed struct field default validation now uses a dedicated
+  resolver-restored field-default helper, with focused coverage from
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_struct_name_metadata`,
+  `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_struct_field_default_refs_when_fields_incomplete`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_clears_stale_struct_fields_after_name_restore`.
 - Resolver/typechecker handoff coverage preserves generic type parameters in
   struct fields and enum payloads before type metadata collection.
 - Resolver enum variant symbols carry payload-count metadata, and typechecker

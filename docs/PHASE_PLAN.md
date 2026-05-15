@@ -950,6 +950,9 @@ checked-in docs, tests, and commits only.
   validated resolver type symbols, including typed function-field metadata,
   instead of rebuilding struct fields only from AST declarations after
   validation.
+- Resolver-backed struct field default validation now uses a dedicated
+  resolver-restored field-default helper instead of keeping restored struct
+  lookup inline in the broad declaration semantics loop.
 - Resolver/typechecker handoff coverage preserves generic type parameters in
   struct fields and enum payloads before type metadata collection.
 - Resolver enum variant symbols now carry payload-count metadata, and
