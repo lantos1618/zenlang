@@ -7535,16 +7535,8 @@ impl TypeChecker {
             span,
         );
         if symbol.variant_payload_type != expected.typed {
-            let actual = symbol
-                .variant_payload_type
-                .as_ref()
-                .map(AstType::display_name)
-                .unwrap_or_else(|| "none".to_string());
-            let expected = expected
-                .typed
-                .as_ref()
-                .map(AstType::display_name)
-                .unwrap_or_else(|| "none".to_string());
+            let actual = optional_ast_type_display(symbol.variant_payload_type.as_ref(), "none");
+            let expected = optional_ast_type_display(expected.typed.as_ref(), "none");
             self.diagnostics.push(Diagnostic::error(
                 "E0359",
                 format!(
@@ -8203,9 +8195,13 @@ fn resolver_metadata_display(value: Option<&str>) -> &str {
 }
 
 fn resolver_ast_type_metadata_display(value: Option<&AstType>) -> String {
+    optional_ast_type_display(value, "unknown")
+}
+
+fn optional_ast_type_display(value: Option<&AstType>, missing: &str) -> String {
     value
         .map(AstType::display_name)
-        .unwrap_or_else(|| "unknown".to_string())
+        .unwrap_or_else(|| missing.to_string())
 }
 
 fn expected_parameter_metadata(params: &[Param]) -> Vec<ExpectedParameter> {
@@ -9101,6 +9097,11 @@ mod tests {
             "i32"
         );
         assert_eq!(resolver_ast_type_metadata_display(None), "unknown");
+        assert_eq!(
+            optional_ast_type_display(Some(&AstType::Bool), "none"),
+            "bool"
+        );
+        assert_eq!(optional_ast_type_display(None, "none"), "none");
     }
 
     #[test]
