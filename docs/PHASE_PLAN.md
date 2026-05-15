@@ -203,6 +203,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed struct and enum collection now also uses typed resolver
   generic bound refs, so generic type templates no longer retain stale AST-only
   behavior bounds after resolver validation.
+- Struct field default expressions now participate in generic type-reference
+  validation, and resolver-backed validation skips those defaults when
+  incomplete resolver field metadata has removed the collected struct instead
+  of falling back to stale AST generic parameters.
 - Resolver-backed struct and enum collection now shares resolver-restored
   behavior association ref handoff setup, keeping impl and required association
   metadata collection aligned before kind-specific field or variant metadata is

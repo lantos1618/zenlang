@@ -4020,17 +4020,25 @@ impl TypeChecker {
                     if self.resolver_backed_collection {
                         let restored_name =
                             Self::validation_symbol_name(symbols, Namespace::Type, name, *span);
-                        let scoped =
-                            self.collected_type_type_param_scope(&restored_name, type_params);
-                        self.validate_collected_struct_type_references(
-                            &restored_name,
-                            &scoped,
-                            *span,
-                        );
+                        if let Some(scoped) = self.collected_type_type_param_scope(&restored_name) {
+                            self.validate_collected_struct_type_references(
+                                &restored_name,
+                                &scoped,
+                                *span,
+                            );
+                            for field in fields {
+                                if let Some(default) = &field.default {
+                                    self.validate_generic_expr_type_references(default, &scoped);
+                                }
+                            }
+                        }
                     } else {
                         let scoped = type_param_name_set(type_params);
                         for field in fields {
                             self.validate_generic_type_ref_bounds(&field.ty, &scoped, field.span);
+                            if let Some(default) = &field.default {
+                                self.validate_generic_expr_type_references(default, &scoped);
+                            }
                         }
                     }
                 }
@@ -4044,13 +4052,13 @@ impl TypeChecker {
                     if self.resolver_backed_collection {
                         let restored_name =
                             Self::validation_symbol_name(symbols, Namespace::Type, name, *span);
-                        let scoped =
-                            self.collected_type_type_param_scope(&restored_name, type_params);
-                        self.validate_collected_enum_type_references(
-                            &restored_name,
-                            &scoped,
-                            *span,
-                        );
+                        if let Some(scoped) = self.collected_type_type_param_scope(&restored_name) {
+                            self.validate_collected_enum_type_references(
+                                &restored_name,
+                                &scoped,
+                                *span,
+                            );
+                        }
                     } else {
                         let scoped = type_param_name_set(type_params);
                         for variant in variants {
@@ -4274,11 +4282,7 @@ impl TypeChecker {
             .map(|info| info.type_params.iter().cloned().collect())
     }
 
-    fn collected_type_type_param_scope(
-        &self,
-        name: &str,
-        ast_type_params: &[ast::TypeParam],
-    ) -> HashSet<String> {
+    fn collected_type_type_param_scope(&self, name: &str) -> Option<HashSet<String>> {
         self.structs
             .get(name)
             .map(|info| info.type_params.iter().cloned().collect())
@@ -4287,7 +4291,6 @@ impl TypeChecker {
                     .get(name)
                     .map(|info| info.type_params.iter().cloned().collect())
             })
-            .unwrap_or_else(|| type_param_name_set(ast_type_params))
     }
 
     fn collected_behavior_type_param_scope(&self, name: &str) -> Option<HashSet<String>> {
@@ -10262,6 +10265,31 @@ main = (value: Missing, items: Bag<i32>) i32 { return 0 }
     }
 
     #[test]
+    fn check_program_rejects_unknown_type_references_in_struct_field_defaults() {
+        let program = parse_program(
+            r#"
+Box<T>: {
+    value: T = {
+        same: Missing = 1
+        same
+    }
+}
+"#,
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program(&program)
+            .expect_err("unknown struct field default type reference should fail");
+
+        assert!(
+            err.iter()
+                .any(|d| d.message.contains("unknown type symbol 'Missing'")),
+            "expected unknown field default type diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn scope_variable_lookup() {
         let mut tc = TypeChecker::new();
         tc.define_var("x", Type::I32);
@@ -11696,6 +11724,41 @@ Point: { x: i32 }
         assert!(
             !tc.structs.contains_key("Point"),
             "resolver-backed collection should not keep AST-only struct fields when resolver field metadata is incomplete"
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_validate_stale_struct_field_default_refs_when_fields_incomplete(
+    ) {
+        let mut program = parse_program(
+            r#"
+Box<T>: {
+    value: T = {
+        same: T = 1
+        same
+    }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_field_types_for_test(Namespace::Type, "Box", None);
+        if let Declaration::Struct { type_params, .. } = &mut program.declarations[0] {
+            type_params[0].name = "Stale".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.structs.contains_key("Box"),
+            "resolver-backed collection should remove struct fields when resolver field metadata is incomplete"
+        );
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-backed collection should not validate stale AST struct field default refs when resolver field metadata is incomplete: {:?}",
+            tc.diagnostics
         );
     }
 

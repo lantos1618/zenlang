@@ -673,6 +673,14 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed struct and enum collection uses typed resolver generic bound
   refs, so generic type templates no longer retain stale AST-only behavior
   bounds after resolver validation.
+- Struct field default expressions now participate in generic type-reference
+  validation, so local annotations inside defaults cannot hide unknown type
+  symbols, covered by
+  `typechecker::tests::check_program_rejects_unknown_type_references_in_struct_field_defaults`.
+  When resolver field metadata is incomplete and struct collection is removed,
+  default-expression validation skips that struct instead of falling back to
+  stale AST generic parameters, covered by
+  `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_struct_field_default_refs_when_fields_incomplete`.
 - Typechecker setup rejects extra resolver-owned local symbols after mirroring
   resolver scope allocation across function bodies, nested scopes, pattern
   bindings, closures, defaults, and top-level expressions.
