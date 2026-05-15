@@ -7692,7 +7692,7 @@ fn expected_behavior_symbol(
 ) -> ExpectedBehaviorSymbol {
     ExpectedBehaviorSymbol {
         type_like: expected_type_like_symbol(type_params, Some(is_public)),
-        methods: expected_behavior_methods(methods),
+        methods: expected_behavior_method_metadata(methods),
     }
 }
 
@@ -7883,7 +7883,9 @@ fn expected_variant_payload_metadata(payload: &Option<AstType>) -> ExpectedVaria
     }
 }
 
-fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> Vec<ExpectedBehaviorMethod> {
+fn expected_behavior_method_metadata(
+    methods: &[ast::BehaviorMethod],
+) -> Vec<ExpectedBehaviorMethod> {
     let mut expected = Vec::new();
     for method in methods {
         let params = expected_parameter_metadata(&method.params);

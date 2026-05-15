@@ -759,6 +759,9 @@ checked-in docs, tests, and commits only.
   consistently with paired display and typed field expectations.
 - Resolver enum variant payload expectation construction now uses metadata
   terminology consistently with paired display and typed payload expectations.
+- Resolver behavior-method expectation construction now uses metadata
+  terminology consistently with paired display-signature and typed method
+  expectations.
 
 ## Current Phase
 
