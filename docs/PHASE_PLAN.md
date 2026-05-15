@@ -933,6 +933,8 @@ checked-in docs, tests, and commits only.
   declaration/import/module and local symbol checks.
 - Resolver missing-symbol validation now shares one diagnostic helper across
   declaration/import/module/type/behavior/variant/value and local checks.
+- Resolver absent-source metadata validation now reuses the shared resolver
+  source diagnostic helper.
 
 ## Current Phase
 

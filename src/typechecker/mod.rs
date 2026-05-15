@@ -6892,15 +6892,18 @@ impl TypeChecker {
         code: &'static str,
         span: Span,
     ) {
-        if let Some(actual) = symbol.import_source.as_deref() {
-            self.diagnostics.push(Diagnostic::error(
+        self.validate_resolver_source(
+            symbol_kind,
+            name,
+            symbol.import_source.as_deref(),
+            None,
+            SourceValidation {
                 code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has source '{actual}', expected none"
-                ),
-                span,
-            ));
-        }
+                actual_missing: "none",
+                quote_expected: false,
+            },
+            span,
+        );
     }
 
     fn validate_resolver_source(
