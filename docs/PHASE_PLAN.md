@@ -1053,6 +1053,8 @@ checked-in docs, tests, and commits only.
   through the shared source validation bundle.
 - Resolver type-like source absence validation now owns its resolver diagnostic
   code mapping instead of constructing that code at the call site.
+- Resolver variant source absence validation now owns its resolver diagnostic
+  code mapping instead of constructing that code at the call site.
 - Resolver local mutability validation now shares the same diagnostic helper
   shape used by the resolver metadata validation paths.
 - Resolver local mutability validation now carries its diagnostic code and
