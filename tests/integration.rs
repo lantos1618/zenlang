@@ -1212,74 +1212,25 @@ main = () i32 {
 
 #[test]
 fn build_command_rejects_build_zen_until_deterministic_graph_exists() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let build_path = tmp.path().join("build.zen");
-    std::fs::write(
-        &build_path,
-        r#"
-main = () i32 {
-    return 0
-}
-"#,
-    )
-    .expect("write build.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build", build_path.to_str().unwrap()])
-        .output()
-        .expect("run zen build");
-
-    assert!(
-        !output.status.success(),
-        "zen build build.zen unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr).contains(
-            "build.zen execution is gated until deterministic build graph support exists"
-        ),
-        "expected build.zen gated diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert_build_zen_rejected(&["build"], "zen build build.zen");
 }
 
 #[test]
 fn check_command_rejects_build_zen_until_deterministic_graph_exists() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let build_path = tmp.path().join("build.zen");
-    std::fs::write(
-        &build_path,
-        r#"
-main = () i32 {
-    return 0
-}
-"#,
-    )
-    .expect("write build.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["check", build_path.to_str().unwrap()])
-        .output()
-        .expect("run zen check");
-
-    assert!(
-        !output.status.success(),
-        "zen check build.zen unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr).contains(
-            "build.zen execution is gated until deterministic build graph support exists"
-        ),
-        "expected build.zen gated diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert_build_zen_rejected(&["check"], "zen check build.zen");
 }
 
 #[test]
 fn emit_command_rejects_build_zen_until_deterministic_graph_exists() {
+    assert_build_zen_rejected(&["emit"], "zen emit build.zen");
+}
+
+#[test]
+fn direct_file_command_rejects_build_zen_until_deterministic_graph_exists() {
+    assert_build_zen_rejected(&[], "zen build.zen");
+}
+
+fn assert_build_zen_rejected(prefix_args: &[&str], command_name: &str) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let build_path = tmp.path().join("build.zen");
     std::fs::write(
@@ -1292,14 +1243,16 @@ main = () i32 {
     )
     .expect("write build.zen");
 
+    let mut args = prefix_args.to_vec();
+    args.push(build_path.to_str().unwrap());
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit", build_path.to_str().unwrap()])
+        .args(args)
         .output()
-        .expect("run zen emit");
+        .unwrap_or_else(|err| panic!("run {command_name}: {err}"));
 
     assert!(
         !output.status.success(),
-        "zen emit build.zen unexpectedly succeeded: stdout={}, stderr={}",
+        "{command_name} unexpectedly succeeded: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
@@ -1307,7 +1260,7 @@ main = () i32 {
         String::from_utf8_lossy(&output.stderr).contains(
             "build.zen execution is gated until deterministic build graph support exists"
         ),
-        "expected build.zen gated diagnostic, stderr={}",
+        "expected build.zen gated diagnostic for {command_name}, stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
 }

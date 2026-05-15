@@ -739,9 +739,9 @@ checked-in docs, tests, and commits only.
   resolver-backed declaration collection as single-file resolver/typechecker
   integration, so graph-owned modules no longer fall back to plain AST
   declaration collection after resolver validation.
-- The CLI `check`, `emit`, and `build` paths now reject `build.zen` explicitly
-  until deterministic build graph support exists, with integration coverage for
-  the gated Phase 4 entrypoints.
+- The CLI `check`, `emit`, `build`, and direct file paths now reject
+  `build.zen` explicitly until deterministic build graph support exists, with
+  integration coverage for the gated Phase 4 entrypoints.
 - Resolver behavior-association validation now shares the parent/impl/requires
   name/ref diagnostic plumbing while keeping each path's explicit labels and
   error codes.
