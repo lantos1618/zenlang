@@ -13258,6 +13258,80 @@ Box.impl = {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_metadata()
+    {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Debug: behavior {
+    debug: (Self) str
+}
+Box: { value: i32 }
+
+Box.impl = {
+    apply<U: Json<U>> = (self: Box, callback: (U) U) (U) U {
+        return callback
+    }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[3] {
+            if let Declaration::Function {
+                type_params,
+                params,
+                return_type,
+                ..
+            } = &mut methods[0]
+            {
+                type_params[0].name = "Stale".to_string();
+                type_params[0].constraint = Some("Debug".to_string());
+                type_params[0].constraint_type_args.clear();
+                params[1].ty = AstType::I32;
+                *return_type = Some(AstType::I32);
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc
+            .generic_methods
+            .get("Box.apply")
+            .expect("generic impl method template");
+        assert_eq!(template.type_params, vec!["U".to_string()]);
+        assert_eq!(
+            tc.methods
+                .get("Box.apply")
+                .expect("impl method info")
+                .type_param_bounds
+                .get("U"),
+            Some(&BehaviorBound {
+                behavior: "Json".to_string(),
+                type_args: vec![AstType::Named("U".to_string())],
+            })
+        );
+        assert_eq!(
+            template.params[1].ty,
+            AstType::Function {
+                params: vec![AstType::Named("U".to_string())],
+                ret: Box::new(AstType::Named("U".to_string())),
+            }
+        );
+        assert_eq!(
+            template.return_type,
+            Some(AstType::Function {
+                params: vec![AstType::Named("U".to_string())],
+                ret: Box::new(AstType::Named("U".to_string())),
+            })
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_generic_impl_method_template(
     ) {
         let mut program = parse_program(

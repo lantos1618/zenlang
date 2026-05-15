@@ -95,6 +95,10 @@ checked-in docs, tests, and commits only.
   The rebuild preserves AST-only parameter mutability by positional fallback
   when resolver-restored parameter names differ from stale AST names, and it
   ignores stale same-name matches from different parameter positions.
+- Resolver-backed generic `Type.impl` method template collection now has the
+  same function-typed parameter/return and behavior-bound metadata coverage as
+  top-level generic method templates, so impl templates do not rely on stale
+  AST-only generic signatures before monomorphization.
 - Resolver-backed behavior method collection now rebuilds behavior parameters
   from resolver-owned parameter names and types, so stale AST-only missing or
   extra parameters cannot distort impl conformance checks.
