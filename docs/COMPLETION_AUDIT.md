@@ -911,6 +911,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior inheritance checks validate restored resolver parent
   refs before cycle and method-coherence checks, so stale AST-only parent names
   or type arguments cannot leak false extends diagnostics.
+  Restored generic parent refs prevent false duplicate inheritance diagnostics
+  when AST-only parent type arguments collapse distinct parent specializations,
+  covered by
+  `typechecker::tests::collect_declarations_with_symbols_avoids_false_duplicate_from_restored_parent_type_args`.
   Inherited missing-method diagnostics from restored parent refs are covered by
   `typechecker::tests::collect_declarations_with_symbols_reports_resolver_restored_behavior_parent_metadata`.
   Inherited behavior default synthesis from restored parent refs is covered by
