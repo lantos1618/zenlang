@@ -181,6 +181,11 @@ struct ExpectedBehaviorMethods {
     types: Vec<BehaviorMethodTypeMetadata>,
 }
 
+struct ExpectedBehaviorSymbol {
+    type_like: ExpectedTypeLikeSymbol,
+    methods: ExpectedBehaviorMethods,
+}
+
 struct ExpectedTypeParameters {
     count: usize,
     names: Vec<String>,
@@ -4164,23 +4169,17 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    let Some(symbol) = self.require_resolver_type_like_symbol(
-                        symbols,
-                        Namespace::Behavior,
-                        name,
-                        expected_type_like_symbol(type_params, Some(*public)),
-                        *span,
-                    ) else {
+                    if self
+                        .require_resolver_behavior_symbol(
+                            symbols,
+                            name,
+                            expected_behavior_symbol(type_params, methods, *public),
+                            *span,
+                        )
+                        .is_none()
+                    {
                         continue;
                     };
-                    let expected_methods = expected_behavior_methods(methods);
-                    self.validate_resolver_behavior_method_signatures(
-                        symbol,
-                        name,
-                        expected_methods,
-                        *span,
-                    );
-                    self.validate_resolver_behavior_absent_type_metadata(symbol, name, *span);
                     for method in methods {
                         if let Some(default_body) = &method.default_body {
                             let mut locals = scope_cursor.new_scope();
@@ -6486,6 +6485,27 @@ impl TypeChecker {
         Some(symbol)
     }
 
+    fn require_resolver_behavior_symbol<'a>(
+        &mut self,
+        symbols: &'a SymbolTable,
+        name: &str,
+        expected: ExpectedBehaviorSymbol,
+        span: Span,
+    ) -> Option<&'a crate::resolver::Symbol> {
+        let symbol = self.require_resolver_type_like_symbol(
+            symbols,
+            Namespace::Behavior,
+            name,
+            expected.type_like,
+            span,
+        )?;
+
+        self.validate_resolver_behavior_method_signatures(symbol, name, expected.methods, span);
+        self.validate_resolver_behavior_absent_type_metadata(symbol, name, span);
+
+        Some(symbol)
+    }
+
     fn validate_resolver_type_parameters(
         &mut self,
         symbol: &crate::resolver::Symbol,
@@ -7632,6 +7652,17 @@ fn expected_type_like_symbol(
     ExpectedTypeLikeSymbol {
         type_params,
         is_public,
+    }
+}
+
+fn expected_behavior_symbol(
+    type_params: &[ast::TypeParam],
+    methods: &[ast::BehaviorMethod],
+    is_public: bool,
+) -> ExpectedBehaviorSymbol {
+    ExpectedBehaviorSymbol {
+        type_like: expected_type_like_symbol(type_params, Some(is_public)),
+        methods: expected_behavior_methods(methods),
     }
 }
 
