@@ -622,6 +622,8 @@ checked-in docs, tests, and commits only.
   symbol lookup across parent, impl, and requires handoff paths.
 - Resolver behavior-association validation now builds expected display names
   and typed refs in the same AST pass for impl/requires and parent edges.
+- Resolver behavior-association expectation storage now uses a shared edge
+  container for impl, requires, and parent validation inputs.
 
 ## Current Phase
 

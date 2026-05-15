@@ -629,6 +629,8 @@ and do not assume Phase 4 is ready without evidence.
   accessor for behavior parent refs, type impl refs, and type requires refs.
 - Resolver behavior-association validation now derives display-name and typed
   ref expectations together, avoiding duplicate AST scans for the same edges.
+- Resolver behavior-association expectation storage now uses one shared edge
+  container for impl, requires, and parent inputs.
 
 ## Unresolved Gaps
 

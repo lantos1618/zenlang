@@ -586,16 +586,39 @@ struct ExpectedBehaviorRefList<'a> {
     refs: &'a [BehaviorRefMetadata],
 }
 
-struct ExpectedBehaviorAssociations {
-    impl_names: HashMap<String, Vec<String>>,
-    required_names: HashMap<String, Vec<String>>,
-    impl_refs: HashMap<String, Vec<BehaviorRefMetadata>>,
-    required_refs: HashMap<String, Vec<BehaviorRefMetadata>>,
-}
-
-struct ExpectedBehaviorParents {
+#[derive(Default)]
+struct ExpectedBehaviorEdges {
     names: HashMap<String, Vec<String>>,
     refs: HashMap<String, Vec<BehaviorRefMetadata>>,
+}
+
+impl ExpectedBehaviorEdges {
+    fn push(&mut self, owner: &str, behavior: &str, type_args: &[AstType]) {
+        self.names
+            .entry(owner.to_string())
+            .or_default()
+            .push(behavior_ref_display(behavior, type_args));
+        self.refs
+            .entry(owner.to_string())
+            .or_default()
+            .push(BehaviorRefMetadata {
+                name: behavior.to_string(),
+                type_args: type_args.to_vec(),
+            });
+    }
+
+    fn names_for(&self, owner: &str) -> &[String] {
+        self.names.get(owner).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    fn refs_for(&self, owner: &str) -> &[BehaviorRefMetadata] {
+        self.refs.get(owner).map(Vec::as_slice).unwrap_or(&[])
+    }
+}
+
+struct ExpectedBehaviorAssociations {
+    impls: ExpectedBehaviorEdges,
+    required: ExpectedBehaviorEdges,
 }
 
 // ── TypeChecker ───────────────────────────────────────────────────
@@ -4389,31 +4412,15 @@ impl TypeChecker {
             self.validate_resolver_behavior_impl_list(
                 symbol,
                 name,
-                expected
-                    .impl_names
-                    .get(name)
-                    .map(Vec::as_slice)
-                    .unwrap_or(&[]),
-                expected
-                    .impl_refs
-                    .get(name)
-                    .map(Vec::as_slice)
-                    .unwrap_or(&[]),
+                expected.impls.names_for(name),
+                expected.impls.refs_for(name),
                 *span,
             );
             self.validate_resolver_behavior_required_list(
                 symbol,
                 name,
-                expected
-                    .required_names
-                    .get(name)
-                    .map(Vec::as_slice)
-                    .unwrap_or(&[]),
-                expected
-                    .required_refs
-                    .get(name)
-                    .map(Vec::as_slice)
-                    .unwrap_or(&[]),
+                expected.required.names_for(name),
+                expected.required.refs_for(name),
                 *span,
             );
         }
@@ -4435,8 +4442,8 @@ impl TypeChecker {
             self.validate_resolver_behavior_parent_list(
                 symbol,
                 name,
-                expected.names.get(name).map(Vec::as_slice).unwrap_or(&[]),
-                expected.refs.get(name).map(Vec::as_slice).unwrap_or(&[]),
+                expected.names_for(name),
+                expected.refs_for(name),
                 *span,
             );
         }
@@ -7801,10 +7808,8 @@ fn expected_behavior_method_types(
 
 fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAssociations {
     let mut expected = ExpectedBehaviorAssociations {
-        impl_names: HashMap::new(),
-        required_names: HashMap::new(),
-        impl_refs: HashMap::new(),
-        required_refs: HashMap::new(),
+        impls: ExpectedBehaviorEdges::default(),
+        required: ExpectedBehaviorEdges::default(),
     };
     for decl in &program.declarations {
         match decl {
@@ -7814,19 +7819,7 @@ fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAss
                 behavior_type_args,
                 ..
             } => {
-                expected
-                    .impl_names
-                    .entry(type_name.clone())
-                    .or_default()
-                    .push(behavior_ref_display(behavior, behavior_type_args));
-                expected
-                    .impl_refs
-                    .entry(type_name.clone())
-                    .or_default()
-                    .push(BehaviorRefMetadata {
-                        name: behavior.clone(),
-                        type_args: behavior_type_args.clone(),
-                    });
+                expected.impls.push(type_name, behavior, behavior_type_args);
             }
             Declaration::Requires {
                 type_name,
@@ -7835,18 +7828,8 @@ fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAss
                 ..
             } => {
                 expected
-                    .required_names
-                    .entry(type_name.clone())
-                    .or_default()
-                    .push(behavior_ref_display(behavior, behavior_type_args));
-                expected
-                    .required_refs
-                    .entry(type_name.clone())
-                    .or_default()
-                    .push(BehaviorRefMetadata {
-                        name: behavior.clone(),
-                        type_args: behavior_type_args.clone(),
-                    });
+                    .required
+                    .push(type_name, behavior, behavior_type_args);
             }
             _ => {}
         }
@@ -7854,11 +7837,8 @@ fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAss
     expected
 }
 
-fn expected_behavior_parent_associations(program: &ast::Program) -> ExpectedBehaviorParents {
-    let mut expected = ExpectedBehaviorParents {
-        names: HashMap::new(),
-        refs: HashMap::new(),
-    };
+fn expected_behavior_parent_associations(program: &ast::Program) -> ExpectedBehaviorEdges {
+    let mut expected = ExpectedBehaviorEdges::default();
     for decl in &program.declarations {
         if let Declaration::BehaviorExtends {
             behavior,
@@ -7867,19 +7847,7 @@ fn expected_behavior_parent_associations(program: &ast::Program) -> ExpectedBeha
             ..
         } = decl
         {
-            expected
-                .names
-                .entry(behavior.clone())
-                .or_default()
-                .push(behavior_ref_display(parent, parent_type_args));
-            expected
-                .refs
-                .entry(behavior.clone())
-                .or_default()
-                .push(BehaviorRefMetadata {
-                    name: parent.clone(),
-                    type_args: parent_type_args.clone(),
-                });
+            expected.push(behavior, parent, parent_type_args);
         }
     }
     expected
