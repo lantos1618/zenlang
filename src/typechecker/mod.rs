@@ -15435,6 +15435,44 @@ Box.apply<U: Json<U>> = (self: Box, callback: (U) U) (U) U {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_clears_generic_method_template_type_params_when_resolver_bounds_missing(
+    ) {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Box: { value: i32 }
+Box.keep<U: Json<U>> = (self: Box, value: U) U { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_bound_refs_for_test(Namespace::Value, "Box.keep", None);
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc
+            .generic_methods
+            .get("Box.keep")
+            .expect("generic method template");
+        assert!(
+            template.type_params.is_empty(),
+            "resolver-backed generic method templates should not keep type parameter names when typed bound metadata is incomplete"
+        );
+        assert!(
+            tc.methods
+                .get("Box.keep")
+                .expect("method info")
+                .type_params
+                .is_empty(),
+            "method info and template type parameter handoff should agree when resolver metadata is incomplete"
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_generic_method_template_return_presence() {
         let mut program = parse_program(
             r#"

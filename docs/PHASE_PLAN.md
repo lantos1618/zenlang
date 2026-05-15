@@ -1239,7 +1239,7 @@ checked-in docs, tests, and commits only.
   typed bound refs through one shared metadata helper.
 - Resolver-backed generic template refresh now uses the same complete
   type-parameter metadata as callable info, so incomplete typed bound refs do
-  not leave stale template type parameters behind.
+  not leave stale function or method template type parameters behind.
 - The docs truth gate now locks the quiet draft-PR CI trigger shape: no
   `pull_request.synchronize`, manual dispatch retained, and fmt/clippy/test
   jobs guarded by the draft-PR condition.
