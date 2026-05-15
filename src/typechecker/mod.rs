@@ -1482,6 +1482,34 @@ impl BehaviorRefValidation {
             },
         }
     }
+
+    fn contains_name_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver {} symbol '{name}' has {} '{actual}', expected to include '{expected}'",
+            self.symbol_kind, self.name_label
+        )
+    }
+
+    fn contains_ref_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver {} symbol '{name}' has {} '{actual}', expected to include '{expected}'",
+            self.symbol_kind, self.ref_label
+        )
+    }
+
+    fn list_name_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver {} symbol '{name}' has {} '{actual}', expected '{expected}'",
+            self.symbol_kind, self.name_label
+        )
+    }
+
+    fn list_ref_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver {} symbol '{name}' has {} '{actual}', expected '{expected}'",
+            self.symbol_kind, self.ref_label
+        )
+    }
 }
 
 struct BehaviorRefActual<'a> {
@@ -8376,10 +8404,7 @@ impl TypeChecker {
             let actual = format_behavior_ref_names(actual.names);
             self.diagnostics.push(Diagnostic::error(
                 validation.name_code,
-                format!(
-                    "resolver {} symbol '{name}' has {} '{actual}', expected to include '{}'",
-                    validation.symbol_kind, validation.name_label, expected.display
-                ),
+                validation.contains_name_message(name, &actual, &expected.display),
                 span,
             ));
         }
@@ -8392,10 +8417,7 @@ impl TypeChecker {
                 behavior_ref_display(&expected.metadata.name, &expected.metadata.type_args);
             self.diagnostics.push(Diagnostic::error(
                 validation.ref_code,
-                format!(
-                    "resolver {} symbol '{name}' has {} '{actual}', expected to include '{expected_ref}'",
-                    validation.symbol_kind, validation.ref_label
-                ),
+                validation.contains_ref_message(name, &actual, &expected_ref),
                 span,
             ));
         }
@@ -8415,10 +8437,7 @@ impl TypeChecker {
             let expected_names = format_behavior_ref_names(Some(&expected.names));
             self.diagnostics.push(Diagnostic::error(
                 validation.name_code,
-                format!(
-                    "resolver {} symbol '{name}' has {} '{actual}', expected '{expected_names}'",
-                    validation.symbol_kind, validation.name_label
-                ),
+                validation.list_name_message(name, &actual, &expected_names),
                 span,
             ));
         }
@@ -8427,10 +8446,7 @@ impl TypeChecker {
             let expected_refs = format_behavior_refs(Some(&expected.refs));
             self.diagnostics.push(Diagnostic::error(
                 validation.ref_code,
-                format!(
-                    "resolver {} symbol '{name}' has {} '{actual}', expected '{expected_refs}'",
-                    validation.symbol_kind, validation.ref_label
-                ),
+                validation.list_ref_message(name, &actual, &expected_refs),
                 span,
             ));
         }
@@ -9919,6 +9935,27 @@ Box.get<T> = (self: Box<T>) T { return self.value }
                 expected
             );
         }
+
+        let contains =
+            BehaviorRefValidation::for_role(BehaviorRefRole::Impl, BehaviorRefCheck::Contains);
+        assert_eq!(
+            contains.contains_name_message("Point", "PrettyJson", "Json<str>"),
+            "resolver type symbol 'Point' has behavior impls 'PrettyJson', expected to include 'Json<str>'"
+        );
+        assert_eq!(
+            contains.contains_ref_message("Point", "PrettyJson", "Json<str>"),
+            "resolver type symbol 'Point' has behavior impl refs 'PrettyJson', expected to include 'Json<str>'"
+        );
+
+        let list = BehaviorRefValidation::for_role(BehaviorRefRole::Parent, BehaviorRefCheck::List);
+        assert_eq!(
+            list.list_name_message("PrettyJson", "Json, Debug", "Json"),
+            "resolver behavior symbol 'PrettyJson' has parents 'Json, Debug', expected 'Json'"
+        );
+        assert_eq!(
+            list.list_ref_message("PrettyJson", "Json, Debug", "Json"),
+            "resolver behavior symbol 'PrettyJson' has parent refs 'Json, Debug', expected 'Json'"
+        );
     }
 
     #[test]

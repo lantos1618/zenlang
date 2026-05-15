@@ -993,6 +993,8 @@ checked-in docs, tests, and commits only.
   parent, impl, and requires resolver metadata selection.
 - Resolver behavior-association contains/list validation now shares role-aware
   wrapper helpers for parent, impl, and requires diagnostics.
+- Resolver behavior-association diagnostics now carry contains/list name/ref
+  message formatting through the behavior-ref validation bundle.
 - Resolver struct-field validation now shares one expected metadata bundle
   for counts, display fields, and typed AST fields.
 - Resolver behavior-method validation now shares one expected metadata bundle

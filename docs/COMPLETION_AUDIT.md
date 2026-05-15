@@ -953,6 +953,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-association contains/list validation now shares role-aware
   wrapper helpers for parent, impl, and requires diagnostics, covered by
   `typechecker::tests::behavior_ref_role_validation_emits_selected_contains_diagnostics`.
+- Resolver behavior-association diagnostics now carry contains/list name/ref
+  message formatting through the behavior-ref validation bundle, covered by
+  `typechecker::tests::behavior_ref_validation_maps_role_and_check_diagnostics`.
 - Resolver struct-field validation now shares one expected metadata bundle
   for counts, display fields, and typed AST fields.
 - Resolver behavior-method validation now shares one expected metadata bundle
