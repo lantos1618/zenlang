@@ -7703,7 +7703,7 @@ fn expected_struct_symbol(
 ) -> ExpectedStructSymbol {
     ExpectedStructSymbol {
         type_like: expected_type_like_symbol(type_params, Some(is_public)),
-        fields: expected_fields(fields),
+        fields: expected_field_metadata(fields),
     }
 }
 
@@ -7821,7 +7821,7 @@ fn format_parameter_names(names: Option<&[String]>) -> String {
     }
 }
 
-fn expected_fields(fields: &[StructField]) -> Vec<ExpectedField> {
+fn expected_field_metadata(fields: &[StructField]) -> Vec<ExpectedField> {
     let mut expected = Vec::new();
     for field in fields {
         expected.push(ExpectedField {

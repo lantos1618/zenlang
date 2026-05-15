@@ -755,6 +755,8 @@ checked-in docs, tests, and commits only.
 - Resolver type-parameter expectation construction now uses metadata
   terminology consistently with paired bound display and typed bound-ref
   expectations.
+- Resolver struct-field expectation construction now uses metadata terminology
+  consistently with paired display and typed field expectations.
 
 ## Current Phase
 
