@@ -189,6 +189,27 @@ struct ExpectedParameter {
     display: String,
 }
 
+struct ExpectedParameterMetadata {
+    count: usize,
+    names: Vec<String>,
+    display_types: Vec<String>,
+    typed_types: Vec<AstType>,
+}
+
+impl ExpectedParameterMetadata {
+    fn from_parameters(parameters: &[ExpectedParameter]) -> Self {
+        Self {
+            count: parameters.len(),
+            names: parameters.iter().map(|param| param.name.clone()).collect(),
+            display_types: parameters
+                .iter()
+                .map(|param| param.display.clone())
+                .collect(),
+            typed_types: parameters.iter().map(|param| param.typed.clone()).collect(),
+        }
+    }
+}
+
 struct ExpectedReturnMetadata {
     typed: AstType,
     display: String,
@@ -7695,8 +7716,8 @@ impl TypeChecker {
         expected: &[ExpectedParameter],
         span: Span,
     ) {
-        let expected_count = expected.len();
-        if symbol.parameter_count != Some(expected_count) {
+        let expected = ExpectedParameterMetadata::from_parameters(expected);
+        if symbol.parameter_count != Some(expected.count) {
             let actual = symbol
                 .parameter_count
                 .map(|count| count.to_string())
@@ -7705,16 +7726,15 @@ impl TypeChecker {
                 "E0211",
                 format!(
                     "resolver value symbol '{name}' has parameter count {actual}, expected {}",
-                    expected_count
+                    expected.count
                 ),
                 span,
             ));
         }
 
-        let expected_names: Vec<_> = expected.iter().map(|param| param.name.clone()).collect();
-        if symbol.parameter_names.as_deref() != Some(expected_names.as_slice()) {
+        if symbol.parameter_names.as_deref() != Some(expected.names.as_slice()) {
             let actual = format_parameter_names(symbol.parameter_names.as_deref());
-            let expected_names_display = format_parameter_names(Some(&expected_names));
+            let expected_names_display = format_parameter_names(Some(&expected.names));
             self.diagnostics.push(Diagnostic::error(
                 "E0223",
                 format!(
@@ -7724,11 +7744,9 @@ impl TypeChecker {
             ));
         }
 
-        let expected_type_names: Vec<_> =
-            expected.iter().map(|param| param.display.clone()).collect();
-        if symbol.parameter_type_names.as_deref() != Some(expected_type_names.as_slice()) {
+        if symbol.parameter_type_names.as_deref() != Some(expected.display_types.as_slice()) {
             let actual = format_parameter_type_names(symbol.parameter_type_names.as_deref());
-            let expected_types = format_parameter_type_names(Some(&expected_type_names));
+            let expected_types = format_parameter_type_names(Some(&expected.display_types));
             self.diagnostics.push(Diagnostic::error(
                 "E0216",
                 format!(
@@ -7737,10 +7755,9 @@ impl TypeChecker {
                 span,
             ));
         }
-        let expected_types: Vec<_> = expected.iter().map(|param| param.typed.clone()).collect();
-        if symbol.parameter_types.as_deref() != Some(expected_types.as_slice()) {
+        if symbol.parameter_types.as_deref() != Some(expected.typed_types.as_slice()) {
             let actual = format_ast_type_list(symbol.parameter_types.as_deref());
-            let expected_types = format_ast_type_list(Some(&expected_types));
+            let expected_types = format_ast_type_list(Some(&expected.typed_types));
             self.diagnostics.push(Diagnostic::error(
                 "E0356",
                 format!(
