@@ -7881,10 +7881,10 @@ impl TypeChecker {
         expected: ExpectedBehaviorEdge,
         span: Span,
     ) {
-        self.validate_resolver_behavior_ref_contains(
-            BehaviorRefValidation::for_role(BehaviorRefRole::Parent, BehaviorRefCheck::Contains),
+        self.validate_resolver_behavior_ref_contains_for_role(
+            BehaviorRefRole::Parent,
+            symbol,
             name,
-            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Parent),
             expected,
             span,
         );
@@ -7897,10 +7897,10 @@ impl TypeChecker {
         expected: &[ExpectedBehaviorEdge],
         span: Span,
     ) {
-        self.validate_resolver_behavior_ref_list(
-            BehaviorRefValidation::for_role(BehaviorRefRole::Parent, BehaviorRefCheck::List),
+        self.validate_resolver_behavior_ref_list_for_role(
+            BehaviorRefRole::Parent,
+            symbol,
             name,
-            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Parent),
             expected,
             span,
         );
@@ -7913,10 +7913,10 @@ impl TypeChecker {
         expected: ExpectedBehaviorEdge,
         span: Span,
     ) {
-        self.validate_resolver_behavior_ref_contains(
-            BehaviorRefValidation::for_role(BehaviorRefRole::Impl, BehaviorRefCheck::Contains),
+        self.validate_resolver_behavior_ref_contains_for_role(
+            BehaviorRefRole::Impl,
+            symbol,
             name,
-            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Impl),
             expected,
             span,
         );
@@ -7929,10 +7929,10 @@ impl TypeChecker {
         expected: &[ExpectedBehaviorEdge],
         span: Span,
     ) {
-        self.validate_resolver_behavior_ref_list(
-            BehaviorRefValidation::for_role(BehaviorRefRole::Impl, BehaviorRefCheck::List),
+        self.validate_resolver_behavior_ref_list_for_role(
+            BehaviorRefRole::Impl,
+            symbol,
             name,
-            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Impl),
             expected,
             span,
         );
@@ -7945,10 +7945,10 @@ impl TypeChecker {
         expected: ExpectedBehaviorEdge,
         span: Span,
     ) {
-        self.validate_resolver_behavior_ref_contains(
-            BehaviorRefValidation::for_role(BehaviorRefRole::Required, BehaviorRefCheck::Contains),
+        self.validate_resolver_behavior_ref_contains_for_role(
+            BehaviorRefRole::Required,
+            symbol,
             name,
-            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Required),
             expected,
             span,
         );
@@ -7961,10 +7961,44 @@ impl TypeChecker {
         expected: &[ExpectedBehaviorEdge],
         span: Span,
     ) {
-        self.validate_resolver_behavior_ref_list(
-            BehaviorRefValidation::for_role(BehaviorRefRole::Required, BehaviorRefCheck::List),
+        self.validate_resolver_behavior_ref_list_for_role(
+            BehaviorRefRole::Required,
+            symbol,
             name,
-            BehaviorRefActual::for_role(symbol, BehaviorRefRole::Required),
+            expected,
+            span,
+        );
+    }
+
+    fn validate_resolver_behavior_ref_contains_for_role(
+        &mut self,
+        role: BehaviorRefRole,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected: ExpectedBehaviorEdge,
+        span: Span,
+    ) {
+        self.validate_resolver_behavior_ref_contains(
+            BehaviorRefValidation::for_role(role, BehaviorRefCheck::Contains),
+            name,
+            BehaviorRefActual::for_role(symbol, role),
+            expected,
+            span,
+        );
+    }
+
+    fn validate_resolver_behavior_ref_list_for_role(
+        &mut self,
+        role: BehaviorRefRole,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected: &[ExpectedBehaviorEdge],
+        span: Span,
+    ) {
+        self.validate_resolver_behavior_ref_list(
+            BehaviorRefValidation::for_role(role, BehaviorRefCheck::List),
+            name,
+            BehaviorRefActual::for_role(symbol, role),
             expected,
             span,
         );
@@ -9548,6 +9582,49 @@ Point.requires(Json<str>)
         let required = BehaviorRefActual::for_role(ty, BehaviorRefRole::Required);
         assert_eq!(format_behavior_ref_names(required.names), "Json<str>");
         assert_eq!(format_behavior_refs(required.refs), "Json<str>");
+    }
+
+    #[test]
+    fn behavior_ref_role_validation_emits_selected_contains_diagnostics() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+Point.implements(PrettyJson) {
+    pretty = (value: Point) str { return "pretty" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let ty = symbols
+            .lookup(Namespace::Type, "Point")
+            .expect("type symbol");
+        let mut tc = TypeChecker::new();
+
+        tc.validate_resolver_behavior_ref_contains_for_role(
+            BehaviorRefRole::Impl,
+            ty,
+            "Point",
+            expected_behavior_edge("Json", &[AstType::Str]),
+            Span::dummy(),
+        );
+
+        assert!(tc.diagnostics.iter().any(|d| d.code == "E0236" && d.message.contains(
+            "resolver type symbol 'Point' has behavior impls 'PrettyJson', expected to include 'Json<str>'"
+        )));
+        assert!(tc.diagnostics.iter().any(|d| d.code == "E0247" && d.message.contains(
+            "resolver type symbol 'Point' has behavior impl refs 'PrettyJson', expected to include 'Json<str>'"
+        )));
     }
 
     #[test]
