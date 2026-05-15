@@ -273,7 +273,7 @@ struct ExpectedField {
 }
 
 struct ExpectedVariantPayload {
-    ty: ExpectedVariantPayloadType,
+    metadata: ExpectedVariantPayloadType,
 }
 
 struct ExpectedVariantPayloadType {
@@ -6898,7 +6898,7 @@ impl TypeChecker {
         expected_payload: ExpectedVariantPayload,
         span: Span,
     ) {
-        let expected_count = usize::from(expected_payload.ty.typed.is_some());
+        let expected_count = usize::from(expected_payload.metadata.typed.is_some());
         if symbol.variant_payload_count != Some(expected_count) {
             let actual = symbol
                 .variant_payload_count
@@ -6913,14 +6913,14 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.variant_payload_type != expected_payload.ty.typed {
+        if symbol.variant_payload_type != expected_payload.metadata.typed {
             let actual = symbol
                 .variant_payload_type
                 .as_ref()
                 .map(AstType::display_name)
                 .unwrap_or_else(|| "none".to_string());
             let expected = expected_payload
-                .ty
+                .metadata
                 .typed
                 .as_ref()
                 .map(AstType::display_name)
@@ -6933,12 +6933,16 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.variant_payload_type_name != expected_payload.ty.display {
+        if symbol.variant_payload_type_name != expected_payload.metadata.display {
             let actual = symbol
                 .variant_payload_type_name
                 .as_deref()
                 .unwrap_or("unknown");
-            let expected = expected_payload.ty.display.as_deref().unwrap_or("none");
+            let expected = expected_payload
+                .metadata
+                .display
+                .as_deref()
+                .unwrap_or("none");
             self.diagnostics.push(Diagnostic::error(
                 "E0218",
                 format!(
@@ -7934,7 +7938,7 @@ fn format_variant_names(variants: Option<&[String]>) -> String {
 
 fn expected_variant_payload(payload: &Option<AstType>) -> ExpectedVariantPayload {
     ExpectedVariantPayload {
-        ty: ExpectedVariantPayloadType {
+        metadata: ExpectedVariantPayloadType {
             typed: payload.clone(),
             display: payload.as_ref().map(AstType::display_name),
         },
