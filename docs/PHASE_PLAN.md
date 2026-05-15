@@ -782,6 +782,9 @@ checked-in docs, tests, and commits only.
   metadata when resolver method metadata is missing.
 - Resolver-backed behavior collection no longer falls back to AST-only generic
   bounds when resolver bound metadata is missing.
+- Resolver-backed value, struct, and enum collection now defaults missing
+  resolver generic-bound metadata directly instead of carrying dead AST-bound
+  fallback state.
 
 ## Current Phase
 

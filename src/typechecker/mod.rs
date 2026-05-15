@@ -1527,17 +1527,11 @@ impl TypeChecker {
         ) else {
             return;
         };
-        let ast_type_param_bounds = self
-            .functions
-            .get(name)
-            .or_else(|| self.methods.get(name))
-            .map(|info| info.type_param_bounds.clone())
-            .unwrap_or_default();
         let type_param_bounds = symbol
             .type_parameter_bound_refs
             .as_deref()
             .map(type_param_bounds_from_resolver_refs)
-            .unwrap_or(ast_type_param_bounds);
+            .unwrap_or_default();
 
         let info = FuncInfo {
             name: name.to_string(),
@@ -1651,16 +1645,11 @@ impl TypeChecker {
             return;
         };
 
-        let ast_type_param_bounds = self
-            .structs
-            .get(name)
-            .map(|info| info.type_param_bounds.clone())
-            .unwrap_or_default();
         let type_param_bounds = symbol
             .type_parameter_bound_refs
             .as_deref()
             .map(type_param_bounds_from_resolver_refs)
-            .unwrap_or(ast_type_param_bounds);
+            .unwrap_or_default();
         self.structs.insert(
             name.to_string(),
             StructInfo {
@@ -1691,16 +1680,11 @@ impl TypeChecker {
                 )
             })
             .collect();
-        let ast_type_param_bounds = self
-            .enums
-            .get(name)
-            .map(|info| info.type_param_bounds.clone())
-            .unwrap_or_default();
         let type_param_bounds = symbol
             .type_parameter_bound_refs
             .as_deref()
             .map(type_param_bounds_from_resolver_refs)
-            .unwrap_or(ast_type_param_bounds);
+            .unwrap_or_default();
         self.enums.insert(
             name.to_string(),
             EnumInfo {
@@ -8929,6 +8913,52 @@ Option<T: Json<T>>: Some(T), None
             tc.diagnostics.is_empty(),
             "resolver-restored type bounds should avoid stale AST generic-bound diagnostics: {:?}",
             tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_type_bounds() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Box<T: Json<T>>: { value: T }
+Option<T: Json<T>>: Some(T), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_bound_refs_for_test(Namespace::Type, "Box", None);
+        symbols.set_type_parameter_bound_refs_for_test(Namespace::Type, "Option", None);
+        if let Declaration::Struct { type_params, .. } = &mut program.declarations[1] {
+            type_params[0].constraint = Some("MissingBox".to_string());
+            type_params[0].constraint_type_args.clear();
+        }
+        if let Declaration::Enum { type_params, .. } = &mut program.declarations[2] {
+            type_params[0].constraint = Some("MissingOption".to_string());
+            type_params[0].constraint_type_args.clear();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.structs
+                .get("Box")
+                .expect("struct info")
+                .type_param_bounds
+                .is_empty(),
+            "resolver-backed struct collection should not keep AST-only bounds when resolver bound metadata is incomplete"
+        );
+        assert!(
+            tc.enums
+                .get("Option")
+                .expect("enum info")
+                .type_param_bounds
+                .is_empty(),
+            "resolver-backed enum collection should not keep AST-only bounds when resolver bound metadata is incomplete"
         );
     }
 
