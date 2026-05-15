@@ -3258,7 +3258,20 @@ impl TypeChecker {
         symbols: &SymbolTable,
     ) {
         self.collect_resolver_callable_declaration_metadata(decls, symbols);
+        self.collect_resolver_type_declaration_metadata(decls, symbols);
 
+        for decl in decls {
+            if let Declaration::Behavior { name, span, .. } = decl {
+                self.collect_resolver_behavior_declaration_metadata(symbols, name, *span);
+            }
+        }
+    }
+
+    fn collect_resolver_type_declaration_metadata(
+        &mut self,
+        decls: &[Declaration],
+        symbols: &SymbolTable,
+    ) {
         for decl in decls {
             match decl {
                 Declaration::Struct {
@@ -3268,9 +3281,6 @@ impl TypeChecker {
                 }
                 Declaration::Enum { name, span, .. } => {
                     self.collect_resolver_enum_declaration_metadata(symbols, name, *span);
-                }
-                Declaration::Behavior { name, span, .. } => {
-                    self.collect_resolver_behavior_declaration_metadata(symbols, name, *span);
                 }
                 _ => {}
             }
