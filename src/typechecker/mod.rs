@@ -7679,14 +7679,20 @@ impl TypeChecker {
         validation: ResolverSymbolPresenceValidation,
         span: Span,
     ) {
-        self.diagnostics.push(Diagnostic::error(
-            validation.code,
-            validation.message(symbol_kind, name),
-            span,
-        ));
+        self.validate_resolver_symbol_presence(symbol_kind, name, validation, span);
     }
 
     fn validate_missing_resolver_symbol(
+        &mut self,
+        symbol_kind: &str,
+        name: &str,
+        validation: ResolverSymbolPresenceValidation,
+        span: Span,
+    ) {
+        self.validate_resolver_symbol_presence(symbol_kind, name, validation, span);
+    }
+
+    fn validate_resolver_symbol_presence(
         &mut self,
         symbol_kind: &str,
         name: &str,
@@ -10300,6 +10306,28 @@ main = (mut input: i32) i32 {
         assert_eq!(
             missing.message("local", "value"),
             "resolver symbol table missing local symbol 'value'"
+        );
+    }
+
+    #[test]
+    fn resolver_symbol_presence_validation_pushes_diagnostic() {
+        let mut tc = TypeChecker::new();
+
+        tc.validate_resolver_symbol_presence(
+            "value",
+            "main",
+            ResolverSymbolPresenceValidation {
+                code: "EXTRA",
+                presence: ResolverSymbolPresence::Extra,
+            },
+            Span::dummy(),
+        );
+
+        assert_eq!(tc.diagnostics.len(), 1);
+        assert_eq!(tc.diagnostics[0].code, "EXTRA");
+        assert_eq!(
+            tc.diagnostics[0].message,
+            "resolver symbol table has extra value symbol 'main'"
         );
     }
 
