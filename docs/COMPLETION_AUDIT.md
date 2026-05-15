@@ -784,6 +784,8 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver variant payload expectations now pass paired typed/display payload
   metadata directly to validation instead of wrapping it in a redundant
   intermediate object.
+- Resolver field, enum variant-name, and behavior-method validators now borrow
+  expectation slices instead of taking ownership of rebuilt expectation vectors.
 
 ## Unresolved Gaps
 

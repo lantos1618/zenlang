@@ -861,6 +861,8 @@ checked-in docs, tests, and commits only.
 - Resolver variant payload expectations now pass the paired typed/display
   payload metadata directly to validation instead of wrapping it in a redundant
   intermediate object.
+- Resolver field, enum variant-name, and behavior-method validators now borrow
+  expectation slices instead of taking ownership of rebuilt expectation vectors.
 
 ## Current Phase
 

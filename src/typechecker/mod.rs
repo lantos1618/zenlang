@@ -6768,7 +6768,7 @@ impl TypeChecker {
             span,
         )?;
 
-        self.validate_resolver_fields(symbol, Namespace::Type, name, expected.fields, span);
+        self.validate_resolver_fields(symbol, Namespace::Type, name, &expected.fields, span);
         self.validate_resolver_struct_absent_enum_metadata(symbol, name, span);
 
         Some(symbol)
@@ -6789,7 +6789,7 @@ impl TypeChecker {
             span,
         )?;
 
-        self.validate_resolver_variant_names(symbol, name, expected.variant_names, span);
+        self.validate_resolver_variant_names(symbol, name, &expected.variant_names, span);
         self.validate_resolver_enum_absent_struct_metadata(symbol, name, span);
 
         Some(symbol)
@@ -6834,7 +6834,7 @@ impl TypeChecker {
             span,
         )?;
 
-        self.validate_resolver_behavior_methods(symbol, name, expected.methods, span);
+        self.validate_resolver_behavior_methods(symbol, name, &expected.methods, span);
         self.validate_resolver_behavior_absent_type_metadata(symbol, name, span);
 
         Some(symbol)
@@ -7036,7 +7036,7 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         namespace: Namespace,
         name: &str,
-        expected_fields: Vec<ExpectedField>,
+        expected_fields: &[ExpectedField],
         span: Span,
     ) {
         let expected_count = expected_fields.len();
@@ -7072,8 +7072,8 @@ impl TypeChecker {
             ));
         }
         let expected_type_names: Vec<_> = expected_fields
-            .into_iter()
-            .map(|field| field.display)
+            .iter()
+            .map(|field| field.display.clone())
             .collect();
         if symbol.field_type_names.as_deref() != Some(expected_type_names.as_slice()) {
             let actual = format_field_type_names(symbol.field_type_names.as_deref());
@@ -7093,12 +7093,12 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_variant_names: Vec<String>,
+        expected_variant_names: &[String],
         span: Span,
     ) {
-        if symbol.variant_names.as_deref() != Some(expected_variant_names.as_slice()) {
+        if symbol.variant_names.as_deref() != Some(expected_variant_names) {
             let actual = format_variant_names(symbol.variant_names.as_deref());
-            let expected = format_variant_names(Some(&expected_variant_names));
+            let expected = format_variant_names(Some(expected_variant_names));
             self.diagnostics.push(Diagnostic::error(
                 "E0241",
                 format!(
@@ -7361,7 +7361,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_methods: Vec<ExpectedBehaviorMethod>,
+        expected_methods: &[ExpectedBehaviorMethod],
         span: Span,
     ) {
         let expected_signatures: Vec<_> = expected_methods
@@ -7381,8 +7381,8 @@ impl TypeChecker {
             ));
         }
         let expected_types: Vec<_> = expected_methods
-            .into_iter()
-            .map(|method| method.metadata)
+            .iter()
+            .map(|method| method.metadata.clone())
             .collect();
         if symbol.behavior_method_types.as_deref() != Some(expected_types.as_slice()) {
             let actual = format_behavior_method_types(symbol.behavior_method_types.as_deref());
