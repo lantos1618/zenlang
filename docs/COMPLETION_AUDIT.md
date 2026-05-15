@@ -899,6 +899,8 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior inheritance checks validate restored resolver parent
   refs before cycle and method-coherence checks, so stale AST-only parent names
   or type arguments cannot leak false extends diagnostics.
+  Inherited missing-method diagnostics from restored parent refs are covered by
+  `typechecker::tests::collect_declarations_with_symbols_reports_resolver_restored_behavior_parent_metadata`.
 - Resolver type symbols carry visibility metadata for structs and enums, and
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Typechecker setup rejects resolver behavior symbol visibility mismatches

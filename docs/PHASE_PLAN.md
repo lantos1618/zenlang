@@ -435,6 +435,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior inheritance checks now validate restored resolver
   parent refs before cycle and method-coherence checks, so stale AST-only parent
   names or type arguments cannot leak false extends diagnostics.
+  Inherited missing-method diagnostics also use restored parent behavior refs
+  when AST-only `.extends` parent names or type arguments are stale.
 - Resolver-backed `.requires` conformance checks now read validated resolver
   required-behavior refs, so stale AST-only required behavior type arguments
   cannot produce false missing-impl diagnostics.

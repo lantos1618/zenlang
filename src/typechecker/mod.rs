@@ -15460,6 +15460,62 @@ Pretty.extends(Serializable<T>)
     }
 
     #[test]
+    fn collect_declarations_with_symbols_reports_resolver_restored_behavior_parent_metadata() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+Point: { x: i32 }
+
+PrettyJson.extends(Json<str>)
+
+Point.implements(PrettyJson) {
+    pretty = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::BehaviorExtends {
+            parent,
+            parent_type_args,
+            ..
+        } = &mut program.declarations[3]
+        {
+            *parent = "Missing".to_string();
+            parent_type_args[0] = AstType::I32;
+        } else {
+            panic!("expected behavior extends declaration");
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let messages: Vec<_> = tc
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.message.as_str())
+            .collect();
+        assert!(
+            messages.iter().any(|message| {
+                *message == "type `Point` implementation of `PrettyJson` is missing required method `encode`"
+            }),
+            "resolver-restored parent metadata should report the inherited missing method, got {:?}",
+            messages
+        );
+        assert!(
+            messages.iter().all(|message| !message.contains("Missing")),
+            "stale AST-only behavior parent names should not leak into diagnostics: {:?}",
+            messages
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_behavior_impl_metadata() {
         let mut program = parse_program(
             r#"
