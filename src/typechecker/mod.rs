@@ -701,6 +701,10 @@ struct VisibilityValidation {
 }
 
 impl VisibilityValidation {
+    fn module_resolver_code() -> Self {
+        Self { code: "E0229" }
+    }
+
     fn local_resolver_code() -> Self {
         Self { code: "E0247" }
     }
@@ -6036,7 +6040,7 @@ impl TypeChecker {
             &expected.name,
             symbol.is_public,
             expected.is_public,
-            VisibilityValidation { code: "E0229" },
+            VisibilityValidation::module_resolver_code(),
             span,
         );
 
@@ -10720,6 +10724,13 @@ main = (mut input: i32) i32 {
         let validation = VisibilityValidation::local_resolver_code();
 
         assert_eq!(validation.code, "E0247");
+    }
+
+    #[test]
+    fn visibility_validation_uses_module_resolver_code() {
+        let validation = VisibilityValidation::module_resolver_code();
+
+        assert_eq!(validation.code, "E0229");
     }
 
     #[test]

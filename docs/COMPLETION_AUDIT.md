@@ -1012,6 +1012,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver visibility validation now owns its full diagnostic message
   formatting through that bundle, keeping it aligned with source/count
   validation helpers.
+- Resolver module visibility validation now owns its resolver diagnostic code
+  mapping, covered by
+  `typechecker::tests::visibility_validation_uses_module_resolver_code`.
 - Resolver local visibility validation now owns its resolver diagnostic code
   mapping, covered by
   `typechecker::tests::visibility_validation_uses_local_resolver_code`.
