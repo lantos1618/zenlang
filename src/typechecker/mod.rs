@@ -838,6 +838,26 @@ struct ExpectedVariantPayloadMetadata {
     display: Option<String>,
 }
 
+#[derive(Clone, Copy)]
+struct VariantPayloadValidation {
+    display_code: &'static str,
+    typed_code: &'static str,
+}
+
+impl VariantPayloadValidation {
+    fn display_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver variant symbol '{name}' has payload type '{actual}', expected '{expected}'"
+        )
+    }
+
+    fn typed_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver variant symbol '{name}' has typed payload type '{actual}', expected '{expected}'"
+        )
+    }
+}
+
 impl ExpectedVariantPayloadMetadata {
     fn from_payload(payload: ExpectedVariantPayloadType) -> Self {
         Self {
@@ -8112,14 +8132,16 @@ impl TypeChecker {
             },
             span,
         );
+        let validation = VariantPayloadValidation {
+            display_code: "E0218",
+            typed_code: "E0359",
+        };
         if symbol.variant_payload_type != expected.typed {
             let actual = optional_ast_type_display(symbol.variant_payload_type.as_ref(), "none");
             let expected = optional_ast_type_display(expected.typed.as_ref(), "none");
             self.diagnostics.push(Diagnostic::error(
-                "E0359",
-                format!(
-                    "resolver variant symbol '{name}' has typed payload type '{actual}', expected '{expected}'"
-                ),
+                validation.typed_code,
+                validation.typed_message(name, &actual, &expected),
                 span,
             ));
         }
@@ -8127,10 +8149,8 @@ impl TypeChecker {
             let actual = resolver_metadata_display(symbol.variant_payload_type_name.as_deref());
             let expected = expected.display.as_deref().unwrap_or("none");
             self.diagnostics.push(Diagnostic::error(
-                "E0218",
-                format!(
-                    "resolver variant symbol '{name}' has payload type '{actual}', expected '{expected}'"
-                ),
+                validation.display_code,
+                validation.display_message(name, actual, expected),
                 span,
             ));
         }
@@ -9778,6 +9798,24 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(
             validation.typed_message("type", "Pipeline", "(callback: i32)", "(callback: (i32) i32)"),
             "resolver type symbol 'Pipeline' has typed fields '(callback: i32)', expected '(callback: (i32) i32)'"
+        );
+    }
+
+    #[test]
+    fn variant_payload_validation_formats_messages() {
+        let validation = VariantPayloadValidation {
+            display_code: "PAYLOAD",
+            typed_code: "TYPED_PAYLOAD",
+        };
+
+        assert_eq!(validation.display_code, "PAYLOAD");
+        assert_eq!(
+            validation.display_message("Some", "bool", "i32"),
+            "resolver variant symbol 'Some' has payload type 'bool', expected 'i32'"
+        );
+        assert_eq!(
+            validation.typed_message("Wrap", "i32", "(i32) i32"),
+            "resolver variant symbol 'Wrap' has typed payload type 'i32', expected '(i32) i32'"
         );
     }
 
