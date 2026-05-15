@@ -59,6 +59,12 @@ pub struct FuncInfo {
     pub type_param_bounds: HashMap<String, BehaviorBound>,
 }
 
+struct ResolverCallableSignature<'a> {
+    parameter_names: &'a [String],
+    parameter_types: &'a [AstType],
+    return_type: &'a AstType,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorBound {
     pub behavior: String,
@@ -3866,29 +3872,35 @@ impl TypeChecker {
             self.remove_callable_signature(name);
             return;
         };
-        let (Some(parameter_names), Some(parameter_types), Some(return_type)) = (
-            symbol.parameter_names.as_ref(),
-            symbol.parameter_types.as_ref(),
-            symbol.return_type.as_ref(),
-        ) else {
+        let Some(signature) = Self::resolver_callable_signature_metadata(symbol) else {
             self.remove_callable_signature(name);
             return;
         };
         let info = func_info_from_resolver_signature(
             name.to_string(),
             symbol,
-            parameter_names,
-            parameter_types,
-            return_type,
+            signature.parameter_names,
+            signature.parameter_types,
+            signature.return_type,
         );
         self.insert_callable_signature(name, info);
         self.collect_resolver_generic_template_signature(
             name,
             symbol.type_parameter_names.as_deref().unwrap_or(&[]),
-            parameter_names,
-            parameter_types,
-            return_type,
+            signature.parameter_names,
+            signature.parameter_types,
+            signature.return_type,
         );
+    }
+
+    fn resolver_callable_signature_metadata(
+        symbol: &Symbol,
+    ) -> Option<ResolverCallableSignature<'_>> {
+        Some(ResolverCallableSignature {
+            parameter_names: symbol.parameter_names.as_deref()?,
+            parameter_types: symbol.parameter_types.as_deref()?,
+            return_type: symbol.return_type.as_ref()?,
+        })
     }
 
     fn remove_callable_signature(&mut self, name: &str) {
@@ -11733,6 +11745,36 @@ Point: { x: i32 }
             Namespace::Type,
             "Missing",
             |symbol| symbol.field_types.as_ref()
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn resolver_callable_signature_metadata_requires_complete_signature() {
+        let program = parse_program(
+            r#"
+identity<T> = (value: T) T { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let signature = TypeChecker::resolver_callable_signature_metadata(
+            symbols
+                .lookup(Namespace::Value, "identity")
+                .expect("identity symbol"),
+        )
+        .expect("complete resolver signature");
+
+        assert_eq!(signature.parameter_names, ["value"]);
+        assert_eq!(signature.parameter_types, [AstType::Named("T".to_string())]);
+        assert_eq!(signature.return_type, &AstType::Named("T".to_string()));
+
+        symbols.set_parameter_types_for_test(Namespace::Value, "identity", None);
+        assert!(TypeChecker::resolver_callable_signature_metadata(
+            symbols
+                .lookup(Namespace::Value, "identity")
+                .expect("identity symbol")
         )
         .is_none());
     }

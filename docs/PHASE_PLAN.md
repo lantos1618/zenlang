@@ -1226,6 +1226,9 @@ checked-in docs, tests, and commits only.
 - Resolver behavior-method expectation building now reuses the shared
   value-signature metadata path for parameter names, display types, typed
   metadata, and returns.
+- Resolver-backed callable signature collection now reads resolver parameter
+  names, parameter types, and return types through one complete-signature
+  helper.
 - The docs truth gate now locks the quiet draft-PR CI trigger shape: no
   `pull_request.synchronize`, manual dispatch retained, and fmt/clippy/test
   jobs guarded by the draft-PR condition.

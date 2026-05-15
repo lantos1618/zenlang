@@ -1344,6 +1344,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-method expectation building now reuses the shared
   value-signature metadata path for names, display types, typed metadata, and
   returns.
+- Resolver-backed callable signature collection now reads resolver parameter
+  names, parameter types, and return types through one complete-signature
+  helper, covered by
+  `typechecker::tests::resolver_callable_signature_metadata_requires_complete_signature`.
 - The docs truth gate now covers the quiet draft-PR CI trigger shape by
   rejecting `pull_request.synchronize`, requiring manual dispatch, and requiring
   the draft-PR guard on fmt, clippy, and test jobs.
