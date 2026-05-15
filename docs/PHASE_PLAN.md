@@ -1175,6 +1175,8 @@ checked-in docs, tests, and commits only.
   specialization diagnostics.
 - Resolver value-parameter validation now owns its resolver diagnostic code
   mapping instead of constructing those codes at the call site.
+- Resolver module type-parameter absence validation now owns its resolver
+  diagnostic code mapping instead of constructing those codes at the call site.
 
 ## Current Phase
 

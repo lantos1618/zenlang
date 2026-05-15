@@ -447,6 +447,15 @@ struct TypeParameterAbsenceValidation {
 }
 
 impl TypeParameterAbsenceValidation {
+    fn module_resolver_codes() -> Self {
+        Self {
+            count_code: "E0269",
+            name_code: "E0348",
+            bound_code: "E0270",
+            bound_ref_code: "E0373",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
         [
             AbsentMetadataEntry::new(
@@ -6272,12 +6281,7 @@ impl TypeChecker {
             symbol,
             "module",
             &expected.name,
-            TypeParameterAbsenceValidation {
-                count_code: "E0269",
-                name_code: "E0348",
-                bound_code: "E0270",
-                bound_ref_code: "E0373",
-            },
+            TypeParameterAbsenceValidation::module_resolver_codes(),
             span,
         );
 
@@ -10875,6 +10879,16 @@ identity<T: Json> = (value: T) T { return value }
                 AbsentMetadataEntry::new(true, "BOUND_REFS", "typed type parameter bound refs"),
             ]
         );
+    }
+
+    #[test]
+    fn type_parameter_absence_validation_uses_module_resolver_codes() {
+        let validation = TypeParameterAbsenceValidation::module_resolver_codes();
+
+        assert_eq!(validation.count_code, "E0269");
+        assert_eq!(validation.name_code, "E0348");
+        assert_eq!(validation.bound_code, "E0270");
+        assert_eq!(validation.bound_ref_code, "E0373");
     }
 
     #[test]
