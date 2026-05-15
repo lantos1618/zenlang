@@ -1090,8 +1090,14 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::behavior_extends_conflicting_method_signature_is_error`,
   and
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_parent_metadata`.
-  Behavior generic-bound validation is owned by that named pass, avoiding
-  duplicate AST-only diagnostics from the remaining collection loop.
+  Behavior declaration collection now dispatches to AST signature seeding plus
+  behavior generic-bound validation, or resolver-backed stub seeding, avoiding
+  duplicate AST-only diagnostics from the remaining collection loop, covered by
+  `typechecker::tests::behavior_declaration_collection`,
+  `typechecker::tests::behavior_generic_bound_accepts_later_behavior_declaration`,
+  `typechecker::tests::resolver_backed_behavior_collection_defers_generic_metadata_to_resolver`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_bounds_for_validation`.
   AST struct/enum generic-bound validation and type declaration seeding now
   also have named helper passes.
   Type declaration collection now dispatches to that AST-only path instead of

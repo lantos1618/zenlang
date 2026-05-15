@@ -2980,8 +2980,7 @@ impl TypeChecker {
     // ── Phase 1: Collect ──────────────────────────────────────────
 
     fn collect_declarations(&mut self, decls: &[Declaration]) {
-        self.collect_ast_behavior_declarations(decls);
-        self.validate_ast_behavior_generic_bounds(decls);
+        self.collect_behavior_declarations(decls);
         self.validate_ast_behavior_extends(decls);
         self.collect_type_declarations(decls);
         self.collect_callable_declarations(decls);
@@ -3230,6 +3229,14 @@ impl TypeChecker {
         }
     }
 
+    fn collect_behavior_declarations(&mut self, decls: &[Declaration]) {
+        self.collect_ast_behavior_declarations(decls);
+
+        if !self.resolver_backed_collection {
+            self.validate_ast_behavior_generic_bounds(decls);
+        }
+    }
+
     fn collect_ast_behavior_declarations(&mut self, decls: &[Declaration]) {
         if self.resolver_backed_collection {
             self.collect_resolver_backed_behavior_declaration_stubs(decls);
@@ -3267,10 +3274,6 @@ impl TypeChecker {
     }
 
     fn validate_ast_behavior_generic_bounds(&mut self, decls: &[Declaration]) {
-        if self.resolver_backed_collection {
-            return;
-        }
-
         for decl in decls {
             if let Declaration::Behavior { type_params, .. } = decl {
                 self.validate_generic_bounds(type_params);

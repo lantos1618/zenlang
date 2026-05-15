@@ -562,7 +562,8 @@ checked-in docs, tests, and commits only.
   AST-only behavior inheritance validation now has its own helper after shared
   self-type context validation, keeping resolver-backed collection out of the
   extends/coherence traversal.
-  Behavior generic-bound validation is owned by that named pass, avoiding
+  Behavior declaration collection now dispatches to AST signature seeding plus
+  behavior generic-bound validation, or resolver-backed stub seeding, avoiding
   duplicate AST-only diagnostics from the remaining collection loop.
   AST struct/enum generic-bound validation and type declaration seeding now
   also have named helper passes.
