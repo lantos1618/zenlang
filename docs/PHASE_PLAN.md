@@ -98,6 +98,9 @@ checked-in docs, tests, and commits only.
 - Top-level generic method templates now have direct resolver-restored return
   presence and parameter-count coverage, matching the generic function template
   path.
+  Resolver-restored top-level generic method parameter names also preserve
+  positional mutability and ignore stale same-name AST parameter matches from
+  different positions.
 - Resolver-backed generic `Type.impl` method template collection now has the
   same function-typed parameter/return and behavior-bound metadata coverage as
   top-level generic method templates, so impl templates do not rely on stale

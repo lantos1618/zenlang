@@ -766,6 +766,12 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_generic_method_template_return_presence`
   and
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_generic_method_template_parameter_count`.
+  Resolver-restored top-level generic method parameter names also preserve
+  positional mutability and avoid stale same-name AST parameter matches,
+  covered by
+  `typechecker::tests::collect_declarations_with_symbols_preserves_generic_method_template_param_mutability_by_position`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_ignores_stale_generic_method_template_param_names_for_mutability`.
 - Resolver-backed generic `Type.impl` method template collection preserves
   function-typed parameter/return metadata and behavior-bound metadata from
   resolver symbols instead of stale AST-only generic signatures, covered by
