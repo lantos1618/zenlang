@@ -1246,6 +1246,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver module variant absence validation now owns its resolver diagnostic
   code mapping, covered by
   `typechecker::tests::variant_absence_validation_uses_module_resolver_codes`.
+- Resolver import variant absence validation now owns its resolver diagnostic
+  code mapping, covered by
+  `typechecker::tests::variant_absence_validation_uses_import_resolver_codes`.
 
 ## Unresolved Gaps
 

@@ -712,6 +712,16 @@ impl VariantAbsenceValidation {
         }
     }
 
+    fn import_resolver_codes() -> Self {
+        Self {
+            names_code: "E0289",
+            owner_code: "E0290",
+            payload_count_code: "E0291",
+            payload_type_name_code: "E0292",
+            payload_type_code: "E0366",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 5] {
         [
             AbsentMetadataEntry::new(
@@ -7418,13 +7428,7 @@ impl TypeChecker {
             symbol,
             "import",
             name,
-            VariantAbsenceValidation {
-                names_code: "E0289",
-                owner_code: "E0290",
-                payload_count_code: "E0291",
-                payload_type_name_code: "E0292",
-                payload_type_code: "E0366",
-            },
+            VariantAbsenceValidation::import_resolver_codes(),
             span,
         );
 
@@ -11101,6 +11105,17 @@ Option<T>: Some(T), None
         assert_eq!(validation.payload_count_code, "E0275");
         assert_eq!(validation.payload_type_name_code, "E0276");
         assert_eq!(validation.payload_type_code, "E0375");
+    }
+
+    #[test]
+    fn variant_absence_validation_uses_import_resolver_codes() {
+        let validation = VariantAbsenceValidation::import_resolver_codes();
+
+        assert_eq!(validation.names_code, "E0289");
+        assert_eq!(validation.owner_code, "E0290");
+        assert_eq!(validation.payload_count_code, "E0291");
+        assert_eq!(validation.payload_type_name_code, "E0292");
+        assert_eq!(validation.payload_type_code, "E0366");
     }
 
     #[test]

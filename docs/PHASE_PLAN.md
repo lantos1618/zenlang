@@ -1199,6 +1199,8 @@ checked-in docs, tests, and commits only.
   code mapping instead of constructing those codes at the call site.
 - Resolver module variant absence validation now owns its resolver diagnostic
   code mapping instead of constructing those codes at the call site.
+- Resolver import variant absence validation now owns its resolver diagnostic
+  code mapping instead of constructing those codes at the call site.
 
 ## Current Phase
 
