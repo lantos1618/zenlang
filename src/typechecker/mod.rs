@@ -9588,24 +9588,22 @@ impl TypeChecker {
         );
         let validation = FieldValidation::resolver_codes();
         let symbol_kind = namespace.diagnostic_name();
-        if symbol.field_types.as_deref() != Some(expected.typed.as_slice()) {
-            let actual = format_field_types(symbol.field_types.as_deref());
-            let expected = format_field_types(Some(&expected.typed));
-            self.diagnostics.push(Diagnostic::error(
-                validation.typed_code,
-                validation.typed_message(symbol_kind, name, &actual, &expected),
-                span,
-            ));
-        }
-        if symbol.field_type_names.as_deref() != Some(expected.display.as_slice()) {
-            let actual = format_field_type_names(symbol.field_type_names.as_deref());
-            let expected = format_field_type_names(Some(&expected.display));
-            self.diagnostics.push(Diagnostic::error(
-                validation.display_code,
-                validation.display_message(symbol_kind, name, &actual, &expected),
-                span,
-            ));
-        }
+        self.validate_resolver_metadata_list(
+            symbol.field_types.as_deref(),
+            &expected.typed,
+            format_field_types,
+            validation.typed_code,
+            |actual, expected| validation.typed_message(symbol_kind, name, actual, expected),
+            span,
+        );
+        self.validate_resolver_metadata_list(
+            symbol.field_type_names.as_deref(),
+            &expected.display,
+            format_field_type_names,
+            validation.display_code,
+            |actual, expected| validation.display_message(symbol_kind, name, actual, expected),
+            span,
+        );
     }
 
     fn validate_resolver_variant_names(

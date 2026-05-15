@@ -1848,6 +1848,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-method validation now uses the shared metadata-list
   comparison helper for display signatures and typed method metadata, covered
   by `cargo test behavior_method_validation`.
+- Resolver field validation now uses the shared metadata-list comparison
+  helper for display field metadata and typed field metadata, covered by
+  `cargo test field_validation` and
+  `cargo test check_program_with_symbols_validates_resolver_struct_field`.
 
 ## Unresolved Gaps
 

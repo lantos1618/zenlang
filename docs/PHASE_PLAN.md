@@ -1612,6 +1612,9 @@ checked-in docs, tests, and commits only.
 - Resolver behavior-method validation now uses the same metadata-list
   comparison helper for display signatures and typed method metadata,
   preserving behavior-specific resolver diagnostics.
+- Resolver field validation now uses the same metadata-list comparison helper
+  for display field metadata and typed field metadata after the field-count
+  check, preserving type-specific resolver diagnostics.
 
 ## Current Phase
 
