@@ -198,6 +198,10 @@ checked-in docs, tests, and commits only.
   behavior association ref handoff setup, keeping impl and required association
   metadata collection aligned before kind-specific field or variant metadata is
   rebuilt.
+- Resolver-backed declaration collection now centralizes its temporary
+  resolver-backed state toggling, so collection, impl/default restoration, and
+  semantic validation use one scoped state helper instead of repeated manual
+  flag flips.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

@@ -110,6 +110,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed struct and enum collection shares the resolver-restored
   behavior association ref setup before rebuilding kind-specific metadata,
   keeping impl and required association handoffs on the same collection path.
+- Resolver-backed declaration collection uses one scoped state helper for
+  collection, impl/default restoration, and semantic validation instead of
+  repeated manual resolver-backed flag toggles.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
