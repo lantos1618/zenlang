@@ -1022,6 +1022,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver local mutability validation now carries its diagnostic code and
   actual/expected display formatting through a validation bundle, covered by
   `typechecker::tests::mutability_validation_formats_actual_and_expected`.
+- Resolver local mutability validation now owns its resolver diagnostic code
+  mapping, covered by
+  `typechecker::tests::mutability_validation_uses_resolver_code`.
 - Resolver local mutability validation now owns its full diagnostic message
   formatting through that bundle, keeping it aligned with the
   source/count/visibility validation helpers.

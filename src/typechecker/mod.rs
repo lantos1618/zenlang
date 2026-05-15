@@ -673,6 +673,10 @@ struct MutabilityValidation {
 }
 
 impl MutabilityValidation {
+    fn resolver_code() -> Self {
+        Self { code: "E0231" }
+    }
+
     fn display(self, actual: Option<bool>, expected: bool) -> (&'static str, &'static str) {
         (mutability_name(actual), mutability_name(Some(expected)))
     }
@@ -7526,7 +7530,7 @@ impl TypeChecker {
             name,
             symbol.is_mutable,
             expected.is_mutable,
-            MutabilityValidation { code: "E0231" },
+            MutabilityValidation::resolver_code(),
             span,
         );
 
@@ -10685,6 +10689,13 @@ main = (mut input: i32) i32 {
             validation.message("local", "value", Some(false), true),
             "resolver local symbol 'value' has mutability immutable, expected mutable"
         );
+    }
+
+    #[test]
+    fn mutability_validation_uses_resolver_code() {
+        let validation = MutabilityValidation::resolver_code();
+
+        assert_eq!(validation.code, "E0231");
     }
 
     #[test]
