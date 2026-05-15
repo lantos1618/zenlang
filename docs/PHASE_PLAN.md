@@ -855,6 +855,9 @@ checked-in docs, tests, and commits only.
 - Resolver behavior-method expectation building now reuses the shared
   value-signature metadata path for parameter names, display types, typed
   metadata, and returns.
+- The docs truth gate now locks the quiet draft-PR CI trigger shape: no
+  `pull_request.synchronize`, manual dispatch retained, and fmt/clippy/test
+  jobs guarded by the draft-PR condition.
 
 ## Current Phase
 

@@ -778,6 +778,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-method expectation building now reuses the shared
   value-signature metadata path for names, display types, typed metadata, and
   returns.
+- The docs truth gate now covers the quiet draft-PR CI trigger shape by
+  rejecting `pull_request.synchronize`, requiring manual dispatch, and requiring
+  the draft-PR guard on fmt, clippy, and test jobs.
 
 ## Unresolved Gaps
 

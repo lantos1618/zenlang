@@ -358,6 +358,24 @@ fn ci_and_release_only_advertise_existing_targets() {
     assert!(ci.contains("cargo clippy -- -D warnings"));
     assert!(ci.contains("cargo test --lib"));
     assert!(ci.contains("cargo test --tests"));
+    assert!(
+        ci.contains("types: [opened, reopened, ready_for_review]"),
+        "CI pull_request triggers must avoid synchronize spam while still running when PRs leave draft"
+    );
+    assert!(
+        !ci.contains("synchronize"),
+        "CI workflow should not run on every draft PR synchronize push"
+    );
+    assert_eq!(
+        ci.matches("github.event.pull_request.draft == false")
+            .count(),
+        3,
+        "CI fmt, clippy, and test jobs must keep the draft-PR guard"
+    );
+    assert!(
+        ci.contains("workflow_dispatch"),
+        "CI must keep a manual dispatch path when draft PR pushes do not run checks"
+    );
 
     for unsupported in ["LLVM", "zen-lsp", "aarch64-apple-darwin"] {
         assert!(
