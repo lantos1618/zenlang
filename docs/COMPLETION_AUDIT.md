@@ -1098,6 +1098,13 @@ and do not assume Phase 4 is ready without evidence.
   resolver-backed callable template seeding now also have named helper passes.
   AST impl method/default seeding and resolver-backed impl template seeding now
   also have named helper passes.
+  Impl-block collection now dispatches to exactly one of those passes instead
+  of invoking both and relying on per-pass resolver-backed guards, covered by
+  `typechecker::tests::type_impl_method_collection`,
+  `typechecker::tests::behavior_impl_can_omit_default_method`,
+  `typechecker::tests::resolver_backed_callable_template_collection_defers_signature_metadata_to_resolver`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata`.
   AST import seeding now has a named helper pass, removing the residual mixed
   declaration collection loop.
   Resolver-backed function and method signature restoration now shares one

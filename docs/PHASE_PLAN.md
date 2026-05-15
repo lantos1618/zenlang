@@ -570,6 +570,8 @@ checked-in docs, tests, and commits only.
   resolver-backed callable template seeding now also have named helper passes.
   AST impl method/default seeding and resolver-backed impl template seeding now
   also have named helper passes.
+  Impl-block collection now dispatches to exactly one of those passes instead
+  of invoking both and relying on per-pass resolver-backed guards.
   AST import seeding now has a named helper pass, removing the residual mixed
   declaration collection loop.
   Resolver-backed function and method signature restoration now shares one

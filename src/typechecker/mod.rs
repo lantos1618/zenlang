@@ -2988,8 +2988,7 @@ impl TypeChecker {
         self.validate_ast_callable_generic_bounds(decls);
         self.collect_ast_callable_declarations(decls);
         self.collect_resolver_backed_callable_templates(decls);
-        self.collect_ast_impl_block_declarations(decls);
-        self.collect_resolver_backed_impl_block_templates(decls);
+        self.collect_impl_block_declarations(decls);
         self.collect_ast_import_declarations(decls);
     }
 
@@ -3008,11 +3007,15 @@ impl TypeChecker {
         }
     }
 
-    fn collect_ast_impl_block_declarations(&mut self, decls: &[Declaration]) {
+    fn collect_impl_block_declarations(&mut self, decls: &[Declaration]) {
         if self.resolver_backed_collection {
-            return;
+            self.collect_resolver_backed_impl_block_templates(decls);
+        } else {
+            self.collect_ast_impl_block_declarations(decls);
         }
+    }
 
+    fn collect_ast_impl_block_declarations(&mut self, decls: &[Declaration]) {
         for decl in decls {
             let Declaration::ImplBlock {
                 type_name,
@@ -3040,10 +3043,6 @@ impl TypeChecker {
     }
 
     fn collect_resolver_backed_impl_block_templates(&mut self, decls: &[Declaration]) {
-        if !self.resolver_backed_collection {
-            return;
-        }
-
         for decl in decls {
             let Declaration::ImplBlock {
                 type_name, methods, ..
