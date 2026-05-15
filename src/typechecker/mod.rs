@@ -7330,35 +7330,12 @@ impl TypeChecker {
         }
 
         self.validate_resolver_value_parameters(symbol, name, &expected_signature.params, span);
-
-        if symbol.return_type_name.as_deref()
-            != Some(expected_signature.return_type.type_name.as_str())
-        {
-            let actual = symbol.return_type_name.as_deref().unwrap_or("unknown");
-            self.diagnostics.push(Diagnostic::error(
-                "E0212",
-                format!(
-                    "resolver value symbol '{name}' has return type '{actual}', expected '{}'",
-                    expected_signature.return_type.type_name
-                ),
-                span,
-            ));
-        }
-        if symbol.return_type.as_ref() != Some(&expected_signature.return_type.ty) {
-            let actual = symbol
-                .return_type
-                .as_ref()
-                .map(AstType::display_name)
-                .unwrap_or_else(|| "unknown".to_string());
-            self.diagnostics.push(Diagnostic::error(
-                "E0357",
-                format!(
-                    "resolver value symbol '{name}' has typed return type '{actual}', expected '{}'",
-                    expected_signature.return_type.ty.display_name()
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_value_return_type(
+            symbol,
+            name,
+            &expected_signature.return_type,
+            span,
+        );
 
         self.validate_resolver_type_parameters(
             symbol,
@@ -7429,6 +7406,41 @@ impl TypeChecker {
                 "E0356",
                 format!(
                     "resolver value symbol '{name}' has typed parameter types '{actual}', expected '{expected_types}'"
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn validate_resolver_value_return_type(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected: &ExpectedReturnType,
+        span: Span,
+    ) {
+        if symbol.return_type_name.as_deref() != Some(expected.type_name.as_str()) {
+            let actual = symbol.return_type_name.as_deref().unwrap_or("unknown");
+            self.diagnostics.push(Diagnostic::error(
+                "E0212",
+                format!(
+                    "resolver value symbol '{name}' has return type '{actual}', expected '{}'",
+                    expected.type_name
+                ),
+                span,
+            ));
+        }
+        if symbol.return_type.as_ref() != Some(&expected.ty) {
+            let actual = symbol
+                .return_type
+                .as_ref()
+                .map(AstType::display_name)
+                .unwrap_or_else(|| "unknown".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0357",
+                format!(
+                    "resolver value symbol '{name}' has typed return type '{actual}', expected '{}'",
+                    expected.ty.display_name()
                 ),
                 span,
             ));
