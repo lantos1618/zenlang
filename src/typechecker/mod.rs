@@ -639,9 +639,9 @@ struct BehaviorRefActual<'a> {
     refs: Option<&'a [BehaviorRefMetadata]>,
 }
 
-struct ExpectedBehaviorRef<'a> {
-    name: &'a str,
-    reference: &'a BehaviorRefMetadata,
+struct ExpectedBehaviorRef {
+    name: String,
+    reference: BehaviorRefMetadata,
 }
 
 struct ExpectedBehaviorRefList<'a> {
@@ -4202,11 +4202,7 @@ impl TypeChecker {
                             self.validate_resolver_behavior_impl_names(
                                 symbol,
                                 type_name,
-                                &behavior_ref_display(behavior, behavior_type_args),
-                                &BehaviorRefMetadata {
-                                    name: behavior.clone(),
-                                    type_args: behavior_type_args.clone(),
-                                },
+                                expected_behavior_ref(behavior, behavior_type_args),
                                 *span,
                             );
                         }
@@ -4262,11 +4258,7 @@ impl TypeChecker {
                         self.validate_resolver_behavior_required_names(
                             symbol,
                             type_name,
-                            &behavior_ref_display(behavior, behavior_type_args),
-                            &BehaviorRefMetadata {
-                                name: behavior.clone(),
-                                type_args: behavior_type_args.clone(),
-                            },
+                            expected_behavior_ref(behavior, behavior_type_args),
                             *span,
                         );
                     }
@@ -4297,11 +4289,7 @@ impl TypeChecker {
                         self.validate_resolver_behavior_parent_names(
                             symbol,
                             behavior,
-                            &behavior_ref_display(parent, parent_type_args),
-                            &BehaviorRefMetadata {
-                                name: parent.clone(),
-                                type_args: parent_type_args.clone(),
-                            },
+                            expected_behavior_ref(parent, parent_type_args),
                             *span,
                         );
                     }
@@ -7117,8 +7105,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_parent: &str,
-        expected_parent_ref: &BehaviorRefMetadata,
+        expected: ExpectedBehaviorRef,
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_contains(
@@ -7134,10 +7121,7 @@ impl TypeChecker {
                 names: symbol.behavior_parent_names.as_deref(),
                 refs: symbol.behavior_parent_refs.as_deref(),
             },
-            ExpectedBehaviorRef {
-                name: expected_parent,
-                reference: expected_parent_ref,
-            },
+            expected,
             span,
         );
     }
@@ -7171,8 +7155,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_impl: &str,
-        expected_impl_ref: &BehaviorRefMetadata,
+        expected: ExpectedBehaviorRef,
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_contains(
@@ -7188,10 +7171,7 @@ impl TypeChecker {
                 names: symbol.behavior_impl_names.as_deref(),
                 refs: symbol.behavior_impl_refs.as_deref(),
             },
-            ExpectedBehaviorRef {
-                name: expected_impl,
-                reference: expected_impl_ref,
-            },
+            expected,
             span,
         );
     }
@@ -7225,8 +7205,7 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_required: &str,
-        expected_required_ref: &BehaviorRefMetadata,
+        expected: ExpectedBehaviorRef,
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_contains(
@@ -7242,10 +7221,7 @@ impl TypeChecker {
                 names: symbol.behavior_required_names.as_deref(),
                 refs: symbol.behavior_required_refs.as_deref(),
             },
-            ExpectedBehaviorRef {
-                name: expected_required,
-                reference: expected_required_ref,
-            },
+            expected,
             span,
         );
     }
@@ -7280,12 +7256,12 @@ impl TypeChecker {
         validation: BehaviorRefValidation,
         name: &str,
         actual: BehaviorRefActual<'_>,
-        expected: ExpectedBehaviorRef<'_>,
+        expected: ExpectedBehaviorRef,
         span: Span,
     ) {
         if !actual
             .names
-            .is_some_and(|names| names.iter().any(|name| name == expected.name))
+            .is_some_and(|names| names.iter().any(|name| name == &expected.name))
         {
             let actual = format_behavior_ref_names(actual.names);
             self.diagnostics.push(Diagnostic::error(
@@ -7299,7 +7275,7 @@ impl TypeChecker {
         }
         if !actual
             .refs
-            .is_some_and(|refs| refs.iter().any(|behavior| behavior == expected.reference))
+            .is_some_and(|refs| refs.iter().any(|behavior| behavior == &expected.reference))
         {
             let actual = format_behavior_refs(actual.refs);
             let expected_ref =
@@ -7903,6 +7879,16 @@ fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAss
         }
     }
     expected
+}
+
+fn expected_behavior_ref(behavior: &str, type_args: &[AstType]) -> ExpectedBehaviorRef {
+    ExpectedBehaviorRef {
+        name: behavior_ref_display(behavior, type_args),
+        reference: BehaviorRefMetadata {
+            name: behavior.to_string(),
+            type_args: type_args.to_vec(),
+        },
+    }
 }
 
 fn expected_behavior_parent_associations(program: &ast::Program) -> ExpectedBehaviorEdges {

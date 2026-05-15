@@ -111,6 +111,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver validation now carries behavior parent, impl, and
   required association list expectations as paired name/ref objects instead of
   parallel loose slices.
+- Typechecker resolver validation now carries individual behavior association
+  expectations as paired display-name and typed-ref objects instead of parallel
+  loose values.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, reducing
