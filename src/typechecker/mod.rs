@@ -4700,12 +4700,7 @@ impl TypeChecker {
         type_name: &str,
         behavior: &str,
     ) -> Option<BehaviorRefMetadata> {
-        Self::pop_resolver_behavior_ref(
-            self.resolver_backed_collection,
-            &mut self.resolver_behavior_required_refs,
-            type_name,
-            behavior,
-        )
+        self.resolver_behavior_ref_for(BehaviorRefRole::Required, type_name, behavior)
     }
 
     fn check_behavior_extends(
@@ -5138,12 +5133,30 @@ impl TypeChecker {
         type_name: &str,
         behavior: &str,
     ) -> Option<BehaviorRefMetadata> {
-        Self::pop_resolver_behavior_ref(
-            self.resolver_backed_collection,
-            &mut self.resolver_behavior_impl_refs,
-            type_name,
-            behavior,
-        )
+        self.resolver_behavior_ref_for(BehaviorRefRole::Impl, type_name, behavior)
+    }
+
+    fn resolver_behavior_ref_for(
+        &mut self,
+        role: BehaviorRefRole,
+        type_name: &str,
+        behavior: &str,
+    ) -> Option<BehaviorRefMetadata> {
+        match role {
+            BehaviorRefRole::Impl => Self::pop_resolver_behavior_ref(
+                self.resolver_backed_collection,
+                &mut self.resolver_behavior_impl_refs,
+                type_name,
+                behavior,
+            ),
+            BehaviorRefRole::Required => Self::pop_resolver_behavior_ref(
+                self.resolver_backed_collection,
+                &mut self.resolver_behavior_required_refs,
+                type_name,
+                behavior,
+            ),
+            BehaviorRefRole::Parent => None,
+        }
     }
 
     fn behavior_ref_parts<'a>(

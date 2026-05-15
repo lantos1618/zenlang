@@ -1290,7 +1290,9 @@ and do not assume Phase 4 is ready without evidence.
   name/ref validation plumbing, reducing duplicate handoff code while preserving
   the existing explicit diagnostic labels and error codes.
 - Resolver behavior-association collection now uses one resolver behavior-ref
-  accessor for behavior parent refs, type impl refs, and type requires refs.
+  accessor for behavior parent refs, type impl refs, and type requires refs;
+  resolver-backed impl/requires semantic checks also pop restored refs through
+  one role-selected helper.
 - Resolver behavior-association validation now derives display-name and typed
   ref expectations together, avoiding duplicate AST scans for the same edges.
 - Resolver behavior-association expectation storage now uses one shared edge
