@@ -112,6 +112,9 @@ and do not assume Phase 4 is ready without evidence.
   and typechecker setup rejects impl-method signature drift before behavior impl
   body collection. Function-typed impl-method parameters and returns are
   included in that handoff coverage.
+- Behavior impl conformance reads the collected `Type.method` signature,
+  including resolver-restored impl-method metadata, so stale AST-only method
+  signatures cannot produce false impl diagnostics.
 - Resolver behavior impl method bodies carry scoped local symbols, and
   typechecker setup rejects missing impl-method body locals before behavior impl
   body collection.

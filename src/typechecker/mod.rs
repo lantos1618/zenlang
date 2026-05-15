@@ -586,6 +586,7 @@ pub struct TypeChecker {
     current_return_type: Option<Type>,
     current_self_type: Option<Type>,
     pending_defers: Vec<TypedExpression>,
+    resolver_backed_collection: bool,
 }
 
 impl Default for TypeChecker {
@@ -618,6 +619,7 @@ impl TypeChecker {
             current_return_type: None,
             current_self_type: None,
             pending_defers: Vec::new(),
+            resolver_backed_collection: false,
         }
     }
 
@@ -1211,7 +1213,9 @@ impl TypeChecker {
             }
         }
 
+        self.resolver_backed_collection = true;
         self.validate_collected_declaration_semantics(decls);
+        self.resolver_backed_collection = false;
 
         for decl in decls {
             match decl {
@@ -2029,7 +2033,24 @@ impl TypeChecker {
             };
 
             let (actual_params, actual_return_type, actual_span) = actual;
-            if actual_params.len() != required.params.len() {
+            let method_key = format!("{}.{}", type_name, required.name);
+            let collected_signature = self
+                .resolver_backed_collection
+                .then(|| self.methods.get(&method_key))
+                .flatten();
+            let actual_param_types: Vec<AstType> = collected_signature
+                .map(|info| {
+                    info.params
+                        .iter()
+                        .map(|(_, ty)| ty.clone())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_else(|| actual_params.iter().map(|param| param.ty.clone()).collect());
+            let actual_return = collected_signature
+                .map(|info| info.return_type.clone())
+                .unwrap_or_else(|| actual_return_type.clone().unwrap_or(AstType::Void));
+
+            if actual_param_types.len() != required.params.len() {
                 self.diagnostics.push(Diagnostic::error(
                     "E6002",
                     format!(
@@ -2037,17 +2058,20 @@ impl TypeChecker {
                         required.name,
                         behavior_key,
                         required.params.len(),
-                        actual_params.len()
+                        actual_param_types.len()
                     ),
                     actual_span,
                 ));
                 continue;
             }
 
-            for (idx, (expected, actual)) in
-                required.params.iter().zip(actual_params.iter()).enumerate()
+            for (idx, (expected, actual_ty)) in required
+                .params
+                .iter()
+                .zip(actual_param_types.iter())
+                .enumerate()
             {
-                if !self.impl_ast_types_compatible(&expected.ty, &actual.ty, type_name) {
+                if !self.impl_ast_types_compatible(&expected.ty, actual_ty, type_name) {
                     self.diagnostics.push(Diagnostic::error(
                         "E6002",
                         format!(
@@ -2056,16 +2080,18 @@ impl TypeChecker {
                             required.name,
                             behavior_key,
                             self.impl_type_display(&expected.ty, type_name),
-                            actual.ty.display_name()
+                            actual_ty.display_name()
                         ),
-                        actual.span,
+                        actual_params
+                            .get(idx)
+                            .map(|param| param.span)
+                            .unwrap_or(actual_span),
                     ));
                 }
             }
 
             let expected_return = required.return_type.as_ref().unwrap_or(&AstType::Void);
-            let actual_return = actual_return_type.as_ref().unwrap_or(&AstType::Void);
-            if !self.impl_ast_types_compatible(expected_return, actual_return, type_name) {
+            if !self.impl_ast_types_compatible(expected_return, &actual_return, type_name) {
                 self.diagnostics.push(Diagnostic::error(
                     "E6002",
                     format!(
@@ -8187,6 +8213,45 @@ Point.implements(Mapper) {
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored behavior metadata should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_impl_method_metadata_for_impl_checks() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Mapper: behavior {
+    map: (self: Self, callback: (i32) i32) (i32) i32
+}
+
+Point.implements(Mapper) {
+    map = (self: Point, callback: (i32) i32) (i32) i32 { return callback }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[2] {
+            if let Declaration::Function {
+                params,
+                return_type,
+                ..
+            } = &mut methods[0]
+            {
+                params[1].ty = AstType::I32;
+                *return_type = Some(AstType::I32);
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored impl method metadata should avoid stale AST impl diagnostics: {:?}",
             tc.diagnostics
         );
     }

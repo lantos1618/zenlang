@@ -92,6 +92,9 @@ checked-in docs, tests, and commits only.
   validates impl-method signature handoff drift before checking impl bodies.
   Function-typed impl-method parameters and returns are included in that
   resolver handoff coverage.
+- Behavior impl conformance checks now read the collected `Type.method`
+  signature, including resolver-restored impl-method metadata, so stale
+  AST-only method signatures cannot produce false impl diagnostics.
 - Resolver records impl-method body locals in their nested scopes, and
   typechecker setup requires those local symbols before checking impl bodies.
 - Generic behavior bounds share the behavior inheritance solver, so an impl of a
