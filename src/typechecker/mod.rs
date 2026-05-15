@@ -1819,10 +1819,13 @@ impl TypeChecker {
             return required_refs.pop_front();
         }
 
-        let index = required_refs
+        match required_refs
             .iter()
-            .position(|required| required.name == behavior)?;
-        required_refs.remove(index)
+            .position(|required| required.name == behavior)
+        {
+            Some(index) => required_refs.remove(index),
+            None => required_refs.pop_front(),
+        }
     }
 
     fn check_behavior_extends(
@@ -2260,10 +2263,13 @@ impl TypeChecker {
             return impl_refs.pop_front();
         }
 
-        let index = impl_refs
+        match impl_refs
             .iter()
-            .position(|implementation| implementation.name == behavior)?;
-        impl_refs.remove(index)
+            .position(|implementation| implementation.name == behavior)
+        {
+            Some(index) => impl_refs.remove(index),
+            None => impl_refs.pop_front(),
+        }
     }
 
     fn find_overlapping_behavior_impl(&self, type_name: &str, behavior: &str) -> Option<String> {
@@ -8957,6 +8963,38 @@ Point.implements(Json<str>) {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_impl_name_metadata() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { behavior, .. } = &mut program.declarations[2] {
+            *behavior = Some("Missing".to_string());
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored impl name metadata should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_behavior_required_metadata() {
         let mut program = parse_program(
             r#"
@@ -8989,6 +9027,40 @@ Point.requires(Json<str>)
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored requires metadata should avoid stale AST requires diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_required_name_metadata() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Requires { behavior, .. } = &mut program.declarations[3] {
+            *behavior = "Missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored requires name metadata should avoid stale AST requires diagnostics: {:?}",
             tc.diagnostics
         );
     }

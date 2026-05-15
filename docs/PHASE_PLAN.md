@@ -127,6 +127,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed `.implements` conformance checks now read validated resolver
   behavior impl refs before method conformance, so stale AST-only impl behavior
   type arguments cannot produce false method signature diagnostics.
+- Resolver-backed `.implements` and `.requires` conformance now also falls back
+  to declaration-order resolver refs when AST-only behavior names are stale, so
+  validated resolver behavior associations cannot be shadowed by stale AST
+  names during semantic checks.
 - Inherited generic behavior dispatch has executable coverage through
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Concrete generic behavior association syntax in `.implements` and `.requires`,
