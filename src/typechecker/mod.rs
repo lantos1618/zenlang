@@ -407,10 +407,29 @@ impl ValueSignatureAbsenceValidation {
     }
 }
 
+#[derive(Clone, Copy)]
 struct FieldAbsenceValidation {
     count_code: &'static str,
     type_name_code: &'static str,
     typed_code: &'static str,
+}
+
+impl FieldAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 3] {
+        [
+            (symbol.field_count.is_some(), self.count_code, "field count"),
+            (
+                symbol.field_type_names.is_some(),
+                self.type_name_code,
+                "field types",
+            ),
+            (
+                symbol.field_types.is_some(),
+                self.typed_code,
+                "typed field types",
+            ),
+        ]
+    }
 }
 
 struct VariantAbsenceValidation {
@@ -7150,28 +7169,8 @@ impl TypeChecker {
         validation: FieldAbsenceValidation,
         span: Span,
     ) {
-        self.validate_resolver_absent_metadata_entries(
-            symbol_kind,
-            name,
-            &[
-                (
-                    symbol.field_count.is_some(),
-                    validation.count_code,
-                    "field count",
-                ),
-                (
-                    symbol.field_type_names.is_some(),
-                    validation.type_name_code,
-                    "field types",
-                ),
-                (
-                    symbol.field_types.is_some(),
-                    validation.typed_code,
-                    "typed field types",
-                ),
-            ],
-            span,
-        );
+        let entries = validation.entries(symbol);
+        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
     }
 
     fn validate_resolver_absent_variant_metadata(
@@ -9789,6 +9788,36 @@ identity<T: Json> = (value: T) T { return value }
                 (true, "NAMES", "type parameter names"),
                 (true, "BOUNDS", "type parameter bounds"),
                 (true, "BOUND_REFS", "typed type parameter bound refs"),
+            ]
+        );
+    }
+
+    #[test]
+    fn field_absence_validation_builds_entries() {
+        let program = parse_program(
+            r#"
+Point: { x: i32, y: i32 }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let symbol = symbols
+            .lookup(Namespace::Type, "Point")
+            .expect("type symbol");
+        let entries = FieldAbsenceValidation {
+            count_code: "COUNT",
+            type_name_code: "FIELD_TYPES",
+            typed_code: "TYPED_FIELDS",
+        }
+        .entries(symbol);
+
+        assert_eq!(
+            entries,
+            [
+                (true, "COUNT", "field count"),
+                (true, "FIELD_TYPES", "field types"),
+                (true, "TYPED_FIELDS", "typed field types"),
             ]
         );
     }

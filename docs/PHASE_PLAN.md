@@ -1005,6 +1005,8 @@ checked-in docs, tests, and commits only.
   bundle build its count/name/bounds metadata entries.
 - Resolver absent field metadata validation now shares one helper across
   module, import, local, enum, variant, behavior, and value symbols.
+- Resolver absent field metadata validation now lets the validation bundle
+  build its count/display/typed field metadata entries.
 - Resolver absent variant metadata validation now shares one helper across
   module, import, local, struct/type, behavior, and value symbols.
 - Resolver absent behavior-association metadata validation now shares one

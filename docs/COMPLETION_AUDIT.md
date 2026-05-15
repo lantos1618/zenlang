@@ -945,6 +945,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::type_parameter_absence_validation_builds_entries`.
 - Resolver absent field metadata validation now shares one helper across
   module, import, local, enum, variant, behavior, and value symbols.
+- Resolver absent field metadata validation now lets the validation bundle
+  build its count/display/typed field metadata entries, covered by
+  `typechecker::tests::field_absence_validation_builds_entries`.
 - Resolver absent variant metadata validation now shares one helper across
   module, import, local, struct/type, behavior, and value symbols.
 - Resolver absent behavior-association metadata validation now shares one
