@@ -164,7 +164,6 @@ struct ExpectedValueSymbol {
 
 #[derive(Default)]
 struct ExpectedParameters {
-    count: usize,
     params: Vec<ExpectedParameter>,
 }
 
@@ -7473,7 +7472,8 @@ impl TypeChecker {
         expected: &ExpectedParameters,
         span: Span,
     ) {
-        if symbol.parameter_count != Some(expected.count) {
+        let expected_count = expected.params.len();
+        if symbol.parameter_count != Some(expected_count) {
             let actual = symbol
                 .parameter_count
                 .map(|count| count.to_string())
@@ -7482,7 +7482,7 @@ impl TypeChecker {
                 "E0211",
                 format!(
                     "resolver value symbol '{name}' has parameter count {actual}, expected {}",
-                    expected.count
+                    expected_count
                 ),
                 span,
             ));
@@ -7679,10 +7679,7 @@ fn visibility_name(is_public: bool) -> &'static str {
 }
 
 fn expected_parameters(params: &[Param]) -> ExpectedParameters {
-    let mut expected = ExpectedParameters {
-        count: params.len(),
-        ..ExpectedParameters::default()
-    };
+    let mut expected = ExpectedParameters::default();
     for param in params {
         expected.params.push(ExpectedParameter {
             name: param.name.clone(),
