@@ -8345,10 +8345,7 @@ fn expected_local_symbol(is_mutable: bool, scope_id: u32) -> ExpectedLocalSymbol
 }
 
 fn format_type_parameter_names(names: Option<&[String]>) -> String {
-    match names {
-        Some(names) => format!("({})", names.join(", ")),
-        None => "unknown".to_string(),
-    }
+    format_resolver_string_list(names)
 }
 
 fn format_type_parameter_bounds(bounds: Option<&[TypeParameterBoundMetadata]>) -> String {
@@ -8384,10 +8381,7 @@ fn format_type_parameter_bound_refs(bounds: Option<&[TypeParameterBoundRefMetada
 }
 
 fn format_parameter_type_names(names: Option<&[String]>) -> String {
-    match names {
-        Some(names) => format!("({})", names.join(", ")),
-        None => "unknown".to_string(),
-    }
+    format_resolver_string_list(names)
 }
 
 fn format_ast_type_list(types: Option<&[AstType]>) -> String {
@@ -8405,10 +8399,7 @@ fn format_ast_type_list(types: Option<&[AstType]>) -> String {
 }
 
 fn format_parameter_names(names: Option<&[String]>) -> String {
-    match names {
-        Some(names) => format!("({})", names.join(", ")),
-        None => "unknown".to_string(),
-    }
+    format_resolver_string_list(names)
 }
 
 fn expected_field_metadata(fields: &[StructField]) -> Vec<ExpectedField> {
@@ -8458,10 +8449,13 @@ fn expected_variant_name_metadata(variants: &[EnumVariant]) -> Vec<String> {
 }
 
 fn format_variant_names(variants: Option<&[String]>) -> String {
-    match variants {
-        Some(variants) => format!("({})", variants.join(", ")),
-        None => "unknown".to_string(),
-    }
+    format_resolver_string_list(variants)
+}
+
+fn format_resolver_string_list(values: Option<&[String]>) -> String {
+    values
+        .map(|values| format!("({})", values.join(", ")))
+        .unwrap_or_else(|| "unknown".to_string())
 }
 
 fn expected_variant_payload_metadata(payload: &Option<AstType>) -> ExpectedVariantPayloadType {
@@ -9102,6 +9096,13 @@ mod tests {
             "bool"
         );
         assert_eq!(optional_ast_type_display(None, "none"), "none");
+    }
+
+    #[test]
+    fn resolver_string_list_display_formats_known_and_missing_lists() {
+        let names = vec!["T".to_string(), "U".to_string()];
+        assert_eq!(format_resolver_string_list(Some(&names)), "(T, U)");
+        assert_eq!(format_resolver_string_list(None), "unknown");
     }
 
     #[test]

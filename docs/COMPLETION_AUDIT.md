@@ -139,6 +139,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver optional AST type display now shares one helper for both `unknown`
   metadata and `none` payload diagnostics, covered by the same display
   fallback test.
+- Resolver string-list display now shares one helper across type-parameter,
+  value-parameter, parameter-type, and variant-name diagnostics, covered by
+  `typechecker::tests::resolver_string_list_display_formats_known_and_missing_lists`.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
