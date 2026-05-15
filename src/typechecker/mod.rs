@@ -10160,23 +10160,22 @@ impl TypeChecker {
     ) {
         let validation = ReturnValidation::resolver_codes();
 
-        if symbol.return_type_name.as_deref() != Some(expected.display.as_str()) {
-            let actual = resolver_metadata_display(symbol.return_type_name.as_deref());
-            self.diagnostics.push(Diagnostic::error(
-                validation.display_code,
-                validation.display_message(name, actual, &expected.display),
-                span,
-            ));
-        }
-        if symbol.return_type.as_ref() != Some(&expected.typed) {
-            let actual = resolver_ast_type_metadata_display(symbol.return_type.as_ref());
-            let expected = expected.typed.display_name();
-            self.diagnostics.push(Diagnostic::error(
-                validation.typed_code,
-                validation.typed_message(name, &actual, &expected),
-                span,
-            ));
-        }
+        self.validate_resolver_metadata_value(
+            symbol.return_type_name.as_deref(),
+            Some(expected.display.as_str()),
+            |value| resolver_metadata_display(value).to_string(),
+            validation.display_code,
+            |actual, expected| validation.display_message(name, actual, expected),
+            span,
+        );
+        self.validate_resolver_metadata_value(
+            symbol.return_type.as_ref(),
+            Some(&expected.typed),
+            resolver_ast_type_metadata_display,
+            validation.typed_code,
+            |actual, expected| validation.typed_message(name, actual, expected),
+            span,
+        );
     }
 
     fn validate_resolver_value_absent_declaration_metadata(

@@ -1619,6 +1619,9 @@ checked-in docs, tests, and commits only.
   comparison helper for display payload metadata and typed payload metadata
   after the payload-count check, preserving variant-specific resolver
   diagnostics.
+- Resolver value return validation now uses the same optional-metadata
+  comparison helper for display return metadata and typed return metadata,
+  preserving value-specific resolver diagnostics.
 
 ## Current Phase
 

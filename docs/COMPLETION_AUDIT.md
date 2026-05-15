@@ -1857,6 +1857,12 @@ and do not assume Phase 4 is ready without evidence.
   covered by `cargo test variant_payload_validation`,
   `cargo test check_program_with_symbols_validates_resolver_enum_variant_payload`,
   and `cargo test check_program_with_symbols_validates_resolver_enum_typed_payload_metadata`.
+- Resolver value return validation now uses the shared optional-metadata
+  comparison helper for display return metadata and typed return metadata,
+  covered by `cargo test return_validation`,
+  `cargo test check_program_with_symbols_validates_resolver_function_return_type`,
+  `cargo test check_program_with_symbols_validates_resolver_function_type_return_metadata`,
+  and `cargo test check_program_with_symbols_validates_resolver_function_typed_signature_metadata`.
 
 ## Unresolved Gaps
 
