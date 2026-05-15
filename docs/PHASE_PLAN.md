@@ -1009,6 +1009,8 @@ checked-in docs, tests, and commits only.
   validation bundle build its impl/requires metadata entries.
 - Resolver absent behavior-declaration metadata validation now shares one
   helper across module, import, local, variant, and value symbols.
+- Resolver absent behavior-declaration metadata validation now lets the
+  validation bundle build its method/parent metadata entries.
 - Resolver absent mutability metadata validation now shares one helper across
   module, import, type-like, variant, and value symbols.
 

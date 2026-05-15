@@ -390,11 +390,39 @@ impl BehaviorAssociationAbsenceValidation {
     }
 }
 
+#[derive(Clone, Copy)]
 struct BehaviorDeclarationAbsenceValidation {
     method_signature_code: &'static str,
     method_type_code: &'static str,
     parent_name_code: &'static str,
     parent_ref_code: &'static str,
+}
+
+impl BehaviorDeclarationAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 4] {
+        [
+            (
+                symbol.behavior_method_signatures.is_some(),
+                self.method_signature_code,
+                "behavior methods",
+            ),
+            (
+                symbol.behavior_method_types.is_some(),
+                self.method_type_code,
+                "typed behavior methods",
+            ),
+            (
+                symbol.behavior_parent_names.is_some(),
+                self.parent_name_code,
+                "behavior parents",
+            ),
+            (
+                symbol.behavior_parent_refs.is_some(),
+                self.parent_ref_code,
+                "typed behavior parents",
+            ),
+        ]
+    }
 }
 
 struct SourceValidation {
@@ -7202,33 +7230,8 @@ impl TypeChecker {
         validation: BehaviorDeclarationAbsenceValidation,
         span: Span,
     ) {
-        self.validate_resolver_absent_metadata_entries(
-            symbol_kind,
-            name,
-            &[
-                (
-                    symbol.behavior_method_signatures.is_some(),
-                    validation.method_signature_code,
-                    "behavior methods",
-                ),
-                (
-                    symbol.behavior_method_types.is_some(),
-                    validation.method_type_code,
-                    "typed behavior methods",
-                ),
-                (
-                    symbol.behavior_parent_names.is_some(),
-                    validation.parent_name_code,
-                    "behavior parents",
-                ),
-                (
-                    symbol.behavior_parent_refs.is_some(),
-                    validation.parent_ref_code,
-                    "typed behavior parents",
-                ),
-            ],
-            span,
-        );
+        let entries = validation.entries(symbol);
+        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
     }
 
     fn validate_resolver_absent_mutability_metadata(
@@ -9668,6 +9671,46 @@ Point.requires(Json)
                 (true, "IMPL_REFS", "typed behavior impls"),
                 (true, "REQUIRED_NAMES", "behavior requires"),
                 (true, "REQUIRED_REFS", "typed behavior requires"),
+            ]
+        );
+    }
+
+    #[test]
+    fn behavior_declaration_absence_validation_builds_entries() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let symbol = symbols
+            .lookup(Namespace::Behavior, "PrettyJson")
+            .expect("behavior symbol");
+        let entries = BehaviorDeclarationAbsenceValidation {
+            method_signature_code: "METHODS",
+            method_type_code: "TYPED_METHODS",
+            parent_name_code: "PARENTS",
+            parent_ref_code: "TYPED_PARENTS",
+        }
+        .entries(symbol);
+
+        assert_eq!(
+            entries,
+            [
+                (true, "METHODS", "behavior methods"),
+                (true, "TYPED_METHODS", "typed behavior methods"),
+                (true, "PARENTS", "behavior parents"),
+                (true, "TYPED_PARENTS", "typed behavior parents"),
             ]
         );
     }

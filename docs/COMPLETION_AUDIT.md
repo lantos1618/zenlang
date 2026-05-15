@@ -948,6 +948,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::behavior_association_absence_validation_builds_entries`.
 - Resolver absent behavior-declaration metadata validation now shares one
   helper across module, import, local, variant, and value symbols.
+- Resolver absent behavior-declaration metadata validation now lets the
+  validation bundle build its method/parent metadata entries, covered by
+  `typechecker::tests::behavior_declaration_absence_validation_builds_entries`.
 - Resolver absent mutability metadata validation now shares one helper across
   module, import, type-like, variant, and value symbols.
 
