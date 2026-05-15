@@ -1213,6 +1213,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver module type-parameter absence validation now owns its resolver
   diagnostic code mapping, covered by
   `typechecker::tests::type_parameter_absence_validation_uses_module_resolver_codes`.
+- Resolver import type-parameter absence validation now owns its resolver
+  diagnostic code mapping, covered by
+  `typechecker::tests::type_parameter_absence_validation_uses_import_resolver_codes`.
 
 ## Unresolved Gaps
 
