@@ -454,6 +454,8 @@ checked-in docs, tests, and commits only.
   type arguments cannot produce false method signature diagnostics.
   Overlap diagnostics also use restored generic impl refs, so stale AST-only
   impl type arguments cannot hide parent/child behavior conflicts.
+  Duplicate-impl checks also use restored generic impl refs, so stale AST-only
+  impl type arguments cannot collapse distinct behavior specializations.
   Missing-method diagnostics also use restored target type names, behavior
   names, and behavior type arguments when all AST-only `.implements` parts are
   stale.

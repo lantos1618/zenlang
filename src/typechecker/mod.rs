@@ -16011,6 +16011,74 @@ Point.implements(PrettyJson) {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_avoids_false_duplicate_from_restored_impl_type_args() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T { return "default" }
+}
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+}
+
+Point.implements(Json<i32>) {
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let second_impl = program
+            .declarations
+            .iter_mut()
+            .filter(|declaration| {
+                matches!(
+                    declaration,
+                    Declaration::ImplBlock {
+                        behavior: Some(behavior),
+                        ..
+                    } if behavior == "Json"
+                )
+            })
+            .nth(1)
+            .expect("second Json impl declaration");
+        if let Declaration::ImplBlock {
+            behavior_type_args, ..
+        } = second_impl
+        {
+            behavior_type_args[0] = AstType::Str;
+        } else {
+            panic!("expected second Json impl declaration");
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let messages: Vec<_> = tc
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.message.as_str())
+            .collect();
+        assert!(
+            messages
+                .iter()
+                .all(|message| !message.contains("duplicate implementation")),
+            "resolver-restored impl type args should avoid false duplicate diagnostics, got {:?}",
+            messages
+        );
+        assert!(
+            tc.behavior_impls
+                .contains(&("Point".to_string(), "Json_str".to_string()))
+                && tc
+                    .behavior_impls
+                    .contains(&("Point".to_string(), "Json_i32".to_string())),
+            "resolver-restored impl type args should keep distinct impl specializations: {:?}",
+            tc.behavior_impls
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_behavior_required_metadata() {
         let mut program = parse_program(
             r#"
