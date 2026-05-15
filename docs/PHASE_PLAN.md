@@ -105,6 +105,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis.
+- Collected declaration semantic validation now records behavior impl and
+  requires checks in one declaration dispatch before replaying the existing
+  impl-before-requires validation order.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so

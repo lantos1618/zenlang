@@ -106,6 +106,21 @@ struct ResolverBehaviorImplBlockTask<'a> {
     methods: &'a [Declaration],
 }
 
+struct BehaviorImplValidationTask<'a> {
+    type_name: &'a str,
+    behavior: &'a str,
+    behavior_type_args: &'a [AstType],
+    methods: &'a [Declaration],
+    span: Span,
+}
+
+struct BehaviorRequiresValidationTask<'a> {
+    type_name: &'a str,
+    behavior: &'a str,
+    behavior_type_args: &'a [AstType],
+    span: Span,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorBound {
     pub behavior: String,
@@ -3715,43 +3730,63 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: Option<&SymbolTable>,
     ) {
+        let mut impl_tasks = Vec::new();
+        let mut requires_tasks = Vec::new();
+
         for decl in decls {
-            if let Declaration::ImplBlock {
-                type_name,
-                behavior: Some(behavior),
-                behavior_type_args,
-                methods,
-                span,
-                ..
-            } = decl
-            {
-                self.validate_collected_behavior_impl_declaration(
-                    symbols,
+            match decl {
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior: Some(behavior),
+                    behavior_type_args,
+                    methods,
+                    span,
+                    ..
+                } => {
+                    impl_tasks.push(BehaviorImplValidationTask {
+                        type_name,
+                        behavior,
+                        behavior_type_args,
+                        methods,
+                        span: *span,
+                    });
+                }
+                Declaration::Requires {
                     type_name,
                     behavior,
                     behavior_type_args,
-                    methods,
-                    *span,
-                );
+                    span,
+                } => {
+                    requires_tasks.push(BehaviorRequiresValidationTask {
+                        type_name,
+                        behavior,
+                        behavior_type_args,
+                        span: *span,
+                    });
+                }
+                _ => {}
             }
         }
 
-        for decl in decls {
-            if let Declaration::Requires {
-                type_name,
-                behavior,
-                behavior_type_args,
-                span,
-            } = decl
-            {
-                self.validate_collected_behavior_requires_declaration(
-                    symbols,
-                    type_name,
-                    behavior,
-                    behavior_type_args,
-                    *span,
-                );
-            }
+        for task in impl_tasks {
+            self.validate_collected_behavior_impl_declaration(
+                symbols,
+                task.type_name,
+                task.behavior,
+                task.behavior_type_args,
+                task.methods,
+                task.span,
+            );
+        }
+
+        for task in requires_tasks {
+            self.validate_collected_behavior_requires_declaration(
+                symbols,
+                task.type_name,
+                task.behavior,
+                task.behavior_type_args,
+                task.span,
+            );
         }
 
         self.validate_generic_type_references(decls, symbols);

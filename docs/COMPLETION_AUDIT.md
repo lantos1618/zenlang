@@ -176,6 +176,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.
+- Collected declaration semantic validation now records behavior impl and
+  requires tasks in one declaration dispatch, then replays the same
+  impl-before-requires validation order as before.
 - Module graph typechecking now seeds graph imports and then runs
   resolver-backed declaration collection for the current module, so multi-file
   graph modules use the same resolver-owned metadata handoff as
