@@ -4212,7 +4212,7 @@ impl TypeChecker {
                             self.validate_resolver_behavior_impl_names(
                                 symbol,
                                 type_name,
-                                expected_behavior_ref(behavior, behavior_type_args),
+                                expected_behavior_edge(behavior, behavior_type_args),
                                 *span,
                             );
                         }
@@ -4268,7 +4268,7 @@ impl TypeChecker {
                         self.validate_resolver_behavior_required_names(
                             symbol,
                             type_name,
-                            expected_behavior_ref(behavior, behavior_type_args),
+                            expected_behavior_edge(behavior, behavior_type_args),
                             *span,
                         );
                     }
@@ -4299,7 +4299,7 @@ impl TypeChecker {
                         self.validate_resolver_behavior_parent_names(
                             symbol,
                             behavior,
-                            expected_behavior_ref(parent, parent_type_args),
+                            expected_behavior_edge(parent, parent_type_args),
                             *span,
                         );
                     }
@@ -7940,7 +7940,7 @@ fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAss
     expected
 }
 
-fn expected_behavior_ref(behavior: &str, type_args: &[AstType]) -> ExpectedBehaviorEdge {
+fn expected_behavior_edge(behavior: &str, type_args: &[AstType]) -> ExpectedBehaviorEdge {
     ExpectedBehaviorEdge {
         display: behavior_ref_display(behavior, type_args),
         metadata: BehaviorRefMetadata {

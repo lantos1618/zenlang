@@ -743,6 +743,8 @@ checked-in docs, tests, and commits only.
   display string and typed metadata directly.
 - Resolver behavior-association paired edge expectations now use edge naming
   consistently at the item and collection levels.
+- Resolver behavior-association edge construction now uses the same edge
+  terminology as the paired expectation type.
 - Resolver value-signature expectation building now derives parameter names,
   display types, and typed metadata in one parameter pass.
 
