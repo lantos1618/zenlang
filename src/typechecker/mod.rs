@@ -177,8 +177,12 @@ struct ExpectedReturnType {
 
 #[derive(Default)]
 struct ExpectedBehaviorMethods {
-    signatures: Vec<MethodSignatureMetadata>,
-    types: Vec<BehaviorMethodTypeMetadata>,
+    methods: Vec<ExpectedBehaviorMethod>,
+}
+
+struct ExpectedBehaviorMethod {
+    signature: MethodSignatureMetadata,
+    metadata: BehaviorMethodTypeMetadata,
 }
 
 struct ExpectedBehaviorSymbol {
@@ -7046,12 +7050,15 @@ impl TypeChecker {
         expected_methods: ExpectedBehaviorMethods,
         span: Span,
     ) {
-        if symbol.behavior_method_signatures.as_deref()
-            != Some(expected_methods.signatures.as_slice())
-        {
+        let expected_signatures: Vec<_> = expected_methods
+            .methods
+            .iter()
+            .map(|method| method.signature.clone())
+            .collect();
+        if symbol.behavior_method_signatures.as_deref() != Some(expected_signatures.as_slice()) {
             let actual =
                 format_behavior_method_signatures(symbol.behavior_method_signatures.as_deref());
-            let expected = format_behavior_method_signatures(Some(&expected_methods.signatures));
+            let expected = format_behavior_method_signatures(Some(&expected_signatures));
             self.diagnostics.push(Diagnostic::error(
                 "E0219",
                 format!(
@@ -7060,9 +7067,14 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.behavior_method_types.as_deref() != Some(expected_methods.types.as_slice()) {
+        let expected_types: Vec<_> = expected_methods
+            .methods
+            .into_iter()
+            .map(|method| method.metadata)
+            .collect();
+        if symbol.behavior_method_types.as_deref() != Some(expected_types.as_slice()) {
             let actual = format_behavior_method_types(symbol.behavior_method_types.as_deref());
-            let expected = format_behavior_method_types(Some(&expected_methods.types));
+            let expected = format_behavior_method_types(Some(&expected_types));
             self.diagnostics.push(Diagnostic::error(
                 "E0355",
                 format!(
@@ -7877,16 +7889,18 @@ fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> ExpectedBehavio
     for method in methods {
         let params = expected_parameters(&method.params);
         let return_type = expected_return_type(&method.return_type);
-        expected.signatures.push((
-            method.name.clone(),
-            params.type_names.clone(),
-            return_type.type_name,
-        ));
-        expected.types.push(BehaviorMethodTypeMetadata {
-            name: method.name.clone(),
-            parameter_names: params.names,
-            parameter_types: params.types,
-            return_type: return_type.ty,
+        expected.methods.push(ExpectedBehaviorMethod {
+            signature: (
+                method.name.clone(),
+                params.type_names.clone(),
+                return_type.type_name,
+            ),
+            metadata: BehaviorMethodTypeMetadata {
+                name: method.name.clone(),
+                parameter_names: params.names,
+                parameter_types: params.types,
+                return_type: return_type.ty,
+            },
         });
     }
     expected
