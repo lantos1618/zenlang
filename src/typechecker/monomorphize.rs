@@ -88,26 +88,7 @@ impl TypeChecker {
         }
 
         self.specializations_seen.insert(mangled.clone());
-        let saved_return_type = self.current_return_type.clone();
-        let saved_self_type = self.current_self_type.clone();
-        let saved_defers = std::mem::take(&mut self.pending_defers);
-        let dependency_state = self.install_template_dependencies(&template);
-        self.type_substitutions.push(substitutions.clone());
-        match self.check_function(
-            &mangled,
-            &template.params,
-            &template.return_type,
-            &template.body,
-            &template.span,
-        ) {
-            Ok(function) => self.specialized_functions.push(function),
-            Err(diagnostic) => self.diagnostics.push(diagnostic),
-        }
-        self.type_substitutions.pop();
-        self.restore_template_dependencies(dependency_state);
-        self.pending_defers = saved_defers;
-        self.current_return_type = saved_return_type;
-        self.current_self_type = saved_self_type;
+        self.specialize_generic_template_body(&mangled, &template, substitutions, None);
 
         Some(mangled)
     }
@@ -136,14 +117,27 @@ impl TypeChecker {
         }
 
         self.specializations_seen.insert(mangled.clone());
+        let self_type = self.generic_method_self_type(name, substitutions);
+        self.specialize_generic_template_body(&mangled, &template, substitutions, self_type);
+
+        Some(mangled)
+    }
+
+    fn specialize_generic_template_body(
+        &mut self,
+        mangled: &str,
+        template: &super::GenericFunctionTemplate,
+        substitutions: &HashMap<String, Type>,
+        self_type: Option<Type>,
+    ) {
         let saved_return_type = self.current_return_type.clone();
         let saved_self_type = self.current_self_type.clone();
         let saved_defers = std::mem::take(&mut self.pending_defers);
-        let dependency_state = self.install_template_dependencies(&template);
-        self.current_self_type = self.generic_method_self_type(name, substitutions);
+        let dependency_state = self.install_template_dependencies(template);
+        self.current_self_type = self_type;
         self.type_substitutions.push(substitutions.clone());
         match self.check_function(
-            &mangled,
+            mangled,
             &template.params,
             &template.return_type,
             &template.body,
@@ -157,8 +151,6 @@ impl TypeChecker {
         self.pending_defers = saved_defers;
         self.current_return_type = saved_return_type;
         self.current_self_type = saved_self_type;
-
-        Some(mangled)
     }
 
     fn reject_missing_generic_substitutions(
