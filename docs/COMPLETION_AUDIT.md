@@ -1840,10 +1840,11 @@ and do not assume Phase 4 is ready without evidence.
   parameter, field, variant, behavior association, behavior declaration, and
   mutability entry builders through one typed replay helper, covered by
   `cargo test absence_validation`.
-- Resolver type-parameter validation now shares one metadata-list comparison
-  helper for names, display bounds, and typed bound refs, covered by
+- Resolver type-parameter and value-parameter validation now share one
+  metadata-list comparison helper for names, display metadata, and typed
+  metadata, covered by
   `cargo test type_parameter_validation` and
-  `cargo test check_program_with_symbols_validates_resolver_function_type_parameter`.
+  `cargo test value_parameter_validation`.
 
 ## Unresolved Gaps
 

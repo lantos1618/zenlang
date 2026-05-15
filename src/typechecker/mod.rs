@@ -9489,7 +9489,7 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_type_parameter_metadata_list(
+        self.validate_resolver_metadata_list(
             symbol.type_parameter_names.as_deref(),
             &expected.names,
             format_type_parameter_names,
@@ -9498,7 +9498,7 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_type_parameter_metadata_list(
+        self.validate_resolver_metadata_list(
             symbol.type_parameter_bounds.as_deref(),
             &expected.bounds,
             format_type_parameter_bounds,
@@ -9507,7 +9507,7 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_type_parameter_metadata_list(
+        self.validate_resolver_metadata_list(
             symbol.type_parameter_bound_refs.as_deref(),
             &expected.bound_refs,
             format_type_parameter_bound_refs,
@@ -9517,7 +9517,7 @@ impl TypeChecker {
         );
     }
 
-    fn validate_resolver_type_parameter_metadata_list<T: PartialEq>(
+    fn validate_resolver_metadata_list<T: PartialEq>(
         &mut self,
         actual: Option<&[T]>,
         expected: &[T],
@@ -10110,34 +10110,32 @@ impl TypeChecker {
 
         let validation = ValueParameterValidation::resolver_codes();
 
-        if symbol.parameter_names.as_deref() != Some(expected.names.as_slice()) {
-            let actual = format_parameter_names(symbol.parameter_names.as_deref());
-            let expected_names_display = format_parameter_names(Some(&expected.names));
-            self.diagnostics.push(Diagnostic::error(
-                validation.name_code,
-                validation.name_message(name, &actual, &expected_names_display),
-                span,
-            ));
-        }
+        self.validate_resolver_metadata_list(
+            symbol.parameter_names.as_deref(),
+            &expected.names,
+            format_parameter_names,
+            validation.name_code,
+            |actual, expected| validation.name_message(name, actual, expected),
+            span,
+        );
 
-        if symbol.parameter_type_names.as_deref() != Some(expected.display_types.as_slice()) {
-            let actual = format_parameter_type_names(symbol.parameter_type_names.as_deref());
-            let expected_types = format_parameter_type_names(Some(&expected.display_types));
-            self.diagnostics.push(Diagnostic::error(
-                validation.display_type_code,
-                validation.display_type_message(name, &actual, &expected_types),
-                span,
-            ));
-        }
-        if symbol.parameter_types.as_deref() != Some(expected.typed_types.as_slice()) {
-            let actual = format_ast_type_list(symbol.parameter_types.as_deref());
-            let expected_types = format_ast_type_list(Some(&expected.typed_types));
-            self.diagnostics.push(Diagnostic::error(
-                validation.typed_type_code,
-                validation.typed_type_message(name, &actual, &expected_types),
-                span,
-            ));
-        }
+        self.validate_resolver_metadata_list(
+            symbol.parameter_type_names.as_deref(),
+            &expected.display_types,
+            format_parameter_type_names,
+            validation.display_type_code,
+            |actual, expected| validation.display_type_message(name, actual, expected),
+            span,
+        );
+
+        self.validate_resolver_metadata_list(
+            symbol.parameter_types.as_deref(),
+            &expected.typed_types,
+            format_ast_type_list,
+            validation.typed_type_code,
+            |actual, expected| validation.typed_type_message(name, actual, expected),
+            span,
+        );
     }
 
     fn validate_resolver_value_return_type(

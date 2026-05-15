@@ -1606,9 +1606,9 @@ checked-in docs, tests, and commits only.
   parameter, field, variant, behavior association, behavior declaration, and
   mutability entry builders through one typed replay helper while preserving
   role-specific diagnostic wrappers.
-- Resolver type-parameter validation now shares one metadata-list comparison
-  helper for names, display bounds, and typed bound refs after the count check,
-  preserving each diagnostic code and message.
+- Resolver type-parameter and value-parameter validation now share one
+  metadata-list comparison helper for names, display metadata, and typed
+  metadata after each count check, preserving each diagnostic code and message.
 
 ## Current Phase
 
