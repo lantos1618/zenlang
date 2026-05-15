@@ -2231,17 +2231,8 @@ impl TypeChecker {
     ) {
         let (behavior, behavior_type_args) =
             self.resolver_behavior_impl_ref_parts(type_name, behavior, behavior_type_args);
-        let behavior_substitutions = self
-            .behaviors
-            .get(behavior)
-            .map(|info| {
-                info.type_params
-                    .iter()
-                    .cloned()
-                    .zip(behavior_type_args.iter().cloned())
-                    .collect::<HashMap<_, _>>()
-            })
-            .unwrap_or_default();
+        let behavior_substitutions =
+            self.behavior_type_param_substitutions(behavior, behavior_type_args);
         let mut required_methods: VecDeque<ast::BehaviorMethod> = self
             .behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new())
             .into_iter()
@@ -2585,17 +2576,8 @@ impl TypeChecker {
                     .iter()
                     .map(|type_arg| substitute_behavior_ast_type(type_arg, substitutions))
                     .collect();
-                let parent_substitutions = self
-                    .behaviors
-                    .get(&parent.behavior)
-                    .map(|info| {
-                        info.type_params
-                            .iter()
-                            .cloned()
-                            .zip(parent_type_args)
-                            .collect::<HashMap<_, _>>()
-                    })
-                    .unwrap_or_default();
+                let parent_substitutions =
+                    self.behavior_type_param_substitutions(&parent.behavior, &parent_type_args);
                 self.collect_behavior_method_coherence_errors(
                     &parent.behavior,
                     root_behavior,
@@ -3036,17 +3018,8 @@ impl TypeChecker {
         behavior_type_args: &[AstType],
         methods: &[Declaration],
     ) -> Vec<DefaultBehaviorMethod> {
-        let behavior_substitutions = self
-            .behaviors
-            .get(behavior)
-            .map(|info| {
-                info.type_params
-                    .iter()
-                    .cloned()
-                    .zip(behavior_type_args.iter().cloned())
-                    .collect::<HashMap<_, _>>()
-            })
-            .unwrap_or_default();
+        let behavior_substitutions =
+            self.behavior_type_param_substitutions(behavior, behavior_type_args);
         self.behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new())
             .iter()
             .filter(|required| {
@@ -3116,17 +3089,8 @@ impl TypeChecker {
                     .iter()
                     .map(|type_arg| substitute_behavior_ast_type(type_arg, substitutions))
                     .collect();
-                let parent_substitutions = self
-                    .behaviors
-                    .get(&parent.behavior)
-                    .map(|info| {
-                        info.type_params
-                            .iter()
-                            .cloned()
-                            .zip(parent_type_args)
-                            .collect::<HashMap<_, _>>()
-                    })
-                    .unwrap_or_default();
+                let parent_substitutions =
+                    self.behavior_type_param_substitutions(&parent.behavior, &parent_type_args);
                 methods.extend(self.behavior_methods_with_inherited_substituted(
                     &parent.behavior,
                     &parent_substitutions,
@@ -3173,6 +3137,23 @@ impl TypeChecker {
         seen: &mut HashSet<String>,
     ) -> Vec<ast::BehaviorMethod> {
         self.behavior_methods_with_inherited_substituted(behavior, substitutions, seen)
+    }
+
+    fn behavior_type_param_substitutions(
+        &self,
+        behavior: &str,
+        type_args: &[AstType],
+    ) -> HashMap<String, AstType> {
+        self.behaviors
+            .get(behavior)
+            .map(|info| {
+                info.type_params
+                    .iter()
+                    .cloned()
+                    .zip(type_args.iter().cloned())
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 
     fn impl_ast_types_compatible(
