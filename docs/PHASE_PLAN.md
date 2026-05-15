@@ -437,6 +437,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior inheritance checks now validate restored resolver
   parent refs before cycle and method-coherence checks, so stale AST-only parent
   names or type arguments cannot leak false extends diagnostics.
+  Cycle diagnostics also use restored resolver parent refs, so stale AST-only
+  parent names cannot hide inherited cycles.
   Duplicate-parent checks also use restored generic parent refs, so stale
   AST-only parent type arguments cannot collapse distinct parent
   specializations.

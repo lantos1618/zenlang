@@ -15693,6 +15693,61 @@ PrettyJson.extends(Debug<i32>)
     }
 
     #[test]
+    fn collect_declarations_with_symbols_reports_cycle_from_restored_parent_refs() {
+        let mut program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+Debug: behavior {
+    debug: (Self) str
+}
+
+Json.extends(PrettyJson)
+PrettyJson.extends(Json)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let second_parent = program
+            .declarations
+            .iter_mut()
+            .filter(|declaration| matches!(declaration, Declaration::BehaviorExtends { .. }))
+            .nth(1)
+            .expect("second parent declaration");
+        if let Declaration::BehaviorExtends { parent, .. } = second_parent {
+            *parent = "Debug".to_string();
+        } else {
+            panic!("expected behavior extends declaration");
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let messages: Vec<_> = tc
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.message.as_str())
+            .collect();
+        assert!(
+            messages
+                .iter()
+                .any(|message| message.contains("behavior inheritance cycle")),
+            "resolver-restored parent refs should drive cycle diagnostics, got {:?}",
+            messages
+        );
+        let parents = tc
+            .behavior_extends
+            .get("PrettyJson")
+            .expect("behavior parents");
+        assert_eq!(parents[0].behavior, "Json");
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_synthesizes_defaults_from_restored_behavior_parent() {
         let mut program = parse_program(
             r#"
