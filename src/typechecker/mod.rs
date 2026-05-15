@@ -3287,21 +3287,27 @@ impl TypeChecker {
     fn validate_ast_behavior_extends(&mut self, decls: &[Declaration]) {
         self.validate_self_type_contexts(decls);
 
-        if !self.resolver_backed_collection {
-            for decl in decls {
-                if let Declaration::BehaviorExtends {
-                    behavior,
-                    parent,
-                    parent_type_args,
-                    span,
-                } = decl
-                {
-                    self.check_behavior_extends(behavior, parent, parent_type_args, *span);
-                }
-            }
-            self.validate_behavior_extends_cycles();
-            self.validate_behavior_method_coherence();
+        if self.resolver_backed_collection {
+            return;
         }
+
+        self.validate_ast_behavior_extends_declarations(decls);
+    }
+
+    fn validate_ast_behavior_extends_declarations(&mut self, decls: &[Declaration]) {
+        for decl in decls {
+            if let Declaration::BehaviorExtends {
+                behavior,
+                parent,
+                parent_type_args,
+                span,
+            } = decl
+            {
+                self.check_behavior_extends(behavior, parent, parent_type_args, *span);
+            }
+        }
+        self.validate_behavior_extends_cycles();
+        self.validate_behavior_method_coherence();
     }
 
     fn collect_declarations_with_symbols(&mut self, decls: &[Declaration], symbols: &SymbolTable) {
