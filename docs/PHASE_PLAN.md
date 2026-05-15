@@ -115,6 +115,9 @@ checked-in docs, tests, and commits only.
 - AST callable type-reference validation now shares one signature/body helper
   across functions, top-level methods, and `Type.impl` methods while preserving
   each caller's existing return diagnostic span.
+- `Self` type validation now shares one callable signature/body helper across
+  functions, top-level methods, behavior default methods, and `Type.impl`
+  methods while preserving each caller's existing `Self` allowance.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.

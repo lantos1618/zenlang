@@ -6263,11 +6263,7 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.validate_self_type_params(params, false);
-                    if let Some(return_type) = return_type {
-                        self.validate_self_type_ref(return_type, *span, false);
-                    }
-                    self.validate_self_type_expr(body, false);
+                    self.validate_self_type_callable(params, return_type, body, *span, false);
                 }
                 Declaration::Method {
                     params,
@@ -6276,21 +6272,24 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.validate_self_type_params(params, true);
-                    if let Some(return_type) = return_type {
-                        self.validate_self_type_ref(return_type, *span, true);
-                    }
-                    self.validate_self_type_expr(body, true);
+                    self.validate_self_type_callable(params, return_type, body, *span, true);
                 }
                 Declaration::Behavior { methods, .. } => {
                     for method in methods {
-                        self.validate_self_type_params(&method.params, true);
-                        if let Some(return_type) = &method.return_type {
-                            self.validate_self_type_ref(return_type, method.span, true);
-                        }
-                        if let Some(default_body) = &method.default_body {
-                            self.validate_self_type_expr(default_body, true);
-                        }
+                        let Some(default_body) = &method.default_body else {
+                            self.validate_self_type_params(&method.params, true);
+                            if let Some(return_type) = &method.return_type {
+                                self.validate_self_type_ref(return_type, method.span, true);
+                            }
+                            continue;
+                        };
+                        self.validate_self_type_callable(
+                            &method.params,
+                            &method.return_type,
+                            default_body,
+                            method.span,
+                            true,
+                        );
                     }
                 }
                 Declaration::ImplBlock {
@@ -6311,11 +6310,13 @@ impl TypeChecker {
                             ..
                         } = method
                         {
-                            self.validate_self_type_params(params, true);
-                            if let Some(return_type) = return_type {
-                                self.validate_self_type_ref(return_type, *span, true);
-                            }
-                            self.validate_self_type_expr(body, true);
+                            self.validate_self_type_callable(
+                                params,
+                                return_type,
+                                body,
+                                *span,
+                                true,
+                            );
                         }
                     }
                 }
@@ -6343,6 +6344,21 @@ impl TypeChecker {
                 Declaration::Import { .. } | Declaration::Error { .. } => {}
             }
         }
+    }
+
+    fn validate_self_type_callable(
+        &mut self,
+        params: &[Param],
+        return_type: &Option<AstType>,
+        body: &Expression,
+        span: Span,
+        allow_self_type: bool,
+    ) {
+        self.validate_self_type_params(params, allow_self_type);
+        if let Some(return_type) = return_type {
+            self.validate_self_type_ref(return_type, span, allow_self_type);
+        }
+        self.validate_self_type_expr(body, allow_self_type);
     }
 
     fn validate_self_type_params(&mut self, params: &[Param], allow_self_type: bool) {
