@@ -1336,8 +1336,18 @@ impl MutabilityAbsenceValidation {
         Self { code: "E0308" }
     }
 
-    fn entry(self, symbol: &Symbol) -> AbsentMetadataEntry {
-        AbsentMetadataEntry::new(symbol.is_mutable.is_some(), self.code, "mutability")
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 1] {
+        [AbsentMetadataEntry::new(
+            symbol.is_mutable.is_some(),
+            self.code,
+            "mutability",
+        )]
+    }
+}
+
+impl AbsentMetadataValidation<1> for MutabilityAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 1] {
+        MutabilityAbsenceValidation::entries(self, symbol)
     }
 }
 
@@ -9293,8 +9303,7 @@ impl TypeChecker {
         validation: MutabilityAbsenceValidation,
         span: Span,
     ) {
-        let entry = validation.entry(symbol);
-        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &[entry], span);
+        self.validate_resolver_absent_metadata(symbol, symbol_kind, name, validation, span);
     }
 
     fn validate_resolver_absent_source_metadata(
@@ -13746,7 +13755,7 @@ Option<T>: Some(T), None
     }
 
     #[test]
-    fn mutability_absence_validation_builds_entry() {
+    fn mutability_absence_validation_builds_entries() {
         let program = parse_program(
             r#"
 main = (mut input: i32) i32 {
@@ -13761,11 +13770,11 @@ main = (mut input: i32) i32 {
         let symbol = symbols
             .lookup_scoped(Namespace::Local, "input")
             .expect("local symbol");
-        let entry = MutabilityAbsenceValidation { code: "MUTABLE" }.entry(symbol);
+        let entries = MutabilityAbsenceValidation { code: "MUTABLE" }.entries(symbol);
 
         assert_eq!(
-            entry,
-            AbsentMetadataEntry::new(true, "MUTABLE", "mutability")
+            entries,
+            [AbsentMetadataEntry::new(true, "MUTABLE", "mutability")]
         );
     }
 

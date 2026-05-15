@@ -1837,8 +1837,8 @@ and do not assume Phase 4 is ready without evidence.
   code mapping, covered by
   `typechecker::tests::count_validation_uses_variant_payload_resolver_code`.
 - Resolver absent-metadata validation now routes value signature, type
-  parameter, field, variant, behavior association, and behavior declaration
-  entry builders through one typed replay helper, covered by
+  parameter, field, variant, behavior association, behavior declaration, and
+  mutability entry builders through one typed replay helper, covered by
   `cargo test absence_validation`.
 
 ## Unresolved Gaps
