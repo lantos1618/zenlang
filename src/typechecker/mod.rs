@@ -1597,7 +1597,9 @@ impl TypeChecker {
             return;
         };
 
-        self.validate_generic_bounds(type_params);
+        if !self.resolver_backed_collection {
+            self.validate_generic_bounds(type_params);
+        }
         let key = format!("{}.{}", type_name, name);
         let collected_type_params: Vec<String> =
             type_params.iter().map(|tp| tp.name.clone()).collect();
@@ -8404,6 +8406,39 @@ Serializable<T: Json<T>>: behavior {
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored behavior bounds should avoid stale AST generic-bound diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_impl_method_bounds_for_validation() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Box: { value: i32 }
+Box.impl = {
+    keep<T: Json<T>> = (self: Box, value: T) T { return value }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[2] {
+            if let Declaration::Function { type_params, .. } = &mut methods[0] {
+                type_params[0].constraint = Some("Missing".to_string());
+                type_params[0].constraint_type_args.clear();
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored impl method bounds should avoid stale AST generic-bound diagnostics: {:?}",
             tc.diagnostics
         );
     }

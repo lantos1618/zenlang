@@ -50,8 +50,8 @@ checked-in docs, tests, and commits only.
   diagnostics.
 - Resolver-backed generic bound validation now defers AST-only type-parameter
   constraint checks until resolver metadata has been restored for functions,
-  structs, enums, and behaviors, so stale AST-only behavior constraints cannot
-  produce false generic-bound diagnostics.
+  structs, enums, behaviors, and impl methods, so stale AST-only behavior
+  constraints cannot produce false generic-bound diagnostics.
 - Resolver-backed typechecker collection now updates generic function and
   generic method templates with validated resolver type-parameter,
   bound-ref, parameter-type, and return metadata, so monomorphization templates
