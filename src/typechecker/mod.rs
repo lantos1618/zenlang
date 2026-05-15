@@ -390,6 +390,14 @@ fn type_param_bounds_from_resolver_refs(
         .collect()
 }
 
+fn resolver_type_param_bounds(symbol: &crate::resolver::Symbol) -> HashMap<String, BehaviorBound> {
+    symbol
+        .type_parameter_bound_refs
+        .as_deref()
+        .map(type_param_bounds_from_resolver_refs)
+        .unwrap_or_default()
+}
+
 fn type_param_bound_display(type_param: &ast::TypeParam) -> Option<String> {
     type_param.constraint.as_ref().map(|constraint| {
         if type_param.constraint_type_args.is_empty() {
@@ -1592,12 +1600,6 @@ impl TypeChecker {
             self.generic_methods.remove(name);
             return;
         };
-        let type_param_bounds = symbol
-            .type_parameter_bound_refs
-            .as_deref()
-            .map(type_param_bounds_from_resolver_refs)
-            .unwrap_or_default();
-
         let info = FuncInfo {
             name: name.to_string(),
             params: parameter_names
@@ -1607,7 +1609,7 @@ impl TypeChecker {
                 .collect(),
             return_type: return_type.clone(),
             type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
-            type_param_bounds,
+            type_param_bounds: resolver_type_param_bounds(symbol),
         };
         self.functions.remove(name);
         self.methods.remove(name);
@@ -1864,18 +1866,13 @@ impl TypeChecker {
             return;
         };
 
-        let type_param_bounds = symbol
-            .type_parameter_bound_refs
-            .as_deref()
-            .map(type_param_bounds_from_resolver_refs)
-            .unwrap_or_default();
         self.structs.insert(
             name.to_string(),
             StructInfo {
                 name: name.to_string(),
                 fields: field_types.clone(),
                 type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
-                type_param_bounds,
+                type_param_bounds: resolver_type_param_bounds(symbol),
             },
         );
     }
@@ -1899,18 +1896,13 @@ impl TypeChecker {
                 )
             })
             .collect();
-        let type_param_bounds = symbol
-            .type_parameter_bound_refs
-            .as_deref()
-            .map(type_param_bounds_from_resolver_refs)
-            .unwrap_or_default();
         self.enums.insert(
             name.to_string(),
             EnumInfo {
                 name: name.to_string(),
                 variants,
                 type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
-                type_param_bounds,
+                type_param_bounds: resolver_type_param_bounds(symbol),
             },
         );
     }
@@ -1960,11 +1952,7 @@ impl TypeChecker {
             BehaviorInfo {
                 name: name.to_string(),
                 type_params: symbol.type_parameter_names.clone().unwrap_or_default(),
-                type_param_bounds: symbol
-                    .type_parameter_bound_refs
-                    .as_deref()
-                    .map(type_param_bounds_from_resolver_refs)
-                    .unwrap_or_default(),
+                type_param_bounds: resolver_type_param_bounds(symbol),
                 methods,
             },
         );

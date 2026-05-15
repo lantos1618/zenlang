@@ -867,6 +867,9 @@ checked-in docs, tests, and commits only.
   module, import, local, and variant symbol metadata entries.
 - The same absent-metadata helper now covers the remaining type-like, kind,
   behavior, and value declaration validation paths.
+- Resolver-backed declaration collection now restores type-parameter bounds
+  through one shared resolver metadata helper for values, structs, enums, and
+  behaviors.
 
 ## Current Phase
 

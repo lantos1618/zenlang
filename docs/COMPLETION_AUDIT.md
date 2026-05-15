@@ -790,6 +790,9 @@ and do not assume Phase 4 is ready without evidence.
   module, import, local, and variant symbol metadata entries.
 - The same absent-metadata helper now covers the remaining type-like, kind,
   behavior, and value declaration validation paths.
+- Resolver-backed declaration collection now restores type-parameter bounds
+  through one shared resolver metadata helper for values, structs, enums, and
+  behaviors.
 
 ## Unresolved Gaps
 
