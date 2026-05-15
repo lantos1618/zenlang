@@ -549,7 +549,8 @@ checked-in docs, tests, and commits only.
   functions, top-level methods, and non-behavior impl methods, and the
   function/method arms call the shared signature restoration helpers directly.
   Type resolver declaration metadata now has a focused traversal for structs
-  and enums.
+  and enums, with shared resolver-owned type-name and behavior-ref restoration
+  before type-specific field or variant collection.
   Behavior resolver declaration metadata now has a focused traversal for
   behavior declarations that calls the shared behavior metadata collector
   directly.

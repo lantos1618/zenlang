@@ -1062,7 +1062,8 @@ and do not assume Phase 4 is ready without evidence.
   and
   `typechecker::tests::resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass`.
   Type resolver declaration metadata now has a focused traversal for structs
-  and enums, covered by
+  and enums, with shared resolver-owned type-name and behavior-ref restoration
+  before type-specific field or variant collection, covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_struct_field_metadata`,
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_struct_name_metadata`,
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_enum_payload_metadata`,

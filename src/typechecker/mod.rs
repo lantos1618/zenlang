@@ -3412,9 +3412,14 @@ impl TypeChecker {
         fields: &[StructField],
         span: Span,
     ) {
-        let restored_name =
-            self.collect_resolver_type_behavior_refs_for_declaration(symbols, name, span);
-        self.collect_resolver_struct_fields(symbols, &restored_name, fields);
+        self.collect_resolver_type_declaration_metadata_for(
+            symbols,
+            name,
+            span,
+            |checker, name| {
+                checker.collect_resolver_struct_fields(symbols, name, fields);
+            },
+        );
     }
 
     fn collect_resolver_enum_declaration_metadata(
@@ -3423,9 +3428,26 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
+        self.collect_resolver_type_declaration_metadata_for(
+            symbols,
+            name,
+            span,
+            |checker, name| {
+                checker.collect_resolver_enum_variants(symbols, name);
+            },
+        );
+    }
+
+    fn collect_resolver_type_declaration_metadata_for(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        span: Span,
+        collect: impl FnOnce(&mut Self, &str),
+    ) {
         let restored_name =
             self.collect_resolver_type_behavior_refs_for_declaration(symbols, name, span);
-        self.collect_resolver_enum_variants(symbols, &restored_name);
+        collect(self, &restored_name);
     }
 
     fn collect_resolver_behavior_impl_metadata(
