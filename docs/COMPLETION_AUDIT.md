@@ -569,6 +569,9 @@ and do not assume Phase 4 is ready without evidence.
   stale AST target names from a unique missing impl-ref owner before skipping
   incomplete resolver handoff, so stale AST-only impl refs cannot synthesize
   default methods or produce false undefined-type errors.
+- Resolver-backed `.implements` and `.requires` target restoration share a
+  unique behavior-ref owner helper, reducing duplicate association handoff logic
+  while preserving ambiguity checks.
 - Resolver-backed generic template collection also derives return-type presence
   from validated resolver metadata, so stale AST-only missing return annotations
   cannot erase resolver-owned generic function or method returns before

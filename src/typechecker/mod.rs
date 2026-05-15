@@ -1785,41 +1785,26 @@ impl TypeChecker {
 
         if let Some((behavior, behavior_type_args)) = behavior_ref {
             let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
-            let mut candidates =
-                self.resolver_behavior_impl_refs
-                    .iter()
-                    .filter_map(|(candidate_type, refs)| {
-                        refs.iter()
-                            .any(|reference| {
-                                self.behavior_reference_key(&reference.name, &reference.type_args)
-                                    == behavior_key
-                            })
-                            .then_some(candidate_type.clone())
-                    });
-            if let Some(candidate) = candidates.next() {
-                if candidates.next().is_none() {
-                    return candidate;
-                }
+            if let Some(candidate) =
+                self.unique_behavior_ref_owner(&self.resolver_behavior_impl_refs, |reference| {
+                    self.behavior_reference_key(&reference.name, &reference.type_args)
+                        == behavior_key
+                })
+            {
+                return candidate;
             }
 
-            let mut candidates =
-                self.resolver_behavior_impl_refs
-                    .iter()
-                    .filter_map(|(candidate_type, refs)| {
-                        (!refs.is_empty()).then_some(candidate_type.clone())
-                    });
-            if let Some(candidate) = candidates.next() {
-                if candidates.next().is_none() {
-                    return candidate;
-                }
+            if let Some(candidate) =
+                self.unique_behavior_ref_owner(&self.resolver_behavior_impl_refs, |_| true)
+            {
+                return candidate;
             }
         }
 
-        let mut candidates = self.resolver_missing_behavior_impl_refs.iter();
-        if let Some(candidate) = candidates.next() {
-            if candidates.next().is_none() {
-                return candidate.clone();
-            }
+        if let Some(candidate) =
+            Self::unique_owned_candidate(self.resolver_missing_behavior_impl_refs.iter().cloned())
+        {
+            return candidate;
         }
 
         type_name.to_string()
@@ -1837,43 +1822,42 @@ impl TypeChecker {
         }
 
         let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
-        let mut candidates =
-            self.resolver_behavior_required_refs
-                .iter()
-                .filter_map(|(candidate_type, refs)| {
-                    refs.iter()
-                        .any(|reference| {
-                            self.behavior_reference_key(&reference.name, &reference.type_args)
-                                == behavior_key
-                        })
-                        .then_some(candidate_type.clone())
-                });
-        if let Some(candidate) = candidates.next() {
-            if candidates.next().is_none() {
-                return candidate;
-            }
+        if let Some(candidate) =
+            self.unique_behavior_ref_owner(&self.resolver_behavior_required_refs, |reference| {
+                self.behavior_reference_key(&reference.name, &reference.type_args) == behavior_key
+            })
+        {
+            return candidate;
         }
 
-        let mut candidates =
-            self.resolver_behavior_required_refs
-                .iter()
-                .filter_map(|(candidate_type, refs)| {
-                    (!refs.is_empty()).then_some(candidate_type.clone())
-                });
-        if let Some(candidate) = candidates.next() {
-            if candidates.next().is_none() {
-                return candidate;
-            }
+        if let Some(candidate) =
+            self.unique_behavior_ref_owner(&self.resolver_behavior_required_refs, |_| true)
+        {
+            return candidate;
         }
 
-        let mut candidates = self.resolver_missing_behavior_required_refs.iter();
-        if let Some(candidate) = candidates.next() {
-            if candidates.next().is_none() {
-                return candidate.clone();
-            }
+        if let Some(candidate) = Self::unique_owned_candidate(
+            self.resolver_missing_behavior_required_refs.iter().cloned(),
+        ) {
+            return candidate;
         }
 
         type_name.to_string()
+    }
+
+    fn unique_behavior_ref_owner(
+        &self,
+        refs_by_type: &HashMap<String, VecDeque<BehaviorRefMetadata>>,
+        matches: impl Fn(&BehaviorRefMetadata) -> bool,
+    ) -> Option<String> {
+        Self::unique_owned_candidate(refs_by_type.iter().filter_map(|(candidate_type, refs)| {
+            refs.iter().any(&matches).then_some(candidate_type.clone())
+        }))
+    }
+
+    fn unique_owned_candidate(mut candidates: impl Iterator<Item = String>) -> Option<String> {
+        let candidate = candidates.next()?;
+        candidates.next().is_none().then_some(candidate)
     }
 
     fn collect_resolver_struct_fields(&mut self, symbols: &SymbolTable, name: &str) {

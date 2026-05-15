@@ -845,6 +845,9 @@ checked-in docs, tests, and commits only.
   restore stale AST target names from unique missing impl-ref metadata before
   skipping incomplete resolver handoff, avoiding stale AST-only impl refs and
   default methods.
+- Resolver-backed `.implements` and `.requires` target restoration now share
+  the unique behavior-ref owner selection helper, reducing duplicate association
+  handoff logic while preserving ambiguity checks.
 
 ## Current Phase
 
