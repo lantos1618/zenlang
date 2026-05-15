@@ -908,6 +908,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed `.requires` conformance uses restored required-behavior refs
   together with inherited child behavior impl satisfaction, covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_restored_requires_ref_for_inherited_impl`.
+  Distinct restored generic `.requires` refs remain satisfied when stale AST
+  type arguments collapse the requirements, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_distinct_restored_requires_type_args`.
 - Resolver-backed behavior inheritance checks validate restored resolver parent
   refs before cycle and method-coherence checks, so stale AST-only parent names
   or type arguments cannot leak false extends diagnostics.

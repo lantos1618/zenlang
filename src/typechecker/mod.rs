@@ -16461,6 +16461,64 @@ Point.requires(Json<str>)
     }
 
     #[test]
+    fn collect_declarations_with_symbols_uses_distinct_restored_requires_type_args() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T { return "default" }
+}
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+}
+
+Point.implements(Json<i32>) {
+}
+
+Point.requires(Json<str>)
+Point.requires(Json<i32>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let second_requires = program
+            .declarations
+            .iter_mut()
+            .filter(|declaration| matches!(declaration, Declaration::Requires { .. }))
+            .nth(1)
+            .expect("second requires declaration");
+        if let Declaration::Requires {
+            behavior_type_args, ..
+        } = second_requires
+        {
+            behavior_type_args[0] = AstType::Str;
+        } else {
+            panic!("expected requires declaration");
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.iter().all(|diagnostic| !diagnostic
+                .message
+                .contains("does not implement required behavior")),
+            "resolver-restored requires type args should keep distinct satisfied specializations: {:?}",
+            tc.diagnostics
+        );
+        assert!(
+            tc.behavior_impls
+                .contains(&("Point".to_string(), "Json_str".to_string()))
+                && tc
+                    .behavior_impls
+                    .contains(&("Point".to_string(), "Json_i32".to_string())),
+            "resolver-restored impl refs should keep both required specializations available: {:?}",
+            tc.behavior_impls
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_behavior_required_metadata()
     {
         let mut program = parse_program(

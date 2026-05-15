@@ -453,6 +453,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed `.requires` conformance checks now read validated resolver
   required-behavior refs, so stale AST-only required behavior type arguments
   cannot produce false missing-impl diagnostics.
+  Distinct generic `.requires` specializations also stay resolver-owned when
+  stale AST-only required type arguments collapse to the same specialization.
   Missing-impl diagnostics also use restored target type names, behavior names,
   and behavior type arguments when all AST-only `.requires` parts are stale.
   Restored `.requires` behavior refs also use inherited child behavior impls
