@@ -581,8 +581,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver enum variant payload metadata preserves function-typed payloads over
   generic type parameters, and typechecker setup rejects generic function-type
   payload drift before enum variant metadata collection.
-- CLI `build` rejects `build.zen` explicitly until deterministic build graph
-  support exists, with integration coverage for the gated Phase 4 entrypoint.
+- CLI `check`, `emit`, and `build` reject `build.zen` explicitly until
+  deterministic build graph support exists, with integration coverage for the
+  gated Phase 4 entrypoints.
 - Multi-file generic import fixtures cover imported generic enum/function
   specialization through C generation and runtime execution, including generated
   C assertions that imported mangled calls have matching concrete definitions.

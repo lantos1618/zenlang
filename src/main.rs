@@ -54,6 +54,7 @@ fn main() {
 }
 
 fn cmd_check(path_str: &str) {
+    reject_build_zen(path_str);
     let typed = graph_frontend(path_str);
     println!(
         "  {} functions, {} types — ok",
@@ -103,6 +104,7 @@ fn graph_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
 }
 
 fn cmd_emit(path_str: &str) {
+    reject_build_zen(path_str);
     let typed = graph_frontend(path_str);
     let backend = CBackend;
     match backend.generate(&typed) {
@@ -117,12 +119,7 @@ fn cmd_emit(path_str: &str) {
 }
 
 fn cmd_build(path_str: &str) {
-    if is_build_zen_path(path_str) {
-        eprintln!(
-            "error: build.zen execution is gated until deterministic build graph support exists"
-        );
-        process::exit(1);
-    }
+    reject_build_zen(path_str);
 
     let typed = graph_frontend(path_str);
     let backend = CBackend;
@@ -176,6 +173,15 @@ fn is_build_zen_path(path_str: &str) -> bool {
         .file_name()
         .and_then(|name| name.to_str())
         .is_some_and(|name| name == "build.zen")
+}
+
+fn reject_build_zen(path_str: &str) {
+    if is_build_zen_path(path_str) {
+        eprintln!(
+            "error: build.zen execution is gated until deterministic build graph support exists"
+        );
+        process::exit(1);
+    }
 }
 
 fn print_errors(errs: &[zen::error::CompileError], files: &FileTable) {

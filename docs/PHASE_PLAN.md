@@ -602,9 +602,9 @@ checked-in docs, tests, and commits only.
 - Resolver enum variant payload metadata also preserves function-typed payloads
   over generic type parameters, and typechecker setup rejects that generic
   handoff drift before enum variant metadata collection.
-- The CLI `build` path now rejects `build.zen` explicitly until deterministic
-  build graph support exists, with integration coverage for the gated Phase 4
-  entrypoint.
+- The CLI `check`, `emit`, and `build` paths now reject `build.zen` explicitly
+  until deterministic build graph support exists, with integration coverage for
+  the gated Phase 4 entrypoints.
 
 ## Current Phase
 
