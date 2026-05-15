@@ -1055,6 +1055,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver type-like mutability absence validation now owns its resolver
   diagnostic code mapping, covered by
   `typechecker::tests::mutability_absence_validation_uses_type_like_resolver_code`.
+- Resolver variant mutability absence validation now owns its resolver
+  diagnostic code mapping, covered by
+  `typechecker::tests::mutability_absence_validation_uses_variant_resolver_code`.
 - Resolver local mutability validation now carries its diagnostic code and
   actual/expected display formatting through a validation bundle, covered by
   `typechecker::tests::mutability_validation_formats_actual_and_expected`.
