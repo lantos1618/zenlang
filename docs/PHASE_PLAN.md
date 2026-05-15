@@ -1094,6 +1094,8 @@ checked-in docs, tests, and commits only.
   typed field metadata, and field defaults through one helper.
 - Resolver-backed behavior collection now restores resolver-owned method lists
   and AST default bodies through one metadata helper.
+- Resolver-backed behavior parent collection now restores parent refs and
+  computed behavior keys through one metadata helper.
 - Resolver behavior-association validation now builds expected display names
   and typed refs in the same AST pass for impl/requires and parent edges.
 - Resolver behavior-association expectation storage now uses a shared edge

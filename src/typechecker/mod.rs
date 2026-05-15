@@ -4353,10 +4353,7 @@ impl TypeChecker {
             return;
         };
 
-        let parents = parent_refs
-            .iter()
-            .map(|parent| self.behavior_parent_ref_from_metadata(parent))
-            .collect();
+        let parents = self.behavior_parent_refs_from_metadata(parent_refs);
         self.behavior_extends.insert(name.to_string(), parents);
         self.behavior_extends_spans
             .entry(name.to_string())
@@ -4446,6 +4443,16 @@ impl TypeChecker {
         metadata: &BehaviorRefMetadata,
     ) -> BehaviorParentRef {
         self.behavior_parent_ref(&metadata.name, &metadata.type_args)
+    }
+
+    fn behavior_parent_refs_from_metadata(
+        &self,
+        metadata: &[BehaviorRefMetadata],
+    ) -> Vec<BehaviorParentRef> {
+        metadata
+            .iter()
+            .map(|parent| self.behavior_parent_ref_from_metadata(parent))
+            .collect()
     }
 
     fn behavior_parent_ref(&self, behavior: &str, type_args: &[AstType]) -> BehaviorParentRef {
@@ -11304,6 +11311,30 @@ Second: Wrap(str)
             methods[1].default_body,
             Some(Expression::IntLiteral { value: 1, .. })
         ));
+    }
+
+    #[test]
+    fn behavior_parent_refs_from_metadata_restores_keys_and_type_args() {
+        let tc = TypeChecker::new();
+        let metadata = vec![
+            BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![AstType::Named("T".to_string())],
+            },
+            BehaviorRefMetadata {
+                name: "Debug".to_string(),
+                type_args: vec![],
+            },
+        ];
+
+        let refs = tc.behavior_parent_refs_from_metadata(&metadata);
+
+        assert_eq!(refs[0].behavior, "Json");
+        assert_eq!(refs[0].type_args, vec![AstType::Named("T".to_string())]);
+        assert_eq!(refs[0].key, "Json_T");
+        assert_eq!(refs[1].behavior, "Debug");
+        assert!(refs[1].type_args.is_empty());
+        assert_eq!(refs[1].key, "Debug");
     }
 
     #[test]
