@@ -220,6 +220,8 @@ checked-in docs, tests, and commits only.
   target restoration and generic method monomorphization inference.
 - Resolver count validation now shares one diagnostic helper across value
   parameters, type parameters, struct fields, and enum variant payloads.
+- Resolver metadata display fallbacks now share helpers for optional string and
+  typed AST metadata diagnostics.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

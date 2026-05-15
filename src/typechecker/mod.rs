@@ -7554,10 +7554,7 @@ impl TypeChecker {
             ));
         }
         if symbol.variant_payload_type_name != expected.display {
-            let actual = symbol
-                .variant_payload_type_name
-                .as_deref()
-                .unwrap_or("unknown");
+            let actual = resolver_metadata_display(symbol.variant_payload_type_name.as_deref());
             let expected = expected.display.as_deref().unwrap_or("none");
             self.diagnostics.push(Diagnostic::error(
                 "E0218",
@@ -7577,7 +7574,7 @@ impl TypeChecker {
         span: Span,
     ) {
         if symbol.variant_owner_name.as_deref() != Some(expected_owner_name) {
-            let actual = symbol.variant_owner_name.as_deref().unwrap_or("unknown");
+            let actual = resolver_metadata_display(symbol.variant_owner_name.as_deref());
             self.diagnostics.push(Diagnostic::error(
                 "E0242",
                 format!(
@@ -8084,7 +8081,7 @@ impl TypeChecker {
         span: Span,
     ) {
         if symbol.return_type_name.as_deref() != Some(expected.display.as_str()) {
-            let actual = symbol.return_type_name.as_deref().unwrap_or("unknown");
+            let actual = resolver_metadata_display(symbol.return_type_name.as_deref());
             self.diagnostics.push(Diagnostic::error(
                 "E0212",
                 format!(
@@ -8095,11 +8092,7 @@ impl TypeChecker {
             ));
         }
         if symbol.return_type.as_ref() != Some(&expected.typed) {
-            let actual = symbol
-                .return_type
-                .as_ref()
-                .map(AstType::display_name)
-                .unwrap_or_else(|| "unknown".to_string());
+            let actual = resolver_ast_type_metadata_display(symbol.return_type.as_ref());
             self.diagnostics.push(Diagnostic::error(
                 "E0357",
                 format!(
@@ -8202,6 +8195,16 @@ fn mutability_name(is_mutable: Option<bool>) -> &'static str {
 fn resolver_count_display(count: Option<usize>) -> String {
     count
         .map(|count| count.to_string())
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
+fn resolver_metadata_display(value: Option<&str>) -> &str {
+    value.unwrap_or("unknown")
+}
+
+fn resolver_ast_type_metadata_display(value: Option<&AstType>) -> String {
+    value
+        .map(AstType::display_name)
         .unwrap_or_else(|| "unknown".to_string())
 }
 
@@ -9087,6 +9090,17 @@ mod tests {
     fn resolver_count_display_formats_known_and_missing_counts() {
         assert_eq!(resolver_count_display(Some(2)), "2");
         assert_eq!(resolver_count_display(None), "unknown");
+    }
+
+    #[test]
+    fn resolver_metadata_display_formats_known_and_missing_values() {
+        assert_eq!(resolver_metadata_display(Some("Point")), "Point");
+        assert_eq!(resolver_metadata_display(None), "unknown");
+        assert_eq!(
+            resolver_ast_type_metadata_display(Some(&AstType::I32)),
+            "i32"
+        );
+        assert_eq!(resolver_ast_type_metadata_display(None), "unknown");
     }
 
     #[test]

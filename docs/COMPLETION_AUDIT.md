@@ -133,6 +133,9 @@ and do not assume Phase 4 is ready without evidence.
   parameters, type parameters, struct fields, and enum variant payloads, with
   display coverage in
   `typechecker::tests::resolver_count_display_formats_known_and_missing_counts`.
+- Resolver metadata display fallbacks now share helpers for optional string and
+  typed AST metadata diagnostics, covered by
+  `typechecker::tests::resolver_metadata_display_formats_known_and_missing_values`.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
