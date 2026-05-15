@@ -422,6 +422,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior method collection rebuilds behavior parameters from
   resolver-owned parameter names and types, so stale AST-only missing or extra
   parameters cannot distort impl conformance checks.
+- Resolver-backed behavior method collection also walks resolver-owned behavior
+  method metadata in resolver order, so stale AST-only missing behavior methods
+  cannot drop required methods from impl conformance checks.
 - Resolver-backed struct and enum collection uses typed resolver generic bound
   refs, so generic type templates no longer retain stale AST-only behavior
   bounds after resolver validation.

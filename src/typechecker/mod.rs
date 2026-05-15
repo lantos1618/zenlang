@@ -1548,39 +1548,33 @@ impl TypeChecker {
         let Some(existing) = self.behaviors.get(name).cloned() else {
             return;
         };
-        let mut method_types: VecDeque<BehaviorMethodTypeMetadata> =
-            method_types.iter().cloned().collect();
-        let methods = existing
-            .methods
-            .into_iter()
-            .map(|method| {
-                let metadata = match method_types
-                    .iter()
-                    .position(|metadata| metadata.name == method.name)
-                {
-                    Some(index) => method_types.remove(index),
-                    None => method_types.pop_front(),
-                };
-                let Some(metadata) = metadata else {
-                    return method;
-                };
-                let params = Self::resolver_behavior_method_params(
-                    &method.params,
-                    &metadata.parameter_names,
-                    &metadata.parameter_types,
-                );
-                let return_type = match metadata.return_type {
-                    AstType::Void => None,
-                    ty => Some(ty),
-                };
-                ast::BehaviorMethod {
-                    name: metadata.name,
-                    params,
-                    return_type,
-                    ..method
-                }
-            })
-            .collect();
+        let mut existing_methods: VecDeque<ast::BehaviorMethod> =
+            existing.methods.into_iter().collect();
+        let mut methods = Vec::new();
+        for (metadata_index, metadata) in method_types.iter().cloned().enumerate() {
+            let method = match existing_methods
+                .iter()
+                .position(|method| method.name == metadata.name)
+            {
+                Some(index) => existing_methods.remove(index),
+                None => match existing_methods.front() {
+                    Some(front)
+                        if method_types[metadata_index + 1..]
+                            .iter()
+                            .any(|metadata| metadata.name == front.name) =>
+                    {
+                        None
+                    }
+                    Some(_) => existing_methods.pop_front(),
+                    None => None,
+                },
+            };
+            methods.push(Self::resolver_behavior_method_from_metadata(
+                method.as_ref(),
+                metadata,
+                symbol.definition_span,
+            ));
+        }
         self.behaviors.insert(
             name.to_string(),
             BehaviorInfo {
@@ -1594,6 +1588,31 @@ impl TypeChecker {
                 methods,
             },
         );
+    }
+
+    fn resolver_behavior_method_from_metadata(
+        existing_method: Option<&ast::BehaviorMethod>,
+        metadata: BehaviorMethodTypeMetadata,
+        span: Span,
+    ) -> ast::BehaviorMethod {
+        let params = Self::resolver_behavior_method_params(
+            existing_method
+                .map(|method| method.params.as_slice())
+                .unwrap_or(&[]),
+            &metadata.parameter_names,
+            &metadata.parameter_types,
+        );
+        let return_type = match metadata.return_type {
+            AstType::Void => None,
+            ty => Some(ty),
+        };
+        ast::BehaviorMethod {
+            name: metadata.name,
+            params,
+            return_type,
+            default_body: existing_method.and_then(|method| method.default_body.clone()),
+            span: existing_method.map(|method| method.span).unwrap_or(span),
+        }
     }
 
     fn resolver_behavior_method_params(
@@ -9199,6 +9218,43 @@ Point.implements(Mapper) {
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored behavior method params should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_method_count() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+    describe: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+    describe = (value: Point) str { return "desc" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
+            methods.pop();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.behaviors.get("Json").expect("behavior info");
+        assert_eq!(info.methods.len(), 2);
+        assert_eq!(info.methods[0].name, "encode");
+        assert_eq!(info.methods[1].name, "describe");
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior methods should avoid stale AST impl diagnostics: {:?}",
             tc.diagnostics
         );
     }
