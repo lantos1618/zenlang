@@ -566,6 +566,17 @@ impl MutabilityValidation {
 }
 
 #[derive(Clone, Copy)]
+struct VisibilityValidation {
+    code: &'static str,
+}
+
+impl VisibilityValidation {
+    fn display(self, actual: bool, expected: bool) -> (&'static str, &'static str) {
+        (visibility_name(actual), visibility_name(expected))
+    }
+}
+
+#[derive(Clone, Copy)]
 struct SourceAbsenceValidation {
     code: &'static str,
 }
@@ -5494,7 +5505,7 @@ impl TypeChecker {
             &expected.name,
             symbol.is_public,
             expected.is_public,
-            "E0229",
+            VisibilityValidation { code: "E0229" },
             span,
         );
 
@@ -5623,7 +5634,7 @@ impl TypeChecker {
                 &symbol.name,
                 symbol.is_public,
                 false,
-                "E0245",
+                VisibilityValidation { code: "E0245" },
                 symbol.definition_span,
             );
             if symbol.import_source.is_none() {
@@ -6537,7 +6548,7 @@ impl TypeChecker {
             name,
             symbol.is_public,
             expected.is_public,
-            "E0245",
+            VisibilityValidation { code: "E0245" },
             span,
         );
 
@@ -6985,7 +6996,7 @@ impl TypeChecker {
             name,
             symbol.is_public,
             expected.is_public,
-            "E0247",
+            VisibilityValidation { code: "E0247" },
             span,
         );
 
@@ -7103,7 +7114,7 @@ impl TypeChecker {
                 name,
                 symbol.is_public,
                 expected_is_public,
-                "E0225",
+                VisibilityValidation { code: "E0225" },
                 span,
             );
         }
@@ -7437,16 +7448,15 @@ impl TypeChecker {
         name: &str,
         actual: bool,
         expected: bool,
-        code: &'static str,
+        validation: VisibilityValidation,
         span: Span,
     ) {
         if actual != expected {
+            let (actual, expected) = validation.display(actual, expected);
             self.diagnostics.push(Diagnostic::error(
-                code,
+                validation.code,
                 format!(
-                    "resolver {symbol_kind} symbol '{name}' has visibility {}, expected {}",
-                    visibility_name(actual),
-                    visibility_name(expected)
+                    "resolver {symbol_kind} symbol '{name}' has visibility {actual}, expected {expected}"
                 ),
                 span,
             ));
@@ -7753,7 +7763,7 @@ impl TypeChecker {
             name,
             symbol.is_public,
             expected_is_public,
-            "E0226",
+            VisibilityValidation { code: "E0226" },
             span,
         );
     }
@@ -8154,7 +8164,7 @@ impl TypeChecker {
             name,
             symbol.is_public,
             expected.is_public,
-            "E0224",
+            VisibilityValidation { code: "E0224" },
             span,
         );
 
@@ -9946,6 +9956,15 @@ main = (mut input: i32) i32 {
             ("immutable", "mutable")
         );
         assert_eq!(validation.display(None, false), ("unknown", "immutable"));
+    }
+
+    #[test]
+    fn visibility_validation_formats_actual_and_expected() {
+        let validation = VisibilityValidation { code: "VISIBLE" };
+
+        assert_eq!(validation.code, "VISIBLE");
+        assert_eq!(validation.display(true, false), ("public", "private"));
+        assert_eq!(validation.display(false, true), ("private", "public"));
     }
 
     #[test]

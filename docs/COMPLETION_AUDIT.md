@@ -922,6 +922,9 @@ and do not assume Phase 4 is ready without evidence.
   for counts, display payload types, and typed AST payloads.
 - Resolver visibility validation now shares one diagnostic helper across
   module, import, local, type-like, variant, and value symbols.
+- Resolver visibility validation now carries its diagnostic code and
+  actual/expected display formatting through a validation bundle, covered by
+  `typechecker::tests::visibility_validation_formats_actual_and_expected`.
 - Resolver source validation now shares one diagnostic helper across module,
   import, and local symbols.
 - Resolver local mutability validation now shares the same diagnostic helper
