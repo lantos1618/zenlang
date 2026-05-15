@@ -1086,6 +1086,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed callable template and behavior method collection now share
   parameter restoration from resolver-owned names and typed metadata, covered
   by focused unit coverage.
+- Resolver-backed callable template and behavior method collection now share
+  resolver return-type restoration for `void` versus annotated returns.
 - Resolver behavior-association validation now builds expected display names
   and typed refs in the same AST pass for impl/requires and parent edges.
 - Resolver behavior-association expectation storage now uses a shared edge

@@ -3938,10 +3938,7 @@ impl TypeChecker {
             parameter_types,
             template.span,
         );
-        template.return_type = match return_type {
-            AstType::Void => None,
-            ty => Some(ty.clone()),
-        };
+        template.return_type = Self::resolver_optional_return_type(return_type);
     }
 
     fn collect_resolver_method_signature(
@@ -4282,10 +4279,7 @@ impl TypeChecker {
             &metadata.parameter_types,
             Span::dummy(),
         );
-        let return_type = match metadata.return_type {
-            AstType::Void => None,
-            ty => Some(ty),
-        };
+        let return_type = Self::resolver_optional_return_type(&metadata.return_type);
         ast::BehaviorMethod {
             name: metadata.name,
             params,
@@ -4321,6 +4315,13 @@ impl TypeChecker {
                 },
             })
             .collect()
+    }
+
+    fn resolver_optional_return_type(return_type: &AstType) -> Option<AstType> {
+        match return_type {
+            AstType::Void => None,
+            ty => Some(ty.clone()),
+        }
     }
 
     fn collect_resolver_behavior_parents(&mut self, symbols: &SymbolTable, name: &str) {
@@ -11124,6 +11125,24 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(params[1].ty, parameter_types[1]);
         assert!(!params[1].mutable);
         assert_eq!(params[1].span, default_span);
+    }
+
+    #[test]
+    fn resolver_optional_return_type_maps_void_to_missing_annotation() {
+        assert_eq!(
+            TypeChecker::resolver_optional_return_type(&AstType::Void),
+            None
+        );
+        assert_eq!(
+            TypeChecker::resolver_optional_return_type(&AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::Str),
+            }),
+            Some(AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::Str),
+            })
+        );
     }
 
     #[test]

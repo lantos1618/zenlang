@@ -1298,6 +1298,10 @@ and do not assume Phase 4 is ready without evidence.
   resolver-owned parameter restoration while preserving AST mutability and
   spans, covered by
   `typechecker::tests::resolver_params_from_metadata_preserves_ast_param_shape`.
+- Resolver-backed callable template and behavior method collection now share
+  resolver return-type restoration for `void` versus annotated returns, covered
+  by
+  `typechecker::tests::resolver_optional_return_type_maps_void_to_missing_annotation`.
 - Resolver behavior-association validation now derives display-name and typed
   ref expectations together, avoiding duplicate AST scans for the same edges.
 - Resolver behavior-association expectation storage now uses one shared edge
