@@ -8957,17 +8957,21 @@ fn format_behavior_method_types(methods: Option<&[BehaviorMethodTypeMetadata]>) 
 }
 
 fn format_behavior_ref_names(parents: Option<&[String]>) -> String {
-    match parents {
-        Some(parents) if !parents.is_empty() => join_resolver_strings(parents),
-        _ => "none".to_string(),
-    }
+    format_resolver_nonempty_joined_list(parents, String::clone)
 }
 
 fn format_behavior_refs(refs: Option<&[BehaviorRefMetadata]>) -> String {
-    match refs {
-        Some(refs) if !refs.is_empty() => join_resolver_display_values(refs, |behavior| {
-            behavior_ref_display(&behavior.name, &behavior.type_args)
-        }),
+    format_resolver_nonempty_joined_list(refs, |behavior| {
+        behavior_ref_display(&behavior.name, &behavior.type_args)
+    })
+}
+
+fn format_resolver_nonempty_joined_list<T>(
+    values: Option<&[T]>,
+    display_value: impl Fn(&T) -> String,
+) -> String {
+    match values {
+        Some(values) if !values.is_empty() => join_resolver_display_values(values, display_value),
         _ => "none".to_string(),
     }
 }
@@ -9091,6 +9095,22 @@ mod tests {
             "(T: Display<i32>)"
         );
         assert_eq!(format_type_parameter_bound_refs(None), "unknown");
+    }
+
+    #[test]
+    fn resolver_nonempty_joined_list_formats_present_empty_and_missing_items() {
+        let names = vec!["Json".to_string(), "Debug".to_string()];
+        assert_eq!(format_behavior_ref_names(Some(&names)), "Json, Debug");
+        assert_eq!(format_behavior_ref_names(Some(&[])), "none");
+        assert_eq!(format_behavior_ref_names(None), "none");
+
+        let refs = vec![BehaviorRefMetadata {
+            name: "Json".to_string(),
+            type_args: vec![AstType::I32],
+        }];
+        assert_eq!(format_behavior_refs(Some(&refs)), "Json<i32>");
+        assert_eq!(format_behavior_refs(Some(&[])), "none");
+        assert_eq!(format_behavior_refs(None), "none");
     }
 
     #[test]

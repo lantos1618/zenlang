@@ -232,6 +232,8 @@ checked-in docs, tests, and commits only.
   metadata diagnostics.
 - Resolver mapped-list rendering is now shared by AST type, type-parameter
   bound, behavior method, and behavior-ref metadata diagnostics.
+- Resolver non-empty joined-list rendering is now shared by behavior-ref name
+  and typed behavior-ref metadata diagnostics.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

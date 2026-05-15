@@ -151,6 +151,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver mapped-list rendering is now shared by AST type, type-parameter
   bound, behavior method, and behavior-ref metadata diagnostics, covered by
   `typechecker::tests::resolver_display_list_formats_mapped_known_and_missing_items`.
+- Resolver non-empty joined-list rendering is now shared by behavior-ref name
+  and typed behavior-ref metadata diagnostics, covered by
+  `typechecker::tests::resolver_nonempty_joined_list_formats_present_empty_and_missing_items`.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
