@@ -4349,7 +4349,7 @@ impl TypeChecker {
         if !self.resolver_backed_collection {
             self.validate_generic_bounds(type_params);
         }
-        let key = format!("{}.{}", type_name, name);
+        let key = Self::method_key(type_name, name);
         self.methods.insert(
             key.clone(),
             func_info_from_ast_signature(key.clone(), type_params, params, return_type),
@@ -4382,7 +4382,7 @@ impl TypeChecker {
             generic_template_from_type_params(type_params, params, return_type, body, *span)
         {
             self.generic_methods
-                .insert(format!("{}.{}", type_name, name), template);
+                .insert(Self::method_key(type_name, name), template);
         }
     }
 
@@ -4414,8 +4414,8 @@ impl TypeChecker {
             let Some(restored_name) = restored_name else {
                 continue;
             };
-            let ast_key = format!("{ast_type_name}.{name}");
-            let restored_key = format!("{type_name}.{restored_name}");
+            let ast_key = Self::method_key(ast_type_name, name);
+            let restored_key = Self::method_key(type_name, &restored_name);
             self.collect_resolver_callable_signature_for_key(symbols, &ast_key, &restored_key);
         }
     }
@@ -5231,7 +5231,7 @@ impl TypeChecker {
         type_name: &str,
         default: &DefaultBehaviorMethod,
     ) {
-        let key = format!("{}.{}", type_name, default.name);
+        let key = Self::method_key(type_name, &default.name);
         self.methods.insert(
             key.clone(),
             func_info_from_behavior_method(key, &default.params, &default.return_type),
@@ -5293,8 +5293,12 @@ impl TypeChecker {
         method_name: &str,
     ) -> Option<&FuncInfo> {
         self.resolver_backed_collection
-            .then(|| self.methods.get(&format!("{type_name}.{method_name}")))
+            .then(|| self.methods.get(&Self::method_key(type_name, method_name)))
             .flatten()
+    }
+
+    fn method_key(type_name: &str, method_name: &str) -> String {
+        format!("{type_name}.{method_name}")
     }
 
     fn remove_named_queue_entry(items: &mut VecDeque<String>, name: &str) -> Option<String> {
@@ -11002,6 +11006,11 @@ Point.get = (self: Point) i32 { return self.x }
                 .map(|info| info.return_type.clone()),
             Some(AstType::Str)
         );
+    }
+
+    #[test]
+    fn method_key_formats_type_qualified_method_name() {
+        assert_eq!(TypeChecker::method_key("Point", "encode"), "Point.encode");
     }
 
     #[test]

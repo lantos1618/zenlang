@@ -388,6 +388,9 @@ checked-in docs, tests, and commits only.
   signature fallback selection.
 - Resolver-backed behavior impl conformance and default-method suppression now
   share one collected method-signature lookup helper.
+- Impl method collection, resolver-backed impl restoration, default seeding,
+  and resolver-backed method lookup now share one type-qualified method key
+  helper.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths.
 - Generic method specialization preserves concrete `Self` receiver context in
