@@ -822,6 +822,8 @@ and do not assume Phase 4 is ready without evidence.
   save/check/restore path, with methods supplying only their receiver self type.
 - Resolver-backed callable signature restoration now shares stale-entry cleanup
   and generic-template rekey helpers across function and method paths.
+- Resolver-backed struct and enum metadata restoration now use shared
+  constructors for resolver type parameters, bounds, fields, and variants.
 
 ## Unresolved Gaps
 

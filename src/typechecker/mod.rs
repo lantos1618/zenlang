@@ -22,7 +22,7 @@ use crate::ast::{self, AstType, Declaration, EnumVariant, Expression, Param, Str
 use crate::error::{Diagnostic, Span};
 use crate::module_system::{ResolvedModule, ResolvedModuleGraph};
 use crate::resolver::{
-    BehaviorMethodTypeMetadata, BehaviorRefMetadata, MethodSignatureMetadata, Namespace,
+    BehaviorMethodTypeMetadata, BehaviorRefMetadata, MethodSignatureMetadata, Namespace, Symbol,
     SymbolTable, TypeParameterBoundMetadata, TypeParameterBoundRefMetadata,
 };
 
@@ -538,6 +538,32 @@ fn behavior_info_from_ast_methods(
         type_params: type_param_names(type_params),
         type_param_bounds: type_param_bounds(type_params),
         methods: methods.to_vec(),
+    }
+}
+
+fn struct_info_from_resolver_fields(
+    name: String,
+    symbol: &Symbol,
+    fields: Vec<(String, AstType)>,
+) -> StructInfo {
+    StructInfo {
+        name,
+        fields,
+        type_params: resolver_type_param_names(symbol),
+        type_param_bounds: resolver_type_param_bounds(symbol),
+    }
+}
+
+fn enum_info_from_resolver_variants(
+    name: String,
+    symbol: &Symbol,
+    variants: Vec<(String, Option<AstType>)>,
+) -> EnumInfo {
+    EnumInfo {
+        name,
+        variants,
+        type_params: resolver_type_param_names(symbol),
+        type_param_bounds: resolver_type_param_bounds(symbol),
     }
 }
 
@@ -2021,12 +2047,7 @@ impl TypeChecker {
 
         self.structs.insert(
             name.to_string(),
-            StructInfo {
-                name: name.to_string(),
-                fields: field_types.clone(),
-                type_params: resolver_type_param_names(symbol),
-                type_param_bounds: resolver_type_param_bounds(symbol),
-            },
+            struct_info_from_resolver_fields(name.to_string(), symbol, field_types.clone()),
         );
     }
 
@@ -2051,12 +2072,7 @@ impl TypeChecker {
             .collect();
         self.enums.insert(
             name.to_string(),
-            EnumInfo {
-                name: name.to_string(),
-                variants,
-                type_params: resolver_type_param_names(symbol),
-                type_param_bounds: resolver_type_param_bounds(symbol),
-            },
+            enum_info_from_resolver_variants(name.to_string(), symbol, variants),
         );
     }
 
