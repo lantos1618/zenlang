@@ -251,54 +251,53 @@ impl TypeChecker {
             ));
         }
 
-        (
-            saved_structs,
-            saved_enums,
-            saved_functions,
-            saved_generic_functions,
-            saved_methods,
-            saved_generic_methods,
-        )
+        super::TemplateDependencyState {
+            structs: saved_structs,
+            enums: saved_enums,
+            functions: saved_functions,
+            generic_functions: saved_generic_functions,
+            methods: saved_methods,
+            generic_methods: saved_generic_methods,
+        }
     }
 
     fn restore_template_dependencies(&mut self, state: super::TemplateDependencyState) {
-        let (structs, enums, functions, generic_functions, methods, generic_methods) = state;
-        for (name, previous) in structs {
+        for (name, previous) in state.structs {
             if let Some(previous) = previous {
                 self.structs.insert(name, previous);
             } else {
                 self.structs.remove(&name);
             }
         }
-        for (name, previous) in enums {
+        for (name, previous) in state.enums {
             if let Some(previous) = previous {
                 self.enums.insert(name, previous);
             } else {
                 self.enums.remove(&name);
             }
         }
-        for (name, previous) in functions {
+        for (name, previous) in state.functions {
             if let Some(previous) = previous {
                 self.functions.insert(name, previous);
             } else {
                 self.functions.remove(&name);
             }
         }
-        for (name, previous) in generic_functions {
+        for (name, previous) in state.generic_functions {
             if let Some(previous) = previous {
                 self.generic_functions.insert(name, previous);
             } else {
                 self.generic_functions.remove(&name);
             }
         }
-        for (name, previous) in methods {
+        for (name, previous) in state.methods {
             if let Some(previous) = previous {
                 self.methods.insert(name, previous);
             } else {
                 self.methods.remove(&name);
             }
         }
-        for (name, previous) in generic_methods {
+        for (name, previous) in state.generic_methods {
             if let Some(previous) = previous {
                 self.generic_methods.insert(name, previous);
             } else {

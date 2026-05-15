@@ -889,6 +889,8 @@ checked-in docs, tests, and commits only.
   source-module dependency bundle directly instead of a second wrapper type.
 - Generic function templates now own source-module dependency attachment, so
   imported generic function and method templates share the same dependency path.
+- Generic template dependency save/restore state now uses named dependency
+  fields instead of a positional tuple across monomorphization.
 
 ## Current Phase
 

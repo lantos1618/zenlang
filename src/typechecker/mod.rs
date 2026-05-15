@@ -154,14 +154,15 @@ pub(crate) type TemplateGenericDependencyState = Vec<(String, Option<GenericFunc
 pub(crate) type TemplateMethodDependencyState = Vec<(String, Option<FuncInfo>)>;
 pub(crate) type TemplateGenericMethodDependencyState =
     Vec<(String, Option<GenericFunctionTemplate>)>;
-pub(crate) type TemplateDependencyState = (
-    TemplateStructDependencyState,
-    TemplateEnumDependencyState,
-    TemplateFunctionDependencyState,
-    TemplateGenericDependencyState,
-    TemplateMethodDependencyState,
-    TemplateGenericMethodDependencyState,
-);
+
+pub(crate) struct TemplateDependencyState {
+    structs: TemplateStructDependencyState,
+    enums: TemplateEnumDependencyState,
+    functions: TemplateFunctionDependencyState,
+    generic_functions: TemplateGenericDependencyState,
+    methods: TemplateMethodDependencyState,
+    generic_methods: TemplateGenericMethodDependencyState,
+}
 
 struct DefaultBehaviorMethod {
     name: String,
