@@ -196,7 +196,7 @@ struct ExpectedEnumSymbol {
 struct ExpectedVariantSymbol {
     owner_name: String,
     is_public: bool,
-    payload: ExpectedVariantPayload,
+    payload: ExpectedVariantPayloadType,
 }
 
 struct ExpectedImportSymbol {
@@ -247,10 +247,6 @@ struct ValueSignatureAbsenceValidation {
 struct ExpectedField {
     typed: (String, AstType),
     display: (String, String),
-}
-
-struct ExpectedVariantPayload {
-    metadata: ExpectedVariantPayloadType,
 }
 
 struct ExpectedVariantPayloadType {
@@ -7165,10 +7161,10 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_payload: ExpectedVariantPayload,
+        expected_payload: ExpectedVariantPayloadType,
         span: Span,
     ) {
-        let expected_count = usize::from(expected_payload.metadata.typed.is_some());
+        let expected_count = usize::from(expected_payload.typed.is_some());
         if symbol.variant_payload_count != Some(expected_count) {
             let actual = symbol
                 .variant_payload_count
@@ -7183,14 +7179,13 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.variant_payload_type != expected_payload.metadata.typed {
+        if symbol.variant_payload_type != expected_payload.typed {
             let actual = symbol
                 .variant_payload_type
                 .as_ref()
                 .map(AstType::display_name)
                 .unwrap_or_else(|| "none".to_string());
             let expected = expected_payload
-                .metadata
                 .typed
                 .as_ref()
                 .map(AstType::display_name)
@@ -7203,16 +7198,12 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.variant_payload_type_name != expected_payload.metadata.display {
+        if symbol.variant_payload_type_name != expected_payload.display {
             let actual = symbol
                 .variant_payload_type_name
                 .as_deref()
                 .unwrap_or("unknown");
-            let expected = expected_payload
-                .metadata
-                .display
-                .as_deref()
-                .unwrap_or("none");
+            let expected = expected_payload.display.as_deref().unwrap_or("none");
             self.diagnostics.push(Diagnostic::error(
                 "E0218",
                 format!(
@@ -8193,12 +8184,10 @@ fn format_variant_names(variants: Option<&[String]>) -> String {
     }
 }
 
-fn expected_variant_payload_metadata(payload: &Option<AstType>) -> ExpectedVariantPayload {
-    ExpectedVariantPayload {
-        metadata: ExpectedVariantPayloadType {
-            typed: payload.clone(),
-            display: payload.as_ref().map(AstType::display_name),
-        },
+fn expected_variant_payload_metadata(payload: &Option<AstType>) -> ExpectedVariantPayloadType {
+    ExpectedVariantPayloadType {
+        typed: payload.clone(),
+        display: payload.as_ref().map(AstType::display_name),
     }
 }
 

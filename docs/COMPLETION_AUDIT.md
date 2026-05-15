@@ -781,6 +781,9 @@ and do not assume Phase 4 is ready without evidence.
 - The docs truth gate now covers the quiet draft-PR CI trigger shape by
   rejecting `pull_request.synchronize`, requiring manual dispatch, and requiring
   the draft-PR guard on fmt, clippy, and test jobs.
+- Resolver variant payload expectations now pass paired typed/display payload
+  metadata directly to validation instead of wrapping it in a redundant
+  intermediate object.
 
 ## Unresolved Gaps
 
