@@ -156,6 +156,29 @@ main = () i32 {
 }
 
 #[test]
+fn generic_function_inference_conflict_through_array_type_is_error() {
+    let errors = typecheck_errors(
+        r#"
+choose_array<T> = (left: T, items: [T; 1]) T {
+    return left
+}
+
+main = () i32 {
+    items = ["bad"]
+    return choose_array(1, items)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic function `choose_array`: inferred `i32` and `str`"
+        )),
+        "expected generic function array-type inference conflict diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_method_inference_conflict_is_error() {
     let errors = typecheck_errors(
         r#"
