@@ -7329,57 +7329,7 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.parameter_count != Some(expected_signature.params.count) {
-            let actual = symbol
-                .parameter_count
-                .map(|count| count.to_string())
-                .unwrap_or_else(|| "unknown".to_string());
-            self.diagnostics.push(Diagnostic::error(
-                "E0211",
-                format!(
-                    "resolver value symbol '{name}' has parameter count {actual}, expected {}",
-                    expected_signature.params.count
-                ),
-                span,
-            ));
-        }
-
-        if symbol.parameter_names.as_deref() != Some(expected_signature.params.names.as_slice()) {
-            let actual = format_parameter_names(symbol.parameter_names.as_deref());
-            let expected = format_parameter_names(Some(&expected_signature.params.names));
-            self.diagnostics.push(Diagnostic::error(
-                "E0223",
-                format!(
-                    "resolver value symbol '{name}' has parameter names '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
-
-        if symbol.parameter_type_names.as_deref()
-            != Some(expected_signature.params.type_names.as_slice())
-        {
-            let actual = format_parameter_type_names(symbol.parameter_type_names.as_deref());
-            let expected = format_parameter_type_names(Some(&expected_signature.params.type_names));
-            self.diagnostics.push(Diagnostic::error(
-                "E0216",
-                format!(
-                    "resolver value symbol '{name}' has parameter types '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
-        if symbol.parameter_types.as_deref() != Some(expected_signature.params.types.as_slice()) {
-            let actual = format_ast_type_list(symbol.parameter_types.as_deref());
-            let expected = format_ast_type_list(Some(&expected_signature.params.types));
-            self.diagnostics.push(Diagnostic::error(
-                "E0356",
-                format!(
-                    "resolver value symbol '{name}' has typed parameter types '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_value_parameters(symbol, name, &expected_signature.params, span);
 
         if symbol.return_type_name.as_deref()
             != Some(expected_signature.return_type.type_name.as_str())
@@ -7425,6 +7375,64 @@ impl TypeChecker {
         );
 
         self.validate_resolver_value_absent_declaration_metadata(symbol, name, span);
+    }
+
+    fn validate_resolver_value_parameters(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        name: &str,
+        expected: &ExpectedParameters,
+        span: Span,
+    ) {
+        if symbol.parameter_count != Some(expected.count) {
+            let actual = symbol
+                .parameter_count
+                .map(|count| count.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0211",
+                format!(
+                    "resolver value symbol '{name}' has parameter count {actual}, expected {}",
+                    expected.count
+                ),
+                span,
+            ));
+        }
+
+        if symbol.parameter_names.as_deref() != Some(expected.names.as_slice()) {
+            let actual = format_parameter_names(symbol.parameter_names.as_deref());
+            let expected_names = format_parameter_names(Some(&expected.names));
+            self.diagnostics.push(Diagnostic::error(
+                "E0223",
+                format!(
+                    "resolver value symbol '{name}' has parameter names '{actual}', expected '{expected_names}'"
+                ),
+                span,
+            ));
+        }
+
+        if symbol.parameter_type_names.as_deref() != Some(expected.type_names.as_slice()) {
+            let actual = format_parameter_type_names(symbol.parameter_type_names.as_deref());
+            let expected_types = format_parameter_type_names(Some(&expected.type_names));
+            self.diagnostics.push(Diagnostic::error(
+                "E0216",
+                format!(
+                    "resolver value symbol '{name}' has parameter types '{actual}', expected '{expected_types}'"
+                ),
+                span,
+            ));
+        }
+        if symbol.parameter_types.as_deref() != Some(expected.types.as_slice()) {
+            let actual = format_ast_type_list(symbol.parameter_types.as_deref());
+            let expected_types = format_ast_type_list(Some(&expected.types));
+            self.diagnostics.push(Diagnostic::error(
+                "E0356",
+                format!(
+                    "resolver value symbol '{name}' has typed parameter types '{actual}', expected '{expected_types}'"
+                ),
+                span,
+            ));
+        }
     }
 
     fn validate_resolver_value_absent_declaration_metadata(

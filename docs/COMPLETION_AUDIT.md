@@ -189,7 +189,8 @@ and do not assume Phase 4 is ready without evidence.
   those behavior-method handoff checks aligned.
 - Typechecker resolver validation now carries value parameter count, names,
   display types, and typed parameter metadata through one shared parameter
-  expectation object, keeping value-signature handoff checks aligned.
+  expectation and validation path, keeping value-signature handoff checks
+  aligned.
 - Typechecker resolver validation now carries value display-return and
   typed-return metadata through one shared return expectation object, keeping
   value-signature handoff checks aligned.
