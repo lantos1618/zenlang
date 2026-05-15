@@ -247,6 +247,9 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker resolver validation now stores expected value parameter names,
   display types, and typed metadata as paired per-parameter expectations before
   deriving resolver comparison lists.
+- Typechecker resolver validation now stores expected value display-return and
+  typed-return metadata as one paired return expectation before deriving
+  resolver comparison values.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, keeping

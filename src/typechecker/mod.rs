@@ -175,8 +175,12 @@ struct ExpectedParameter {
 }
 
 struct ExpectedReturnType {
-    ty: AstType,
-    type_name: String,
+    metadata: ExpectedReturnMetadata,
+}
+
+struct ExpectedReturnMetadata {
+    typed: AstType,
+    display: String,
 }
 
 #[derive(Default)]
@@ -7533,18 +7537,18 @@ impl TypeChecker {
         expected: &ExpectedReturnType,
         span: Span,
     ) {
-        if symbol.return_type_name.as_deref() != Some(expected.type_name.as_str()) {
+        if symbol.return_type_name.as_deref() != Some(expected.metadata.display.as_str()) {
             let actual = symbol.return_type_name.as_deref().unwrap_or("unknown");
             self.diagnostics.push(Diagnostic::error(
                 "E0212",
                 format!(
                     "resolver value symbol '{name}' has return type '{actual}', expected '{}'",
-                    expected.type_name
+                    expected.metadata.display
                 ),
                 span,
             ));
         }
-        if symbol.return_type.as_ref() != Some(&expected.ty) {
+        if symbol.return_type.as_ref() != Some(&expected.metadata.typed) {
             let actual = symbol
                 .return_type
                 .as_ref()
@@ -7554,7 +7558,7 @@ impl TypeChecker {
                 "E0357",
                 format!(
                     "resolver value symbol '{name}' has typed return type '{actual}', expected '{}'",
-                    expected.ty.display_name()
+                    expected.metadata.typed.display_name()
                 ),
                 span,
             ));
@@ -7650,8 +7654,10 @@ fn expected_return_type_name(return_type: &Option<AstType>) -> String {
 
 fn expected_return_type(return_type: &Option<AstType>) -> ExpectedReturnType {
     ExpectedReturnType {
-        ty: return_type.clone().unwrap_or(AstType::Void),
-        type_name: expected_return_type_name(return_type),
+        metadata: ExpectedReturnMetadata {
+            typed: return_type.clone().unwrap_or(AstType::Void),
+            display: expected_return_type_name(return_type),
+        },
     }
 }
 
@@ -7962,13 +7968,13 @@ fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> ExpectedBehavio
             signature: (
                 method.name.clone(),
                 parameter_type_names,
-                return_type.type_name,
+                return_type.metadata.display,
             ),
             metadata: BehaviorMethodTypeMetadata {
                 name: method.name.clone(),
                 parameter_names,
                 parameter_types,
-                return_type: return_type.ty,
+                return_type: return_type.metadata.typed,
             },
         });
     }
