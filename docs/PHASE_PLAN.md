@@ -70,6 +70,10 @@ checked-in docs, tests, and commits only.
   cannot leave stale `Type.missing` method entries during setup. Generic
   `Type.impl` method templates are covered by the same resolver-restored key,
   parameter, and return metadata path.
+- Resolver-backed non-behavior `Type.impl` metadata collection now receives
+  the impl target and method list from the declaration dispatcher instead of
+  re-matching the whole declaration, shrinking another duplicate declaration
+  collection boundary while preserving resolver-restored impl method coverage.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so

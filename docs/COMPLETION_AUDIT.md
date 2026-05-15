@@ -126,6 +126,13 @@ and do not assume Phase 4 is ready without evidence.
   Generic `Type.impl` method templates also restore resolver-owned method names,
   parameters, and returns, covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_name_metadata`.
+- Resolver-backed non-behavior `Type.impl` metadata collection now takes the
+  dispatcher-owned impl target and method list directly instead of re-matching
+  the full declaration, with focused coverage from
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_method_name_metadata`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_target_name_metadata`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_target_and_name_metadata`.
 - Module graph typechecking now seeds graph imports and then runs
   resolver-backed declaration collection for the current module, so multi-file
   graph modules use the same resolver-owned metadata handoff as

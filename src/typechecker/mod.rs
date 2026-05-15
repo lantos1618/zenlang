@@ -3269,8 +3269,15 @@ impl TypeChecker {
                         *span,
                     );
                 }
-                Declaration::ImplBlock { behavior: None, .. } => {
-                    self.collect_resolver_type_impl_declaration_metadata(decl, symbols);
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior: None,
+                    methods,
+                    ..
+                } => {
+                    self.collect_resolver_type_impl_declaration_metadata(
+                        symbols, type_name, methods,
+                    );
                 }
                 Declaration::Struct {
                     name, fields, span, ..
@@ -3309,20 +3316,13 @@ impl TypeChecker {
 
     fn collect_resolver_type_impl_declaration_metadata(
         &mut self,
-        decl: &Declaration,
         symbols: &SymbolTable,
+        type_name: &str,
+        methods: &[Declaration],
     ) {
-        if let Declaration::ImplBlock {
-            type_name,
-            behavior: None,
-            methods,
-            ..
-        } = decl
-        {
-            for method in methods {
-                if let Declaration::Function { name, span, .. } = method {
-                    self.collect_resolver_method_signature(symbols, type_name, name, *span);
-                }
+        for method in methods {
+            if let Declaration::Function { name, span, .. } = method {
+                self.collect_resolver_method_signature(symbols, type_name, name, *span);
             }
         }
     }
