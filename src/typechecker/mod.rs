@@ -179,6 +179,20 @@ struct ExpectedValueSignature {
     type_params: Vec<ExpectedTypeParameter>,
 }
 
+impl ExpectedValueSignature {
+    fn new(
+        params: &[Param],
+        return_type: &Option<AstType>,
+        type_params: &[ast::TypeParam],
+    ) -> Self {
+        Self {
+            params: expected_parameter_metadata(params),
+            return_type: expected_return_metadata(return_type),
+            type_params: expected_type_parameter_metadata(type_params),
+        }
+    }
+}
+
 struct ExpectedValueSymbol {
     signature: ExpectedValueSignature,
     is_public: bool,
@@ -9250,13 +9264,7 @@ fn expected_value_signature_metadata(
     return_type: &Option<AstType>,
     type_params: &[ast::TypeParam],
 ) -> ExpectedValueSignature {
-    let params = expected_parameter_metadata(params);
-    let type_params = expected_type_parameter_metadata(type_params);
-    ExpectedValueSignature {
-        params,
-        return_type: expected_return_metadata(return_type),
-        type_params,
-    }
+    ExpectedValueSignature::new(params, return_type, type_params)
 }
 
 fn expected_value_symbol(
@@ -11026,6 +11034,42 @@ Point.requires(Json<str>)
             }]
         );
         assert_eq!(expected.metadata.return_type, AstType::Str);
+    }
+
+    #[test]
+    fn expected_value_signature_builds_components_together() {
+        let params = vec![Param {
+            name: "value".to_string(),
+            ty: AstType::Named("T".to_string()),
+            mutable: false,
+            span: Span::dummy(),
+        }];
+        let return_type = Some(AstType::Named("T".to_string()));
+        let type_params = vec![ast::TypeParam {
+            name: "T".to_string(),
+            constraint: Some("Json".to_string()),
+            constraint_type_args: vec![AstType::Named("T".to_string())],
+            span: Span::dummy(),
+        }];
+
+        let signature = ExpectedValueSignature::new(&params, &return_type, &type_params);
+
+        assert_eq!(signature.params[0].name, "value");
+        assert_eq!(signature.params[0].display, "T");
+        assert_eq!(signature.params[0].typed, AstType::Named("T".to_string()));
+        assert_eq!(signature.return_type.display, "T");
+        assert_eq!(signature.return_type.typed, AstType::Named("T".to_string()));
+        assert_eq!(signature.type_params[0].name, "T");
+        let bound = signature.type_params[0]
+            .bound
+            .as_ref()
+            .expect("expected bound");
+        assert_eq!(bound.display, ("T".to_string(), "Json<T>".to_string()));
+        assert_eq!(bound.reference.behavior, "Json");
+        assert_eq!(
+            bound.reference.type_args,
+            vec![AstType::Named("T".to_string())]
+        );
     }
 
     #[test]

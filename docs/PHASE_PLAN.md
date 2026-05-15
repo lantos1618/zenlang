@@ -167,6 +167,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver expected behavior-method construction now pairs display
   method signatures and typed method metadata through one expected-method
   constructor.
+- Typechecker resolver expected value-signature construction now gathers
+  parameter, return, and type-parameter expectations through one
+  expected-signature constructor.
 - Typechecker resolver behavior-ref validation now separates role labels from
   per-check diagnostic code mappings, avoiding duplicated label bundles across
   contains and full-list checks.
