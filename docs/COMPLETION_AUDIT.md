@@ -990,6 +990,8 @@ and do not assume Phase 4 is ready without evidence.
   signature fallback selection, covered by
   `typechecker::tests::impl_effective_method_name_prefers_resolver_then_ast_then_collected_signature`,
   `typechecker::tests::resolver_backed_impl_method_key_requires_resolver_collection`,
+  `typechecker::tests::resolver_backed_behavior_impl_method_signature_name_prefers_resolver_key`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_impl_method_signature_target_and_name_metadata`,
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_method_name_metadata_for_impl_checks`,
   and
   `typechecker::tests::collect_declarations_with_symbols_does_not_let_stale_ast_name_hide_extra_impl_method`.

@@ -393,6 +393,10 @@ checked-in docs, tests, and commits only.
   keeping resolver-owned span lookup disabled during AST-only collection while
   feeding behavior impl conformance the restored key during resolver-backed
   collection.
+- Resolver-backed behavior impl method signature collection now shares that
+  restored impl-method key with a named required-method selection helper, so
+  stale AST-only impl method names do not control which resolver value
+  signatures are collected for conformance.
 - Resolver-backed behavior impl conformance and default-method suppression now
   share one collected method-signature lookup helper.
 - Impl method collection, resolver-backed impl restoration, default seeding,

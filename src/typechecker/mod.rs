@@ -4480,16 +4480,21 @@ impl TypeChecker {
             .collect();
 
         for method in methods {
-            let Declaration::Function { name, .. } = method else {
-                continue;
-            };
-            let restored_name =
-                Self::named_queue_index(&required_methods, name, |required| required.name.as_str())
-                    .and_then(|index| required_methods.remove(index).map(|required| required.name));
-            let Some(restored_name) = restored_name else {
+            let Declaration::Function { name, span, .. } = method else {
                 continue;
             };
             let ast_key = Self::method_key(ast_type_name, name);
+            let resolver_owned_key =
+                self.resolver_backed_impl_method_key(Some(symbols), &ast_key, type_name, *span);
+            let restored_name = self.resolver_backed_behavior_impl_method_signature_name(
+                &mut required_methods,
+                name,
+                resolver_owned_key.as_deref(),
+                type_name,
+            );
+            let Some(restored_name) = restored_name else {
+                continue;
+            };
             let restored_key = Self::method_key(type_name, &restored_name);
             self.collect_resolver_callable_signature_for_key(symbols, &ast_key, &restored_key);
         }
@@ -5366,6 +5371,32 @@ impl TypeChecker {
         }
 
         ast_name.to_string()
+    }
+
+    fn resolver_backed_behavior_impl_method_signature_name(
+        &self,
+        required_methods: &mut VecDeque<ast::BehaviorMethod>,
+        ast_name: &str,
+        resolver_owned_key: Option<&str>,
+        type_name: &str,
+    ) -> Option<String> {
+        if let Some(resolver_owned_key) = resolver_owned_key {
+            let resolver_owned_name = resolver_owned_key
+                .strip_prefix(&format!("{type_name}."))
+                .unwrap_or(resolver_owned_key);
+            if let Some(index) =
+                Self::named_queue_index(required_methods, resolver_owned_name, |required| {
+                    required.name.as_str()
+                })
+            {
+                return required_methods.remove(index).map(|required| required.name);
+            }
+        }
+
+        Self::named_queue_index(required_methods, ast_name, |required| {
+            required.name.as_str()
+        })
+        .and_then(|index| required_methods.remove(index).map(|required| required.name))
     }
 
     fn resolver_backed_impl_method_key(
@@ -11129,6 +11160,47 @@ Point.implements(Json) {
     }
 
     #[test]
+    fn resolver_backed_behavior_impl_method_signature_name_prefers_resolver_key() {
+        let tc = TypeChecker::new();
+        let mut required = VecDeque::from([
+            ast::BehaviorMethod {
+                name: "encode".to_string(),
+                params: Vec::new(),
+                return_type: Some(AstType::Str),
+                default_body: None,
+                span: Span::dummy(),
+            },
+            ast::BehaviorMethod {
+                name: "debug".to_string(),
+                params: Vec::new(),
+                return_type: Some(AstType::Str),
+                default_body: None,
+                span: Span::dummy(),
+            },
+        ]);
+
+        assert_eq!(
+            tc.resolver_backed_behavior_impl_method_signature_name(
+                &mut required,
+                "stale",
+                Some("Point.encode"),
+                "Point",
+            ),
+            Some("encode".to_string())
+        );
+        assert_eq!(
+            tc.resolver_backed_behavior_impl_method_signature_name(
+                &mut required,
+                "debug",
+                None,
+                "Point",
+            ),
+            Some("debug".to_string())
+        );
+        assert!(required.is_empty());
+    }
+
+    #[test]
     fn resolver_backed_method_signature_requires_resolver_collection() {
         let mut tc = TypeChecker::new();
         tc.methods.insert(
@@ -16318,6 +16390,57 @@ Point.implements(Json) {
         assert!(
             !tc.methods.contains_key("Point.encode"),
             "resolver-backed behavior impl collection should clear restored method keys when resolver signature metadata is incomplete"
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_impl_method_signature_target_and_name_metadata(
+    ) {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock {
+            type_name, methods, ..
+        } = &mut program.declarations[2]
+        {
+            *type_name = "Missing".to_string();
+            if let Declaration::Function {
+                name,
+                params,
+                return_type,
+                ..
+            } = &mut methods[0]
+            {
+                *name = "missing".to_string();
+                params[0].ty = AstType::Named("Stale".to_string());
+                *return_type = Some(AstType::Named("AlsoStale".to_string()));
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.methods.get("Point.encode").expect("impl method info");
+        assert!(!tc.methods.contains_key("Missing.missing"));
+        assert_eq!(info.params[0].0, "value");
+        assert_eq!(info.params[0].1, AstType::Named("Point".to_string()));
+        assert_eq!(info.return_type, AstType::Str);
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior impl method signature should avoid stale AST diagnostics: {:?}",
+            tc.diagnostics
         );
     }
 
