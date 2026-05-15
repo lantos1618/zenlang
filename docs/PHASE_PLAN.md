@@ -1137,6 +1137,8 @@ checked-in docs, tests, and commits only.
   diagnostic code mapping instead of constructing those codes at the call site.
 - Resolver import behavior-declaration absence validation now owns its resolver
   diagnostic code mapping instead of constructing those codes at the call site.
+- Resolver local behavior-declaration absence validation now owns its resolver
+  diagnostic code mapping instead of constructing those codes at the call site.
 - Resolver absent mutability metadata validation now shares one helper across
   module, import, type-like, variant, and value symbols.
 - Resolver absent mutability metadata validation now lets the validation bundle

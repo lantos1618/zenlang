@@ -702,6 +702,15 @@ impl BehaviorDeclarationAbsenceValidation {
         }
     }
 
+    fn local_resolver_codes() -> Self {
+        Self {
+            method_signature_code: "E0261",
+            method_type_code: "E0385",
+            parent_name_code: "E0262",
+            parent_ref_code: "E0386",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
         [
             AbsentMetadataEntry::new(
@@ -7731,12 +7740,7 @@ impl TypeChecker {
             symbol,
             "local",
             name,
-            BehaviorDeclarationAbsenceValidation {
-                method_signature_code: "E0261",
-                method_type_code: "E0385",
-                parent_name_code: "E0262",
-                parent_ref_code: "E0386",
-            },
+            BehaviorDeclarationAbsenceValidation::local_resolver_codes(),
             span,
         );
     }
@@ -10680,6 +10684,16 @@ PrettyJson.extends(Json)
         assert_eq!(validation.method_type_code, "E0367");
         assert_eq!(validation.parent_name_code, "E0294");
         assert_eq!(validation.parent_ref_code, "E0368");
+    }
+
+    #[test]
+    fn behavior_declaration_absence_validation_uses_local_resolver_codes() {
+        let validation = BehaviorDeclarationAbsenceValidation::local_resolver_codes();
+
+        assert_eq!(validation.method_signature_code, "E0261");
+        assert_eq!(validation.method_type_code, "E0385");
+        assert_eq!(validation.parent_name_code, "E0262");
+        assert_eq!(validation.parent_ref_code, "E0386");
     }
 
     #[test]
