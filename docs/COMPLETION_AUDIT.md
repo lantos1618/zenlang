@@ -806,6 +806,9 @@ and do not assume Phase 4 is ready without evidence.
   stale AST target names from a unique missing impl-ref owner before skipping
   incomplete resolver handoff, so stale AST-only impl refs cannot synthesize
   default methods or produce false undefined-type errors.
+- Resolver-backed behavior default synthesis now uses a named skip helper for
+  incomplete resolver impl-ref handoff, covered by
+  `typechecker::tests::behavior_default_synthesis_skip_requires_resolver_collection_and_missing_impl_ref`.
 - Resolver-backed `.implements` and `.requires` target restoration share a
   unique behavior-ref owner helper, reducing duplicate association handoff logic
   while preserving ambiguity checks.

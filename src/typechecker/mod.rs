@@ -4502,9 +4502,7 @@ impl TypeChecker {
         behavior_type_args: &[AstType],
         methods: &[Declaration],
     ) {
-        if self.resolver_backed_collection
-            && self.resolver_missing_behavior_impl_refs.contains(type_name)
-        {
+        if self.should_skip_behavior_default_synthesis(type_name) {
             return;
         }
         let (behavior, behavior_type_args) =
@@ -4514,6 +4512,11 @@ impl TypeChecker {
         {
             self.seed_behavior_default_method_signature(type_name, &default);
         }
+    }
+
+    fn should_skip_behavior_default_synthesis(&self, type_name: &str) -> bool {
+        self.resolver_backed_collection
+            && self.resolver_missing_behavior_impl_refs.contains(type_name)
     }
 
     fn behavior_reference_key(&self, behavior: &str, type_args: &[AstType]) -> String {
@@ -11090,6 +11093,18 @@ Point.get = (self: Point) i32 { return self.x }
                 .map(|info| info.return_type.clone()),
             Some(AstType::Str)
         );
+    }
+
+    #[test]
+    fn behavior_default_synthesis_skip_requires_resolver_collection_and_missing_impl_ref() {
+        let mut tc = TypeChecker::new();
+        tc.resolver_missing_behavior_impl_refs
+            .insert("Point".to_string());
+
+        assert!(!tc.should_skip_behavior_default_synthesis("Point"));
+        tc.resolver_backed_collection = true;
+        assert!(tc.should_skip_behavior_default_synthesis("Point"));
+        assert!(!tc.should_skip_behavior_default_synthesis("Other"));
     }
 
     #[test]

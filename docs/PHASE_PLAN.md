@@ -1161,6 +1161,9 @@ checked-in docs, tests, and commits only.
   restore stale AST target names from unique missing impl-ref metadata before
   skipping incomplete resolver handoff, avoiding stale AST-only impl refs and
   default methods.
+- Resolver-backed behavior default synthesis now uses a named skip helper for
+  incomplete resolver impl-ref handoff, keeping the resolver-backed guard out
+  of the default collection body.
 - Resolver-backed `.implements` and `.requires` target restoration now share
   the unique behavior-ref owner selection helper, reducing duplicate association
   handoff logic while preserving ambiguity checks.
