@@ -158,6 +158,10 @@ and do not assume Phase 4 is ready without evidence.
   once for both AST collection and resolver-backed template stubs, shrinking
   another duplicate declaration walk while keeping the same `Type.impl`
   coverage above.
+- Callable declaration collection now dispatches each function or top-level
+  method once for both AST collection and resolver-backed template stubs,
+  shrinking another duplicate function/method declaration walk while preserving
+  generic callable template coverage.
 - Module graph typechecking now seeds graph imports and then runs
   resolver-backed declaration collection for the current module, so multi-file
   graph modules use the same resolver-owned metadata handoff as

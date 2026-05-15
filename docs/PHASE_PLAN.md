@@ -90,6 +90,9 @@ checked-in docs, tests, and commits only.
   both AST and resolver-backed setup, so resolver-backed template stubs also
   receive the already-dispatched target and method list instead of re-matching
   the whole declaration.
+- Callable declaration collection now owns the function/method dispatcher for
+  both AST setup and resolver-backed template stubs, so callable collection
+  shares one declaration walk before mode-specific signature or stub handling.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so
