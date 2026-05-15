@@ -3287,7 +3287,10 @@ impl TypeChecker {
                 self.collect_resolver_method_signature(symbols, type_name, method_name, *span);
             }
             Declaration::ImplBlock {
-                type_name, methods, ..
+                type_name,
+                behavior: None,
+                methods,
+                ..
             } => {
                 for method in methods {
                     if let Declaration::Function { name, span, .. } = method {
@@ -3340,9 +3343,10 @@ impl TypeChecker {
             checker.for_each_resolver_behavior_impl_block(
                 decls,
                 symbols,
-                |checker, type_name, behavior, behavior_type_args, methods| {
+                |checker, ast_type_name, type_name, behavior, behavior_type_args, methods| {
                     checker.collect_resolver_behavior_impl_method_signatures(
                         symbols,
+                        ast_type_name,
                         type_name,
                         behavior,
                         behavior_type_args,
@@ -3356,7 +3360,7 @@ impl TypeChecker {
             checker.for_each_resolver_behavior_impl_block(
                 decls,
                 symbols,
-                |checker, type_name, behavior, behavior_type_args, methods| {
+                |checker, _ast_type_name, type_name, behavior, behavior_type_args, methods| {
                     checker.collect_behavior_default_method_signatures(
                         type_name,
                         behavior,
@@ -3406,7 +3410,7 @@ impl TypeChecker {
         &mut self,
         decls: &[Declaration],
         symbols: &SymbolTable,
-        mut visit: impl FnMut(&mut Self, &str, &str, &[AstType], &[Declaration]),
+        mut visit: impl FnMut(&mut Self, &str, &str, &str, &[AstType], &[Declaration]),
     ) {
         for decl in decls {
             if let Declaration::ImplBlock {
@@ -3417,13 +3421,20 @@ impl TypeChecker {
                 ..
             } = decl
             {
-                let type_name = self.resolver_impl_type_name_for(
+                let restored_type_name = self.resolver_impl_type_name_for(
                     symbols,
                     type_name,
                     methods,
                     Some((behavior, behavior_type_args)),
                 );
-                visit(self, &type_name, behavior, behavior_type_args, methods);
+                visit(
+                    self,
+                    type_name,
+                    &restored_type_name,
+                    behavior,
+                    behavior_type_args,
+                    methods,
+                );
             }
         }
     }
@@ -4306,6 +4317,7 @@ impl TypeChecker {
     fn collect_resolver_behavior_impl_method_signatures(
         &mut self,
         symbols: &SymbolTable,
+        ast_type_name: &str,
         type_name: &str,
         behavior: &str,
         behavior_type_args: &[AstType],
@@ -4334,7 +4346,7 @@ impl TypeChecker {
             let Some(restored_name) = restored_name else {
                 continue;
             };
-            let ast_key = format!("{type_name}.{name}");
+            let ast_key = format!("{ast_type_name}.{name}");
             let restored_key = format!("{type_name}.{restored_name}");
             self.collect_resolver_callable_signature_for_key(symbols, &ast_key, &restored_key);
         }
@@ -15599,6 +15611,44 @@ Point.implements(Json) {
             tc.diagnostics.is_empty(),
             "resolver-restored behavior impl target should avoid stale AST impl diagnostics: {:?}",
             tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.impl = {
+    get = (self: Point) i32 { return self.x }
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let mut tc = TypeChecker::new();
+
+        tc.with_resolver_backed_collection(|checker| {
+            checker.collect_declarations(&program.declarations);
+        });
+        tc.collect_resolver_declaration_metadata(&program.declarations, &symbols);
+
+        assert!(
+            tc.methods.contains_key("Point.get"),
+            "non-behavior impl methods should still be refreshed by declaration metadata"
+        );
+        assert!(
+            !tc.methods.contains_key("Point.encode"),
+            "behavior impl method signatures should be owned by the behavior impl metadata pass"
         );
     }
 

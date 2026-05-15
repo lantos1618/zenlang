@@ -916,6 +916,9 @@ and do not assume Phase 4 is ready without evidence.
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed
   declaration collection surface that later Phase 2 slices still need to shrink.
+  Behavior impl method signatures are skipped by the generic declaration
+  metadata refresh and owned by the behavior impl metadata pass, covered by
+  `typechecker::tests::resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass`.
   AST behavior declaration seeding, behavior generic-bound validation, and
   AST-only behavior inheritance validation now also have named helper passes.
   Behavior generic-bound validation is owned by that named pass, avoiding
