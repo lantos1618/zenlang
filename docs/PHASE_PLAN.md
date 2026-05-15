@@ -573,6 +573,9 @@ checked-in docs, tests, and commits only.
   graph-owned import privacy boundary. Duplicate non-behavior impl method names
   and collisions with top-level `Type.method` declarations are rejected by
   resolver coverage.
+  Source-module imported generic enum dependencies for public generic
+  `Type.impl` methods are covered by
+  `tests/zen/multi_file_type_impl_return_enum_dependency/main.zen`.
 - Typechecker setup now rejects extra resolver-owned declaration symbols for
   values, types, behaviors, and enum variants before collecting declaration
   metadata from the AST.

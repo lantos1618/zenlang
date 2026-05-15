@@ -702,6 +702,19 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Holder_T"));
     assert!(!c_source.contains("T Holder_get"));
 
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_type_impl_return_enum_dependency/main.zen"),
+    );
+    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
+    assert!(c_source.contains("Option_i32 Box_wrap_i32(Box_i32 self)"));
+    assert!(c_source.contains("int32_t Box_value_or_i32(Box_i32 self, int32_t fallback)"));
+    assert!(c_source.contains("Box_wrap_i32(self)"));
+    assert!(c_source.contains("Box_value_or_i32(box, 0LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "Box_wrap_i32");
+    assert_c_call_resolves_to_definition(&c_source, "Box_value_or_i32");
+    assert!(!c_source.contains("Option_T"));
+    assert!(!c_source.contains("T Box_wrap"));
+
     let c_source =
         compile_to_c_with_generated_call_check(&test_dir().join("multi_file_type_method/main.zen"));
     assert!(c_source.contains("int32_t Point_keep_i32(Point self, int32_t value)"));
@@ -1659,6 +1672,13 @@ fn test_multi_file_type_impl_imported_type_dependency_imports() {
     let zen_path = test_dir().join("multi_file_type_impl_imported_type_dependency/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "61\n");
+}
+
+#[test]
+fn test_multi_file_type_impl_return_enum_dependency_imports() {
+    let zen_path = test_dir().join("multi_file_type_impl_return_enum_dependency/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "101\n");
 }
 
 #[test]
