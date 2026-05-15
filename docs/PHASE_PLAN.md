@@ -40,6 +40,10 @@ checked-in docs, tests, and commits only.
   `tests/zen/generic_nested_result_enum.zen`, proving
   `Result<Option<i32>, str>` runtime behavior and generated-C call/definition
   consistency for both the outer result unwrap and inner option unwrap.
+- Generic method specialization with nested generic enum returns is covered by
+  `tests/zen/generic_method_nested_result.zen`, proving a specialized
+  `Box<T>` method can return `Result<Option<T>, str>` without leaving
+  unspecialized C symbols or unresolved generated calls.
 - Resolver method symbols carry full value-signature metadata, including
   generic type-parameter names and bounds, and typechecker setup validates
   method signature handoff drift before method bodies are checked.

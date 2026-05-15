@@ -428,6 +428,11 @@ fn test_generic_method_worklist() {
 }
 
 #[test]
+fn test_generic_method_nested_result() {
+    run_test("generic_method_nested_result");
+}
+
+#[test]
 fn test_type_impl_methods() {
     run_test("type_impl_methods");
 }
@@ -548,6 +553,21 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Box_get_inner_i32");
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
+
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("generic_method_nested_result.zen"),
+    );
+    assert!(c_source.contains("typedef struct Result_Option_i32_str Result_Option_i32_str;"));
+    assert!(c_source.contains("Result_Option_i32_str Box_wrap_result_i32(Box_i32 self)"));
+    assert!(c_source.contains("Box_wrap_result_i32(box)"));
+    assert!(c_source.contains("unwrap_result_Option_i32_str(wrapped,"));
+    assert!(c_source.contains("unwrap_option_i32(some, 0LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "Box_wrap_result_i32");
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_result_Option_i32_str");
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_option_i32");
+    assert!(!c_source.contains("Result_T"));
+    assert!(!c_source.contains("Option_T"));
+    assert!(!c_source.contains("T Box_wrap_result"));
 
     let c_source =
         compile_to_c_with_generated_call_check(&test_dir().join("type_impl_methods.zen"));

@@ -1,0 +1,40 @@
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+Option<T>:
+    None,
+    Some(T)
+
+Result<T, E>:
+    Ok(T),
+    Err(E)
+
+Box.wrap_result<T> = (self: Box<T>) Result<Option<T>, str> {
+    return Result<Option<T>, str>.Ok(Option<T>.Some(self.value))
+}
+
+unwrap_option<T> = (value: Option<T>, fallback: T) T {
+    value ?
+        | Some(inner) { inner }
+        | None { fallback }
+}
+
+unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
+    value ?
+        | Ok(inner) { inner }
+        | Err(_) { fallback }
+}
+
+main = () i32 {
+    box = Box<i32> { value: 42 }
+    wrapped = box.wrap_result<i32>()
+    fallback = Result<Option<i32>, str>.Err("bad")
+    some = unwrap_result(wrapped, Option<i32>.None)
+    other = unwrap_result(fallback, Option<i32>.Some(7))
+    io.println("${unwrap_option(some, 0)}")
+    io.println("${unwrap_option(other, 0)}")
+    return 0
+}

@@ -63,6 +63,12 @@ and do not assume Phase 4 is ready without evidence.
   `tests/zen/generic_method_self.zen`, including receiver-based inference for
   `Self`-only generic method signatures and nested
   `Box<Option<i32>>` specialization dependency ordering.
+- Generic method specialization with nested generic enum return types is covered
+  by `tests/zen/generic_method_nested_result.zen`,
+  `integration::test_generic_method_nested_result`, and
+  `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`,
+  proving `Box<T>.wrap_result` can specialize
+  `Result<Option<T>, str>` without unresolved generated C calls.
 - Generic method specializations that call generic functions have executable
   and generated-C coverage in `tests/zen/generic_method_worklist.zen`, including
   call-resolution assertions for the reached generic function dependency.
