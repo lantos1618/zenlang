@@ -243,6 +243,9 @@ and do not assume Phase 4 is ready without evidence.
   the per-field expectation list instead of storing a separate count.
 - Typechecker resolver validation now stores expected enum variant payload
   display and typed metadata as one paired payload-type expectation.
+- Typechecker resolver validation now derives expected enum variant payload
+  counts from the paired payload-type expectation instead of storing a separate
+  count.
 - Typechecker resolver validation now stores expected type-parameter display
   bounds and typed bound refs as paired per-bound expectations before deriving
   resolver comparison lists.

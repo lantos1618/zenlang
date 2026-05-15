@@ -273,7 +273,6 @@ struct ExpectedField {
 }
 
 struct ExpectedVariantPayload {
-    count: usize,
     ty: ExpectedVariantPayloadType,
 }
 
@@ -6899,7 +6898,8 @@ impl TypeChecker {
         expected_payload: ExpectedVariantPayload,
         span: Span,
     ) {
-        if symbol.variant_payload_count != Some(expected_payload.count) {
+        let expected_count = usize::from(expected_payload.ty.typed.is_some());
+        if symbol.variant_payload_count != Some(expected_count) {
             let actual = symbol
                 .variant_payload_count
                 .map(|count| count.to_string())
@@ -6908,7 +6908,7 @@ impl TypeChecker {
                 "E0215",
                 format!(
                     "resolver variant symbol '{name}' has payload count {actual}, expected {}",
-                    expected_payload.count
+                    expected_count
                 ),
                 span,
             ));
@@ -7940,7 +7940,6 @@ fn format_variant_names(variants: Option<&[String]>) -> String {
 
 fn expected_variant_payload(payload: &Option<AstType>) -> ExpectedVariantPayload {
     ExpectedVariantPayload {
-        count: usize::from(payload.is_some()),
         ty: ExpectedVariantPayloadType {
             typed: payload.clone(),
             display: payload.as_ref().map(AstType::display_name),
