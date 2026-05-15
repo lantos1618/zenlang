@@ -1424,7 +1424,12 @@ impl TypeChecker {
                 ..
             } = decl
             {
-                let type_name = self.resolver_impl_type_name_for(symbols, type_name, methods);
+                let type_name = self.resolver_impl_type_name_for(
+                    symbols,
+                    type_name,
+                    methods,
+                    Some((behavior, behavior_type_args)),
+                );
                 self.collect_resolver_behavior_impl_method_signatures(
                     symbols,
                     &type_name,
@@ -1446,7 +1451,12 @@ impl TypeChecker {
                 ..
             } = decl
             {
-                let type_name = self.resolver_impl_type_name_for(symbols, type_name, methods);
+                let type_name = self.resolver_impl_type_name_for(
+                    symbols,
+                    type_name,
+                    methods,
+                    Some((behavior, behavior_type_args)),
+                );
                 self.collect_behavior_default_method_signatures(
                     &type_name,
                     behavior,
@@ -1493,7 +1503,14 @@ impl TypeChecker {
             } = decl
             {
                 let type_name = symbols
-                    .map(|symbols| self.resolver_impl_type_name_for(symbols, type_name, methods))
+                    .map(|symbols| {
+                        self.resolver_impl_type_name_for(
+                            symbols,
+                            type_name,
+                            methods,
+                            Some((behavior, behavior_type_args)),
+                        )
+                    })
                     .unwrap_or_else(|| type_name.clone());
                 self.check_behavior_impl(&type_name, behavior, behavior_type_args, methods, *span);
             }
@@ -1728,29 +1745,51 @@ impl TypeChecker {
         symbols: &SymbolTable,
         type_name: &str,
         methods: &[Declaration],
+        behavior_ref: Option<(&str, &[AstType])>,
     ) -> String {
         if symbols.lookup(Namespace::Type, type_name).is_some() {
             return type_name.to_string();
         }
 
-        methods
-            .iter()
-            .find_map(|method| {
-                let Declaration::Function { span, .. } = method else {
-                    return None;
-                };
-                symbols
-                    .symbols()
+        if let Some(type_name) = methods.iter().find_map(|method| {
+            let Declaration::Function { span, .. } = method else {
+                return None;
+            };
+            symbols
+                .symbols()
+                .iter()
+                .find(|symbol| {
+                    symbol.namespace == Namespace::Value
+                        && symbol.name.contains('.')
+                        && symbol.definition_span == *span
+                })
+                .and_then(|symbol| symbol.name.rsplit_once('.'))
+                .map(|(type_name, _)| type_name.to_string())
+        }) {
+            return type_name;
+        }
+
+        if let Some((behavior, behavior_type_args)) = behavior_ref {
+            let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
+            let mut candidates =
+                self.resolver_behavior_impl_refs
                     .iter()
-                    .find(|symbol| {
-                        symbol.namespace == Namespace::Value
-                            && symbol.name.contains('.')
-                            && symbol.definition_span == *span
-                    })
-                    .and_then(|symbol| symbol.name.rsplit_once('.'))
-                    .map(|(type_name, _)| type_name.to_string())
-            })
-            .unwrap_or_else(|| type_name.to_string())
+                    .filter_map(|(candidate_type, refs)| {
+                        refs.iter()
+                            .any(|reference| {
+                                self.behavior_reference_key(&reference.name, &reference.type_args)
+                                    == behavior_key
+                            })
+                            .then_some(candidate_type.clone())
+                    });
+            if let Some(candidate) = candidates.next() {
+                if candidates.next().is_none() {
+                    return candidate;
+                }
+            }
+        }
+
+        type_name.to_string()
     }
 
     fn collect_resolver_struct_fields(&mut self, symbols: &SymbolTable, name: &str) {
@@ -10157,6 +10196,38 @@ Point.implements(Json) {
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored behavior impl metadata should drive default synthesis: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_impl_target_for_defaults() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (self: Self) str { return "default" }
+}
+
+Point.implements(Json) {
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { type_name, .. } = &mut program.declarations[2] {
+            *type_name = "Missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(tc.methods.contains_key("Point.encode"));
+        assert!(!tc.methods.contains_key("Missing.encode"));
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior impl target should drive omitted default synthesis: {:?}",
             tc.diagnostics
         );
     }

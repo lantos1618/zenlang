@@ -790,6 +790,9 @@ checked-in docs, tests, and commits only.
   the impl target type name from resolver method symbols by declaration span,
   so stale AST-only impl target names cannot produce false undefined-type
   diagnostics.
+- Resolver-backed behavior default synthesis also restores omitted-method impl
+  targets from unique resolver behavior impl association refs when no explicit
+  impl method span exists.
 - Resolver-backed struct collection no longer seeds AST-only field metadata
   before resolver metadata restoration.
 - Resolver-backed enum collection no longer seeds AST-only variant metadata
