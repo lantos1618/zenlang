@@ -10989,6 +10989,56 @@ Point.implements(Json) {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_clears_stale_behavior_impl_method_signature_after_key_restore(
+    ) {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "Point.encode", None);
+        if let Declaration::ImplBlock {
+            type_name, methods, ..
+        } = &mut program.declarations[2]
+        {
+            *type_name = "Missing".to_string();
+            if let Declaration::Function {
+                name,
+                params,
+                return_type,
+                ..
+            } = &mut methods[0]
+            {
+                *name = "missing".to_string();
+                params[0].ty = AstType::Named("Stale".to_string());
+                *return_type = Some(AstType::Named("AlsoStale".to_string()));
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.methods.contains_key("Missing.missing"),
+            "resolver-backed behavior impl collection should not keep stale AST method keys"
+        );
+        assert!(
+            !tc.methods.contains_key("Point.encode"),
+            "resolver-backed behavior impl collection should clear restored method keys when resolver signature metadata is incomplete"
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_behavior_parent_metadata() {
         let mut program = parse_program(
             r#"

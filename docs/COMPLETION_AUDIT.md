@@ -559,6 +559,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed value signature cleanup removes generic function and method
   templates when resolver value metadata is missing or incomplete, so incomplete
   handoff cannot leave stale monomorphization templates behind.
+- Behavior impl method collection clears restored method keys after stale
+  AST-only target/name repair when resolver value-signature metadata is
+  incomplete, so partial handoff cannot retain stale impl method signatures.
 - Resolver-backed generic template collection also derives return-type presence
   from validated resolver metadata, so stale AST-only missing return annotations
   cannot erase resolver-owned generic function or method returns before

@@ -835,6 +835,9 @@ checked-in docs, tests, and commits only.
   method, and generic template entries when resolver value metadata is missing
   or incomplete, so behavior impl collection and monomorphization cannot retain
   AST-only signatures.
+- Behavior impl method collection now has coverage for clearing restored method
+  keys after stale AST target/name repair when resolver value-signature metadata
+  is incomplete.
 
 ## Current Phase
 
