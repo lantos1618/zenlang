@@ -762,6 +762,20 @@ fn behavior_method_signatures_match(
             .all(|(left, right)| left.mutable == right.mutable && left.ty == right.ty)
 }
 
+fn substituted_behavior_method_signature(
+    method: &ast::BehaviorMethod,
+    substitutions: &HashMap<String, AstType>,
+) -> ast::BehaviorMethod {
+    let mut method = method.clone();
+    for param in &mut method.params {
+        param.ty = substitute_behavior_ast_type(&param.ty, substitutions);
+    }
+    if let Some(return_type) = &mut method.return_type {
+        *return_type = substitute_behavior_ast_type(return_type, substitutions);
+    }
+    method
+}
+
 #[derive(Clone, Copy)]
 struct BehaviorRefValidation {
     symbol_kind: &'static str,
@@ -2586,13 +2600,7 @@ impl TypeChecker {
 
         if let Some(info) = self.behaviors.get(behavior) {
             for method in &info.methods {
-                let mut method = method.clone();
-                for param in &mut method.params {
-                    param.ty = substitute_behavior_ast_type(&param.ty, substitutions);
-                }
-                if let Some(return_type) = &mut method.return_type {
-                    *return_type = substitute_behavior_ast_type(return_type, substitutions);
-                }
+                let method = substituted_behavior_method_signature(method, substitutions);
 
                 if let Some(previous) = seen_methods.get(&method.name) {
                     if !behavior_method_signatures_match(previous, &method) {
@@ -3089,15 +3097,11 @@ impl TypeChecker {
             }
         }
         if let Some(info) = self.behaviors.get(behavior) {
-            methods.extend(info.methods.iter().cloned().map(|mut method| {
-                for param in &mut method.params {
-                    param.ty = substitute_behavior_ast_type(&param.ty, substitutions);
-                }
-                if let Some(return_type) = &mut method.return_type {
-                    *return_type = substitute_behavior_ast_type(return_type, substitutions);
-                }
-                method
-            }));
+            methods.extend(
+                info.methods
+                    .iter()
+                    .map(|method| substituted_behavior_method_signature(method, substitutions)),
+            );
         }
         methods
     }
