@@ -947,6 +947,8 @@ checked-in docs, tests, and commits only.
   and generic-template rekey helpers across function and method paths.
 - Resolver-backed callable signature insertion now shares function-vs-method
   routing for restored value metadata.
+- Resolver-backed generic template restoration now shares function-vs-method
+  routing for restored generic value metadata.
 - Resolver-backed struct and enum metadata restoration now use shared
   constructors for resolver type parameters, bounds, fields, and variants.
 - Resolver-backed behavior metadata restoration now uses the same constructor

@@ -881,6 +881,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed callable signature insertion now shares function-vs-method
   routing for restored value metadata, covered by
   `typechecker::tests::callable_signature_insert_routes_function_and_method_keys`.
+- Resolver-backed generic template restoration now shares function-vs-method
+  routing for restored generic value metadata, covered by
+  `typechecker::tests::generic_callable_template_mut_routes_function_and_method_keys`.
 - Resolver-backed struct and enum metadata restoration now use shared
   constructors for resolver type parameters, bounds, fields, and variants.
 - Resolver-backed behavior metadata restoration now uses the same constructor

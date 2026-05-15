@@ -2073,6 +2073,17 @@ impl TypeChecker {
         }
     }
 
+    fn generic_callable_template_mut(
+        &mut self,
+        name: &str,
+    ) -> Option<&mut GenericFunctionTemplate> {
+        if is_method_signature_key(name) {
+            self.generic_methods.get_mut(name)
+        } else {
+            self.generic_functions.get_mut(name)
+        }
+    }
+
     fn collect_resolver_generic_template_signature(
         &mut self,
         name: &str,
@@ -2081,12 +2092,7 @@ impl TypeChecker {
         parameter_types: &[AstType],
         return_type: &AstType,
     ) {
-        let template = if is_method_signature_key(name) {
-            self.generic_methods.get_mut(name)
-        } else {
-            self.generic_functions.get_mut(name)
-        };
-        let Some(template) = template else {
+        let Some(template) = self.generic_callable_template_mut(name) else {
             return;
         };
         template.type_params = type_parameter_names.to_vec();
@@ -9302,6 +9308,88 @@ Point: { x: i32 }
         assert!(!tc.methods.contains_key("make"));
         assert!(tc.methods.contains_key("Point.get"));
         assert!(!tc.functions.contains_key("Point.get"));
+    }
+
+    #[test]
+    fn generic_callable_template_mut_routes_function_and_method_keys() {
+        let program = parse_program(
+            r#"
+Box<T>: {
+    value: T
+}
+
+identity<T> = (value: T) T { return value }
+
+Box.get<T> = (self: Box<T>) T { return self.value }
+"#,
+        );
+        let ast::Declaration::Function {
+            type_params: function_type_params,
+            params: function_params,
+            return_type: function_return_type,
+            body: function_body,
+            span: function_span,
+            ..
+        } = &program.declarations[1]
+        else {
+            panic!("expected generic function");
+        };
+        let ast::Declaration::Method {
+            type_params: method_type_params,
+            params: method_params,
+            return_type: method_return_type,
+            body: method_body,
+            span: method_span,
+            ..
+        } = &program.declarations[2]
+        else {
+            panic!("expected generic method");
+        };
+        let mut tc = TypeChecker::new();
+        tc.generic_functions.insert(
+            "identity".to_string(),
+            generic_template_from_type_params(
+                function_type_params,
+                function_params,
+                function_return_type,
+                function_body,
+                *function_span,
+            )
+            .expect("generic function template"),
+        );
+        tc.generic_methods.insert(
+            "Box.get".to_string(),
+            generic_template_from_type_params(
+                method_type_params,
+                method_params,
+                method_return_type,
+                method_body,
+                *method_span,
+            )
+            .expect("generic method template"),
+        );
+
+        tc.generic_callable_template_mut("identity")
+            .expect("function template")
+            .return_type = Some(AstType::I32);
+        tc.generic_callable_template_mut("Box.get")
+            .expect("method template")
+            .return_type = Some(AstType::Bool);
+
+        assert_eq!(
+            tc.generic_functions
+                .get("identity")
+                .and_then(|template| template.return_type.as_ref()),
+            Some(&AstType::I32)
+        );
+        assert_eq!(
+            tc.generic_methods
+                .get("Box.get")
+                .and_then(|template| template.return_type.as_ref()),
+            Some(&AstType::Bool)
+        );
+        assert!(!tc.generic_methods.contains_key("identity"));
+        assert!(!tc.generic_functions.contains_key("Box.get"));
     }
 
     #[test]
