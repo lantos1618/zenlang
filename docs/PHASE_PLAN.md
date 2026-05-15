@@ -624,6 +624,8 @@ checked-in docs, tests, and commits only.
   and typed refs in the same AST pass for impl/requires and parent edges.
 - Resolver behavior-association expectation storage now uses a shared edge
   container for impl, requires, and parent validation inputs.
+- Resolver value-signature expectation building now derives parameter names,
+  display types, and typed metadata in one parameter pass.
 
 ## Current Phase
 

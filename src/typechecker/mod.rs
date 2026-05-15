@@ -163,6 +163,13 @@ struct ExpectedValueSignature {
     type_parameter_bound_refs: Vec<TypeParameterBoundRefMetadata>,
 }
 
+#[derive(Default)]
+struct ExpectedParameters {
+    names: Vec<String>,
+    types: Vec<AstType>,
+    type_names: Vec<String>,
+}
+
 struct ExpectedTypeLikeSymbol {
     type_parameter_count: usize,
     type_parameter_names: Vec<String>,
@@ -7566,16 +7573,18 @@ fn visibility_name(is_public: bool) -> &'static str {
     }
 }
 
+fn expected_parameters(params: &[Param]) -> ExpectedParameters {
+    let mut expected = ExpectedParameters::default();
+    for param in params {
+        expected.names.push(param.name.clone());
+        expected.types.push(param.ty.clone());
+        expected.type_names.push(param.ty.display_name());
+    }
+    expected
+}
+
 fn expected_parameter_type_names(params: &[Param]) -> Vec<String> {
     params.iter().map(|param| param.ty.display_name()).collect()
-}
-
-fn expected_parameter_types(params: &[Param]) -> Vec<AstType> {
-    params.iter().map(|param| param.ty.clone()).collect()
-}
-
-fn expected_parameter_names(params: &[Param]) -> Vec<String> {
-    params.iter().map(|param| param.name.clone()).collect()
 }
 
 fn expected_value_signature(
@@ -7583,10 +7592,11 @@ fn expected_value_signature(
     return_type: &Option<AstType>,
     type_params: &[ast::TypeParam],
 ) -> ExpectedValueSignature {
+    let params = expected_parameters(params);
     ExpectedValueSignature {
-        parameter_names: expected_parameter_names(params),
-        parameter_types: expected_parameter_types(params),
-        parameter_type_names: expected_parameter_type_names(params),
+        parameter_names: params.names,
+        parameter_types: params.types,
+        parameter_type_names: params.type_names,
         return_type: return_type.clone().unwrap_or(AstType::Void),
         return_type_name: expected_return_type_name(return_type),
         type_parameter_count: type_params.len(),
