@@ -185,6 +185,9 @@ and do not assume Phase 4 is ready without evidence.
 - Struct field-default validation now dispatches struct declarations once and
   routes extracted fields through AST or resolver-restored default checks,
   preserving resolver field-name coverage without mode-specific declaration scans.
+- AST callable type-reference validation now shares one signature/body helper
+  across functions, top-level methods, and `Type.impl` methods while preserving
+  each caller's existing return diagnostic span.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate

@@ -5873,14 +5873,13 @@ impl TypeChecker {
                     body,
                     ..
                 } => {
-                    let scoped = type_param_name_set(type_params);
-                    for param in params {
-                        self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
-                    }
-                    if let Some(return_type) = return_type {
-                        self.validate_generic_type_ref_bounds(return_type, &scoped, Span::dummy());
-                    }
-                    self.validate_generic_expr_type_references(body, &scoped);
+                    self.validate_ast_callable_type_references(
+                        type_params,
+                        params,
+                        return_type,
+                        body,
+                        Span::dummy(),
+                    );
                 }
                 Declaration::Method {
                     type_params,
@@ -5889,14 +5888,13 @@ impl TypeChecker {
                     body,
                     ..
                 } => {
-                    let scoped = type_param_name_set(type_params);
-                    for param in params {
-                        self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
-                    }
-                    if let Some(return_type) = return_type {
-                        self.validate_generic_type_ref_bounds(return_type, &scoped, Span::dummy());
-                    }
-                    self.validate_generic_expr_type_references(body, &scoped);
+                    self.validate_ast_callable_type_references(
+                        type_params,
+                        params,
+                        return_type,
+                        body,
+                        Span::dummy(),
+                    );
                 }
                 Declaration::Behavior {
                     type_params,
@@ -5930,20 +5928,13 @@ impl TypeChecker {
                             ..
                         } = method
                         {
-                            let scoped = type_param_name_set(type_params);
-                            for param in params {
-                                self.validate_generic_type_ref_bounds(
-                                    &param.ty, &scoped, param.span,
-                                );
-                            }
-                            if let Some(return_type) = return_type {
-                                self.validate_generic_type_ref_bounds(
-                                    return_type,
-                                    &scoped,
-                                    method.span(),
-                                );
-                            }
-                            self.validate_generic_expr_type_references(body, &scoped);
+                            self.validate_ast_callable_type_references(
+                                type_params,
+                                params,
+                                return_type,
+                                body,
+                                method.span(),
+                            );
                         }
                     }
                 }
@@ -5953,6 +5944,24 @@ impl TypeChecker {
                 _ => {}
             }
         }
+    }
+
+    fn validate_ast_callable_type_references(
+        &mut self,
+        type_params: &[ast::TypeParam],
+        params: &[Param],
+        return_type: &Option<AstType>,
+        body: &Expression,
+        return_span: Span,
+    ) {
+        let scoped = type_param_name_set(type_params);
+        for param in params {
+            self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
+        }
+        if let Some(return_type) = return_type {
+            self.validate_generic_type_ref_bounds(return_type, &scoped, return_span);
+        }
+        self.validate_generic_expr_type_references(body, &scoped);
     }
 
     fn validate_resolver_backed_type_references(
