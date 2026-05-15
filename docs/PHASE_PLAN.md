@@ -419,6 +419,8 @@ checked-in docs, tests, and commits only.
   from resolver-owned value symbols when AST-only impl method names are stale,
   without masking real extra impl methods that lack resolver-owned required
   method symbols.
+  It also uses resolver-owned impl method names when reporting extra methods,
+  so stale AST-only required names cannot hide real resolver-owned extras.
   Direct coverage now also proves stale AST impl method parameter names and
   ordering are restored from resolver-owned value signatures before conformance.
 - Resolver records impl-method body locals in their nested scopes, and

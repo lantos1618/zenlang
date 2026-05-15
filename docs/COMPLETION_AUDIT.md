@@ -322,6 +322,9 @@ and do not assume Phase 4 is ready without evidence.
   from resolver-owned value symbols when AST-only impl method names are stale,
   without masking real extra impl methods that lack resolver-owned required
   method symbols.
+  Direct coverage for stale AST names hiding real resolver-owned extra methods
+  is provided by
+  `typechecker::tests::collect_declarations_with_symbols_does_not_let_stale_ast_name_hide_extra_impl_method`.
   Stale AST impl method parameter names and ordering are covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_method_parameter_names_for_impl_checks`
   and

@@ -3335,7 +3335,14 @@ impl TypeChecker {
                         )
                     })
                     .unwrap_or_else(|| type_name.clone());
-                self.check_behavior_impl(&type_name, behavior, behavior_type_args, methods, *span);
+                self.check_behavior_impl(
+                    &type_name,
+                    behavior,
+                    behavior_type_args,
+                    methods,
+                    *span,
+                    symbols,
+                );
             }
         }
 
@@ -4540,6 +4547,7 @@ impl TypeChecker {
         behavior_type_args: &[AstType],
         methods: &[Declaration],
         span: Span,
+        symbols: Option<&SymbolTable>,
     ) {
         let resolver_impl_ref = self.resolver_impl_ref_for(type_name, behavior);
         if self.should_skip_missing_resolver_behavior_ref(
@@ -4617,33 +4625,53 @@ impl TypeChecker {
                     Declaration::Function { name, .. } => name.as_str(),
                     _ => "",
                 };
-                let effective_name = match unmatched_required
-                    .iter()
-                    .position(|required| required == ast_name)
-                {
-                    Some(index) => unmatched_required
-                        .remove(index)
-                        .unwrap_or_else(|| ast_name.to_string()),
-                    None if self.resolver_backed_collection => {
-                        let resolved_index = unmatched_required.iter().position(|required| {
-                            self.methods
-                                .contains_key(&format!("{type_name}.{required}"))
-                        });
-                        match resolved_index {
-                            Some(index) => unmatched_required
-                                .remove(index)
-                                .unwrap_or_else(|| ast_name.to_string()),
-                            None => ast_name.to_string(),
-                        }
+                let ast_key = format!("{type_name}.{ast_name}");
+                let resolver_owned_name = self.resolver_backed_collection.then(|| {
+                    Self::validation_method_key(symbols, &ast_key, type_name, method.span())
+                });
+                let effective_name = if let Some(resolver_owned_key) = resolver_owned_name {
+                    let resolver_owned_name = resolver_owned_key
+                        .strip_prefix(&format!("{type_name}."))
+                        .unwrap_or(&resolver_owned_key)
+                        .to_string();
+                    match unmatched_required
+                        .iter()
+                        .position(|required| required == &resolver_owned_name)
+                    {
+                        Some(index) => unmatched_required
+                            .remove(index)
+                            .unwrap_or(resolver_owned_name),
+                        None => resolver_owned_name,
                     }
-                    None => ast_name.to_string(),
+                } else {
+                    match unmatched_required
+                        .iter()
+                        .position(|required| required == ast_name)
+                    {
+                        Some(index) => unmatched_required
+                            .remove(index)
+                            .unwrap_or_else(|| ast_name.to_string()),
+                        None if self.resolver_backed_collection => {
+                            let resolved_index = unmatched_required.iter().position(|required| {
+                                self.methods
+                                    .contains_key(&format!("{type_name}.{required}"))
+                            });
+                            match resolved_index {
+                                Some(index) => unmatched_required
+                                    .remove(index)
+                                    .unwrap_or_else(|| ast_name.to_string()),
+                                None => ast_name.to_string(),
+                            }
+                        }
+                        None => ast_name.to_string(),
+                    }
                 };
                 (method, effective_name)
             })
             .collect();
 
         for (method, effective_name) in &effective_methods {
-            if let Declaration::Function { name, span, .. } = method {
+            if let Declaration::Function { span, .. } = method {
                 if !required_methods
                     .iter()
                     .any(|required| required.name == *effective_name)
@@ -4652,7 +4680,7 @@ impl TypeChecker {
                         "E6005",
                         format!(
                             "method `{}` is not declared by behavior `{}`",
-                            name, behavior_key
+                            effective_name, behavior_key
                         ),
                         *span,
                     ));
@@ -15132,6 +15160,46 @@ Point.implements(Json) {
             tc.diagnostics.is_empty(),
             "resolver-restored impl method name metadata should avoid stale AST impl diagnostics: {:?}",
             tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_let_stale_ast_name_hide_extra_impl_method() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    extra = (value: Point) str { return "extra" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[2] {
+            if let Declaration::Function { name, .. } = &mut methods[0] {
+                *name = "encode".to_string();
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let messages: Vec<_> = tc
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.message.as_str())
+            .collect();
+        assert!(
+            messages
+                .iter()
+                .any(|message| *message == "method `extra` is not declared by behavior `Json`"),
+            "resolver-owned extra impl method should not be hidden by stale AST required name: {:?}",
+            messages
         );
     }
 
