@@ -1069,7 +1069,8 @@ and do not assume Phase 4 is ready without evidence.
   and
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_enum_name_metadata`.
   Behavior resolver declaration metadata now has a focused traversal for
-  behavior declarations, covered by
+  behavior declarations that calls the shared behavior metadata collector
+  directly, covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_method_metadata`,
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_name_metadata`,
   and

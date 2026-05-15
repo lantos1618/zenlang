@@ -3334,7 +3334,7 @@ impl TypeChecker {
     ) {
         for decl in decls {
             if let Declaration::Behavior { name, span, .. } = decl {
-                self.collect_resolver_behavior_declaration_metadata(symbols, name, *span);
+                self.collect_resolver_behavior_declaration(symbols, name, *span);
             }
         }
     }
@@ -3426,15 +3426,6 @@ impl TypeChecker {
         let restored_name =
             self.collect_resolver_type_behavior_refs_for_declaration(symbols, name, span);
         self.collect_resolver_enum_variants(symbols, &restored_name);
-    }
-
-    fn collect_resolver_behavior_declaration_metadata(
-        &mut self,
-        symbols: &SymbolTable,
-        name: &str,
-        span: Span,
-    ) {
-        self.collect_resolver_behavior_declaration(symbols, name, span);
     }
 
     fn collect_resolver_behavior_impl_metadata(

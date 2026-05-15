@@ -551,7 +551,8 @@ checked-in docs, tests, and commits only.
   Type resolver declaration metadata now has a focused traversal for structs
   and enums.
   Behavior resolver declaration metadata now has a focused traversal for
-  behavior declarations.
+  behavior declarations that calls the shared behavior metadata collector
+  directly.
   Behavior impl method signatures are now skipped by the generic declaration
   metadata refresh and owned by the behavior impl metadata pass, covered by
   `typechecker::tests::resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass`.
