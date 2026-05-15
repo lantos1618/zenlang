@@ -261,6 +261,16 @@ struct ExpectedReturnMetadata {
     display: String,
 }
 
+impl ExpectedReturnMetadata {
+    fn new(return_type: &Option<AstType>) -> Self {
+        let typed = return_type.clone().unwrap_or(AstType::Void);
+        Self {
+            display: typed.display_name(),
+            typed,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct ReturnValidation {
     display_code: &'static str,
@@ -9111,11 +9121,7 @@ impl TypeChecker {
 }
 
 fn expected_return_metadata(return_type: &Option<AstType>) -> ExpectedReturnMetadata {
-    let typed = return_type.clone().unwrap_or(AstType::Void);
-    ExpectedReturnMetadata {
-        display: typed.display_name(),
-        typed,
-    }
+    ExpectedReturnMetadata::new(return_type)
 }
 
 fn visibility_name(is_public: bool) -> &'static str {
@@ -10869,6 +10875,17 @@ Point.requires(Json<str>)
                 ret: Box::new(AstType::Str),
             }
         );
+    }
+
+    #[test]
+    fn expected_return_metadata_defaults_and_displays_together() {
+        let explicit = ExpectedReturnMetadata::new(&Some(AstType::Named("Point".to_string())));
+        let implicit = ExpectedReturnMetadata::new(&None);
+
+        assert_eq!(explicit.display, "Point");
+        assert_eq!(explicit.typed, AstType::Named("Point".to_string()));
+        assert_eq!(implicit.display, "void");
+        assert_eq!(implicit.typed, AstType::Void);
     }
 
     #[test]

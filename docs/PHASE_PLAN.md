@@ -152,6 +152,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver expected value parameter construction now builds
   parameter names, display types, and typed AST types through one expected
   parameter constructor.
+- Typechecker resolver expected return metadata construction now derives the
+  default void return, display return, and typed AST return through one
+  expected return constructor.
 - Typechecker resolver behavior-ref validation now separates role labels from
   per-check diagnostic code mappings, avoiding duplicated label bundles across
   contains and full-list checks.

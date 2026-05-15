@@ -196,6 +196,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver expected value parameter construction now pairs parameter names,
   display types, and typed AST types through one constructor, covered by
   `typechecker::tests::expected_parameter_builds_name_display_and_type_together`.
+- Resolver expected return metadata construction now pairs default void
+  handling, display return metadata, and typed AST return metadata through one
+  constructor, covered by
+  `typechecker::tests::expected_return_metadata_defaults_and_displays_together`.
 - Resolver expected behavior association construction now pairs display names
   and typed refs through one constructor, covered by
   `typechecker::tests::expected_behavior_edge_builds_display_and_metadata_together`.
