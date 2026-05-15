@@ -8207,23 +8207,33 @@ fn expected_behavior_method_metadata(
 ) -> Vec<ExpectedBehaviorMethod> {
     let mut expected = Vec::new();
     for method in methods {
-        let params = expected_parameter_metadata(&method.params);
-        let return_type = expected_return_metadata(&method.return_type);
-        let parameter_type_names: Vec<_> =
-            params.iter().map(|param| param.display.clone()).collect();
-        let parameter_names: Vec<_> = params.iter().map(|param| param.name.clone()).collect();
-        let parameter_types: Vec<_> = params.into_iter().map(|param| param.typed).collect();
+        let signature = expected_value_signature_metadata(&method.params, &method.return_type, &[]);
+        let parameter_type_names: Vec<_> = signature
+            .params
+            .iter()
+            .map(|param| param.display.clone())
+            .collect();
+        let parameter_names: Vec<_> = signature
+            .params
+            .iter()
+            .map(|param| param.name.clone())
+            .collect();
+        let parameter_types: Vec<_> = signature
+            .params
+            .into_iter()
+            .map(|param| param.typed)
+            .collect();
         expected.push(ExpectedBehaviorMethod {
             signature: (
                 method.name.clone(),
                 parameter_type_names,
-                return_type.display,
+                signature.return_type.display,
             ),
             metadata: BehaviorMethodTypeMetadata {
                 name: method.name.clone(),
                 parameter_names,
                 parameter_types,
-                return_type: return_type.typed,
+                return_type: signature.return_type.typed,
             },
         });
     }

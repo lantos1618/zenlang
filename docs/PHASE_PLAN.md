@@ -852,6 +852,9 @@ checked-in docs, tests, and commits only.
   behavior-ref handoff helper for `.implements` and `.requires`, reducing
   duplicate resolver metadata setup while preserving incomplete-metadata
   tracking.
+- Resolver behavior-method expectation building now reuses the shared
+  value-signature metadata path for parameter names, display types, typed
+  metadata, and returns.
 
 ## Current Phase
 

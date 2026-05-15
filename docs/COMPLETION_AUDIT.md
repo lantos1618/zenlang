@@ -775,6 +775,9 @@ and do not assume Phase 4 is ready without evidence.
   directly instead of wrapping the expected edge list.
 - Resolver value-signature expectation building now uses one parameter pass for
   names, display types, and typed metadata.
+- Resolver behavior-method expectation building now reuses the shared
+  value-signature metadata path for names, display types, typed metadata, and
+  returns.
 
 ## Unresolved Gaps
 
