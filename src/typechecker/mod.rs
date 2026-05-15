@@ -1779,56 +1779,34 @@ impl TypeChecker {
         }
 
         self.with_resolver_backed_collection(|checker| {
-            for decl in decls {
-                if let Declaration::ImplBlock {
-                    type_name,
-                    behavior: Some(behavior),
-                    behavior_type_args,
-                    methods,
-                    ..
-                } = decl
-                {
-                    let type_name = checker.resolver_impl_type_name_for(
-                        symbols,
-                        type_name,
-                        methods,
-                        Some((behavior, behavior_type_args)),
-                    );
+            checker.for_each_resolver_behavior_impl_block(
+                decls,
+                symbols,
+                |checker, type_name, behavior, behavior_type_args, methods| {
                     checker.collect_resolver_behavior_impl_method_signatures(
                         symbols,
-                        &type_name,
+                        type_name,
                         behavior,
                         behavior_type_args,
                         methods,
                     );
-                }
-            }
+                },
+            );
 
             checker.validate_collected_behavior_extends_semantics();
 
-            for decl in decls {
-                if let Declaration::ImplBlock {
-                    type_name,
-                    behavior: Some(behavior),
-                    behavior_type_args,
-                    methods,
-                    ..
-                } = decl
-                {
-                    let type_name = checker.resolver_impl_type_name_for(
-                        symbols,
-                        type_name,
-                        methods,
-                        Some((behavior, behavior_type_args)),
-                    );
+            checker.for_each_resolver_behavior_impl_block(
+                decls,
+                symbols,
+                |checker, type_name, behavior, behavior_type_args, methods| {
                     checker.collect_behavior_default_method_signatures(
-                        &type_name,
+                        type_name,
                         behavior,
                         behavior_type_args,
                         methods,
                     );
-                }
-            }
+                },
+            );
         });
 
         self.with_resolver_backed_collection(|checker| {
@@ -1856,6 +1834,32 @@ impl TypeChecker {
         self.resolver_backed_collection = true;
         collect(self);
         self.resolver_backed_collection = previous;
+    }
+
+    fn for_each_resolver_behavior_impl_block(
+        &mut self,
+        decls: &[Declaration],
+        symbols: &SymbolTable,
+        mut visit: impl FnMut(&mut Self, &str, &str, &[AstType], &[Declaration]),
+    ) {
+        for decl in decls {
+            if let Declaration::ImplBlock {
+                type_name,
+                behavior: Some(behavior),
+                behavior_type_args,
+                methods,
+                ..
+            } = decl
+            {
+                let type_name = self.resolver_impl_type_name_for(
+                    symbols,
+                    type_name,
+                    methods,
+                    Some((behavior, behavior_type_args)),
+                );
+                visit(self, &type_name, behavior, behavior_type_args, methods);
+            }
+        }
     }
 
     fn collect_resolver_type_behavior_refs_for_declaration(

@@ -202,6 +202,9 @@ checked-in docs, tests, and commits only.
   resolver-backed state toggling, so collection, impl/default restoration, and
   semantic validation use one scoped state helper instead of repeated manual
   flag flips.
+- Resolver-backed behavior impl collection now shares the restored impl-block
+  traversal used by impl method signature refresh and omitted default-method
+  seeding, keeping resolver target restoration in one path.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only
