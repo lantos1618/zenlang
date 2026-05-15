@@ -3537,23 +3537,13 @@ impl TypeChecker {
                 ..
             } = decl
             {
-                let type_name = symbols
-                    .map(|symbols| {
-                        self.resolver_impl_type_name_for(
-                            symbols,
-                            type_name,
-                            methods,
-                            Some((behavior, behavior_type_args)),
-                        )
-                    })
-                    .unwrap_or_else(|| type_name.clone());
-                self.check_behavior_impl(
-                    &type_name,
+                self.validate_collected_behavior_impl_declaration(
+                    symbols,
+                    type_name,
                     behavior,
                     behavior_type_args,
                     methods,
                     *span,
-                    symbols,
                 );
             }
         }
@@ -3578,6 +3568,35 @@ impl TypeChecker {
 
         self.validate_generic_type_references(decls, symbols);
         self.validate_struct_field_defaults(decls, symbols);
+    }
+
+    fn validate_collected_behavior_impl_declaration(
+        &mut self,
+        symbols: Option<&SymbolTable>,
+        type_name: &str,
+        behavior: &str,
+        behavior_type_args: &[AstType],
+        methods: &[Declaration],
+        span: Span,
+    ) {
+        let restored_type_name = symbols
+            .map(|symbols| {
+                self.resolver_impl_type_name_for(
+                    symbols,
+                    type_name,
+                    methods,
+                    Some((behavior, behavior_type_args)),
+                )
+            })
+            .unwrap_or_else(|| type_name.to_string());
+        self.check_behavior_impl(
+            &restored_type_name,
+            behavior,
+            behavior_type_args,
+            methods,
+            span,
+            symbols,
+        );
     }
 
     fn validate_collected_behavior_requires_declaration(

@@ -1096,6 +1096,12 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_required_target_and_name_metadata`,
   and
   `typechecker::tests::collect_declarations_with_symbols_reports_resolver_restored_required_target_and_name`.
+- Resolver-backed behavior-impl semantic validation now restores the impl type
+  target through a dedicated declaration helper, with focused coverage from
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_method_metadata_for_impl_checks`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_method_name_metadata_for_impl_checks`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata`.
 - Resolver value-signature expectation building now uses one parameter pass for
   names, display types, and typed metadata.
 - Resolver behavior-method expectation building now reuses the shared
