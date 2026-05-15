@@ -219,6 +219,8 @@ and do not assume Phase 4 is ready without evidence.
   expectations through one expected import-symbol object.
 - Typechecker resolver validation now carries module name, source, and
   visibility expectations through one expected module-symbol object.
+- Typechecker resolver validation now carries local scope, mutability, source,
+  and visibility expectations through one expected local-symbol object.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, keeping

@@ -213,6 +213,13 @@ struct ExpectedModuleSymbol {
     is_public: bool,
 }
 
+struct ExpectedLocalSymbol {
+    scope_id: u32,
+    is_mutable: bool,
+    is_public: bool,
+    source: Option<String>,
+}
+
 struct ExpectedTypeParameters {
     count: usize,
     names: Vec<String>,
@@ -5951,8 +5958,7 @@ impl TypeChecker {
             self.require_resolver_local_symbol(
                 symbols,
                 &param.name,
-                param.mutable,
-                locals.current_scope_id,
+                expected_local_symbol(param.mutable, locals.current_scope_id),
                 param.span,
             );
             locals.insert(param.name.clone(), param.mutable);
@@ -6109,8 +6115,7 @@ impl TypeChecker {
                     self.require_resolver_local_symbol(
                         symbols,
                         &param.name,
-                        false,
-                        closure_locals.current_scope_id,
+                        expected_local_symbol(false, closure_locals.current_scope_id),
                         param.span,
                     );
                     closure_locals.insert(param.name.clone(), false);
@@ -6164,8 +6169,7 @@ impl TypeChecker {
                     self.require_resolver_local_symbol(
                         symbols,
                         name,
-                        *mutable,
-                        locals.current_scope_id,
+                        expected_local_symbol(*mutable, locals.current_scope_id),
                         *span,
                     );
                     locals.insert(name.clone(), *mutable);
@@ -6204,8 +6208,7 @@ impl TypeChecker {
                 self.require_resolver_local_symbol(
                     symbols,
                     name,
-                    false,
-                    locals.current_scope_id,
+                    expected_local_symbol(false, locals.current_scope_id),
                     *span,
                 );
                 locals.insert(name.clone(), false);
@@ -6218,8 +6221,7 @@ impl TypeChecker {
                         self.require_resolver_local_symbol(
                             symbols,
                             name,
-                            false,
-                            locals.current_scope_id,
+                            expected_local_symbol(false, locals.current_scope_id),
                             *span,
                         );
                         locals.insert(name.clone(), false);
@@ -6255,11 +6257,11 @@ impl TypeChecker {
         &mut self,
         symbols: &SymbolTable,
         name: &str,
-        expected_mutable: bool,
-        scope_id: u32,
+        expected: ExpectedLocalSymbol,
         span: Span,
     ) {
-        let Some(symbol) = symbols.lookup_in_scope(Namespace::Local, name, scope_id) else {
+        let Some(symbol) = symbols.lookup_in_scope(Namespace::Local, name, expected.scope_id)
+        else {
             self.diagnostics.push(Diagnostic::error(
                 "E0228",
                 format!("resolver symbol table missing local symbol '{name}'"),
@@ -6268,13 +6270,13 @@ impl TypeChecker {
             return;
         };
 
-        if symbol.is_mutable != Some(expected_mutable) {
+        if symbol.is_mutable != Some(expected.is_mutable) {
             let actual = match symbol.is_mutable {
                 Some(true) => "mutable",
                 Some(false) => "immutable",
                 None => "unknown",
             };
-            let expected = if expected_mutable {
+            let expected_mutability = if expected.is_mutable {
                 "mutable"
             } else {
                 "immutable"
@@ -6282,24 +6284,32 @@ impl TypeChecker {
             self.diagnostics.push(Diagnostic::error(
                 "E0231",
                 format!(
-                    "resolver local symbol '{name}' has mutability {actual}, expected {expected}"
+                    "resolver local symbol '{name}' has mutability {actual}, expected {expected_mutability}"
                 ),
                 span,
             ));
         }
 
-        if symbol.is_public {
+        if symbol.is_public != expected.is_public {
             self.diagnostics.push(Diagnostic::error(
                 "E0247",
-                format!("resolver local symbol '{name}' has visibility public, expected private"),
+                format!(
+                    "resolver local symbol '{name}' has visibility {}, expected {}",
+                    visibility_name(symbol.is_public),
+                    visibility_name(expected.is_public)
+                ),
                 span,
             ));
         }
 
-        if let Some(actual) = symbol.import_source.as_deref() {
+        if symbol.import_source != expected.source {
+            let actual = symbol.import_source.as_deref().unwrap_or("none");
+            let expected_source = expected.source.as_deref().unwrap_or("none");
             self.diagnostics.push(Diagnostic::error(
                 "E0248",
-                format!("resolver local symbol '{name}' has source '{actual}', expected none"),
+                format!(
+                    "resolver local symbol '{name}' has source '{actual}', expected {expected_source}"
+                ),
                 span,
             ));
         }
@@ -7746,6 +7756,15 @@ fn expected_module_symbol(name: &str) -> ExpectedModuleSymbol {
         name: name.to_string(),
         source: None,
         is_public: false,
+    }
+}
+
+fn expected_local_symbol(is_mutable: bool, scope_id: u32) -> ExpectedLocalSymbol {
+    ExpectedLocalSymbol {
+        scope_id,
+        is_mutable,
+        is_public: false,
+        source: None,
     }
 }
 
