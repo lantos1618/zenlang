@@ -341,6 +341,12 @@ struct ValueSignatureAbsenceValidation {
     typed_return_type_code: &'static str,
 }
 
+struct FieldAbsenceValidation {
+    count_code: &'static str,
+    type_name_code: &'static str,
+    typed_code: &'static str,
+}
+
 struct SourceValidation {
     code: &'static str,
     actual_missing: &'static str,
@@ -5108,13 +5114,22 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_field_metadata(
+            symbol,
+            "module",
+            &expected.name,
+            FieldAbsenceValidation {
+                count_code: "E0271",
+                type_name_code: "E0272",
+                typed_code: "E0374",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "module",
             &expected.name,
             &[
-                (symbol.field_count.is_some(), "E0271", "field count"),
-                (symbol.field_type_names.is_some(), "E0272", "field types"),
-                (symbol.field_types.is_some(), "E0374", "typed field types"),
                 (symbol.variant_names.is_some(), "E0273", "variant names"),
                 (
                     symbol.variant_owner_name.is_some(),
@@ -6173,13 +6188,22 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_field_metadata(
+            symbol,
+            "import",
+            name,
+            FieldAbsenceValidation {
+                count_code: "E0287",
+                type_name_code: "E0288",
+                typed_code: "E0365",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "import",
             name,
             &[
-                (symbol.field_count.is_some(), "E0287", "field count"),
-                (symbol.field_type_names.is_some(), "E0288", "field types"),
-                (symbol.field_types.is_some(), "E0365", "typed field types"),
                 (symbol.variant_names.is_some(), "E0289", "variant names"),
                 (
                     symbol.variant_owner_name.is_some(),
@@ -6625,13 +6649,22 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_field_metadata(
+            symbol,
+            "local",
+            name,
+            FieldAbsenceValidation {
+                count_code: "E0255",
+                type_name_code: "E0256",
+                typed_code: "E0383",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "local",
             name,
             &[
-                (symbol.field_count.is_some(), "E0255", "field count"),
-                (symbol.field_type_names.is_some(), "E0256", "field types"),
-                (symbol.field_types.is_some(), "E0383", "typed field types"),
                 (symbol.variant_names.is_some(), "E0257", "variant names"),
                 (
                     symbol.variant_owner_name.is_some(),
@@ -6906,6 +6939,38 @@ impl TypeChecker {
                     symbol.type_parameter_bound_refs.is_some(),
                     validation.bound_ref_code,
                     "typed type parameter bound refs",
+                ),
+            ],
+            span,
+        );
+    }
+
+    fn validate_resolver_absent_field_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        symbol_kind: &str,
+        name: &str,
+        validation: FieldAbsenceValidation,
+        span: Span,
+    ) {
+        self.validate_resolver_absent_metadata_entries(
+            symbol_kind,
+            name,
+            &[
+                (
+                    symbol.field_count.is_some(),
+                    validation.count_code,
+                    "field count",
+                ),
+                (
+                    symbol.field_type_names.is_some(),
+                    validation.type_name_code,
+                    "field types",
+                ),
+                (
+                    symbol.field_types.is_some(),
+                    validation.typed_code,
+                    "typed field types",
                 ),
             ],
             span,
@@ -7285,14 +7350,15 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        self.validate_resolver_absent_metadata_entries(
+        self.validate_resolver_absent_field_metadata(
+            symbol,
             "type",
             name,
-            &[
-                (symbol.field_count.is_some(), "E0319", "field count"),
-                (symbol.field_type_names.is_some(), "E0320", "field types"),
-                (symbol.field_types.is_some(), "E0398", "typed field types"),
-            ],
+            FieldAbsenceValidation {
+                count_code: "E0319",
+                type_name_code: "E0320",
+                typed_code: "E0398",
+            },
             span,
         );
     }
@@ -7426,13 +7492,22 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_field_metadata(
+            symbol,
+            "variant",
+            name,
+            FieldAbsenceValidation {
+                count_code: "E0336",
+                type_name_code: "E0337",
+                typed_code: "E0392",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "variant",
             name,
             &[
-                (symbol.field_count.is_some(), "E0336", "field count"),
-                (symbol.field_type_names.is_some(), "E0337", "field types"),
-                (symbol.field_types.is_some(), "E0392", "typed field types"),
                 (symbol.variant_names.is_some(), "E0338", "variant names"),
                 (
                     symbol.behavior_method_signatures.is_some(),
@@ -7519,13 +7594,22 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
+        self.validate_resolver_absent_field_metadata(
+            symbol,
+            "behavior",
+            name,
+            FieldAbsenceValidation {
+                count_code: "E0321",
+                type_name_code: "E0322",
+                typed_code: "E0399",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "behavior",
             name,
             &[
-                (symbol.field_count.is_some(), "E0321", "field count"),
-                (symbol.field_type_names.is_some(), "E0322", "field types"),
-                (symbol.field_types.is_some(), "E0399", "typed field types"),
                 (symbol.variant_names.is_some(), "E0323", "variant names"),
                 (
                     symbol.variant_owner_name.is_some(),
@@ -7927,13 +8011,22 @@ impl TypeChecker {
     ) {
         self.validate_resolver_absent_source_metadata(symbol, "value", name, "E0297", span);
 
+        self.validate_resolver_absent_field_metadata(
+            symbol,
+            "value",
+            name,
+            FieldAbsenceValidation {
+                count_code: "E0298",
+                type_name_code: "E0299",
+                typed_code: "E0403",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "value",
             name,
             &[
-                (symbol.field_count.is_some(), "E0298", "field count"),
-                (symbol.field_type_names.is_some(), "E0299", "field types"),
-                (symbol.field_types.is_some(), "E0403", "typed field types"),
                 (symbol.variant_names.is_some(), "E0300", "variant names"),
                 (
                     symbol.variant_owner_name.is_some(),
