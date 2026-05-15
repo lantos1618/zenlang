@@ -355,11 +355,39 @@ struct VariantAbsenceValidation {
     payload_type_code: &'static str,
 }
 
+#[derive(Clone, Copy)]
 struct BehaviorAssociationAbsenceValidation {
     impl_name_code: &'static str,
     impl_ref_code: &'static str,
     required_name_code: &'static str,
     required_ref_code: &'static str,
+}
+
+impl BehaviorAssociationAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [(bool, &'static str, &'static str); 4] {
+        [
+            (
+                symbol.behavior_impl_names.is_some(),
+                self.impl_name_code,
+                "behavior impls",
+            ),
+            (
+                symbol.behavior_impl_refs.is_some(),
+                self.impl_ref_code,
+                "typed behavior impls",
+            ),
+            (
+                symbol.behavior_required_names.is_some(),
+                self.required_name_code,
+                "behavior requires",
+            ),
+            (
+                symbol.behavior_required_refs.is_some(),
+                self.required_ref_code,
+                "typed behavior requires",
+            ),
+        ]
+    }
 }
 
 struct BehaviorDeclarationAbsenceValidation {
@@ -7162,33 +7190,8 @@ impl TypeChecker {
         validation: BehaviorAssociationAbsenceValidation,
         span: Span,
     ) {
-        self.validate_resolver_absent_metadata_entries(
-            symbol_kind,
-            name,
-            &[
-                (
-                    symbol.behavior_impl_names.is_some(),
-                    validation.impl_name_code,
-                    "behavior impls",
-                ),
-                (
-                    symbol.behavior_impl_refs.is_some(),
-                    validation.impl_ref_code,
-                    "typed behavior impls",
-                ),
-                (
-                    symbol.behavior_required_names.is_some(),
-                    validation.required_name_code,
-                    "behavior requires",
-                ),
-                (
-                    symbol.behavior_required_refs.is_some(),
-                    validation.required_ref_code,
-                    "typed behavior requires",
-                ),
-            ],
-            span,
-        );
+        let entries = validation.entries(symbol);
+        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
     }
 
     fn validate_resolver_absent_behavior_declaration_metadata(
@@ -9625,6 +9628,48 @@ Point.implements(PrettyJson) {
         assert!(tc.diagnostics.iter().any(|d| d.code == "E0247" && d.message.contains(
             "resolver type symbol 'Point' has behavior impl refs 'PrettyJson', expected to include 'Json<str>'"
         )));
+    }
+
+    #[test]
+    fn behavior_association_absence_validation_builds_entries() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let symbol = symbols
+            .lookup(Namespace::Type, "Point")
+            .expect("type symbol");
+        let entries = BehaviorAssociationAbsenceValidation {
+            impl_name_code: "IMPL_NAMES",
+            impl_ref_code: "IMPL_REFS",
+            required_name_code: "REQUIRED_NAMES",
+            required_ref_code: "REQUIRED_REFS",
+        }
+        .entries(symbol);
+
+        assert_eq!(
+            entries,
+            [
+                (true, "IMPL_NAMES", "behavior impls"),
+                (true, "IMPL_REFS", "typed behavior impls"),
+                (true, "REQUIRED_NAMES", "behavior requires"),
+                (true, "REQUIRED_REFS", "typed behavior requires"),
+            ]
+        );
     }
 
     #[test]

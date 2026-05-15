@@ -1005,6 +1005,8 @@ checked-in docs, tests, and commits only.
   module, import, local, struct/type, behavior, and value symbols.
 - Resolver absent behavior-association metadata validation now shares one
   helper across module, import, local, variant, behavior, and value symbols.
+- Resolver absent behavior-association metadata validation now lets the
+  validation bundle build its impl/requires metadata entries.
 - Resolver absent behavior-declaration metadata validation now shares one
   helper across module, import, local, variant, and value symbols.
 - Resolver absent mutability metadata validation now shares one helper across
