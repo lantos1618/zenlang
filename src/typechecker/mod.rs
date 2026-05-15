@@ -3898,9 +3898,10 @@ impl TypeChecker {
             signature.return_type,
         );
         self.insert_callable_signature(name, info);
+        let type_parameter_names = resolver_type_param_names(symbol);
         self.collect_resolver_generic_template_signature(
             name,
-            symbol.type_parameter_names.as_deref().unwrap_or(&[]),
+            &type_parameter_names,
             signature.parameter_names,
             signature.parameter_types,
             signature.return_type,
@@ -15204,6 +15205,43 @@ apply<T: Json<T>> = (callback: (T) T) (T) T {
                 params: vec![AstType::Named("T".to_string())],
                 ret: Box::new(AstType::Named("T".to_string())),
             })
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_clears_generic_function_template_type_params_when_resolver_bounds_missing(
+    ) {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+identity<T: Json<T>> = (value: T) T { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_bound_refs_for_test(Namespace::Value, "identity", None);
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc
+            .generic_functions
+            .get("identity")
+            .expect("generic function template");
+        assert!(
+            template.type_params.is_empty(),
+            "resolver-backed generic templates should not keep type parameter names when typed bound metadata is incomplete"
+        );
+        assert!(
+            tc.functions
+                .get("identity")
+                .expect("function info")
+                .type_params
+                .is_empty(),
+            "function info and template type parameter handoff should agree when resolver metadata is incomplete"
         );
     }
 

@@ -1362,6 +1362,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed declaration info now reads resolver type-parameter names and
   typed bound refs through one shared metadata helper, covered by
   `typechecker::tests::resolver_type_parameter_metadata_requires_names_and_bound_refs`.
+- Resolver-backed generic template refresh now uses the same complete
+  type-parameter metadata as callable info, covered by
+  `typechecker::tests::collect_declarations_with_symbols_clears_generic_function_template_type_params_when_resolver_bounds_missing`.
 - The docs truth gate now covers the quiet draft-PR CI trigger shape by
   rejecting `pull_request.synchronize`, requiring manual dispatch, and requiring
   the draft-PR guard on fmt, clippy, and test jobs.
