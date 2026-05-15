@@ -10394,6 +10394,38 @@ Mapper: behavior {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_clears_stale_behavior_methods_after_name_restore() {
+        let mut program = parse_program(
+            r#"
+Mapper: behavior {
+    map: (Self, i32) i32
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_method_types_for_test(Namespace::Behavior, "Mapper", None);
+        if let Declaration::Behavior { name, methods, .. } = &mut program.declarations[0] {
+            *name = "Missing".to_string();
+            methods[0].params[1].ty = AstType::Named("Stale".to_string());
+            methods[0].return_type = Some(AstType::Named("AlsoStale".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.behaviors.contains_key("Missing"),
+            "resolver-backed collection should clear the stale AST behavior key after resolver name restoration"
+        );
+        assert!(
+            !tc.behaviors.contains_key("Mapper"),
+            "resolver-backed collection should clear the restored behavior key when resolver method metadata is incomplete"
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_behavior_method_name_metadata() {
         let mut program = parse_program(
             r#"
