@@ -364,7 +364,7 @@ impl TypeChecker {
                             );
                             self.resolve_type(&info.return_type)
                         } else {
-                            let method_key = format!("{}.{}", recv_name, method);
+                            let method_key = super::method_signature_key(recv_name, method);
                             if let Some(info) = self.methods.get(&method_key).cloned() {
                                 self.check_call_signature(
                                     "method",
@@ -411,7 +411,7 @@ impl TypeChecker {
                     }
                     _ => String::new(),
                 };
-                let method_key = format!("{}.{}", type_name, method);
+                let method_key = super::method_signature_key(&type_name, method);
 
                 if let Some(info) = self.methods.get(&method_key).cloned() {
                     // Found as a type method — handle generics
@@ -524,7 +524,7 @@ impl TypeChecker {
                         span: *span,
                     })
                 } else if let Some(generic_base) = self.generic_base_type_name(&type_name) {
-                    let generic_method_key = format!("{}.{}", generic_base, method);
+                    let generic_method_key = super::method_signature_key(&generic_base, method);
                     if let Some(info) = self.methods.get(&generic_method_key).cloned() {
                         if !info.type_params.is_empty() {
                             let (subs, explicit_type_args_valid) = if type_args.is_empty() {

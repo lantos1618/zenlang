@@ -1005,6 +1005,11 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::method_signature_key_helpers_share_receiver_parsing`,
   `typechecker::tests::method_key_formats_type_qualified_method_name`, and
   `typechecker::tests::callable_signature_insert_routes_function_and_method_keys`.
+- Expression method lookup for module fallbacks, concrete receivers, and
+  generic receiver bases now also uses that shared method-key helper, covered
+  by `typechecker::tests::generic_method_collection`,
+  `generic_diagnostics::generic_method_inference_conflict_from_receiver_is_error`,
+  and the `integration::test_generic_method*` fixtures.
 - Resolver-backed declaration collection now has named passes for resolver
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed

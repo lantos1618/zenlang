@@ -399,6 +399,8 @@ checked-in docs, tests, and commits only.
   helper before resolver-owned method name restoration.
 - AST, resolver-backed, graph-import, dependency, and typed body method-key
   construction now route through the same type-qualified method key helper.
+- Expression method lookup for module fallbacks, concrete receivers, and
+  generic receiver bases now also uses that shared method-key helper.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths.
 - Generic method specialization preserves concrete `Self` receiver context in
