@@ -517,6 +517,17 @@ impl ValueSignatureAbsenceValidation {
         }
     }
 
+    fn type_like_resolver_codes() -> Self {
+        Self {
+            parameter_count_code: "E0310",
+            parameter_name_code: "E0312",
+            parameter_type_name_code: "E0313",
+            parameter_type_code: "E0360",
+            return_type_code: "E0311",
+            typed_return_type_code: "E0361",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 6] {
         [
             AbsentMetadataEntry::new(
@@ -8213,14 +8224,7 @@ impl TypeChecker {
             symbol,
             namespace.diagnostic_name(),
             name,
-            ValueSignatureAbsenceValidation {
-                parameter_count_code: "E0310",
-                parameter_name_code: "E0312",
-                parameter_type_name_code: "E0313",
-                parameter_type_code: "E0360",
-                return_type_code: "E0311",
-                typed_return_type_code: "E0361",
-            },
+            ValueSignatureAbsenceValidation::type_like_resolver_codes(),
             span,
         );
 
@@ -10807,6 +10811,18 @@ add = (left: i32, right: i32) i32 { return left + right }
         assert_eq!(validation.parameter_type_code, "E0380");
         assert_eq!(validation.return_type_code, "E0250");
         assert_eq!(validation.typed_return_type_code, "E0381");
+    }
+
+    #[test]
+    fn value_signature_absence_validation_uses_type_like_resolver_codes() {
+        let validation = ValueSignatureAbsenceValidation::type_like_resolver_codes();
+
+        assert_eq!(validation.parameter_count_code, "E0310");
+        assert_eq!(validation.parameter_name_code, "E0312");
+        assert_eq!(validation.parameter_type_name_code, "E0313");
+        assert_eq!(validation.parameter_type_code, "E0360");
+        assert_eq!(validation.return_type_code, "E0311");
+        assert_eq!(validation.typed_return_type_code, "E0361");
     }
 
     #[test]
