@@ -640,6 +640,15 @@ impl BehaviorAssociationAbsenceValidation {
         }
     }
 
+    fn value_resolver_codes() -> Self {
+        Self {
+            impl_name_code: "E0306",
+            impl_ref_code: "E0407",
+            required_name_code: "E0307",
+            required_ref_code: "E0408",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
         [
             AbsentMetadataEntry::new(
@@ -8886,12 +8895,7 @@ impl TypeChecker {
             symbol,
             "value",
             name,
-            BehaviorAssociationAbsenceValidation {
-                impl_name_code: "E0306",
-                impl_ref_code: "E0407",
-                required_name_code: "E0307",
-                required_ref_code: "E0408",
-            },
+            BehaviorAssociationAbsenceValidation::value_resolver_codes(),
             span,
         );
 
@@ -10598,6 +10602,16 @@ Point.requires(Json)
         assert_eq!(validation.impl_ref_code, "E0401");
         assert_eq!(validation.required_name_code, "E0328");
         assert_eq!(validation.required_ref_code, "E0402");
+    }
+
+    #[test]
+    fn behavior_association_absence_validation_uses_value_resolver_codes() {
+        let validation = BehaviorAssociationAbsenceValidation::value_resolver_codes();
+
+        assert_eq!(validation.impl_name_code, "E0306");
+        assert_eq!(validation.impl_ref_code, "E0407");
+        assert_eq!(validation.required_name_code, "E0307");
+        assert_eq!(validation.required_ref_code, "E0408");
     }
 
     #[test]
