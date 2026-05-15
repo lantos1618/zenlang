@@ -1524,7 +1524,17 @@ impl TypeChecker {
                 span,
             } = decl
             {
-                self.check_behavior_requires(type_name, behavior, behavior_type_args, *span);
+                let type_name = symbols
+                    .map(|symbols| {
+                        self.resolver_required_type_name_for(
+                            symbols,
+                            type_name,
+                            behavior,
+                            behavior_type_args,
+                        )
+                    })
+                    .unwrap_or_else(|| type_name.clone());
+                self.check_behavior_requires(&type_name, behavior, behavior_type_args, *span);
             }
         }
 
@@ -1786,6 +1796,38 @@ impl TypeChecker {
                 if candidates.next().is_none() {
                     return candidate;
                 }
+            }
+        }
+
+        type_name.to_string()
+    }
+
+    fn resolver_required_type_name_for(
+        &self,
+        symbols: &SymbolTable,
+        type_name: &str,
+        behavior: &str,
+        behavior_type_args: &[AstType],
+    ) -> String {
+        if symbols.lookup(Namespace::Type, type_name).is_some() {
+            return type_name.to_string();
+        }
+
+        let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
+        let mut candidates =
+            self.resolver_behavior_required_refs
+                .iter()
+                .filter_map(|(candidate_type, refs)| {
+                    refs.iter()
+                        .any(|reference| {
+                            self.behavior_reference_key(&reference.name, &reference.type_args)
+                                == behavior_key
+                        })
+                        .then_some(candidate_type.clone())
+                });
+        if let Some(candidate) = candidates.next() {
+            if candidates.next().is_none() {
+                return candidate;
             }
         }
 
@@ -10598,6 +10640,40 @@ Point.requires(Json<str>)
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored requires metadata should avoid stale AST requires diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_required_target_metadata() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Requires { type_name, .. } = &mut program.declarations[3] {
+            *type_name = "Missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored requires target metadata should avoid stale AST requires diagnostics: {:?}",
             tc.diagnostics
         );
     }
