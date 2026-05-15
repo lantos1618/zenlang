@@ -752,6 +752,9 @@ checked-in docs, tests, and commits only.
 - Resolver value-parameter expectation construction now uses metadata
   terminology consistently with the paired display and typed parameter
   expectations.
+- Resolver type-parameter expectation construction now uses metadata
+  terminology consistently with paired bound display and typed bound-ref
+  expectations.
 
 ## Current Phase
 

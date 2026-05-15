@@ -7632,7 +7632,7 @@ fn expected_value_signature(
     type_params: &[ast::TypeParam],
 ) -> ExpectedValueSignature {
     let params = expected_parameter_metadata(params);
-    let type_params = expected_type_parameters(type_params);
+    let type_params = expected_type_parameter_metadata(type_params);
     ExpectedValueSignature {
         params,
         return_type: expected_return_metadata(return_type),
@@ -7652,7 +7652,7 @@ fn expected_value_symbol(
     }
 }
 
-fn expected_type_parameters(type_params: &[ast::TypeParam]) -> Vec<ExpectedTypeParameter> {
+fn expected_type_parameter_metadata(type_params: &[ast::TypeParam]) -> Vec<ExpectedTypeParameter> {
     let mut expected = Vec::new();
     for type_param in type_params {
         let bound = type_param.constraint.as_ref().and_then(|behavior| {
@@ -7678,7 +7678,7 @@ fn expected_type_like_symbol(
     type_params: &[ast::TypeParam],
     is_public: Option<bool>,
 ) -> ExpectedTypeLikeSymbol {
-    let type_params = expected_type_parameters(type_params);
+    let type_params = expected_type_parameter_metadata(type_params);
     ExpectedTypeLikeSymbol {
         type_params,
         is_public,
