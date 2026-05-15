@@ -1156,13 +1156,15 @@ impl TypeChecker {
                         self.collect_impl_method_signature(type_name, method);
                     }
 
-                    if let Some(behavior) = behavior {
-                        self.collect_behavior_default_method_signatures(
-                            type_name,
-                            behavior,
-                            behavior_type_args,
-                            methods,
-                        );
+                    if !self.resolver_backed_collection {
+                        if let Some(behavior) = behavior {
+                            self.collect_behavior_default_method_signatures(
+                                type_name,
+                                behavior,
+                                behavior_type_args,
+                                methods,
+                            );
+                        }
                     }
                 }
                 _ => {}
@@ -1222,6 +1224,7 @@ impl TypeChecker {
             }
         }
 
+        self.resolver_backed_collection = true;
         for decl in decls {
             if let Declaration::ImplBlock {
                 type_name,
@@ -1260,6 +1263,7 @@ impl TypeChecker {
                 );
             }
         }
+        self.resolver_backed_collection = false;
 
         self.resolver_backed_collection = true;
         self.validate_collected_declaration_semantics(decls);
@@ -2591,9 +2595,11 @@ impl TypeChecker {
             .iter()
             .filter(|required| {
                 required.default_body.is_some()
-                    && !methods.iter().any(|decl| {
-                        matches!(decl, Declaration::Function { name, .. } if name == &required.name)
-                    })
+                    && !self.impl_methods_include_behavior_method(
+                        type_name,
+                        methods,
+                        &required.name,
+                    )
             })
             .filter_map(|required| {
                 let body = required.default_body.clone()?;
@@ -2618,6 +2624,21 @@ impl TypeChecker {
                 })
             })
             .collect()
+    }
+
+    fn impl_methods_include_behavior_method(
+        &self,
+        type_name: &str,
+        methods: &[Declaration],
+        required_name: &str,
+    ) -> bool {
+        methods
+            .iter()
+            .any(|decl| matches!(decl, Declaration::Function { name, .. } if name == required_name))
+            || (self.resolver_backed_collection
+                && self
+                    .methods
+                    .contains_key(&format!("{type_name}.{required_name}")))
     }
 
     fn behavior_methods_with_inherited_substituted(
@@ -9432,6 +9453,51 @@ Point.implements(Mapper) {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             }
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_skips_default_when_resolver_restores_impl_method_name() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (self: Self) str { return "default" }
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[2] {
+            if let Declaration::Function { name, .. } = &mut methods[0] {
+                *name = "missing".to_string();
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let method = tc
+            .methods
+            .get("Point.encode")
+            .expect("restored impl method");
+        assert_eq!(
+            method.params[0].0, "value",
+            "resolver-restored explicit impl method should not be overwritten by the behavior default"
+        );
+        assert!(
+            !tc.methods.contains_key("Point.missing"),
+            "stale AST-only impl method key should be removed"
+        );
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored impl method name should suppress default insertion: {:?}",
+            tc.diagnostics
         );
     }
 

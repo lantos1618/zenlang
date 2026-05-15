@@ -184,6 +184,12 @@ and do not assume Phase 4 is ready without evidence.
 - Omitted behavior default methods now refresh their method-table signatures
   from validated resolver behavior method metadata, so function-typed default
   methods do not retain stale AST-only signatures after behavior collection.
+- Resolver-backed behavior default synthesis now waits until resolver behavior
+  and impl-method metadata has been restored, and it treats resolver-restored
+  impl method names as explicit overrides. This prevents stale AST-only impl
+  method names from causing default methods to overwrite explicit impl
+  signatures, covered by
+  `typechecker::tests::collect_declarations_with_symbols_skips_default_when_resolver_restores_impl_method_name`.
 - Resolver-backed declaration collection now defers impl/requires semantic
   checks until after resolver value and behavior metadata has been restored, so
   stale AST-only behavior signatures cannot produce false impl diagnostics.
