@@ -272,6 +272,19 @@ struct ImportedMethodDependencies<'a> {
     generic_methods: &'a HashMap<String, GenericFunctionTemplate>,
 }
 
+impl ImportedMethodDependencies<'_> {
+    fn apply_to_template(self, template: GenericFunctionTemplate) -> GenericFunctionTemplate {
+        template.with_dependencies(
+            self.structs.clone(),
+            self.enums.clone(),
+            self.functions.clone(),
+            self.generic_functions.clone(),
+            self.methods.clone(),
+            self.generic_methods.clone(),
+        )
+    }
+}
+
 #[derive(Default)]
 struct SourceModuleDependencies {
     structs: HashMap<String, StructInfo>,
@@ -5956,17 +5969,8 @@ impl TypeChecker {
             signature.body,
             signature.span,
         ) {
-            self.generic_methods.insert(
-                key,
-                template.with_dependencies(
-                    dependencies.structs.clone(),
-                    dependencies.enums.clone(),
-                    dependencies.functions.clone(),
-                    dependencies.generic_functions.clone(),
-                    dependencies.methods.clone(),
-                    dependencies.generic_methods.clone(),
-                ),
-            );
+            self.generic_methods
+                .insert(key, dependencies.apply_to_template(template));
         }
     }
 
