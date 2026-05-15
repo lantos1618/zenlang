@@ -106,6 +106,9 @@ checked-in docs, tests, and commits only.
   Typechecker setup also validates those structured behavior refs for generic
   parent, impl, and required-behavior associations before declaration
   collection, so display-name metadata cannot hide typed association drift.
+- Resolver-backed behavior inheritance checks now validate restored resolver
+  parent refs before cycle and method-coherence checks, so stale AST-only parent
+  names or type arguments cannot leak false extends diagnostics.
 - Resolver-backed `.requires` conformance checks now read validated resolver
   required-behavior refs, so stale AST-only required behavior type arguments
   cannot produce false missing-impl diagnostics.

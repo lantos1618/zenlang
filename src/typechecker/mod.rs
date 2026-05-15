@@ -980,19 +980,21 @@ impl TypeChecker {
 
         self.validate_self_type_contexts(decls);
 
-        for decl in decls {
-            if let Declaration::BehaviorExtends {
-                behavior,
-                parent,
-                parent_type_args,
-                span,
-            } = decl
-            {
-                self.check_behavior_extends(behavior, parent, parent_type_args, *span);
+        if !self.resolver_backed_collection {
+            for decl in decls {
+                if let Declaration::BehaviorExtends {
+                    behavior,
+                    parent,
+                    parent_type_args,
+                    span,
+                } = decl
+                {
+                    self.check_behavior_extends(behavior, parent, parent_type_args, *span);
+                }
             }
+            self.validate_behavior_extends_cycles();
+            self.validate_behavior_method_coherence();
         }
-        self.validate_behavior_extends_cycles();
-        self.validate_behavior_method_coherence();
 
         for decl in decls {
             match decl {
@@ -1154,7 +1156,9 @@ impl TypeChecker {
     }
 
     fn collect_declarations_with_symbols(&mut self, decls: &[Declaration], symbols: &SymbolTable) {
+        self.resolver_backed_collection = true;
         self.collect_declarations(decls);
+        self.resolver_backed_collection = false;
 
         for decl in decls {
             match decl {
@@ -1198,6 +1202,8 @@ impl TypeChecker {
                 _ => {}
             }
         }
+
+        self.validate_collected_behavior_extends_semantics();
 
         for decl in decls {
             if let Declaration::ImplBlock {
@@ -1260,6 +1266,42 @@ impl TypeChecker {
         }
 
         self.validate_generic_type_references(decls);
+    }
+
+    fn validate_collected_behavior_extends_semantics(&mut self) {
+        let behavior_extends: Vec<(String, Vec<BehaviorParentRef>, Span)> = self
+            .behavior_extends
+            .iter()
+            .map(|(behavior, parents)| {
+                (
+                    behavior.clone(),
+                    parents.clone(),
+                    self.behavior_extends_spans
+                        .get(behavior)
+                        .copied()
+                        .unwrap_or_else(Span::dummy),
+                )
+            })
+            .collect();
+
+        for (behavior, parents, span) in behavior_extends {
+            let scoped_type_params: HashSet<String> = self
+                .behaviors
+                .get(&behavior)
+                .map(|info| info.type_params.iter().cloned().collect())
+                .unwrap_or_default();
+            for parent in parents {
+                self.behavior_type_arg_substitutions(
+                    &parent.behavior,
+                    &parent.type_args,
+                    &scoped_type_params,
+                    span,
+                );
+            }
+        }
+
+        self.validate_behavior_extends_cycles();
+        self.validate_behavior_method_coherence();
     }
 
     fn collect_resolver_value_signature(&mut self, symbols: &SymbolTable, name: &str) {
@@ -1483,6 +1525,9 @@ impl TypeChecker {
             .map(|parent| self.behavior_parent_ref_from_metadata(parent))
             .collect();
         self.behavior_extends.insert(name.to_string(), parents);
+        self.behavior_extends_spans
+            .entry(name.to_string())
+            .or_insert(symbol.definition_span);
     }
 
     fn collect_resolver_type_behavior_impls(&mut self, symbols: &SymbolTable, name: &str) {
@@ -8324,9 +8369,12 @@ PrettyJson.extends(Json<str>)
             .resolve_program(&program)
             .expect("resolver succeeds");
         if let Declaration::BehaviorExtends {
-            parent_type_args, ..
+            parent,
+            parent_type_args,
+            ..
         } = &mut program.declarations[2]
         {
+            *parent = "Missing".to_string();
             parent_type_args[0] = AstType::I32;
         }
         let mut tc = TypeChecker::new();
@@ -8339,6 +8387,11 @@ PrettyJson.extends(Json<str>)
             .expect("behavior parents");
         assert_eq!(parents[0].behavior, "Json");
         assert_eq!(parents[0].type_args, vec![AstType::Str]);
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior parent metadata should avoid stale AST extends diagnostics: {:?}",
+            tc.diagnostics
+        );
     }
 
     #[test]

@@ -449,6 +449,9 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker setup validates typed resolver behavior association refs for
   generic parents, impls, and required-behavior assertions, so matching
   display-name metadata cannot hide structured association drift.
+- Resolver-backed behavior inheritance checks validate restored resolver parent
+  refs before cycle and method-coherence checks, so stale AST-only parent names
+  or type arguments cannot leak false extends diagnostics.
 - Resolver type symbols carry visibility metadata for structs and enums, and
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Typechecker setup rejects resolver behavior symbol visibility mismatches
