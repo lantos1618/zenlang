@@ -3257,6 +3257,31 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: &SymbolTable,
     ) {
+        self.collect_resolver_callable_declaration_metadata(decls, symbols);
+
+        for decl in decls {
+            match decl {
+                Declaration::Struct {
+                    name, fields, span, ..
+                } => {
+                    self.collect_resolver_struct_declaration_metadata(symbols, name, fields, *span);
+                }
+                Declaration::Enum { name, span, .. } => {
+                    self.collect_resolver_enum_declaration_metadata(symbols, name, *span);
+                }
+                Declaration::Behavior { name, span, .. } => {
+                    self.collect_resolver_behavior_declaration_metadata(symbols, name, *span);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn collect_resolver_callable_declaration_metadata(
+        &mut self,
+        decls: &[Declaration],
+        symbols: &SymbolTable,
+    ) {
         for decl in decls {
             match decl {
                 Declaration::Function { name, span, .. } => {
@@ -3284,17 +3309,6 @@ impl TypeChecker {
                     self.collect_resolver_type_impl_declaration_metadata(
                         symbols, type_name, methods,
                     );
-                }
-                Declaration::Struct {
-                    name, fields, span, ..
-                } => {
-                    self.collect_resolver_struct_declaration_metadata(symbols, name, fields, *span);
-                }
-                Declaration::Enum { name, span, .. } => {
-                    self.collect_resolver_enum_declaration_metadata(symbols, name, *span);
-                }
-                Declaration::Behavior { name, span, .. } => {
-                    self.collect_resolver_behavior_declaration_metadata(symbols, name, *span);
                 }
                 _ => {}
             }

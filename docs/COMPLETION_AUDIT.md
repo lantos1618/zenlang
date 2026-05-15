@@ -1019,6 +1019,12 @@ and do not assume Phase 4 is ready without evidence.
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed
   declaration collection surface that later Phase 2 slices still need to shrink.
+  Callable resolver declaration metadata now has a focused traversal for
+  functions, top-level methods, and non-behavior impl methods, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_method_signature_for_type_refs`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_method_name_metadata`,
+  and
+  `typechecker::tests::resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass`.
   Behavior impl method signatures are skipped by the generic declaration
   metadata refresh and owned by the behavior impl metadata pass, covered by
   `typechecker::tests::resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass`.

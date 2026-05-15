@@ -528,6 +528,8 @@ checked-in docs, tests, and commits only.
   metadata refresh, behavior impl metadata refresh, semantic validation, and
   final impl association refresh into named passes instead of one mixed
   collection loop.
+  Callable resolver declaration metadata now has a focused traversal for
+  functions, top-level methods, and non-behavior impl methods.
   Behavior impl method signatures are now skipped by the generic declaration
   metadata refresh and owned by the behavior impl metadata pass, covered by
   `typechecker::tests::resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass`.
