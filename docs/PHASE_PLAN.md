@@ -776,6 +776,8 @@ checked-in docs, tests, and commits only.
   impl method template bodies for later metadata replacement.
 - Resolver-backed struct collection no longer seeds AST-only field metadata
   before resolver metadata restoration.
+- Resolver-backed enum collection no longer seeds AST-only variant metadata
+  before resolver metadata restoration.
 
 ## Current Phase
 

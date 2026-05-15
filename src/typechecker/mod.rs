@@ -1170,6 +1170,8 @@ impl TypeChecker {
                 } => {
                     if !self.resolver_backed_collection {
                         self.validate_generic_bounds(type_params);
+                    } else {
+                        continue;
                     }
                     self.enums.insert(
                         name.clone(),
@@ -9429,6 +9431,30 @@ Callback<T: Json<T>>: Wrap((i32) i32), None
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             })
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_enum_variants() {
+        let mut program = parse_program(
+            r#"
+Option<T>: Some(T), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_variant_names_for_test(Namespace::Type, "Option", None);
+        if let Declaration::Enum { variants, .. } = &mut program.declarations[0] {
+            variants[0].payload = Some(AstType::Named("Stale".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.enums.contains_key("Option"),
+            "resolver-backed collection should not keep AST-only enum variants when resolver variant metadata is incomplete"
         );
     }
 
