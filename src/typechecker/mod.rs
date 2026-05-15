@@ -1219,6 +1219,25 @@ impl TypeChecker {
             }
         }
 
+        for decl in decls {
+            if let Declaration::ImplBlock {
+                type_name,
+                behavior: Some(behavior),
+                behavior_type_args,
+                methods,
+                ..
+            } = decl
+            {
+                self.collect_resolver_behavior_impl_method_signatures(
+                    symbols,
+                    type_name,
+                    behavior,
+                    behavior_type_args,
+                    methods,
+                );
+            }
+        }
+
         self.validate_collected_behavior_extends_semantics();
 
         for decl in decls {
@@ -1651,6 +1670,66 @@ impl TypeChecker {
                     *span,
                 ),
             );
+        }
+    }
+
+    fn collect_resolver_behavior_impl_method_signatures(
+        &mut self,
+        symbols: &SymbolTable,
+        type_name: &str,
+        behavior: &str,
+        behavior_type_args: &[AstType],
+        methods: &[Declaration],
+    ) {
+        let (behavior, behavior_type_args) =
+            match self.resolver_behavior_impl_ref_for_peek(type_name, behavior) {
+                Some(implementation) => (
+                    implementation.name.as_str(),
+                    implementation.type_args.as_slice(),
+                ),
+                None => (behavior, behavior_type_args),
+            };
+        let behavior_substitutions = self
+            .behaviors
+            .get(behavior)
+            .map(|info| {
+                info.type_params
+                    .iter()
+                    .cloned()
+                    .zip(behavior_type_args.iter().cloned())
+                    .collect::<HashMap<_, _>>()
+            })
+            .unwrap_or_default();
+        let mut required_methods: VecDeque<ast::BehaviorMethod> = self
+            .behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new())
+            .into_iter()
+            .collect();
+
+        for method in methods {
+            let Declaration::Function { name, .. } = method else {
+                continue;
+            };
+            let restored_name = match required_methods
+                .iter()
+                .position(|required| required.name == *name)
+            {
+                Some(index) => required_methods.remove(index).map(|required| required.name),
+                None => required_methods.pop_front().map(|required| required.name),
+            };
+            let Some(restored_name) = restored_name else {
+                continue;
+            };
+            let key = format!("{type_name}.{restored_name}");
+            if symbols.lookup(Namespace::Value, &key).is_none() {
+                continue;
+            }
+
+            let mut restored_method = method.clone();
+            if let Declaration::Function { name, .. } = &mut restored_method {
+                *name = restored_name;
+            }
+            self.collect_impl_method_signature(type_name, &restored_method);
+            self.collect_resolver_value_signature(symbols, &key);
         }
     }
 
@@ -2134,12 +2213,47 @@ impl TypeChecker {
             .insert((type_name.to_string(), behavior_key.clone()));
         let required_methods =
             self.behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new());
+        let mut unmatched_required: VecDeque<String> = required_methods
+            .iter()
+            .map(|required| required.name.clone())
+            .collect();
+        let effective_methods: Vec<(&Declaration, String)> = methods
+            .iter()
+            .map(|method| {
+                let ast_name = match method {
+                    Declaration::Function { name, .. } => name.as_str(),
+                    _ => "",
+                };
+                let effective_name = match unmatched_required
+                    .iter()
+                    .position(|required| required == ast_name)
+                {
+                    Some(index) => unmatched_required
+                        .remove(index)
+                        .unwrap_or_else(|| ast_name.to_string()),
+                    None if self.resolver_backed_collection => {
+                        let resolved_index = unmatched_required.iter().position(|required| {
+                            self.methods
+                                .contains_key(&format!("{type_name}.{required}"))
+                        });
+                        match resolved_index {
+                            Some(index) => unmatched_required
+                                .remove(index)
+                                .unwrap_or_else(|| ast_name.to_string()),
+                            None => ast_name.to_string(),
+                        }
+                    }
+                    None => ast_name.to_string(),
+                };
+                (method, effective_name)
+            })
+            .collect();
 
-        for method in methods {
+        for (method, effective_name) in &effective_methods {
             if let Declaration::Function { name, span, .. } = method {
                 if !required_methods
                     .iter()
-                    .any(|required| required.name == *name)
+                    .any(|required| required.name == *effective_name)
                 {
                     self.diagnostics.push(Diagnostic::error(
                         "E6005",
@@ -2154,16 +2268,19 @@ impl TypeChecker {
         }
 
         for required in &required_methods {
-            let Some(actual) = methods.iter().find_map(|decl| match decl {
-                Declaration::Function {
-                    name,
-                    params,
-                    return_type,
-                    span,
-                    ..
-                } if name == &required.name => Some((params, return_type, *span)),
-                _ => None,
-            }) else {
+            let Some(actual) =
+                effective_methods
+                    .iter()
+                    .find_map(|(decl, effective_name)| match decl {
+                        Declaration::Function {
+                            params,
+                            return_type,
+                            span,
+                            ..
+                        } if effective_name == &required.name => Some((params, return_type, *span)),
+                        _ => None,
+                    })
+            else {
                 if required.default_body.is_some() {
                     continue;
                 }
@@ -2277,6 +2394,22 @@ impl TypeChecker {
             Some(index) => impl_refs.remove(index),
             None => impl_refs.pop_front(),
         }
+    }
+
+    fn resolver_behavior_impl_ref_for_peek(
+        &self,
+        type_name: &str,
+        behavior: &str,
+    ) -> Option<&BehaviorRefMetadata> {
+        if !self.resolver_backed_collection {
+            return None;
+        }
+
+        let impl_refs = self.resolver_behavior_impl_refs.get(type_name)?;
+        impl_refs
+            .iter()
+            .find(|implementation| implementation.name == behavior)
+            .or_else(|| impl_refs.front())
     }
 
     fn find_overlapping_behavior_impl(&self, type_name: &str, behavior: &str) -> Option<String> {
@@ -8943,6 +9076,39 @@ Point.implements(Mapper) {
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored impl method metadata should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_impl_method_name_metadata_for_impl_checks() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[2] {
+            if let Declaration::Function { name, .. } = &mut methods[0] {
+                *name = "missing".to_string();
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored impl method name metadata should avoid stale AST impl diagnostics: {:?}",
             tc.diagnostics
         );
     }

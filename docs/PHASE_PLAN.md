@@ -107,6 +107,10 @@ checked-in docs, tests, and commits only.
 - Behavior impl conformance checks now read the collected `Type.method`
   signature, including resolver-restored impl-method metadata, so stale
   AST-only method signatures cannot produce false impl diagnostics.
+- Resolver-backed behavior impl conformance now also restores impl method names
+  from resolver-owned value symbols when AST-only impl method names are stale,
+  without masking real extra impl methods that lack resolver-owned required
+  method symbols.
 - Resolver records impl-method body locals in their nested scopes, and
   typechecker setup requires those local symbols before checking impl bodies.
 - Generic behavior bounds share the behavior inheritance solver, so an impl of a

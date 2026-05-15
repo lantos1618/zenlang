@@ -126,6 +126,10 @@ and do not assume Phase 4 is ready without evidence.
 - Behavior impl conformance reads the collected `Type.method` signature,
   including resolver-restored impl-method metadata, so stale AST-only method
   signatures cannot produce false impl diagnostics.
+- Resolver-backed behavior impl conformance also restores impl method names
+  from resolver-owned value symbols when AST-only impl method names are stale,
+  without masking real extra impl methods that lack resolver-owned required
+  method symbols.
 - Resolver behavior impl method bodies carry scoped local symbols, and
   typechecker setup rejects missing impl-method body locals before behavior impl
   body collection.
