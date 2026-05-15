@@ -492,6 +492,8 @@ checked-in docs, tests, and commits only.
   resolver-backed callable template seeding now also have named helper passes.
   AST impl method/default seeding and resolver-backed impl template seeding now
   also have named helper passes.
+  AST import seeding now has a named helper pass, removing the residual mixed
+  declaration collection loop.
   Resolver-backed semantic validation and final type impl association refresh
   now each have focused helper boundaries matching those named passes.
   The declaration metadata refresh pass also routes callable signatures,

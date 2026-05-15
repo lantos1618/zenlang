@@ -2939,21 +2939,20 @@ impl TypeChecker {
         self.collect_resolver_backed_callable_templates(decls);
         self.collect_ast_impl_block_declarations(decls);
         self.collect_resolver_backed_impl_block_templates(decls);
+        self.collect_ast_import_declarations(decls);
+    }
 
+    fn collect_ast_import_declarations(&mut self, decls: &[Declaration]) {
         for decl in decls {
-            match decl {
-                Declaration::Struct { .. } | Declaration::Enum { .. } => {}
-                Declaration::Import {
-                    names, module_path, ..
-                } => {
-                    for name in names {
-                        self.imports.insert(name.clone(), module_path.clone());
-                    }
-                }
-                Declaration::Function { .. } | Declaration::Method { .. } => {}
-                Declaration::Behavior { .. } => {}
-                Declaration::ImplBlock { .. } => {}
-                _ => {}
+            let Declaration::Import {
+                names, module_path, ..
+            } = decl
+            else {
+                continue;
+            };
+
+            for name in names {
+                self.imports.insert(name.clone(), module_path.clone());
             }
         }
     }
@@ -12674,6 +12673,24 @@ Point: { x: i32 = "bad" }
         tc.collect_declarations(&decls);
         assert!(tc.enums.contains_key("OptionI32"));
         assert_eq!(tc.enums["OptionI32"].variants.len(), 2);
+    }
+
+    #[test]
+    fn collect_import_info() {
+        let program = parse_program(
+            r#"
+{ io, fmt } = std
+
+main = () i32 {
+    return 0
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        tc.collect_declarations(&program.declarations);
+        assert_eq!(tc.imports.get("io"), Some(&vec!["std".to_string()]));
+        assert_eq!(tc.imports.get("fmt"), Some(&vec!["std".to_string()]));
     }
 
     #[test]
