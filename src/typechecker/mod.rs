@@ -511,6 +511,15 @@ struct ExpectedTypeLikeSymbol {
     is_public: Option<bool>,
 }
 
+impl ExpectedTypeLikeSymbol {
+    fn new(type_params: &[ast::TypeParam], is_public: Option<bool>) -> Self {
+        Self {
+            type_params: expected_type_parameter_metadata(type_params),
+            is_public,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct TypeParameterValidation {
     count_code: &'static str,
@@ -9302,11 +9311,7 @@ fn expected_type_like_metadata(
     type_params: &[ast::TypeParam],
     is_public: Option<bool>,
 ) -> ExpectedTypeLikeSymbol {
-    let type_params = expected_type_parameter_metadata(type_params);
-    ExpectedTypeLikeSymbol {
-        type_params,
-        is_public,
-    }
+    ExpectedTypeLikeSymbol::new(type_params, is_public)
 }
 
 fn expected_behavior_symbol(
@@ -11102,6 +11107,32 @@ Point.requires(Json<str>)
         assert_eq!(symbol.signature.return_type.display, "bool");
         assert_eq!(symbol.signature.return_type.typed, AstType::Bool);
         assert!(symbol.signature.type_params.is_empty());
+    }
+
+    #[test]
+    fn expected_type_like_symbol_builds_type_params_and_visibility_together() {
+        let type_params = vec![ast::TypeParam {
+            name: "T".to_string(),
+            constraint: Some("Json".to_string()),
+            constraint_type_args: vec![AstType::Named("T".to_string())],
+            span: Span::dummy(),
+        }];
+
+        let symbol = ExpectedTypeLikeSymbol::new(&type_params, Some(true));
+
+        assert_eq!(symbol.is_public, Some(true));
+        assert_eq!(symbol.type_params[0].name, "T");
+        let bound = symbol.type_params[0]
+            .bound
+            .as_ref()
+            .expect("expected bound");
+        assert_eq!(bound.display, ("T".to_string(), "Json<T>".to_string()));
+        assert_eq!(bound.reference.type_parameter, "T");
+        assert_eq!(bound.reference.behavior, "Json");
+        assert_eq!(
+            bound.reference.type_args,
+            vec![AstType::Named("T".to_string())]
+        );
     }
 
     #[test]
