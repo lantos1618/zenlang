@@ -235,6 +235,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed `.requires` conformance checks read validated resolver
   required-behavior refs, so stale AST-only required behavior type arguments
   cannot produce false missing-impl diagnostics.
+- Resolver-backed `.implements` conformance checks read validated resolver
+  behavior impl refs before method conformance, so stale AST-only impl behavior
+  type arguments cannot produce false method signature diagnostics.
 - Generic behavior bounds use the same inheritance-aware behavior satisfaction
   check as `.requires`.
 - Inherited generic behavior dispatch is covered by the executable fixture

@@ -587,6 +587,7 @@ pub struct TypeChecker {
     current_self_type: Option<Type>,
     pending_defers: Vec<TypedExpression>,
     resolver_backed_collection: bool,
+    resolver_behavior_impl_refs: HashMap<String, VecDeque<BehaviorRefMetadata>>,
     resolver_behavior_required_refs: HashMap<String, VecDeque<BehaviorRefMetadata>>,
 }
 
@@ -621,6 +622,7 @@ impl TypeChecker {
             current_self_type: None,
             pending_defers: Vec::new(),
             resolver_backed_collection: false,
+            resolver_behavior_impl_refs: HashMap::new(),
             resolver_behavior_required_refs: HashMap::new(),
         }
     }
@@ -1201,10 +1203,12 @@ impl TypeChecker {
                 }
                 Declaration::Struct { name, .. } => {
                     self.collect_resolver_struct_fields(symbols, name);
+                    self.collect_resolver_type_behavior_impl_refs(symbols, name);
                     self.collect_resolver_type_behavior_requires(symbols, name);
                 }
                 Declaration::Enum { name, .. } => {
                     self.collect_resolver_enum_variants(symbols, name);
+                    self.collect_resolver_type_behavior_impl_refs(symbols, name);
                     self.collect_resolver_type_behavior_requires(symbols, name);
                 }
                 Declaration::Behavior { name, .. } => {
@@ -1238,6 +1242,7 @@ impl TypeChecker {
         self.resolver_backed_collection = true;
         self.validate_collected_declaration_semantics(decls);
         self.resolver_backed_collection = false;
+        self.resolver_behavior_impl_refs.clear();
         self.resolver_behavior_required_refs.clear();
 
         for decl in decls {
@@ -1558,6 +1563,18 @@ impl TypeChecker {
                 self.behavior_reference_key(&behavior.name, &behavior.type_args),
             ));
         }
+    }
+
+    fn collect_resolver_type_behavior_impl_refs(&mut self, symbols: &SymbolTable, name: &str) {
+        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
+            return;
+        };
+        let Some(impl_refs) = symbol.behavior_impl_refs.as_ref() else {
+            return;
+        };
+
+        self.resolver_behavior_impl_refs
+            .insert(name.to_string(), impl_refs.iter().cloned().collect());
     }
 
     fn collect_resolver_type_behavior_requires(&mut self, symbols: &SymbolTable, name: &str) {
@@ -2043,6 +2060,16 @@ impl TypeChecker {
         methods: &[Declaration],
         span: Span,
     ) {
+        let resolver_impl_ref = self.resolver_impl_ref_for(type_name, behavior);
+        let behavior = resolver_impl_ref
+            .as_ref()
+            .map(|implementation| implementation.name.as_str())
+            .unwrap_or(behavior);
+        let behavior_type_args = resolver_impl_ref
+            .as_ref()
+            .map(|implementation| implementation.type_args.as_slice())
+            .unwrap_or(behavior_type_args);
+
         if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
             self.diagnostics.push(Diagnostic::error(
                 "E6005",
@@ -2214,6 +2241,29 @@ impl TypeChecker {
                 ));
             }
         }
+    }
+
+    fn resolver_impl_ref_for(
+        &mut self,
+        type_name: &str,
+        behavior: &str,
+    ) -> Option<BehaviorRefMetadata> {
+        if !self.resolver_backed_collection {
+            return None;
+        }
+
+        let impl_refs = self.resolver_behavior_impl_refs.get_mut(type_name)?;
+        if impl_refs
+            .front()
+            .is_some_and(|implementation| implementation.name == behavior)
+        {
+            return impl_refs.pop_front();
+        }
+
+        let index = impl_refs
+            .iter()
+            .position(|implementation| implementation.name == behavior)?;
+        impl_refs.remove(index)
     }
 
     fn find_overlapping_behavior_impl(&self, type_name: &str, behavior: &str) -> Option<String> {
@@ -8898,6 +8948,11 @@ Point.implements(Json<str>) {
             !tc.behavior_impls
                 .contains(&("Point".to_string(), "Json_i32".to_string())),
             "AST-only Json<i32> impl drift should not remain after resolver collection"
+        );
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored impl metadata should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
         );
     }
 
