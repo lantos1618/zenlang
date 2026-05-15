@@ -91,6 +91,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed generic type-reference validation reads collected
   resolver-restored function and method signatures, so stale AST-only parameter
   or return annotations cannot produce false unknown-type diagnostics.
+- Resolver-backed top-level method collection also restores method names from
+  resolver value symbols by declaration span when AST-only method names are
+  stale, so collected `Type.method` signatures use resolver-owned names.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
