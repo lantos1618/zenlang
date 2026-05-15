@@ -9836,6 +9836,37 @@ Box.apply<U: Json<U>> = (self: Box, callback: (U) U) (U) U {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_generic_method_template() {
+        let mut program = parse_program(
+            r#"
+Box: { value: i32 }
+Box.keep<T> = (self: Box, value: T) T { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "Box.keep", None);
+        if let Declaration::Method {
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[1]
+        {
+            params[1].ty = AstType::Named("Stale".to_string());
+            *return_type = Some(AstType::Named("AlsoStale".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.generic_methods.contains_key("Box.keep"),
+            "resolver-backed collection should not keep AST-only generic method templates when resolver signature metadata is incomplete"
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_struct_field_metadata() {
         let mut program = parse_program(
             r#"
