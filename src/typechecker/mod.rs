@@ -1509,10 +1509,10 @@ impl TypeChecker {
                         param
                     })
                     .collect();
-                let return_type = method
-                    .return_type
-                    .as_ref()
-                    .map(|_| metadata.return_type.clone());
+                let return_type = match metadata.return_type {
+                    AstType::Void => None,
+                    ty => Some(ty),
+                };
                 ast::BehaviorMethod {
                     name: metadata.name,
                     params,
@@ -8798,6 +8798,39 @@ Point.implements(Json) {
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored behavior method name metadata should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_method_return_presence_metadata() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
+            methods[0].return_type = None;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.behaviors.get("Json").expect("behavior info");
+        assert_eq!(info.methods[0].return_type, Some(AstType::Str));
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior method return metadata should avoid stale AST impl diagnostics: {:?}",
             tc.diagnostics
         );
     }

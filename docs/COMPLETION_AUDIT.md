@@ -489,6 +489,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior method collection also restores method names from
   validated resolver metadata, so stale AST-only behavior method names cannot
   shadow resolver-owned signatures during impl conformance.
+- Resolver-backed behavior method collection derives return-type presence from
+  validated resolver metadata, so stale AST-only missing return annotations
+  cannot erase resolver-owned behavior method returns.
 - Resolver behavior method signature metadata preserves generic return types on
   generic behaviors, and typechecker setup rejects generic method-signature
   handoff drift before behavior metadata collection.
