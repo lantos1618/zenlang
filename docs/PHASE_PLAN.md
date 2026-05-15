@@ -1013,6 +1013,8 @@ checked-in docs, tests, and commits only.
   shape used by the resolver metadata validation paths.
 - Resolver local mutability validation now carries its diagnostic code and
   display formatting through a validation bundle.
+- Resolver local mutability validation now also owns its full diagnostic
+  message formatting, matching the source/count/visibility helper shape.
 - Resolver extra-symbol validation now shares one diagnostic helper across
   declaration/import/module and local symbol checks.
 - Resolver missing-symbol validation now shares one diagnostic helper across

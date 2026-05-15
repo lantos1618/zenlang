@@ -564,6 +564,19 @@ impl MutabilityValidation {
     fn display(self, actual: Option<bool>, expected: bool) -> (&'static str, &'static str) {
         (mutability_name(actual), mutability_name(Some(expected)))
     }
+
+    fn message(
+        self,
+        symbol_kind: &str,
+        name: &str,
+        actual: Option<bool>,
+        expected: bool,
+    ) -> String {
+        let (actual, expected) = self.display(actual, expected);
+        format!(
+            "resolver {symbol_kind} symbol '{name}' has mutability {actual}, expected {expected}"
+        )
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -7651,12 +7664,9 @@ impl TypeChecker {
         span: Span,
     ) {
         if actual != Some(expected) {
-            let (actual, expected) = validation.display(actual, expected);
             self.diagnostics.push(Diagnostic::error(
                 validation.code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has mutability {actual}, expected {expected}"
-                ),
+                validation.message(symbol_kind, name, actual, expected),
                 span,
             ));
         }
@@ -10251,6 +10261,10 @@ main = (mut input: i32) i32 {
             ("immutable", "mutable")
         );
         assert_eq!(validation.display(None, false), ("unknown", "immutable"));
+        assert_eq!(
+            validation.message("local", "value", Some(false), true),
+            "resolver local symbol 'value' has mutability immutable, expected mutable"
+        );
     }
 
     #[test]
