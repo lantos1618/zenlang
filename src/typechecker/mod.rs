@@ -8454,8 +8454,12 @@ fn format_variant_names(variants: Option<&[String]>) -> String {
 
 fn format_resolver_string_list(values: Option<&[String]>) -> String {
     values
-        .map(|values| format!("({})", values.join(", ")))
+        .map(|values| format!("({})", join_resolver_strings(values)))
         .unwrap_or_else(|| "unknown".to_string())
+}
+
+fn join_resolver_strings(values: &[String]) -> String {
+    values.join(", ")
 }
 
 fn expected_variant_payload_metadata(payload: &Option<AstType>) -> ExpectedVariantPayloadType {
@@ -8995,7 +8999,7 @@ fn format_behavior_method_types(methods: Option<&[BehaviorMethodTypeMetadata]>) 
 
 fn format_behavior_ref_names(parents: Option<&[String]>) -> String {
     match parents {
-        Some(parents) if !parents.is_empty() => parents.join(", "),
+        Some(parents) if !parents.is_empty() => join_resolver_strings(parents),
         _ => "none".to_string(),
     }
 }
@@ -9101,6 +9105,7 @@ mod tests {
     #[test]
     fn resolver_string_list_display_formats_known_and_missing_lists() {
         let names = vec!["T".to_string(), "U".to_string()];
+        assert_eq!(join_resolver_strings(&names), "T, U");
         assert_eq!(format_resolver_string_list(Some(&names)), "(T, U)");
         assert_eq!(format_resolver_string_list(None), "unknown");
     }

@@ -142,6 +142,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver string-list display now shares one helper across type-parameter,
   value-parameter, parameter-type, and variant-name diagnostics, covered by
   `typechecker::tests::resolver_string_list_display_formats_known_and_missing_lists`.
+- Resolver comma-joined string rendering is now shared by resolver metadata
+  lists and behavior-ref name diagnostics, covered by the same string-list
+  display test.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
