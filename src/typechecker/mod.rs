@@ -1146,6 +1146,8 @@ impl TypeChecker {
                 } => {
                     if !self.resolver_backed_collection {
                         self.validate_generic_bounds(type_params);
+                    } else {
+                        continue;
                     }
                     self.structs.insert(
                         name.clone(),
@@ -9356,6 +9358,30 @@ Pipeline<T: Json<T>>: { callback: (i32) i32 }
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             }
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_struct_fields() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_field_types_for_test(Namespace::Type, "Point", None);
+        if let Declaration::Struct { fields, .. } = &mut program.declarations[0] {
+            fields[0].ty = AstType::Named("Stale".to_string());
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.structs.contains_key("Point"),
+            "resolver-backed collection should not keep AST-only struct fields when resolver field metadata is incomplete"
         );
     }
 
