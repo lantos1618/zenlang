@@ -7674,7 +7674,7 @@ fn expected_type_parameter_metadata(type_params: &[ast::TypeParam]) -> Vec<Expec
     expected
 }
 
-fn expected_type_like_symbol(
+fn expected_type_like_metadata(
     type_params: &[ast::TypeParam],
     is_public: Option<bool>,
 ) -> ExpectedTypeLikeSymbol {
@@ -7691,7 +7691,7 @@ fn expected_behavior_symbol(
     is_public: bool,
 ) -> ExpectedBehaviorSymbol {
     ExpectedBehaviorSymbol {
-        type_like: expected_type_like_symbol(type_params, Some(is_public)),
+        type_like: expected_type_like_metadata(type_params, Some(is_public)),
         methods: expected_behavior_method_metadata(methods),
     }
 }
@@ -7702,7 +7702,7 @@ fn expected_struct_symbol(
     is_public: bool,
 ) -> ExpectedStructSymbol {
     ExpectedStructSymbol {
-        type_like: expected_type_like_symbol(type_params, Some(is_public)),
+        type_like: expected_type_like_metadata(type_params, Some(is_public)),
         fields: expected_field_metadata(fields),
     }
 }
@@ -7713,7 +7713,7 @@ fn expected_enum_symbol(
     is_public: bool,
 ) -> ExpectedEnumSymbol {
     ExpectedEnumSymbol {
-        type_like: expected_type_like_symbol(type_params, Some(is_public)),
+        type_like: expected_type_like_metadata(type_params, Some(is_public)),
         variant_names: expected_variant_name_metadata(variants),
     }
 }
