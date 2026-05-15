@@ -2934,6 +2934,9 @@ impl TypeChecker {
         self.validate_ast_behavior_extends(decls);
         self.validate_ast_type_generic_bounds(decls);
         self.collect_ast_type_declarations(decls);
+        self.validate_ast_callable_generic_bounds(decls);
+        self.collect_ast_callable_declarations(decls);
+        self.collect_resolver_backed_callable_templates(decls);
 
         for decl in decls {
             match decl {
@@ -2945,6 +2948,65 @@ impl TypeChecker {
                         self.imports.insert(name.clone(), module_path.clone());
                     }
                 }
+                Declaration::Function { .. } | Declaration::Method { .. } => {}
+                Declaration::Behavior { type_params, .. } => {
+                    if !self.resolver_backed_collection {
+                        self.validate_generic_bounds(type_params);
+                    }
+                }
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior,
+                    behavior_type_args,
+                    methods,
+                    ..
+                } => {
+                    if !self.resolver_backed_collection {
+                        for method in methods {
+                            self.collect_impl_method_signature(type_name, method);
+                        }
+                        if let Some(behavior) = behavior {
+                            self.collect_behavior_default_method_signatures(
+                                type_name,
+                                behavior,
+                                behavior_type_args,
+                                methods,
+                            );
+                        }
+                    } else {
+                        for method in methods {
+                            self.collect_resolver_backed_impl_method_template(type_name, method);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn validate_ast_callable_generic_bounds(&mut self, decls: &[Declaration]) {
+        if self.resolver_backed_collection {
+            return;
+        }
+
+        for decl in decls {
+            match decl {
+                Declaration::Function { type_params, .. }
+                | Declaration::Method { type_params, .. } => {
+                    self.validate_generic_bounds(type_params);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn collect_ast_callable_declarations(&mut self, decls: &[Declaration]) {
+        if self.resolver_backed_collection {
+            return;
+        }
+
+        for decl in decls {
+            match decl {
                 Declaration::Function {
                     name,
                     type_params,
@@ -2954,21 +3016,6 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    if !self.resolver_backed_collection {
-                        self.validate_generic_bounds(type_params);
-                    }
-                    if self.resolver_backed_collection {
-                        if let Some(template) = generic_template_from_type_params(
-                            type_params,
-                            params,
-                            return_type,
-                            body,
-                            *span,
-                        ) {
-                            self.generic_functions.insert(name.clone(), template);
-                        }
-                        continue;
-                    }
                     self.functions.insert(
                         name.clone(),
                         func_info_from_ast_signature(
@@ -2998,27 +3045,62 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    if !self.resolver_backed_collection {
-                        self.validate_generic_bounds(type_params);
-                    }
-                    if self.resolver_backed_collection {
-                        if let Some(template) = generic_template_from_type_params(
-                            type_params,
-                            params,
-                            return_type,
-                            body,
-                            *span,
-                        ) {
-                            self.generic_methods
-                                .insert(format!("{}.{}", type_name, method_name), template);
-                        }
-                        continue;
-                    }
                     let key = format!("{}.{}", type_name, method_name);
                     self.methods.insert(
                         key.clone(),
-                        func_info_from_ast_signature(key, type_params, params, return_type),
+                        func_info_from_ast_signature(key.clone(), type_params, params, return_type),
                     );
+                    if let Some(template) = generic_template_from_type_params(
+                        type_params,
+                        params,
+                        return_type,
+                        body,
+                        *span,
+                    ) {
+                        self.generic_methods.insert(key, template);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn collect_resolver_backed_callable_templates(&mut self, decls: &[Declaration]) {
+        if !self.resolver_backed_collection {
+            return;
+        }
+
+        for decl in decls {
+            match decl {
+                Declaration::Function {
+                    name,
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                    span,
+                    ..
+                } => {
+                    if let Some(template) = generic_template_from_type_params(
+                        type_params,
+                        params,
+                        return_type,
+                        body,
+                        *span,
+                    ) {
+                        self.generic_functions.insert(name.clone(), template);
+                    }
+                }
+                Declaration::Method {
+                    type_name,
+                    method_name,
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                    span,
+                    ..
+                } => {
                     if let Some(template) = generic_template_from_type_params(
                         type_params,
                         params,
@@ -3028,36 +3110,6 @@ impl TypeChecker {
                     ) {
                         self.generic_methods
                             .insert(format!("{}.{}", type_name, method_name), template);
-                    }
-                }
-                Declaration::Behavior { type_params, .. } => {
-                    if !self.resolver_backed_collection {
-                        self.validate_generic_bounds(type_params);
-                    }
-                }
-                Declaration::ImplBlock {
-                    type_name,
-                    behavior,
-                    behavior_type_args,
-                    methods,
-                    ..
-                } => {
-                    if !self.resolver_backed_collection {
-                        for method in methods {
-                            self.collect_impl_method_signature(type_name, method);
-                        }
-                        if let Some(behavior) = behavior {
-                            self.collect_behavior_default_method_signatures(
-                                type_name,
-                                behavior,
-                                behavior_type_args,
-                                methods,
-                            );
-                        }
-                    } else {
-                        for method in methods {
-                            self.collect_resolver_backed_impl_method_template(type_name, method);
-                        }
                     }
                 }
                 _ => {}
@@ -22110,6 +22162,40 @@ describe = (flag: bool) StaticString {
         tc.collect_declarations(&decls);
         let info = tc.functions.get("identity").unwrap();
         assert_eq!(info.type_params, vec!["T".to_string()]);
+    }
+
+    #[test]
+    fn generic_method_collection() {
+        use crate::ast::Expression;
+        let mut tc = TypeChecker::new();
+        let decls = vec![Declaration::Method {
+            type_name: "Box".into(),
+            method_name: "get".into(),
+            type_params: vec![crate::ast::declarations::TypeParam {
+                name: "T".into(),
+                constraint: None,
+                constraint_type_args: Vec::new(),
+                span: Span::dummy(),
+            }],
+            params: vec![crate::ast::Param {
+                name: "value".into(),
+                ty: AstType::Named("T".into()),
+                mutable: false,
+                span: Span::dummy(),
+            }],
+            return_type: Some(AstType::Named("T".into())),
+            body: Expression::Block {
+                statements: Vec::new(),
+                expr: None,
+                span: Span::dummy(),
+            },
+            public: false,
+            span: Span::dummy(),
+        }];
+        tc.collect_declarations(&decls);
+        let info = tc.methods.get("Box.get").unwrap();
+        assert_eq!(info.type_params, vec!["T".to_string()]);
+        assert!(tc.generic_methods.contains_key("Box.get"));
     }
 
     #[test]
