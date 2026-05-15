@@ -2452,12 +2452,12 @@ impl TypeChecker {
         type_name: &str,
         behavior: &str,
     ) -> Option<BehaviorRefMetadata> {
-        if !self.resolver_backed_collection {
-            return None;
-        }
-
-        let required_refs = self.resolver_behavior_required_refs.get_mut(type_name)?;
-        Self::pop_resolver_behavior_ref(required_refs, behavior)
+        Self::pop_resolver_behavior_ref_for(
+            self.resolver_backed_collection,
+            &mut self.resolver_behavior_required_refs,
+            type_name,
+            behavior,
+        )
     }
 
     fn check_behavior_extends(
@@ -2926,12 +2926,26 @@ impl TypeChecker {
         type_name: &str,
         behavior: &str,
     ) -> Option<BehaviorRefMetadata> {
-        if !self.resolver_backed_collection {
+        Self::pop_resolver_behavior_ref_for(
+            self.resolver_backed_collection,
+            &mut self.resolver_behavior_impl_refs,
+            type_name,
+            behavior,
+        )
+    }
+
+    fn pop_resolver_behavior_ref_for(
+        resolver_backed_collection: bool,
+        refs_by_type: &mut HashMap<String, VecDeque<BehaviorRefMetadata>>,
+        type_name: &str,
+        behavior: &str,
+    ) -> Option<BehaviorRefMetadata> {
+        if !resolver_backed_collection {
             return None;
         }
 
-        let impl_refs = self.resolver_behavior_impl_refs.get_mut(type_name)?;
-        Self::pop_resolver_behavior_ref(impl_refs, behavior)
+        let refs = refs_by_type.get_mut(type_name)?;
+        Self::pop_resolver_behavior_ref(refs, behavior)
     }
 
     fn pop_resolver_behavior_ref(
