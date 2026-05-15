@@ -927,6 +927,8 @@ checked-in docs, tests, and commits only.
   module, import, local, type-like, variant, and value symbols.
 - Resolver source validation now shares one diagnostic helper across module,
   import, and local symbols.
+- Resolver local mutability validation now shares the same diagnostic helper
+  shape used by the resolver metadata validation paths.
 
 ## Current Phase
 

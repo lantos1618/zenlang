@@ -6595,25 +6595,14 @@ impl TypeChecker {
             return;
         };
 
-        if symbol.is_mutable != Some(expected.is_mutable) {
-            let actual = match symbol.is_mutable {
-                Some(true) => "mutable",
-                Some(false) => "immutable",
-                None => "unknown",
-            };
-            let expected_mutability = if expected.is_mutable {
-                "mutable"
-            } else {
-                "immutable"
-            };
-            self.diagnostics.push(Diagnostic::error(
-                "E0231",
-                format!(
-                    "resolver local symbol '{name}' has mutability {actual}, expected {expected_mutability}"
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_mutability(
+            "local",
+            name,
+            symbol.is_mutable,
+            expected.is_mutable,
+            "E0231",
+            span,
+        );
 
         self.validate_resolver_visibility(
             "local",
@@ -6952,6 +6941,28 @@ impl TypeChecker {
                 validation.code,
                 format!(
                     "resolver {symbol_kind} symbol '{name}' has source '{actual}', expected {expected}"
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn validate_resolver_mutability(
+        &mut self,
+        symbol_kind: &str,
+        name: &str,
+        actual: Option<bool>,
+        expected: bool,
+        code: &'static str,
+        span: Span,
+    ) {
+        if actual != Some(expected) {
+            let actual = mutability_name(actual);
+            let expected = mutability_name(Some(expected));
+            self.diagnostics.push(Diagnostic::error(
+                code,
+                format!(
+                    "resolver {symbol_kind} symbol '{name}' has mutability {actual}, expected {expected}"
                 ),
                 span,
             ));
@@ -7986,6 +7997,14 @@ fn visibility_name(is_public: bool) -> &'static str {
         "public"
     } else {
         "private"
+    }
+}
+
+fn mutability_name(is_mutable: Option<bool>) -> &'static str {
+    match is_mutable {
+        Some(true) => "mutable",
+        Some(false) => "immutable",
+        None => "unknown",
     }
 }
 
