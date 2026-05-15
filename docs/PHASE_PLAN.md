@@ -780,6 +780,8 @@ checked-in docs, tests, and commits only.
   before resolver metadata restoration.
 - Resolver-backed behavior collection no longer keeps AST-only behavior method
   metadata when resolver method metadata is missing.
+- Resolver-backed behavior collection no longer falls back to AST-only generic
+  bounds when resolver bound metadata is missing.
 
 ## Current Phase
 

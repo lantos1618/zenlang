@@ -1761,7 +1761,7 @@ impl TypeChecker {
                     .type_parameter_bound_refs
                     .as_deref()
                     .map(type_param_bounds_from_resolver_refs)
-                    .unwrap_or_else(|| existing.type_param_bounds.clone()),
+                    .unwrap_or_default(),
                 methods,
             },
         );
@@ -8959,6 +8959,37 @@ Serializable<T: Json<T>>: behavior {
             tc.diagnostics.is_empty(),
             "resolver-restored behavior bounds should avoid stale AST generic-bound diagnostics: {:?}",
             tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_behavior_bounds() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Serializable<T: Json<T>>: behavior {
+    serialize: (Self) T
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_type_parameter_bound_refs_for_test(Namespace::Behavior, "Serializable", None);
+        if let Declaration::Behavior { type_params, .. } = &mut program.declarations[1] {
+            type_params[0].constraint = Some("Missing".to_string());
+            type_params[0].constraint_type_args.clear();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.behaviors.get("Serializable").expect("behavior info");
+        assert!(
+            info.type_param_bounds.is_empty(),
+            "resolver-backed behavior collection should not keep AST-only bounds when resolver bound metadata is incomplete"
         );
     }
 
