@@ -711,6 +711,15 @@ impl BehaviorDeclarationAbsenceValidation {
         }
     }
 
+    fn variant_resolver_codes() -> Self {
+        Self {
+            method_signature_code: "E0339",
+            method_type_code: "E0393",
+            parent_name_code: "E0340",
+            parent_ref_code: "E0394",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
         [
             AbsentMetadataEntry::new(
@@ -8445,12 +8454,7 @@ impl TypeChecker {
             symbol,
             "variant",
             name,
-            BehaviorDeclarationAbsenceValidation {
-                method_signature_code: "E0339",
-                method_type_code: "E0393",
-                parent_name_code: "E0340",
-                parent_ref_code: "E0394",
-            },
+            BehaviorDeclarationAbsenceValidation::variant_resolver_codes(),
             span,
         );
 
@@ -10694,6 +10698,16 @@ PrettyJson.extends(Json)
         assert_eq!(validation.method_type_code, "E0385");
         assert_eq!(validation.parent_name_code, "E0262");
         assert_eq!(validation.parent_ref_code, "E0386");
+    }
+
+    #[test]
+    fn behavior_declaration_absence_validation_uses_variant_resolver_codes() {
+        let validation = BehaviorDeclarationAbsenceValidation::variant_resolver_codes();
+
+        assert_eq!(validation.method_signature_code, "E0339");
+        assert_eq!(validation.method_type_code, "E0393");
+        assert_eq!(validation.parent_name_code, "E0340");
+        assert_eq!(validation.parent_ref_code, "E0394");
     }
 
     #[test]
