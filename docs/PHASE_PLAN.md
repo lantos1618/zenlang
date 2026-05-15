@@ -108,6 +108,9 @@ checked-in docs, tests, and commits only.
 - Collected declaration semantic validation now records behavior impl and
   requires checks in one declaration dispatch before replaying the existing
   impl-before-requires validation order.
+- Resolver-backed type behavior-impl refresh now uses explicit restored type
+  tasks instead of a callback traversal for the final association restoration
+  pass.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so

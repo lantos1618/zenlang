@@ -121,6 +121,10 @@ struct BehaviorRequiresValidationTask<'a> {
     span: Span,
 }
 
+struct ResolverTypeBehaviorRefreshTask {
+    restored_name: String,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorBound {
     pub behavior: String,
@@ -3622,9 +3626,9 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: &SymbolTable,
     ) {
-        self.for_each_resolver_type_declaration(decls, symbols, |checker, restored_name| {
-            checker.collect_resolver_type_behavior_impls(symbols, restored_name);
-        });
+        for task in self.resolver_type_behavior_refresh_tasks(decls, symbols) {
+            self.collect_resolver_type_behavior_impls(symbols, &task.restored_name);
+        }
     }
 
     fn with_resolver_backed_collection(&mut self, collect: impl FnOnce(&mut Self)) {
@@ -3667,22 +3671,23 @@ impl TypeChecker {
         tasks
     }
 
-    fn for_each_resolver_type_declaration(
-        &mut self,
+    fn resolver_type_behavior_refresh_tasks(
+        &self,
         decls: &[Declaration],
         symbols: &SymbolTable,
-        mut visit: impl FnMut(&mut Self, &str),
-    ) {
+    ) -> Vec<ResolverTypeBehaviorRefreshTask> {
+        let mut tasks = Vec::new();
         for decl in decls {
             match decl {
                 Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. } => {
                     let restored_name =
                         Self::resolver_symbol_name_for(symbols, Namespace::Type, name, *span);
-                    visit(self, &restored_name);
+                    tasks.push(ResolverTypeBehaviorRefreshTask { restored_name });
                 }
                 _ => {}
             }
         }
+        tasks
     }
 
     fn collect_resolver_type_behavior_refs_for_declaration(

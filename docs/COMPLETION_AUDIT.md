@@ -179,6 +179,9 @@ and do not assume Phase 4 is ready without evidence.
 - Collected declaration semantic validation now records behavior impl and
   requires tasks in one declaration dispatch, then replays the same
   impl-before-requires validation order as before.
+- Resolver-backed type behavior-impl refresh now uses explicit restored type
+  tasks instead of a callback traversal for the final association restoration
+  pass.
 - Module graph typechecking now seeds graph imports and then runs
   resolver-backed declaration collection for the current module, so multi-file
   graph modules use the same resolver-owned metadata handoff as
