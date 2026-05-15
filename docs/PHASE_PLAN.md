@@ -891,6 +891,8 @@ checked-in docs, tests, and commits only.
   imported generic function and method templates share the same dependency path.
 - Generic template dependency save/restore state now uses named dependency
   fields instead of a positional tuple across monomorphization.
+- Generic template dependency save/restore now uses shared map helpers across
+  structs, enums, functions, generic functions, methods, and generic methods.
 
 ## Current Phase
 

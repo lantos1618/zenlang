@@ -15,6 +15,26 @@ pub(crate) struct InferenceConflict {
     pub(crate) actual: Type,
 }
 
+fn install_dependency_map<T: Clone>(
+    target: &mut HashMap<String, T>,
+    dependencies: &HashMap<String, T>,
+) -> Vec<(String, Option<T>)> {
+    dependencies
+        .iter()
+        .map(|(name, value)| (name.clone(), target.insert(name.clone(), value.clone())))
+        .collect()
+}
+
+fn restore_dependency_map<T>(target: &mut HashMap<String, T>, state: Vec<(String, Option<T>)>) {
+    for (name, previous) in state {
+        if let Some(previous) = previous {
+            target.insert(name, previous);
+        } else {
+            target.remove(&name);
+        }
+    }
+}
+
 impl TypeChecker {
     pub(crate) fn mangle_generic_type_name(&self, name: &str, type_args: &[AstType]) -> String {
         if type_args.is_empty() {
@@ -204,106 +224,29 @@ impl TypeChecker {
         &mut self,
         template: &super::GenericFunctionTemplate,
     ) -> super::TemplateDependencyState {
-        let mut saved_structs = Vec::new();
-        for (name, info) in &template.dependency_structs {
-            saved_structs.push((
-                name.clone(),
-                self.structs.insert(name.clone(), info.clone()),
-            ));
-        }
-
-        let mut saved_enums = Vec::new();
-        for (name, info) in &template.dependency_enums {
-            saved_enums.push((name.clone(), self.enums.insert(name.clone(), info.clone())));
-        }
-
-        let mut saved_functions = Vec::new();
-        for (name, info) in &template.dependency_functions {
-            saved_functions.push((
-                name.clone(),
-                self.functions.insert(name.clone(), info.clone()),
-            ));
-        }
-
-        let mut saved_generic_functions = Vec::new();
-        for (name, dependency) in &template.dependency_generic_functions {
-            saved_generic_functions.push((
-                name.clone(),
-                self.generic_functions
-                    .insert(name.clone(), dependency.clone()),
-            ));
-        }
-
-        let mut saved_methods = Vec::new();
-        for (name, info) in &template.dependency_methods {
-            saved_methods.push((
-                name.clone(),
-                self.methods.insert(name.clone(), info.clone()),
-            ));
-        }
-
-        let mut saved_generic_methods = Vec::new();
-        for (name, dependency) in &template.dependency_generic_methods {
-            saved_generic_methods.push((
-                name.clone(),
-                self.generic_methods
-                    .insert(name.clone(), dependency.clone()),
-            ));
-        }
-
         super::TemplateDependencyState {
-            structs: saved_structs,
-            enums: saved_enums,
-            functions: saved_functions,
-            generic_functions: saved_generic_functions,
-            methods: saved_methods,
-            generic_methods: saved_generic_methods,
+            structs: install_dependency_map(&mut self.structs, &template.dependency_structs),
+            enums: install_dependency_map(&mut self.enums, &template.dependency_enums),
+            functions: install_dependency_map(&mut self.functions, &template.dependency_functions),
+            generic_functions: install_dependency_map(
+                &mut self.generic_functions,
+                &template.dependency_generic_functions,
+            ),
+            methods: install_dependency_map(&mut self.methods, &template.dependency_methods),
+            generic_methods: install_dependency_map(
+                &mut self.generic_methods,
+                &template.dependency_generic_methods,
+            ),
         }
     }
 
     fn restore_template_dependencies(&mut self, state: super::TemplateDependencyState) {
-        for (name, previous) in state.structs {
-            if let Some(previous) = previous {
-                self.structs.insert(name, previous);
-            } else {
-                self.structs.remove(&name);
-            }
-        }
-        for (name, previous) in state.enums {
-            if let Some(previous) = previous {
-                self.enums.insert(name, previous);
-            } else {
-                self.enums.remove(&name);
-            }
-        }
-        for (name, previous) in state.functions {
-            if let Some(previous) = previous {
-                self.functions.insert(name, previous);
-            } else {
-                self.functions.remove(&name);
-            }
-        }
-        for (name, previous) in state.generic_functions {
-            if let Some(previous) = previous {
-                self.generic_functions.insert(name, previous);
-            } else {
-                self.generic_functions.remove(&name);
-            }
-        }
-        for (name, previous) in state.methods {
-            if let Some(previous) = previous {
-                self.methods.insert(name, previous);
-            } else {
-                self.methods.remove(&name);
-            }
-        }
-        for (name, previous) in state.generic_methods {
-            if let Some(previous) = previous {
-                self.generic_methods.insert(name, previous);
-            } else {
-                self.generic_methods.remove(&name);
-            }
-        }
+        restore_dependency_map(&mut self.structs, state.structs);
+        restore_dependency_map(&mut self.enums, state.enums);
+        restore_dependency_map(&mut self.functions, state.functions);
+        restore_dependency_map(&mut self.generic_functions, state.generic_functions);
+        restore_dependency_map(&mut self.methods, state.methods);
+        restore_dependency_map(&mut self.generic_methods, state.generic_methods);
     }
 
     fn generic_receiver_self_type(
