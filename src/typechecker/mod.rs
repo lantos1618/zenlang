@@ -5112,17 +5112,8 @@ impl TypeChecker {
         refs: &mut VecDeque<BehaviorRefMetadata>,
         behavior: &str,
     ) -> Option<BehaviorRefMetadata> {
-        if refs
-            .front()
-            .is_some_and(|reference| reference.name == behavior)
-        {
-            return refs.pop_front();
-        }
-
-        match refs.iter().position(|reference| reference.name == behavior) {
-            Some(index) => refs.remove(index),
-            None => refs.pop_front(),
-        }
+        let index = Self::resolver_behavior_ref_queue_index(refs, behavior)?;
+        refs.remove(index)
     }
 
     fn resolver_behavior_impl_ref_for_peek(
@@ -5149,9 +5140,16 @@ impl TypeChecker {
         }
 
         let refs = refs_by_type.get(type_name)?;
+        Self::resolver_behavior_ref_queue_index(refs, behavior).and_then(|index| refs.get(index))
+    }
+
+    fn resolver_behavior_ref_queue_index(
+        refs: &VecDeque<BehaviorRefMetadata>,
+        behavior: &str,
+    ) -> Option<usize> {
         refs.iter()
-            .find(|implementation| implementation.name == behavior)
-            .or_else(|| refs.front())
+            .position(|reference| reference.name == behavior)
+            .or_else(|| (!refs.is_empty()).then_some(0))
     }
 
     fn resolver_behavior_impl_ref_parts<'a>(
@@ -10828,6 +10826,33 @@ Point.get = (self: Point) i32 { return self.x }
         assert!(
             TypeChecker::pop_resolver_behavior_ref(false, &mut refs_by_type, "Point", "Debug")
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn resolver_behavior_ref_queue_selection_prefers_exact_then_front() {
+        let refs = VecDeque::from(vec![
+            BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![AstType::I32],
+            },
+            BehaviorRefMetadata {
+                name: "Debug".to_string(),
+                type_args: vec![],
+            },
+        ]);
+
+        assert_eq!(
+            TypeChecker::resolver_behavior_ref_queue_index(&refs, "Debug"),
+            Some(1)
+        );
+        assert_eq!(
+            TypeChecker::resolver_behavior_ref_queue_index(&refs, "Missing"),
+            Some(0)
+        );
+        assert_eq!(
+            TypeChecker::resolver_behavior_ref_queue_index(&VecDeque::new(), "Missing"),
+            None
         );
     }
 
