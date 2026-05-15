@@ -905,6 +905,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior association collection skips AST-only parent, impl,
   and required refs when resolver association metadata is missing, so stale AST
   associations cannot survive incomplete resolver handoff.
+- Resolver-backed declaration collection now has named passes for resolver
+  declaration metadata refresh, behavior impl metadata refresh, semantic
+  validation, and final impl association refresh, reducing the mixed
+  declaration collection surface that later Phase 2 slices still need to shrink.
 - Resolver-backed `.requires` conformance uses restored required-behavior refs
   together with inherited child behavior impl satisfaction, covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_restored_requires_ref_for_inherited_impl`.

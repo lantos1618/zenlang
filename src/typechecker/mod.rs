@@ -3134,6 +3134,24 @@ impl TypeChecker {
     fn collect_declarations_with_symbols(&mut self, decls: &[Declaration], symbols: &SymbolTable) {
         self.with_resolver_backed_collection(|checker| checker.collect_declarations(decls));
 
+        self.collect_resolver_declaration_metadata(decls, symbols);
+        self.collect_resolver_behavior_impl_metadata(decls, symbols);
+
+        self.with_resolver_backed_collection(|checker| {
+            checker.validate_collected_declaration_semantics(decls, Some(symbols));
+        });
+        self.clear_resolver_behavior_ref_state();
+
+        self.for_each_resolver_type_declaration(decls, symbols, |checker, restored_name| {
+            checker.collect_resolver_type_behavior_impls(symbols, restored_name);
+        });
+    }
+
+    fn collect_resolver_declaration_metadata(
+        &mut self,
+        decls: &[Declaration],
+        symbols: &SymbolTable,
+    ) {
         for decl in decls {
             match decl {
                 Declaration::Function { name, span, .. } => {
@@ -3174,7 +3192,13 @@ impl TypeChecker {
                 _ => {}
             }
         }
+    }
 
+    fn collect_resolver_behavior_impl_metadata(
+        &mut self,
+        decls: &[Declaration],
+        symbols: &SymbolTable,
+    ) {
         self.with_resolver_backed_collection(|checker| {
             checker.for_each_resolver_behavior_impl_block(
                 decls,
@@ -3205,18 +3229,13 @@ impl TypeChecker {
                 },
             );
         });
+    }
 
-        self.with_resolver_backed_collection(|checker| {
-            checker.validate_collected_declaration_semantics(decls, Some(symbols));
-        });
+    fn clear_resolver_behavior_ref_state(&mut self) {
         self.resolver_behavior_impl_refs.clear();
         self.resolver_behavior_required_refs.clear();
         self.resolver_missing_behavior_impl_refs.clear();
         self.resolver_missing_behavior_required_refs.clear();
-
-        self.for_each_resolver_type_declaration(decls, symbols, |checker, restored_name| {
-            checker.collect_resolver_type_behavior_impls(symbols, restored_name);
-        });
     }
 
     fn with_resolver_backed_collection(&mut self, collect: impl FnOnce(&mut Self)) {

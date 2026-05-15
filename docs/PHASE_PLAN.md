@@ -478,6 +478,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior association validation now skips AST-only parent,
   impl, and required refs when resolver association metadata is missing, and
   clears stale impl associations before resolver-owned refresh.
+- Resolver-backed declaration collection now separates resolver declaration
+  metadata refresh, behavior impl metadata refresh, semantic validation, and
+  final impl association refresh into named passes instead of one mixed
+  collection loop.
 - Inherited generic behavior dispatch has executable coverage through
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Concrete generic behavior association syntax in `.implements` and `.requires`,
