@@ -162,6 +162,9 @@ and do not assume Phase 4 is ready without evidence.
   method once for both AST collection and resolver-backed template stubs,
   shrinking another duplicate function/method declaration walk while preserving
   generic callable template coverage.
+- AST type declaration collection now validates struct/enum generic bounds in
+  the same declaration dispatch that builds type metadata, removing the
+  separate type-generic-bound pass while preserving generic type diagnostics.
 - Module graph typechecking now seeds graph imports and then runs
   resolver-backed declaration collection for the current module, so multi-file
   graph modules use the same resolver-owned metadata handoff as

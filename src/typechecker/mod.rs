@@ -3225,19 +3225,7 @@ impl TypeChecker {
             return;
         }
 
-        self.validate_ast_type_generic_bounds(decls);
         self.collect_ast_type_declarations(decls);
-    }
-
-    fn validate_ast_type_generic_bounds(&mut self, decls: &[Declaration]) {
-        for decl in decls {
-            match decl {
-                Declaration::Struct { type_params, .. } | Declaration::Enum { type_params, .. } => {
-                    self.validate_generic_bounds(type_params);
-                }
-                _ => {}
-            }
-        }
     }
 
     fn collect_ast_type_declarations(&mut self, decls: &[Declaration]) {
@@ -3249,6 +3237,7 @@ impl TypeChecker {
                     fields,
                     ..
                 } => {
+                    self.validate_generic_bounds(type_params);
                     self.structs.insert(
                         name.clone(),
                         struct_info_from_ast_fields(name.clone(), type_params, fields),
@@ -3260,6 +3249,7 @@ impl TypeChecker {
                     variants,
                     ..
                 } => {
+                    self.validate_generic_bounds(type_params);
                     self.enums.insert(
                         name.clone(),
                         enum_info_from_ast_variants(name.clone(), type_params, variants),

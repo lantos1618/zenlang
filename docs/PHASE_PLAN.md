@@ -93,6 +93,9 @@ checked-in docs, tests, and commits only.
 - Callable declaration collection now owns the function/method dispatcher for
   both AST setup and resolver-backed template stubs, so callable collection
   shares one declaration walk before mode-specific signature or stub handling.
+- AST type declaration collection now validates struct/enum generic bounds in
+  the same dispatch that builds type metadata, removing the separate generic
+  bound walk over type declarations.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so
