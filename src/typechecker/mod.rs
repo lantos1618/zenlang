@@ -233,7 +233,6 @@ struct ExpectedLocalSymbol {
 }
 
 struct ExpectedTypeParameters {
-    count: usize,
     params: Vec<ExpectedTypeParameter>,
 }
 
@@ -6647,7 +6646,8 @@ impl TypeChecker {
         validation: TypeParameterValidation,
         span: Span,
     ) {
-        if symbol.type_parameter_count != Some(expected.count) {
+        let expected_count = expected.params.len();
+        if symbol.type_parameter_count != Some(expected_count) {
             let actual = symbol
                 .type_parameter_count
                 .map(|count| count.to_string())
@@ -6656,7 +6656,7 @@ impl TypeChecker {
                 validation.count_code,
                 format!(
                     "resolver {symbol_kind} symbol '{name}' has type parameter count {actual}, expected {}",
-                    expected.count
+                    expected_count
                 ),
                 span,
             ));
@@ -7720,10 +7720,7 @@ fn expected_value_symbol(
 }
 
 fn expected_type_parameters(type_params: &[ast::TypeParam]) -> ExpectedTypeParameters {
-    let mut expected = ExpectedTypeParameters {
-        count: type_params.len(),
-        params: Vec::new(),
-    };
+    let mut expected = ExpectedTypeParameters { params: Vec::new() };
     for type_param in type_params {
         let bound = type_param.constraint.as_ref().and_then(|behavior| {
             let display = type_param_bound_display(type_param)?;
