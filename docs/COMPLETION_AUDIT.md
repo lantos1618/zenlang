@@ -415,6 +415,10 @@ and do not assume Phase 4 is ready without evidence.
   from validated resolver metadata, so stale AST-only missing return annotations
   cannot erase resolver-owned generic function or method returns before
   monomorphization.
+- Resolver-backed generic template collection rebuilds template parameters from
+  validated resolver parameter names and types, so stale AST-only parameter
+  counts cannot leave monomorphization templates with missing or extra
+  parameters.
 - Resolver-backed struct and enum collection uses typed resolver generic bound
   refs, so generic type templates no longer retain stale AST-only behavior
   bounds after resolver validation.

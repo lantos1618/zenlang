@@ -1387,6 +1387,7 @@ impl TypeChecker {
         self.collect_resolver_generic_template_signature(
             name,
             symbol.type_parameter_names.as_deref().unwrap_or(&[]),
+            parameter_names,
             parameter_types,
             return_type,
         );
@@ -1396,6 +1397,7 @@ impl TypeChecker {
         &mut self,
         name: &str,
         type_parameter_names: &[String],
+        parameter_names: &[String],
         parameter_types: &[AstType],
         return_type: &AstType,
     ) {
@@ -1408,16 +1410,24 @@ impl TypeChecker {
             return;
         };
         template.type_params = type_parameter_names.to_vec();
-        if template.params.len() != parameter_types.len() {
-            return;
-        }
-        for (param, ty) in template
-            .params
-            .iter_mut()
+        template.params = parameter_names
+            .iter()
+            .cloned()
             .zip(parameter_types.iter().cloned())
-        {
-            param.ty = ty;
-        }
+            .map(|(param_name, ty)| {
+                let existing = template
+                    .params
+                    .iter()
+                    .find(|param| param.name == param_name)
+                    .cloned();
+                Param {
+                    name: param_name,
+                    ty,
+                    mutable: existing.as_ref().is_some_and(|param| param.mutable),
+                    span: existing.map(|param| param.span).unwrap_or(template.span),
+                }
+            })
+            .collect();
         template.return_type = match return_type {
             AstType::Void => None,
             ty => Some(ty.clone()),
@@ -8787,6 +8797,36 @@ identity<T> = (value: T) T {
             .get("identity")
             .expect("generic template");
         assert_eq!(template.return_type, Some(AstType::Named("T".to_string())));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_generic_function_template_parameter_count() {
+        let mut program = parse_program(
+            r#"
+choose<T> = (left: T, right: T) T {
+    return left
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function { params, .. } = &mut program.declarations[0] {
+            params.pop();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc
+            .generic_functions
+            .get("choose")
+            .expect("generic template");
+        assert_eq!(template.params.len(), 2);
+        assert_eq!(template.params[0].name, "left");
+        assert_eq!(template.params[1].name, "right");
+        assert_eq!(template.params[0].ty, AstType::Named("T".to_string()));
+        assert_eq!(template.params[1].ty, AstType::Named("T".to_string()));
     }
 
     #[test]
