@@ -62,6 +62,9 @@ checked-in docs, tests, and commits only.
   If resolver value-signature metadata is incomplete and the collected
   signature/template is removed, body type-reference validation now skips that
   declaration instead of falling back to stale AST generic parameters.
+- Resolver-backed generic type-reference validation now has a focused
+  resolver-backed traversal instead of interleaving resolver and AST-only
+  validation in each declaration arm.
 - Resolver-backed function type-reference validation now runs through a
   dedicated restored-function helper, reducing another inline resolver
   handoff inside the broad generic type-reference declaration scan.

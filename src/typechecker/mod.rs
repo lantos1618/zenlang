@@ -5500,143 +5500,95 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: Option<&SymbolTable>,
     ) {
+        if self.resolver_backed_collection {
+            self.validate_resolver_backed_type_references(decls, symbols);
+            return;
+        }
+
         for decl in decls {
             match decl {
                 Declaration::Struct {
-                    name,
                     type_params,
                     fields,
-                    span,
                     ..
                 } => {
-                    if self.resolver_backed_collection {
-                        self.validate_resolver_struct_type_references(symbols, name, fields, *span);
-                    } else {
-                        let scoped = type_param_name_set(type_params);
-                        for field in fields {
-                            self.validate_generic_type_ref_bounds(&field.ty, &scoped, field.span);
-                            if let Some(default) = &field.default {
-                                self.validate_generic_expr_type_references(default, &scoped);
-                            }
+                    let scoped = type_param_name_set(type_params);
+                    for field in fields {
+                        self.validate_generic_type_ref_bounds(&field.ty, &scoped, field.span);
+                        if let Some(default) = &field.default {
+                            self.validate_generic_expr_type_references(default, &scoped);
                         }
                     }
                 }
                 Declaration::Enum {
-                    name,
                     type_params,
                     variants,
-                    span,
                     ..
                 } => {
-                    if self.resolver_backed_collection {
-                        self.validate_resolver_enum_type_references(symbols, name, *span);
-                    } else {
-                        let scoped = type_param_name_set(type_params);
-                        for variant in variants {
-                            if let Some(payload) = &variant.payload {
-                                self.validate_generic_type_ref_bounds(
-                                    payload,
-                                    &scoped,
-                                    variant.span,
-                                );
-                            }
+                    let scoped = type_param_name_set(type_params);
+                    for variant in variants {
+                        if let Some(payload) = &variant.payload {
+                            self.validate_generic_type_ref_bounds(payload, &scoped, variant.span);
                         }
                     }
                 }
                 Declaration::Function {
-                    name,
                     type_params,
                     params,
                     return_type,
                     body,
-                    span,
                     ..
                 } => {
-                    if self.resolver_backed_collection {
-                        self.validate_resolver_function_type_references(symbols, name, body, *span);
-                    } else {
-                        let scoped = type_param_name_set(type_params);
-                        for param in params {
-                            self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
-                        }
-                        if let Some(return_type) = return_type {
-                            self.validate_generic_type_ref_bounds(
-                                return_type,
-                                &scoped,
-                                Span::dummy(),
-                            );
-                        }
-                        self.validate_generic_expr_type_references(body, &scoped);
+                    let scoped = type_param_name_set(type_params);
+                    for param in params {
+                        self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
                     }
+                    if let Some(return_type) = return_type {
+                        self.validate_generic_type_ref_bounds(return_type, &scoped, Span::dummy());
+                    }
+                    self.validate_generic_expr_type_references(body, &scoped);
                 }
                 Declaration::Method {
                     type_params,
                     params,
                     return_type,
                     body,
-                    type_name,
-                    method_name,
-                    span,
                     ..
                 } => {
-                    let ast_key = Self::method_key(type_name, method_name);
-                    if self.resolver_backed_collection {
-                        self.validate_resolver_method_type_references(
-                            symbols, &ast_key, type_name, body, *span,
-                        );
-                    } else {
-                        let scoped = type_param_name_set(type_params);
-                        for param in params {
+                    let scoped = type_param_name_set(type_params);
+                    for param in params {
+                        self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
+                    }
+                    if let Some(return_type) = return_type {
+                        self.validate_generic_type_ref_bounds(return_type, &scoped, Span::dummy());
+                    }
+                    self.validate_generic_expr_type_references(body, &scoped);
+                }
+                Declaration::Behavior {
+                    type_params,
+                    methods,
+                    ..
+                } => {
+                    let scoped = type_param_name_set(type_params);
+                    for method in methods {
+                        for param in &method.params {
                             self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
                         }
-                        if let Some(return_type) = return_type {
+                        if let Some(return_type) = &method.return_type {
                             self.validate_generic_type_ref_bounds(
                                 return_type,
                                 &scoped,
-                                Span::dummy(),
+                                method.span,
                             );
                         }
-                        self.validate_generic_expr_type_references(body, &scoped);
-                    }
-                }
-                Declaration::Behavior {
-                    name,
-                    type_params,
-                    methods,
-                    span,
-                    ..
-                } => {
-                    if self.resolver_backed_collection {
-                        self.validate_resolver_behavior_type_references(
-                            symbols, name, methods, *span,
-                        );
-                    } else {
-                        let scoped = type_param_name_set(type_params);
-                        for method in methods {
-                            for param in &method.params {
-                                self.validate_generic_type_ref_bounds(
-                                    &param.ty, &scoped, param.span,
-                                );
-                            }
-                            if let Some(return_type) = &method.return_type {
-                                self.validate_generic_type_ref_bounds(
-                                    return_type,
-                                    &scoped,
-                                    method.span,
-                                );
-                            }
-                            if let Some(default_body) = &method.default_body {
-                                self.validate_generic_expr_type_references(default_body, &scoped);
-                            }
+                        if let Some(default_body) = &method.default_body {
+                            self.validate_generic_expr_type_references(default_body, &scoped);
                         }
                     }
                 }
-                Declaration::ImplBlock {
-                    type_name, methods, ..
-                } => {
+                Declaration::ImplBlock { methods, .. } => {
                     for method in methods {
                         if let Declaration::Function {
-                            name,
                             type_params,
                             params,
                             return_type,
@@ -5644,31 +5596,84 @@ impl TypeChecker {
                             ..
                         } = method
                         {
-                            if self.resolver_backed_collection {
-                                let ast_key = Self::method_key(type_name, name);
-                                self.validate_resolver_method_type_references(
-                                    symbols,
-                                    &ast_key,
-                                    type_name,
-                                    body,
+                            let scoped = type_param_name_set(type_params);
+                            for param in params {
+                                self.validate_generic_type_ref_bounds(
+                                    &param.ty, &scoped, param.span,
+                                );
+                            }
+                            if let Some(return_type) = return_type {
+                                self.validate_generic_type_ref_bounds(
+                                    return_type,
+                                    &scoped,
                                     method.span(),
                                 );
-                            } else {
-                                let scoped = type_param_name_set(type_params);
-                                for param in params {
-                                    self.validate_generic_type_ref_bounds(
-                                        &param.ty, &scoped, param.span,
-                                    );
-                                }
-                                if let Some(return_type) = return_type {
-                                    self.validate_generic_type_ref_bounds(
-                                        return_type,
-                                        &scoped,
-                                        method.span(),
-                                    );
-                                }
-                                self.validate_generic_expr_type_references(body, &scoped);
                             }
+                            self.validate_generic_expr_type_references(body, &scoped);
+                        }
+                    }
+                }
+                Declaration::TopLevelExpr { expr, .. } => {
+                    self.validate_generic_expr_type_references(expr, &HashSet::new());
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn validate_resolver_backed_type_references(
+        &mut self,
+        decls: &[Declaration],
+        symbols: Option<&SymbolTable>,
+    ) {
+        for decl in decls {
+            match decl {
+                Declaration::Struct {
+                    name, fields, span, ..
+                } => {
+                    self.validate_resolver_struct_type_references(symbols, name, fields, *span);
+                }
+                Declaration::Enum { name, span, .. } => {
+                    self.validate_resolver_enum_type_references(symbols, name, *span);
+                }
+                Declaration::Function {
+                    name, body, span, ..
+                } => {
+                    self.validate_resolver_function_type_references(symbols, name, body, *span);
+                }
+                Declaration::Method {
+                    body,
+                    type_name,
+                    method_name,
+                    span,
+                    ..
+                } => {
+                    let ast_key = Self::method_key(type_name, method_name);
+                    self.validate_resolver_method_type_references(
+                        symbols, &ast_key, type_name, body, *span,
+                    );
+                }
+                Declaration::Behavior {
+                    name,
+                    methods,
+                    span,
+                    ..
+                } => {
+                    self.validate_resolver_behavior_type_references(symbols, name, methods, *span);
+                }
+                Declaration::ImplBlock {
+                    type_name, methods, ..
+                } => {
+                    for method in methods {
+                        if let Declaration::Function { name, body, .. } = method {
+                            let ast_key = Self::method_key(type_name, name);
+                            self.validate_resolver_method_type_references(
+                                symbols,
+                                &ast_key,
+                                type_name,
+                                body,
+                                method.span(),
+                            );
                         }
                     }
                 }

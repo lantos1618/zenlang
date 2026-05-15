@@ -116,6 +116,14 @@ and do not assume Phase 4 is ready without evidence.
   declaration instead of falling back to stale AST generic parameters, covered
   by
   `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_generic_function_body_refs_when_signature_incomplete`.
+- Resolver-backed generic type-reference validation now has a focused
+  resolver-backed traversal instead of interleaving resolver and AST-only
+  validation in each declaration arm, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_function_signature_for_type_refs`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_method_signature_for_type_refs`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_name_for_body_type_refs`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_behavior_default_body_refs_when_methods_incomplete`.
 - Resolver-backed function type-reference validation now runs through a
   dedicated restored-function helper, with focused coverage from
   `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_generic_function_body_refs_when_signature_incomplete`
