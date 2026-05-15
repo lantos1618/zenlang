@@ -1622,6 +1622,9 @@ checked-in docs, tests, and commits only.
 - Resolver value return validation now uses the same optional-metadata
   comparison helper for display return metadata and typed return metadata,
   preserving value-specific resolver diagnostics.
+- Resolver enum variant-name validation now uses the shared metadata-list
+  comparison helper for resolver-owned variant names, preserving
+  type-specific resolver diagnostics.
 
 ## Current Phase
 

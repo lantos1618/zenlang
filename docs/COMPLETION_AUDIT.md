@@ -1863,6 +1863,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test check_program_with_symbols_validates_resolver_function_return_type`,
   `cargo test check_program_with_symbols_validates_resolver_function_type_return_metadata`,
   and `cargo test check_program_with_symbols_validates_resolver_function_typed_signature_metadata`.
+- Resolver enum variant-name validation now uses the shared metadata-list
+  comparison helper for resolver-owned variant names, covered by
+  `cargo test variant_name_validation` and
+  `cargo test check_program_with_symbols_validates_resolver_enum_variant_names`.
 
 ## Unresolved Gaps
 

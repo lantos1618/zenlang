@@ -9633,16 +9633,15 @@ impl TypeChecker {
         expected_variant_names: &[String],
         span: Span,
     ) {
-        if symbol.variant_names.as_deref() != Some(expected_variant_names) {
-            let validation = VariantNameValidation::resolver_code();
-            let actual = format_variant_names(symbol.variant_names.as_deref());
-            let expected = format_variant_names(Some(expected_variant_names));
-            self.diagnostics.push(Diagnostic::error(
-                validation.code,
-                validation.message(name, &actual, &expected),
-                span,
-            ));
-        }
+        let validation = VariantNameValidation::resolver_code();
+        self.validate_resolver_metadata_list(
+            symbol.variant_names.as_deref(),
+            expected_variant_names,
+            format_variant_names,
+            validation.code,
+            |actual, expected| validation.message(name, actual, expected),
+            span,
+        );
     }
 
     fn validate_resolver_struct_absent_enum_metadata(
