@@ -1730,10 +1730,7 @@ impl TypeChecker {
 
     fn collect_resolver_value_signature(&mut self, symbols: &SymbolTable, name: &str) {
         let Some(symbol) = symbols.lookup(Namespace::Value, name) else {
-            self.functions.remove(name);
-            self.methods.remove(name);
-            self.generic_functions.remove(name);
-            self.generic_methods.remove(name);
+            self.remove_callable_signature(name);
             return;
         };
         let (Some(parameter_names), Some(parameter_types), Some(return_type)) = (
@@ -1741,10 +1738,7 @@ impl TypeChecker {
             symbol.parameter_types.as_ref(),
             symbol.return_type.as_ref(),
         ) else {
-            self.functions.remove(name);
-            self.methods.remove(name);
-            self.generic_functions.remove(name);
-            self.generic_methods.remove(name);
+            self.remove_callable_signature(name);
             return;
         };
         let info = FuncInfo {
@@ -1772,6 +1766,13 @@ impl TypeChecker {
             parameter_types,
             return_type,
         );
+    }
+
+    fn remove_callable_signature(&mut self, name: &str) {
+        self.functions.remove(name);
+        self.methods.remove(name);
+        self.generic_functions.remove(name);
+        self.generic_methods.remove(name);
     }
 
     fn collect_resolver_generic_template_signature(
@@ -1855,9 +1856,7 @@ impl TypeChecker {
 
         if restored_key != ast_key {
             self.methods.remove(&ast_key);
-            if let Some(template) = self.generic_methods.remove(&ast_key) {
-                self.generic_methods.insert(restored_key.clone(), template);
-            }
+            Self::rekey_generic_template(&mut self.generic_methods, &ast_key, &restored_key);
         }
         self.collect_resolver_value_signature(symbols, &restored_key);
     }
@@ -1872,12 +1871,19 @@ impl TypeChecker {
 
         if restored_name != name {
             self.functions.remove(name);
-            if let Some(template) = self.generic_functions.remove(name) {
-                self.generic_functions
-                    .insert(restored_name.clone(), template);
-            }
+            Self::rekey_generic_template(&mut self.generic_functions, name, &restored_name);
         }
         self.collect_resolver_value_signature(symbols, &restored_name);
+    }
+
+    fn rekey_generic_template(
+        templates: &mut HashMap<String, GenericFunctionTemplate>,
+        old_key: &str,
+        new_key: &str,
+    ) {
+        if let Some(template) = templates.remove(old_key) {
+            templates.insert(new_key.to_string(), template);
+        }
     }
 
     fn resolver_symbol_name_for(

@@ -820,6 +820,8 @@ and do not assume Phase 4 is ready without evidence.
   inference diagnostics while preserving function/method wording.
 - Generic function and method specialization now share the template-body
   save/check/restore path, with methods supplying only their receiver self type.
+- Resolver-backed callable signature restoration now shares stale-entry cleanup
+  and generic-template rekey helpers across function and method paths.
 
 ## Unresolved Gaps
 
