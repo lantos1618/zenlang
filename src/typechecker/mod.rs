@@ -7130,14 +7130,7 @@ impl TypeChecker {
                         expected_value_symbol(params, return_type, type_params, *public),
                         *span,
                     );
-                    let mut locals = scope_cursor.new_scope();
-                    self.require_resolver_parameter_locals(symbols, params, &mut locals);
-                    self.require_resolver_expr_locals(
-                        symbols,
-                        body,
-                        &mut scope_cursor,
-                        &mut locals,
-                    );
+                    self.require_resolver_callable_locals(symbols, params, body, &mut scope_cursor);
                 }
                 Declaration::Method {
                     type_name,
@@ -7157,14 +7150,7 @@ impl TypeChecker {
                         expected_value_symbol(params, return_type, type_params, *public),
                         *span,
                     );
-                    let mut locals = scope_cursor.new_scope();
-                    self.require_resolver_parameter_locals(symbols, params, &mut locals);
-                    self.require_resolver_expr_locals(
-                        symbols,
-                        body,
-                        &mut scope_cursor,
-                        &mut locals,
-                    );
+                    self.require_resolver_callable_locals(symbols, params, body, &mut scope_cursor);
                 }
                 Declaration::Struct {
                     name,
@@ -7241,17 +7227,11 @@ impl TypeChecker {
                     };
                     for method in methods {
                         if let Some(default_body) = &method.default_body {
-                            let mut locals = scope_cursor.new_scope();
-                            self.require_resolver_parameter_locals(
+                            self.require_resolver_callable_locals(
                                 symbols,
                                 &method.params,
-                                &mut locals,
-                            );
-                            self.require_resolver_expr_locals(
-                                symbols,
                                 default_body,
                                 &mut scope_cursor,
-                                &mut locals,
                             );
                         }
                     }
@@ -7323,13 +7303,11 @@ impl TypeChecker {
                                 expected_value_symbol(params, return_type, type_params, *public),
                                 *span,
                             );
-                            let mut locals = scope_cursor.new_scope();
-                            self.require_resolver_parameter_locals(symbols, params, &mut locals);
-                            self.require_resolver_expr_locals(
+                            self.require_resolver_callable_locals(
                                 symbols,
+                                params,
                                 body,
                                 &mut scope_cursor,
-                                &mut locals,
                             );
                         }
                     }
@@ -7402,6 +7380,18 @@ impl TypeChecker {
         self.validate_resolver_behavior_association_lists(program, symbols);
         self.validate_resolver_behavior_parent_lists(program, symbols);
         self.validate_stripped_resolver_import_symbols(program, symbols);
+    }
+
+    fn require_resolver_callable_locals(
+        &mut self,
+        symbols: &SymbolTable,
+        params: &[Param],
+        body: &Expression,
+        scope_cursor: &mut ResolverScopeCursor,
+    ) {
+        let mut locals = scope_cursor.new_scope();
+        self.require_resolver_parameter_locals(symbols, params, &mut locals);
+        self.require_resolver_expr_locals(symbols, body, scope_cursor, &mut locals);
     }
 
     fn validate_no_extra_resolver_declaration_symbols(
