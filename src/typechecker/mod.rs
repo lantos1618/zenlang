@@ -2297,11 +2297,7 @@ impl TypeChecker {
         for default in
             self.behavior_default_methods_for_impl(type_name, behavior, behavior_type_args, methods)
         {
-            let key = format!("{}.{}", type_name, default.name);
-            self.methods.insert(
-                key.clone(),
-                func_info_from_behavior_method(key, &default.params, &default.return_type),
-            );
+            self.seed_behavior_default_method_signature(type_name, &default);
         }
     }
 
@@ -3055,6 +3051,18 @@ impl TypeChecker {
                 })
             })
             .collect()
+    }
+
+    fn seed_behavior_default_method_signature(
+        &mut self,
+        type_name: &str,
+        default: &DefaultBehaviorMethod,
+    ) {
+        let key = format!("{}.{}", type_name, default.name);
+        self.methods.insert(
+            key.clone(),
+            func_info_from_behavior_method(key, &default.params, &default.return_type),
+        );
     }
 
     fn impl_methods_include_behavior_method(
@@ -5459,11 +5467,7 @@ impl TypeChecker {
                 behavior_type_args,
                 methods,
             ) {
-                let key = format!("{}.{}", local_name, default.name);
-                self.methods.insert(
-                    key.clone(),
-                    func_info_from_behavior_method(key, &default.params, &default.return_type),
-                );
+                self.seed_behavior_default_method_signature(local_name, &default);
             }
         }
     }
