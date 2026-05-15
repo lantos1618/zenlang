@@ -786,6 +786,8 @@ and do not assume Phase 4 is ready without evidence.
   intermediate object.
 - Resolver field, enum variant-name, and behavior-method validators now borrow
   expectation slices instead of taking ownership of rebuilt expectation vectors.
+- Resolver absent-metadata validation now shares a list-level helper for
+  module, import, local, and variant symbol metadata entries.
 
 ## Unresolved Gaps
 
