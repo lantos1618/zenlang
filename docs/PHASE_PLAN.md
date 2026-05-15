@@ -919,6 +919,8 @@ checked-in docs, tests, and commits only.
   metadata bundle for display names and typed refs.
 - Resolver struct-field validation now shares one expected metadata bundle
   for counts, display fields, and typed AST fields.
+- Resolver behavior-method validation now shares one expected metadata bundle
+  for display signatures and typed method metadata.
 
 ## Current Phase
 

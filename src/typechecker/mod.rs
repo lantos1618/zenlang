@@ -220,6 +220,26 @@ struct ExpectedBehaviorMethod {
     metadata: BehaviorMethodTypeMetadata,
 }
 
+struct ExpectedBehaviorMethodMetadata {
+    signatures: Vec<MethodSignatureMetadata>,
+    typed: Vec<BehaviorMethodTypeMetadata>,
+}
+
+impl ExpectedBehaviorMethodMetadata {
+    fn from_methods(methods: &[ExpectedBehaviorMethod]) -> Self {
+        Self {
+            signatures: methods
+                .iter()
+                .map(|method| method.signature.clone())
+                .collect(),
+            typed: methods
+                .iter()
+                .map(|method| method.metadata.clone())
+                .collect(),
+        }
+    }
+}
+
 struct ExpectedBehaviorSymbol {
     type_like: ExpectedTypeLikeSymbol,
     methods: Vec<ExpectedBehaviorMethod>,
@@ -7382,14 +7402,11 @@ impl TypeChecker {
         expected_methods: &[ExpectedBehaviorMethod],
         span: Span,
     ) {
-        let expected_signatures: Vec<_> = expected_methods
-            .iter()
-            .map(|method| method.signature.clone())
-            .collect();
-        if symbol.behavior_method_signatures.as_deref() != Some(expected_signatures.as_slice()) {
+        let expected = ExpectedBehaviorMethodMetadata::from_methods(expected_methods);
+        if symbol.behavior_method_signatures.as_deref() != Some(expected.signatures.as_slice()) {
             let actual =
                 format_behavior_method_signatures(symbol.behavior_method_signatures.as_deref());
-            let expected = format_behavior_method_signatures(Some(&expected_signatures));
+            let expected = format_behavior_method_signatures(Some(&expected.signatures));
             self.diagnostics.push(Diagnostic::error(
                 "E0219",
                 format!(
@@ -7398,13 +7415,9 @@ impl TypeChecker {
                 span,
             ));
         }
-        let expected_types: Vec<_> = expected_methods
-            .iter()
-            .map(|method| method.metadata.clone())
-            .collect();
-        if symbol.behavior_method_types.as_deref() != Some(expected_types.as_slice()) {
+        if symbol.behavior_method_types.as_deref() != Some(expected.typed.as_slice()) {
             let actual = format_behavior_method_types(symbol.behavior_method_types.as_deref());
-            let expected = format_behavior_method_types(Some(&expected_types));
+            let expected = format_behavior_method_types(Some(&expected.typed));
             self.diagnostics.push(Diagnostic::error(
                 "E0355",
                 format!(
