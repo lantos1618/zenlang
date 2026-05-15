@@ -636,6 +636,9 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker setup validates typed resolver behavior association refs for
   generic parents, impls, and required-behavior assertions, so matching
   display-name metadata cannot hide structured association drift.
+- Resolver-backed behavior association collection skips AST-only parent, impl,
+  and required refs when resolver association metadata is missing, so stale AST
+  associations cannot survive incomplete resolver handoff.
 - Resolver-backed behavior inheritance checks validate restored resolver parent
   refs before cycle and method-coherence checks, so stale AST-only parent names
   or type arguments cannot leak false extends diagnostics.
