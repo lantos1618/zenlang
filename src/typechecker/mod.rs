@@ -789,6 +789,10 @@ fn resolver_type_param_names(symbol: &crate::resolver::Symbol) -> Vec<String> {
     symbol.type_parameter_names.clone().unwrap_or_default()
 }
 
+fn is_method_signature_key(name: &str) -> bool {
+    name.contains('.')
+}
+
 fn type_param_bound_display(type_param: &ast::TypeParam) -> Option<String> {
     type_param.constraint.as_ref().map(|constraint| {
         if type_param.constraint_type_args.is_empty() {
@@ -2031,7 +2035,7 @@ impl TypeChecker {
         );
         self.functions.remove(name);
         self.methods.remove(name);
-        if name.contains('.') {
+        if is_method_signature_key(name) {
             self.methods.insert(name.to_string(), info);
         } else {
             self.functions.insert(name.to_string(), info);
@@ -2060,7 +2064,7 @@ impl TypeChecker {
         parameter_types: &[AstType],
         return_type: &AstType,
     ) {
-        let template = if name.contains('.') {
+        let template = if is_method_signature_key(name) {
             self.generic_methods.get_mut(name)
         } else {
             self.generic_functions.get_mut(name)
