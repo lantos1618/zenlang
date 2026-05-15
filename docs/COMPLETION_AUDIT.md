@@ -683,6 +683,9 @@ and do not assume Phase 4 is ready without evidence.
   Non-generic struct literals can omit defaulted fields and receive the typed
   default expression in declaration order, covered by
   `typechecker::tests::struct_literal_uses_default_for_omitted_field`.
+  Generic struct literals also install concrete type substitutions while
+  checking omitted default expressions, covered by
+  `typechecker::tests::generic_struct_literal_uses_substituted_default_for_omitted_field`.
   When resolver field metadata is incomplete and struct collection is removed,
   default-expression validation skips that struct instead of falling back to
   stale AST generic parameters, covered by

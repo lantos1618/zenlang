@@ -17835,6 +17835,93 @@ Option: Some(i32), None
     }
 
     #[test]
+    fn generic_struct_literal_uses_substituted_default_for_omitted_field() {
+        use crate::ast::declarations::{StructField, TypeParam};
+        use crate::ast::typed::{TypedExprKind, TypedStatementKind};
+        use crate::ast::{Expression, Program, Statement};
+        let mut tc = TypeChecker::new();
+        let program = Program {
+            declarations: vec![
+                Declaration::Struct {
+                    name: "Box".into(),
+                    type_params: vec![TypeParam {
+                        name: "T".into(),
+                        constraint: None,
+                        constraint_type_args: Vec::new(),
+                        span: Span::dummy(),
+                    }],
+                    fields: vec![StructField {
+                        name: "value".into(),
+                        ty: AstType::Named("T".into()),
+                        default: Some(Expression::Block {
+                            statements: vec![Statement::VarDecl {
+                                name: "same".into(),
+                                ty: Some(AstType::Named("T".into())),
+                                value: Expression::StringLiteral {
+                                    value: "fallback".into(),
+                                    span: Span::dummy(),
+                                },
+                                mutable: false,
+                                constant: false,
+                                span: Span::dummy(),
+                            }],
+                            expr: Some(Box::new(Expression::Identifier {
+                                name: "same".into(),
+                                span: Span::dummy(),
+                            })),
+                            span: Span::dummy(),
+                        }),
+                        mutable: false,
+                        span: Span::dummy(),
+                    }],
+                    public: false,
+                    span: Span::dummy(),
+                },
+                Declaration::Function {
+                    name: "main".into(),
+                    type_params: Vec::new(),
+                    params: Vec::new(),
+                    return_type: Some(AstType::Void),
+                    body: Expression::Block {
+                        statements: vec![Statement::VarDecl {
+                            name: "box".into(),
+                            ty: None,
+                            value: Expression::StructLiteral {
+                                name: "Box".into(),
+                                type_args: vec![AstType::Str],
+                                fields: Vec::new(),
+                                span: Span::dummy(),
+                            },
+                            mutable: false,
+                            constant: false,
+                            span: Span::dummy(),
+                        }],
+                        expr: None,
+                        span: Span::dummy(),
+                    },
+                    public: false,
+                    span: Span::dummy(),
+                },
+            ],
+            file_id: 0,
+        };
+
+        let typed = tc
+            .check_program(&program)
+            .expect("generic defaulted struct field may be omitted");
+        let TypedStatementKind::VarDecl { value, .. } = &typed.functions[0].body.statements[0].kind
+        else {
+            panic!("expected var decl");
+        };
+        let TypedExprKind::StructLiteral { fields, .. } = &value.kind else {
+            panic!("expected struct literal");
+        };
+        assert_eq!(fields.len(), 1);
+        assert_eq!(fields[0].0, "value");
+        assert_eq!(fields[0].1.ty, Type::Str);
+    }
+
+    #[test]
     fn struct_literal_field_type_mismatch_is_error() {
         use crate::ast::declarations::StructField;
         use crate::ast::{Expression, Program, Statement};
