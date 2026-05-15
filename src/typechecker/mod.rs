@@ -432,6 +432,15 @@ struct ExpectedStructSymbol {
     fields: Vec<ExpectedField>,
 }
 
+impl ExpectedStructSymbol {
+    fn new(type_params: &[ast::TypeParam], fields: &[StructField], is_public: bool) -> Self {
+        Self {
+            type_like: ExpectedTypeLikeSymbol::new(type_params, Some(is_public)),
+            fields: expected_field_metadata(fields),
+        }
+    }
+}
+
 struct ExpectedEnumSymbol {
     type_like: ExpectedTypeLikeSymbol,
     variant_names: Vec<String>,
@@ -9340,10 +9349,7 @@ fn expected_struct_symbol(
     fields: &[StructField],
     is_public: bool,
 ) -> ExpectedStructSymbol {
-    ExpectedStructSymbol {
-        type_like: expected_type_like_metadata(type_params, Some(is_public)),
-        fields: expected_field_metadata(fields),
-    }
+    ExpectedStructSymbol::new(type_params, fields, is_public)
 }
 
 fn expected_enum_symbol(
@@ -11181,6 +11187,36 @@ Point.requires(Json<str>)
         assert_eq!(
             symbol.methods[0].metadata.return_type,
             AstType::Named("T".to_string())
+        );
+    }
+
+    #[test]
+    fn expected_struct_symbol_builds_type_like_and_fields_together() {
+        let type_params = vec![ast::TypeParam {
+            name: "T".to_string(),
+            constraint: None,
+            constraint_type_args: vec![],
+            span: Span::dummy(),
+        }];
+        let fields = vec![StructField {
+            name: "value".to_string(),
+            ty: AstType::Named("T".to_string()),
+            default: None,
+            mutable: false,
+            span: Span::dummy(),
+        }];
+
+        let symbol = ExpectedStructSymbol::new(&type_params, &fields, true);
+
+        assert_eq!(symbol.type_like.is_public, Some(true));
+        assert_eq!(symbol.type_like.type_params[0].name, "T");
+        assert_eq!(
+            symbol.fields[0].display,
+            ("value".to_string(), "T".to_string())
+        );
+        assert_eq!(
+            symbol.fields[0].typed,
+            ("value".to_string(), AstType::Named("T".to_string()))
         );
     }
 
