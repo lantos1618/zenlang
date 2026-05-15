@@ -2805,7 +2805,7 @@ impl TypeChecker {
         type_name: &str,
         behavior: &str,
     ) -> Option<BehaviorRefMetadata> {
-        Self::pop_resolver_behavior_ref_for(
+        Self::pop_resolver_behavior_ref(
             self.resolver_backed_collection,
             &mut self.resolver_behavior_required_refs,
             type_name,
@@ -3253,7 +3253,7 @@ impl TypeChecker {
         type_name: &str,
         behavior: &str,
     ) -> Option<BehaviorRefMetadata> {
-        Self::pop_resolver_behavior_ref_for(
+        Self::pop_resolver_behavior_ref(
             self.resolver_backed_collection,
             &mut self.resolver_behavior_impl_refs,
             type_name,
@@ -3271,7 +3271,7 @@ impl TypeChecker {
             .unwrap_or((behavior, behavior_type_args))
     }
 
-    fn pop_resolver_behavior_ref_for(
+    fn pop_resolver_behavior_ref(
         resolver_backed_collection: bool,
         refs_by_type: &mut HashMap<String, VecDeque<BehaviorRefMetadata>>,
         type_name: &str,
@@ -3282,7 +3282,7 @@ impl TypeChecker {
         }
 
         let refs = refs_by_type.get_mut(type_name)?;
-        Self::pop_resolver_behavior_ref(refs, behavior)
+        Self::pop_resolver_behavior_ref_from_queue(refs, behavior)
     }
 
     fn should_skip_missing_resolver_behavior_ref(
@@ -3296,7 +3296,7 @@ impl TypeChecker {
             && missing_refs.contains(type_name)
     }
 
-    fn pop_resolver_behavior_ref(
+    fn pop_resolver_behavior_ref_from_queue(
         refs: &mut VecDeque<BehaviorRefMetadata>,
         behavior: &str,
     ) -> Option<BehaviorRefMetadata> {
@@ -3318,15 +3318,28 @@ impl TypeChecker {
         type_name: &str,
         behavior: &str,
     ) -> Option<&BehaviorRefMetadata> {
-        if !self.resolver_backed_collection {
+        Self::peek_resolver_behavior_ref(
+            self.resolver_backed_collection,
+            &self.resolver_behavior_impl_refs,
+            type_name,
+            behavior,
+        )
+    }
+
+    fn peek_resolver_behavior_ref<'a>(
+        resolver_backed_collection: bool,
+        refs_by_type: &'a HashMap<String, VecDeque<BehaviorRefMetadata>>,
+        type_name: &str,
+        behavior: &str,
+    ) -> Option<&'a BehaviorRefMetadata> {
+        if !resolver_backed_collection {
             return None;
         }
 
-        let impl_refs = self.resolver_behavior_impl_refs.get(type_name)?;
-        impl_refs
-            .iter()
+        let refs = refs_by_type.get(type_name)?;
+        refs.iter()
             .find(|implementation| implementation.name == behavior)
-            .or_else(|| impl_refs.front())
+            .or_else(|| refs.front())
     }
 
     fn resolver_behavior_impl_ref_parts<'a>(
@@ -9161,6 +9174,52 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(format_behavior_refs(Some(&refs)), "Json<i32>");
         assert_eq!(format_behavior_refs(Some(&[])), "none");
         assert_eq!(format_behavior_refs(None), "none");
+    }
+
+    #[test]
+    fn resolver_behavior_ref_helpers_share_pop_and_peek_selection() {
+        let refs = VecDeque::from(vec![
+            BehaviorRefMetadata {
+                name: "Json".to_string(),
+                type_args: vec![AstType::I32],
+            },
+            BehaviorRefMetadata {
+                name: "Debug".to_string(),
+                type_args: vec![],
+            },
+        ]);
+        let mut refs_by_type = HashMap::from([("Point".to_string(), refs.clone())]);
+
+        assert_eq!(
+            TypeChecker::peek_resolver_behavior_ref(true, &refs_by_type, "Point", "Debug")
+                .map(|reference| reference.name.as_str()),
+            Some("Debug")
+        );
+        assert_eq!(
+            TypeChecker::pop_resolver_behavior_ref(true, &mut refs_by_type, "Point", "Debug")
+                .map(|reference| reference.name),
+            Some("Debug".to_string())
+        );
+
+        let mut refs_by_type = HashMap::from([("Point".to_string(), refs)]);
+        assert_eq!(
+            TypeChecker::peek_resolver_behavior_ref(true, &refs_by_type, "Point", "Missing")
+                .map(|reference| reference.name.as_str()),
+            Some("Json")
+        );
+        assert_eq!(
+            TypeChecker::pop_resolver_behavior_ref(true, &mut refs_by_type, "Point", "Missing")
+                .map(|reference| reference.name),
+            Some("Json".to_string())
+        );
+        assert!(
+            TypeChecker::peek_resolver_behavior_ref(false, &refs_by_type, "Point", "Debug")
+                .is_none()
+        );
+        assert!(
+            TypeChecker::pop_resolver_behavior_ref(false, &mut refs_by_type, "Point", "Debug")
+                .is_none()
+        );
     }
 
     #[test]

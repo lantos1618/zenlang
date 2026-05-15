@@ -157,6 +157,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver non-empty joined-list rendering is now shared by behavior-ref name
   and typed behavior-ref metadata diagnostics, covered by
   `typechecker::tests::resolver_nonempty_joined_list_formats_present_empty_and_missing_items`.
+- Resolver behavior-ref pop and peek selection now share one helper across
+  impl and required-association restoration paths, covered by
+  `typechecker::tests::resolver_behavior_ref_helpers_share_pop_and_peek_selection`.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
