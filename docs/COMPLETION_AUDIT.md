@@ -154,6 +154,10 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_target_name_metadata`,
   and
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_target_and_name_metadata`.
+- Impl-block declaration collection now dispatches the target and method list
+  once for both AST collection and resolver-backed template stubs, shrinking
+  another duplicate declaration walk while keeping the same `Type.impl`
+  coverage above.
 - Module graph typechecking now seeds graph imports and then runs
   resolver-backed declaration collection for the current module, so multi-file
   graph modules use the same resolver-owned metadata handoff as

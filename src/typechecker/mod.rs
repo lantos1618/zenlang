@@ -3024,14 +3024,6 @@ impl TypeChecker {
     }
 
     fn collect_impl_block_declarations(&mut self, decls: &[Declaration]) {
-        if self.resolver_backed_collection {
-            self.collect_resolver_backed_impl_block_templates(decls);
-        } else {
-            self.collect_ast_impl_block_declarations(decls);
-        }
-    }
-
-    fn collect_ast_impl_block_declarations(&mut self, decls: &[Declaration]) {
         for decl in decls {
             let Declaration::ImplBlock {
                 type_name,
@@ -3044,13 +3036,12 @@ impl TypeChecker {
                 continue;
             };
 
-            for method in methods {
-                self.collect_impl_method_signature(type_name, method);
-            }
-            if let Some(behavior) = behavior {
-                self.collect_behavior_default_method_signatures(
+            if self.resolver_backed_collection {
+                self.collect_resolver_backed_impl_block_templates(type_name, methods);
+            } else {
+                self.collect_ast_impl_block_declaration(
                     type_name,
-                    behavior,
+                    behavior.as_deref(),
                     behavior_type_args,
                     methods,
                 );
@@ -3058,18 +3049,33 @@ impl TypeChecker {
         }
     }
 
-    fn collect_resolver_backed_impl_block_templates(&mut self, decls: &[Declaration]) {
-        for decl in decls {
-            let Declaration::ImplBlock {
-                type_name, methods, ..
-            } = decl
-            else {
-                continue;
-            };
+    fn collect_ast_impl_block_declaration(
+        &mut self,
+        type_name: &str,
+        behavior: Option<&str>,
+        behavior_type_args: &[AstType],
+        methods: &[Declaration],
+    ) {
+        for method in methods {
+            self.collect_impl_method_signature(type_name, method);
+        }
+        if let Some(behavior) = behavior {
+            self.collect_behavior_default_method_signatures(
+                type_name,
+                behavior,
+                behavior_type_args,
+                methods,
+            );
+        }
+    }
 
-            for method in methods {
-                self.collect_resolver_backed_impl_method_template(type_name, method);
-            }
+    fn collect_resolver_backed_impl_block_templates(
+        &mut self,
+        type_name: &str,
+        methods: &[Declaration],
+    ) {
+        for method in methods {
+            self.collect_resolver_backed_impl_method_template(type_name, method);
         }
     }
 
