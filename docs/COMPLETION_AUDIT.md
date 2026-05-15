@@ -187,6 +187,9 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker resolver validation now derives behavior method display
   signatures and typed method metadata from one shared expectation pass, keeping
   those behavior-method handoff checks aligned.
+- Typechecker resolver validation now derives value parameter count, names,
+  display types, and typed parameter metadata from one shared expectation pass,
+  keeping value-signature handoff checks aligned.
 - Typechecker resolver validation now derives type-parameter counts, names,
   display bounds, and typed bound refs from one shared expectation pass for
   value and type-like symbols, keeping generic metadata handoff checks aligned.

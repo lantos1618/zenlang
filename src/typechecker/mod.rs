@@ -152,6 +152,7 @@ struct DefaultBehaviorMethod {
 }
 
 struct ExpectedValueSignature {
+    parameter_count: usize,
     parameter_names: Vec<String>,
     parameter_types: Vec<AstType>,
     parameter_type_names: Vec<String>,
@@ -165,6 +166,7 @@ struct ExpectedValueSignature {
 
 #[derive(Default)]
 struct ExpectedParameters {
+    count: usize,
     names: Vec<String>,
     types: Vec<AstType>,
     type_names: Vec<String>,
@@ -7311,8 +7313,7 @@ impl TypeChecker {
             ));
         }
 
-        let expected_parameter_count = expected_signature.parameter_type_names.len();
-        if symbol.parameter_count != Some(expected_parameter_count) {
+        if symbol.parameter_count != Some(expected_signature.parameter_count) {
             let actual = symbol
                 .parameter_count
                 .map(|count| count.to_string())
@@ -7320,7 +7321,8 @@ impl TypeChecker {
             self.diagnostics.push(Diagnostic::error(
                 "E0211",
                 format!(
-                    "resolver value symbol '{name}' has parameter count {actual}, expected {expected_parameter_count}"
+                    "resolver value symbol '{name}' has parameter count {actual}, expected {}",
+                    expected_signature.parameter_count
                 ),
                 span,
             ));
@@ -7566,7 +7568,10 @@ fn visibility_name(is_public: bool) -> &'static str {
 }
 
 fn expected_parameters(params: &[Param]) -> ExpectedParameters {
-    let mut expected = ExpectedParameters::default();
+    let mut expected = ExpectedParameters {
+        count: params.len(),
+        ..ExpectedParameters::default()
+    };
     for param in params {
         expected.names.push(param.name.clone());
         expected.types.push(param.ty.clone());
@@ -7583,6 +7588,7 @@ fn expected_value_signature(
     let params = expected_parameters(params);
     let type_params = expected_type_parameters(type_params);
     ExpectedValueSignature {
+        parameter_count: params.count,
         parameter_names: params.names,
         parameter_types: params.types,
         parameter_type_names: params.type_names,
