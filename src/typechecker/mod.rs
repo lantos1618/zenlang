@@ -8349,35 +8349,17 @@ fn format_type_parameter_names(names: Option<&[String]>) -> String {
 }
 
 fn format_type_parameter_bounds(bounds: Option<&[TypeParameterBoundMetadata]>) -> String {
-    match bounds {
-        Some(bounds) => format!(
-            "({})",
-            bounds
-                .iter()
-                .map(|(name, behavior)| format!("{name}: {behavior}"))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        None => "unknown".to_string(),
-    }
+    format_resolver_display_list(bounds, |(name, behavior)| format!("{name}: {behavior}"))
 }
 
 fn format_type_parameter_bound_refs(bounds: Option<&[TypeParameterBoundRefMetadata]>) -> String {
-    match bounds {
-        Some(bounds) => format!(
-            "({})",
-            bounds
-                .iter()
-                .map(|bound| format!(
-                    "{}: {}",
-                    bound.type_parameter,
-                    behavior_ref_display(&bound.behavior, &bound.type_args)
-                ))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        None => "unknown".to_string(),
-    }
+    format_resolver_display_list(bounds, |bound| {
+        format!(
+            "{}: {}",
+            bound.type_parameter,
+            behavior_ref_display(&bound.behavior, &bound.type_args)
+        )
+    })
 }
 
 fn format_parameter_type_names(names: Option<&[String]>) -> String {
@@ -8385,17 +8367,7 @@ fn format_parameter_type_names(names: Option<&[String]>) -> String {
 }
 
 fn format_ast_type_list(types: Option<&[AstType]>) -> String {
-    match types {
-        Some(types) => format!(
-            "({})",
-            types
-                .iter()
-                .map(AstType::display_name)
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        None => "unknown".to_string(),
-    }
+    format_resolver_display_list(types, AstType::display_name)
 }
 
 fn format_parameter_names(names: Option<&[String]>) -> String {
@@ -8433,13 +8405,25 @@ fn format_variant_names(variants: Option<&[String]>) -> String {
 }
 
 fn format_resolver_string_list(values: Option<&[String]>) -> String {
+    format_resolver_display_list(values, String::clone)
+}
+
+fn format_resolver_display_list<T>(
+    values: Option<&[T]>,
+    display_value: impl Fn(&T) -> String,
+) -> String {
     values
-        .map(|values| format!("({})", join_resolver_strings(values)))
+        .map(|values| format!("({})", join_resolver_display_values(values, display_value)))
         .unwrap_or_else(|| "unknown".to_string())
 }
 
 fn join_resolver_strings(values: &[String]) -> String {
     values.join(", ")
+}
+
+fn join_resolver_display_values<T>(values: &[T], display_value: impl Fn(&T) -> String) -> String {
+    let entries = values.iter().map(display_value).collect::<Vec<_>>();
+    join_resolver_strings(&entries)
 }
 
 fn format_resolver_named_list<T>(
@@ -8942,54 +8926,34 @@ fn expected_resolver_local(
 }
 
 fn format_behavior_method_signatures(methods: Option<&[MethodSignatureMetadata]>) -> String {
-    match methods {
-        Some(methods) => format!(
-            "({})",
-            methods
-                .iter()
-                .map(|(name, params, return_type)| {
-                    format!("{name}({}) {return_type}", params.join(", "))
-                })
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        None => "unknown".to_string(),
-    }
+    format_resolver_display_list(methods, |(name, params, return_type)| {
+        format!("{name}({}) {return_type}", params.join(", "))
+    })
 }
 
 fn format_behavior_method_types(methods: Option<&[BehaviorMethodTypeMetadata]>) -> String {
-    match methods {
-        Some(methods) => format!(
-            "({})",
-            methods
-                .iter()
-                .map(|method| {
-                    let params = method
-                        .parameter_types
-                        .iter()
-                        .enumerate()
-                        .map(|(index, ty)| {
-                            let name = method
-                                .parameter_names
-                                .get(index)
-                                .map(String::as_str)
-                                .unwrap_or("_");
-                            format!("{name}: {}", ty.display_name())
-                        })
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    format!(
-                        "{}({}) {}",
-                        method.name,
-                        params,
-                        method.return_type.display_name()
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        None => "unknown".to_string(),
-    }
+    format_resolver_display_list(methods, |method| {
+        let params = method
+            .parameter_types
+            .iter()
+            .enumerate()
+            .map(|(index, ty)| {
+                let name = method
+                    .parameter_names
+                    .get(index)
+                    .map(String::as_str)
+                    .unwrap_or("_");
+                format!("{name}: {}", ty.display_name())
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "{}({}) {}",
+            method.name,
+            params,
+            method.return_type.display_name()
+        )
+    })
 }
 
 fn format_behavior_ref_names(parents: Option<&[String]>) -> String {
@@ -9001,11 +8965,9 @@ fn format_behavior_ref_names(parents: Option<&[String]>) -> String {
 
 fn format_behavior_refs(refs: Option<&[BehaviorRefMetadata]>) -> String {
     match refs {
-        Some(refs) if !refs.is_empty() => refs
-            .iter()
-            .map(|behavior| behavior_ref_display(&behavior.name, &behavior.type_args))
-            .collect::<Vec<_>>()
-            .join(", "),
+        Some(refs) if !refs.is_empty() => join_resolver_display_values(refs, |behavior| {
+            behavior_ref_display(&behavior.name, &behavior.type_args)
+        }),
         _ => "none".to_string(),
     }
 }
@@ -9101,8 +9063,34 @@ mod tests {
     fn resolver_string_list_display_formats_known_and_missing_lists() {
         let names = vec!["T".to_string(), "U".to_string()];
         assert_eq!(join_resolver_strings(&names), "T, U");
+        assert_eq!(
+            join_resolver_display_values(&[AstType::I32, AstType::Bool], AstType::display_name),
+            "i32, bool"
+        );
         assert_eq!(format_resolver_string_list(Some(&names)), "(T, U)");
         assert_eq!(format_resolver_string_list(None), "unknown");
+    }
+
+    #[test]
+    fn resolver_display_list_formats_mapped_known_and_missing_items() {
+        let types = vec![AstType::I32, AstType::Bool];
+        assert_eq!(format_ast_type_list(Some(&types)), "(i32, bool)");
+        assert_eq!(format_ast_type_list(None), "unknown");
+
+        let bounds = vec![("T".to_string(), "Display".to_string())];
+        assert_eq!(format_type_parameter_bounds(Some(&bounds)), "(T: Display)");
+        assert_eq!(format_type_parameter_bounds(None), "unknown");
+
+        let bound_refs = vec![TypeParameterBoundRefMetadata {
+            type_parameter: "T".to_string(),
+            behavior: "Display".to_string(),
+            type_args: vec![AstType::I32],
+        }];
+        assert_eq!(
+            format_type_parameter_bound_refs(Some(&bound_refs)),
+            "(T: Display<i32>)"
+        );
+        assert_eq!(format_type_parameter_bound_refs(None), "unknown");
     }
 
     #[test]

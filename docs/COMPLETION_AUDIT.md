@@ -148,6 +148,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver named-list rendering is now shared by typed and display struct field
   metadata diagnostics, covered by
   `typechecker::tests::resolver_named_list_display_formats_known_and_missing_items`.
+- Resolver mapped-list rendering is now shared by AST type, type-parameter
+  bound, behavior method, and behavior-ref metadata diagnostics, covered by
+  `typechecker::tests::resolver_display_list_formats_mapped_known_and_missing_items`.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
