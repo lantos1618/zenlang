@@ -2483,6 +2483,39 @@ struct ExpectedBehaviorAssociations {
     required: ExpectedBehaviorEdges,
 }
 
+impl ExpectedBehaviorAssociations {
+    fn new(program: &ast::Program) -> Self {
+        let mut expected = Self {
+            impls: ExpectedBehaviorEdges::default(),
+            required: ExpectedBehaviorEdges::default(),
+        };
+        for decl in &program.declarations {
+            match decl {
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior: Some(behavior),
+                    behavior_type_args,
+                    ..
+                } => {
+                    expected.impls.push(type_name, behavior, behavior_type_args);
+                }
+                Declaration::Requires {
+                    type_name,
+                    behavior,
+                    behavior_type_args,
+                    ..
+                } => {
+                    expected
+                        .required
+                        .push(type_name, behavior, behavior_type_args);
+                }
+                _ => {}
+            }
+        }
+        expected
+    }
+}
+
 // ── TypeChecker ───────────────────────────────────────────────────
 
 pub struct TypeChecker {
@@ -9527,34 +9560,7 @@ fn expected_behavior_method_metadata(
 }
 
 fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAssociations {
-    let mut expected = ExpectedBehaviorAssociations {
-        impls: ExpectedBehaviorEdges::default(),
-        required: ExpectedBehaviorEdges::default(),
-    };
-    for decl in &program.declarations {
-        match decl {
-            Declaration::ImplBlock {
-                type_name,
-                behavior: Some(behavior),
-                behavior_type_args,
-                ..
-            } => {
-                expected.impls.push(type_name, behavior, behavior_type_args);
-            }
-            Declaration::Requires {
-                type_name,
-                behavior,
-                behavior_type_args,
-                ..
-            } => {
-                expected
-                    .required
-                    .push(type_name, behavior, behavior_type_args);
-            }
-            _ => {}
-        }
-    }
-    expected
+    ExpectedBehaviorAssociations::new(program)
 }
 
 fn expected_behavior_edge(behavior: &str, type_args: &[AstType]) -> ExpectedBehaviorEdge {
@@ -11325,6 +11331,36 @@ Point.requires(Json<str>)
         assert_eq!(edge.display, "Json<i32>");
         assert_eq!(edge.metadata.name, "Json");
         assert_eq!(edge.metadata.type_args, vec![AstType::I32]);
+    }
+
+    #[test]
+    fn expected_behavior_associations_build_impl_and_required_edges_together() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+
+        let expected = ExpectedBehaviorAssociations::new(&program);
+        let impl_edge = &expected.impls.edges_for("Point")[0];
+        let required_edge = &expected.required.edges_for("Point")[0];
+
+        assert_eq!(impl_edge.display, "Json<str>");
+        assert_eq!(impl_edge.metadata.name, "Json");
+        assert_eq!(impl_edge.metadata.type_args, vec![AstType::Str]);
+        assert_eq!(required_edge.display, "Json<str>");
+        assert_eq!(required_edge.metadata.name, "Json");
+        assert_eq!(required_edge.metadata.type_args, vec![AstType::Str]);
     }
 
     #[test]

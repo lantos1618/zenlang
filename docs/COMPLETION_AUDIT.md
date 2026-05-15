@@ -248,6 +248,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver expected behavior association construction now pairs display names
   and typed refs through one constructor, covered by
   `typechecker::tests::expected_behavior_edge_builds_display_and_metadata_together`.
+- Resolver expected behavior-association aggregation now pairs impl and
+  required edge groups through one constructor, covered by
+  `typechecker::tests::expected_behavior_associations_build_impl_and_required_edges_together`.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths, covered by
   `typechecker::tests::resolver_symbol_metadata_helper_requires_symbol_and_selected_metadata`.
