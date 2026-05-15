@@ -954,6 +954,13 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::resolver_behavior_ref_queue_selection_prefers_exact_then_front`,
   and
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_method_name_metadata_for_impl_checks`.
+- Resolver behavior method metadata restoration now uses the same named queue
+  selection family while preserving front AST methods that later resolver
+  method metadata still needs, covered by
+  `typechecker::tests::named_queue_selection_can_preserve_front_for_future_match`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_method_name_metadata`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_method_count`.
 - Resolver-backed declaration collection now has named passes for resolver
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed

@@ -380,6 +380,9 @@ checked-in docs, tests, and commits only.
   impl and required-association restoration paths.
 - Resolver behavior-ref selection and behavior impl required-method restoration
   now share the same exact-match-then-front queue selector.
+- Resolver behavior method metadata restoration now uses the same named queue
+  selection family while preserving front AST methods needed by later resolver
+  method metadata.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths.
 - Generic method specialization preserves concrete `Self` receiver context in

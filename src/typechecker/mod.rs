@@ -4145,23 +4145,16 @@ impl TypeChecker {
             existing.methods.into_iter().collect();
         let mut methods = Vec::new();
         for (metadata_index, metadata) in method_types.iter().cloned().enumerate() {
-            let method = match existing_methods
+            let future_method_names = method_types[metadata_index + 1..]
                 .iter()
-                .position(|method| method.name == metadata.name)
-            {
-                Some(index) => existing_methods.remove(index),
-                None => match existing_methods.front() {
-                    Some(front)
-                        if method_types[metadata_index + 1..]
-                            .iter()
-                            .any(|metadata| metadata.name == front.name) =>
-                    {
-                        None
-                    }
-                    Some(_) => existing_methods.pop_front(),
-                    None => None,
-                },
-            };
+                .map(|metadata| metadata.name.as_str());
+            let method = Self::named_queue_index_preserving_future_front(
+                &existing_methods,
+                &metadata.name,
+                future_method_names,
+                |method| method.name.as_str(),
+            )
+            .and_then(|index| existing_methods.remove(index));
             methods.push(Self::resolver_behavior_method_from_metadata(
                 method.as_ref(),
                 metadata,
@@ -5155,6 +5148,23 @@ impl TypeChecker {
             .iter()
             .position(|item| item_name(item) == name)
             .or_else(|| (!items.is_empty()).then_some(0))
+    }
+
+    fn named_queue_index_preserving_future_front<'a, T>(
+        items: &VecDeque<T>,
+        name: &str,
+        future_names: impl IntoIterator<Item = &'a str>,
+        item_name: impl Fn(&T) -> &str,
+    ) -> Option<usize> {
+        if let Some(index) = items.iter().position(|item| item_name(item) == name) {
+            return Some(index);
+        }
+
+        let front_name = item_name(items.front()?);
+        (!future_names
+            .into_iter()
+            .any(|future_name| future_name == front_name))
+        .then_some(0)
     }
 
     fn resolver_behavior_impl_ref_parts<'a>(
@@ -10876,6 +10886,39 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(
             TypeChecker::named_queue_index(&VecDeque::<String>::new(), "Missing", String::as_str),
             None
+        );
+    }
+
+    #[test]
+    fn named_queue_selection_can_preserve_front_for_future_match() {
+        let items = VecDeque::from(["Json".to_string(), "Debug".to_string()]);
+
+        assert_eq!(
+            TypeChecker::named_queue_index_preserving_future_front(
+                &items,
+                "Debug",
+                Vec::<&str>::new(),
+                String::as_str,
+            ),
+            Some(1)
+        );
+        assert_eq!(
+            TypeChecker::named_queue_index_preserving_future_front(
+                &items,
+                "Missing",
+                ["Json"],
+                String::as_str,
+            ),
+            None
+        );
+        assert_eq!(
+            TypeChecker::named_queue_index_preserving_future_front(
+                &items,
+                "Missing",
+                ["Other"],
+                String::as_str,
+            ),
+            Some(0)
         );
     }
 
