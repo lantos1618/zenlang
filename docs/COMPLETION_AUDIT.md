@@ -499,6 +499,14 @@ and do not assume Phase 4 is ready without evidence.
   `PrettyJson.extends(Json<str>)`, is parsed, recorded in resolver metadata,
   checked with substituted parent method signatures, and covered by
   `tests/zen/behavior_generic_parent_inheritance.zen`.
+- Generic behavior inheritance parent arguments may reference the child
+  behavior's own type parameters, such as `Pretty<T>.extends(Serializable<T>)`.
+  This is covered at resolver level by
+  `resolver_phase2::resolver_accepts_behavior_parent_type_args_from_child_type_params`,
+  guarded negatively by
+  `resolver_phase2::resolver_rejects_behavior_parent_type_args_outside_child_type_params`,
+  and checked through resolver/typechecker handoff by
+  `typechecker::tests::check_program_with_symbols_accepts_resolver_behavior_parent_child_type_param_refs`.
 - Resolver behavior symbols carry parent behavior metadata, and typechecker
   setup rejects missing or extra resolver parent-edge metadata. Specialized
   parent references such as `Json<str>` are included in this resolver handoff
