@@ -762,6 +762,8 @@ checked-in docs, tests, and commits only.
 - Resolver behavior-method expectation construction now uses metadata
   terminology consistently with paired display-signature and typed method
   expectations.
+- Resolver enum variant-name expectation construction now uses metadata
+  terminology consistently with enum symbol variant-name metadata.
 
 ## Current Phase
 

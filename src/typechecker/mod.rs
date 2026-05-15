@@ -7714,7 +7714,7 @@ fn expected_enum_symbol(
 ) -> ExpectedEnumSymbol {
     ExpectedEnumSymbol {
         type_like: expected_type_like_symbol(type_params, Some(is_public)),
-        variant_names: expected_variant_names(variants),
+        variant_names: expected_variant_name_metadata(variants),
     }
 }
 
@@ -7860,7 +7860,7 @@ fn format_field_type_names(fields: Option<&[(String, String)]>) -> String {
     }
 }
 
-fn expected_variant_names(variants: &[EnumVariant]) -> Vec<String> {
+fn expected_variant_name_metadata(variants: &[EnumVariant]) -> Vec<String> {
     variants
         .iter()
         .map(|variant| variant.name.clone())
