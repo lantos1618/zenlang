@@ -190,6 +190,16 @@ struct ExpectedParameter {
     display: String,
 }
 
+impl ExpectedParameter {
+    fn new(name: &str, ty: &AstType) -> Self {
+        Self {
+            name: name.to_string(),
+            typed: ty.clone(),
+            display: ty.display_name(),
+        }
+    }
+}
+
 struct ExpectedParameterMetadata {
     count: usize,
     names: Vec<String>,
@@ -9147,11 +9157,7 @@ fn optional_ast_type_display(value: Option<&AstType>, missing: &str) -> String {
 fn expected_parameter_metadata(params: &[Param]) -> Vec<ExpectedParameter> {
     let mut expected = Vec::new();
     for param in params {
-        expected.push(ExpectedParameter {
-            name: param.name.clone(),
-            typed: param.ty.clone(),
-            display: param.ty.display_name(),
-        });
+        expected.push(ExpectedParameter::new(&param.name, &param.ty));
     }
     expected
 }
@@ -10842,6 +10848,27 @@ Point.requires(Json<str>)
         assert!(!actual.contains_metadata(&mismatch.metadata));
         assert!(actual.names_match(&expected_list.names));
         assert!(actual.refs_match(&expected_list.refs));
+    }
+
+    #[test]
+    fn expected_parameter_builds_name_display_and_type_together() {
+        let parameter = ExpectedParameter::new(
+            "mapper",
+            &AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::Str),
+            },
+        );
+
+        assert_eq!(parameter.name, "mapper");
+        assert_eq!(parameter.display, "(i32) str");
+        assert_eq!(
+            parameter.typed,
+            AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::Str),
+            }
+        );
     }
 
     #[test]

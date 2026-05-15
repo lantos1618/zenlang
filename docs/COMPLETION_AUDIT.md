@@ -193,6 +193,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-ref owner restoration now separates exact behavior-key
   owner lookup from unique fallback owner lookup, covered by
   `typechecker::tests::resolver_behavior_ref_owner_prefers_exact_then_unique_fallbacks`.
+- Resolver expected value parameter construction now pairs parameter names,
+  display types, and typed AST types through one constructor, covered by
+  `typechecker::tests::expected_parameter_builds_name_display_and_type_together`.
 - Resolver expected behavior association construction now pairs display names
   and typed refs through one constructor, covered by
   `typechecker::tests::expected_behavior_edge_builds_display_and_metadata_together`.

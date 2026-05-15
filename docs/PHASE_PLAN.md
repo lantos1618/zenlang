@@ -149,6 +149,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver validation now adapts type-parameter validation bundles
   into shared count diagnostics through the validation helper instead of
   constructing count diagnostics inline.
+- Typechecker resolver expected value parameter construction now builds
+  parameter names, display types, and typed AST types through one expected
+  parameter constructor.
 - Typechecker resolver behavior-ref validation now separates role labels from
   per-check diagnostic code mappings, avoiding duplicated label bundles across
   contains and full-list checks.
