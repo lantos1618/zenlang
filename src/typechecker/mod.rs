@@ -1817,16 +1817,9 @@ impl TypeChecker {
         self.resolver_missing_behavior_impl_refs.clear();
         self.resolver_missing_behavior_required_refs.clear();
 
-        for decl in decls {
-            match decl {
-                Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. } => {
-                    let restored_name =
-                        Self::resolver_symbol_name_for(symbols, Namespace::Type, name, *span);
-                    self.collect_resolver_type_behavior_impls(symbols, &restored_name);
-                }
-                _ => {}
-            }
-        }
+        self.for_each_resolver_type_declaration(decls, symbols, |checker, restored_name| {
+            checker.collect_resolver_type_behavior_impls(symbols, restored_name);
+        });
     }
 
     fn with_resolver_backed_collection(&mut self, collect: impl FnOnce(&mut Self)) {
@@ -1858,6 +1851,24 @@ impl TypeChecker {
                     Some((behavior, behavior_type_args)),
                 );
                 visit(self, &type_name, behavior, behavior_type_args, methods);
+            }
+        }
+    }
+
+    fn for_each_resolver_type_declaration(
+        &mut self,
+        decls: &[Declaration],
+        symbols: &SymbolTable,
+        mut visit: impl FnMut(&mut Self, &str),
+    ) {
+        for decl in decls {
+            match decl {
+                Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. } => {
+                    let restored_name =
+                        Self::resolver_symbol_name_for(symbols, Namespace::Type, name, *span);
+                    visit(self, &restored_name);
+                }
+                _ => {}
             }
         }
     }

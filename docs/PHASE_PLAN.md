@@ -205,6 +205,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior impl collection now shares the restored impl-block
   traversal used by impl method signature refresh and omitted default-method
   seeding, keeping resolver target restoration in one path.
+- Resolver-backed type behavior-impl refresh now uses a shared restored
+  struct/enum declaration traversal instead of open-coding the final
+  type-name restoration pass.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only
