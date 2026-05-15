@@ -6571,6 +6571,25 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_absent_source_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        symbol_kind: &str,
+        name: &str,
+        code: &'static str,
+        span: Span,
+    ) {
+        if let Some(actual) = symbol.import_source.as_deref() {
+            self.diagnostics.push(Diagnostic::error(
+                code,
+                format!(
+                    "resolver {symbol_kind} symbol '{name}' has source '{actual}', expected none"
+                ),
+                span,
+            ));
+        }
+    }
+
     fn validate_resolver_absent_metadata_entry(
         &mut self,
         symbol_kind: &str,
@@ -6659,16 +6678,13 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        if let Some(actual) = symbol.import_source.as_deref() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0309",
-                format!(
-                    "resolver {} symbol '{name}' has source '{actual}', expected none",
-                    namespace.diagnostic_name()
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_absent_source_metadata(
+            symbol,
+            namespace.diagnostic_name(),
+            name,
+            "E0309",
+            span,
+        );
 
         self.validate_resolver_absent_value_signature_metadata(
             symbol,
@@ -6925,13 +6941,7 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        if let Some(actual) = symbol.import_source.as_deref() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0329",
-                format!("resolver variant symbol '{name}' has source '{actual}', expected none"),
-                span,
-            ));
-        }
+        self.validate_resolver_absent_source_metadata(symbol, "variant", name, "E0329", span);
 
         self.validate_resolver_absent_value_signature_metadata(
             symbol,
@@ -7493,13 +7503,7 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        if let Some(actual) = symbol.import_source.as_deref() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0297",
-                format!("resolver value symbol '{name}' has source '{actual}', expected none"),
-                span,
-            ));
-        }
+        self.validate_resolver_absent_source_metadata(symbol, "value", name, "E0297", span);
 
         for (present, code, label) in [
             (symbol.field_count.is_some(), "E0298", "field count"),
