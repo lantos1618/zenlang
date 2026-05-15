@@ -2069,6 +2069,11 @@ fn method_signature_receiver_name(name: &str) -> Option<&str> {
     method_signature_key_parts(name).map(|(receiver, _)| receiver)
 }
 
+fn method_signature_method_name_for_receiver<'a>(name: &'a str, receiver: &str) -> Option<&'a str> {
+    method_signature_key_parts(name)
+        .and_then(|(actual_receiver, method)| (actual_receiver == receiver).then_some(method))
+}
+
 fn is_method_signature_key(name: &str) -> bool {
     method_signature_key_parts(name).is_some()
 }
@@ -5347,10 +5352,10 @@ impl TypeChecker {
         type_name: &str,
     ) -> String {
         if let Some(resolver_owned_key) = resolver_owned_key {
-            let resolver_owned_name = resolver_owned_key
-                .strip_prefix(&format!("{type_name}."))
-                .unwrap_or(&resolver_owned_key)
-                .to_string();
+            let resolver_owned_name =
+                method_signature_method_name_for_receiver(&resolver_owned_key, type_name)
+                    .unwrap_or(&resolver_owned_key)
+                    .to_string();
             return Self::remove_named_queue_entry(unmatched_required, &resolver_owned_name)
                 .unwrap_or(resolver_owned_name);
         }
@@ -5381,9 +5386,9 @@ impl TypeChecker {
         type_name: &str,
     ) -> Option<String> {
         if let Some(resolver_owned_key) = resolver_owned_key {
-            let resolver_owned_name = resolver_owned_key
-                .strip_prefix(&format!("{type_name}."))
-                .unwrap_or(resolver_owned_key);
+            let resolver_owned_name =
+                method_signature_method_name_for_receiver(resolver_owned_key, type_name)
+                    .unwrap_or(resolver_owned_key);
             if let Some(index) =
                 Self::named_queue_index(required_methods, resolver_owned_name, |required| {
                     required.name.as_str()
@@ -10556,6 +10561,14 @@ mod tests {
             Some(("Point", "get"))
         );
         assert_eq!(method_signature_receiver_name("Point.get"), Some("Point"));
+        assert_eq!(
+            method_signature_method_name_for_receiver("Point.get", "Point"),
+            Some("get")
+        );
+        assert_eq!(
+            method_signature_method_name_for_receiver("Other.get", "Point"),
+            None
+        );
         assert!(is_method_signature_key("Point.get"));
         assert_eq!(method_signature_key_parts("plain"), None);
         assert_eq!(method_signature_receiver_name("plain"), None);

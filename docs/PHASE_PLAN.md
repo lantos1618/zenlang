@@ -361,6 +361,9 @@ checked-in docs, tests, and commits only.
   classifier when matching resolver value symbols by declaration span.
 - Method-key receiver parsing is now shared between resolver-backed method
   target restoration and generic method monomorphization inference.
+- Method-key method-name parsing is now shared by resolver-backed behavior impl
+  conformance and behavior impl signature collection, removing duplicate
+  `Type.method` prefix stripping in resolver-owned method-name selection.
 - Resolver definition-span symbol lookup is now shared between callable
   signature restoration and impl target-name restoration.
 - Resolver count validation now shares one diagnostic helper across value

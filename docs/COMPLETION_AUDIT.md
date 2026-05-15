@@ -181,6 +181,12 @@ and do not assume Phase 4 is ready without evidence.
 - Method-key receiver parsing is shared between resolver-backed method target
   restoration and generic method monomorphization inference, covered by
   `typechecker::tests::method_signature_key_helpers_share_receiver_parsing`.
+- Method-key method-name parsing is also shared by resolver-backed behavior
+  impl conformance and behavior impl signature collection, covered by
+  `typechecker::tests::method_signature_key_helpers_share_receiver_parsing`,
+  `typechecker::tests::impl_effective_method_name_prefers_resolver_then_ast_then_collected_signature`,
+  and
+  `typechecker::tests::resolver_backed_behavior_impl_method_signature_name_prefers_resolver_key`.
 - Resolver definition-span symbol lookup is shared between callable signature
   restoration and impl target-name restoration, covered by
   `typechecker::tests::resolver_symbol_lookup_helpers_share_definition_span_fallbacks`.
