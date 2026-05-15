@@ -491,6 +491,16 @@ struct ExpectedModuleSymbol {
     is_public: bool,
 }
 
+impl ExpectedModuleSymbol {
+    fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            source: None,
+            is_public: false,
+        }
+    }
+}
+
 struct ExpectedLocalSymbol {
     scope_id: u32,
     is_mutable: bool,
@@ -9394,11 +9404,7 @@ fn expected_import_symbol(source: &str) -> ExpectedImportSymbol {
 }
 
 fn expected_module_symbol(name: &str) -> ExpectedModuleSymbol {
-    ExpectedModuleSymbol {
-        name: name.to_string(),
-        source: None,
-        is_public: false,
-    }
+    ExpectedModuleSymbol::new(name)
 }
 
 fn expected_local_symbol(is_mutable: bool, scope_id: u32) -> ExpectedLocalSymbol {
@@ -11284,6 +11290,15 @@ Point.requires(Json<str>)
         let symbol = ExpectedImportSymbol::new("std.io");
 
         assert_eq!(symbol.source, "std.io");
+        assert!(!symbol.is_public);
+    }
+
+    #[test]
+    fn expected_module_symbol_builds_name_source_and_visibility_together() {
+        let symbol = ExpectedModuleSymbol::new("std.io");
+
+        assert_eq!(symbol.name, "std.io");
+        assert_eq!(symbol.source, None);
         assert!(!symbol.is_public);
     }
 
