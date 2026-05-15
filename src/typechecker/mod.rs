@@ -2356,6 +2356,92 @@ impl TypeChecker {
         }
 
         self.validate_generic_type_references(decls, symbols);
+        self.validate_struct_field_defaults(decls, symbols);
+    }
+
+    fn validate_struct_field_defaults(
+        &mut self,
+        decls: &[Declaration],
+        symbols: Option<&SymbolTable>,
+    ) {
+        for decl in decls {
+            let Declaration::Struct {
+                name,
+                type_params,
+                fields,
+                span,
+                ..
+            } = decl
+            else {
+                continue;
+            };
+
+            if self.resolver_backed_collection {
+                let restored_name =
+                    Self::validation_symbol_name(symbols, Namespace::Type, name, *span);
+                let Some(info) = self.structs.get(&restored_name).cloned() else {
+                    continue;
+                };
+                if !info.type_params.is_empty() {
+                    continue;
+                }
+                let field_types: HashMap<_, _> = info.fields.into_iter().collect();
+                for field in fields {
+                    if let (Some(default), Some(expected)) =
+                        (&field.default, field_types.get(&field.name))
+                    {
+                        self.validate_struct_field_default(&field.name, expected, default);
+                    }
+                }
+            } else {
+                if !type_params.is_empty() {
+                    continue;
+                }
+                for field in fields {
+                    if let Some(default) = &field.default {
+                        self.validate_struct_field_default(&field.name, &field.ty, default);
+                    }
+                }
+            }
+        }
+    }
+
+    fn validate_struct_field_default(
+        &mut self,
+        field_name: &str,
+        expected: &AstType,
+        default: &Expression,
+    ) {
+        let expected = self.resolve_type(expected);
+        self.push_scope();
+        let actual = self.check_expr(default);
+        self.pop_scope();
+
+        let Ok(actual) = actual else {
+            self.diagnostics.push(actual.expect_err("checked error"));
+            return;
+        };
+        let actual_ty = if (expected.is_integer()
+            && matches!(actual.kind, TypedExprKind::IntLiteral(_)))
+            || (expected.is_float() && matches!(actual.kind, TypedExprKind::FloatLiteral(_)))
+        {
+            expected.clone()
+        } else {
+            actual.ty.clone()
+        };
+
+        if !self.types_compatible(&expected, &actual_ty) {
+            self.diagnostics.push(Diagnostic::error(
+                "E3073",
+                format!(
+                    "field `{}` default expects `{}`, found `{}`",
+                    field_name,
+                    expected.display_name(),
+                    actual.ty.display_name()
+                ),
+                actual.span,
+            ));
+        }
     }
 
     fn validate_collected_behavior_extends_semantics(&mut self) {
@@ -10286,6 +10372,27 @@ Box<T>: {
             err.iter()
                 .any(|d| d.message.contains("unknown type symbol 'Missing'")),
             "expected unknown field default type diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn check_program_rejects_struct_field_default_type_mismatch() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 = "bad" }
+"#,
+        );
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program(&program)
+            .expect_err("struct field default type mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d
+                .message
+                .contains("field `x` default expects `i32`, found `str`")),
+            "expected field default type mismatch diagnostic, got {err:?}"
         );
     }
 

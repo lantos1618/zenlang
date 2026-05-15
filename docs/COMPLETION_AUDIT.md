@@ -677,6 +677,9 @@ and do not assume Phase 4 is ready without evidence.
   validation, so local annotations inside defaults cannot hide unknown type
   symbols, covered by
   `typechecker::tests::check_program_rejects_unknown_type_references_in_struct_field_defaults`.
+  Non-generic struct field defaults are also checked against their declared
+  field type, covered by
+  `typechecker::tests::check_program_rejects_struct_field_default_type_mismatch`.
   When resolver field metadata is incomplete and struct collection is removed,
   default-expression validation skips that struct instead of falling back to
   stale AST generic parameters, covered by
