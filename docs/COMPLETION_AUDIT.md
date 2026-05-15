@@ -849,6 +849,11 @@ and do not assume Phase 4 is ready without evidence.
   is removed, default-body type-reference validation skips that behavior instead
   of falling back to stale AST generic parameters, covered by
   `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_behavior_default_body_refs_when_methods_incomplete`.
+- Resolver-backed behavior type-reference and default-body validation now runs
+  through a dedicated restored-behavior helper, with focused coverage from
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_type_params_for_type_refs`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_behavior_default_body_refs_when_methods_incomplete`.
 - Resolver-backed struct and enum collection uses typed resolver generic bound
   refs, so generic type templates no longer retain stale AST-only behavior
   bounds after resolver validation.

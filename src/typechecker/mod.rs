@@ -18,7 +18,9 @@ mod statements;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::ast::typed::*;
-use crate::ast::{self, AstType, Declaration, EnumVariant, Expression, Param, StructField};
+use crate::ast::{
+    self, AstType, BehaviorMethod, Declaration, EnumVariant, Expression, Param, StructField,
+};
 use crate::error::{Diagnostic, Span};
 use crate::module_system::{ResolvedModule, ResolvedModuleGraph};
 use crate::resolver::{
@@ -5557,25 +5559,9 @@ impl TypeChecker {
                     ..
                 } => {
                     if self.resolver_backed_collection {
-                        let restored_name =
-                            Self::validation_symbol_name(symbols, Namespace::Behavior, name, *span);
-                        if let Some(scoped) =
-                            self.collected_behavior_type_param_scope(&restored_name)
-                        {
-                            self.validate_collected_behavior_type_references(
-                                &restored_name,
-                                &scoped,
-                                *span,
-                            );
-                            for method in methods {
-                                if let Some(default_body) = &method.default_body {
-                                    self.validate_generic_expr_type_references(
-                                        default_body,
-                                        &scoped,
-                                    );
-                                }
-                            }
-                        }
+                        self.validate_resolver_behavior_type_references(
+                            symbols, name, methods, *span,
+                        );
                     } else {
                         let scoped = type_param_name_set(type_params);
                         for method in methods {
@@ -5642,6 +5628,24 @@ impl TypeChecker {
                     self.validate_generic_expr_type_references(expr, &HashSet::new());
                 }
                 _ => {}
+            }
+        }
+    }
+
+    fn validate_resolver_behavior_type_references(
+        &mut self,
+        symbols: Option<&SymbolTable>,
+        name: &str,
+        methods: &[BehaviorMethod],
+        span: Span,
+    ) {
+        let restored_name = Self::validation_symbol_name(symbols, Namespace::Behavior, name, span);
+        if let Some(scoped) = self.collected_behavior_type_param_scope(&restored_name) {
+            self.validate_collected_behavior_type_references(&restored_name, &scoped, span);
+            for method in methods {
+                if let Some(default_body) = &method.default_body {
+                    self.validate_generic_expr_type_references(default_body, &scoped);
+                }
             }
         }
     }

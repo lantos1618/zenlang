@@ -134,6 +134,9 @@ checked-in docs, tests, and commits only.
 - If resolver behavior-method metadata is incomplete and behavior collection is
   removed, default-body type-reference validation now skips that behavior
   instead of falling back to stale AST generic parameters.
+- Resolver-backed behavior type-reference and default-body validation now runs
+  through a dedicated restored-behavior helper, reducing another inline
+  resolver handoff in the generic type-reference scan.
 - Typechecker resolver validation now derives behavior method display
   signatures and typed method metadata from one shared expectation pass, so the
   two resolver handoff checks cannot drift while scanning the same behavior
