@@ -1104,6 +1104,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver module value-signature absence validation now owns its resolver
   diagnostic code mapping, covered by
   `typechecker::tests::value_signature_absence_validation_uses_module_resolver_codes`.
+- Resolver import value-signature absence validation now owns its resolver
+  diagnostic code mapping, covered by
+  `typechecker::tests::value_signature_absence_validation_uses_import_resolver_codes`.
 - Resolver absent type-parameter metadata validation now shares one helper
   across module, import, local, and variant symbols.
 - Resolver absent type-parameter metadata validation now lets the validation
