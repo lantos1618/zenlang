@@ -20556,6 +20556,17 @@ describe = (flag: bool) StaticString {
         );
         assert_eq!(
             tc.substitute_type(
+                &AstType::MutPtr(Box::new(AstType::Named("T".into()))),
+                &subs
+            ),
+            Type::MutPtr(Box::new(Type::I32))
+        );
+        assert_eq!(
+            tc.substitute_type(&AstType::Slice(Box::new(AstType::Named("T".into()))), &subs),
+            Type::Slice(Box::new(Type::I32))
+        );
+        assert_eq!(
+            tc.substitute_type(
                 &AstType::Array {
                     elem: Box::new(AstType::Named("T".into())),
                     size: Some(3),

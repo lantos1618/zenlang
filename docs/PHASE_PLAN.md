@@ -1246,9 +1246,9 @@ checked-in docs, tests, and commits only.
   module, import, type-like, variant, and value symbols.
 - Resolver absent mutability metadata validation now lets the validation bundle
   build its mutability metadata entry.
-- Generic type substitution now covers raw pointers, arrays, and function
-  signatures so Phase 5 specializations do not leave nested type parameters
-  inside composite type shapes.
+- Generic type substitution now covers mutable pointers, raw pointers, slices,
+  arrays, and function signatures so Phase 5 specializations do not leave
+  nested type parameters inside composite type shapes.
 - Generic function-type substitutions now round-trip through nested generic
   type arguments instead of degrading to `void`.
 - Generic method call arity diagnostics now preserve method wording through

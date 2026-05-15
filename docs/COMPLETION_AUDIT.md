@@ -1277,9 +1277,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::behavior_declaration_absence_validation_uses_value_resolver_codes`.
 - Resolver absent mutability metadata validation now shares one helper across
   module, import, type-like, variant, and value symbols.
-- Generic type substitution now covers raw pointers, arrays, and function
-  signatures so Phase 5 specializations do not leave nested type parameters
-  inside composite type shapes, covered by
+- Generic type substitution now covers mutable pointers, raw pointers, slices,
+  arrays, and function signatures so Phase 5 specializations do not leave
+  nested type parameters inside composite type shapes, covered by
   `typechecker::tests::substitute_type_covers_all_composite_type_shapes`.
 - Generic function-type substitutions now round-trip through nested generic
   type arguments instead of degrading to `void`, covered by
