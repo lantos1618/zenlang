@@ -193,6 +193,9 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker resolver validation now derives struct field display metadata and
   typed field metadata from one shared expectation pass, keeping resolver field
   handoff checks aligned.
+- Typechecker resolver validation now derives enum variant payload count,
+  display type, and typed payload metadata from one shared expectation pass,
+  keeping resolver variant handoff checks aligned.
 - Resolver-backed behavior default synthesis now waits until resolver behavior
   and impl-method metadata has been restored, and it treats resolver-restored
   impl method names as explicit overrides. This prevents stale AST-only impl

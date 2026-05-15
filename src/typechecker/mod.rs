@@ -197,6 +197,12 @@ struct ExpectedFields {
     type_names: Vec<(String, String)>,
 }
 
+struct ExpectedVariantPayload {
+    count: usize,
+    ty: Option<AstType>,
+    type_name: Option<String>,
+}
+
 struct ImportedMethodSignature<'a> {
     name: &'a str,
     type_params: &'a [ast::TypeParam],
@@ -4124,12 +4130,6 @@ impl TypeChecker {
                             );
                             continue;
                         };
-                        self.validate_resolver_variant_payload_count(
-                            symbol,
-                            &variant.name,
-                            usize::from(variant.payload.is_some()),
-                            variant.span,
-                        );
                         self.validate_resolver_variant_owner_name(
                             symbol,
                             &variant.name,
@@ -4145,8 +4145,7 @@ impl TypeChecker {
                         self.validate_resolver_variant_payload_type(
                             symbol,
                             &variant.name,
-                            variant.payload.clone(),
-                            expected_variant_payload_type_name(&variant.payload),
+                            expected_variant_payload(&variant.payload),
                             variant.span,
                         );
                         self.validate_resolver_variant_absent_other_metadata(
@@ -6740,14 +6739,14 @@ impl TypeChecker {
         }
     }
 
-    fn validate_resolver_variant_payload_count(
+    fn validate_resolver_variant_payload_type(
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_payload_count: usize,
+        expected_payload: ExpectedVariantPayload,
         span: Span,
     ) {
-        if symbol.variant_payload_count != Some(expected_payload_count) {
+        if symbol.variant_payload_count != Some(expected_payload.count) {
             let actual = symbol
                 .variant_payload_count
                 .map(|count| count.to_string())
@@ -6755,7 +6754,41 @@ impl TypeChecker {
             self.diagnostics.push(Diagnostic::error(
                 "E0215",
                 format!(
-                    "resolver variant symbol '{name}' has payload count {actual}, expected {expected_payload_count}"
+                    "resolver variant symbol '{name}' has payload count {actual}, expected {}",
+                    expected_payload.count
+                ),
+                span,
+            ));
+        }
+        if symbol.variant_payload_type != expected_payload.ty {
+            let actual = symbol
+                .variant_payload_type
+                .as_ref()
+                .map(AstType::display_name)
+                .unwrap_or_else(|| "none".to_string());
+            let expected = expected_payload
+                .ty
+                .as_ref()
+                .map(AstType::display_name)
+                .unwrap_or_else(|| "none".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0359",
+                format!(
+                    "resolver variant symbol '{name}' has typed payload type '{actual}', expected '{expected}'"
+                ),
+                span,
+            ));
+        }
+        if symbol.variant_payload_type_name != expected_payload.type_name {
+            let actual = symbol
+                .variant_payload_type_name
+                .as_deref()
+                .unwrap_or("unknown");
+            let expected = expected_payload.type_name.as_deref().unwrap_or("none");
+            self.diagnostics.push(Diagnostic::error(
+                "E0218",
+                format!(
+                    "resolver variant symbol '{name}' has payload type '{actual}', expected '{expected}'"
                 ),
                 span,
             ));
@@ -6795,48 +6828,6 @@ impl TypeChecker {
                     "resolver variant symbol '{name}' has visibility {}, expected {}",
                     visibility_name(symbol.is_public),
                     visibility_name(expected_is_public)
-                ),
-                span,
-            ));
-        }
-    }
-
-    fn validate_resolver_variant_payload_type(
-        &mut self,
-        symbol: &crate::resolver::Symbol,
-        name: &str,
-        expected_payload_type: Option<AstType>,
-        expected_payload_type_name: Option<String>,
-        span: Span,
-    ) {
-        if symbol.variant_payload_type != expected_payload_type {
-            let actual = symbol
-                .variant_payload_type
-                .as_ref()
-                .map(AstType::display_name)
-                .unwrap_or_else(|| "none".to_string());
-            let expected = expected_payload_type
-                .as_ref()
-                .map(AstType::display_name)
-                .unwrap_or_else(|| "none".to_string());
-            self.diagnostics.push(Diagnostic::error(
-                "E0359",
-                format!(
-                    "resolver variant symbol '{name}' has typed payload type '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
-        if symbol.variant_payload_type_name != expected_payload_type_name {
-            let actual = symbol
-                .variant_payload_type_name
-                .as_deref()
-                .unwrap_or("unknown");
-            let expected = expected_payload_type_name.as_deref().unwrap_or("none");
-            self.diagnostics.push(Diagnostic::error(
-                "E0218",
-                format!(
-                    "resolver variant symbol '{name}' has payload type '{actual}', expected '{expected}'"
                 ),
                 span,
             ));
@@ -7776,8 +7767,12 @@ fn format_variant_names(variants: Option<&[String]>) -> String {
     }
 }
 
-fn expected_variant_payload_type_name(payload: &Option<AstType>) -> Option<String> {
-    payload.as_ref().map(AstType::display_name)
+fn expected_variant_payload(payload: &Option<AstType>) -> ExpectedVariantPayload {
+    ExpectedVariantPayload {
+        count: usize::from(payload.is_some()),
+        ty: payload.clone(),
+        type_name: payload.as_ref().map(AstType::display_name),
+    }
 }
 
 fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> ExpectedBehaviorMethods {
