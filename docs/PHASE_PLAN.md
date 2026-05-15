@@ -795,6 +795,10 @@ checked-in docs, tests, and commits only.
   impl method span exists.
 - Resolver-backed `.requires` validation now restores stale AST-only target
   type names from unique resolver required-behavior association refs.
+- Resolver-backed `.requires` validation also restores stale target type names
+  when AST-only behavior names or type arguments are stale, using unique
+  resolver required association owners before declaration-order behavior ref
+  restoration.
 - Resolver-backed struct collection no longer seeds AST-only field metadata
   before resolver metadata restoration.
 - Resolver-backed enum collection no longer seeds AST-only variant metadata
