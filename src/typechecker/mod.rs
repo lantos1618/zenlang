@@ -1379,19 +1379,36 @@ impl TypeChecker {
                         }
                     }
                 }
-                Declaration::Struct { name, .. } => {
-                    self.collect_resolver_struct_fields(symbols, name);
-                    self.collect_resolver_type_behavior_impl_refs(symbols, name);
-                    self.collect_resolver_type_behavior_requires(symbols, name);
+                Declaration::Struct { name, span, .. } => {
+                    let restored_name =
+                        Self::resolver_symbol_name_for(symbols, Namespace::Type, name, *span);
+                    self.collect_resolver_struct_fields(symbols, &restored_name);
+                    self.collect_resolver_type_behavior_impl_refs(symbols, &restored_name);
+                    self.collect_resolver_type_behavior_requires(symbols, &restored_name);
                 }
-                Declaration::Enum { name, .. } => {
-                    self.collect_resolver_enum_variants(symbols, name);
-                    self.collect_resolver_type_behavior_impl_refs(symbols, name);
-                    self.collect_resolver_type_behavior_requires(symbols, name);
+                Declaration::Enum { name, span, .. } => {
+                    let restored_name =
+                        Self::resolver_symbol_name_for(symbols, Namespace::Type, name, *span);
+                    self.collect_resolver_enum_variants(symbols, &restored_name);
+                    self.collect_resolver_type_behavior_impl_refs(symbols, &restored_name);
+                    self.collect_resolver_type_behavior_requires(symbols, &restored_name);
                 }
-                Declaration::Behavior { name, .. } => {
-                    self.collect_resolver_behavior_methods(symbols, name);
-                    self.collect_resolver_behavior_parents(symbols, name);
+                Declaration::Behavior { name, span, .. } => {
+                    let restored_name =
+                        Self::resolver_symbol_name_for(symbols, Namespace::Behavior, name, *span);
+                    if restored_name != *name {
+                        if let Some(info) = self.behaviors.remove(name) {
+                            self.behaviors.insert(
+                                restored_name.clone(),
+                                BehaviorInfo {
+                                    name: restored_name.clone(),
+                                    ..info
+                                },
+                            );
+                        }
+                    }
+                    self.collect_resolver_behavior_methods(symbols, &restored_name);
+                    self.collect_resolver_behavior_parents(symbols, &restored_name);
                 }
                 _ => {}
             }
@@ -1448,8 +1465,10 @@ impl TypeChecker {
 
         for decl in decls {
             match decl {
-                Declaration::Struct { name, .. } | Declaration::Enum { name, .. } => {
-                    self.collect_resolver_type_behavior_impls(symbols, name);
+                Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. } => {
+                    let restored_name =
+                        Self::resolver_symbol_name_for(symbols, Namespace::Type, name, *span);
+                    self.collect_resolver_type_behavior_impls(symbols, &restored_name);
                 }
                 _ => {}
             }
@@ -1653,21 +1672,7 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        let restored_name = symbols
-            .lookup(Namespace::Value, name)
-            .map(|symbol| symbol.name.clone())
-            .or_else(|| {
-                symbols
-                    .symbols()
-                    .iter()
-                    .find(|symbol| {
-                        symbol.namespace == Namespace::Value
-                            && !symbol.name.contains('.')
-                            && symbol.definition_span == span
-                    })
-                    .map(|symbol| symbol.name.clone())
-            })
-            .unwrap_or_else(|| name.to_string());
+        let restored_name = Self::resolver_symbol_name_for(symbols, Namespace::Value, name, span);
 
         if restored_name != name {
             self.functions.remove(name);
@@ -1677,6 +1682,25 @@ impl TypeChecker {
             }
         }
         self.collect_resolver_value_signature(symbols, &restored_name);
+    }
+
+    fn resolver_symbol_name_for(
+        symbols: &SymbolTable,
+        namespace: Namespace,
+        name: &str,
+        span: Span,
+    ) -> String {
+        symbols
+            .lookup(namespace, name)
+            .map(|symbol| symbol.name.clone())
+            .or_else(|| {
+                symbols
+                    .symbols()
+                    .iter()
+                    .find(|symbol| symbol.namespace == namespace && symbol.definition_span == span)
+                    .map(|symbol| symbol.name.clone())
+            })
+            .unwrap_or_else(|| name.to_string())
     }
 
     fn collect_resolver_struct_fields(&mut self, symbols: &SymbolTable, name: &str) {
@@ -9531,6 +9555,27 @@ Pipeline<T: Json<T>>: { callback: (i32) i32 }
     }
 
     #[test]
+    fn collect_declarations_with_symbols_uses_resolver_struct_name_metadata() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Struct { name, .. } = &mut program.declarations[0] {
+            *name = "Missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(tc.structs.contains_key("Point"));
+        assert!(!tc.structs.contains_key("Missing"));
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_struct_fields() {
         let mut program = parse_program(
             r#"
@@ -9602,6 +9647,27 @@ Callback<T: Json<T>>: Wrap((i32) i32), None
     }
 
     #[test]
+    fn collect_declarations_with_symbols_uses_resolver_enum_name_metadata() {
+        let mut program = parse_program(
+            r#"
+Option<T>: Some(T), None
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Enum { name, .. } = &mut program.declarations[0] {
+            *name = "Missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(tc.enums.contains_key("Option"));
+        assert!(!tc.enums.contains_key("Missing"));
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_enum_variants() {
         let mut program = parse_program(
             r#"
@@ -9660,6 +9726,29 @@ Mapper: behavior {
                 ret: Box::new(AstType::I32),
             })
         );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_name_metadata() {
+        let mut program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { name, .. } = &mut program.declarations[0] {
+            *name = "Missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(tc.behaviors.contains_key("Json"));
+        assert!(!tc.behaviors.contains_key("Missing"));
     }
 
     #[test]

@@ -777,6 +777,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed top-level function collection now restores function names
   from resolver value symbols by declaration span, so stale AST-only function
   names cannot drop restored signatures or generic templates during setup.
+- Resolver-backed struct, enum, and behavior collection now restores
+  type-like names from resolver symbols by declaration span, so stale AST-only
+  declaration names cannot drop restored fields, variants, behavior methods,
+  or association metadata during setup.
 - Resolver-backed impl-block collection no longer seeds AST-only method
   signatures before resolver metadata restoration, while preserving generic
   impl method template bodies for later metadata replacement.
