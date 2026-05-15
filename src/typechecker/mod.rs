@@ -7598,7 +7598,7 @@ impl TypeChecker {
     }
 }
 
-fn expected_return_type(return_type: &Option<AstType>) -> ExpectedReturnMetadata {
+fn expected_return_metadata(return_type: &Option<AstType>) -> ExpectedReturnMetadata {
     let typed = return_type.clone().unwrap_or(AstType::Void);
     ExpectedReturnMetadata {
         display: typed.display_name(),
@@ -7635,7 +7635,7 @@ fn expected_value_signature(
     let type_params = expected_type_parameters(type_params);
     ExpectedValueSignature {
         params,
-        return_type: expected_return_type(return_type),
+        return_type: expected_return_metadata(return_type),
         type_params,
     }
 }
@@ -7887,7 +7887,7 @@ fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> Vec<ExpectedBeh
     let mut expected = Vec::new();
     for method in methods {
         let params = expected_parameters(&method.params);
-        let return_type = expected_return_type(&method.return_type);
+        let return_type = expected_return_metadata(&method.return_type);
         let parameter_type_names: Vec<_> =
             params.iter().map(|param| param.display.clone()).collect();
         let parameter_names: Vec<_> = params.iter().map(|param| param.name.clone()).collect();

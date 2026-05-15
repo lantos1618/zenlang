@@ -747,6 +747,8 @@ checked-in docs, tests, and commits only.
   terminology as the paired expectation type.
 - Resolver value-signature expectation building now derives parameter names,
   display types, and typed metadata in one parameter pass.
+- Resolver value-return expectation construction now uses metadata terminology
+  consistently with the paired display and typed return expectation.
 
 ## Current Phase
 
