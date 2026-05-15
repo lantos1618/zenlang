@@ -213,6 +213,8 @@ checked-in docs, tests, and commits only.
   display names and typed refs through one expected-edge constructor.
 - Typechecker resolver expected behavior-association aggregation now builds
   impl and required edge groups through one expected-association constructor.
+- Typechecker resolver expected behavior-parent aggregation now builds
+  `.extends` edge groups through one expected-edge collection constructor.
 - Typechecker resolver validation now stores expected behavior display
   signatures and typed method metadata as paired per-method expectations before
   deriving the resolver comparison lists.

@@ -2466,6 +2466,22 @@ struct ExpectedBehaviorEdges {
 }
 
 impl ExpectedBehaviorEdges {
+    fn parents_from(program: &ast::Program) -> Self {
+        let mut expected = Self::default();
+        for decl in &program.declarations {
+            if let Declaration::BehaviorExtends {
+                behavior,
+                parent,
+                parent_type_args,
+                ..
+            } = decl
+            {
+                expected.push(behavior, parent, parent_type_args);
+            }
+        }
+        expected
+    }
+
     fn push(&mut self, owner: &str, behavior: &str, type_args: &[AstType]) {
         self.edges
             .entry(owner.to_string())
@@ -9568,19 +9584,7 @@ fn expected_behavior_edge(behavior: &str, type_args: &[AstType]) -> ExpectedBeha
 }
 
 fn expected_behavior_parent_associations(program: &ast::Program) -> ExpectedBehaviorEdges {
-    let mut expected = ExpectedBehaviorEdges::default();
-    for decl in &program.declarations {
-        if let Declaration::BehaviorExtends {
-            behavior,
-            parent,
-            parent_type_args,
-            ..
-        } = decl
-        {
-            expected.push(behavior, parent, parent_type_args);
-        }
-    }
-    expected
+    ExpectedBehaviorEdges::parents_from(program)
 }
 
 fn expected_resolver_declaration_symbols(program: &ast::Program) -> HashSet<(Namespace, String)> {
@@ -11361,6 +11365,30 @@ Point.requires(Json<str>)
         assert_eq!(required_edge.display, "Json<str>");
         assert_eq!(required_edge.metadata.name, "Json");
         assert_eq!(required_edge.metadata.type_args, vec![AstType::Str]);
+    }
+
+    #[test]
+    fn expected_behavior_edges_build_parent_edges_from_extends_together() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+"#,
+        );
+
+        let expected = ExpectedBehaviorEdges::parents_from(&program);
+        let edge = &expected.edges_for("PrettyJson")[0];
+
+        assert_eq!(edge.display, "Json");
+        assert_eq!(edge.metadata.name, "Json");
+        assert_eq!(edge.metadata.type_args, Vec::<AstType>::new());
     }
 
     #[test]
