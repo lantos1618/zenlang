@@ -901,6 +901,8 @@ and do not assume Phase 4 is ready without evidence.
   or type arguments cannot leak false extends diagnostics.
   Inherited missing-method diagnostics from restored parent refs are covered by
   `typechecker::tests::collect_declarations_with_symbols_reports_resolver_restored_behavior_parent_metadata`.
+  Inherited behavior default synthesis from restored parent refs is covered by
+  `typechecker::tests::collect_declarations_with_symbols_synthesizes_defaults_from_restored_behavior_parent`.
 - Resolver type symbols carry visibility metadata for structs and enums, and
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Typechecker setup rejects resolver behavior symbol visibility mismatches
