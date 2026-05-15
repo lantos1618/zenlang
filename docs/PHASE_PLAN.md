@@ -784,6 +784,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed impl-block collection no longer seeds AST-only method
   signatures before resolver metadata restoration, while preserving generic
   impl method template bodies for later metadata replacement.
+- Resolver-backed `Type.impl` method collection now restores method keys by
+  declaration span even when the AST-only impl target type name is stale.
 - Resolver-backed struct collection no longer seeds AST-only field metadata
   before resolver metadata restoration.
 - Resolver-backed enum collection no longer seeds AST-only variant metadata

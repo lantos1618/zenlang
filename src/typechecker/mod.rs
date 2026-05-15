@@ -1655,6 +1655,17 @@ impl TypeChecker {
                     })
                     .map(|symbol| symbol.name.clone())
             })
+            .or_else(|| {
+                symbols
+                    .symbols()
+                    .iter()
+                    .find(|symbol| {
+                        symbol.namespace == Namespace::Value
+                            && symbol.name.contains('.')
+                            && symbol.definition_span == span
+                    })
+                    .map(|symbol| symbol.name.clone())
+            })
             .unwrap_or(ast_key.clone());
 
         if restored_key != ast_key {
@@ -9209,6 +9220,31 @@ Point.impl = {
 
         assert!(tc.methods.contains_key("Point.get"));
         assert!(!tc.methods.contains_key("Point.missing"));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_type_impl_target_name_metadata() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Point.impl = {
+    get = (self: Point) i32 { return self.x }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { type_name, .. } = &mut program.declarations[1] {
+            *type_name = "Missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(tc.methods.contains_key("Point.get"));
+        assert!(!tc.methods.contains_key("Missing.get"));
     }
 
     #[test]
