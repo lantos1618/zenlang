@@ -912,6 +912,8 @@ and do not assume Phase 4 is ready without evidence.
   Callable signatures, type declarations, and behavior declarations now route
   through focused declaration metadata helpers within that resolver refresh
   pass.
+  Behavior declaration metadata now has the same focused helper boundary as
+  callable and type declaration metadata.
 - Resolver-backed `.requires` conformance uses restored required-behavior refs
   together with inherited child behavior impl satisfaction, covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_restored_requires_ref_for_inherited_impl`.

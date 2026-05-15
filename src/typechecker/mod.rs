@@ -3162,8 +3162,8 @@ impl TypeChecker {
                 Declaration::Struct { .. } | Declaration::Enum { .. } => {
                     self.collect_resolver_type_declaration_metadata(decl, symbols);
                 }
-                Declaration::Behavior { name, span, .. } => {
-                    self.collect_resolver_behavior_declaration(symbols, name, *span);
+                Declaration::Behavior { .. } => {
+                    self.collect_resolver_behavior_declaration_metadata(decl, symbols);
                 }
                 _ => {}
             }
@@ -3219,6 +3219,16 @@ impl TypeChecker {
                 self.collect_resolver_enum_variants(symbols, &restored_name);
             }
             _ => {}
+        }
+    }
+
+    fn collect_resolver_behavior_declaration_metadata(
+        &mut self,
+        decl: &Declaration,
+        symbols: &SymbolTable,
+    ) {
+        if let Declaration::Behavior { name, span, .. } = decl {
+            self.collect_resolver_behavior_declaration(symbols, name, *span);
         }
     }
 
