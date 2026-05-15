@@ -419,6 +419,8 @@ checked-in docs, tests, and commits only.
   from resolver-owned value symbols when AST-only impl method names are stale,
   without masking real extra impl methods that lack resolver-owned required
   method symbols.
+  Direct coverage now also proves stale AST impl method parameter names and
+  ordering are restored from resolver-owned value signatures before conformance.
 - Resolver records impl-method body locals in their nested scopes, and
   typechecker setup requires those local symbols before checking impl bodies.
 - Generic behavior bounds share the behavior inheritance solver, so an impl of a

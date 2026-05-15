@@ -322,6 +322,10 @@ and do not assume Phase 4 is ready without evidence.
   from resolver-owned value symbols when AST-only impl method names are stale,
   without masking real extra impl methods that lack resolver-owned required
   method symbols.
+  Stale AST impl method parameter names and ordering are covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_method_parameter_names_for_impl_checks`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_ignores_stale_impl_method_parameter_order_for_impl_checks`.
 - Resolver behavior impl method bodies carry scoped local symbols, and
   typechecker setup rejects missing impl-method body locals before behavior impl
   body collection.
