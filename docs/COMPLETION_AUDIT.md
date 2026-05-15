@@ -769,6 +769,11 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_return_presence`
   and
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_parameter_count`.
+  Resolver-restored generic impl method parameter names preserve positional
+  mutability and avoid stale same-name AST parameter matches, covered by
+  `typechecker::tests::collect_declarations_with_symbols_preserves_type_impl_generic_template_param_mutability_by_position`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_ignores_stale_type_impl_generic_template_param_names_for_mutability`.
 - Resolver-backed behavior method collection rebuilds behavior parameters from
   resolver-owned parameter names and types, so stale AST-only missing or extra
   parameters cannot distort impl conformance checks.

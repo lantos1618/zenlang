@@ -101,6 +101,9 @@ checked-in docs, tests, and commits only.
   AST-only generic signatures before monomorphization.
   It also directly covers resolver-restored return presence and parameter
   counts for generic impl method templates.
+  Resolver-restored generic impl method parameter names also preserve
+  positional mutability and ignore stale same-name AST parameter matches from
+  different positions.
 - Resolver-backed behavior method collection now rebuilds behavior parameters
   from resolver-owned parameter names and types, so stale AST-only missing or
   extra parameters cannot distort impl conformance checks.
