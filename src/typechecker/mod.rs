@@ -2355,7 +2355,7 @@ impl TypeChecker {
             }
         }
 
-        self.validate_generic_type_references(decls);
+        self.validate_generic_type_references(decls, symbols);
     }
 
     fn validate_collected_behavior_extends_semantics(&mut self) {
@@ -4003,7 +4003,11 @@ impl TypeChecker {
         }
     }
 
-    fn validate_generic_type_references(&mut self, decls: &[Declaration]) {
+    fn validate_generic_type_references(
+        &mut self,
+        decls: &[Declaration],
+        symbols: Option<&SymbolTable>,
+    ) {
         for decl in decls {
             match decl {
                 Declaration::Struct {
@@ -4014,8 +4018,15 @@ impl TypeChecker {
                     ..
                 } => {
                     if self.resolver_backed_collection {
-                        let scoped = self.collected_type_type_param_scope(name, type_params);
-                        self.validate_collected_struct_type_references(name, &scoped, *span);
+                        let restored_name =
+                            Self::validation_symbol_name(symbols, Namespace::Type, name, *span);
+                        let scoped =
+                            self.collected_type_type_param_scope(&restored_name, type_params);
+                        self.validate_collected_struct_type_references(
+                            &restored_name,
+                            &scoped,
+                            *span,
+                        );
                     } else {
                         let scoped = type_param_name_set(type_params);
                         for field in fields {
@@ -4031,8 +4042,15 @@ impl TypeChecker {
                     ..
                 } => {
                     if self.resolver_backed_collection {
-                        let scoped = self.collected_type_type_param_scope(name, type_params);
-                        self.validate_collected_enum_type_references(name, &scoped, *span);
+                        let restored_name =
+                            Self::validation_symbol_name(symbols, Namespace::Type, name, *span);
+                        let scoped =
+                            self.collected_type_type_param_scope(&restored_name, type_params);
+                        self.validate_collected_enum_type_references(
+                            &restored_name,
+                            &scoped,
+                            *span,
+                        );
                     } else {
                         let scoped = type_param_name_set(type_params);
                         for variant in variants {
@@ -4052,11 +4070,19 @@ impl TypeChecker {
                     params,
                     return_type,
                     body,
+                    span,
                     ..
                 } => {
                     if self.resolver_backed_collection {
-                        let scoped = self.collected_value_type_param_scope(name, type_params);
-                        self.validate_collected_value_type_references(name, &scoped, Span::dummy());
+                        let restored_name =
+                            Self::validation_symbol_name(symbols, Namespace::Value, name, *span);
+                        let scoped =
+                            self.collected_value_type_param_scope(&restored_name, type_params);
+                        self.validate_collected_value_type_references(
+                            &restored_name,
+                            &scoped,
+                            *span,
+                        );
                         self.validate_generic_expr_type_references(body, &scoped);
                     } else {
                         let scoped = type_param_name_set(type_params);
@@ -4083,10 +4109,17 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    let full_name = format!("{type_name}.{method_name}");
+                    let ast_key = format!("{type_name}.{method_name}");
                     if self.resolver_backed_collection {
-                        let scoped = self.collected_value_type_param_scope(&full_name, type_params);
-                        self.validate_collected_value_type_references(&full_name, &scoped, *span);
+                        let restored_key =
+                            Self::validation_method_key(symbols, &ast_key, type_name, *span);
+                        let scoped =
+                            self.collected_value_type_param_scope(&restored_key, type_params);
+                        self.validate_collected_value_type_references(
+                            &restored_key,
+                            &scoped,
+                            *span,
+                        );
                         self.validate_generic_expr_type_references(body, &scoped);
                     } else {
                         let scoped = type_param_name_set(type_params);
@@ -4111,8 +4144,15 @@ impl TypeChecker {
                     ..
                 } => {
                     if self.resolver_backed_collection {
-                        let scoped = self.collected_behavior_type_param_scope(name, type_params);
-                        self.validate_collected_behavior_type_references(name, &scoped, *span);
+                        let restored_name =
+                            Self::validation_symbol_name(symbols, Namespace::Behavior, name, *span);
+                        let scoped =
+                            self.collected_behavior_type_param_scope(&restored_name, type_params);
+                        self.validate_collected_behavior_type_references(
+                            &restored_name,
+                            &scoped,
+                            *span,
+                        );
                         for method in methods {
                             if let Some(default_body) = &method.default_body {
                                 self.validate_generic_expr_type_references(default_body, &scoped);
@@ -4153,11 +4193,17 @@ impl TypeChecker {
                         } = method
                         {
                             if self.resolver_backed_collection {
-                                let full_name = format!("{type_name}.{name}");
-                                let scoped =
-                                    self.collected_value_type_param_scope(&full_name, type_params);
+                                let ast_key = format!("{type_name}.{name}");
+                                let restored_key = Self::validation_method_key(
+                                    symbols,
+                                    &ast_key,
+                                    type_name,
+                                    method.span(),
+                                );
+                                let scoped = self
+                                    .collected_value_type_param_scope(&restored_key, type_params);
                                 self.validate_collected_value_type_references(
-                                    &full_name,
+                                    &restored_key,
                                     &scoped,
                                     method.span(),
                                 );
@@ -4187,6 +4233,30 @@ impl TypeChecker {
                 _ => {}
             }
         }
+    }
+
+    fn validation_symbol_name(
+        symbols: Option<&SymbolTable>,
+        namespace: Namespace,
+        name: &str,
+        span: Span,
+    ) -> String {
+        symbols
+            .map(|symbols| Self::resolver_symbol_name_for(symbols, namespace, name, span))
+            .unwrap_or_else(|| name.to_string())
+    }
+
+    fn validation_method_key(
+        symbols: Option<&SymbolTable>,
+        ast_key: &str,
+        type_name: &str,
+        span: Span,
+    ) -> String {
+        symbols
+            .map(|symbols| {
+                Self::resolver_method_signature_name_for(symbols, ast_key, type_name, span)
+            })
+            .unwrap_or_else(|| ast_key.to_string())
     }
 
     fn collected_value_type_param_scope(
@@ -11469,6 +11539,40 @@ Box.keep<T> = (self: Box, value: T) T { return value }
         assert!(
             !tc.generic_methods.contains_key("Box.keep"),
             "resolver-backed collection should clear the restored generic method template key when resolver signature metadata is incomplete"
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_generic_method_name_for_body_type_refs() {
+        let mut program = parse_program(
+            r#"
+Box: { value: i32 }
+Box.keep<T> = (self: Box, value: T) T {
+    same: T = value
+    return same
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Method {
+            method_name,
+            type_params,
+            ..
+        } = &mut program.declarations[1]
+        {
+            *method_name = "missing".to_string();
+            type_params[0].name = "Stale".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored generic method name and type parameters should avoid stale AST body type-ref diagnostics: {:?}",
+            tc.diagnostics
         );
     }
 
