@@ -951,6 +951,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver value return-type validation now carries display and typed return
   message formatting through a validation bundle, covered by
   `typechecker::tests::return_validation_formats_messages`.
+- Resolver value return-type validation now owns its resolver diagnostic code
+  mapping, covered by
+  `typechecker::tests::return_validation_uses_resolver_codes`.
 - Resolver behavior-association list validation now shares one expected
   metadata bundle for display names and typed refs.
 - Resolver behavior-association validation now uses one role/check mapping for

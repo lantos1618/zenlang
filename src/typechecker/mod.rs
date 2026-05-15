@@ -258,6 +258,13 @@ struct ReturnValidation {
 }
 
 impl ReturnValidation {
+    fn resolver_codes() -> Self {
+        Self {
+            display_code: "E0212",
+            typed_code: "E0357",
+        }
+    }
+
     fn display_message(self, name: &str, actual: &str, expected: &str) -> String {
         format!("resolver value symbol '{name}' has return type '{actual}', expected '{expected}'")
     }
@@ -8718,10 +8725,7 @@ impl TypeChecker {
         expected: &ExpectedReturnMetadata,
         span: Span,
     ) {
-        let validation = ReturnValidation {
-            display_code: "E0212",
-            typed_code: "E0357",
-        };
+        let validation = ReturnValidation::resolver_codes();
 
         if symbol.return_type_name.as_deref() != Some(expected.display.as_str()) {
             let actual = resolver_metadata_display(symbol.return_type_name.as_deref());
@@ -9836,6 +9840,14 @@ Point.get = (self: Point) i32 { return self.x }
             validation.typed_message("apply", "i32", "(i32) i32"),
             "resolver value symbol 'apply' has typed return type 'i32', expected '(i32) i32'"
         );
+    }
+
+    #[test]
+    fn return_validation_uses_resolver_codes() {
+        let validation = ReturnValidation::resolver_codes();
+
+        assert_eq!(validation.display_code, "E0212");
+        assert_eq!(validation.typed_code, "E0357");
     }
 
     #[test]
