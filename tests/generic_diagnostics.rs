@@ -108,6 +108,33 @@ main = () i32 {
 }
 
 #[test]
+fn generic_method_argument_arity_uses_method_diagnostic() {
+    let errors = typecheck_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+Box.get<T> = (self: Box<T>) T {
+    return self.value
+}
+
+main = () i32 {
+    box = Box<i32> { value: 1 }
+    return box.get(2)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("method `Box.get` expects 1 arguments, found 2")),
+        "expected generic method arity diagnostic to name method kind, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_function_inference_conflict_is_error() {
     let errors = typecheck_errors(
         r#"

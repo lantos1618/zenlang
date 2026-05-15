@@ -1042,6 +1042,8 @@ checked-in docs, tests, and commits only.
   inside composite type shapes.
 - Generic function-type substitutions now round-trip through nested generic
   type arguments instead of degrading to `void`.
+- Generic method call arity diagnostics now preserve method wording through
+  the shared call-signature checker.
 
 ## Current Phase
 

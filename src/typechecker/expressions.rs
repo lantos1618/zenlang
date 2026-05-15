@@ -211,6 +211,7 @@ impl TypeChecker {
                                 )
                             };
                             self.check_call_signature_with_substitutions(
+                                "function",
                                 &full_name,
                                 &info.params,
                                 &typed_args,
@@ -240,7 +241,13 @@ impl TypeChecker {
                                     *span,
                                 ));
                             }
-                            self.check_call_signature(&full_name, &info.params, &typed_args, span);
+                            self.check_call_signature(
+                                "function",
+                                &full_name,
+                                &info.params,
+                                &typed_args,
+                                span,
+                            );
                             (full_name.clone(), self.resolve_type(&info.return_type))
                         }
                     } else if name == "cast" && typed_args.len() == 1 && !type_args.is_empty() {
@@ -254,10 +261,22 @@ impl TypeChecker {
                             name.clone()
                         };
                         if let Some(info) = self.methods.get(&full_name).cloned() {
-                            self.check_call_signature(&full_name, &info.params, &typed_args, span);
+                            self.check_call_signature(
+                                "method",
+                                &full_name,
+                                &info.params,
+                                &typed_args,
+                                span,
+                            );
                             (full_name.clone(), self.resolve_type(&info.return_type))
                         } else if let Some(info) = self.functions.get(&mangled).cloned() {
-                            self.check_call_signature(&mangled, &info.params, &typed_args, span);
+                            self.check_call_signature(
+                                "function",
+                                &mangled,
+                                &info.params,
+                                &typed_args,
+                                span,
+                            );
                             (full_name.clone(), self.resolve_type(&info.return_type))
                         } else {
                             let m = module.as_deref().unwrap_or("");
@@ -309,12 +328,19 @@ impl TypeChecker {
                         let mangled = format!("{}_{}", recv_name, method);
                         // Try to look up the return type
                         let ret_type = if let Some(info) = self.functions.get(&mangled).cloned() {
-                            self.check_call_signature(&mangled, &info.params, &typed_args, span);
+                            self.check_call_signature(
+                                "function",
+                                &mangled,
+                                &info.params,
+                                &typed_args,
+                                span,
+                            );
                             self.resolve_type(&info.return_type)
                         } else {
                             let method_key = format!("{}.{}", recv_name, method);
                             if let Some(info) = self.methods.get(&method_key).cloned() {
                                 self.check_call_signature(
+                                    "method",
                                     &method_key,
                                     &info.params,
                                     &typed_args,
@@ -391,6 +417,7 @@ impl TypeChecker {
                         let saved_self_type = self.current_self_type.clone();
                         self.current_self_type = self.generic_method_self_type(&method_key, &subs);
                         self.check_call_signature_with_substitutions(
+                            "method",
                             &method_key,
                             &info.params,
                             &typed_args,
@@ -421,7 +448,13 @@ impl TypeChecker {
                                 *span,
                             ));
                         }
-                        self.check_call_signature(&method_key, &info.params, &typed_args, span);
+                        self.check_call_signature(
+                            "method",
+                            &method_key,
+                            &info.params,
+                            &typed_args,
+                            span,
+                        );
                         (
                             format!("{}_{}", type_name, method),
                             self.resolve_type(&info.return_type),
@@ -468,6 +501,7 @@ impl TypeChecker {
                             self.current_self_type =
                                 self.generic_method_self_type(&generic_method_key, &subs);
                             self.check_call_signature_with_substitutions(
+                                "method",
                                 &generic_method_key,
                                 &info.params,
                                 &typed_args,
@@ -506,6 +540,7 @@ impl TypeChecker {
                                 ));
                             }
                             self.check_call_signature(
+                                "method",
                                 &generic_method_key,
                                 &info.params,
                                 &typed_args,
@@ -545,6 +580,7 @@ impl TypeChecker {
                             )
                         };
                         self.check_call_signature_with_substitutions(
+                            "function",
                             method,
                             &info.params,
                             &typed_args,
@@ -570,7 +606,13 @@ impl TypeChecker {
                                 *span,
                             ));
                         }
-                        self.check_call_signature(method, &info.params, &typed_args, span);
+                        self.check_call_signature(
+                            "function",
+                            method,
+                            &info.params,
+                            &typed_args,
+                            span,
+                        );
                         (method.clone(), self.resolve_type(&info.return_type))
                     };
                     Ok(TypedExpression {
@@ -1318,6 +1360,7 @@ impl TypeChecker {
 
     fn check_call_signature(
         &mut self,
+        kind: &str,
         callee: &str,
         params: &[(String, AstType)],
         args: &[TypedExpression],
@@ -1327,7 +1370,8 @@ impl TypeChecker {
             self.diagnostics.push(Diagnostic::error(
                 "E3021",
                 format!(
-                    "function `{}` expects {} arguments, found {}",
+                    "{} `{}` expects {} arguments, found {}",
+                    kind,
                     callee,
                     params.len(),
                     args.len()
@@ -1361,6 +1405,7 @@ impl TypeChecker {
 
     fn check_call_signature_with_substitutions(
         &mut self,
+        kind: &str,
         callee: &str,
         params: &[(String, AstType)],
         args: &[TypedExpression],
@@ -1371,7 +1416,8 @@ impl TypeChecker {
             self.diagnostics.push(Diagnostic::error(
                 "E3021",
                 format!(
-                    "function `{}` expects {} arguments, found {}",
+                    "{} `{}` expects {} arguments, found {}",
+                    kind,
                     callee,
                     params.len(),
                     args.len()

@@ -996,6 +996,9 @@ and do not assume Phase 4 is ready without evidence.
 - Generic function-type substitutions now round-trip through nested generic
   type arguments instead of degrading to `void`, covered by
   `typechecker::tests::substitute_type_preserves_function_type_arguments_in_nested_generics`.
+- Generic method call arity diagnostics now preserve method wording through
+  the shared call-signature checker, covered by
+  `generic_diagnostics::generic_method_argument_arity_uses_method_diagnostic`.
 
 ## Unresolved Gaps
 
