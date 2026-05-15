@@ -3730,23 +3730,39 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: Option<&SymbolTable>,
     ) {
+        if self.resolver_backed_collection {
+            self.validate_resolver_struct_field_default_declarations(decls, symbols);
+        } else {
+            self.validate_ast_struct_field_default_declarations(decls);
+        }
+    }
+
+    fn validate_resolver_struct_field_default_declarations(
+        &mut self,
+        decls: &[Declaration],
+        symbols: Option<&SymbolTable>,
+    ) {
+        for decl in decls {
+            let Declaration::Struct { name, span, .. } = decl else {
+                continue;
+            };
+
+            self.validate_resolver_struct_field_defaults(symbols, name, *span);
+        }
+    }
+
+    fn validate_ast_struct_field_default_declarations(&mut self, decls: &[Declaration]) {
         for decl in decls {
             let Declaration::Struct {
-                name,
                 type_params,
                 fields,
-                span,
                 ..
             } = decl
             else {
                 continue;
             };
 
-            if self.resolver_backed_collection {
-                self.validate_resolver_struct_field_defaults(symbols, name, *span);
-            } else {
-                self.validate_ast_struct_field_defaults(!type_params.is_empty(), fields);
-            }
+            self.validate_ast_struct_field_defaults(!type_params.is_empty(), fields);
         }
     }
 

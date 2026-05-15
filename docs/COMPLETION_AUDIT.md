@@ -1193,6 +1193,13 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_struct_field_default_refs_when_fields_incomplete`,
   and
   `typechecker::tests::collect_declarations_with_symbols_clears_stale_struct_fields_after_name_restore`.
+- AST-only and resolver-backed struct field default declaration traversal now
+  have separate helper passes, covered by
+  `typechecker::tests::struct_literal_uses_default_for_omitted_field`,
+  `typechecker::tests::generic_struct_literal_uses_substituted_default_for_omitted_field`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_struct_field_names_for_defaults`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_struct_field_default_refs_when_fields_incomplete`.
 - Resolver-backed struct field defaults are stored and validated under
   resolver-owned field names by position, so stale AST-only field names cannot
   skip default type checking, covered by

@@ -1024,6 +1024,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed struct field default validation now uses a dedicated
   resolver-restored field-default helper instead of keeping restored struct
   lookup inline in the broad declaration semantics loop.
+- AST-only and resolver-backed struct field default declaration traversal now
+  have separate helper passes before the focused default validators run.
 - Resolver-backed struct field defaults are now stored and validated under
   resolver-owned field names by position, so stale AST-only field names cannot
   skip default type checking.
