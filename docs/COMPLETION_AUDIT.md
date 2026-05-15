@@ -160,6 +160,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-ref pop and peek selection now share one helper across
   impl and required-association restoration paths, covered by
   `typechecker::tests::resolver_behavior_ref_helpers_share_pop_and_peek_selection`.
+- Resolver absent mutability metadata validation now uses a validation bundle
+  to build the shared mutability metadata entry, covered by
+  `typechecker::tests::mutability_absence_validation_builds_entry`.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths, covered by
   `typechecker::tests::resolver_symbol_metadata_helper_requires_symbol_and_selected_metadata`.

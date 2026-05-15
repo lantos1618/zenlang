@@ -1021,6 +1021,8 @@ checked-in docs, tests, and commits only.
   validation bundle build its method/parent metadata entries.
 - Resolver absent mutability metadata validation now shares one helper across
   module, import, type-like, variant, and value symbols.
+- Resolver absent mutability metadata validation now lets the validation bundle
+  build its mutability metadata entry.
 
 ## Current Phase
 

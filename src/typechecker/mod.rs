@@ -543,6 +543,17 @@ impl BehaviorDeclarationAbsenceValidation {
     }
 }
 
+#[derive(Clone, Copy)]
+struct MutabilityAbsenceValidation {
+    code: &'static str,
+}
+
+impl MutabilityAbsenceValidation {
+    fn entry(self, symbol: &Symbol) -> (bool, &'static str, &'static str) {
+        (symbol.is_mutable.is_some(), self.code, "mutability")
+    }
+}
+
 struct SourceValidation {
     code: &'static str,
     actual_missing: &'static str,
@@ -5558,7 +5569,7 @@ impl TypeChecker {
             symbol,
             "module",
             &expected.name,
-            "E0345",
+            MutabilityAbsenceValidation { code: "E0345" },
             span,
         );
     }
@@ -6606,7 +6617,13 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_absent_mutability_metadata(symbol, "import", name, "E0344", span);
+        self.validate_resolver_absent_mutability_metadata(
+            symbol,
+            "import",
+            name,
+            MutabilityAbsenceValidation { code: "E0344" },
+            span,
+        );
     }
 
     fn require_resolver_parameter_locals(
@@ -7247,17 +7264,11 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         symbol_kind: &str,
         name: &str,
-        code: &'static str,
+        validation: MutabilityAbsenceValidation,
         span: Span,
     ) {
-        self.validate_resolver_absent_metadata_entry(
-            symbol_kind,
-            name,
-            symbol.is_mutable.is_some(),
-            code,
-            "mutability",
-            span,
-        );
+        let entry = validation.entry(symbol);
+        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &[entry], span);
     }
 
     fn validate_resolver_absent_source_metadata(
@@ -7536,7 +7547,7 @@ impl TypeChecker {
             symbol,
             namespace.diagnostic_name(),
             name,
-            "E0314",
+            MutabilityAbsenceValidation { code: "E0314" },
             span,
         );
     }
@@ -7806,7 +7817,13 @@ impl TypeChecker {
             &[(symbol.variant_names.is_some(), "E0338", "variant names")],
             span,
         );
-        self.validate_resolver_absent_mutability_metadata(symbol, "variant", name, "E0343", span);
+        self.validate_resolver_absent_mutability_metadata(
+            symbol,
+            "variant",
+            name,
+            MutabilityAbsenceValidation { code: "E0343" },
+            span,
+        );
     }
 
     fn validate_resolver_behavior_methods(
@@ -8286,7 +8303,13 @@ impl TypeChecker {
             span,
         );
 
-        self.validate_resolver_absent_mutability_metadata(symbol, "value", name, "E0308", span);
+        self.validate_resolver_absent_mutability_metadata(
+            symbol,
+            "value",
+            name,
+            MutabilityAbsenceValidation { code: "E0308" },
+            span,
+        );
     }
 }
 
@@ -9857,6 +9880,27 @@ Option<T>: Some(T), None
                 (true, "TYPED_PAYLOAD", "typed variant payload type"),
             ]
         );
+    }
+
+    #[test]
+    fn mutability_absence_validation_builds_entry() {
+        let program = parse_program(
+            r#"
+main = (mut input: i32) i32 {
+    value ::= input
+    return value
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let symbol = symbols
+            .lookup_scoped(Namespace::Local, "input")
+            .expect("local symbol");
+        let entry = MutabilityAbsenceValidation { code: "MUTABLE" }.entry(symbol);
+
+        assert_eq!(entry, (true, "MUTABLE", "mutability"));
     }
 
     #[test]
