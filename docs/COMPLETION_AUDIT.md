@@ -627,6 +627,8 @@ and do not assume Phase 4 is ready without evidence.
   the existing explicit diagnostic labels and error codes.
 - Resolver behavior-association collection now uses one resolver behavior-ref
   accessor for behavior parent refs, type impl refs, and type requires refs.
+- Resolver behavior-association validation now derives display-name and typed
+  ref expectations together, avoiding duplicate AST scans for the same edges.
 
 ## Unresolved Gaps
 

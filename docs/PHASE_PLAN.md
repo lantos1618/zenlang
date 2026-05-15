@@ -620,6 +620,8 @@ checked-in docs, tests, and commits only.
   error codes.
 - Resolver behavior-association collection now shares resolver behavior-ref
   symbol lookup across parent, impl, and requires handoff paths.
+- Resolver behavior-association validation now builds expected display names
+  and typed refs in the same AST pass for impl/requires and parent edges.
 
 ## Current Phase
 

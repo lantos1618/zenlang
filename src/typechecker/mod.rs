@@ -586,6 +586,18 @@ struct ExpectedBehaviorRefList<'a> {
     refs: &'a [BehaviorRefMetadata],
 }
 
+struct ExpectedBehaviorAssociations {
+    impl_names: HashMap<String, Vec<String>>,
+    required_names: HashMap<String, Vec<String>>,
+    impl_refs: HashMap<String, Vec<BehaviorRefMetadata>>,
+    required_refs: HashMap<String, Vec<BehaviorRefMetadata>>,
+}
+
+struct ExpectedBehaviorParents {
+    names: HashMap<String, Vec<String>>,
+    refs: HashMap<String, Vec<BehaviorRefMetadata>>,
+}
+
 // ── TypeChecker ───────────────────────────────────────────────────
 
 pub struct TypeChecker {
@@ -4364,9 +4376,7 @@ impl TypeChecker {
         program: &ast::Program,
         symbols: &SymbolTable,
     ) {
-        let (expected_impls, expected_requires) = expected_behavior_associations(program);
-        let (expected_impl_refs, expected_required_refs) =
-            expected_behavior_association_refs(program);
+        let expected = expected_behavior_associations(program);
         for decl in &program.declarations {
             let (Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. }) =
                 decl
@@ -4379,8 +4389,13 @@ impl TypeChecker {
             self.validate_resolver_behavior_impl_list(
                 symbol,
                 name,
-                expected_impls.get(name).map(Vec::as_slice).unwrap_or(&[]),
-                expected_impl_refs
+                expected
+                    .impl_names
+                    .get(name)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]),
+                expected
+                    .impl_refs
                     .get(name)
                     .map(Vec::as_slice)
                     .unwrap_or(&[]),
@@ -4389,11 +4404,13 @@ impl TypeChecker {
             self.validate_resolver_behavior_required_list(
                 symbol,
                 name,
-                expected_requires
+                expected
+                    .required_names
                     .get(name)
                     .map(Vec::as_slice)
                     .unwrap_or(&[]),
-                expected_required_refs
+                expected
+                    .required_refs
                     .get(name)
                     .map(Vec::as_slice)
                     .unwrap_or(&[]),
@@ -4407,8 +4424,7 @@ impl TypeChecker {
         program: &ast::Program,
         symbols: &SymbolTable,
     ) {
-        let expected_parents = expected_behavior_parent_associations(program);
-        let expected_parent_refs = expected_behavior_parent_ref_associations(program);
+        let expected = expected_behavior_parent_associations(program);
         for decl in &program.declarations {
             let Declaration::Behavior { name, span, .. } = decl else {
                 continue;
@@ -4419,11 +4435,8 @@ impl TypeChecker {
             self.validate_resolver_behavior_parent_list(
                 symbol,
                 name,
-                expected_parents.get(name).map(Vec::as_slice).unwrap_or(&[]),
-                expected_parent_refs
-                    .get(name)
-                    .map(Vec::as_slice)
-                    .unwrap_or(&[]),
+                expected.names.get(name).map(Vec::as_slice).unwrap_or(&[]),
+                expected.refs.get(name).map(Vec::as_slice).unwrap_or(&[]),
                 *span,
             );
         }
@@ -7786,11 +7799,13 @@ fn expected_behavior_method_types(
         .collect()
 }
 
-fn expected_behavior_associations(
-    program: &ast::Program,
-) -> (HashMap<String, Vec<String>>, HashMap<String, Vec<String>>) {
-    let mut impls: HashMap<String, Vec<String>> = HashMap::new();
-    let mut requires: HashMap<String, Vec<String>> = HashMap::new();
+fn expected_behavior_associations(program: &ast::Program) -> ExpectedBehaviorAssociations {
+    let mut expected = ExpectedBehaviorAssociations {
+        impl_names: HashMap::new(),
+        required_names: HashMap::new(),
+        impl_refs: HashMap::new(),
+        required_refs: HashMap::new(),
+    };
     for decl in &program.declarations {
         match decl {
             Declaration::ImplBlock {
@@ -7799,45 +7814,13 @@ fn expected_behavior_associations(
                 behavior_type_args,
                 ..
             } => {
-                impls
+                expected
+                    .impl_names
                     .entry(type_name.clone())
                     .or_default()
                     .push(behavior_ref_display(behavior, behavior_type_args));
-            }
-            Declaration::Requires {
-                type_name,
-                behavior,
-                behavior_type_args,
-                ..
-            } => {
-                requires
-                    .entry(type_name.clone())
-                    .or_default()
-                    .push(behavior_ref_display(behavior, behavior_type_args));
-            }
-            _ => {}
-        }
-    }
-    (impls, requires)
-}
-
-fn expected_behavior_association_refs(
-    program: &ast::Program,
-) -> (
-    HashMap<String, Vec<BehaviorRefMetadata>>,
-    HashMap<String, Vec<BehaviorRefMetadata>>,
-) {
-    let mut impls: HashMap<String, Vec<BehaviorRefMetadata>> = HashMap::new();
-    let mut requires: HashMap<String, Vec<BehaviorRefMetadata>> = HashMap::new();
-    for decl in &program.declarations {
-        match decl {
-            Declaration::ImplBlock {
-                type_name,
-                behavior: Some(behavior),
-                behavior_type_args,
-                ..
-            } => {
-                impls
+                expected
+                    .impl_refs
                     .entry(type_name.clone())
                     .or_default()
                     .push(BehaviorRefMetadata {
@@ -7851,7 +7834,13 @@ fn expected_behavior_association_refs(
                 behavior_type_args,
                 ..
             } => {
-                requires
+                expected
+                    .required_names
+                    .entry(type_name.clone())
+                    .or_default()
+                    .push(behavior_ref_display(behavior, behavior_type_args));
+                expected
+                    .required_refs
                     .entry(type_name.clone())
                     .or_default()
                     .push(BehaviorRefMetadata {
@@ -7862,11 +7851,14 @@ fn expected_behavior_association_refs(
             _ => {}
         }
     }
-    (impls, requires)
+    expected
 }
 
-fn expected_behavior_parent_associations(program: &ast::Program) -> HashMap<String, Vec<String>> {
-    let mut parents: HashMap<String, Vec<String>> = HashMap::new();
+fn expected_behavior_parent_associations(program: &ast::Program) -> ExpectedBehaviorParents {
+    let mut expected = ExpectedBehaviorParents {
+        names: HashMap::new(),
+        refs: HashMap::new(),
+    };
     for decl in &program.declarations {
         if let Declaration::BehaviorExtends {
             behavior,
@@ -7875,28 +7867,13 @@ fn expected_behavior_parent_associations(program: &ast::Program) -> HashMap<Stri
             ..
         } = decl
         {
-            parents
+            expected
+                .names
                 .entry(behavior.clone())
                 .or_default()
                 .push(behavior_ref_display(parent, parent_type_args));
-        }
-    }
-    parents
-}
-
-fn expected_behavior_parent_ref_associations(
-    program: &ast::Program,
-) -> HashMap<String, Vec<BehaviorRefMetadata>> {
-    let mut parents: HashMap<String, Vec<BehaviorRefMetadata>> = HashMap::new();
-    for decl in &program.declarations {
-        if let Declaration::BehaviorExtends {
-            behavior,
-            parent,
-            parent_type_args,
-            ..
-        } = decl
-        {
-            parents
+            expected
+                .refs
                 .entry(behavior.clone())
                 .or_default()
                 .push(BehaviorRefMetadata {
@@ -7905,7 +7882,7 @@ fn expected_behavior_parent_ref_associations(
                 });
         }
     }
-    parents
+    expected
 }
 
 fn expected_resolver_declaration_symbols(program: &ast::Program) -> HashSet<(Namespace, String)> {
