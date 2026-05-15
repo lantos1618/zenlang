@@ -925,6 +925,8 @@ checked-in docs, tests, and commits only.
   for counts, display payload types, and typed AST payloads.
 - Resolver visibility validation now shares one diagnostic helper across
   module, import, local, type-like, variant, and value symbols.
+- Resolver source validation now shares one diagnostic helper across module,
+  import, and local symbols.
 
 ## Current Phase
 

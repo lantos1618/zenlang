@@ -330,6 +330,12 @@ struct ValueSignatureAbsenceValidation {
     return_type_code: &'static str,
 }
 
+struct SourceValidation {
+    code: &'static str,
+    actual_missing: &'static str,
+    quote_expected: bool,
+}
+
 struct ExpectedField {
     typed: (String, AstType),
     display: (String, String),
@@ -5053,18 +5059,18 @@ impl TypeChecker {
             span,
         );
 
-        if symbol.import_source != expected.source {
-            let actual = symbol.import_source.as_deref().unwrap_or("none");
-            let expected_source = expected.source.as_deref().unwrap_or("none");
-            self.diagnostics.push(Diagnostic::error(
-                "E0230",
-                format!(
-                    "resolver module symbol '{}' has source '{actual}', expected {expected_source}",
-                    expected.name
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_source(
+            "module",
+            &expected.name,
+            symbol.import_source.as_deref(),
+            expected.source.as_deref(),
+            SourceValidation {
+                code: "E0230",
+                actual_missing: "none",
+                quote_expected: false,
+            },
+            span,
+        );
 
         self.validate_resolver_absent_value_signature_metadata(
             symbol,
@@ -6128,17 +6134,18 @@ impl TypeChecker {
             span,
         );
 
-        if symbol.import_source.as_deref() != Some(expected.source.as_str()) {
-            let actual = symbol.import_source.as_deref().unwrap_or("unknown");
-            self.diagnostics.push(Diagnostic::error(
-                "E0227",
-                format!(
-                    "resolver import symbol '{name}' has source '{actual}', expected '{}'",
-                    expected.source
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_source(
+            "import",
+            name,
+            symbol.import_source.as_deref(),
+            Some(expected.source.as_str()),
+            SourceValidation {
+                code: "E0227",
+                actual_missing: "unknown",
+                quote_expected: true,
+            },
+            span,
+        );
 
         self.validate_resolver_import_absent_declaration_metadata(symbol, name, span);
     }
@@ -6617,17 +6624,18 @@ impl TypeChecker {
             span,
         );
 
-        if symbol.import_source != expected.source {
-            let actual = symbol.import_source.as_deref().unwrap_or("none");
-            let expected_source = expected.source.as_deref().unwrap_or("none");
-            self.diagnostics.push(Diagnostic::error(
-                "E0248",
-                format!(
-                    "resolver local symbol '{name}' has source '{actual}', expected {expected_source}"
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_source(
+            "local",
+            name,
+            symbol.import_source.as_deref(),
+            expected.source.as_deref(),
+            SourceValidation {
+                code: "E0248",
+                actual_missing: "none",
+                quote_expected: false,
+            },
+            span,
+        );
 
         self.validate_resolver_absent_value_signature_metadata(
             symbol,
@@ -6917,6 +6925,33 @@ impl TypeChecker {
                 code,
                 format!(
                     "resolver {symbol_kind} symbol '{name}' has source '{actual}', expected none"
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn validate_resolver_source(
+        &mut self,
+        symbol_kind: &str,
+        name: &str,
+        actual: Option<&str>,
+        expected: Option<&str>,
+        validation: SourceValidation,
+        span: Span,
+    ) {
+        if actual != expected {
+            let actual = actual.unwrap_or(validation.actual_missing);
+            let expected = expected.unwrap_or("none");
+            let expected = if validation.quote_expected {
+                format!("'{expected}'")
+            } else {
+                expected.to_string()
+            };
+            self.diagnostics.push(Diagnostic::error(
+                validation.code,
+                format!(
+                    "resolver {symbol_kind} symbol '{name}' has source '{actual}', expected {expected}"
                 ),
                 span,
             ));
