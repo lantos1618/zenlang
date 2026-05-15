@@ -908,6 +908,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior method collection derives return-type presence from
   validated resolver metadata, so stale AST-only missing return annotations
   cannot erase resolver-owned behavior method returns.
+- Omitted behavior default synthesis uses resolver-restored behavior method
+  names, so stale AST-only default method names do not synthesize stale method
+  keys, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_default_method_name_metadata`.
 - Resolver behavior method signature metadata preserves generic return types on
   generic behaviors, and typechecker setup rejects generic method-signature
   handoff drift before behavior metadata collection.

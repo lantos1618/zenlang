@@ -848,6 +848,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior default synthesis now runs after resolver behavior
   and impl-method metadata restoration, and restored impl method names count as
   explicit overrides so defaults cannot overwrite explicit impl signatures.
+  Omitted defaults also use resolver-restored behavior method names, so stale
+  AST-only behavior default names cannot synthesize stale method keys.
 - Behavior default synthesis now uses resolver-owned behavior impl refs when
   AST-only impl behavior names or type arguments are stale, so omitted defaults
   come from the validated behavior association.
