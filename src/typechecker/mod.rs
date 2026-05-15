@@ -751,6 +751,10 @@ impl SourceAbsenceValidation {
         Self { code: "E0329" }
     }
 
+    fn value_resolver_code() -> Self {
+        Self { code: "E0297" }
+    }
+
     fn source_validation(self) -> SourceValidation {
         SourceValidation {
             code: self.code,
@@ -8808,7 +8812,7 @@ impl TypeChecker {
             symbol,
             "value",
             name,
-            SourceAbsenceValidation { code: "E0297" },
+            SourceAbsenceValidation::value_resolver_code(),
             span,
         );
 
@@ -10852,6 +10856,13 @@ main = (mut input: i32) i32 {
         let validation = SourceAbsenceValidation::variant_resolver_code();
 
         assert_eq!(validation.code, "E0329");
+    }
+
+    #[test]
+    fn source_absence_validation_uses_value_resolver_code() {
+        let validation = SourceAbsenceValidation::value_resolver_code();
+
+        assert_eq!(validation.code, "E0297");
     }
 
     #[test]

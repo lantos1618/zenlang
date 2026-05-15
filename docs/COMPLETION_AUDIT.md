@@ -1041,6 +1041,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver variant source absence validation now owns its resolver diagnostic
   code mapping, covered by
   `typechecker::tests::source_absence_validation_uses_variant_resolver_code`.
+- Resolver value source absence validation now owns its resolver diagnostic
+  code mapping, covered by
+  `typechecker::tests::source_absence_validation_uses_value_resolver_code`.
 - Resolver local mutability validation now shares the same diagnostic helper
   shape used by the resolver metadata validation paths.
 - Resolver local mutability validation now carries its diagnostic code and
