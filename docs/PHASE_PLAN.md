@@ -74,6 +74,8 @@ checked-in docs, tests, and commits only.
   from validated resolver parameter names and types, so stale AST-only
   parameter counts cannot leave monomorphization templates with missing or
   extra parameters.
+  The rebuild preserves AST-only parameter mutability by positional fallback
+  when resolver-restored parameter names differ from stale AST names.
 - Resolver-backed behavior method collection now rebuilds behavior parameters
   from resolver-owned parameter names and types, so stale AST-only missing or
   extra parameters cannot distort impl conformance checks.

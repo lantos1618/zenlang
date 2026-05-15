@@ -432,6 +432,9 @@ and do not assume Phase 4 is ready without evidence.
   validated resolver parameter names and types, so stale AST-only parameter
   counts cannot leave monomorphization templates with missing or extra
   parameters.
+  Parameter mutability is preserved by positional fallback when restored
+  resolver parameter names differ from stale AST names, covered by
+  `typechecker::tests::collect_declarations_with_symbols_preserves_generic_template_param_mutability_by_position`.
 - Resolver-backed behavior method collection rebuilds behavior parameters from
   resolver-owned parameter names and types, so stale AST-only missing or extra
   parameters cannot distort impl conformance checks.

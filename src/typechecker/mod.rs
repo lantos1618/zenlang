@@ -1413,11 +1413,13 @@ impl TypeChecker {
             .iter()
             .cloned()
             .zip(parameter_types.iter().cloned())
-            .map(|(param_name, ty)| {
+            .enumerate()
+            .map(|(index, (param_name, ty))| {
                 let existing = template
                     .params
                     .iter()
                     .find(|param| param.name == param_name)
+                    .or_else(|| template.params.get(index))
                     .cloned();
                 Param {
                     name: param_name,
@@ -8983,6 +8985,34 @@ choose<T> = (left: T, right: T) T {
         assert_eq!(template.params[1].name, "right");
         assert_eq!(template.params[0].ty, AstType::Named("T".to_string()));
         assert_eq!(template.params[1].ty, AstType::Named("T".to_string()));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_preserves_generic_template_param_mutability_by_position() {
+        let mut program = parse_program(
+            r#"
+keep<T> = (mut value: T) T {
+    value = value
+    return value
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Function { params, .. } = &mut program.declarations[0] {
+            params[0].name = "stale".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let template = tc.generic_functions.get("keep").expect("generic template");
+        assert_eq!(template.params[0].name, "value");
+        assert!(
+            template.params[0].mutable,
+            "resolver-restored parameter name should preserve positional mutability"
+        );
     }
 
     #[test]
