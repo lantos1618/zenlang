@@ -1027,6 +1027,8 @@ checked-in docs, tests, and commits only.
   mapping instead of constructing that code at the call site.
 - Resolver variant-name validation now carries its diagnostic code and message
   formatting through a validation bundle.
+- Resolver variant-name validation now owns its resolver diagnostic code
+  mapping instead of constructing that code at the call site.
 - Resolver visibility validation now shares one diagnostic helper across
   module, import, local, type-like, variant, and value symbols.
 - Resolver visibility validation now carries its diagnostic code and display

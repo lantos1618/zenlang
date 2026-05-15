@@ -891,6 +891,10 @@ struct VariantNameValidation {
 }
 
 impl VariantNameValidation {
+    fn resolver_code() -> Self {
+        Self { code: "E0241" }
+    }
+
     fn message(self, name: &str, actual: &str, expected: &str) -> String {
         format!("resolver type symbol '{name}' has variants '{actual}', expected '{expected}'")
     }
@@ -8138,7 +8142,7 @@ impl TypeChecker {
         span: Span,
     ) {
         if symbol.variant_names.as_deref() != Some(expected_variant_names) {
-            let validation = VariantNameValidation { code: "E0241" };
+            let validation = VariantNameValidation::resolver_code();
             let actual = format_variant_names(symbol.variant_names.as_deref());
             let expected = format_variant_names(Some(expected_variant_names));
             self.diagnostics.push(Diagnostic::error(
@@ -9971,6 +9975,13 @@ Point.get = (self: Point) i32 { return self.x }
             validation.message("Option", "(Some)", "(Some, None)"),
             "resolver type symbol 'Option' has variants '(Some)', expected '(Some, None)'"
         );
+    }
+
+    #[test]
+    fn variant_name_validation_uses_resolver_code() {
+        let validation = VariantNameValidation::resolver_code();
+
+        assert_eq!(validation.code, "E0241");
     }
 
     #[test]
