@@ -917,6 +917,8 @@ and do not assume Phase 4 is ready without evidence.
   also have named helper passes.
   AST callable generic-bound validation, callable signature seeding, and
   resolver-backed callable template seeding now also have named helper passes.
+  AST impl method/default seeding and resolver-backed impl template seeding now
+  also have named helper passes.
   Resolver-backed semantic validation and final type impl association refresh
   now each have focused helper boundaries matching those named passes.
   Callable signatures, type declarations, and behavior declarations now route
