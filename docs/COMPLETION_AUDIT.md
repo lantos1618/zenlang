@@ -1156,6 +1156,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver variant behavior-declaration absence validation now owns its resolver
   diagnostic code mapping, covered by
   `typechecker::tests::behavior_declaration_absence_validation_uses_variant_resolver_codes`.
+- Resolver value behavior-declaration absence validation now owns its resolver
+  diagnostic code mapping, covered by
+  `typechecker::tests::behavior_declaration_absence_validation_uses_value_resolver_codes`.
 - Resolver absent mutability metadata validation now shares one helper across
   module, import, type-like, variant, and value symbols.
 - Generic type substitution now covers raw pointers, arrays, and function
