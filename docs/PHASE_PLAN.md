@@ -228,6 +228,8 @@ checked-in docs, tests, and commits only.
   value-parameter, parameter-type, and variant-name diagnostics.
 - Resolver comma-joined string rendering is now shared by resolver metadata
   lists and behavior-ref name diagnostics.
+- Resolver named-list rendering is now shared by typed and display struct field
+  metadata diagnostics.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

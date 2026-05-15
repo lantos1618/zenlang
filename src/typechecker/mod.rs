@@ -8414,31 +8414,11 @@ fn expected_field_metadata(fields: &[StructField]) -> Vec<ExpectedField> {
 }
 
 fn format_field_types(fields: Option<&[(String, AstType)]>) -> String {
-    match fields {
-        Some(fields) => format!(
-            "({})",
-            fields
-                .iter()
-                .map(|(name, ty)| format!("{name}: {}", ty.display_name()))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        None => "unknown".to_string(),
-    }
+    format_resolver_named_list(fields, AstType::display_name)
 }
 
 fn format_field_type_names(fields: Option<&[(String, String)]>) -> String {
-    match fields {
-        Some(fields) => format!(
-            "({})",
-            fields
-                .iter()
-                .map(|(name, ty)| format!("{name}: {ty}"))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        None => "unknown".to_string(),
-    }
+    format_resolver_named_list(fields, String::clone)
 }
 
 fn expected_variant_name_metadata(variants: &[EnumVariant]) -> Vec<String> {
@@ -8460,6 +8440,21 @@ fn format_resolver_string_list(values: Option<&[String]>) -> String {
 
 fn join_resolver_strings(values: &[String]) -> String {
     values.join(", ")
+}
+
+fn format_resolver_named_list<T>(
+    values: Option<&[(String, T)]>,
+    display_value: impl Fn(&T) -> String,
+) -> String {
+    values
+        .map(|values| {
+            let entries = values
+                .iter()
+                .map(|(name, value)| format!("{name}: {}", display_value(value)))
+                .collect::<Vec<_>>();
+            format!("({})", join_resolver_strings(&entries))
+        })
+        .unwrap_or_else(|| "unknown".to_string())
 }
 
 fn expected_variant_payload_metadata(payload: &Option<AstType>) -> ExpectedVariantPayloadType {
@@ -9108,6 +9103,19 @@ mod tests {
         assert_eq!(join_resolver_strings(&names), "T, U");
         assert_eq!(format_resolver_string_list(Some(&names)), "(T, U)");
         assert_eq!(format_resolver_string_list(None), "unknown");
+    }
+
+    #[test]
+    fn resolver_named_list_display_formats_known_and_missing_items() {
+        let fields = vec![("value".to_string(), "i32".to_string())];
+        assert_eq!(
+            format_resolver_named_list(Some(&fields), |ty: &String| ty.clone()),
+            "(value: i32)"
+        );
+        assert_eq!(
+            format_resolver_named_list::<String>(None, |ty: &String| ty.clone()),
+            "unknown"
+        );
     }
 
     #[test]
