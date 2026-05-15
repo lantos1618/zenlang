@@ -319,11 +319,38 @@ struct ExpectedTypeLikeSymbol {
     is_public: Option<bool>,
 }
 
+#[derive(Clone, Copy)]
 struct TypeParameterValidation {
     count_code: &'static str,
     name_code: &'static str,
     bound_code: &'static str,
     bound_ref_code: &'static str,
+}
+
+impl TypeParameterValidation {
+    fn name_message(self, symbol_kind: &str, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver {symbol_kind} symbol '{name}' has type parameter names '{actual}', expected '{expected}'"
+        )
+    }
+
+    fn bound_message(self, symbol_kind: &str, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver {symbol_kind} symbol '{name}' has type parameter bounds '{actual}', expected '{expected}'"
+        )
+    }
+
+    fn bound_ref_message(
+        self,
+        symbol_kind: &str,
+        name: &str,
+        actual: &str,
+        expected: &str,
+    ) -> String {
+        format!(
+            "resolver {symbol_kind} symbol '{name}' has type parameter bound refs '{actual}', expected '{expected}'"
+        )
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -7825,9 +7852,7 @@ impl TypeChecker {
             let expected_names_display = format_type_parameter_names(Some(&expected.names));
             self.diagnostics.push(Diagnostic::error(
                 validation.name_code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has type parameter names '{actual}', expected '{expected_names_display}'"
-                ),
+                validation.name_message(symbol_kind, name, &actual, &expected_names_display),
                 span,
             ));
         }
@@ -7837,9 +7862,7 @@ impl TypeChecker {
             let expected_bounds_display = format_type_parameter_bounds(Some(&expected.bounds));
             self.diagnostics.push(Diagnostic::error(
                 validation.bound_code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has type parameter bounds '{actual}', expected '{expected_bounds_display}'"
-                ),
+                validation.bound_message(symbol_kind, name, &actual, &expected_bounds_display),
                 span,
             ));
         }
@@ -7849,9 +7872,7 @@ impl TypeChecker {
             let expected_refs = format_type_parameter_bound_refs(Some(&expected.bound_refs));
             self.diagnostics.push(Diagnostic::error(
                 validation.bound_ref_code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has type parameter bound refs '{actual}', expected '{expected_refs}'"
-                ),
+                validation.bound_ref_message(symbol_kind, name, &actual, &expected_refs),
                 span,
             ));
         }
@@ -9604,6 +9625,30 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(
             validation.message("variant", "Some", None, 1),
             "resolver variant symbol 'Some' has parameter count unknown, expected 1"
+        );
+    }
+
+    #[test]
+    fn type_parameter_validation_formats_messages() {
+        let validation = TypeParameterValidation {
+            count_code: "COUNT",
+            name_code: "NAMES",
+            bound_code: "BOUNDS",
+            bound_ref_code: "BOUND_REFS",
+        };
+
+        assert_eq!(validation.name_code, "NAMES");
+        assert_eq!(
+            validation.name_message("value", "identity", "(U)", "(T)"),
+            "resolver value symbol 'identity' has type parameter names '(U)', expected '(T)'"
+        );
+        assert_eq!(
+            validation.bound_message("type", "Box", "(T: Other)", "(T: Json)"),
+            "resolver type symbol 'Box' has type parameter bounds '(T: Other)', expected '(T: Json)'"
+        );
+        assert_eq!(
+            validation.bound_ref_message("behavior", "Serializable", "(T: Json<i32>)", "(T: Json<T>)"),
+            "resolver behavior symbol 'Serializable' has type parameter bound refs '(T: Json<i32>)', expected '(T: Json<T>)'"
         );
     }
 
