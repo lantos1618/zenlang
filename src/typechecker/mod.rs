@@ -1203,6 +1203,13 @@ impl CountValidation {
         }
     }
 
+    fn variant_payload_resolver_code() -> Self {
+        Self {
+            label: "payload count",
+            code: "E0215",
+        }
+    }
+
     fn message(
         self,
         symbol_kind: &str,
@@ -8483,10 +8490,7 @@ impl TypeChecker {
             name,
             symbol.variant_payload_count,
             expected.count,
-            CountValidation {
-                label: "payload count",
-                code: "E0215",
-            },
+            CountValidation::variant_payload_resolver_code(),
             span,
         );
         let validation = VariantPayloadValidation::resolver_codes();
@@ -10006,6 +10010,14 @@ Point.get = (self: Point) i32 { return self.x }
 
         assert_eq!(validation.label, "field count");
         assert_eq!(validation.code, "E0214");
+    }
+
+    #[test]
+    fn count_validation_uses_variant_payload_resolver_code() {
+        let validation = CountValidation::variant_payload_resolver_code();
+
+        assert_eq!(validation.label, "payload count");
+        assert_eq!(validation.code, "E0215");
     }
 
     #[test]

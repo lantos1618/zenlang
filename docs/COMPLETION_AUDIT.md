@@ -1272,6 +1272,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::count_validation_uses_value_parameter_resolver_code`.
 - Resolver field-count validation now owns its resolver diagnostic code mapping,
   covered by `typechecker::tests::count_validation_uses_field_resolver_code`.
+- Resolver variant payload-count validation now owns its resolver diagnostic
+  code mapping, covered by
+  `typechecker::tests::count_validation_uses_variant_payload_resolver_code`.
 
 ## Unresolved Gaps
 
