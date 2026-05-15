@@ -236,6 +236,9 @@ and do not assume Phase 4 is ready without evidence.
 - Typechecker resolver validation now stores expected behavior display
   signatures and typed method metadata as paired per-method expectations before
   deriving the resolver comparison lists.
+- Typechecker resolver validation now stores expected behavior method
+  expectations directly on behavior symbols instead of wrapping the per-method
+  list before deriving resolver comparison lists.
 - Typechecker resolver validation now stores expected struct field display and
   typed metadata as paired per-field expectations before deriving resolver
   comparison lists.

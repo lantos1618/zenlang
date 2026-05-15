@@ -178,11 +178,6 @@ struct ExpectedReturnMetadata {
     display: String,
 }
 
-#[derive(Default)]
-struct ExpectedBehaviorMethods {
-    methods: Vec<ExpectedBehaviorMethod>,
-}
-
 struct ExpectedBehaviorMethod {
     signature: MethodSignatureMetadata,
     metadata: BehaviorMethodTypeMetadata,
@@ -190,7 +185,7 @@ struct ExpectedBehaviorMethod {
 
 struct ExpectedBehaviorSymbol {
     type_like: ExpectedTypeLikeSymbol,
-    methods: ExpectedBehaviorMethods,
+    methods: Vec<ExpectedBehaviorMethod>,
 }
 
 struct ExpectedStructSymbol {
@@ -7096,11 +7091,10 @@ impl TypeChecker {
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,
-        expected_methods: ExpectedBehaviorMethods,
+        expected_methods: Vec<ExpectedBehaviorMethod>,
         span: Span,
     ) {
         let expected_signatures: Vec<_> = expected_methods
-            .methods
             .iter()
             .map(|method| method.signature.clone())
             .collect();
@@ -7117,7 +7111,6 @@ impl TypeChecker {
             ));
         }
         let expected_types: Vec<_> = expected_methods
-            .methods
             .into_iter()
             .map(|method| method.metadata)
             .collect();
@@ -7939,8 +7932,8 @@ fn expected_variant_payload(payload: &Option<AstType>) -> ExpectedVariantPayload
     }
 }
 
-fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> ExpectedBehaviorMethods {
-    let mut expected = ExpectedBehaviorMethods::default();
+fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> Vec<ExpectedBehaviorMethod> {
+    let mut expected = Vec::new();
     for method in methods {
         let params = expected_parameters(&method.params);
         let return_type = expected_return_type(&method.return_type);
@@ -7955,7 +7948,7 @@ fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> ExpectedBehavio
             .map(|param| param.name.clone())
             .collect();
         let parameter_types: Vec<_> = params.params.into_iter().map(|param| param.typed).collect();
-        expected.methods.push(ExpectedBehaviorMethod {
+        expected.push(ExpectedBehaviorMethod {
             signature: (
                 method.name.clone(),
                 parameter_type_names,
