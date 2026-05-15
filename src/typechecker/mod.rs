@@ -3253,10 +3253,11 @@ impl TypeChecker {
     ) {
         for decl in decls {
             match decl {
-                Declaration::Function { .. }
-                | Declaration::Method { .. }
-                | Declaration::ImplBlock { .. } => {
+                Declaration::Function { .. } | Declaration::Method { .. } => {
                     self.collect_resolver_callable_declaration_metadata(decl, symbols);
+                }
+                Declaration::ImplBlock { behavior: None, .. } => {
+                    self.collect_resolver_type_impl_declaration_metadata(decl, symbols);
                 }
                 Declaration::Struct { .. } | Declaration::Enum { .. } => {
                     self.collect_resolver_type_declaration_metadata(decl, symbols);
@@ -3286,19 +3287,27 @@ impl TypeChecker {
             } => {
                 self.collect_resolver_method_signature(symbols, type_name, method_name, *span);
             }
-            Declaration::ImplBlock {
-                type_name,
-                behavior: None,
-                methods,
-                ..
-            } => {
-                for method in methods {
-                    if let Declaration::Function { name, span, .. } = method {
-                        self.collect_resolver_method_signature(symbols, type_name, name, *span);
-                    }
+            _ => {}
+        }
+    }
+
+    fn collect_resolver_type_impl_declaration_metadata(
+        &mut self,
+        decl: &Declaration,
+        symbols: &SymbolTable,
+    ) {
+        if let Declaration::ImplBlock {
+            type_name,
+            behavior: None,
+            methods,
+            ..
+        } = decl
+        {
+            for method in methods {
+                if let Declaration::Function { name, span, .. } = method {
+                    self.collect_resolver_method_signature(symbols, type_name, name, *span);
                 }
             }
-            _ => {}
         }
     }
 
