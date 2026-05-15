@@ -1758,21 +1758,7 @@ impl TypeChecker {
                     self.collect_resolver_enum_variants(symbols, &restored_name);
                 }
                 Declaration::Behavior { name, span, .. } => {
-                    let restored_name =
-                        Self::resolver_symbol_name_for(symbols, Namespace::Behavior, name, *span);
-                    if restored_name != *name {
-                        if let Some(info) = self.behaviors.remove(name) {
-                            self.behaviors.insert(
-                                restored_name.clone(),
-                                BehaviorInfo {
-                                    name: restored_name.clone(),
-                                    ..info
-                                },
-                            );
-                        }
-                    }
-                    self.collect_resolver_behavior_methods(symbols, &restored_name);
-                    self.collect_resolver_behavior_parents(symbols, &restored_name);
+                    self.collect_resolver_behavior_declaration(symbols, name, *span);
                 }
                 _ => {}
             }
@@ -1883,6 +1869,34 @@ impl TypeChecker {
         self.collect_resolver_type_behavior_impl_refs(symbols, &restored_name);
         self.collect_resolver_type_behavior_requires(symbols, &restored_name);
         restored_name
+    }
+
+    fn collect_resolver_behavior_declaration(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        span: Span,
+    ) {
+        let restored_name =
+            Self::resolver_symbol_name_for(symbols, Namespace::Behavior, name, span);
+        self.rekey_behavior_declaration(name, &restored_name);
+        self.collect_resolver_behavior_methods(symbols, &restored_name);
+        self.collect_resolver_behavior_parents(symbols, &restored_name);
+    }
+
+    fn rekey_behavior_declaration(&mut self, old_name: &str, new_name: &str) {
+        if old_name == new_name {
+            return;
+        }
+        if let Some(info) = self.behaviors.remove(old_name) {
+            self.behaviors.insert(
+                new_name.to_string(),
+                BehaviorInfo {
+                    name: new_name.to_string(),
+                    ..info
+                },
+            );
+        }
     }
 
     fn validate_collected_declaration_semantics(

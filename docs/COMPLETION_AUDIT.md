@@ -117,6 +117,8 @@ and do not assume Phase 4 is ready without evidence.
   default-method seeding now share the same restored impl-block traversal.
 - Resolver-backed type behavior-impl refresh now shares a restored struct/enum
   declaration traversal for the final type-name restoration pass.
+- Resolver-backed behavior declaration collection now centralizes behavior
+  name rekeying before method and parent metadata restoration.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
