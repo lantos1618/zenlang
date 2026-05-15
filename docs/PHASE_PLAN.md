@@ -1231,6 +1231,8 @@ checked-in docs, tests, and commits only.
   helper.
 - Resolver-backed struct field collection now reads resolver field metadata
   through one dedicated helper before restoring fields and defaults.
+- Resolver-backed enum variant collection now reads resolver variant-name
+  metadata through one dedicated helper before restoring owner-scoped payloads.
 - The docs truth gate now locks the quiet draft-PR CI trigger shape: no
   `pull_request.synchronize`, manual dispatch retained, and fmt/clippy/test
   jobs guarded by the draft-PR condition.

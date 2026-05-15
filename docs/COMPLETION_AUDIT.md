@@ -1351,6 +1351,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed struct field collection now reads resolver field metadata
   through one dedicated helper before restoring fields and defaults, covered by
   `typechecker::tests::resolver_struct_field_metadata_requires_field_types`.
+- Resolver-backed enum variant collection now reads resolver variant-name
+  metadata through one dedicated helper before restoring owner-scoped payloads,
+  covered by
+  `typechecker::tests::resolver_enum_variant_name_metadata_requires_variant_names`.
 - The docs truth gate now covers the quiet draft-PR CI trigger shape by
   rejecting `pull_request.synchronize`, requiring manual dispatch, and requiring
   the draft-PR guard on fmt, clippy, and test jobs.

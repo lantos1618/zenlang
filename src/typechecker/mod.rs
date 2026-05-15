@@ -4217,7 +4217,7 @@ impl TypeChecker {
     fn collect_resolver_enum_variants(&mut self, symbols: &SymbolTable, name: &str) {
         let Some((symbol, variant_names)) =
             Self::resolver_symbol_metadata(symbols, Namespace::Type, name, |symbol| {
-                symbol.variant_names.as_ref()
+                Self::resolver_enum_variant_name_metadata(symbol)
             })
         else {
             self.enums.remove(name);
@@ -4229,6 +4229,10 @@ impl TypeChecker {
             name.to_string(),
             enum_info_from_resolver_variants(name.to_string(), symbol, variants),
         );
+    }
+
+    fn resolver_enum_variant_name_metadata(symbol: &Symbol) -> Option<&[String]> {
+        symbol.variant_names.as_deref()
     }
 
     fn resolver_enum_variants_from_metadata(
@@ -11807,6 +11811,34 @@ Point: { x: i32 }
             symbols
                 .lookup(Namespace::Type, "Point")
                 .expect("Point symbol")
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn resolver_enum_variant_name_metadata_requires_variant_names() {
+        let program = parse_program(
+            r#"
+Option: Some(i32), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let variants = TypeChecker::resolver_enum_variant_name_metadata(
+            symbols
+                .lookup(Namespace::Type, "Option")
+                .expect("Option symbol"),
+        )
+        .expect("complete resolver variants");
+
+        assert_eq!(variants, ["Some", "None"]);
+
+        symbols.set_variant_names_for_test(Namespace::Type, "Option", None);
+        assert!(TypeChecker::resolver_enum_variant_name_metadata(
+            symbols
+                .lookup(Namespace::Type, "Option")
+                .expect("Option symbol")
         )
         .is_none());
     }
