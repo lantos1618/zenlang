@@ -793,6 +793,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior default synthesis also restores omitted-method impl
   targets from unique resolver behavior impl association refs when no explicit
   impl method span exists.
+- Resolver-backed behavior default synthesis also restores omitted-method impl
+  targets when AST-only behavior names are stale, using unique resolver impl
+  association owners before resolver behavior ref restoration.
 - Resolver-backed `.requires` validation now restores stale AST-only target
   type names from unique resolver required-behavior association refs.
 - Resolver-backed `.requires` validation also restores stale target type names
