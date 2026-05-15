@@ -648,6 +648,10 @@ and do not assume Phase 4 is ready without evidence.
   Parameter mutability is preserved by positional fallback when restored
   resolver parameter names differ from stale AST names, covered by
   `typechecker::tests::collect_declarations_with_symbols_preserves_generic_template_param_mutability_by_position`.
+  Resolver-restored generic template parameter names no longer steal mutability
+  from stale AST parameters with matching names in different positions, covered
+  by
+  `typechecker::tests::collect_declarations_with_symbols_ignores_stale_generic_template_param_names_for_mutability`.
 - Resolver-backed behavior method collection rebuilds behavior parameters from
   resolver-owned parameter names and types, so stale AST-only missing or extra
   parameters cannot distort impl conformance checks.
