@@ -1108,6 +1108,8 @@ checked-in docs, tests, and commits only.
   diagnostic code mapping instead of constructing those codes at the call site.
 - Resolver type-like value-signature absence validation now owns its resolver
   diagnostic code mapping instead of constructing those codes at the call site.
+- Resolver variant value-signature absence validation now owns its resolver
+  diagnostic code mapping instead of constructing those codes at the call site.
 - Resolver absent type-parameter metadata validation now shares one helper
   across module, import, local, and variant symbols.
 - Resolver absent type-parameter metadata validation now lets the validation
