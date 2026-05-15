@@ -817,6 +817,16 @@ impl TypeParameterAbsenceValidation {
     }
 }
 
+trait AbsentMetadataValidation<const N: usize>: Copy {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; N];
+}
+
+impl AbsentMetadataValidation<4> for TypeParameterAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
+        TypeParameterAbsenceValidation::entries(self, symbol)
+    }
+}
+
 #[derive(Clone, Copy)]
 struct ValueSignatureAbsenceValidation {
     parameter_count_code: &'static str,
@@ -919,6 +929,12 @@ impl ValueSignatureAbsenceValidation {
     }
 }
 
+impl AbsentMetadataValidation<6> for ValueSignatureAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 6] {
+        ValueSignatureAbsenceValidation::entries(self, symbol)
+    }
+}
+
 #[derive(Clone, Copy)]
 struct FieldAbsenceValidation {
     count_code: &'static str,
@@ -997,6 +1013,12 @@ impl FieldAbsenceValidation {
                 "typed field types",
             ),
         ]
+    }
+}
+
+impl AbsentMetadataValidation<3> for FieldAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 3] {
+        FieldAbsenceValidation::entries(self, symbol)
     }
 }
 
@@ -1101,6 +1123,12 @@ impl VariantAbsenceValidation {
     }
 }
 
+impl AbsentMetadataValidation<5> for VariantAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 5] {
+        VariantAbsenceValidation::entries(self, symbol)
+    }
+}
+
 #[derive(Clone, Copy)]
 struct BehaviorAssociationAbsenceValidation {
     impl_name_code: &'static str,
@@ -1190,12 +1218,24 @@ impl BehaviorAssociationAbsenceValidation {
     }
 }
 
+impl AbsentMetadataValidation<4> for BehaviorAssociationAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
+        BehaviorAssociationAbsenceValidation::entries(self, symbol)
+    }
+}
+
 #[derive(Clone, Copy)]
 struct BehaviorDeclarationAbsenceValidation {
     method_signature_code: &'static str,
     method_type_code: &'static str,
     parent_name_code: &'static str,
     parent_ref_code: &'static str,
+}
+
+impl AbsentMetadataValidation<4> for BehaviorDeclarationAbsenceValidation {
+    fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
+        BehaviorDeclarationAbsenceValidation::entries(self, symbol)
+    }
 }
 
 impl BehaviorDeclarationAbsenceValidation {
@@ -9187,8 +9227,7 @@ impl TypeChecker {
         validation: ValueSignatureAbsenceValidation,
         span: Span,
     ) {
-        let entries = validation.entries(symbol);
-        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
+        self.validate_resolver_absent_metadata(symbol, symbol_kind, name, validation, span);
     }
 
     fn validate_resolver_absent_type_parameter_metadata(
@@ -9199,8 +9238,7 @@ impl TypeChecker {
         validation: TypeParameterAbsenceValidation,
         span: Span,
     ) {
-        let entries = validation.entries(symbol);
-        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
+        self.validate_resolver_absent_metadata(symbol, symbol_kind, name, validation, span);
     }
 
     fn validate_resolver_absent_field_metadata(
@@ -9211,8 +9249,7 @@ impl TypeChecker {
         validation: FieldAbsenceValidation,
         span: Span,
     ) {
-        let entries = validation.entries(symbol);
-        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
+        self.validate_resolver_absent_metadata(symbol, symbol_kind, name, validation, span);
     }
 
     fn validate_resolver_absent_variant_metadata(
@@ -9223,8 +9260,7 @@ impl TypeChecker {
         validation: VariantAbsenceValidation,
         span: Span,
     ) {
-        let entries = validation.entries(symbol);
-        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
+        self.validate_resolver_absent_metadata(symbol, symbol_kind, name, validation, span);
     }
 
     fn validate_resolver_absent_behavior_association_metadata(
@@ -9235,8 +9271,7 @@ impl TypeChecker {
         validation: BehaviorAssociationAbsenceValidation,
         span: Span,
     ) {
-        let entries = validation.entries(symbol);
-        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
+        self.validate_resolver_absent_metadata(symbol, symbol_kind, name, validation, span);
     }
 
     fn validate_resolver_absent_behavior_declaration_metadata(
@@ -9247,8 +9282,7 @@ impl TypeChecker {
         validation: BehaviorDeclarationAbsenceValidation,
         span: Span,
     ) {
-        let entries = validation.entries(symbol);
-        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
+        self.validate_resolver_absent_metadata(symbol, symbol_kind, name, validation, span);
     }
 
     fn validate_resolver_absent_mutability_metadata(
@@ -9365,6 +9399,18 @@ impl TypeChecker {
                 span,
             ));
         }
+    }
+
+    fn validate_resolver_absent_metadata<const N: usize>(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        symbol_kind: &str,
+        name: &str,
+        validation: impl AbsentMetadataValidation<N>,
+        span: Span,
+    ) {
+        let entries = validation.entries(symbol);
+        self.validate_resolver_absent_metadata_entries(symbol_kind, name, &entries, span);
     }
 
     fn validate_resolver_absent_metadata_entries(

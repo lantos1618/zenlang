@@ -1602,6 +1602,10 @@ checked-in docs, tests, and commits only.
   instead of constructing that code at the call site.
 - Resolver variant payload-count validation now owns its resolver diagnostic
   code mapping instead of constructing that code at the call site.
+- Resolver absent-metadata validation now routes value signature, type
+  parameter, field, variant, behavior association, and behavior declaration
+  entry builders through one typed replay helper while preserving role-specific
+  diagnostic wrappers.
 
 ## Current Phase
 

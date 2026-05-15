@@ -1836,6 +1836,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver variant payload-count validation now owns its resolver diagnostic
   code mapping, covered by
   `typechecker::tests::count_validation_uses_variant_payload_resolver_code`.
+- Resolver absent-metadata validation now routes value signature, type
+  parameter, field, variant, behavior association, and behavior declaration
+  entry builders through one typed replay helper, covered by
+  `cargo test absence_validation`.
 
 ## Unresolved Gaps
 
