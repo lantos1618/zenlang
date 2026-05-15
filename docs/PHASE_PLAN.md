@@ -1037,6 +1037,8 @@ checked-in docs, tests, and commits only.
   formatting, matching the source/count validation helper shape.
 - Resolver module visibility validation now owns its resolver diagnostic code
   mapping instead of constructing that code at the call site.
+- Resolver import visibility validation now owns its resolver diagnostic code
+  mapping instead of constructing that code at its call sites.
 - Resolver local visibility validation now owns its resolver diagnostic code
   mapping instead of constructing that code at the call site.
 - Resolver source validation now shares one diagnostic helper across module,

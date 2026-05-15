@@ -705,6 +705,10 @@ impl VisibilityValidation {
         Self { code: "E0229" }
     }
 
+    fn import_resolver_code() -> Self {
+        Self { code: "E0245" }
+    }
+
     fn local_resolver_code() -> Self {
         Self { code: "E0247" }
     }
@@ -6169,7 +6173,7 @@ impl TypeChecker {
                 &symbol.name,
                 symbol.is_public,
                 false,
-                VisibilityValidation { code: "E0245" },
+                VisibilityValidation::import_resolver_code(),
                 symbol.definition_span,
             );
             if symbol.import_source.is_none() {
@@ -7091,7 +7095,7 @@ impl TypeChecker {
             name,
             symbol.is_public,
             expected.is_public,
-            VisibilityValidation { code: "E0245" },
+            VisibilityValidation::import_resolver_code(),
             span,
         );
 
@@ -10731,6 +10735,13 @@ main = (mut input: i32) i32 {
         let validation = VisibilityValidation::module_resolver_code();
 
         assert_eq!(validation.code, "E0229");
+    }
+
+    #[test]
+    fn visibility_validation_uses_import_resolver_code() {
+        let validation = VisibilityValidation::import_resolver_code();
+
+        assert_eq!(validation.code, "E0245");
     }
 
     #[test]
