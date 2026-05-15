@@ -70,6 +70,34 @@ struct ResolverTypeParameterMetadata<'a> {
     bound_refs: &'a [TypeParameterBoundRefMetadata],
 }
 
+enum ResolverCallableDeclarationMetadataTask<'a> {
+    Function {
+        name: &'a str,
+        span: Span,
+    },
+    Method {
+        type_name: &'a str,
+        method_name: &'a str,
+        span: Span,
+    },
+    TypeImpl {
+        type_name: &'a str,
+        methods: &'a [Declaration],
+    },
+}
+
+enum ResolverTypeDeclarationMetadataTask<'a> {
+    Struct {
+        name: &'a str,
+        fields: &'a [StructField],
+        span: Span,
+    },
+    Enum {
+        name: &'a str,
+        span: Span,
+    },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorBound {
     pub behavior: String,
@@ -3346,52 +3374,17 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: &SymbolTable,
     ) {
-        self.collect_resolver_callable_declaration_metadata(decls, symbols);
-        self.collect_resolver_type_declaration_metadata(decls, symbols);
-        self.collect_resolver_behavior_declaration_metadata_pass(decls, symbols);
-    }
+        let mut callable_tasks = Vec::new();
+        let mut type_tasks = Vec::new();
+        let mut behavior_tasks = Vec::new();
 
-    fn collect_resolver_behavior_declaration_metadata_pass(
-        &mut self,
-        decls: &[Declaration],
-        symbols: &SymbolTable,
-    ) {
-        for decl in decls {
-            if let Declaration::Behavior { name, span, .. } = decl {
-                self.collect_resolver_behavior_declaration(symbols, name, *span);
-            }
-        }
-    }
-
-    fn collect_resolver_type_declaration_metadata(
-        &mut self,
-        decls: &[Declaration],
-        symbols: &SymbolTable,
-    ) {
-        for decl in decls {
-            match decl {
-                Declaration::Struct {
-                    name, fields, span, ..
-                } => {
-                    self.collect_resolver_struct_declaration_metadata(symbols, name, fields, *span);
-                }
-                Declaration::Enum { name, span, .. } => {
-                    self.collect_resolver_enum_declaration_metadata(symbols, name, *span);
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn collect_resolver_callable_declaration_metadata(
-        &mut self,
-        decls: &[Declaration],
-        symbols: &SymbolTable,
-    ) {
         for decl in decls {
             match decl {
                 Declaration::Function { name, span, .. } => {
-                    self.collect_resolver_function_signature(symbols, name, *span);
+                    callable_tasks.push(ResolverCallableDeclarationMetadataTask::Function {
+                        name,
+                        span: *span,
+                    });
                 }
                 Declaration::Method {
                     type_name,
@@ -3399,7 +3392,11 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.collect_resolver_method_signature(symbols, type_name, method_name, *span);
+                    callable_tasks.push(ResolverCallableDeclarationMetadataTask::Method {
+                        type_name,
+                        method_name,
+                        span: *span,
+                    });
                 }
                 Declaration::ImplBlock {
                     type_name,
@@ -3407,11 +3404,85 @@ impl TypeChecker {
                     methods,
                     ..
                 } => {
+                    callable_tasks.push(ResolverCallableDeclarationMetadataTask::TypeImpl {
+                        type_name,
+                        methods,
+                    });
+                }
+                Declaration::Struct {
+                    name, fields, span, ..
+                } => {
+                    type_tasks.push(ResolverTypeDeclarationMetadataTask::Struct {
+                        name,
+                        fields,
+                        span: *span,
+                    });
+                }
+                Declaration::Enum { name, span, .. } => {
+                    type_tasks
+                        .push(ResolverTypeDeclarationMetadataTask::Enum { name, span: *span });
+                }
+                Declaration::Behavior { name, span, .. } => {
+                    behavior_tasks.push((name.as_str(), *span));
+                }
+                _ => {}
+            }
+        }
+
+        self.collect_resolver_callable_declaration_metadata(symbols, &callable_tasks);
+        self.collect_resolver_type_declaration_metadata(symbols, &type_tasks);
+        self.collect_resolver_behavior_declaration_metadata_pass(symbols, &behavior_tasks);
+    }
+
+    fn collect_resolver_behavior_declaration_metadata_pass(
+        &mut self,
+        symbols: &SymbolTable,
+        tasks: &[(&str, Span)],
+    ) {
+        for (name, span) in tasks {
+            self.collect_resolver_behavior_declaration(symbols, name, *span);
+        }
+    }
+
+    fn collect_resolver_type_declaration_metadata(
+        &mut self,
+        symbols: &SymbolTable,
+        tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
+    ) {
+        for task in tasks {
+            match task {
+                ResolverTypeDeclarationMetadataTask::Struct { name, fields, span } => {
+                    self.collect_resolver_struct_declaration_metadata(symbols, name, fields, *span);
+                }
+                ResolverTypeDeclarationMetadataTask::Enum { name, span } => {
+                    self.collect_resolver_enum_declaration_metadata(symbols, name, *span);
+                }
+            }
+        }
+    }
+
+    fn collect_resolver_callable_declaration_metadata(
+        &mut self,
+        symbols: &SymbolTable,
+        tasks: &[ResolverCallableDeclarationMetadataTask<'_>],
+    ) {
+        for task in tasks {
+            match task {
+                ResolverCallableDeclarationMetadataTask::Function { name, span } => {
+                    self.collect_resolver_function_signature(symbols, name, *span);
+                }
+                ResolverCallableDeclarationMetadataTask::Method {
+                    type_name,
+                    method_name,
+                    span,
+                } => {
+                    self.collect_resolver_method_signature(symbols, type_name, method_name, *span);
+                }
+                ResolverCallableDeclarationMetadataTask::TypeImpl { type_name, methods } => {
                     self.collect_resolver_type_impl_declaration_metadata(
                         symbols, type_name, methods,
                     );
                 }
-                _ => {}
             }
         }
     }

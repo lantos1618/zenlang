@@ -169,6 +169,10 @@ and do not assume Phase 4 is ready without evidence.
   building behavior metadata, then validates them after all behavior names are
   collected without a separate behavior declaration walk, preserving
   declaration-order-independent behavior bound diagnostics.
+- Resolver-backed declaration metadata collection now records callable, type,
+  and behavior metadata tasks in one declaration dispatch, then replays the
+  same callable/type/behavior restoration order as before, shrinking duplicate
+  resolver-backed declaration walks without changing restoration ordering.
 - Module graph typechecking now seeds graph imports and then runs
   resolver-backed declaration collection for the current module, so multi-file
   graph modules use the same resolver-owned metadata handoff as

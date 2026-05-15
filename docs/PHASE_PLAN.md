@@ -99,6 +99,9 @@ checked-in docs, tests, and commits only.
 - AST behavior declaration collection now queues behavior generic bounds while
   building behavior metadata, then validates them after all behavior names are
   collected without a separate behavior declaration walk.
+- Resolver-backed declaration metadata collection now builds callable, type,
+  and behavior metadata tasks in one declaration dispatch before replaying the
+  existing callable/type/behavior restoration order.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so
