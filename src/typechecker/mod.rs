@@ -2230,13 +2230,7 @@ impl TypeChecker {
         methods: &[Declaration],
     ) {
         let (behavior, behavior_type_args) =
-            match self.resolver_behavior_impl_ref_for_peek(type_name, behavior) {
-                Some(implementation) => (
-                    implementation.name.as_str(),
-                    implementation.type_args.as_slice(),
-                ),
-                None => (behavior, behavior_type_args),
-            };
+            self.resolver_behavior_impl_ref_parts(type_name, behavior, behavior_type_args);
         let behavior_substitutions = self
             .behaviors
             .get(behavior)
@@ -2294,13 +2288,7 @@ impl TypeChecker {
             return;
         }
         let (behavior, behavior_type_args) =
-            match self.resolver_behavior_impl_ref_for_peek(type_name, behavior) {
-                Some(implementation) => (
-                    implementation.name.as_str(),
-                    implementation.type_args.as_slice(),
-                ),
-                None => (behavior, behavior_type_args),
-            };
+            self.resolver_behavior_impl_ref_parts(type_name, behavior, behavior_type_args);
         for default in
             self.behavior_default_methods_for_impl(type_name, behavior, behavior_type_args, methods)
         {
@@ -2990,6 +2978,21 @@ impl TypeChecker {
             .iter()
             .find(|implementation| implementation.name == behavior)
             .or_else(|| impl_refs.front())
+    }
+
+    fn resolver_behavior_impl_ref_parts<'a>(
+        &'a self,
+        type_name: &str,
+        behavior: &'a str,
+        behavior_type_args: &'a [AstType],
+    ) -> (&'a str, &'a [AstType]) {
+        match self.resolver_behavior_impl_ref_for_peek(type_name, behavior) {
+            Some(implementation) => (
+                implementation.name.as_str(),
+                implementation.type_args.as_slice(),
+            ),
+            None => (behavior, behavior_type_args),
+        }
     }
 
     fn find_overlapping_behavior_impl(&self, type_name: &str, behavior: &str) -> Option<String> {
