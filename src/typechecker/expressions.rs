@@ -8,7 +8,7 @@ use crate::error::{Diagnostic, Span};
 
 use super::closures::collect_captures;
 use super::monomorphize::InferenceConflict;
-use super::TypeChecker;
+use super::{BehaviorBound, TypeChecker};
 
 impl TypeChecker {
     pub(crate) fn check_function(
@@ -220,18 +220,32 @@ impl TypeChecker {
                                     &subs,
                                     span,
                                 );
-                                self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
-                                let ret = self.substitute_type(&info.return_type, &subs);
-                                let mangled = self
-                                    .specialize_generic_function(&full_name, &subs, *span)
-                                    .unwrap_or_else(|| {
+                                if self.check_generic_bounds_valid(
+                                    &info.type_param_bounds,
+                                    &subs,
+                                    *span,
+                                ) {
+                                    let ret = self.substitute_type(&info.return_type, &subs);
+                                    let mangled = self
+                                        .specialize_generic_function(&full_name, &subs, *span)
+                                        .unwrap_or_else(|| {
+                                            self.generic_function_mangled_name(
+                                                &full_name,
+                                                &info.type_params,
+                                                &subs,
+                                            )
+                                        });
+                                    (ret, mangled)
+                                } else {
+                                    (
+                                        Type::Unknown,
                                         self.generic_function_mangled_name(
                                             &full_name,
                                             &info.type_params,
                                             &subs,
-                                        )
-                                    });
-                                (ret, mangled)
+                                        ),
+                                    )
+                                }
                             } else {
                                 (
                                     Type::Unknown,
@@ -439,17 +453,32 @@ impl TypeChecker {
                                 &subs,
                                 span,
                             );
-                            self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
-                            let ret = self.substitute_type(&info.return_type, &subs);
-                            let mangled = self
-                                .specialize_generic_method(&method_key, &subs, *span)
-                                .unwrap_or_else(|| {
+                            let (ret, mangled) = if self.check_generic_bounds_valid(
+                                &info.type_param_bounds,
+                                &subs,
+                                *span,
+                            ) {
+                                let ret = self.substitute_type(&info.return_type, &subs);
+                                let mangled = self
+                                    .specialize_generic_method(&method_key, &subs, *span)
+                                    .unwrap_or_else(|| {
+                                        self.generic_function_mangled_name(
+                                            &method_key,
+                                            &info.type_params,
+                                            &subs,
+                                        )
+                                    });
+                                (ret, mangled)
+                            } else {
+                                (
+                                    Type::Unknown,
                                     self.generic_function_mangled_name(
                                         &method_key,
                                         &info.type_params,
                                         &subs,
-                                    )
-                                });
+                                    ),
+                                )
+                            };
                             self.current_self_type = saved_self_type;
                             (ret, mangled)
                         } else {
@@ -535,17 +564,36 @@ impl TypeChecker {
                                     &subs,
                                     span,
                                 );
-                                self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
-                                let ret_type = self.substitute_type(&info.return_type, &subs);
-                                let mangled = self
-                                    .specialize_generic_method(&generic_method_key, &subs, *span)
-                                    .unwrap_or_else(|| {
+                                let (ret_type, mangled) = if self.check_generic_bounds_valid(
+                                    &info.type_param_bounds,
+                                    &subs,
+                                    *span,
+                                ) {
+                                    let ret_type = self.substitute_type(&info.return_type, &subs);
+                                    let mangled = self
+                                        .specialize_generic_method(
+                                            &generic_method_key,
+                                            &subs,
+                                            *span,
+                                        )
+                                        .unwrap_or_else(|| {
+                                            self.generic_function_mangled_name(
+                                                &generic_method_key,
+                                                &info.type_params,
+                                                &subs,
+                                            )
+                                        });
+                                    (ret_type, mangled)
+                                } else {
+                                    (
+                                        Type::Unknown,
                                         self.generic_function_mangled_name(
                                             &generic_method_key,
                                             &info.type_params,
                                             &subs,
-                                        )
-                                    });
+                                        ),
+                                    )
+                                };
                                 self.current_self_type = saved_self_type;
                                 (ret_type, mangled)
                             } else {
@@ -627,18 +675,32 @@ impl TypeChecker {
                                 &subs,
                                 span,
                             );
-                            self.check_generic_bounds(&info.type_param_bounds, &subs, *span);
-                            let ret = self.substitute_type(&info.return_type, &subs);
-                            let mangled = self
-                                .specialize_generic_function(method, &subs, *span)
-                                .unwrap_or_else(|| {
+                            if self.check_generic_bounds_valid(
+                                &info.type_param_bounds,
+                                &subs,
+                                *span,
+                            ) {
+                                let ret = self.substitute_type(&info.return_type, &subs);
+                                let mangled = self
+                                    .specialize_generic_function(method, &subs, *span)
+                                    .unwrap_or_else(|| {
+                                        self.generic_function_mangled_name(
+                                            method,
+                                            &info.type_params,
+                                            &subs,
+                                        )
+                                    });
+                                (ret, mangled)
+                            } else {
+                                (
+                                    Type::Unknown,
                                     self.generic_function_mangled_name(
                                         method,
                                         &info.type_params,
                                         &subs,
-                                    )
-                                });
-                            (ret, mangled)
+                                    ),
+                                )
+                            }
                         } else {
                             (
                                 Type::Unknown,
@@ -1547,6 +1609,17 @@ impl TypeChecker {
             substitutions,
             arity_valid && annotations_valid && resolved_without_errors,
         )
+    }
+
+    fn check_generic_bounds_valid(
+        &mut self,
+        bounds: &std::collections::HashMap<String, BehaviorBound>,
+        substitutions: &std::collections::HashMap<String, Type>,
+        span: Span,
+    ) -> bool {
+        let diagnostic_count = self.diagnostics.len();
+        self.check_generic_bounds(bounds, substitutions, span);
+        self.diagnostics.len() == diagnostic_count
     }
 
     fn explicit_type_args_valid(type_args: &[AstType], type_params: &[String]) -> bool {

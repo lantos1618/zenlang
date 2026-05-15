@@ -274,7 +274,8 @@ checked-in docs, tests, and commits only.
   type, and behavior declarations, covered by
   `resolver_phase2::resolver_rejects_duplicate_type_parameter_names`.
   Generic behavior bound failures are covered across direct function, method,
-  generic-receiver method, and UFC-style function call paths.
+  generic-receiver method, and UFC-style function call paths, and bound
+  failures skip dependent specialization-body diagnostics.
 - Explicit behavior declarations, impl conformance, default methods, generic
   behavior bounds, and explicit impl method emission have parser, typechecker,
   and executable coverage.
@@ -1053,6 +1054,8 @@ checked-in docs, tests, and commits only.
   cascade into argument or return mismatches.
 - Malformed nested generic type annotations inside explicit function and
   method call type arguments now also skip dependent signature checks.
+- Generic behavior bound failures now skip dependent function and method body
+  specialization diagnostics.
 
 ## Current Phase
 

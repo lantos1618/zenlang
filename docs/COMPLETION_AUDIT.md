@@ -198,7 +198,8 @@ and do not assume Phase 4 is ready without evidence.
   and behavior declarations, covered by
   `resolver_phase2::resolver_rejects_duplicate_type_parameter_names`.
   Generic behavior bound failures are covered across direct function, method,
-  generic-receiver method, and UFC-style function call paths.
+  generic-receiver method, and UFC-style function call paths, and bound
+  failures skip dependent specialization-body diagnostics.
 - Typechecker setup accepts resolver `SymbolTable` through
   `check_program_with_symbols`.
 - Resolver behavior impl method symbols carry complete value-signature metadata,
@@ -1017,6 +1018,11 @@ and do not assume Phase 4 is ready without evidence.
   method call type arguments now also skip dependent signature checks, covered
   by `generic_diagnostics::generic_function_type_arg_annotation_arity_is_error`
   and `generic_diagnostics::generic_method_type_arg_annotation_arity_is_error`.
+- Generic behavior bound failures now skip dependent function and method body
+  specialization diagnostics, covered by strengthened assertions in
+  `generic_diagnostics::generic_function_behavior_bound_failure_is_error`,
+  `generic_diagnostics::generic_method_behavior_bound_failure_is_error`, and
+  `generic_diagnostics::generic_ufc_function_behavior_bound_failure_is_error`.
 
 ## Unresolved Gaps
 

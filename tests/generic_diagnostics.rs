@@ -1207,6 +1207,12 @@ main = () i32 {
             .contains("type `Point` does not implement behavior `Json` required by `T`")),
         "expected generic function bound diagnostic, got {errors:?}"
     );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("has no method `encode`")),
+        "generic function bound failure should not also specialize body method errors, got {errors:?}"
+    );
 }
 
 #[test]
@@ -1282,6 +1288,12 @@ main = () i32 {
             .contains("type `Point` does not implement behavior `Json` required by `T`")),
         "expected generic method bound diagnostic, got {errors:?}"
     );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("has no method `encode`")),
+        "generic method bound failure should not also specialize body method errors, got {errors:?}"
+    );
 }
 
 #[test]
@@ -1350,6 +1362,12 @@ main = () i32 {
             .message
             .contains("type `Point` does not implement behavior `Json` required by `T`")),
         "expected generic UFC function bound diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("has no method `encode`")),
+        "generic UFC bound failure should not also specialize body method errors, got {errors:?}"
     );
 }
 
