@@ -398,6 +398,24 @@ fn generic_template_from_type_params(
     ))
 }
 
+fn func_info_from_ast_signature(
+    name: String,
+    type_params: &[ast::TypeParam],
+    params: &[Param],
+    return_type: &Option<AstType>,
+) -> FuncInfo {
+    FuncInfo {
+        name,
+        params: params
+            .iter()
+            .map(|param| (param.name.clone(), param.ty.clone()))
+            .collect(),
+        return_type: return_type.clone().unwrap_or(AstType::Void),
+        type_params: type_param_names(type_params),
+        type_param_bounds: type_param_bounds(type_params),
+    }
+}
+
 fn type_param_bounds_from_resolver_refs(
     bounds: &[TypeParameterBoundRefMetadata],
 ) -> HashMap<String, BehaviorBound> {
@@ -1254,21 +1272,14 @@ impl TypeChecker {
                         }
                         continue;
                     }
-                    let ret = return_type.clone().unwrap_or(AstType::Void);
-                    let collected_type_params = type_param_names(type_params);
-                    let type_param_bounds = type_param_bounds(type_params);
                     self.functions.insert(
                         name.clone(),
-                        FuncInfo {
-                            name: name.clone(),
-                            params: params
-                                .iter()
-                                .map(|p| (p.name.clone(), p.ty.clone()))
-                                .collect(),
-                            return_type: ret,
-                            type_params: collected_type_params.clone(),
-                            type_param_bounds: type_param_bounds.clone(),
-                        },
+                        func_info_from_ast_signature(
+                            name.clone(),
+                            type_params,
+                            params,
+                            return_type,
+                        ),
                     );
                     if let Some(template) = generic_template_from_type_params(
                         type_params,
@@ -1307,21 +1318,9 @@ impl TypeChecker {
                         continue;
                     }
                     let key = format!("{}.{}", type_name, method_name);
-                    let ret = return_type.clone().unwrap_or(AstType::Void);
-                    let collected_type_params = type_param_names(type_params);
-                    let type_param_bounds = type_param_bounds(type_params);
                     self.methods.insert(
                         key.clone(),
-                        FuncInfo {
-                            name: key,
-                            params: params
-                                .iter()
-                                .map(|p| (p.name.clone(), p.ty.clone()))
-                                .collect(),
-                            return_type: ret,
-                            type_params: collected_type_params.clone(),
-                            type_param_bounds: type_param_bounds.clone(),
-                        },
+                        func_info_from_ast_signature(key, type_params, params, return_type),
                     );
                     if let Some(template) = generic_template_from_type_params(
                         type_params,
@@ -2141,19 +2140,9 @@ impl TypeChecker {
             self.validate_generic_bounds(type_params);
         }
         let key = format!("{}.{}", type_name, name);
-        let collected_type_params = type_param_names(type_params);
         self.methods.insert(
             key.clone(),
-            FuncInfo {
-                name: key.clone(),
-                params: params
-                    .iter()
-                    .map(|p| (p.name.clone(), p.ty.clone()))
-                    .collect(),
-                return_type: return_type.clone().unwrap_or(AstType::Void),
-                type_params: collected_type_params.clone(),
-                type_param_bounds: type_param_bounds(type_params),
-            },
+            func_info_from_ast_signature(key.clone(), type_params, params, return_type),
         );
         if let Some(template) =
             generic_template_from_type_params(type_params, params, return_type, body, *span)
@@ -5210,19 +5199,14 @@ impl TypeChecker {
                 span,
                 ..
             } => {
-                let collected_type_params = type_param_names(type_params);
                 self.functions.insert(
                     local_name.to_string(),
-                    FuncInfo {
-                        name: local_name.to_string(),
-                        params: params
-                            .iter()
-                            .map(|param| (param.name.clone(), param.ty.clone()))
-                            .collect(),
-                        return_type: return_type.clone().unwrap_or(AstType::Void),
-                        type_params: collected_type_params.clone(),
-                        type_param_bounds: type_param_bounds(type_params),
-                    },
+                    func_info_from_ast_signature(
+                        local_name.to_string(),
+                        type_params,
+                        params,
+                        return_type,
+                    ),
                 );
                 if let Some(template) =
                     generic_template_from_type_params(type_params, params, return_type, body, *span)
@@ -5242,19 +5226,9 @@ impl TypeChecker {
                 ..
             } => {
                 let key = format!("{}.{}", type_name, method_name);
-                let collected_type_params = type_param_names(type_params);
                 self.methods.insert(
                     key.clone(),
-                    FuncInfo {
-                        name: key.clone(),
-                        params: params
-                            .iter()
-                            .map(|param| (param.name.clone(), param.ty.clone()))
-                            .collect(),
-                        return_type: return_type.clone().unwrap_or(AstType::Void),
-                        type_params: collected_type_params.clone(),
-                        type_param_bounds: type_param_bounds(type_params),
-                    },
+                    func_info_from_ast_signature(key.clone(), type_params, params, return_type),
                 );
                 if let Some(template) =
                     generic_template_from_type_params(type_params, params, return_type, body, *span)
@@ -5841,20 +5815,14 @@ impl TypeChecker {
         callables: &mut HashMap<String, FuncInfo>,
         generic_callables: &mut HashMap<String, GenericFunctionTemplate>,
     ) {
-        let collected_type_params = type_param_names(signature.type_params);
         callables.insert(
             signature.name.to_string(),
-            FuncInfo {
-                name: signature.name.to_string(),
-                params: signature
-                    .params
-                    .iter()
-                    .map(|param| (param.name.clone(), param.ty.clone()))
-                    .collect(),
-                return_type: signature.return_type.clone().unwrap_or(AstType::Void),
-                type_params: collected_type_params.clone(),
-                type_param_bounds: type_param_bounds(signature.type_params),
-            },
+            func_info_from_ast_signature(
+                signature.name.to_string(),
+                signature.type_params,
+                signature.params,
+                signature.return_type,
+            ),
         );
         if let Some(template) = generic_template_from_type_params(
             signature.type_params,
@@ -5959,20 +5927,14 @@ impl TypeChecker {
         dependencies: ImportedMethodDependencies<'_>,
     ) {
         let key = format!("{}.{}", local_type_name, signature.name);
-        let collected_type_params = type_param_names(signature.type_params);
         self.methods.insert(
             key.clone(),
-            FuncInfo {
-                name: key.clone(),
-                params: signature
-                    .params
-                    .iter()
-                    .map(|param| (param.name.clone(), param.ty.clone()))
-                    .collect(),
-                return_type: signature.return_type.clone().unwrap_or(AstType::Void),
-                type_params: collected_type_params.clone(),
-                type_param_bounds: type_param_bounds(signature.type_params),
-            },
+            func_info_from_ast_signature(
+                key.clone(),
+                signature.type_params,
+                signature.params,
+                signature.return_type,
+            ),
         );
         if let Some(template) = generic_template_from_type_params(
             signature.type_params,

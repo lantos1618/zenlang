@@ -800,6 +800,8 @@ and do not assume Phase 4 is ready without evidence.
   behavior, struct, enum, function, method, and impl-method metadata.
 - Generic template collection now uses one helper for local and imported
   function, method, and impl-method templates.
+- AST callable metadata collection now uses one `FuncInfo` helper for local,
+  impl, imported, and dependency function/method signatures.
 
 ## Unresolved Gaps
 
