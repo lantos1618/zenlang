@@ -669,42 +669,34 @@ struct ExpectedBehaviorRef {
 }
 
 struct ExpectedBehaviorRefList<'a> {
-    names: &'a [String],
-    refs: &'a [BehaviorRefMetadata],
+    refs: &'a [ExpectedBehaviorRef],
 }
 
 #[derive(Default)]
 struct ExpectedBehaviorEdges {
-    names: HashMap<String, Vec<String>>,
-    refs: HashMap<String, Vec<BehaviorRefMetadata>>,
+    refs: HashMap<String, Vec<ExpectedBehaviorRef>>,
 }
 
 impl ExpectedBehaviorEdges {
     fn push(&mut self, owner: &str, behavior: &str, type_args: &[AstType]) {
-        self.names
-            .entry(owner.to_string())
-            .or_default()
-            .push(behavior_ref_display(behavior, type_args));
         self.refs
             .entry(owner.to_string())
             .or_default()
-            .push(BehaviorRefMetadata {
-                name: behavior.to_string(),
-                type_args: type_args.to_vec(),
+            .push(ExpectedBehaviorRef {
+                name: behavior_ref_display(behavior, type_args),
+                reference: BehaviorRefMetadata {
+                    name: behavior.to_string(),
+                    type_args: type_args.to_vec(),
+                },
             });
     }
 
-    fn names_for(&self, owner: &str) -> &[String] {
-        self.names.get(owner).map(Vec::as_slice).unwrap_or(&[])
-    }
-
-    fn refs_for(&self, owner: &str) -> &[BehaviorRefMetadata] {
+    fn refs_for(&self, owner: &str) -> &[ExpectedBehaviorRef] {
         self.refs.get(owner).map(Vec::as_slice).unwrap_or(&[])
     }
 
     fn list_for(&self, owner: &str) -> ExpectedBehaviorRefList<'_> {
         ExpectedBehaviorRefList {
-            names: self.names_for(owner),
             refs: self.refs_for(owner),
         }
     }
@@ -7361,9 +7353,10 @@ impl TypeChecker {
         expected: ExpectedBehaviorRefList<'_>,
         span: Span,
     ) {
-        if !behavior_ref_names_match(actual.names, expected.names) {
+        let expected_names: Vec<_> = expected.refs.iter().map(|edge| edge.name.clone()).collect();
+        if !behavior_ref_names_match(actual.names, &expected_names) {
             let actual = format_behavior_ref_names(actual.names);
-            let expected_names = format_behavior_ref_names(Some(expected.names));
+            let expected_names = format_behavior_ref_names(Some(&expected_names));
             self.diagnostics.push(Diagnostic::error(
                 validation.name_code,
                 format!(
@@ -7373,9 +7366,14 @@ impl TypeChecker {
                 span,
             ));
         }
-        if !behavior_refs_match(actual.refs, expected.refs) {
+        let expected_refs: Vec<_> = expected
+            .refs
+            .iter()
+            .map(|edge| edge.reference.clone())
+            .collect();
+        if !behavior_refs_match(actual.refs, &expected_refs) {
             let actual = format_behavior_refs(actual.refs);
-            let expected_refs = format_behavior_refs(Some(expected.refs));
+            let expected_refs = format_behavior_refs(Some(&expected_refs));
             self.diagnostics.push(Diagnostic::error(
                 validation.ref_code,
                 format!(

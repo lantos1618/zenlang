@@ -739,6 +739,8 @@ and do not assume Phase 4 is ready without evidence.
   ref expectations together, avoiding duplicate AST scans for the same edges.
 - Resolver behavior-association expectation storage now uses one shared edge
   container for impl, requires, and parent inputs.
+- Resolver behavior-association expectation storage now stores display names
+  and typed refs as paired edges before deriving resolver comparison lists.
 - Resolver value-signature expectation building now uses one parameter pass for
   names, display types, and typed metadata.
 
