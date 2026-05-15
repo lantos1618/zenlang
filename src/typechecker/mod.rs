@@ -422,6 +422,15 @@ impl TypeParameterValidation {
         }
     }
 
+    fn value_resolver_codes() -> Self {
+        Self {
+            count_code: "E0220",
+            name_code: "E0347",
+            bound_code: "E0221",
+            bound_ref_code: "E0351",
+        }
+    }
+
     fn name_message(self, symbol_kind: &str, name: &str, actual: &str, expected: &str) -> String {
         format!(
             "resolver {symbol_kind} symbol '{name}' has type parameter names '{actual}', expected '{expected}'"
@@ -8886,12 +8895,7 @@ impl TypeChecker {
             "value",
             name,
             &expected.signature.type_params,
-            TypeParameterValidation {
-                count_code: "E0220",
-                name_code: "E0347",
-                bound_code: "E0221",
-                bound_ref_code: "E0351",
-            },
+            TypeParameterValidation::value_resolver_codes(),
             span,
         );
 
@@ -10012,6 +10016,16 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(validation.name_code, "E0346");
         assert_eq!(validation.bound_code, "E0222");
         assert_eq!(validation.bound_ref_code, "E0350");
+    }
+
+    #[test]
+    fn type_parameter_validation_uses_value_resolver_codes() {
+        let validation = TypeParameterValidation::value_resolver_codes();
+
+        assert_eq!(validation.count_code, "E0220");
+        assert_eq!(validation.name_code, "E0347");
+        assert_eq!(validation.bound_code, "E0221");
+        assert_eq!(validation.bound_ref_code, "E0351");
     }
 
     #[test]

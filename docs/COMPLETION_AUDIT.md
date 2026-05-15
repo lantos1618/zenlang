@@ -1264,6 +1264,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver type-like type-parameter validation now owns its resolver diagnostic
   code mapping, covered by
   `typechecker::tests::type_parameter_validation_uses_type_like_resolver_codes`.
+- Resolver value type-parameter validation now owns its resolver diagnostic
+  code mapping, covered by
+  `typechecker::tests::type_parameter_validation_uses_value_resolver_codes`.
 
 ## Unresolved Gaps
 
