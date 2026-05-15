@@ -987,6 +987,12 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_name_for_body_type_refs`,
   and
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_generic_method_name_for_body_type_refs`.
+- Resolver symbol validation for top-level and impl method signatures now uses
+  the shared type-qualified method key helper, covered by
+  `typechecker::tests::check_program_with_symbols_validates_resolver_method_signature`,
+  `typechecker::tests::check_program_with_symbols_validates_resolver_impl_method_signature`,
+  and
+  `typechecker::tests::method_key_formats_type_qualified_method_name`.
 - Resolver-backed declaration collection now has named passes for resolver
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed

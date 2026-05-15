@@ -6739,7 +6739,7 @@ impl TypeChecker {
                     self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
                     self.require_resolver_value_symbol(
                         symbols,
-                        &format!("{type_name}.{method_name}"),
+                        &Self::method_key(type_name, method_name),
                         expected_value_symbol(params, return_type, type_params, *public),
                         *span,
                     );
@@ -6905,7 +6905,7 @@ impl TypeChecker {
                         {
                             self.require_resolver_value_symbol(
                                 symbols,
-                                &format!("{type_name}.{name}"),
+                                &Self::method_key(type_name, name),
                                 expected_value_symbol(params, return_type, type_params, *public),
                                 *span,
                             );
