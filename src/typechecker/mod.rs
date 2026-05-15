@@ -10157,6 +10157,35 @@ Point: { x: i32 }
     }
 
     #[test]
+    fn collect_declarations_with_symbols_clears_stale_struct_fields_after_name_restore() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_field_types_for_test(Namespace::Type, "Point", None);
+        if let Declaration::Struct { name, fields, .. } = &mut program.declarations[0] {
+            *name = "Missing".to_string();
+            fields[0].ty = AstType::Named("Stale".to_string());
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.structs.contains_key("Missing"),
+            "resolver-backed collection should clear the stale AST struct key after resolver name restoration"
+        );
+        assert!(
+            !tc.structs.contains_key("Point"),
+            "resolver-backed collection should clear the restored struct key when resolver field metadata is incomplete"
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_enum_payload_metadata() {
         let mut program = parse_program(
             r#"
@@ -10245,6 +10274,35 @@ Option<T>: Some(T), None
         assert!(
             !tc.enums.contains_key("Option"),
             "resolver-backed collection should not keep AST-only enum variants when resolver variant metadata is incomplete"
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_clears_stale_enum_variants_after_name_restore() {
+        let mut program = parse_program(
+            r#"
+Option<T>: Some(T), None
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_variant_names_for_test(Namespace::Type, "Option", None);
+        if let Declaration::Enum { name, variants, .. } = &mut program.declarations[0] {
+            *name = "Missing".to_string();
+            variants[0].payload = Some(AstType::Named("Stale".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.enums.contains_key("Missing"),
+            "resolver-backed collection should clear the stale AST enum key after resolver name restoration"
+        );
+        assert!(
+            !tc.enums.contains_key("Option"),
+            "resolver-backed collection should clear the restored enum key when resolver variant metadata is incomplete"
         );
     }
 
