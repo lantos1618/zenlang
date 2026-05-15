@@ -3931,21 +3931,13 @@ impl TypeChecker {
             return;
         };
         template.type_params = type_parameter_names.to_vec();
-        template.params = parameter_names
-            .iter()
-            .cloned()
-            .zip(parameter_types.iter().cloned())
-            .enumerate()
-            .map(|(index, (param_name, ty))| {
-                let existing = template.params.get(index).cloned();
-                Param {
-                    name: param_name,
-                    ty,
-                    mutable: existing.as_ref().is_some_and(|param| param.mutable),
-                    span: existing.map(|param| param.span).unwrap_or(template.span),
-                }
-            })
-            .collect();
+        let existing_params = template.params.clone();
+        template.params = Self::resolver_params_from_metadata(
+            &existing_params,
+            parameter_names,
+            parameter_types,
+            template.span,
+        );
         template.return_type = match return_type {
             AstType::Void => None,
             ty => Some(ty.clone()),
@@ -4282,12 +4274,13 @@ impl TypeChecker {
         metadata: BehaviorMethodTypeMetadata,
         span: Span,
     ) -> ast::BehaviorMethod {
-        let params = Self::resolver_behavior_method_params(
+        let params = Self::resolver_params_from_metadata(
             existing_method
                 .map(|method| method.params.as_slice())
                 .unwrap_or(&[]),
             &metadata.parameter_names,
             &metadata.parameter_types,
+            Span::dummy(),
         );
         let return_type = match metadata.return_type {
             AstType::Void => None,
@@ -4302,10 +4295,11 @@ impl TypeChecker {
         }
     }
 
-    fn resolver_behavior_method_params(
+    fn resolver_params_from_metadata(
         existing_params: &[Param],
         parameter_names: &[String],
         parameter_types: &[AstType],
+        default_span: Span,
     ) -> Vec<Param> {
         parameter_types
             .iter()
@@ -4323,7 +4317,7 @@ impl TypeChecker {
                     name: parameter_names.get(index).cloned().unwrap_or_default(),
                     ty,
                     mutable: false,
-                    span: Span::dummy(),
+                    span: default_span,
                 },
             })
             .collect()
@@ -11094,6 +11088,42 @@ Point.get = (self: Point) i32 { return self.x }
         assert!(tc
             .resolver_behavior_ref_for(BehaviorRefRole::Impl, "Point", "Json")
             .is_none());
+    }
+
+    #[test]
+    fn resolver_params_from_metadata_preserves_ast_param_shape() {
+        let existing_span = Span::new(1, 10, 15);
+        let default_span = Span::new(1, 20, 25);
+        let existing_params = vec![Param {
+            name: "stale".to_string(),
+            ty: AstType::Bool,
+            mutable: true,
+            span: existing_span,
+        }];
+        let parameter_names = vec!["value".to_string(), "mapper".to_string()];
+        let parameter_types = vec![
+            AstType::I32,
+            AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::Str),
+            },
+        ];
+
+        let params = TypeChecker::resolver_params_from_metadata(
+            &existing_params,
+            &parameter_names,
+            &parameter_types,
+            default_span,
+        );
+
+        assert_eq!(params[0].name, "value");
+        assert_eq!(params[0].ty, AstType::I32);
+        assert!(params[0].mutable);
+        assert_eq!(params[0].span, existing_span);
+        assert_eq!(params[1].name, "mapper");
+        assert_eq!(params[1].ty, parameter_types[1]);
+        assert!(!params[1].mutable);
+        assert_eq!(params[1].span, default_span);
     }
 
     #[test]

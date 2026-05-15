@@ -1294,6 +1294,10 @@ and do not assume Phase 4 is ready without evidence.
   resolver-backed impl/requires semantic checks also pop restored refs through
   one role-selected helper, covered by
   `typechecker::tests::resolver_behavior_ref_for_selects_impl_and_required_queues_by_role`.
+- Resolver-backed callable template and behavior method collection now share
+  resolver-owned parameter restoration while preserving AST mutability and
+  spans, covered by
+  `typechecker::tests::resolver_params_from_metadata_preserves_ast_param_shape`.
 - Resolver behavior-association validation now derives display-name and typed
   ref expectations together, avoiding duplicate AST scans for the same edges.
 - Resolver behavior-association expectation storage now uses one shared edge

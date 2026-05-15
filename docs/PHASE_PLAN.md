@@ -1083,6 +1083,9 @@ checked-in docs, tests, and commits only.
   symbol lookup across parent, impl, and requires handoff paths, and
   resolver-backed impl/requires semantic checks pop restored refs through one
   role-selected helper, covered by focused unit coverage.
+- Resolver-backed callable template and behavior method collection now share
+  parameter restoration from resolver-owned names and typed metadata, covered
+  by focused unit coverage.
 - Resolver behavior-association validation now builds expected display names
   and typed refs in the same AST pass for impl/requires and parent edges.
 - Resolver behavior-association expectation storage now uses a shared edge
