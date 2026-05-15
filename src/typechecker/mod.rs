@@ -461,6 +461,16 @@ struct ExpectedVariantSymbol {
     payload: ExpectedVariantPayloadType,
 }
 
+impl ExpectedVariantSymbol {
+    fn new(owner_name: &str, is_public: bool, payload: &Option<AstType>) -> Self {
+        Self {
+            owner_name: owner_name.to_string(),
+            is_public,
+            payload: ExpectedVariantPayloadType::new(payload),
+        }
+    }
+}
+
 struct ExpectedImportSymbol {
     source: String,
     is_public: bool,
@@ -9367,11 +9377,7 @@ fn expected_variant_symbol(
     is_public: bool,
     payload: &Option<AstType>,
 ) -> ExpectedVariantSymbol {
-    ExpectedVariantSymbol {
-        owner_name: owner_name.to_string(),
-        is_public,
-        payload: expected_variant_payload_metadata(payload),
-    }
+    ExpectedVariantSymbol::new(owner_name, is_public, payload)
 }
 
 fn expected_import_symbol(source: &str) -> ExpectedImportSymbol {
@@ -9490,10 +9496,6 @@ fn format_resolver_named_list<T>(
             format!("({})", join_resolver_strings(&entries))
         })
         .unwrap_or_else(|| "unknown".to_string())
-}
-
-fn expected_variant_payload_metadata(payload: &Option<AstType>) -> ExpectedVariantPayloadType {
-    ExpectedVariantPayloadType::new(payload)
 }
 
 fn expected_behavior_method_metadata(
@@ -11247,6 +11249,27 @@ Point.requires(Json<str>)
         assert_eq!(
             symbol.variant_names,
             vec!["Some".to_string(), "None".to_string()]
+        );
+    }
+
+    #[test]
+    fn expected_variant_symbol_builds_owner_visibility_and_payload_together() {
+        let payload = Some(AstType::Function {
+            params: vec![AstType::I32],
+            ret: Box::new(AstType::Bool),
+        });
+
+        let symbol = ExpectedVariantSymbol::new("Result", true, &payload);
+
+        assert_eq!(symbol.owner_name, "Result");
+        assert!(symbol.is_public);
+        assert_eq!(symbol.payload.display, Some("(i32) bool".to_string()));
+        assert_eq!(
+            symbol.payload.typed,
+            Some(AstType::Function {
+                params: vec![AstType::I32],
+                ret: Box::new(AstType::Bool),
+            })
         );
     }
 

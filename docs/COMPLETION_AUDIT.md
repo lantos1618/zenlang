@@ -233,6 +233,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver expected enum-symbol construction now pairs type-like expectations
   and variant-name expectations through one constructor, covered by
   `typechecker::tests::expected_enum_symbol_builds_type_like_and_variants_together`.
+- Resolver expected variant-symbol construction now pairs owner, visibility,
+  and payload expectations through one constructor, covered by
+  `typechecker::tests::expected_variant_symbol_builds_owner_visibility_and_payload_together`.
 - Resolver expected behavior association construction now pairs display names
   and typed refs through one constructor, covered by
   `typechecker::tests::expected_behavior_edge_builds_display_and_metadata_together`.
