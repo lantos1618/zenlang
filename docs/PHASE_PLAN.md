@@ -1181,6 +1181,8 @@ checked-in docs, tests, and commits only.
   diagnostic code mapping instead of constructing those codes at the call site.
 - Resolver local type-parameter absence validation now owns its resolver
   diagnostic code mapping instead of constructing those codes at the call site.
+- Resolver variant type-parameter absence validation now owns its resolver
+  diagnostic code mapping instead of constructing those codes at the call site.
 
 ## Current Phase
 

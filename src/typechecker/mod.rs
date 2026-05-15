@@ -474,6 +474,15 @@ impl TypeParameterAbsenceValidation {
         }
     }
 
+    fn variant_resolver_codes() -> Self {
+        Self {
+            count_code: "E0334",
+            name_code: "E0351",
+            bound_code: "E0335",
+            bound_ref_code: "E0391",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 4] {
         [
             AbsentMetadataEntry::new(
@@ -8462,12 +8471,7 @@ impl TypeChecker {
             symbol,
             "variant",
             name,
-            TypeParameterAbsenceValidation {
-                count_code: "E0334",
-                name_code: "E0351",
-                bound_code: "E0335",
-                bound_ref_code: "E0391",
-            },
+            TypeParameterAbsenceValidation::variant_resolver_codes(),
             span,
         );
 
@@ -10917,6 +10921,16 @@ identity<T: Json> = (value: T) T { return value }
         assert_eq!(validation.name_code, "E0350");
         assert_eq!(validation.bound_code, "E0254");
         assert_eq!(validation.bound_ref_code, "E0382");
+    }
+
+    #[test]
+    fn type_parameter_absence_validation_uses_variant_resolver_codes() {
+        let validation = TypeParameterAbsenceValidation::variant_resolver_codes();
+
+        assert_eq!(validation.count_code, "E0334");
+        assert_eq!(validation.name_code, "E0351");
+        assert_eq!(validation.bound_code, "E0335");
+        assert_eq!(validation.bound_ref_code, "E0391");
     }
 
     #[test]
