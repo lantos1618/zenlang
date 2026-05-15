@@ -1192,6 +1192,42 @@ struct SourceValidation {
 }
 
 impl SourceValidation {
+    fn module_resolver_code() -> Self {
+        Self {
+            code: "E0230",
+            actual_missing: "none",
+            expected_missing: "none",
+            quote_expected: false,
+        }
+    }
+
+    fn stripped_import_resolver_code() -> Self {
+        Self {
+            code: "E0246",
+            actual_missing: "unknown",
+            expected_missing: "a module source",
+            quote_expected: false,
+        }
+    }
+
+    fn import_resolver_code() -> Self {
+        Self {
+            code: "E0227",
+            actual_missing: "unknown",
+            expected_missing: "none",
+            quote_expected: true,
+        }
+    }
+
+    fn local_resolver_code() -> Self {
+        Self {
+            code: "E0248",
+            actual_missing: "none",
+            expected_missing: "none",
+            quote_expected: false,
+        }
+    }
+
     fn message(
         self,
         symbol_kind: &str,
@@ -6464,12 +6500,7 @@ impl TypeChecker {
             &expected.name,
             symbol.import_source.as_deref(),
             expected.source.as_deref(),
-            SourceValidation {
-                code: "E0230",
-                actual_missing: "none",
-                expected_missing: "none",
-                quote_expected: false,
-            },
+            SourceValidation::module_resolver_code(),
             span,
         );
 
@@ -6561,12 +6592,7 @@ impl TypeChecker {
                     &symbol.name,
                     symbol.import_source.as_deref(),
                     Some("a module source"),
-                    SourceValidation {
-                        code: "E0246",
-                        actual_missing: "unknown",
-                        expected_missing: "a module source",
-                        quote_expected: false,
-                    },
+                    SourceValidation::stripped_import_resolver_code(),
                     symbol.definition_span,
                 );
             } else if let Some(source) = symbol.import_source.as_deref() {
@@ -7480,12 +7506,7 @@ impl TypeChecker {
             name,
             symbol.import_source.as_deref(),
             Some(expected.source.as_str()),
-            SourceValidation {
-                code: "E0227",
-                actual_missing: "unknown",
-                expected_missing: "none",
-                quote_expected: true,
-            },
+            SourceValidation::import_resolver_code(),
             span,
         );
 
@@ -7901,12 +7922,7 @@ impl TypeChecker {
             name,
             symbol.import_source.as_deref(),
             expected.source.as_deref(),
-            SourceValidation {
-                code: "E0248",
-                actual_missing: "none",
-                expected_missing: "none",
-                quote_expected: false,
-            },
+            SourceValidation::local_resolver_code(),
             span,
         );
 
@@ -11520,6 +11536,31 @@ main = (mut input: i32) i32 {
             unquoted.message("value", "main", Some("std"), None),
             "resolver value symbol 'main' has source 'std', expected none"
         );
+    }
+
+    #[test]
+    fn source_validation_uses_resolver_codes() {
+        let module = SourceValidation::module_resolver_code();
+        let stripped_import = SourceValidation::stripped_import_resolver_code();
+        let import = SourceValidation::import_resolver_code();
+        let local = SourceValidation::local_resolver_code();
+
+        assert_eq!(module.code, "E0230");
+        assert_eq!(module.actual_missing, "none");
+        assert_eq!(module.expected_missing, "none");
+        assert!(!module.quote_expected);
+        assert_eq!(stripped_import.code, "E0246");
+        assert_eq!(stripped_import.actual_missing, "unknown");
+        assert_eq!(stripped_import.expected_missing, "a module source");
+        assert!(!stripped_import.quote_expected);
+        assert_eq!(import.code, "E0227");
+        assert_eq!(import.actual_missing, "unknown");
+        assert_eq!(import.expected_missing, "none");
+        assert!(import.quote_expected);
+        assert_eq!(local.code, "E0248");
+        assert_eq!(local.actual_missing, "none");
+        assert_eq!(local.expected_missing, "none");
+        assert!(!local.quote_expected);
     }
 
     #[test]

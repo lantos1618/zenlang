@@ -175,6 +175,9 @@ and do not assume Phase 4 is ready without evidence.
   bundles for missing declaration symbols, missing local symbols, extra
   declaration symbols, and extra local symbols, covered by
   `typechecker::tests::resolver_symbol_presence_validation_uses_resolver_codes`.
+- Resolver source-mismatch diagnostics now use centralized resolver-code
+  bundles for module, stripped import, import, and local symbols, covered by
+  `typechecker::tests::source_validation_uses_resolver_codes`.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths, covered by
   `typechecker::tests::resolver_symbol_metadata_helper_requires_symbol_and_selected_metadata`.
