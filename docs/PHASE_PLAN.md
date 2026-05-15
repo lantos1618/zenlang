@@ -1067,6 +1067,13 @@ checked-in docs, tests, and commits only.
 - Behavior impl method collection now has coverage for clearing restored method
   keys after stale AST target/name repair when resolver value-signature metadata
   is incomplete.
+- Generic behavior impl method template restoration now uses the shared
+  resolver callable key repair path, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_clears_stale_behavior_impl_generic_method_template_after_key_restore`,
+  so stale AST target/name keys cannot survive restored or incomplete resolver
+  value-signature metadata.
 - Resolver-backed `.requires` validation now restores stale AST target names
   from unique missing required-ref metadata before skipping incomplete resolver
   handoff, avoiding false diagnostics from stale AST-only required refs.

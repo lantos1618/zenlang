@@ -318,6 +318,13 @@ and do not assume Phase 4 is ready without evidence.
 - Behavior impl conformance reads the collected `Type.method` signature,
   including resolver-restored impl-method metadata, so stale AST-only method
   signatures cannot produce false impl diagnostics.
+- Generic behavior impl method template restoration uses the shared resolver
+  callable key repair path, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata`
+  and
+  `typechecker::tests::collect_declarations_with_symbols_clears_stale_behavior_impl_generic_method_template_after_key_restore`,
+  so stale AST target/name keys cannot survive restored or incomplete resolver
+  value-signature metadata.
 - Resolver-backed behavior impl conformance also restores impl method names
   from resolver-owned value symbols when AST-only impl method names are stale,
   without masking real extra impl methods that lack resolver-owned required
