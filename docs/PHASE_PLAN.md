@@ -138,6 +138,8 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver validation now stores expected struct field display and
   typed metadata as paired per-field expectations before deriving resolver
   comparison lists.
+- Typechecker resolver validation now stores expected enum variant payload
+  display and typed metadata as one paired payload-type expectation.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, reducing

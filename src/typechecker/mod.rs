@@ -261,8 +261,12 @@ struct ExpectedField {
 
 struct ExpectedVariantPayload {
     count: usize,
-    ty: Option<AstType>,
-    type_name: Option<String>,
+    ty: ExpectedVariantPayloadType,
+}
+
+struct ExpectedVariantPayloadType {
+    typed: Option<AstType>,
+    display: Option<String>,
 }
 
 struct ImportedMethodSignature<'a> {
@@ -6879,7 +6883,7 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.variant_payload_type != expected_payload.ty {
+        if symbol.variant_payload_type != expected_payload.ty.typed {
             let actual = symbol
                 .variant_payload_type
                 .as_ref()
@@ -6887,6 +6891,7 @@ impl TypeChecker {
                 .unwrap_or_else(|| "none".to_string());
             let expected = expected_payload
                 .ty
+                .typed
                 .as_ref()
                 .map(AstType::display_name)
                 .unwrap_or_else(|| "none".to_string());
@@ -6898,12 +6903,12 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.variant_payload_type_name != expected_payload.type_name {
+        if symbol.variant_payload_type_name != expected_payload.ty.display {
             let actual = symbol
                 .variant_payload_type_name
                 .as_deref()
                 .unwrap_or("unknown");
-            let expected = expected_payload.type_name.as_deref().unwrap_or("none");
+            let expected = expected_payload.ty.display.as_deref().unwrap_or("none");
             self.diagnostics.push(Diagnostic::error(
                 "E0218",
                 format!(
@@ -7893,8 +7898,10 @@ fn format_variant_names(variants: Option<&[String]>) -> String {
 fn expected_variant_payload(payload: &Option<AstType>) -> ExpectedVariantPayload {
     ExpectedVariantPayload {
         count: usize::from(payload.is_some()),
-        ty: payload.clone(),
-        type_name: payload.as_ref().map(AstType::display_name),
+        ty: ExpectedVariantPayloadType {
+            typed: payload.clone(),
+            display: payload.as_ref().map(AstType::display_name),
+        },
     }
 }
 
