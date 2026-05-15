@@ -1094,6 +1094,13 @@ and do not assume Phase 4 is ready without evidence.
   duplicate AST-only diagnostics from the remaining collection loop.
   AST struct/enum generic-bound validation and type declaration seeding now
   also have named helper passes.
+  Type declaration collection now dispatches to that AST-only path instead of
+  invoking guarded type helpers during resolver-backed collection, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_metadata_for_type_refs`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_bounds_for_validation`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_struct_name_metadata`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_enum_name_metadata`.
   AST callable generic-bound validation, callable signature seeding, and
   resolver-backed callable template seeding now also have named helper passes.
   Callable collection now dispatches to exactly one of AST signature seeding or

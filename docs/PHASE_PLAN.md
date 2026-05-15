@@ -566,6 +566,9 @@ checked-in docs, tests, and commits only.
   duplicate AST-only diagnostics from the remaining collection loop.
   AST struct/enum generic-bound validation and type declaration seeding now
   also have named helper passes.
+  Type declaration collection now dispatches to the AST-only generic-bound and
+  declaration-seeding helpers as one path, instead of entering those helpers
+  during resolver-backed collection and relying on per-helper guards.
   AST callable generic-bound validation, callable signature seeding, and
   resolver-backed callable template seeding now also have named helper passes.
   Callable collection now dispatches to exactly one of AST signature seeding or

@@ -2983,8 +2983,7 @@ impl TypeChecker {
         self.collect_ast_behavior_declarations(decls);
         self.validate_ast_behavior_generic_bounds(decls);
         self.validate_ast_behavior_extends(decls);
-        self.validate_ast_type_generic_bounds(decls);
-        self.collect_ast_type_declarations(decls);
+        self.collect_type_declarations(decls);
         self.validate_ast_callable_generic_bounds(decls);
         self.collect_callable_declarations(decls);
         self.collect_impl_block_declarations(decls);
@@ -3185,11 +3184,16 @@ impl TypeChecker {
         }
     }
 
-    fn validate_ast_type_generic_bounds(&mut self, decls: &[Declaration]) {
+    fn collect_type_declarations(&mut self, decls: &[Declaration]) {
         if self.resolver_backed_collection {
             return;
         }
 
+        self.validate_ast_type_generic_bounds(decls);
+        self.collect_ast_type_declarations(decls);
+    }
+
+    fn validate_ast_type_generic_bounds(&mut self, decls: &[Declaration]) {
         for decl in decls {
             match decl {
                 Declaration::Struct { type_params, .. } | Declaration::Enum { type_params, .. } => {
@@ -3201,10 +3205,6 @@ impl TypeChecker {
     }
 
     fn collect_ast_type_declarations(&mut self, decls: &[Declaration]) {
-        if self.resolver_backed_collection {
-            return;
-        }
-
         for decl in decls {
             match decl {
                 Declaration::Struct {
