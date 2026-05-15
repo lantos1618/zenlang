@@ -709,6 +709,10 @@ impl VisibilityValidation {
         Self { code: "E0245" }
     }
 
+    fn type_like_resolver_code() -> Self {
+        Self { code: "E0225" }
+    }
+
     fn local_resolver_code() -> Self {
         Self { code: "E0247" }
     }
@@ -7669,7 +7673,7 @@ impl TypeChecker {
                 name,
                 symbol.is_public,
                 expected_is_public,
-                VisibilityValidation { code: "E0225" },
+                VisibilityValidation::type_like_resolver_code(),
                 span,
             );
         }
@@ -10742,6 +10746,13 @@ main = (mut input: i32) i32 {
         let validation = VisibilityValidation::import_resolver_code();
 
         assert_eq!(validation.code, "E0245");
+    }
+
+    #[test]
+    fn visibility_validation_uses_type_like_resolver_code() {
+        let validation = VisibilityValidation::type_like_resolver_code();
+
+        assert_eq!(validation.code, "E0225");
     }
 
     #[test]
