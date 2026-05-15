@@ -251,8 +251,12 @@ struct ValueSignatureAbsenceValidation {
 #[derive(Default)]
 struct ExpectedFields {
     count: usize,
-    types: Vec<(String, AstType)>,
-    type_names: Vec<(String, String)>,
+    fields: Vec<ExpectedField>,
+}
+
+struct ExpectedField {
+    typed: (String, AstType),
+    display: (String, String),
 }
 
 struct ExpectedVariantPayload {
@@ -6750,9 +6754,14 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.field_types.as_deref() != Some(expected_fields.types.as_slice()) {
+        let expected_types: Vec<_> = expected_fields
+            .fields
+            .iter()
+            .map(|field| field.typed.clone())
+            .collect();
+        if symbol.field_types.as_deref() != Some(expected_types.as_slice()) {
             let actual = format_field_types(symbol.field_types.as_deref());
-            let expected = format_field_types(Some(&expected_fields.types));
+            let expected = format_field_types(Some(&expected_types));
             self.diagnostics.push(Diagnostic::error(
                 "E0358",
                 format!(
@@ -6762,9 +6771,14 @@ impl TypeChecker {
                 span,
             ));
         }
-        if symbol.field_type_names.as_deref() != Some(expected_fields.type_names.as_slice()) {
+        let expected_type_names: Vec<_> = expected_fields
+            .fields
+            .into_iter()
+            .map(|field| field.display)
+            .collect();
+        if symbol.field_type_names.as_deref() != Some(expected_type_names.as_slice()) {
             let actual = format_field_type_names(symbol.field_type_names.as_deref());
-            let expected = format_field_type_names(Some(&expected_fields.type_names));
+            let expected = format_field_type_names(Some(&expected_type_names));
             self.diagnostics.push(Diagnostic::error(
                 "E0217",
                 format!(
@@ -7826,10 +7840,10 @@ fn expected_fields(fields: &[StructField]) -> ExpectedFields {
         ..ExpectedFields::default()
     };
     for field in fields {
-        expected.types.push((field.name.clone(), field.ty.clone()));
-        expected
-            .type_names
-            .push((field.name.clone(), field.ty.display_name()));
+        expected.fields.push(ExpectedField {
+            typed: (field.name.clone(), field.ty.clone()),
+            display: (field.name.clone(), field.ty.display_name()),
+        });
     }
     expected
 }
