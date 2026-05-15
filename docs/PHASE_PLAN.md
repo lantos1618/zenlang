@@ -1215,6 +1215,8 @@ checked-in docs, tests, and commits only.
   code mapping instead of constructing those codes at the call site.
 - Resolver value parameter-count validation now owns its resolver diagnostic
   code mapping instead of constructing that code at the call site.
+- Resolver field-count validation now owns its resolver diagnostic code mapping
+  instead of constructing that code at the call site.
 
 ## Current Phase
 

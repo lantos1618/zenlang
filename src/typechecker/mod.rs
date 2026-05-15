@@ -1196,6 +1196,13 @@ impl CountValidation {
         }
     }
 
+    fn field_resolver_code() -> Self {
+        Self {
+            label: "field count",
+            code: "E0214",
+        }
+    }
+
     fn message(
         self,
         symbol_kind: &str,
@@ -8389,10 +8396,7 @@ impl TypeChecker {
             name,
             symbol.field_count,
             expected.count,
-            CountValidation {
-                label: "field count",
-                code: "E0214",
-            },
+            CountValidation::field_resolver_code(),
             span,
         );
         let validation = FieldValidation::resolver_codes();
@@ -9994,6 +9998,14 @@ Point.get = (self: Point) i32 { return self.x }
 
         assert_eq!(validation.label, "parameter count");
         assert_eq!(validation.code, "E0211");
+    }
+
+    #[test]
+    fn count_validation_uses_field_resolver_code() {
+        let validation = CountValidation::field_resolver_code();
+
+        assert_eq!(validation.label, "field count");
+        assert_eq!(validation.code, "E0214");
     }
 
     #[test]
