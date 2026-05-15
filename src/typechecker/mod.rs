@@ -2578,8 +2578,7 @@ impl TypeChecker {
         seen_methods: &mut HashMap<String, ast::BehaviorMethod>,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
-        let behavior_seen_key = self.behavior_seen_key(behavior, substitutions);
-        if !seen_behaviors.insert(behavior_seen_key) {
+        if !self.mark_behavior_seen(behavior, substitutions, seen_behaviors) {
             return;
         }
 
@@ -3079,8 +3078,7 @@ impl TypeChecker {
         substitutions: &HashMap<String, AstType>,
         seen: &mut HashSet<String>,
     ) -> Vec<ast::BehaviorMethod> {
-        let behavior_seen_key = self.behavior_seen_key(behavior, substitutions);
-        if !seen.insert(behavior_seen_key) {
+        if !self.mark_behavior_seen(behavior, substitutions, seen) {
             return Vec::new();
         }
 
@@ -3122,6 +3120,16 @@ impl TypeChecker {
             })
             .unwrap_or_default();
         behavior_ref_display(behavior, &type_args)
+    }
+
+    fn mark_behavior_seen(
+        &self,
+        behavior: &str,
+        substitutions: &HashMap<String, AstType>,
+        seen: &mut HashSet<String>,
+    ) -> bool {
+        let behavior_seen_key = self.behavior_seen_key(behavior, substitutions);
+        seen.insert(behavior_seen_key)
     }
 
     fn behavior_methods_for_impl(
