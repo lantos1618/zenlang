@@ -170,6 +170,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver expected value-signature construction now gathers
   parameter, return, and type-parameter expectations through one
   expected-signature constructor.
+- Typechecker resolver expected value-symbol construction now pairs value
+  signature expectations with visibility through one expected-symbol
+  constructor.
 - Typechecker resolver behavior-ref validation now separates role labels from
   per-check diagnostic code mappings, avoiding duplicated label bundles across
   contains and full-list checks.

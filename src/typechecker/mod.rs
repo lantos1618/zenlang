@@ -198,6 +198,20 @@ struct ExpectedValueSymbol {
     is_public: bool,
 }
 
+impl ExpectedValueSymbol {
+    fn new(
+        params: &[Param],
+        return_type: &Option<AstType>,
+        type_params: &[ast::TypeParam],
+        is_public: bool,
+    ) -> Self {
+        Self {
+            signature: ExpectedValueSignature::new(params, return_type, type_params),
+            is_public,
+        }
+    }
+}
+
 struct ExpectedParameter {
     name: String,
     typed: AstType,
@@ -9273,10 +9287,7 @@ fn expected_value_symbol(
     type_params: &[ast::TypeParam],
     is_public: bool,
 ) -> ExpectedValueSymbol {
-    ExpectedValueSymbol {
-        signature: expected_value_signature_metadata(params, return_type, type_params),
-        is_public,
-    }
+    ExpectedValueSymbol::new(params, return_type, type_params, is_public)
 }
 
 fn expected_type_parameter_metadata(type_params: &[ast::TypeParam]) -> Vec<ExpectedTypeParameter> {
@@ -11070,6 +11081,27 @@ Point.requires(Json<str>)
             bound.reference.type_args,
             vec![AstType::Named("T".to_string())]
         );
+    }
+
+    #[test]
+    fn expected_value_symbol_builds_signature_and_visibility_together() {
+        let params = vec![Param {
+            name: "value".to_string(),
+            ty: AstType::I32,
+            mutable: false,
+            span: Span::dummy(),
+        }];
+        let return_type = Some(AstType::Bool);
+
+        let symbol = ExpectedValueSymbol::new(&params, &return_type, &[], true);
+
+        assert!(symbol.is_public);
+        assert_eq!(symbol.signature.params[0].name, "value");
+        assert_eq!(symbol.signature.params[0].display, "i32");
+        assert_eq!(symbol.signature.params[0].typed, AstType::I32);
+        assert_eq!(symbol.signature.return_type.display, "bool");
+        assert_eq!(symbol.signature.return_type.typed, AstType::Bool);
+        assert!(symbol.signature.type_params.is_empty());
     }
 
     #[test]

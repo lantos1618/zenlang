@@ -216,6 +216,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver expected value-signature construction now gathers parameter, return,
   and type-parameter expectations through one constructor, covered by
   `typechecker::tests::expected_value_signature_builds_components_together`.
+- Resolver expected value-symbol construction now pairs value signature
+  expectations with visibility through one constructor, covered by
+  `typechecker::tests::expected_value_symbol_builds_signature_and_visibility_together`.
 - Resolver expected behavior association construction now pairs display names
   and typed refs through one constructor, covered by
   `typechecker::tests::expected_behavior_edge_builds_display_and_metadata_together`.
