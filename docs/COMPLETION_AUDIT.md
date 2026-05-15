@@ -268,6 +268,9 @@ and do not assume Phase 4 is ready without evidence.
   deriving resolver comparison lists.
 - Typechecker resolver validation now derives expected value parameter counts
   from the per-parameter expectation list instead of storing a separate count.
+- Typechecker resolver validation now stores expected value parameter
+  expectations directly on value signatures instead of wrapping the
+  per-parameter list before deriving resolver comparison lists.
 - Typechecker resolver validation now stores expected value display-return and
   typed-return metadata as one paired return expectation before deriving
   resolver comparison values.
