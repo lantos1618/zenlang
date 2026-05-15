@@ -3272,8 +3272,13 @@ impl TypeChecker {
                 Declaration::ImplBlock { behavior: None, .. } => {
                     self.collect_resolver_type_impl_declaration_metadata(decl, symbols);
                 }
-                Declaration::Struct { .. } | Declaration::Enum { .. } => {
-                    self.collect_resolver_type_declaration_metadata(decl, symbols);
+                Declaration::Struct {
+                    name, fields, span, ..
+                } => {
+                    self.collect_resolver_struct_declaration_metadata(symbols, name, fields, *span);
+                }
+                Declaration::Enum { name, span, .. } => {
+                    self.collect_resolver_enum_declaration_metadata(symbols, name, *span);
                 }
                 Declaration::Behavior { .. } => {
                     self.collect_resolver_behavior_declaration_metadata(decl, symbols);
@@ -3322,26 +3327,27 @@ impl TypeChecker {
         }
     }
 
-    fn collect_resolver_type_declaration_metadata(
+    fn collect_resolver_struct_declaration_metadata(
         &mut self,
-        decl: &Declaration,
         symbols: &SymbolTable,
+        name: &str,
+        fields: &[StructField],
+        span: Span,
     ) {
-        match decl {
-            Declaration::Struct {
-                name, fields, span, ..
-            } => {
-                let restored_name =
-                    self.collect_resolver_type_behavior_refs_for_declaration(symbols, name, *span);
-                self.collect_resolver_struct_fields(symbols, &restored_name, fields);
-            }
-            Declaration::Enum { name, span, .. } => {
-                let restored_name =
-                    self.collect_resolver_type_behavior_refs_for_declaration(symbols, name, *span);
-                self.collect_resolver_enum_variants(symbols, &restored_name);
-            }
-            _ => {}
-        }
+        let restored_name =
+            self.collect_resolver_type_behavior_refs_for_declaration(symbols, name, span);
+        self.collect_resolver_struct_fields(symbols, &restored_name, fields);
+    }
+
+    fn collect_resolver_enum_declaration_metadata(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        span: Span,
+    ) {
+        let restored_name =
+            self.collect_resolver_type_behavior_refs_for_declaration(symbols, name, span);
+        self.collect_resolver_enum_variants(symbols, &restored_name);
     }
 
     fn collect_resolver_behavior_declaration_metadata(
