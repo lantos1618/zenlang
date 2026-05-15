@@ -196,6 +196,12 @@ struct ExpectedEnumSymbol {
     variant_names: Vec<String>,
 }
 
+struct ExpectedVariantSymbol {
+    owner_name: String,
+    is_public: bool,
+    payload: ExpectedVariantPayload,
+}
+
 struct ExpectedTypeParameters {
     count: usize,
     names: Vec<String>,
@@ -4112,46 +4118,10 @@ impl TypeChecker {
                         *span,
                     );
                     for variant in variants {
-                        let Some(symbol) = symbols.lookup_variant(name, &variant.name) else {
-                            if let Some(symbol) = symbols.lookup(Namespace::Variant, &variant.name)
-                            {
-                                self.validate_resolver_variant_owner_name(
-                                    symbol,
-                                    &variant.name,
-                                    name,
-                                    variant.span,
-                                );
-                                continue;
-                            }
-                            self.require_resolver_symbol(
-                                symbols,
-                                Namespace::Variant,
-                                &variant.name,
-                                variant.span,
-                            );
-                            continue;
-                        };
-                        self.validate_resolver_variant_owner_name(
-                            symbol,
+                        self.require_resolver_variant_symbol(
+                            symbols,
                             &variant.name,
-                            name,
-                            variant.span,
-                        );
-                        self.validate_resolver_variant_visibility(
-                            symbol,
-                            &variant.name,
-                            *public,
-                            variant.span,
-                        );
-                        self.validate_resolver_variant_payload(
-                            symbol,
-                            &variant.name,
-                            expected_variant_payload(&variant.payload),
-                            variant.span,
-                        );
-                        self.validate_resolver_variant_absent_other_metadata(
-                            symbol,
-                            &variant.name,
+                            expected_variant_symbol(name, *public, &variant.payload),
                             variant.span,
                         );
                     }
@@ -6522,6 +6492,30 @@ impl TypeChecker {
         Some(symbol)
     }
 
+    fn require_resolver_variant_symbol<'a>(
+        &mut self,
+        symbols: &'a SymbolTable,
+        name: &str,
+        expected: ExpectedVariantSymbol,
+        span: Span,
+    ) -> Option<&'a crate::resolver::Symbol> {
+        let Some(symbol) = symbols.lookup_variant(&expected.owner_name, name) else {
+            if let Some(symbol) = symbols.lookup(Namespace::Variant, name) {
+                self.validate_resolver_variant_owner_name(symbol, name, &expected.owner_name, span);
+                return None;
+            }
+            self.require_resolver_symbol(symbols, Namespace::Variant, name, span);
+            return None;
+        };
+
+        self.validate_resolver_variant_owner_name(symbol, name, &expected.owner_name, span);
+        self.validate_resolver_variant_visibility(symbol, name, expected.is_public, span);
+        self.validate_resolver_variant_payload(symbol, name, expected.payload, span);
+        self.validate_resolver_variant_absent_other_metadata(symbol, name, span);
+
+        Some(symbol)
+    }
+
     fn require_resolver_behavior_symbol<'a>(
         &mut self,
         symbols: &'a SymbolTable,
@@ -7722,6 +7716,18 @@ fn expected_enum_symbol(
     ExpectedEnumSymbol {
         type_like: expected_type_like_symbol(type_params, Some(is_public)),
         variant_names: expected_variant_names(variants),
+    }
+}
+
+fn expected_variant_symbol(
+    owner_name: &str,
+    is_public: bool,
+    payload: &Option<AstType>,
+) -> ExpectedVariantSymbol {
+    ExpectedVariantSymbol {
+        owner_name: owner_name.to_string(),
+        is_public,
+        payload: expected_variant_payload(payload),
     }
 }
 
