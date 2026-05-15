@@ -1067,6 +1067,8 @@ checked-in docs, tests, and commits only.
   diagnostic code mapping instead of constructing that code at the call site.
 - Resolver variant mutability absence validation now owns its resolver
   diagnostic code mapping instead of constructing that code at the call site.
+- Resolver value mutability absence validation now owns its resolver diagnostic
+  code mapping instead of constructing that code at the call site.
 - Resolver local mutability validation now carries its diagnostic code and
   display formatting through a validation bundle.
 - Resolver local mutability validation now owns its resolver diagnostic code
