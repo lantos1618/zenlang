@@ -102,6 +102,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.
+- Resolver-backed behavior impl metadata now builds restored impl-block tasks
+  once and reuses them for both impl method signature restoration and omitted
+  default-method synthesis.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so

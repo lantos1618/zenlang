@@ -98,6 +98,14 @@ enum ResolverTypeDeclarationMetadataTask<'a> {
     },
 }
 
+struct ResolverBehaviorImplBlockTask<'a> {
+    ast_type_name: &'a str,
+    restored_type_name: String,
+    behavior: &'a str,
+    behavior_type_args: &'a [AstType],
+    methods: &'a [Declaration],
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorBound {
     pub behavior: String,
@@ -3550,36 +3558,30 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: &SymbolTable,
     ) {
+        let tasks = self.resolver_behavior_impl_block_tasks(decls, symbols);
+
         self.with_resolver_backed_collection(|checker| {
-            checker.for_each_resolver_behavior_impl_block(
-                decls,
-                symbols,
-                |checker, ast_type_name, type_name, behavior, behavior_type_args, methods| {
-                    checker.collect_resolver_behavior_impl_method_signatures(
-                        symbols,
-                        ast_type_name,
-                        type_name,
-                        behavior,
-                        behavior_type_args,
-                        methods,
-                    );
-                },
-            );
+            for task in &tasks {
+                checker.collect_resolver_behavior_impl_method_signatures(
+                    symbols,
+                    task.ast_type_name,
+                    &task.restored_type_name,
+                    task.behavior,
+                    task.behavior_type_args,
+                    task.methods,
+                );
+            }
 
             checker.validate_collected_behavior_extends_semantics();
 
-            checker.for_each_resolver_behavior_impl_block(
-                decls,
-                symbols,
-                |checker, _ast_type_name, type_name, behavior, behavior_type_args, methods| {
-                    checker.collect_behavior_default_method_signatures(
-                        type_name,
-                        behavior,
-                        behavior_type_args,
-                        methods,
-                    );
-                },
-            );
+            for task in &tasks {
+                checker.collect_behavior_default_method_signatures(
+                    &task.restored_type_name,
+                    task.behavior,
+                    task.behavior_type_args,
+                    task.methods,
+                );
+            }
         });
     }
 
@@ -3617,12 +3619,12 @@ impl TypeChecker {
         self.resolver_backed_collection = previous;
     }
 
-    fn for_each_resolver_behavior_impl_block(
-        &mut self,
-        decls: &[Declaration],
+    fn resolver_behavior_impl_block_tasks<'a>(
+        &self,
+        decls: &'a [Declaration],
         symbols: &SymbolTable,
-        mut visit: impl FnMut(&mut Self, &str, &str, &str, &[AstType], &[Declaration]),
-    ) {
+    ) -> Vec<ResolverBehaviorImplBlockTask<'a>> {
+        let mut tasks = Vec::new();
         for decl in decls {
             if let Declaration::ImplBlock {
                 type_name,
@@ -3638,16 +3640,16 @@ impl TypeChecker {
                     methods,
                     Some((behavior, behavior_type_args)),
                 );
-                visit(
-                    self,
-                    type_name,
-                    &restored_type_name,
+                tasks.push(ResolverBehaviorImplBlockTask {
+                    ast_type_name: type_name,
+                    restored_type_name,
                     behavior,
                     behavior_type_args,
                     methods,
-                );
+                });
             }
         }
+        tasks
     }
 
     fn for_each_resolver_type_declaration(

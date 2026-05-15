@@ -173,6 +173,9 @@ and do not assume Phase 4 is ready without evidence.
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate
   resolver-backed declaration walks without changing restoration ordering.
+- Resolver-backed behavior impl metadata now builds restored impl-block tasks
+  once and reuses them for both impl method signature restoration and omitted
+  default-method synthesis, preserving the signature-before-defaults ordering.
 - Module graph typechecking now seeds graph imports and then runs
   resolver-backed declaration collection for the current module, so multi-file
   graph modules use the same resolver-owned metadata handoff as
