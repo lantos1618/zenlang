@@ -6870,25 +6870,23 @@ impl TypeChecker {
         validation: ValueSignatureAbsenceValidation,
         span: Span,
     ) {
-        if symbol.parameter_count.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                validation.parameter_count_code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has parameter count metadata, expected none"
+        self.validate_resolver_absent_metadata_entries(
+            symbol_kind,
+            name,
+            &[
+                (
+                    symbol.parameter_count.is_some(),
+                    validation.parameter_count_code,
+                    "parameter count",
                 ),
-                span,
-            ));
-        }
-
-        if symbol.return_type_name.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                validation.return_type_code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has return type metadata, expected none"
+                (
+                    symbol.return_type_name.is_some(),
+                    validation.return_type_code,
+                    "return type",
                 ),
-                span,
-            ));
-        }
+            ],
+            span,
+        );
     }
 
     fn validate_resolver_absent_source_metadata(

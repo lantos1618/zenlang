@@ -860,6 +860,8 @@ and do not assume Phase 4 is ready without evidence.
   source diagnostic helper.
 - Resolver stripped-import validation now reuses the shared resolver
   visibility and source diagnostic helpers.
+- Resolver absent value-signature metadata validation now reuses the shared
+  absent-metadata entry helper.
 
 ## Unresolved Gaps
 
