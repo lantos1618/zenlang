@@ -66,7 +66,7 @@ fn compile_to_c_with_generated_call_check(zen_path: &Path) -> String {
 
 /// Run the full pipeline for a `.zen` file and return stdout of the compiled binary.
 fn compile_and_run(zen_path: &Path) -> String {
-    let c_source = compile_to_c(zen_path);
+    let c_source = compile_to_c_with_generated_call_check(zen_path);
 
     // 4. Compile C → binary in a temp dir
     let tmp = tempfile::tempdir().expect("create temp dir");

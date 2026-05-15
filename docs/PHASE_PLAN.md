@@ -32,9 +32,10 @@ checked-in docs, tests, and commits only.
   definitions, including struct-returning specializations without counting
   declarations or definitions as calls. The generated-C specialization test now
   also scans every covered generated call with an underscore-style mangled name
-  and fails if it has no emitted definition. Worklist dedup coverage now counts
-  generated C function definitions directly, so prototypes no longer stand in
-  for "emitted once" evidence.
+  and fails if it has no emitted definition. Every executable integration
+  fixture also runs that generated-call scan before compiling C. Worklist dedup
+  coverage now counts generated C function definitions directly, so prototypes
+  no longer stand in for "emitted once" evidence.
 - Resolver method symbols carry full value-signature metadata, including
   generic type-parameter names and bounds, and typechecker setup validates
   method signature handoff drift before method bodies are checked.

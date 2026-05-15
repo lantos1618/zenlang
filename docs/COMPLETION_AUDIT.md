@@ -47,7 +47,8 @@ and do not assume Phase 4 is ready without evidence.
   definitions, including struct-returning specializations without counting
   declarations or definitions as calls. The generated-C specialization test also
   scans covered underscore-style generated calls and fails if any call lacks an
-  emitted definition, guarded by
+  emitted definition, and every executable integration fixture runs the same
+  generated-call scan before compiling C. The scan itself is guarded by
   `integration::generated_c_call_definition_scan_reports_missing_generated_calls`.
   Worklist dedup checks count generated function definitions directly, guarded
   by `integration::generated_c_definition_count_ignores_prototypes`.
