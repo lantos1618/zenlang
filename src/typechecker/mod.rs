@@ -3262,10 +3262,6 @@ impl TypeChecker {
 
     fn collect_behavior_declarations(&mut self, decls: &[Declaration]) {
         self.collect_ast_behavior_declarations(decls);
-
-        if !self.resolver_backed_collection {
-            self.validate_ast_behavior_generic_bounds(decls);
-        }
     }
 
     fn collect_ast_behavior_declarations(&mut self, decls: &[Declaration]) {
@@ -3277,6 +3273,7 @@ impl TypeChecker {
     }
 
     fn collect_ast_behavior_declaration_signatures(&mut self, decls: &[Declaration]) {
+        let mut type_params_to_validate = Vec::new();
         for decl in decls {
             if let Declaration::Behavior {
                 name,
@@ -3289,7 +3286,11 @@ impl TypeChecker {
                     name.clone(),
                     behavior_info_from_ast_methods(name.clone(), type_params, methods),
                 );
+                type_params_to_validate.push(type_params);
             }
+        }
+        for type_params in type_params_to_validate {
+            self.validate_generic_bounds(type_params);
         }
     }
 
@@ -3300,14 +3301,6 @@ impl TypeChecker {
                     name.clone(),
                     behavior_info_for_resolver_backed_stub(name.clone(), methods),
                 );
-            }
-        }
-    }
-
-    fn validate_ast_behavior_generic_bounds(&mut self, decls: &[Declaration]) {
-        for decl in decls {
-            if let Declaration::Behavior { type_params, .. } = decl {
-                self.validate_generic_bounds(type_params);
             }
         }
     }

@@ -165,6 +165,10 @@ and do not assume Phase 4 is ready without evidence.
 - AST type declaration collection now validates struct/enum generic bounds in
   the same declaration dispatch that builds type metadata, removing the
   separate type-generic-bound pass while preserving generic type diagnostics.
+- AST behavior declaration collection now queues behavior generic bounds while
+  building behavior metadata, then validates them after all behavior names are
+  collected without a separate behavior declaration walk, preserving
+  declaration-order-independent behavior bound diagnostics.
 - Module graph typechecking now seeds graph imports and then runs
   resolver-backed declaration collection for the current module, so multi-file
   graph modules use the same resolver-owned metadata handoff as

@@ -96,6 +96,9 @@ checked-in docs, tests, and commits only.
 - AST type declaration collection now validates struct/enum generic bounds in
   the same dispatch that builds type metadata, removing the separate generic
   bound walk over type declarations.
+- AST behavior declaration collection now queues behavior generic bounds while
+  building behavior metadata, then validates them after all behavior names are
+  collected without a separate behavior declaration walk.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so
