@@ -945,6 +945,8 @@ checked-in docs, tests, and commits only.
   save/check/restore path, with methods supplying only their receiver self type.
 - Resolver-backed callable signature restoration now shares stale-entry cleanup
   and generic-template rekey helpers across function and method paths.
+- Resolver-backed callable signature insertion now shares function-vs-method
+  routing for restored value metadata.
 - Resolver-backed struct and enum metadata restoration now use shared
   constructors for resolver type parameters, bounds, fields, and variants.
 - Resolver-backed behavior metadata restoration now uses the same constructor

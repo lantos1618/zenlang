@@ -2046,13 +2046,7 @@ impl TypeChecker {
             parameter_types,
             return_type,
         );
-        self.functions.remove(name);
-        self.methods.remove(name);
-        if is_method_signature_key(name) {
-            self.methods.insert(name.to_string(), info);
-        } else {
-            self.functions.insert(name.to_string(), info);
-        }
+        self.insert_callable_signature(name, info);
         self.collect_resolver_generic_template_signature(
             name,
             symbol.type_parameter_names.as_deref().unwrap_or(&[]),
@@ -2067,6 +2061,16 @@ impl TypeChecker {
         self.methods.remove(name);
         self.generic_functions.remove(name);
         self.generic_methods.remove(name);
+    }
+
+    fn insert_callable_signature(&mut self, name: &str, info: FuncInfo) {
+        self.functions.remove(name);
+        self.methods.remove(name);
+        if is_method_signature_key(name) {
+            self.methods.insert(name.to_string(), info);
+        } else {
+            self.functions.insert(name.to_string(), info);
+        }
     }
 
     fn collect_resolver_generic_template_signature(
@@ -9271,6 +9275,33 @@ Point: { x: i32 }
             |symbol| symbol.field_types.as_ref()
         )
         .is_none());
+    }
+
+    #[test]
+    fn callable_signature_insert_routes_function_and_method_keys() {
+        let mut tc = TypeChecker::new();
+        let function = FuncInfo {
+            name: "make".to_string(),
+            params: vec![],
+            return_type: AstType::I32,
+            type_params: vec![],
+            type_param_bounds: HashMap::new(),
+        };
+        let method = FuncInfo {
+            name: "Point.get".to_string(),
+            params: vec![("self".to_string(), AstType::Named("Point".to_string()))],
+            return_type: AstType::I32,
+            type_params: vec![],
+            type_param_bounds: HashMap::new(),
+        };
+
+        tc.insert_callable_signature("make", function);
+        tc.insert_callable_signature("Point.get", method);
+
+        assert!(tc.functions.contains_key("make"));
+        assert!(!tc.methods.contains_key("make"));
+        assert!(tc.methods.contains_key("Point.get"));
+        assert!(!tc.functions.contains_key("Point.get"));
     }
 
     #[test]
