@@ -1974,27 +1974,14 @@ impl TypeChecker {
         }
 
         if let Some((behavior, behavior_type_args)) = behavior_ref {
-            let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
-            if let Some(candidate) =
-                self.unique_behavior_ref_owner(&self.resolver_behavior_impl_refs, |reference| {
-                    self.behavior_reference_key(&reference.name, &reference.type_args)
-                        == behavior_key
-                })
-            {
+            if let Some(candidate) = self.resolver_behavior_ref_owner_for(
+                &self.resolver_behavior_impl_refs,
+                &self.resolver_missing_behavior_impl_refs,
+                behavior,
+                behavior_type_args,
+            ) {
                 return candidate;
             }
-
-            if let Some(candidate) =
-                self.unique_behavior_ref_owner(&self.resolver_behavior_impl_refs, |_| true)
-            {
-                return candidate;
-            }
-        }
-
-        if let Some(candidate) =
-            Self::unique_owned_candidate(self.resolver_missing_behavior_impl_refs.iter().cloned())
-        {
-            return candidate;
         }
 
         type_name.to_string()
@@ -2011,28 +1998,31 @@ impl TypeChecker {
             return type_name.to_string();
         }
 
-        let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
-        if let Some(candidate) =
-            self.unique_behavior_ref_owner(&self.resolver_behavior_required_refs, |reference| {
-                self.behavior_reference_key(&reference.name, &reference.type_args) == behavior_key
-            })
-        {
-            return candidate;
-        }
-
-        if let Some(candidate) =
-            self.unique_behavior_ref_owner(&self.resolver_behavior_required_refs, |_| true)
-        {
-            return candidate;
-        }
-
-        if let Some(candidate) = Self::unique_owned_candidate(
-            self.resolver_missing_behavior_required_refs.iter().cloned(),
+        if let Some(candidate) = self.resolver_behavior_ref_owner_for(
+            &self.resolver_behavior_required_refs,
+            &self.resolver_missing_behavior_required_refs,
+            behavior,
+            behavior_type_args,
         ) {
             return candidate;
         }
 
         type_name.to_string()
+    }
+
+    fn resolver_behavior_ref_owner_for(
+        &self,
+        refs_by_type: &HashMap<String, VecDeque<BehaviorRefMetadata>>,
+        missing_refs: &HashSet<String>,
+        behavior: &str,
+        behavior_type_args: &[AstType],
+    ) -> Option<String> {
+        let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
+        self.unique_behavior_ref_owner(refs_by_type, |reference| {
+            self.behavior_reference_key(&reference.name, &reference.type_args) == behavior_key
+        })
+        .or_else(|| self.unique_behavior_ref_owner(refs_by_type, |_| true))
+        .or_else(|| Self::unique_owned_candidate(missing_refs.iter().cloned()))
     }
 
     fn unique_behavior_ref_owner(

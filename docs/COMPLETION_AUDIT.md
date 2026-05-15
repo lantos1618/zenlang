@@ -828,6 +828,8 @@ and do not assume Phase 4 is ready without evidence.
   pattern for resolver type parameters, bounds, and restored method signatures.
 - Behavior implementation ref insertion now shares one helper across
   resolver-restored local impls and imported impl seeding.
+- Resolver-backed behavior impl and requires target restoration now share one
+  owner-selection helper for exact refs, unique refs, and missing-ref fallback.
 
 ## Unresolved Gaps
 
