@@ -9572,6 +9572,53 @@ Box.impl = {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_clears_stale_generic_impl_method_template_after_key_restore(
+    ) {
+        let mut program = parse_program(
+            r#"
+Box: { value: i32 }
+
+Box.impl = {
+    keep<T> = (self: Box, value: T) T { return value }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "Box.keep", None);
+        if let Declaration::ImplBlock {
+            type_name, methods, ..
+        } = &mut program.declarations[1]
+        {
+            *type_name = "Missing".to_string();
+            if let Declaration::Function {
+                name,
+                params,
+                return_type,
+                ..
+            } = &mut methods[0]
+            {
+                *name = "missing".to_string();
+                params[1].ty = AstType::Named("Stale".to_string());
+                *return_type = Some(AstType::Named("AlsoStale".to_string()));
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.generic_methods.contains_key("Missing.missing"),
+            "resolver-backed collection should clear the stale AST generic impl method template key after resolver key restoration"
+        );
+        assert!(
+            !tc.generic_methods.contains_key("Box.keep"),
+            "resolver-backed collection should clear the restored generic impl method template key when resolver signature metadata is incomplete"
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_target_and_name_metadata(
     ) {
         let mut program = parse_program(
