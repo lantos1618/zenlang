@@ -323,6 +323,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed struct and enum collection now also uses typed resolver
   generic bound refs, so generic type templates no longer retain stale AST-only
   behavior bounds after resolver validation.
+- Resolver-backed struct type-reference and field-default expression validation
+  now runs through a dedicated restored-struct helper, reducing another inline
+  resolver handoff in the generic type-reference scan.
 - Struct field default expressions now participate in generic type-reference
   validation. Non-generic struct defaults are checked against their declared
   field type, struct literals inject omitted defaulted fields with concrete

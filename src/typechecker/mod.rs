@@ -5441,20 +5441,7 @@ impl TypeChecker {
                     ..
                 } => {
                     if self.resolver_backed_collection {
-                        let restored_name =
-                            Self::validation_symbol_name(symbols, Namespace::Type, name, *span);
-                        if let Some(scoped) = self.collected_type_type_param_scope(&restored_name) {
-                            self.validate_collected_struct_type_references(
-                                &restored_name,
-                                &scoped,
-                                *span,
-                            );
-                            for field in fields {
-                                if let Some(default) = &field.default {
-                                    self.validate_generic_expr_type_references(default, &scoped);
-                                }
-                            }
-                        }
+                        self.validate_resolver_struct_type_references(symbols, name, fields, *span);
                     } else {
                         let scoped = type_param_name_set(type_params);
                         for field in fields {
@@ -5628,6 +5615,24 @@ impl TypeChecker {
                     self.validate_generic_expr_type_references(expr, &HashSet::new());
                 }
                 _ => {}
+            }
+        }
+    }
+
+    fn validate_resolver_struct_type_references(
+        &mut self,
+        symbols: Option<&SymbolTable>,
+        name: &str,
+        fields: &[StructField],
+        span: Span,
+    ) {
+        let restored_name = Self::validation_symbol_name(symbols, Namespace::Type, name, span);
+        if let Some(scoped) = self.collected_type_type_param_scope(&restored_name) {
+            self.validate_collected_struct_type_references(&restored_name, &scoped, span);
+            for field in fields {
+                if let Some(default) = &field.default {
+                    self.validate_generic_expr_type_references(default, &scoped);
+                }
             }
         }
     }
