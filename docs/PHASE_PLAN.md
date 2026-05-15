@@ -268,6 +268,8 @@ checked-in docs, tests, and commits only.
   Resolver now rejects duplicate local `.requires` edges before recording
   duplicate metadata, covered by
   `resolver_phase2::resolver_rejects_duplicate_behavior_required_edges`.
+  Typechecker setup also rejects extra resolver-owned typed behavior impl and
+  requires refs even when display-name metadata still matches the AST.
 - Behavior inheritance `.extends` now has parser, resolver, and typechecker
   coverage for inherited required methods, parent behavior satisfaction, and
   coherence diagnostics for duplicate edges, cycles, and conflicting inherited
