@@ -1564,9 +1564,6 @@ impl TypeChecker {
                 let Some(metadata) = metadata else {
                     return method;
                 };
-                if method.params.len() != metadata.parameter_types.len() {
-                    return method;
-                }
                 let params = method
                     .params
                     .into_iter()
@@ -9090,6 +9087,45 @@ Point.implements(Json) {
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored behavior method return metadata should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_method_parameter_count() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
+            methods[0].params.push(Param {
+                name: "stale".to_string(),
+                ty: AstType::I32,
+                mutable: false,
+                span: Span::dummy(),
+            });
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.behaviors.get("Json").expect("behavior info");
+        assert_eq!(info.methods[0].params.len(), 1);
+        assert_eq!(info.methods[0].params[0].ty, AstType::SelfType);
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior method params should avoid stale AST impl diagnostics: {:?}",
             tc.diagnostics
         );
     }
