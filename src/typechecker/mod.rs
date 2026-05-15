@@ -6500,7 +6500,7 @@ impl TypeChecker {
             span,
         )?;
 
-        self.validate_resolver_behavior_method_signatures(symbol, name, expected.methods, span);
+        self.validate_resolver_behavior_methods(symbol, name, expected.methods, span);
         self.validate_resolver_behavior_absent_type_metadata(symbol, name, span);
 
         Some(symbol)
@@ -6980,7 +6980,7 @@ impl TypeChecker {
         }
     }
 
-    fn validate_resolver_behavior_method_signatures(
+    fn validate_resolver_behavior_methods(
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,

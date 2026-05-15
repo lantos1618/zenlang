@@ -201,6 +201,8 @@ and do not assume Phase 4 is ready without evidence.
   type-parameter metadata, and method metadata through one expected
   behavior-symbol object, aligning behavior-symbol handoff checks with the
   value-symbol expectation shape.
+- Typechecker resolver validation now names behavior method validation after
+  the full display-signature and typed-metadata check it performs.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, keeping
