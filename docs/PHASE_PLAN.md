@@ -935,6 +935,8 @@ checked-in docs, tests, and commits only.
   declaration/import/module/type/behavior/variant/value and local checks.
 - Resolver absent-source metadata validation now reuses the shared resolver
   source diagnostic helper.
+- Resolver stripped-import validation now reuses the shared resolver
+  visibility and source diagnostic helpers.
 
 ## Current Phase
 

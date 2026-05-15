@@ -333,6 +333,7 @@ struct ValueSignatureAbsenceValidation {
 struct SourceValidation {
     code: &'static str,
     actual_missing: &'static str,
+    expected_missing: &'static str,
     quote_expected: bool,
 }
 
@@ -5062,6 +5063,7 @@ impl TypeChecker {
             SourceValidation {
                 code: "E0230",
                 actual_missing: "none",
+                expected_missing: "none",
                 quote_expected: false,
             },
             span,
@@ -5201,25 +5203,28 @@ impl TypeChecker {
             if symbol.namespace != Namespace::Import {
                 continue;
             }
-            if symbol.is_public {
-                self.diagnostics.push(Diagnostic::error(
-                    "E0245",
-                    format!(
-                        "resolver import symbol '{}' has visibility public, expected private",
-                        symbol.name
-                    ),
-                    symbol.definition_span,
-                ));
-            }
+            self.validate_resolver_visibility(
+                "import",
+                &symbol.name,
+                symbol.is_public,
+                false,
+                "E0245",
+                symbol.definition_span,
+            );
             if symbol.import_source.is_none() {
-                self.diagnostics.push(Diagnostic::error(
-                    "E0246",
-                    format!(
-                        "resolver import symbol '{}' has source 'unknown', expected a module source",
-                        symbol.name
-                    ),
+                self.validate_resolver_source(
+                    "import",
+                    &symbol.name,
+                    symbol.import_source.as_deref(),
+                    Some("a module source"),
+                    SourceValidation {
+                        code: "E0246",
+                        actual_missing: "unknown",
+                        expected_missing: "a module source",
+                        quote_expected: false,
+                    },
                     symbol.definition_span,
-                ));
+                );
             } else if let Some(source) = symbol.import_source.as_deref() {
                 self.require_resolver_module_symbol(
                     symbols,
@@ -6129,6 +6134,7 @@ impl TypeChecker {
             SourceValidation {
                 code: "E0227",
                 actual_missing: "unknown",
+                expected_missing: "none",
                 quote_expected: true,
             },
             span,
@@ -6604,6 +6610,7 @@ impl TypeChecker {
             SourceValidation {
                 code: "E0248",
                 actual_missing: "none",
+                expected_missing: "none",
                 quote_expected: false,
             },
             span,
@@ -6900,6 +6907,7 @@ impl TypeChecker {
             SourceValidation {
                 code,
                 actual_missing: "none",
+                expected_missing: "none",
                 quote_expected: false,
             },
             span,
@@ -6917,7 +6925,7 @@ impl TypeChecker {
     ) {
         if actual != expected {
             let actual = actual.unwrap_or(validation.actual_missing);
-            let expected = expected.unwrap_or("none");
+            let expected = expected.unwrap_or(validation.expected_missing);
             let expected = if validation.quote_expected {
                 format!("'{expected}'")
             } else {

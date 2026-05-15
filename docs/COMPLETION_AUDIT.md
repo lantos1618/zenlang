@@ -858,6 +858,8 @@ and do not assume Phase 4 is ready without evidence.
   declaration/import/module/type/behavior/variant/value and local checks.
 - Resolver absent-source metadata validation now reuses the shared resolver
   source diagnostic helper.
+- Resolver stripped-import validation now reuses the shared resolver
+  visibility and source diagnostic helpers.
 
 ## Unresolved Gaps
 
