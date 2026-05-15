@@ -482,6 +482,8 @@ checked-in docs, tests, and commits only.
   metadata refresh, behavior impl metadata refresh, semantic validation, and
   final impl association refresh into named passes instead of one mixed
   collection loop.
+  AST behavior declaration seeding, behavior generic-bound validation, and
+  AST-only behavior inheritance validation now also have named helper passes.
   Resolver-backed semantic validation and final type impl association refresh
   now each have focused helper boundaries matching those named passes.
   The declaration metadata refresh pass also routes callable signatures,

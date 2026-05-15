@@ -2929,46 +2929,9 @@ impl TypeChecker {
     // ── Phase 1: Collect ──────────────────────────────────────────
 
     fn collect_declarations(&mut self, decls: &[Declaration]) {
-        for decl in decls {
-            if let Declaration::Behavior {
-                name,
-                type_params,
-                methods,
-                ..
-            } = decl
-            {
-                self.behaviors.insert(
-                    name.clone(),
-                    behavior_info_from_ast_methods(name.clone(), type_params, methods),
-                );
-            }
-        }
-
-        for decl in decls {
-            if let Declaration::Behavior { type_params, .. } = decl {
-                if !self.resolver_backed_collection {
-                    self.validate_generic_bounds(type_params);
-                }
-            }
-        }
-
-        self.validate_self_type_contexts(decls);
-
-        if !self.resolver_backed_collection {
-            for decl in decls {
-                if let Declaration::BehaviorExtends {
-                    behavior,
-                    parent,
-                    parent_type_args,
-                    span,
-                } = decl
-                {
-                    self.check_behavior_extends(behavior, parent, parent_type_args, *span);
-                }
-            }
-            self.validate_behavior_extends_cycles();
-            self.validate_behavior_method_coherence();
-        }
+        self.collect_ast_behavior_declarations(decls);
+        self.validate_ast_behavior_generic_bounds(decls);
+        self.validate_ast_behavior_extends(decls);
 
         for decl in decls {
             match decl {
@@ -3128,6 +3091,53 @@ impl TypeChecker {
                 }
                 _ => {}
             }
+        }
+    }
+
+    fn collect_ast_behavior_declarations(&mut self, decls: &[Declaration]) {
+        for decl in decls {
+            if let Declaration::Behavior {
+                name,
+                type_params,
+                methods,
+                ..
+            } = decl
+            {
+                self.behaviors.insert(
+                    name.clone(),
+                    behavior_info_from_ast_methods(name.clone(), type_params, methods),
+                );
+            }
+        }
+    }
+
+    fn validate_ast_behavior_generic_bounds(&mut self, decls: &[Declaration]) {
+        for decl in decls {
+            if let Declaration::Behavior { type_params, .. } = decl {
+                if !self.resolver_backed_collection {
+                    self.validate_generic_bounds(type_params);
+                }
+            }
+        }
+    }
+
+    fn validate_ast_behavior_extends(&mut self, decls: &[Declaration]) {
+        self.validate_self_type_contexts(decls);
+
+        if !self.resolver_backed_collection {
+            for decl in decls {
+                if let Declaration::BehaviorExtends {
+                    behavior,
+                    parent,
+                    parent_type_args,
+                    span,
+                } = decl
+                {
+                    self.check_behavior_extends(behavior, parent, parent_type_args, *span);
+                }
+            }
+            self.validate_behavior_extends_cycles();
+            self.validate_behavior_method_coherence();
         }
     }
 
