@@ -15,6 +15,7 @@ pub type TypeParameterBoundMetadata = (String, String);
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorMethodTypeMetadata {
     pub name: String,
+    pub parameter_names: Vec<String>,
     pub parameter_types: Vec<AstType>,
     pub return_type: AstType,
 }
@@ -2705,6 +2706,7 @@ fn resolver_behavior_method_types(methods: &[BehaviorMethod]) -> Vec<BehaviorMet
         .iter()
         .map(|method| BehaviorMethodTypeMetadata {
             name: method.name.clone(),
+            parameter_names: resolver_param_names(&method.params),
             parameter_types: method.params.iter().map(|param| param.ty.clone()).collect(),
             return_type: method.return_type.clone().unwrap_or(AstType::Void),
         })

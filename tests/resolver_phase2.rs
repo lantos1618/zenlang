@@ -1149,6 +1149,7 @@ Mapper: behavior {
         Some(
             &[zen::resolver::BehaviorMethodTypeMetadata {
                 name: "map".to_string(),
+                parameter_names: vec!["__arg0".to_string(), "__arg1".to_string()],
                 parameter_types: vec![
                     zen::ast::AstType::SelfType,
                     zen::ast::AstType::Function {

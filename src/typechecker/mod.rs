@@ -1564,15 +1564,11 @@ impl TypeChecker {
                 let Some(metadata) = metadata else {
                     return method;
                 };
-                let params = method
-                    .params
-                    .into_iter()
-                    .zip(metadata.parameter_types.iter().cloned())
-                    .map(|(mut param, ty)| {
-                        param.ty = ty;
-                        param
-                    })
-                    .collect();
+                let params = Self::resolver_behavior_method_params(
+                    &method.params,
+                    &metadata.parameter_names,
+                    &metadata.parameter_types,
+                );
                 let return_type = match metadata.return_type {
                     AstType::Void => None,
                     ty => Some(ty),
@@ -1598,6 +1594,33 @@ impl TypeChecker {
                 methods,
             },
         );
+    }
+
+    fn resolver_behavior_method_params(
+        existing_params: &[Param],
+        parameter_names: &[String],
+        parameter_types: &[AstType],
+    ) -> Vec<Param> {
+        parameter_types
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(index, ty)| match existing_params.get(index).cloned() {
+                Some(mut param) => {
+                    if let Some(name) = parameter_names.get(index) {
+                        param.name = name.clone();
+                    }
+                    param.ty = ty;
+                    param
+                }
+                None => Param {
+                    name: parameter_names.get(index).cloned().unwrap_or_default(),
+                    ty,
+                    mutable: false,
+                    span: Span::dummy(),
+                },
+            })
+            .collect()
     }
 
     fn collect_resolver_behavior_parents(&mut self, symbols: &SymbolTable, name: &str) {
@@ -7662,6 +7685,11 @@ fn expected_behavior_method_types(
         .iter()
         .map(|method| BehaviorMethodTypeMetadata {
             name: method.name.clone(),
+            parameter_names: method
+                .params
+                .iter()
+                .map(|param| param.name.clone())
+                .collect(),
             parameter_types: method.params.iter().map(|param| param.ty.clone()).collect(),
             return_type: method.return_type.clone().unwrap_or(AstType::Void),
         })
@@ -8198,7 +8226,15 @@ fn format_behavior_method_types(methods: Option<&[BehaviorMethodTypeMetadata]>) 
                     let params = method
                         .parameter_types
                         .iter()
-                        .map(AstType::display_name)
+                        .enumerate()
+                        .map(|(index, ty)| {
+                            let name = method
+                                .parameter_names
+                                .get(index)
+                                .map(String::as_str)
+                                .unwrap_or("_");
+                            format!("{name}: {}", ty.display_name())
+                        })
                         .collect::<Vec<_>>()
                         .join(", ");
                     format!(
@@ -9123,6 +9159,43 @@ Point.implements(Json) {
         let info = tc.behaviors.get("Json").expect("behavior info");
         assert_eq!(info.methods[0].params.len(), 1);
         assert_eq!(info.methods[0].params[0].ty, AstType::SelfType);
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior method params should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_method_missing_parameter_count() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Mapper: behavior {
+    map: (Self, i32) str
+}
+
+Point.implements(Mapper) {
+    map = (value: Point, input: i32) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
+            methods[0].params.pop();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.behaviors.get("Mapper").expect("behavior info");
+        assert_eq!(info.methods[0].params.len(), 2);
+        assert_eq!(info.methods[0].params[0].name, "__arg0");
+        assert_eq!(info.methods[0].params[1].name, "__arg1");
+        assert_eq!(info.methods[0].params[0].ty, AstType::SelfType);
+        assert_eq!(info.methods[0].params[1].ty, AstType::I32);
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored behavior method params should avoid stale AST impl diagnostics: {:?}",
@@ -10249,6 +10322,7 @@ main = () i32 {
             "io",
             Some(vec![BehaviorMethodTypeMetadata {
                 name: "encode".to_string(),
+                parameter_names: vec!["self".to_string()],
                 parameter_types: vec![AstType::SelfType],
                 return_type: AstType::Str,
             }]),
@@ -10516,6 +10590,7 @@ main = () i32 {
             "std",
             Some(vec![BehaviorMethodTypeMetadata {
                 name: "encode".to_string(),
+                parameter_names: vec!["self".to_string()],
                 parameter_types: vec![AstType::SelfType],
                 return_type: AstType::Str,
             }]),
@@ -11063,6 +11138,7 @@ add = (a: i32, b: i32) i32 { return a + b }
             "a",
             Some(vec![BehaviorMethodTypeMetadata {
                 name: "encode".to_string(),
+                parameter_names: vec!["self".to_string()],
                 parameter_types: vec![AstType::SelfType],
                 return_type: AstType::Str,
             }]),
@@ -11702,6 +11778,7 @@ main = () i32 { return 0 }
             "main",
             Some(vec![BehaviorMethodTypeMetadata {
                 name: "encode".to_string(),
+                parameter_names: vec!["self".to_string()],
                 parameter_types: vec![AstType::Named("Self".to_string())],
                 return_type: AstType::Str,
             }]),
@@ -12114,6 +12191,7 @@ Mapper: behavior {
             "Mapper",
             Some(vec![BehaviorMethodTypeMetadata {
                 name: "map".to_string(),
+                parameter_names: vec!["__arg0".to_string(), "__arg1".to_string()],
                 parameter_types: vec![AstType::SelfType, AstType::I32],
                 return_type: AstType::Function {
                     params: vec![AstType::I32],
@@ -12129,7 +12207,7 @@ Mapper: behavior {
 
         assert!(
             err.iter().any(|d| d.message.contains(
-                "resolver behavior symbol 'Mapper' has typed methods '(map(Self, i32) (i32) i32)', expected '(map(Self, (i32) i32) (i32) i32)'"
+                "resolver behavior symbol 'Mapper' has typed methods '(map(__arg0: Self, __arg1: i32) (i32) i32)', expected '(map(__arg0: Self, __arg1: (i32) i32) (i32) i32)'"
             )),
             "expected resolver typed behavior method diagnostic, got {err:?}"
         );
@@ -13212,6 +13290,7 @@ Option: Some(i32), None
             "Some",
             Some(vec![BehaviorMethodTypeMetadata {
                 name: "encode".to_string(),
+                parameter_names: vec!["self".to_string()],
                 parameter_types: vec![AstType::SelfType],
                 return_type: AstType::Str,
             }]),

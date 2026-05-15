@@ -419,9 +419,9 @@ and do not assume Phase 4 is ready without evidence.
   validated resolver parameter names and types, so stale AST-only parameter
   counts cannot leave monomorphization templates with missing or extra
   parameters.
-- Resolver-backed behavior method collection truncates stale AST-only extra
-  parameters to the resolver-owned parameter type list, so impl conformance
-  checks use the validated behavior signature shape.
+- Resolver-backed behavior method collection rebuilds behavior parameters from
+  resolver-owned parameter names and types, so stale AST-only missing or extra
+  parameters cannot distort impl conformance checks.
 - Resolver-backed struct and enum collection uses typed resolver generic bound
   refs, so generic type templates no longer retain stale AST-only behavior
   bounds after resolver validation.
