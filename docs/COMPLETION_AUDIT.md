@@ -190,6 +190,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-ref actual metadata now owns contains and full-list
   matching for display names and typed refs, covered by
   `typechecker::tests::behavior_ref_actual_matches_expected_edges`.
+- Resolver behavior-ref owner restoration now separates exact behavior-key
+  owner lookup from unique fallback owner lookup, covered by
+  `typechecker::tests::resolver_behavior_ref_owner_prefers_exact_then_unique_fallbacks`.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths, covered by
   `typechecker::tests::resolver_symbol_metadata_helper_requires_symbol_and_selected_metadata`.

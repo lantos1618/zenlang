@@ -158,6 +158,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver behavior-ref validation now asks the selected actual
   metadata to perform contains and full-list matching, keeping name/ref match
   semantics local to the resolver-owned metadata selection.
+- Typechecker resolver behavior-ref owner restoration now splits exact
+  behavior-key owner selection from the unique fallback owner path used when
+  repairing stale AST association targets.
 - Typechecker resolver validation now stores expected behavior display
   signatures and typed method metadata as paired per-method expectations before
   deriving the resolver comparison lists.

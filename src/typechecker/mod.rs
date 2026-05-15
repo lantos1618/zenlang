@@ -3486,11 +3486,27 @@ impl TypeChecker {
         behavior_type_args: &[AstType],
     ) -> Option<String> {
         let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
+        self.unique_behavior_ref_owner_for_key(refs_by_type, &behavior_key)
+            .or_else(|| self.unique_behavior_ref_owner(refs_by_type, |_| true))
+            .or_else(|| Self::unique_owned_candidate(missing_refs.iter().cloned()))
+    }
+
+    fn unique_behavior_ref_owner_for_key(
+        &self,
+        refs_by_type: &HashMap<String, VecDeque<BehaviorRefMetadata>>,
+        behavior_key: &str,
+    ) -> Option<String> {
         self.unique_behavior_ref_owner(refs_by_type, |reference| {
-            self.behavior_reference_key(&reference.name, &reference.type_args) == behavior_key
+            self.behavior_reference_matches_key(reference, behavior_key)
         })
-        .or_else(|| self.unique_behavior_ref_owner(refs_by_type, |_| true))
-        .or_else(|| Self::unique_owned_candidate(missing_refs.iter().cloned()))
+    }
+
+    fn behavior_reference_matches_key(
+        &self,
+        reference: &BehaviorRefMetadata,
+        behavior_key: &str,
+    ) -> bool {
+        self.behavior_reference_key(&reference.name, &reference.type_args) == behavior_key
     }
 
     fn unique_behavior_ref_owner(
@@ -10391,6 +10407,55 @@ Point.get = (self: Point) i32 { return self.x }
         assert!(
             TypeChecker::pop_resolver_behavior_ref(false, &mut refs_by_type, "Point", "Debug")
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn resolver_behavior_ref_owner_prefers_exact_then_unique_fallbacks() {
+        let tc = TypeChecker::new();
+        let mut refs_by_type = HashMap::from([
+            (
+                "Point".to_string(),
+                VecDeque::from(vec![BehaviorRefMetadata {
+                    name: "Json".to_string(),
+                    type_args: vec![AstType::I32],
+                }]),
+            ),
+            (
+                "Label".to_string(),
+                VecDeque::from(vec![BehaviorRefMetadata {
+                    name: "Debug".to_string(),
+                    type_args: vec![],
+                }]),
+            ),
+        ]);
+        let missing_refs = HashSet::new();
+
+        assert_eq!(
+            tc.resolver_behavior_ref_owner_for(
+                &refs_by_type,
+                &missing_refs,
+                "Json",
+                &[AstType::I32]
+            ),
+            Some("Point".to_string())
+        );
+        assert_eq!(
+            tc.resolver_behavior_ref_owner_for(&refs_by_type, &missing_refs, "Missing", &[]),
+            None
+        );
+
+        refs_by_type.remove("Label");
+        assert_eq!(
+            tc.resolver_behavior_ref_owner_for(&refs_by_type, &missing_refs, "Missing", &[]),
+            Some("Point".to_string())
+        );
+
+        refs_by_type.clear();
+        let missing_refs = HashSet::from(["Recovered".to_string()]);
+        assert_eq!(
+            tc.resolver_behavior_ref_owner_for(&refs_by_type, &missing_refs, "Missing", &[]),
+            Some("Recovered".to_string())
         );
     }
 
