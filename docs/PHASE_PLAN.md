@@ -766,6 +766,8 @@ checked-in docs, tests, and commits only.
   terminology consistently with enum symbol variant-name metadata.
 - Resolver type-like expectation construction now uses metadata terminology
   consistently with shared type-parameter and visibility metadata.
+- Resolver value-signature expectation construction now uses metadata
+  terminology consistently with parameter, return, and type-parameter metadata.
 
 ## Current Phase
 

@@ -7626,7 +7626,7 @@ fn expected_parameter_metadata(params: &[Param]) -> Vec<ExpectedParameter> {
     expected
 }
 
-fn expected_value_signature(
+fn expected_value_signature_metadata(
     params: &[Param],
     return_type: &Option<AstType>,
     type_params: &[ast::TypeParam],
@@ -7647,7 +7647,7 @@ fn expected_value_symbol(
     is_public: bool,
 ) -> ExpectedValueSymbol {
     ExpectedValueSymbol {
-        signature: expected_value_signature(params, return_type, type_params),
+        signature: expected_value_signature_metadata(params, return_type, type_params),
         is_public,
     }
 }
