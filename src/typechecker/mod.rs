@@ -1084,6 +1084,66 @@ struct BehaviorRefValidation {
     ref_code: &'static str,
 }
 
+enum BehaviorRefRole {
+    Parent,
+    Impl,
+    Required,
+}
+
+enum BehaviorRefCheck {
+    Contains,
+    List,
+}
+
+impl BehaviorRefValidation {
+    fn for_role(role: BehaviorRefRole, check: BehaviorRefCheck) -> Self {
+        match (role, check) {
+            (BehaviorRefRole::Parent, BehaviorRefCheck::Contains) => Self {
+                symbol_kind: "behavior",
+                name_label: "parents",
+                ref_label: "parent refs",
+                name_code: "E0235",
+                ref_code: "E0245",
+            },
+            (BehaviorRefRole::Parent, BehaviorRefCheck::List) => Self {
+                symbol_kind: "behavior",
+                name_label: "parents",
+                ref_label: "parent refs",
+                name_code: "E0240",
+                ref_code: "E0246",
+            },
+            (BehaviorRefRole::Impl, BehaviorRefCheck::Contains) => Self {
+                symbol_kind: "type",
+                name_label: "behavior impls",
+                ref_label: "behavior impl refs",
+                name_code: "E0236",
+                ref_code: "E0247",
+            },
+            (BehaviorRefRole::Impl, BehaviorRefCheck::List) => Self {
+                symbol_kind: "type",
+                name_label: "behavior impls",
+                ref_label: "behavior impl refs",
+                name_code: "E0238",
+                ref_code: "E0248",
+            },
+            (BehaviorRefRole::Required, BehaviorRefCheck::Contains) => Self {
+                symbol_kind: "type",
+                name_label: "behavior requires",
+                ref_label: "behavior requires refs",
+                name_code: "E0237",
+                ref_code: "E0249",
+            },
+            (BehaviorRefRole::Required, BehaviorRefCheck::List) => Self {
+                symbol_kind: "type",
+                name_label: "behavior requires",
+                ref_label: "behavior requires refs",
+                name_code: "E0239",
+                ref_code: "E0250",
+            },
+        }
+    }
+}
+
 struct BehaviorRefActual<'a> {
     names: Option<&'a [String]>,
     refs: Option<&'a [BehaviorRefMetadata]>,
@@ -7812,13 +7872,7 @@ impl TypeChecker {
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_contains(
-            BehaviorRefValidation {
-                symbol_kind: "behavior",
-                name_label: "parents",
-                ref_label: "parent refs",
-                name_code: "E0235",
-                ref_code: "E0245",
-            },
+            BehaviorRefValidation::for_role(BehaviorRefRole::Parent, BehaviorRefCheck::Contains),
             name,
             BehaviorRefActual::parents(symbol),
             expected,
@@ -7834,13 +7888,7 @@ impl TypeChecker {
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
-            BehaviorRefValidation {
-                symbol_kind: "behavior",
-                name_label: "parents",
-                ref_label: "parent refs",
-                name_code: "E0240",
-                ref_code: "E0246",
-            },
+            BehaviorRefValidation::for_role(BehaviorRefRole::Parent, BehaviorRefCheck::List),
             name,
             BehaviorRefActual::parents(symbol),
             expected,
@@ -7856,13 +7904,7 @@ impl TypeChecker {
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_contains(
-            BehaviorRefValidation {
-                symbol_kind: "type",
-                name_label: "behavior impls",
-                ref_label: "behavior impl refs",
-                name_code: "E0236",
-                ref_code: "E0247",
-            },
+            BehaviorRefValidation::for_role(BehaviorRefRole::Impl, BehaviorRefCheck::Contains),
             name,
             BehaviorRefActual::impls(symbol),
             expected,
@@ -7878,13 +7920,7 @@ impl TypeChecker {
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
-            BehaviorRefValidation {
-                symbol_kind: "type",
-                name_label: "behavior impls",
-                ref_label: "behavior impl refs",
-                name_code: "E0238",
-                ref_code: "E0248",
-            },
+            BehaviorRefValidation::for_role(BehaviorRefRole::Impl, BehaviorRefCheck::List),
             name,
             BehaviorRefActual::impls(symbol),
             expected,
@@ -7900,13 +7936,7 @@ impl TypeChecker {
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_contains(
-            BehaviorRefValidation {
-                symbol_kind: "type",
-                name_label: "behavior requires",
-                ref_label: "behavior requires refs",
-                name_code: "E0237",
-                ref_code: "E0249",
-            },
+            BehaviorRefValidation::for_role(BehaviorRefRole::Required, BehaviorRefCheck::Contains),
             name,
             BehaviorRefActual::required(symbol),
             expected,
@@ -7922,13 +7952,7 @@ impl TypeChecker {
         span: Span,
     ) {
         self.validate_resolver_behavior_ref_list(
-            BehaviorRefValidation {
-                symbol_kind: "type",
-                name_label: "behavior requires",
-                ref_label: "behavior requires refs",
-                name_code: "E0239",
-                ref_code: "E0250",
-            },
+            BehaviorRefValidation::for_role(BehaviorRefRole::Required, BehaviorRefCheck::List),
             name,
             BehaviorRefActual::required(symbol),
             expected,
@@ -9390,6 +9414,80 @@ Box.get<T> = (self: Box<T>) T { return self.value }
         );
         assert!(!tc.generic_methods.contains_key("identity"));
         assert!(!tc.generic_functions.contains_key("Box.get"));
+    }
+
+    #[test]
+    fn behavior_ref_validation_maps_role_and_check_diagnostics() {
+        let cases = [
+            (
+                BehaviorRefRole::Parent,
+                BehaviorRefCheck::Contains,
+                ("behavior", "parents", "parent refs", "E0235", "E0245"),
+            ),
+            (
+                BehaviorRefRole::Parent,
+                BehaviorRefCheck::List,
+                ("behavior", "parents", "parent refs", "E0240", "E0246"),
+            ),
+            (
+                BehaviorRefRole::Impl,
+                BehaviorRefCheck::Contains,
+                (
+                    "type",
+                    "behavior impls",
+                    "behavior impl refs",
+                    "E0236",
+                    "E0247",
+                ),
+            ),
+            (
+                BehaviorRefRole::Impl,
+                BehaviorRefCheck::List,
+                (
+                    "type",
+                    "behavior impls",
+                    "behavior impl refs",
+                    "E0238",
+                    "E0248",
+                ),
+            ),
+            (
+                BehaviorRefRole::Required,
+                BehaviorRefCheck::Contains,
+                (
+                    "type",
+                    "behavior requires",
+                    "behavior requires refs",
+                    "E0237",
+                    "E0249",
+                ),
+            ),
+            (
+                BehaviorRefRole::Required,
+                BehaviorRefCheck::List,
+                (
+                    "type",
+                    "behavior requires",
+                    "behavior requires refs",
+                    "E0239",
+                    "E0250",
+                ),
+            ),
+        ];
+
+        for (role, check, expected) in cases {
+            let validation = BehaviorRefValidation::for_role(role, check);
+            assert_eq!(
+                (
+                    validation.symbol_kind,
+                    validation.name_label,
+                    validation.ref_label,
+                    validation.name_code,
+                    validation.ref_code,
+                ),
+                expected
+            );
+        }
     }
 
     #[test]

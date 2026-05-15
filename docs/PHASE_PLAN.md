@@ -967,6 +967,8 @@ checked-in docs, tests, and commits only.
   for counts, names, display types, and typed AST types.
 - Resolver behavior-association list validation now shares one expected
   metadata bundle for display names and typed refs.
+- Resolver behavior-association validation now uses one role/check mapping for
+  parent, impl, and requires diagnostic metadata.
 - Resolver struct-field validation now shares one expected metadata bundle
   for counts, display fields, and typed AST fields.
 - Resolver behavior-method validation now shares one expected metadata bundle
