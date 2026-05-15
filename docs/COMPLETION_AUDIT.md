@@ -129,6 +129,10 @@ and do not assume Phase 4 is ready without evidence.
 - Method-key receiver parsing is shared between resolver-backed method target
   restoration and generic method monomorphization inference, covered by
   `typechecker::tests::method_signature_key_helpers_share_receiver_parsing`.
+- Resolver count validation now shares one diagnostic helper across value
+  parameters, type parameters, struct fields, and enum variant payloads, with
+  display coverage in
+  `typechecker::tests::resolver_count_display_formats_known_and_missing_counts`.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only

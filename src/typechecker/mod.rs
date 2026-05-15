@@ -376,6 +376,11 @@ struct SourceValidation {
     quote_expected: bool,
 }
 
+struct CountValidation {
+    label: &'static str,
+    code: &'static str,
+}
+
 struct ExpectedField {
     typed: (String, AstType),
     display: (String, String),
@@ -7284,6 +7289,28 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_count(
+        &mut self,
+        symbol_kind: &str,
+        name: &str,
+        actual: Option<usize>,
+        expected: usize,
+        validation: CountValidation,
+        span: Span,
+    ) {
+        if actual != Some(expected) {
+            let actual = resolver_count_display(actual);
+            self.diagnostics.push(Diagnostic::error(
+                validation.code,
+                format!(
+                    "resolver {symbol_kind} symbol '{name}' has {} {actual}, expected {expected}",
+                    validation.label
+                ),
+                span,
+            ));
+        }
+    }
+
     fn validate_resolver_type_parameters(
         &mut self,
         symbol: &crate::resolver::Symbol,
@@ -7294,20 +7321,17 @@ impl TypeChecker {
         span: Span,
     ) {
         let expected = ExpectedTypeParameterMetadata::from_parameters(expected);
-        if symbol.type_parameter_count != Some(expected.count) {
-            let actual = symbol
-                .type_parameter_count
-                .map(|count| count.to_string())
-                .unwrap_or_else(|| "unknown".to_string());
-            self.diagnostics.push(Diagnostic::error(
-                validation.count_code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has type parameter count {actual}, expected {}",
-                    expected.count
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_count(
+            symbol_kind,
+            name,
+            symbol.type_parameter_count,
+            expected.count,
+            CountValidation {
+                label: "type parameter count",
+                code: validation.count_code,
+            },
+            span,
+        );
 
         if symbol.type_parameter_names.as_deref() != Some(expected.names.as_slice()) {
             let actual = format_type_parameter_names(symbol.type_parameter_names.as_deref());
@@ -7394,21 +7418,17 @@ impl TypeChecker {
         span: Span,
     ) {
         let expected = ExpectedFieldMetadata::from_fields(expected_fields);
-        if symbol.field_count != Some(expected.count) {
-            let actual = symbol
-                .field_count
-                .map(|count| count.to_string())
-                .unwrap_or_else(|| "unknown".to_string());
-            self.diagnostics.push(Diagnostic::error(
-                "E0214",
-                format!(
-                    "resolver {} symbol '{name}' has field count {actual}, expected {}",
-                    namespace.diagnostic_name(),
-                    expected.count
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_count(
+            namespace.diagnostic_name(),
+            name,
+            symbol.field_count,
+            expected.count,
+            CountValidation {
+                label: "field count",
+                code: "E0214",
+            },
+            span,
+        );
         if symbol.field_types.as_deref() != Some(expected.typed.as_slice()) {
             let actual = format_field_types(symbol.field_types.as_deref());
             let expected = format_field_types(Some(&expected.typed));
@@ -7503,20 +7523,17 @@ impl TypeChecker {
         span: Span,
     ) {
         let expected = ExpectedVariantPayloadMetadata::from_payload(expected_payload);
-        if symbol.variant_payload_count != Some(expected.count) {
-            let actual = symbol
-                .variant_payload_count
-                .map(|count| count.to_string())
-                .unwrap_or_else(|| "unknown".to_string());
-            self.diagnostics.push(Diagnostic::error(
-                "E0215",
-                format!(
-                    "resolver variant symbol '{name}' has payload count {actual}, expected {}",
-                    expected.count
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_count(
+            "variant",
+            name,
+            symbol.variant_payload_count,
+            expected.count,
+            CountValidation {
+                label: "payload count",
+                code: "E0215",
+            },
+            span,
+        );
         if symbol.variant_payload_type != expected.typed {
             let actual = symbol
                 .variant_payload_type
@@ -8011,20 +8028,17 @@ impl TypeChecker {
         span: Span,
     ) {
         let expected = ExpectedParameterMetadata::from_parameters(expected);
-        if symbol.parameter_count != Some(expected.count) {
-            let actual = symbol
-                .parameter_count
-                .map(|count| count.to_string())
-                .unwrap_or_else(|| "unknown".to_string());
-            self.diagnostics.push(Diagnostic::error(
-                "E0211",
-                format!(
-                    "resolver value symbol '{name}' has parameter count {actual}, expected {}",
-                    expected.count
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_count(
+            "value",
+            name,
+            symbol.parameter_count,
+            expected.count,
+            CountValidation {
+                label: "parameter count",
+                code: "E0211",
+            },
+            span,
+        );
 
         if symbol.parameter_names.as_deref() != Some(expected.names.as_slice()) {
             let actual = format_parameter_names(symbol.parameter_names.as_deref());
@@ -8183,6 +8197,12 @@ fn mutability_name(is_mutable: Option<bool>) -> &'static str {
         Some(false) => "immutable",
         None => "unknown",
     }
+}
+
+fn resolver_count_display(count: Option<usize>) -> String {
+    count
+        .map(|count| count.to_string())
+        .unwrap_or_else(|| "unknown".to_string())
 }
 
 fn expected_parameter_metadata(params: &[Param]) -> Vec<ExpectedParameter> {
@@ -9061,6 +9081,12 @@ mod tests {
         assert_eq!(method_signature_key_parts("plain"), None);
         assert_eq!(method_signature_receiver_name("plain"), None);
         assert!(!is_method_signature_key("plain"));
+    }
+
+    #[test]
+    fn resolver_count_display_formats_known_and_missing_counts() {
+        assert_eq!(resolver_count_display(Some(2)), "2");
+        assert_eq!(resolver_count_display(None), "unknown");
     }
 
     #[test]

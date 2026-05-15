@@ -218,6 +218,8 @@ checked-in docs, tests, and commits only.
   classifier when matching resolver value symbols by declaration span.
 - Method-key receiver parsing is now shared between resolver-backed method
   target restoration and generic method monomorphization inference.
+- Resolver count validation now shares one diagnostic helper across value
+  parameters, type parameters, struct fields, and enum variant payloads.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only
