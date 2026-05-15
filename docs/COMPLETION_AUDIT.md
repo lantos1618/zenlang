@@ -129,6 +129,9 @@ and do not assume Phase 4 is ready without evidence.
 - Method-key receiver parsing is shared between resolver-backed method target
   restoration and generic method monomorphization inference, covered by
   `typechecker::tests::method_signature_key_helpers_share_receiver_parsing`.
+- Resolver definition-span symbol lookup is shared between callable signature
+  restoration and impl target-name restoration, covered by
+  `typechecker::tests::resolver_symbol_lookup_helpers_share_definition_span_fallbacks`.
 - Resolver count validation now shares one diagnostic helper across value
   parameters, type parameters, struct fields, and enum variant payloads, with
   display coverage in

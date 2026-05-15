@@ -2120,33 +2120,8 @@ impl TypeChecker {
         span: Span,
     ) {
         let ast_key = format!("{type_name}.{method_name}");
-        let restored_key = symbols
-            .lookup(Namespace::Value, &ast_key)
-            .map(|symbol| symbol.name.clone())
-            .or_else(|| {
-                let prefix = format!("{type_name}.");
-                symbols
-                    .symbols()
-                    .iter()
-                    .find(|symbol| {
-                        symbol.namespace == Namespace::Value
-                            && symbol.name.starts_with(&prefix)
-                            && symbol.definition_span == span
-                    })
-                    .map(|symbol| symbol.name.clone())
-            })
-            .or_else(|| {
-                symbols
-                    .symbols()
-                    .iter()
-                    .find(|symbol| {
-                        symbol.namespace == Namespace::Value
-                            && is_method_signature_key(&symbol.name)
-                            && symbol.definition_span == span
-                    })
-                    .map(|symbol| symbol.name.clone())
-            })
-            .unwrap_or(ast_key.clone());
+        let restored_key =
+            Self::resolver_method_signature_name_for(symbols, &ast_key, type_name, span);
 
         if restored_key != ast_key {
             self.methods.remove(&ast_key);
@@ -2188,15 +2163,56 @@ impl TypeChecker {
     ) -> String {
         symbols
             .lookup(namespace, name)
+            .or_else(|| Self::resolver_symbol_by_span(symbols, namespace, span))
             .map(|symbol| symbol.name.clone())
-            .or_else(|| {
-                symbols
-                    .symbols()
-                    .iter()
-                    .find(|symbol| symbol.namespace == namespace && symbol.definition_span == span)
-                    .map(|symbol| symbol.name.clone())
-            })
             .unwrap_or_else(|| name.to_string())
+    }
+
+    fn resolver_method_signature_name_for(
+        symbols: &SymbolTable,
+        ast_key: &str,
+        type_name: &str,
+        span: Span,
+    ) -> String {
+        symbols
+            .lookup(Namespace::Value, ast_key)
+            .or_else(|| {
+                let prefix = format!("{type_name}.");
+                Self::resolver_symbol_by_span_matching(symbols, Namespace::Value, span, |symbol| {
+                    symbol.name.starts_with(&prefix)
+                })
+            })
+            .or_else(|| Self::resolver_method_signature_symbol_by_span(symbols, span))
+            .map(|symbol| symbol.name.clone())
+            .unwrap_or_else(|| ast_key.to_string())
+    }
+
+    fn resolver_symbol_by_span(
+        symbols: &SymbolTable,
+        namespace: Namespace,
+        span: Span,
+    ) -> Option<&crate::resolver::Symbol> {
+        Self::resolver_symbol_by_span_matching(symbols, namespace, span, |_| true)
+    }
+
+    fn resolver_method_signature_symbol_by_span(
+        symbols: &SymbolTable,
+        span: Span,
+    ) -> Option<&crate::resolver::Symbol> {
+        Self::resolver_symbol_by_span_matching(symbols, Namespace::Value, span, |symbol| {
+            is_method_signature_key(&symbol.name)
+        })
+    }
+
+    fn resolver_symbol_by_span_matching(
+        symbols: &SymbolTable,
+        namespace: Namespace,
+        span: Span,
+        matches: impl Fn(&crate::resolver::Symbol) -> bool,
+    ) -> Option<&crate::resolver::Symbol> {
+        symbols.symbols().iter().find(|symbol| {
+            symbol.namespace == namespace && symbol.definition_span == span && matches(symbol)
+        })
     }
 
     fn resolver_impl_type_name_for(
@@ -2214,14 +2230,7 @@ impl TypeChecker {
             let Declaration::Function { span, .. } = method else {
                 return None;
             };
-            symbols
-                .symbols()
-                .iter()
-                .find(|symbol| {
-                    symbol.namespace == Namespace::Value
-                        && is_method_signature_key(&symbol.name)
-                        && symbol.definition_span == *span
-                })
+            Self::resolver_method_signature_symbol_by_span(symbols, *span)
                 .and_then(|symbol| method_signature_receiver_name(&symbol.name).map(str::to_string))
         }) {
             return type_name;
@@ -9039,6 +9048,47 @@ mod tests {
         assert_eq!(method_signature_key_parts("plain"), None);
         assert_eq!(method_signature_receiver_name("plain"), None);
         assert!(!is_method_signature_key("plain"));
+    }
+
+    #[test]
+    fn resolver_symbol_lookup_helpers_share_definition_span_fallbacks() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+Point.get = (self: Point) i32 { return self.x }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let Declaration::Method { span, .. } = &program.declarations[1] else {
+            panic!("expected method declaration");
+        };
+        let span = *span;
+
+        assert_eq!(
+            TypeChecker::resolver_symbol_name_for(
+                &symbols,
+                Namespace::Value,
+                "Point.missing",
+                span
+            ),
+            "Point.get"
+        );
+        assert_eq!(
+            TypeChecker::resolver_method_signature_name_for(
+                &symbols,
+                "Missing.missing",
+                "Missing",
+                span
+            ),
+            "Point.get"
+        );
+        assert_eq!(
+            TypeChecker::resolver_method_signature_symbol_by_span(&symbols, span)
+                .map(|symbol| symbol.name.as_str()),
+            Some("Point.get")
+        );
     }
 
     #[test]
