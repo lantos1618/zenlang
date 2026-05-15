@@ -154,7 +154,7 @@ struct DefaultBehaviorMethod {
 struct ExpectedValueSignature {
     params: Vec<ExpectedParameter>,
     return_type: ExpectedReturnMetadata,
-    type_params: ExpectedTypeParameters,
+    type_params: Vec<ExpectedTypeParameter>,
 }
 
 struct ExpectedValueSymbol {
@@ -217,10 +217,6 @@ struct ExpectedLocalSymbol {
     source: Option<String>,
 }
 
-struct ExpectedTypeParameters {
-    params: Vec<ExpectedTypeParameter>,
-}
-
 struct ExpectedTypeParameter {
     name: String,
     bound: Option<ExpectedTypeParameterBound>,
@@ -232,7 +228,7 @@ struct ExpectedTypeParameterBound {
 }
 
 struct ExpectedTypeLikeSymbol {
-    type_params: ExpectedTypeParameters,
+    type_params: Vec<ExpectedTypeParameter>,
     is_public: Option<bool>,
 }
 
@@ -6620,11 +6616,11 @@ impl TypeChecker {
         symbol: &crate::resolver::Symbol,
         symbol_kind: &str,
         name: &str,
-        expected: &ExpectedTypeParameters,
+        expected: &[ExpectedTypeParameter],
         validation: TypeParameterValidation,
         span: Span,
     ) {
-        let expected_count = expected.params.len();
+        let expected_count = expected.len();
         if symbol.type_parameter_count != Some(expected_count) {
             let actual = symbol
                 .type_parameter_count
@@ -6640,11 +6636,7 @@ impl TypeChecker {
             ));
         }
 
-        let expected_names: Vec<_> = expected
-            .params
-            .iter()
-            .map(|param| param.name.clone())
-            .collect();
+        let expected_names: Vec<_> = expected.iter().map(|param| param.name.clone()).collect();
         if symbol.type_parameter_names.as_deref() != Some(expected_names.as_slice()) {
             let actual = format_type_parameter_names(symbol.type_parameter_names.as_deref());
             let expected_names_display = format_type_parameter_names(Some(&expected_names));
@@ -6658,7 +6650,6 @@ impl TypeChecker {
         }
 
         let expected_bounds: Vec<_> = expected
-            .params
             .iter()
             .filter_map(|param| param.bound.as_ref().map(|bound| bound.display.clone()))
             .collect();
@@ -6674,7 +6665,6 @@ impl TypeChecker {
             ));
         }
         let expected_bound_refs: Vec<_> = expected
-            .params
             .iter()
             .filter_map(|param| param.bound.as_ref().map(|bound| bound.reference.clone()))
             .collect();
@@ -7678,8 +7668,8 @@ fn expected_value_symbol(
     }
 }
 
-fn expected_type_parameters(type_params: &[ast::TypeParam]) -> ExpectedTypeParameters {
-    let mut expected = ExpectedTypeParameters { params: Vec::new() };
+fn expected_type_parameters(type_params: &[ast::TypeParam]) -> Vec<ExpectedTypeParameter> {
+    let mut expected = Vec::new();
     for type_param in type_params {
         let bound = type_param.constraint.as_ref().and_then(|behavior| {
             let display = type_param_bound_display(type_param)?;
@@ -7692,7 +7682,7 @@ fn expected_type_parameters(type_params: &[ast::TypeParam]) -> ExpectedTypeParam
                 },
             })
         });
-        expected.params.push(ExpectedTypeParameter {
+        expected.push(ExpectedTypeParameter {
             name: type_param.name.clone(),
             bound,
         });

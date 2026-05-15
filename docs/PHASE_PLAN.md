@@ -162,6 +162,9 @@ checked-in docs, tests, and commits only.
   comparison lists.
 - Typechecker resolver validation now derives expected type-parameter counts
   from the per-parameter expectation list instead of storing a separate count.
+- Typechecker resolver validation now stores expected type-parameter
+  expectations directly on value and type-like symbols instead of wrapping the
+  per-parameter list before deriving resolver comparison lists.
 - Typechecker resolver validation now stores expected value parameter names,
   display types, and typed metadata as paired per-parameter expectations before
   deriving resolver comparison lists.
