@@ -273,6 +273,9 @@ checked-in docs, tests, and commits only.
   to declaration-order resolver refs when AST-only behavior names are stale, so
   validated resolver behavior associations cannot be shadowed by stale AST
   names during semantic checks.
+- Resolver-backed behavior association validation now skips AST-only impl and
+  required refs when resolver association metadata is missing, and clears stale
+  impl associations before resolver-owned refresh.
 - Inherited generic behavior dispatch has executable coverage through
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Concrete generic behavior association syntax in `.implements` and `.requires`,

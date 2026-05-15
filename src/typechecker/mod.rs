@@ -724,6 +724,8 @@ pub struct TypeChecker {
     resolver_backed_collection: bool,
     resolver_behavior_impl_refs: HashMap<String, VecDeque<BehaviorRefMetadata>>,
     resolver_behavior_required_refs: HashMap<String, VecDeque<BehaviorRefMetadata>>,
+    resolver_missing_behavior_impl_refs: HashSet<String>,
+    resolver_missing_behavior_required_refs: HashSet<String>,
 }
 
 impl Default for TypeChecker {
@@ -759,6 +761,8 @@ impl TypeChecker {
             resolver_backed_collection: false,
             resolver_behavior_impl_refs: HashMap::new(),
             resolver_behavior_required_refs: HashMap::new(),
+            resolver_missing_behavior_impl_refs: HashSet::new(),
+            resolver_missing_behavior_required_refs: HashSet::new(),
         }
     }
 
@@ -1439,6 +1443,8 @@ impl TypeChecker {
         self.resolver_backed_collection = false;
         self.resolver_behavior_impl_refs.clear();
         self.resolver_behavior_required_refs.clear();
+        self.resolver_missing_behavior_impl_refs.clear();
+        self.resolver_missing_behavior_required_refs.clear();
 
         for decl in decls {
             match decl {
@@ -1828,6 +1834,8 @@ impl TypeChecker {
     }
 
     fn collect_resolver_type_behavior_impls(&mut self, symbols: &SymbolTable, name: &str) {
+        self.behavior_impls
+            .retain(|(type_name, _)| type_name != name);
         let Some((impl_refs, _)) =
             Self::resolver_behavior_refs(symbols, Namespace::Type, name, |symbol| {
                 &symbol.behavior_impl_refs
@@ -1836,8 +1844,6 @@ impl TypeChecker {
             return;
         };
 
-        self.behavior_impls
-            .retain(|(type_name, _)| type_name != name);
         for behavior in impl_refs {
             self.behavior_impls.insert((
                 name.to_string(),
@@ -1847,24 +1853,30 @@ impl TypeChecker {
     }
 
     fn collect_resolver_type_behavior_impl_refs(&mut self, symbols: &SymbolTable, name: &str) {
-        if let Some((impl_refs, _)) =
-            Self::resolver_behavior_refs(symbols, Namespace::Type, name, |symbol| {
-                &symbol.behavior_impl_refs
-            })
-        {
+        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
+            return;
+        };
+
+        if let Some(impl_refs) = symbol.behavior_impl_refs.as_deref() {
             self.resolver_behavior_impl_refs
                 .insert(name.to_string(), impl_refs.iter().cloned().collect());
+        } else {
+            self.resolver_missing_behavior_impl_refs
+                .insert(name.to_string());
         }
     }
 
     fn collect_resolver_type_behavior_requires(&mut self, symbols: &SymbolTable, name: &str) {
-        if let Some((required_refs, _)) =
-            Self::resolver_behavior_refs(symbols, Namespace::Type, name, |symbol| {
-                &symbol.behavior_required_refs
-            })
-        {
+        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
+            return;
+        };
+
+        if let Some(required_refs) = symbol.behavior_required_refs.as_deref() {
             self.resolver_behavior_required_refs
                 .insert(name.to_string(), required_refs.iter().cloned().collect());
+        } else {
+            self.resolver_missing_behavior_required_refs
+                .insert(name.to_string());
         }
     }
 
@@ -2151,6 +2163,14 @@ impl TypeChecker {
         span: Span,
     ) {
         let resolver_required_ref = self.resolver_required_ref_for(type_name, behavior);
+        if self.resolver_backed_collection
+            && resolver_required_ref.is_none()
+            && self
+                .resolver_missing_behavior_required_refs
+                .contains(type_name)
+        {
+            return;
+        }
         let behavior = resolver_required_ref
             .as_ref()
             .map(|required| required.name.as_str())
@@ -2444,6 +2464,12 @@ impl TypeChecker {
         span: Span,
     ) {
         let resolver_impl_ref = self.resolver_impl_ref_for(type_name, behavior);
+        if self.resolver_backed_collection
+            && resolver_impl_ref.is_none()
+            && self.resolver_missing_behavior_impl_refs.contains(type_name)
+        {
+            return;
+        }
         let behavior = resolver_impl_ref
             .as_ref()
             .map(|implementation| implementation.name.as_str())
@@ -10130,6 +10156,42 @@ Point.implements(Json<str>) {
     }
 
     #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_behavior_impl_metadata() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_impl_refs_for_test(Namespace::Type, "Point", None);
+        if let Declaration::ImplBlock {
+            behavior_type_args, ..
+        } = &mut program.declarations[2]
+        {
+            behavior_type_args[0] = AstType::I32;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.behavior_impls
+                .contains(&("Point".to_string(), "Json_i32".to_string())),
+            "resolver-backed collection should not keep AST-only behavior impl refs when resolver impl metadata is incomplete"
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_uses_resolver_behavior_impl_name_metadata() {
         let mut program = parse_program(
             r#"
@@ -10194,6 +10256,45 @@ Point.requires(Json<str>)
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-restored requires metadata should avoid stale AST requires diagnostics: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_behavior_required_metadata()
+    {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_required_refs_for_test(Namespace::Type, "Point", None);
+        if let Declaration::Requires {
+            behavior_type_args, ..
+        } = &mut program.declarations[3]
+        {
+            behavior_type_args[0] = AstType::I32;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-backed collection should not validate stale AST-only requires refs when resolver required metadata is incomplete: {:?}",
             tc.diagnostics
         );
     }
