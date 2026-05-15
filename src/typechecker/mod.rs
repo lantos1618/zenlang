@@ -282,6 +282,19 @@ struct SourceModuleDependencies {
     generic_methods: HashMap<String, GenericFunctionTemplate>,
 }
 
+impl SourceModuleDependencies {
+    fn as_imported_method_dependencies(&self) -> ImportedMethodDependencies<'_> {
+        ImportedMethodDependencies {
+            structs: &self.structs,
+            enums: &self.enums,
+            functions: &self.functions,
+            generic_functions: &self.generic_functions,
+            methods: &self.methods,
+            generic_methods: &self.generic_methods,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct BehaviorParentRef {
     behavior: String,
@@ -5878,14 +5891,7 @@ impl TypeChecker {
                 body,
                 span: *span,
             },
-            ImportedMethodDependencies {
-                structs: &dependencies.structs,
-                enums: &dependencies.enums,
-                functions: &dependencies.functions,
-                generic_functions: &dependencies.generic_functions,
-                methods: &dependencies.methods,
-                generic_methods: &dependencies.generic_methods,
-            },
+            dependencies.as_imported_method_dependencies(),
         );
     }
 
@@ -5923,14 +5929,7 @@ impl TypeChecker {
                 body,
                 span: *span,
             },
-            ImportedMethodDependencies {
-                structs: &dependencies.structs,
-                enums: &dependencies.enums,
-                functions: &dependencies.functions,
-                generic_functions: &dependencies.generic_functions,
-                methods: &dependencies.methods,
-                generic_methods: &dependencies.generic_methods,
-            },
+            dependencies.as_imported_method_dependencies(),
         );
     }
 
