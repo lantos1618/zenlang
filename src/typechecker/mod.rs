@@ -158,10 +158,7 @@ struct ExpectedValueSignature {
     parameter_type_names: Vec<String>,
     return_type: AstType,
     return_type_name: String,
-    type_parameter_count: usize,
-    type_parameter_names: Vec<String>,
-    type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
-    type_parameter_bound_refs: Vec<TypeParameterBoundRefMetadata>,
+    type_params: ExpectedTypeParameters,
 }
 
 #[derive(Default)]
@@ -186,11 +183,15 @@ struct ExpectedTypeParameters {
 }
 
 struct ExpectedTypeLikeSymbol {
-    type_parameter_count: usize,
-    type_parameter_names: Vec<String>,
-    type_parameter_bounds: Vec<TypeParameterBoundMetadata>,
-    type_parameter_bound_refs: Vec<TypeParameterBoundRefMetadata>,
+    type_params: ExpectedTypeParameters,
     is_public: Option<bool>,
+}
+
+struct TypeParameterValidation {
+    count_code: &'static str,
+    name_code: &'static str,
+    bound_code: &'static str,
+    bound_ref_code: &'static str,
 }
 
 #[derive(Default)]
@@ -6463,70 +6464,84 @@ impl TypeChecker {
             }
         }
 
-        if symbol.type_parameter_count != Some(expected.type_parameter_count) {
+        self.validate_resolver_type_parameters(
+            symbol,
+            namespace.diagnostic_name(),
+            name,
+            &expected.type_params,
+            TypeParameterValidation {
+                count_code: "E0213",
+                name_code: "E0346",
+                bound_code: "E0222",
+                bound_ref_code: "E0350",
+            },
+            span,
+        );
+
+        self.validate_resolver_type_like_absent_value_metadata(symbol, namespace, name, span);
+
+        Some(symbol)
+    }
+
+    fn validate_resolver_type_parameters(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        symbol_kind: &str,
+        name: &str,
+        expected: &ExpectedTypeParameters,
+        validation: TypeParameterValidation,
+        span: Span,
+    ) {
+        if symbol.type_parameter_count != Some(expected.count) {
             let actual = symbol
                 .type_parameter_count
                 .map(|count| count.to_string())
                 .unwrap_or_else(|| "unknown".to_string());
             self.diagnostics.push(Diagnostic::error(
-                "E0213",
+                validation.count_code,
                 format!(
-                    "resolver {} symbol '{name}' has type parameter count {actual}, expected {expected_type_parameter_count}",
-                    namespace.diagnostic_name(),
-                    expected_type_parameter_count = expected.type_parameter_count
+                    "resolver {symbol_kind} symbol '{name}' has type parameter count {actual}, expected {}",
+                    expected.count
                 ),
                 span,
             ));
         }
 
-        if symbol.type_parameter_names.as_deref() != Some(expected.type_parameter_names.as_slice())
-        {
+        if symbol.type_parameter_names.as_deref() != Some(expected.names.as_slice()) {
             let actual = format_type_parameter_names(symbol.type_parameter_names.as_deref());
-            let expected = format_type_parameter_names(Some(&expected.type_parameter_names));
+            let expected_names = format_type_parameter_names(Some(&expected.names));
             self.diagnostics.push(Diagnostic::error(
-                "E0346",
+                validation.name_code,
                 format!(
-                    "resolver {} symbol '{name}' has type parameter names '{actual}', expected '{expected}'",
-                    namespace.diagnostic_name()
+                    "resolver {symbol_kind} symbol '{name}' has type parameter names '{actual}', expected '{expected_names}'"
                 ),
                 span,
             ));
         }
 
-        if symbol.type_parameter_bounds.as_deref()
-            != Some(expected.type_parameter_bounds.as_slice())
-        {
+        if symbol.type_parameter_bounds.as_deref() != Some(expected.bounds.as_slice()) {
             let actual = format_type_parameter_bounds(symbol.type_parameter_bounds.as_deref());
-            let expected = format_type_parameter_bounds(Some(&expected.type_parameter_bounds));
+            let expected_bounds = format_type_parameter_bounds(Some(&expected.bounds));
             self.diagnostics.push(Diagnostic::error(
-                "E0222",
+                validation.bound_code,
                 format!(
-                    "resolver {} symbol '{name}' has type parameter bounds '{actual}', expected '{expected}'",
-                    namespace.diagnostic_name()
+                    "resolver {symbol_kind} symbol '{name}' has type parameter bounds '{actual}', expected '{expected_bounds}'"
                 ),
                 span,
             ));
         }
-        if symbol.type_parameter_bound_refs.as_deref()
-            != Some(expected.type_parameter_bound_refs.as_slice())
-        {
+        if symbol.type_parameter_bound_refs.as_deref() != Some(expected.bound_refs.as_slice()) {
             let actual =
                 format_type_parameter_bound_refs(symbol.type_parameter_bound_refs.as_deref());
-            let expected =
-                format_type_parameter_bound_refs(Some(&expected.type_parameter_bound_refs));
+            let expected_refs = format_type_parameter_bound_refs(Some(&expected.bound_refs));
             self.diagnostics.push(Diagnostic::error(
-                "E0350",
+                validation.bound_ref_code,
                 format!(
-                    "resolver {} symbol '{name}' has type parameter bound refs '{actual}', expected '{expected}'",
-                    namespace.diagnostic_name()
+                    "resolver {symbol_kind} symbol '{name}' has type parameter bound refs '{actual}', expected '{expected_refs}'"
                 ),
                 span,
             ));
         }
-
-        self.validate_resolver_type_like_absent_value_metadata(symbol, namespace, name, span);
-
-        Some(symbol)
     }
 
     fn validate_resolver_type_like_absent_value_metadata(
@@ -7396,66 +7411,19 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.type_parameter_count != Some(expected_signature.type_parameter_count) {
-            let actual = symbol
-                .type_parameter_count
-                .map(|count| count.to_string())
-                .unwrap_or_else(|| "unknown".to_string());
-            self.diagnostics.push(Diagnostic::error(
-                "E0220",
-                format!(
-                    "resolver value symbol '{name}' has type parameter count {actual}, expected {}",
-                    expected_signature.type_parameter_count
-                ),
-                span,
-            ));
-        }
-
-        if symbol.type_parameter_names.as_deref()
-            != Some(expected_signature.type_parameter_names.as_slice())
-        {
-            let actual = format_type_parameter_names(symbol.type_parameter_names.as_deref());
-            let expected =
-                format_type_parameter_names(Some(&expected_signature.type_parameter_names));
-            self.diagnostics.push(Diagnostic::error(
-                "E0347",
-                format!(
-                    "resolver value symbol '{name}' has type parameter names '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
-
-        if symbol.type_parameter_bounds.as_deref()
-            != Some(expected_signature.type_parameter_bounds.as_slice())
-        {
-            let actual = format_type_parameter_bounds(symbol.type_parameter_bounds.as_deref());
-            let expected =
-                format_type_parameter_bounds(Some(&expected_signature.type_parameter_bounds));
-            self.diagnostics.push(Diagnostic::error(
-                "E0221",
-                format!(
-                    "resolver value symbol '{name}' has type parameter bounds '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
-        if symbol.type_parameter_bound_refs.as_deref()
-            != Some(expected_signature.type_parameter_bound_refs.as_slice())
-        {
-            let actual =
-                format_type_parameter_bound_refs(symbol.type_parameter_bound_refs.as_deref());
-            let expected = format_type_parameter_bound_refs(Some(
-                &expected_signature.type_parameter_bound_refs,
-            ));
-            self.diagnostics.push(Diagnostic::error(
-                "E0351",
-                format!(
-                    "resolver value symbol '{name}' has type parameter bound refs '{actual}', expected '{expected}'"
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_type_parameters(
+            symbol,
+            "value",
+            name,
+            &expected_signature.type_params,
+            TypeParameterValidation {
+                count_code: "E0220",
+                name_code: "E0347",
+                bound_code: "E0221",
+                bound_ref_code: "E0351",
+            },
+            span,
+        );
 
         self.validate_resolver_value_absent_declaration_metadata(symbol, name, span);
     }
@@ -7594,10 +7562,7 @@ fn expected_value_signature(
         parameter_type_names: params.type_names,
         return_type: return_type.clone().unwrap_or(AstType::Void),
         return_type_name: expected_return_type_name(return_type),
-        type_parameter_count: type_params.count,
-        type_parameter_names: type_params.names,
-        type_parameter_bounds: type_params.bounds,
-        type_parameter_bound_refs: type_params.bound_refs,
+        type_params,
     }
 }
 
@@ -7630,10 +7595,7 @@ fn expected_type_like_symbol(
 ) -> ExpectedTypeLikeSymbol {
     let type_params = expected_type_parameters(type_params);
     ExpectedTypeLikeSymbol {
-        type_parameter_count: type_params.count,
-        type_parameter_names: type_params.names,
-        type_parameter_bounds: type_params.bounds,
-        type_parameter_bound_refs: type_params.bound_refs,
+        type_params,
         is_public,
     }
 }

@@ -89,10 +89,10 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver validation now derives value parameter count, names,
   display types, and typed parameter metadata from one shared expectation pass,
   keeping those resolver value-signature handoff checks aligned.
-- Typechecker resolver validation now derives type-parameter counts, names,
-  display bounds, and typed bound refs from one shared expectation pass for
-  value and type-like symbols, reducing duplicate resolver metadata handoff
-  construction.
+- Typechecker resolver validation now derives and checks type-parameter
+  counts, names, display bounds, and typed bound refs through shared
+  expectation and validation paths for value and type-like symbols, reducing
+  duplicate resolver metadata handoff construction.
 - Typechecker resolver validation now derives struct field count, display
   metadata, and typed field metadata from one shared expectation pass, keeping
   those resolver field handoff checks aligned.
