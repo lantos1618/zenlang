@@ -109,6 +109,9 @@ checked-in docs, tests, and commits only.
 - AST behavior-extends validation now records explicit extends-validation
   tasks before replaying checks, keeping declaration filtering out of the
   validation pass while preserving cycle and coherence ordering.
+- Struct field-default validation now dispatches struct declarations once and
+  routes the extracted fields through AST or resolver-restored default checks,
+  avoiding separate mode-specific declaration scans.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.

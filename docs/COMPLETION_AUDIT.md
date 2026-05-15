@@ -182,6 +182,9 @@ and do not assume Phase 4 is ready without evidence.
 - AST behavior-extends validation now records explicit extends-validation
   tasks before replaying checks, preserving cycle and coherence validation
   order without passing the whole declaration list into the check loop.
+- Struct field-default validation now dispatches struct declarations once and
+  routes extracted fields through AST or resolver-restored default checks,
+  preserving resolver field-name coverage without mode-specific declaration scans.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate
