@@ -625,6 +625,8 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-association diagnostics now use shared parent/impl/requires
   name/ref validation plumbing, reducing duplicate handoff code while preserving
   the existing explicit diagnostic labels and error codes.
+- Resolver behavior-association collection now uses one resolver behavior-ref
+  accessor for behavior parent refs, type impl refs, and type requires refs.
 
 ## Unresolved Gaps
 

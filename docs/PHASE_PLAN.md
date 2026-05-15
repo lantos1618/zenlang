@@ -618,6 +618,8 @@ checked-in docs, tests, and commits only.
 - Resolver behavior-association validation now shares the parent/impl/requires
   name/ref diagnostic plumbing while keeping each path's explicit labels and
   error codes.
+- Resolver behavior-association collection now shares resolver behavior-ref
+  symbol lookup across parent, impl, and requires handoff paths.
 
 ## Current Phase
 

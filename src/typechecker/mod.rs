@@ -1666,10 +1666,12 @@ impl TypeChecker {
     }
 
     fn collect_resolver_behavior_parents(&mut self, symbols: &SymbolTable, name: &str) {
-        let Some(symbol) = symbols.lookup(Namespace::Behavior, name) else {
-            return;
-        };
-        let Some(parent_refs) = symbol.behavior_parent_refs.as_ref() else {
+        let Some((parent_refs, definition_span)) =
+            Self::resolver_behavior_refs(symbols, Namespace::Behavior, name, |symbol| {
+                &symbol.behavior_parent_refs
+            })
+            .map(|(refs, symbol)| (refs, symbol.definition_span))
+        else {
             return;
         };
 
@@ -1680,14 +1682,15 @@ impl TypeChecker {
         self.behavior_extends.insert(name.to_string(), parents);
         self.behavior_extends_spans
             .entry(name.to_string())
-            .or_insert(symbol.definition_span);
+            .or_insert(definition_span);
     }
 
     fn collect_resolver_type_behavior_impls(&mut self, symbols: &SymbolTable, name: &str) {
-        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
-            return;
-        };
-        let Some(impl_refs) = symbol.behavior_impl_refs.as_ref() else {
+        let Some((impl_refs, _)) =
+            Self::resolver_behavior_refs(symbols, Namespace::Type, name, |symbol| {
+                &symbol.behavior_impl_refs
+            })
+        else {
             return;
         };
 
@@ -1702,32 +1705,37 @@ impl TypeChecker {
     }
 
     fn collect_resolver_type_behavior_impl_refs(&mut self, symbols: &SymbolTable, name: &str) {
-        if let Some(impl_refs) =
-            Self::resolver_type_behavior_refs(symbols, name, |symbol| &symbol.behavior_impl_refs)
+        if let Some((impl_refs, _)) =
+            Self::resolver_behavior_refs(symbols, Namespace::Type, name, |symbol| {
+                &symbol.behavior_impl_refs
+            })
         {
             self.resolver_behavior_impl_refs
-                .insert(name.to_string(), impl_refs);
+                .insert(name.to_string(), impl_refs.iter().cloned().collect());
         }
     }
 
     fn collect_resolver_type_behavior_requires(&mut self, symbols: &SymbolTable, name: &str) {
-        if let Some(required_refs) = Self::resolver_type_behavior_refs(symbols, name, |symbol| {
-            &symbol.behavior_required_refs
-        }) {
+        if let Some((required_refs, _)) =
+            Self::resolver_behavior_refs(symbols, Namespace::Type, name, |symbol| {
+                &symbol.behavior_required_refs
+            })
+        {
             self.resolver_behavior_required_refs
-                .insert(name.to_string(), required_refs);
+                .insert(name.to_string(), required_refs.iter().cloned().collect());
         }
     }
 
-    fn resolver_type_behavior_refs(
-        symbols: &SymbolTable,
+    fn resolver_behavior_refs<'a>(
+        symbols: &'a SymbolTable,
+        namespace: Namespace,
         name: &str,
-        select_refs: impl Fn(&crate::resolver::Symbol) -> &Option<Vec<BehaviorRefMetadata>>,
-    ) -> Option<VecDeque<BehaviorRefMetadata>> {
-        let symbol = symbols.lookup(Namespace::Type, name)?;
-        let refs = select_refs(symbol).as_ref()?;
+        select_refs: impl Fn(&'a crate::resolver::Symbol) -> &'a Option<Vec<BehaviorRefMetadata>>,
+    ) -> Option<(&'a [BehaviorRefMetadata], &'a crate::resolver::Symbol)> {
+        let symbol = symbols.lookup(namespace, name)?;
+        let refs = select_refs(symbol).as_deref()?;
 
-        Some(refs.iter().cloned().collect())
+        Some((refs, symbol))
     }
 
     fn behavior_parent_ref_from_metadata(
