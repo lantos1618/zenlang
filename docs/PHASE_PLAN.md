@@ -103,6 +103,9 @@ checked-in docs, tests, and commits only.
 - AST behavior declaration collection now queues behavior generic bounds while
   building behavior metadata, then validates them after all behavior names are
   collected without a separate behavior declaration walk.
+- Behavior declaration collection now dispatches each behavior once and passes
+  extracted signature fields into AST signatures or resolver-backed stubs,
+  avoiding whole-list handoff inside behavior setup.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.

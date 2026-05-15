@@ -176,6 +176,9 @@ and do not assume Phase 4 is ready without evidence.
   building behavior metadata, then validates them after all behavior names are
   collected without a separate behavior declaration walk, preserving
   declaration-order-independent behavior bound diagnostics.
+- Behavior declaration collection now dispatches each behavior once and sends
+  extracted signature fields into AST signatures or resolver-backed stubs,
+  preserving existing behavior metadata coverage without whole-list handoff.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate

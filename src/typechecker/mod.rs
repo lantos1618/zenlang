@@ -3316,19 +3316,8 @@ impl TypeChecker {
     }
 
     fn collect_behavior_declarations(&mut self, decls: &[Declaration]) {
-        self.collect_ast_behavior_declarations(decls);
-    }
-
-    fn collect_ast_behavior_declarations(&mut self, decls: &[Declaration]) {
-        if self.resolver_backed_collection {
-            self.collect_resolver_backed_behavior_declaration_stubs(decls);
-        } else {
-            self.collect_ast_behavior_declaration_signatures(decls);
-        }
-    }
-
-    fn collect_ast_behavior_declaration_signatures(&mut self, decls: &[Declaration]) {
         let mut type_params_to_validate = Vec::new();
+
         for decl in decls {
             if let Declaration::Behavior {
                 name,
@@ -3337,27 +3326,41 @@ impl TypeChecker {
                 ..
             } = decl
             {
-                self.behaviors.insert(
-                    name.clone(),
-                    behavior_info_from_ast_methods(name.clone(), type_params, methods),
-                );
-                type_params_to_validate.push(type_params);
+                if self.resolver_backed_collection {
+                    self.collect_resolver_backed_behavior_declaration_stub(name, methods);
+                } else {
+                    self.collect_ast_behavior_declaration_signature(name, type_params, methods);
+                    type_params_to_validate.push(type_params);
+                }
             }
         }
+
         for type_params in type_params_to_validate {
             self.validate_generic_bounds(type_params);
         }
     }
 
-    fn collect_resolver_backed_behavior_declaration_stubs(&mut self, decls: &[Declaration]) {
-        for decl in decls {
-            if let Declaration::Behavior { name, methods, .. } = decl {
-                self.behaviors.insert(
-                    name.clone(),
-                    behavior_info_for_resolver_backed_stub(name.clone(), methods),
-                );
-            }
-        }
+    fn collect_ast_behavior_declaration_signature(
+        &mut self,
+        name: &str,
+        type_params: &[ast::TypeParam],
+        methods: &[BehaviorMethod],
+    ) {
+        self.behaviors.insert(
+            name.to_string(),
+            behavior_info_from_ast_methods(name.to_string(), type_params, methods),
+        );
+    }
+
+    fn collect_resolver_backed_behavior_declaration_stub(
+        &mut self,
+        name: &str,
+        methods: &[BehaviorMethod],
+    ) {
+        self.behaviors.insert(
+            name.to_string(),
+            behavior_info_for_resolver_backed_stub(name.to_string(), methods),
+        );
     }
 
     fn validate_behavior_extends(&mut self, decls: &[Declaration]) {
