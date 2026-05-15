@@ -841,6 +841,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed `.requires` validation now restores stale AST target names
   from unique missing required-ref metadata before skipping incomplete resolver
   handoff, avoiding false diagnostics from stale AST-only required refs.
+- Resolver-backed `.implements` validation and omitted-default synthesis now
+  restore stale AST target names from unique missing impl-ref metadata before
+  skipping incomplete resolver handoff, avoiding stale AST-only impl refs and
+  default methods.
 
 ## Current Phase
 
