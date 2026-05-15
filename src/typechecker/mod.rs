@@ -2304,24 +2304,28 @@ impl TypeChecker {
     }
 
     fn collect_resolver_struct_fields(&mut self, symbols: &SymbolTable, name: &str) {
-        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
-            return;
-        };
-        let Some(field_types) = symbol.field_types.as_ref() else {
+        let Some((symbol, field_types)) =
+            Self::resolver_symbol_metadata(symbols, Namespace::Type, name, |symbol| {
+                symbol.field_types.as_ref()
+            })
+        else {
+            self.structs.remove(name);
             return;
         };
 
         self.structs.insert(
             name.to_string(),
-            struct_info_from_resolver_fields(name.to_string(), symbol, field_types.clone()),
+            struct_info_from_resolver_fields(name.to_string(), symbol, field_types.to_vec()),
         );
     }
 
     fn collect_resolver_enum_variants(&mut self, symbols: &SymbolTable, name: &str) {
-        let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
-            return;
-        };
-        let Some(variant_names) = symbol.variant_names.as_ref() else {
+        let Some((symbol, variant_names)) =
+            Self::resolver_symbol_metadata(symbols, Namespace::Type, name, |symbol| {
+                symbol.variant_names.as_ref()
+            })
+        else {
+            self.enums.remove(name);
             return;
         };
 
@@ -2343,11 +2347,11 @@ impl TypeChecker {
     }
 
     fn collect_resolver_behavior_methods(&mut self, symbols: &SymbolTable, name: &str) {
-        let Some(symbol) = symbols.lookup(Namespace::Behavior, name) else {
-            self.behaviors.remove(name);
-            return;
-        };
-        let Some(method_types) = symbol.behavior_method_types.as_ref() else {
+        let Some((symbol, method_types)) =
+            Self::resolver_symbol_metadata(symbols, Namespace::Behavior, name, |symbol| {
+                symbol.behavior_method_types.as_ref()
+            })
+        else {
             self.behaviors.remove(name);
             return;
         };
@@ -2520,10 +2524,22 @@ impl TypeChecker {
         name: &str,
         select_refs: impl Fn(&'a crate::resolver::Symbol) -> &'a Option<Vec<BehaviorRefMetadata>>,
     ) -> Option<(&'a [BehaviorRefMetadata], &'a crate::resolver::Symbol)> {
-        let symbol = symbols.lookup(namespace, name)?;
-        let refs = select_refs(symbol).as_deref()?;
+        let (symbol, refs) = Self::resolver_symbol_metadata(symbols, namespace, name, |symbol| {
+            select_refs(symbol).as_deref()
+        })?;
 
         Some((refs, symbol))
+    }
+
+    fn resolver_symbol_metadata<'a, T: ?Sized>(
+        symbols: &'a SymbolTable,
+        namespace: Namespace,
+        name: &str,
+        select_metadata: impl Fn(&'a crate::resolver::Symbol) -> Option<&'a T>,
+    ) -> Option<(&'a crate::resolver::Symbol, &'a T)> {
+        let symbol = symbols.lookup(namespace, name)?;
+        let metadata = select_metadata(symbol)?;
+        Some((symbol, metadata))
     }
 
     fn behavior_parent_ref_from_metadata(
@@ -9220,6 +9236,41 @@ Point.get = (self: Point) i32 { return self.x }
             TypeChecker::pop_resolver_behavior_ref(false, &mut refs_by_type, "Point", "Debug")
                 .is_none()
         );
+    }
+
+    #[test]
+    fn resolver_symbol_metadata_helper_requires_symbol_and_selected_metadata() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+
+        assert_eq!(
+            TypeChecker::resolver_symbol_metadata(&symbols, Namespace::Type, "Point", |symbol| {
+                symbol.field_types.as_ref()
+            })
+            .map(|(_, fields)| fields[0].0.as_str()),
+            Some("x")
+        );
+        symbols.set_field_types_for_test(Namespace::Type, "Point", None);
+        assert!(TypeChecker::resolver_symbol_metadata(
+            &symbols,
+            Namespace::Type,
+            "Point",
+            |symbol| symbol.field_types.as_ref()
+        )
+        .is_none());
+        assert!(TypeChecker::resolver_symbol_metadata(
+            &symbols,
+            Namespace::Type,
+            "Missing",
+            |symbol| symbol.field_types.as_ref()
+        )
+        .is_none());
     }
 
     #[test]

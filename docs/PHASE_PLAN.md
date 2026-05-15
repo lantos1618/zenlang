@@ -238,6 +238,8 @@ checked-in docs, tests, and commits only.
   and typed behavior-ref metadata diagnostics.
 - Resolver behavior-ref pop and peek selection now share one helper across
   impl and required-association restoration paths.
+- Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
+  behavior-ref restoration paths.
 - Generic method specialization preserves concrete `Self` receiver context in
   both call-site typing and specialized method bodies for generic struct and
   enum receivers, covered by `tests/zen/generic_method_self.zen`. `Self`-only

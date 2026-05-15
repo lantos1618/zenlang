@@ -160,6 +160,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-ref pop and peek selection now share one helper across
   impl and required-association restoration paths, covered by
   `typechecker::tests::resolver_behavior_ref_helpers_share_pop_and_peek_selection`.
+- Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
+  behavior-ref restoration paths, covered by
+  `typechecker::tests::resolver_symbol_metadata_helper_requires_symbol_and_selected_metadata`.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only
