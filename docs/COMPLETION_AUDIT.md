@@ -102,6 +102,11 @@ and do not assume Phase 4 is ready without evidence.
   Generic `Type.impl` method templates also restore resolver-owned method names,
   parameters, and returns, covered by
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_template_name_metadata`.
+- Module graph typechecking now seeds graph imports and then runs
+  resolver-backed declaration collection for the current module, so multi-file
+  graph modules use the same resolver-owned metadata handoff as
+  `check_program_with_symbols` instead of returning to plain AST declaration
+  collection after resolver validation.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only

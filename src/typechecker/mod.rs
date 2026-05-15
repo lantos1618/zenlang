@@ -943,7 +943,8 @@ impl TypeChecker {
                 .collect());
         }
 
-        self.check_program(&module.program)
+        self.collect_declarations_with_symbols(&module.program.declarations, &module.symbols);
+        self.check_program_after_collection(&module.program)
     }
 
     /// Get all diagnostics (errors + warnings).
