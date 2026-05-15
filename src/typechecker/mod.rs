@@ -2156,10 +2156,14 @@ impl TypeChecker {
         &self,
         metadata: &BehaviorRefMetadata,
     ) -> BehaviorParentRef {
+        self.behavior_parent_ref(&metadata.name, &metadata.type_args)
+    }
+
+    fn behavior_parent_ref(&self, behavior: &str, type_args: &[AstType]) -> BehaviorParentRef {
         BehaviorParentRef {
-            behavior: metadata.name.clone(),
-            type_args: metadata.type_args.clone(),
-            key: self.behavior_reference_key(&metadata.name, &metadata.type_args),
+            behavior: behavior.to_string(),
+            type_args: type_args.to_vec(),
+            key: self.behavior_reference_key(behavior, type_args),
         }
     }
 
@@ -2486,13 +2490,16 @@ impl TypeChecker {
             return;
         };
 
-        let parent_key = self.behavior_reference_key(parent, parent_type_args);
+        let parent_ref = self.behavior_parent_ref(parent, parent_type_args);
         let parent_display = behavior_ref_display(parent, parent_type_args);
         let parents = self
             .behavior_extends
             .entry(behavior.to_string())
             .or_default();
-        if parents.iter().any(|existing| existing.key == parent_key) {
+        if parents
+            .iter()
+            .any(|existing| existing.key == parent_ref.key)
+        {
             self.diagnostics.push(Diagnostic::error(
                 "E6011",
                 format!("duplicate behavior inheritance `{behavior}.extends({parent_display})`"),
@@ -2501,11 +2508,7 @@ impl TypeChecker {
             return;
         }
 
-        parents.push(BehaviorParentRef {
-            behavior: parent.to_string(),
-            type_args: parent_type_args.to_vec(),
-            key: parent_key,
-        });
+        parents.push(parent_ref);
         self.behavior_extends_spans
             .entry(behavior.to_string())
             .or_insert(span);
@@ -5330,20 +5333,19 @@ impl TypeChecker {
                 }
             }
 
-            let parent_key = self.behavior_reference_key(parent, parent_type_args);
+            let parent_ref = self.behavior_parent_ref(parent, parent_type_args);
             let parents = self
                 .behavior_extends
                 .entry(local_name.to_string())
                 .or_default();
-            if parents.iter().any(|existing| existing.key == parent_key) {
+            if parents
+                .iter()
+                .any(|existing| existing.key == parent_ref.key)
+            {
                 continue;
             }
 
-            parents.push(BehaviorParentRef {
-                behavior: parent.clone(),
-                type_args: parent_type_args.clone(),
-                key: parent_key,
-            });
+            parents.push(parent_ref);
             self.behavior_extends_spans
                 .entry(local_name.to_string())
                 .or_insert(*span);
