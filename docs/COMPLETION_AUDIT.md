@@ -921,6 +921,8 @@ and do not assume Phase 4 is ready without evidence.
   also have named helper passes.
   AST import seeding now has a named helper pass, removing the residual mixed
   declaration collection loop.
+  Resolver-backed function and method signature restoration now shares one
+  callable key repair and generic-template rekey helper.
   Resolver-backed semantic validation and final type impl association refresh
   now each have focused helper boundaries matching those named passes.
   Callable signatures, type declarations, and behavior declarations now route

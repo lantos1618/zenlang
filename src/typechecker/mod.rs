@@ -3771,11 +3771,7 @@ impl TypeChecker {
         let restored_key =
             Self::resolver_method_signature_name_for(symbols, &ast_key, type_name, span);
 
-        if restored_key != ast_key {
-            self.methods.remove(&ast_key);
-            Self::rekey_generic_template(&mut self.generic_methods, &ast_key, &restored_key);
-        }
-        self.collect_resolver_value_signature(symbols, &restored_key);
+        self.collect_resolver_callable_signature_for_key(symbols, &ast_key, &restored_key);
     }
 
     fn collect_resolver_function_signature(
@@ -3786,20 +3782,34 @@ impl TypeChecker {
     ) {
         let restored_name = Self::resolver_symbol_name_for(symbols, Namespace::Value, name, span);
 
-        if restored_name != name {
-            self.functions.remove(name);
-            Self::rekey_generic_template(&mut self.generic_functions, name, &restored_name);
-        }
-        self.collect_resolver_value_signature(symbols, &restored_name);
+        self.collect_resolver_callable_signature_for_key(symbols, name, &restored_name);
     }
 
-    fn rekey_generic_template(
-        templates: &mut HashMap<String, GenericFunctionTemplate>,
-        old_key: &str,
-        new_key: &str,
+    fn collect_resolver_callable_signature_for_key(
+        &mut self,
+        symbols: &SymbolTable,
+        ast_key: &str,
+        restored_key: &str,
     ) {
-        if let Some(template) = templates.remove(old_key) {
-            templates.insert(new_key.to_string(), template);
+        if restored_key != ast_key {
+            self.rekey_callable_template(ast_key, restored_key);
+            self.remove_callable_signature(ast_key);
+        }
+        self.collect_resolver_value_signature(symbols, restored_key);
+    }
+
+    fn rekey_callable_template(&mut self, old_key: &str, new_key: &str) {
+        let template = self
+            .generic_functions
+            .remove(old_key)
+            .or_else(|| self.generic_methods.remove(old_key));
+
+        if let Some(template) = template {
+            if is_method_signature_key(new_key) {
+                self.generic_methods.insert(new_key.to_string(), template);
+            } else {
+                self.generic_functions.insert(new_key.to_string(), template);
+            }
         }
     }
 
@@ -10915,6 +10925,74 @@ Box.get<T> = (self: Box<T>) T { return self.value }
         );
         assert!(!tc.generic_methods.contains_key("identity"));
         assert!(!tc.generic_functions.contains_key("Box.get"));
+    }
+
+    #[test]
+    fn callable_template_rekey_routes_function_and_method_keys() {
+        let program = parse_program(
+            r#"
+Box<T>: {
+    value: T
+}
+
+identity<T> = (value: T) T { return value }
+
+Box.get<T> = (self: Box<T>) T { return self.value }
+"#,
+        );
+        let ast::Declaration::Function {
+            type_params: function_type_params,
+            params: function_params,
+            return_type: function_return_type,
+            body: function_body,
+            span: function_span,
+            ..
+        } = &program.declarations[1]
+        else {
+            panic!("expected generic function");
+        };
+        let ast::Declaration::Method {
+            type_params: method_type_params,
+            params: method_params,
+            return_type: method_return_type,
+            body: method_body,
+            span: method_span,
+            ..
+        } = &program.declarations[2]
+        else {
+            panic!("expected generic method");
+        };
+        let mut tc = TypeChecker::new();
+        tc.generic_functions.insert(
+            "identity".to_string(),
+            generic_template_from_type_params(
+                function_type_params,
+                function_params,
+                function_return_type,
+                function_body,
+                *function_span,
+            )
+            .expect("generic function template"),
+        );
+        tc.generic_methods.insert(
+            "Box.get".to_string(),
+            generic_template_from_type_params(
+                method_type_params,
+                method_params,
+                method_return_type,
+                method_body,
+                *method_span,
+            )
+            .expect("generic method template"),
+        );
+
+        tc.rekey_callable_template("identity", "renamed");
+        tc.rekey_callable_template("Box.get", "Box.fetch");
+
+        assert!(tc.generic_functions.contains_key("renamed"));
+        assert!(!tc.generic_functions.contains_key("identity"));
+        assert!(tc.generic_methods.contains_key("Box.fetch"));
+        assert!(!tc.generic_methods.contains_key("Box.get"));
     }
 
     #[test]
