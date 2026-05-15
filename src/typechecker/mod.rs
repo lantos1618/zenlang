@@ -666,6 +666,10 @@ impl MutabilityAbsenceValidation {
         Self { code: "E0345" }
     }
 
+    fn import_resolver_code() -> Self {
+        Self { code: "E0344" }
+    }
+
     fn entry(self, symbol: &Symbol) -> AbsentMetadataEntry {
         AbsentMetadataEntry::new(symbol.is_mutable.is_some(), self.code, "mutability")
     }
@@ -7234,7 +7238,7 @@ impl TypeChecker {
             symbol,
             "import",
             name,
-            MutabilityAbsenceValidation { code: "E0344" },
+            MutabilityAbsenceValidation::import_resolver_code(),
             span,
         );
     }
@@ -10720,6 +10724,13 @@ main = (mut input: i32) i32 {
         let validation = MutabilityAbsenceValidation::module_resolver_code();
 
         assert_eq!(validation.code, "E0345");
+    }
+
+    #[test]
+    fn mutability_absence_validation_uses_import_resolver_code() {
+        let validation = MutabilityAbsenceValidation::import_resolver_code();
+
+        assert_eq!(validation.code, "E0344");
     }
 
     #[test]

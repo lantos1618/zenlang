@@ -1061,6 +1061,8 @@ checked-in docs, tests, and commits only.
   shape used by the resolver metadata validation paths.
 - Resolver module mutability absence validation now owns its resolver diagnostic
   code mapping instead of constructing that code at the call site.
+- Resolver import mutability absence validation now owns its resolver diagnostic
+  code mapping instead of constructing that code at the call site.
 - Resolver local mutability validation now carries its diagnostic code and
   display formatting through a validation bundle.
 - Resolver local mutability validation now owns its resolver diagnostic code
