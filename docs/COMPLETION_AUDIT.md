@@ -846,6 +846,8 @@ and do not assume Phase 4 is ready without evidence.
   for display signatures and typed method metadata.
 - Resolver variant-payload validation now shares one expected metadata bundle
   for counts, display payload types, and typed AST payloads.
+- Resolver visibility validation now shares one diagnostic helper across
+  module, import, local, type-like, variant, and value symbols.
 
 ## Unresolved Gaps
 

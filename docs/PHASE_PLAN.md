@@ -923,6 +923,8 @@ checked-in docs, tests, and commits only.
   for display signatures and typed method metadata.
 - Resolver variant-payload validation now shares one expected metadata bundle
   for counts, display payload types, and typed AST payloads.
+- Resolver visibility validation now shares one diagnostic helper across
+  module, import, local, type-like, variant, and value symbols.
 
 ## Current Phase
 

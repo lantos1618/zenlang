@@ -5044,18 +5044,14 @@ impl TypeChecker {
             return;
         };
 
-        if symbol.is_public != expected.is_public {
-            self.diagnostics.push(Diagnostic::error(
-                "E0229",
-                format!(
-                    "resolver module symbol '{}' has visibility {}, expected {}",
-                    expected.name,
-                    visibility_name(symbol.is_public),
-                    visibility_name(expected.is_public)
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_visibility(
+            "module",
+            &expected.name,
+            symbol.is_public,
+            expected.is_public,
+            "E0229",
+            span,
+        );
 
         if symbol.import_source != expected.source {
             let actual = symbol.import_source.as_deref().unwrap_or("none");
@@ -6123,17 +6119,14 @@ impl TypeChecker {
             return;
         };
 
-        if symbol.is_public != expected.is_public {
-            self.diagnostics.push(Diagnostic::error(
-                "E0245",
-                format!(
-                    "resolver import symbol '{name}' has visibility {}, expected {}",
-                    visibility_name(symbol.is_public),
-                    visibility_name(expected.is_public)
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_visibility(
+            "import",
+            name,
+            symbol.is_public,
+            expected.is_public,
+            "E0245",
+            span,
+        );
 
         if symbol.import_source.as_deref() != Some(expected.source.as_str()) {
             let actual = symbol.import_source.as_deref().unwrap_or("unknown");
@@ -6615,17 +6608,14 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.is_public != expected.is_public {
-            self.diagnostics.push(Diagnostic::error(
-                "E0247",
-                format!(
-                    "resolver local symbol '{name}' has visibility {}, expected {}",
-                    visibility_name(symbol.is_public),
-                    visibility_name(expected.is_public)
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_visibility(
+            "local",
+            name,
+            symbol.is_public,
+            expected.is_public,
+            "E0247",
+            span,
+        );
 
         if symbol.import_source != expected.source {
             let actual = symbol.import_source.as_deref().unwrap_or("none");
@@ -6769,18 +6759,14 @@ impl TypeChecker {
         };
 
         if let Some(expected_is_public) = expected.is_public {
-            if symbol.is_public != expected_is_public {
-                self.diagnostics.push(Diagnostic::error(
-                    "E0225",
-                    format!(
-                        "resolver {} symbol '{name}' has visibility {}, expected {}",
-                        namespace.diagnostic_name(),
-                        visibility_name(symbol.is_public),
-                        visibility_name(expected_is_public)
-                    ),
-                    span,
-                ));
-            }
+            self.validate_resolver_visibility(
+                namespace.diagnostic_name(),
+                name,
+                symbol.is_public,
+                expected_is_public,
+                "E0225",
+                span,
+            );
         }
 
         self.validate_resolver_type_parameters(
@@ -6973,6 +6959,28 @@ impl TypeChecker {
                 label,
                 span,
             );
+        }
+    }
+
+    fn validate_resolver_visibility(
+        &mut self,
+        symbol_kind: &str,
+        name: &str,
+        actual: bool,
+        expected: bool,
+        code: &'static str,
+        span: Span,
+    ) {
+        if actual != expected {
+            self.diagnostics.push(Diagnostic::error(
+                code,
+                format!(
+                    "resolver {symbol_kind} symbol '{name}' has visibility {}, expected {}",
+                    visibility_name(actual),
+                    visibility_name(expected)
+                ),
+                span,
+            ));
         }
     }
 
@@ -7293,17 +7301,14 @@ impl TypeChecker {
         expected_is_public: bool,
         span: Span,
     ) {
-        if symbol.is_public != expected_is_public {
-            self.diagnostics.push(Diagnostic::error(
-                "E0226",
-                format!(
-                    "resolver variant symbol '{name}' has visibility {}, expected {}",
-                    visibility_name(symbol.is_public),
-                    visibility_name(expected_is_public)
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_visibility(
+            "variant",
+            name,
+            symbol.is_public,
+            expected_is_public,
+            "E0226",
+            span,
+        );
     }
 
     fn validate_resolver_variant_absent_other_metadata(
@@ -7722,17 +7727,14 @@ impl TypeChecker {
             return;
         };
 
-        if symbol.is_public != expected.is_public {
-            self.diagnostics.push(Diagnostic::error(
-                "E0224",
-                format!(
-                    "resolver value symbol '{name}' has visibility {}, expected {}",
-                    visibility_name(symbol.is_public),
-                    visibility_name(expected.is_public)
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_visibility(
+            "value",
+            name,
+            symbol.is_public,
+            expected.is_public,
+            "E0224",
+            span,
+        );
 
         self.validate_resolver_value_parameters(symbol, name, &expected.signature.params, span);
         self.validate_resolver_value_return_type(
