@@ -120,6 +120,8 @@ checked-in docs, tests, and commits only.
   visibility expectations through one expected module-symbol object.
 - Typechecker resolver validation now carries local scope, mutability, source,
   and visibility expectations through one expected local-symbol object.
+- Typechecker resolver validation now shares absent value-signature metadata
+  checks for non-value resolver symbols while preserving per-kind diagnostics.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, reducing

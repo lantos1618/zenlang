@@ -239,6 +239,11 @@ struct TypeParameterValidation {
     bound_ref_code: &'static str,
 }
 
+struct ValueSignatureAbsenceValidation {
+    parameter_count_code: &'static str,
+    return_type_code: &'static str,
+}
+
 #[derive(Default)]
 struct ExpectedFields {
     count: usize,
@@ -4488,27 +4493,16 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.parameter_count.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0265",
-                format!(
-                    "resolver module symbol '{}' has parameter count metadata, expected none",
-                    expected.name
-                ),
-                span,
-            ));
-        }
-
-        if symbol.return_type_name.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0266",
-                format!(
-                    "resolver module symbol '{}' has return type metadata, expected none",
-                    expected.name
-                ),
-                span,
-            ));
-        }
+        self.validate_resolver_absent_value_signature_metadata(
+            symbol,
+            "module",
+            &expected.name,
+            ValueSignatureAbsenceValidation {
+                parameter_count_code: "E0265",
+                return_type_code: "E0266",
+            },
+            span,
+        );
 
         for (present, code, label) in [
             (symbol.parameter_names.is_some(), "E0267", "parameter names"),
@@ -5821,23 +5815,16 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        if symbol.parameter_count.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0281",
-                format!(
-                    "resolver import symbol '{name}' has parameter count metadata, expected none"
-                ),
-                span,
-            ));
-        }
-
-        if symbol.return_type_name.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0282",
-                format!("resolver import symbol '{name}' has return type metadata, expected none"),
-                span,
-            ));
-        }
+        self.validate_resolver_absent_value_signature_metadata(
+            symbol,
+            "import",
+            name,
+            ValueSignatureAbsenceValidation {
+                parameter_count_code: "E0281",
+                return_type_code: "E0282",
+            },
+            span,
+        );
 
         for (present, code, label) in [
             (symbol.parameter_names.is_some(), "E0283", "parameter names"),
@@ -6314,23 +6301,16 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.parameter_count.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0249",
-                format!(
-                    "resolver local symbol '{name}' has parameter count metadata, expected none"
-                ),
-                span,
-            ));
-        }
-
-        if symbol.return_type_name.is_some() {
-            self.diagnostics.push(Diagnostic::error(
-                "E0250",
-                format!("resolver local symbol '{name}' has return type metadata, expected none"),
-                span,
-            ));
-        }
+        self.validate_resolver_absent_value_signature_metadata(
+            symbol,
+            "local",
+            name,
+            ValueSignatureAbsenceValidation {
+                parameter_count_code: "E0249",
+                return_type_code: "E0250",
+            },
+            span,
+        );
 
         for (present, code, label) in [
             (symbol.parameter_names.is_some(), "E0251", "parameter names"),
@@ -6572,6 +6552,35 @@ impl TypeChecker {
         self.validate_resolver_behavior_absent_type_metadata(symbol, name, span);
 
         Some(symbol)
+    }
+
+    fn validate_resolver_absent_value_signature_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        symbol_kind: &str,
+        name: &str,
+        validation: ValueSignatureAbsenceValidation,
+        span: Span,
+    ) {
+        if symbol.parameter_count.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                validation.parameter_count_code,
+                format!(
+                    "resolver {symbol_kind} symbol '{name}' has parameter count metadata, expected none"
+                ),
+                span,
+            ));
+        }
+
+        if symbol.return_type_name.is_some() {
+            self.diagnostics.push(Diagnostic::error(
+                validation.return_type_code,
+                format!(
+                    "resolver {symbol_kind} symbol '{name}' has return type metadata, expected none"
+                ),
+                span,
+            ));
+        }
     }
 
     fn validate_resolver_type_parameters(
