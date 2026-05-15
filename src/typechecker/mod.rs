@@ -619,6 +619,14 @@ struct FieldAbsenceValidation {
 }
 
 impl FieldAbsenceValidation {
+    fn module_resolver_codes() -> Self {
+        Self {
+            count_code: "E0271",
+            type_name_code: "E0272",
+            typed_code: "E0374",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 3] {
         [
             AbsentMetadataEntry::new(symbol.field_count.is_some(), self.count_code, "field count"),
@@ -6316,11 +6324,7 @@ impl TypeChecker {
             symbol,
             "module",
             &expected.name,
-            FieldAbsenceValidation {
-                count_code: "E0271",
-                type_name_code: "E0272",
-                typed_code: "E0374",
-            },
+            FieldAbsenceValidation::module_resolver_codes(),
             span,
         );
 
@@ -10961,6 +10965,15 @@ Point: { x: i32, y: i32 }
                 AbsentMetadataEntry::new(true, "TYPED_FIELDS", "typed field types"),
             ]
         );
+    }
+
+    #[test]
+    fn field_absence_validation_uses_module_resolver_codes() {
+        let validation = FieldAbsenceValidation::module_resolver_codes();
+
+        assert_eq!(validation.count_code, "E0271");
+        assert_eq!(validation.type_name_code, "E0272");
+        assert_eq!(validation.typed_code, "E0374");
     }
 
     #[test]
