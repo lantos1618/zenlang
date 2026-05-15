@@ -1615,6 +1615,10 @@ checked-in docs, tests, and commits only.
 - Resolver field validation now uses the same metadata-list comparison helper
   for display field metadata and typed field metadata after the field-count
   check, preserving type-specific resolver diagnostics.
+- Resolver variant payload validation now uses a shared optional-metadata
+  comparison helper for display payload metadata and typed payload metadata
+  after the payload-count check, preserving variant-specific resolver
+  diagnostics.
 
 ## Current Phase
 

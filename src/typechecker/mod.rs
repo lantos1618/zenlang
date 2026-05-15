@@ -9537,6 +9537,26 @@ impl TypeChecker {
         }
     }
 
+    fn validate_resolver_metadata_value<T: PartialEq + ?Sized>(
+        &mut self,
+        actual: Option<&T>,
+        expected: Option<&T>,
+        display: impl Fn(Option<&T>) -> String,
+        code: &'static str,
+        message: impl Fn(&str, &str) -> String,
+        span: Span,
+    ) {
+        if actual != expected {
+            let actual_display = display(actual);
+            let expected_display = display(expected);
+            self.diagnostics.push(Diagnostic::error(
+                code,
+                message(&actual_display, &expected_display),
+                span,
+            ));
+        }
+    }
+
     fn validate_resolver_type_like_absent_value_metadata(
         &mut self,
         symbol: &crate::resolver::Symbol,
@@ -9672,24 +9692,22 @@ impl TypeChecker {
             span,
         );
         let validation = VariantPayloadValidation::resolver_codes();
-        if symbol.variant_payload_type != expected.typed {
-            let actual = optional_ast_type_display(symbol.variant_payload_type.as_ref(), "none");
-            let expected = optional_ast_type_display(expected.typed.as_ref(), "none");
-            self.diagnostics.push(Diagnostic::error(
-                validation.typed_code,
-                validation.typed_message(name, &actual, &expected),
-                span,
-            ));
-        }
-        if symbol.variant_payload_type_name != expected.display {
-            let actual = resolver_metadata_display(symbol.variant_payload_type_name.as_deref());
-            let expected = expected.display.as_deref().unwrap_or("none");
-            self.diagnostics.push(Diagnostic::error(
-                validation.display_code,
-                validation.display_message(name, actual, expected),
-                span,
-            ));
-        }
+        self.validate_resolver_metadata_value(
+            symbol.variant_payload_type.as_ref(),
+            expected.typed.as_ref(),
+            |value| optional_ast_type_display(value, "none"),
+            validation.typed_code,
+            |actual, expected| validation.typed_message(name, actual, expected),
+            span,
+        );
+        self.validate_resolver_metadata_value(
+            symbol.variant_payload_type_name.as_deref(),
+            expected.display.as_deref(),
+            |value| resolver_metadata_display(value).to_string(),
+            validation.display_code,
+            |actual, expected| validation.display_message(name, actual, expected),
+            span,
+        );
     }
 
     fn validate_resolver_variant_owner_name(

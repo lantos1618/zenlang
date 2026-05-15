@@ -1852,6 +1852,11 @@ and do not assume Phase 4 is ready without evidence.
   helper for display field metadata and typed field metadata, covered by
   `cargo test field_validation` and
   `cargo test check_program_with_symbols_validates_resolver_struct_field`.
+- Resolver variant payload validation now uses a shared optional-metadata
+  comparison helper for display payload metadata and typed payload metadata,
+  covered by `cargo test variant_payload_validation`,
+  `cargo test check_program_with_symbols_validates_resolver_enum_variant_payload`,
+  and `cargo test check_program_with_symbols_validates_resolver_enum_typed_payload_metadata`.
 
 ## Unresolved Gaps
 
