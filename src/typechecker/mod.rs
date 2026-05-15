@@ -7614,7 +7614,7 @@ fn visibility_name(is_public: bool) -> &'static str {
     }
 }
 
-fn expected_parameters(params: &[Param]) -> Vec<ExpectedParameter> {
+fn expected_parameter_metadata(params: &[Param]) -> Vec<ExpectedParameter> {
     let mut expected = Vec::new();
     for param in params {
         expected.push(ExpectedParameter {
@@ -7631,7 +7631,7 @@ fn expected_value_signature(
     return_type: &Option<AstType>,
     type_params: &[ast::TypeParam],
 ) -> ExpectedValueSignature {
-    let params = expected_parameters(params);
+    let params = expected_parameter_metadata(params);
     let type_params = expected_type_parameters(type_params);
     ExpectedValueSignature {
         params,
@@ -7886,7 +7886,7 @@ fn expected_variant_payload(payload: &Option<AstType>) -> ExpectedVariantPayload
 fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> Vec<ExpectedBehaviorMethod> {
     let mut expected = Vec::new();
     for method in methods {
-        let params = expected_parameters(&method.params);
+        let params = expected_parameter_metadata(&method.params);
         let return_type = expected_return_metadata(&method.return_type);
         let parameter_type_names: Vec<_> =
             params.iter().map(|param| param.display.clone()).collect();

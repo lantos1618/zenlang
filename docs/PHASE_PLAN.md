@@ -749,6 +749,9 @@ checked-in docs, tests, and commits only.
   display types, and typed metadata in one parameter pass.
 - Resolver value-return expectation construction now uses metadata terminology
   consistently with the paired display and typed return expectation.
+- Resolver value-parameter expectation construction now uses metadata
+  terminology consistently with the paired display and typed parameter
+  expectations.
 
 ## Current Phase
 
