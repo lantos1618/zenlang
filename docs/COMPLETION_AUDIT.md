@@ -84,6 +84,11 @@ and do not assume Phase 4 is ready without evidence.
   covered by `tests/zen/multi_file_type_method_imported_dependency/main.zen`
   and
   `integration::imported_type_method_imported_dependencies_are_not_directly_visible`.
+  Imported generic methods returning source-module generic enum dependencies
+  now use receiver inference at the entry-module call and inside the source
+  method body, covered by
+  `tests/zen/multi_file_type_method_return_enum_dependency/main.zen` and
+  `integration::test_multi_file_type_method_return_enum_dependency_imports`.
   Imported public generic non-behavior `Type.impl` method templates that use
   source-module imported generic types and methods are covered by
   `tests/zen/multi_file_type_impl_imported_type_dependency/main.zen` and

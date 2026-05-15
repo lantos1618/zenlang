@@ -9,7 +9,7 @@ pub Box.wrap<T> = (self: Box<T>) Option<T> {
 }
 
 pub Box.value_or<T> = (self: Box<T>, fallback: T) T {
-    value = self.wrap<T>()
+    value = self.wrap()
     value ?
         | Some(inner) { inner }
         | None { fallback }

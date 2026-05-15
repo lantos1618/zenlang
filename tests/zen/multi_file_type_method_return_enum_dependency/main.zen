@@ -3,6 +3,6 @@
 
 main = () i32 {
     box = Box<i32> { value: 97 }
-    io.println("${box.value_or<i32>(0)}")
+    io.println("${box.value_or(0)}")
     return 0
 }

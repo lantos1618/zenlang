@@ -45,6 +45,10 @@ checked-in docs, tests, and commits only.
   `Box<T>` method can infer `T` from the receiver and return
   `Result<Option<T>, str>` without leaving unspecialized C symbols or
   unresolved generated calls.
+- Imported generic methods that return source-module generic enum dependencies
+  now also rely on receiver inference in
+  `tests/zen/multi_file_type_method_return_enum_dependency`, covering both the
+  entry-module call and the source method's nested `self.wrap()` call.
 - Resolver method symbols carry full value-signature metadata, including
   generic type-parameter names and bounds, and typechecker setup validates
   method signature handoff drift before method bodies are checked.
