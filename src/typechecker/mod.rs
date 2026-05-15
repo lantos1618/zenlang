@@ -271,6 +271,24 @@ struct ExpectedBehaviorMethodMetadata {
     typed: Vec<BehaviorMethodTypeMetadata>,
 }
 
+#[derive(Clone, Copy)]
+struct BehaviorMethodValidation {
+    display_code: &'static str,
+    typed_code: &'static str,
+}
+
+impl BehaviorMethodValidation {
+    fn display_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!("resolver behavior symbol '{name}' has methods '{actual}', expected '{expected}'")
+    }
+
+    fn typed_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver behavior symbol '{name}' has typed methods '{actual}', expected '{expected}'"
+        )
+    }
+}
+
 impl ExpectedBehaviorMethodMetadata {
     fn from_methods(methods: &[ExpectedBehaviorMethod]) -> Self {
         Self {
@@ -8319,15 +8337,17 @@ impl TypeChecker {
         span: Span,
     ) {
         let expected = ExpectedBehaviorMethodMetadata::from_methods(expected_methods);
+        let validation = BehaviorMethodValidation {
+            display_code: "E0219",
+            typed_code: "E0355",
+        };
         if symbol.behavior_method_signatures.as_deref() != Some(expected.signatures.as_slice()) {
             let actual =
                 format_behavior_method_signatures(symbol.behavior_method_signatures.as_deref());
             let expected = format_behavior_method_signatures(Some(&expected.signatures));
             self.diagnostics.push(Diagnostic::error(
-                "E0219",
-                format!(
-                    "resolver behavior symbol '{name}' has methods '{actual}', expected '{expected}'"
-                ),
+                validation.display_code,
+                validation.display_message(name, &actual, &expected),
                 span,
             ));
         }
@@ -8335,10 +8355,8 @@ impl TypeChecker {
             let actual = format_behavior_method_types(symbol.behavior_method_types.as_deref());
             let expected = format_behavior_method_types(Some(&expected.typed));
             self.diagnostics.push(Diagnostic::error(
-                "E0355",
-                format!(
-                    "resolver behavior symbol '{name}' has typed methods '{actual}', expected '{expected}'"
-                ),
+                validation.typed_code,
+                validation.typed_message(name, &actual, &expected),
                 span,
             ));
         }
@@ -9800,6 +9818,28 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(
             validation.typed_message("apply", "i32", "(i32) i32"),
             "resolver value symbol 'apply' has typed return type 'i32', expected '(i32) i32'"
+        );
+    }
+
+    #[test]
+    fn behavior_method_validation_formats_messages() {
+        let validation = BehaviorMethodValidation {
+            display_code: "METHODS",
+            typed_code: "TYPED_METHODS",
+        };
+
+        assert_eq!(validation.display_code, "METHODS");
+        assert_eq!(
+            validation.display_message("Serializable", "(encode(Self) bool)", "(encode(Self) str)"),
+            "resolver behavior symbol 'Serializable' has methods '(encode(Self) bool)', expected '(encode(Self) str)'"
+        );
+        assert_eq!(
+            validation.typed_message(
+                "Mapper",
+                "(map(__arg0: Self, __arg1: i32) i32)",
+                "(map(__arg0: Self, __arg1: (i32) i32) i32)"
+            ),
+            "resolver behavior symbol 'Mapper' has typed methods '(map(__arg0: Self, __arg1: i32) i32)', expected '(map(__arg0: Self, __arg1: (i32) i32) i32)'"
         );
     }
 
