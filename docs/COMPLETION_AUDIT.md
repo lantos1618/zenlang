@@ -936,6 +936,9 @@ and do not assume Phase 4 is ready without evidence.
   declaration/import/module and local symbol checks.
 - Resolver missing-symbol validation now shares one diagnostic helper across
   declaration/import/module/type/behavior/variant/value and local checks.
+- Resolver extra- and missing-symbol validation now share one presence
+  validation bundle for diagnostic codes and message formatting, covered by
+  `typechecker::tests::resolver_symbol_presence_validation_formats_messages`.
 - Resolver absent-source metadata validation now reuses the shared resolver
   source diagnostic helper.
 - Resolver absent-source metadata validation now uses a validation bundle to

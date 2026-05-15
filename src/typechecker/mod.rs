@@ -592,6 +592,28 @@ impl SourceAbsenceValidation {
     }
 }
 
+#[derive(Clone, Copy)]
+enum ResolverSymbolPresence {
+    Extra,
+    Missing,
+}
+
+#[derive(Clone, Copy)]
+struct ResolverSymbolPresenceValidation {
+    code: &'static str,
+    presence: ResolverSymbolPresence,
+}
+
+impl ResolverSymbolPresenceValidation {
+    fn message(self, symbol_kind: &str, name: &str) -> String {
+        let verb = match self.presence {
+            ResolverSymbolPresence::Extra => "has extra",
+            ResolverSymbolPresence::Missing => "missing",
+        };
+        format!("resolver symbol table {verb} {symbol_kind} symbol '{name}'")
+    }
+}
+
 struct SourceValidation {
     code: &'static str,
     actual_missing: &'static str,
@@ -5409,7 +5431,10 @@ impl TypeChecker {
                 self.validate_extra_resolver_symbol(
                     symbol.namespace.diagnostic_name(),
                     &symbol.name,
-                    "E0243",
+                    ResolverSymbolPresenceValidation {
+                        code: "E0243",
+                        presence: ResolverSymbolPresence::Extra,
+                    },
                     symbol.definition_span,
                 );
             }
@@ -5430,7 +5455,10 @@ impl TypeChecker {
                 self.validate_extra_resolver_symbol(
                     "local",
                     &symbol.name,
-                    "E0244",
+                    ResolverSymbolPresenceValidation {
+                        code: "E0244",
+                        presence: ResolverSymbolPresence::Extra,
+                    },
                     symbol.definition_span,
                 );
             }
@@ -6527,7 +6555,15 @@ impl TypeChecker {
                 && symbols.lookup(Namespace::Import, name).is_some();
 
         if !found {
-            self.validate_missing_resolver_symbol(namespace.diagnostic_name(), name, "E0210", span);
+            self.validate_missing_resolver_symbol(
+                namespace.diagnostic_name(),
+                name,
+                ResolverSymbolPresenceValidation {
+                    code: "E0210",
+                    presence: ResolverSymbolPresence::Missing,
+                },
+                span,
+            );
         }
     }
 
@@ -6978,7 +7014,15 @@ impl TypeChecker {
     ) {
         let Some(symbol) = symbols.lookup_in_scope(Namespace::Local, name, expected.scope_id)
         else {
-            self.validate_missing_resolver_symbol("local", name, "E0228", span);
+            self.validate_missing_resolver_symbol(
+                "local",
+                name,
+                ResolverSymbolPresenceValidation {
+                    code: "E0228",
+                    presence: ResolverSymbolPresence::Missing,
+                },
+                span,
+            );
             return;
         };
 
@@ -7379,12 +7423,12 @@ impl TypeChecker {
         &mut self,
         symbol_kind: &str,
         name: &str,
-        code: &'static str,
+        validation: ResolverSymbolPresenceValidation,
         span: Span,
     ) {
         self.diagnostics.push(Diagnostic::error(
-            code,
-            format!("resolver symbol table has extra {symbol_kind} symbol '{name}'"),
+            validation.code,
+            validation.message(symbol_kind, name),
             span,
         ));
     }
@@ -7393,12 +7437,12 @@ impl TypeChecker {
         &mut self,
         symbol_kind: &str,
         name: &str,
-        code: &'static str,
+        validation: ResolverSymbolPresenceValidation,
         span: Span,
     ) {
         self.diagnostics.push(Diagnostic::error(
-            code,
-            format!("resolver symbol table missing {symbol_kind} symbol '{name}'"),
+            validation.code,
+            validation.message(symbol_kind, name),
             span,
         ));
     }
@@ -9965,6 +10009,29 @@ main = (mut input: i32) i32 {
         assert_eq!(validation.code, "VISIBLE");
         assert_eq!(validation.display(true, false), ("public", "private"));
         assert_eq!(validation.display(false, true), ("private", "public"));
+    }
+
+    #[test]
+    fn resolver_symbol_presence_validation_formats_messages() {
+        let extra = ResolverSymbolPresenceValidation {
+            code: "EXTRA",
+            presence: ResolverSymbolPresence::Extra,
+        };
+        let missing = ResolverSymbolPresenceValidation {
+            code: "MISSING",
+            presence: ResolverSymbolPresence::Missing,
+        };
+
+        assert_eq!(extra.code, "EXTRA");
+        assert_eq!(
+            extra.message("value", "main"),
+            "resolver symbol table has extra value symbol 'main'"
+        );
+        assert_eq!(missing.code, "MISSING");
+        assert_eq!(
+            missing.message("local", "value"),
+            "resolver symbol table missing local symbol 'value'"
+        );
     }
 
     #[test]
