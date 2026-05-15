@@ -202,6 +202,11 @@ struct ExpectedVariantSymbol {
     payload: ExpectedVariantPayload,
 }
 
+struct ExpectedImportSymbol {
+    source: String,
+    is_public: bool,
+}
+
 struct ExpectedTypeParameters {
     count: usize,
     names: Vec<String>,
@@ -4179,7 +4184,7 @@ impl TypeChecker {
                         self.require_resolver_import_symbol(
                             symbols,
                             name,
-                            &module_path.join("."),
+                            expected_import_symbol(&module_path.join(".")),
                             *span,
                         );
                     }
@@ -5743,7 +5748,7 @@ impl TypeChecker {
         &mut self,
         symbols: &SymbolTable,
         name: &str,
-        expected_source: &str,
+        expected: ExpectedImportSymbol,
         span: Span,
     ) {
         let Some(symbol) = symbols.lookup(Namespace::Import, name) else {
@@ -5751,20 +5756,25 @@ impl TypeChecker {
             return;
         };
 
-        if symbol.is_public {
+        if symbol.is_public != expected.is_public {
             self.diagnostics.push(Diagnostic::error(
                 "E0245",
-                format!("resolver import symbol '{name}' has visibility public, expected private"),
+                format!(
+                    "resolver import symbol '{name}' has visibility {}, expected {}",
+                    visibility_name(symbol.is_public),
+                    visibility_name(expected.is_public)
+                ),
                 span,
             ));
         }
 
-        if symbol.import_source.as_deref() != Some(expected_source) {
+        if symbol.import_source.as_deref() != Some(expected.source.as_str()) {
             let actual = symbol.import_source.as_deref().unwrap_or("unknown");
             self.diagnostics.push(Diagnostic::error(
                 "E0227",
                 format!(
-                    "resolver import symbol '{name}' has source '{actual}', expected '{expected_source}'"
+                    "resolver import symbol '{name}' has source '{actual}', expected '{}'",
+                    expected.source
                 ),
                 span,
             ));
@@ -7696,6 +7706,13 @@ fn expected_variant_symbol(
         owner_name: owner_name.to_string(),
         is_public,
         payload: expected_variant_payload(payload),
+    }
+}
+
+fn expected_import_symbol(source: &str) -> ExpectedImportSymbol {
+    ExpectedImportSymbol {
+        source: source.to_string(),
+        is_public: false,
     }
 }
 
