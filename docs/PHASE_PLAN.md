@@ -987,6 +987,8 @@ checked-in docs, tests, and commits only.
   through the shared count validation bundle.
 - Resolver value-parameter validation now shares one expected metadata bundle
   for counts, names, display types, and typed AST types.
+- Resolver value-parameter validation now carries name, display-type, and
+  typed-type message formatting through a validation bundle.
 - Resolver behavior-association list validation now shares one expected
   metadata bundle for display names and typed refs.
 - Resolver behavior-association validation now uses one role/check mapping for

@@ -945,6 +945,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::count_validation_formats_message`.
 - Resolver value-parameter validation now shares one expected metadata bundle
   for counts, names, display types, and typed AST types.
+- Resolver value-parameter validation now carries name, display-type, and
+  typed-type message formatting through a validation bundle, covered by
+  `typechecker::tests::value_parameter_validation_formats_messages`.
 - Resolver behavior-association list validation now shares one expected
   metadata bundle for display names and typed refs.
 - Resolver behavior-association validation now uses one role/check mapping for

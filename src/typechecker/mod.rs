@@ -197,6 +197,33 @@ struct ExpectedParameterMetadata {
     typed_types: Vec<AstType>,
 }
 
+#[derive(Clone, Copy)]
+struct ValueParameterValidation {
+    name_code: &'static str,
+    display_type_code: &'static str,
+    typed_type_code: &'static str,
+}
+
+impl ValueParameterValidation {
+    fn name_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver value symbol '{name}' has parameter names '{actual}', expected '{expected}'"
+        )
+    }
+
+    fn display_type_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver value symbol '{name}' has parameter types '{actual}', expected '{expected}'"
+        )
+    }
+
+    fn typed_type_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver value symbol '{name}' has typed parameter types '{actual}', expected '{expected}'"
+        )
+    }
+}
+
 impl ExpectedParameterMetadata {
     fn from_parameters(parameters: &[ExpectedParameter]) -> Self {
         Self {
@@ -8539,14 +8566,18 @@ impl TypeChecker {
             span,
         );
 
+        let validation = ValueParameterValidation {
+            name_code: "E0223",
+            display_type_code: "E0216",
+            typed_type_code: "E0356",
+        };
+
         if symbol.parameter_names.as_deref() != Some(expected.names.as_slice()) {
             let actual = format_parameter_names(symbol.parameter_names.as_deref());
             let expected_names_display = format_parameter_names(Some(&expected.names));
             self.diagnostics.push(Diagnostic::error(
-                "E0223",
-                format!(
-                    "resolver value symbol '{name}' has parameter names '{actual}', expected '{expected_names_display}'"
-                ),
+                validation.name_code,
+                validation.name_message(name, &actual, &expected_names_display),
                 span,
             ));
         }
@@ -8555,10 +8586,8 @@ impl TypeChecker {
             let actual = format_parameter_type_names(symbol.parameter_type_names.as_deref());
             let expected_types = format_parameter_type_names(Some(&expected.display_types));
             self.diagnostics.push(Diagnostic::error(
-                "E0216",
-                format!(
-                    "resolver value symbol '{name}' has parameter types '{actual}', expected '{expected_types}'"
-                ),
+                validation.display_type_code,
+                validation.display_type_message(name, &actual, &expected_types),
                 span,
             ));
         }
@@ -8566,10 +8595,8 @@ impl TypeChecker {
             let actual = format_ast_type_list(symbol.parameter_types.as_deref());
             let expected_types = format_ast_type_list(Some(&expected.typed_types));
             self.diagnostics.push(Diagnostic::error(
-                "E0356",
-                format!(
-                    "resolver value symbol '{name}' has typed parameter types '{actual}', expected '{expected_types}'"
-                ),
+                validation.typed_type_code,
+                validation.typed_type_message(name, &actual, &expected_types),
                 span,
             ));
         }
@@ -9649,6 +9676,29 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(
             validation.bound_ref_message("behavior", "Serializable", "(T: Json<i32>)", "(T: Json<T>)"),
             "resolver behavior symbol 'Serializable' has type parameter bound refs '(T: Json<i32>)', expected '(T: Json<T>)'"
+        );
+    }
+
+    #[test]
+    fn value_parameter_validation_formats_messages() {
+        let validation = ValueParameterValidation {
+            name_code: "NAMES",
+            display_type_code: "TYPES",
+            typed_type_code: "TYPED_TYPES",
+        };
+
+        assert_eq!(validation.name_code, "NAMES");
+        assert_eq!(
+            validation.name_message("add", "(a, other)", "(a, b)"),
+            "resolver value symbol 'add' has parameter names '(a, other)', expected '(a, b)'"
+        );
+        assert_eq!(
+            validation.display_type_message("add", "(i32, i32)", "(i32, f64)"),
+            "resolver value symbol 'add' has parameter types '(i32, i32)', expected '(i32, f64)'"
+        );
+        assert_eq!(
+            validation.typed_type_message("apply", "(i32)", "((i32) i32)"),
+            "resolver value symbol 'apply' has typed parameter types '(i32)', expected '((i32) i32)'"
         );
     }
 
