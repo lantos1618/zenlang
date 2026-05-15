@@ -5990,18 +5990,7 @@ impl TypeChecker {
                 Declaration::ImplBlock {
                     type_name, methods, ..
                 } => {
-                    for method in methods {
-                        if let Declaration::Function { name, body, .. } = method {
-                            let ast_key = Self::method_key(type_name, name);
-                            self.validate_resolver_method_type_references(
-                                symbols,
-                                &ast_key,
-                                type_name,
-                                body,
-                                method.span(),
-                            );
-                        }
-                    }
+                    self.validate_resolver_impl_method_type_references(symbols, type_name, methods);
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
                     self.validate_generic_expr_type_references(expr, &HashSet::new());
@@ -6055,6 +6044,26 @@ impl TypeChecker {
                 if let Some(default_body) = &method.default_body {
                     self.validate_generic_expr_type_references(default_body, &scoped);
                 }
+            }
+        }
+    }
+
+    fn validate_resolver_impl_method_type_references(
+        &mut self,
+        symbols: Option<&SymbolTable>,
+        type_name: &str,
+        methods: &[Declaration],
+    ) {
+        for method in methods {
+            if let Declaration::Function { name, body, .. } = method {
+                let ast_key = Self::method_key(type_name, name);
+                self.validate_resolver_method_type_references(
+                    symbols,
+                    &ast_key,
+                    type_name,
+                    body,
+                    method.span(),
+                );
             }
         }
     }

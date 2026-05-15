@@ -182,6 +182,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed type behavior-impl refresh now uses explicit restored type
   tasks instead of a callback traversal for the final association restoration
   pass.
+- Resolver-backed `Type.impl` method type-reference validation now has a
+  dedicated impl-method helper, keeping impl-block method filtering out of the
+  broader resolver-backed type-reference declaration scan.
 - Module graph typechecking now seeds graph imports and then runs
   resolver-backed declaration collection for the current module, so multi-file
   graph modules use the same resolver-owned metadata handoff as

@@ -111,6 +111,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed type behavior-impl refresh now uses explicit restored type
   tasks instead of a callback traversal for the final association restoration
   pass.
+- Resolver-backed `Type.impl` method type-reference validation now has a
+  dedicated impl-method helper, keeping impl-block method filtering out of the
+  broader resolver-backed type-reference declaration scan.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so
