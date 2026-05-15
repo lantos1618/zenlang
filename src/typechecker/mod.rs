@@ -484,6 +484,17 @@ struct ValueSignatureAbsenceValidation {
 }
 
 impl ValueSignatureAbsenceValidation {
+    fn module_resolver_codes() -> Self {
+        Self {
+            parameter_count_code: "E0265",
+            parameter_name_code: "E0267",
+            parameter_type_name_code: "E0268",
+            parameter_type_code: "E0371",
+            return_type_code: "E0266",
+            typed_return_type_code: "E0372",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 6] {
         [
             AbsentMetadataEntry::new(
@@ -6209,14 +6220,7 @@ impl TypeChecker {
             symbol,
             "module",
             &expected.name,
-            ValueSignatureAbsenceValidation {
-                parameter_count_code: "E0265",
-                parameter_name_code: "E0267",
-                parameter_type_name_code: "E0268",
-                parameter_type_code: "E0371",
-                return_type_code: "E0266",
-                typed_return_type_code: "E0372",
-            },
+            ValueSignatureAbsenceValidation::module_resolver_codes(),
             span,
         );
 
@@ -10759,6 +10763,18 @@ add = (left: i32, right: i32) i32 { return left + right }
                 "resolver value symbol 'add' has typed return type metadata, expected none",
             ]
         );
+    }
+
+    #[test]
+    fn value_signature_absence_validation_uses_module_resolver_codes() {
+        let validation = ValueSignatureAbsenceValidation::module_resolver_codes();
+
+        assert_eq!(validation.parameter_count_code, "E0265");
+        assert_eq!(validation.parameter_name_code, "E0267");
+        assert_eq!(validation.parameter_type_name_code, "E0268");
+        assert_eq!(validation.parameter_type_code, "E0371");
+        assert_eq!(validation.return_type_code, "E0266");
+        assert_eq!(validation.typed_return_type_code, "E0372");
     }
 
     #[test]
