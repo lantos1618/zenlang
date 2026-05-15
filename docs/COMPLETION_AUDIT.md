@@ -903,6 +903,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_reports_resolver_restored_behavior_parent_metadata`.
   Inherited behavior default synthesis from restored parent refs is covered by
   `typechecker::tests::collect_declarations_with_symbols_synthesizes_defaults_from_restored_behavior_parent`.
+  Restored generic parent type arguments in inherited default synthesis are
+  covered by
+  `typechecker::tests::collect_declarations_with_symbols_synthesizes_generic_defaults_from_restored_parent_args`.
 - Resolver type symbols carry visibility metadata for structs and enums, and
   typechecker setup rejects mismatches before collecting declaration metadata.
 - Typechecker setup rejects resolver behavior symbol visibility mismatches

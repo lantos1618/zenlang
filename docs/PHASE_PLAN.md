@@ -438,7 +438,8 @@ checked-in docs, tests, and commits only.
   Inherited missing-method diagnostics also use restored parent behavior refs
   when AST-only `.extends` parent names or type arguments are stale.
   Inherited behavior default synthesis also uses restored parent refs instead
-  of stale AST-only `.extends` parent names.
+  of stale AST-only `.extends` parent names, including restored generic parent
+  type arguments.
 - Resolver-backed `.requires` conformance checks now read validated resolver
   required-behavior refs, so stale AST-only required behavior type arguments
   cannot produce false missing-impl diagnostics.
