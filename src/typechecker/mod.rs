@@ -431,6 +431,13 @@ impl TypeParameterValidation {
         }
     }
 
+    fn count_validation(self) -> CountValidation {
+        CountValidation {
+            label: "type parameter count",
+            code: self.count_code,
+        }
+    }
+
     fn name_message(self, symbol_kind: &str, name: &str, actual: &str, expected: &str) -> String {
         format!(
             "resolver {symbol_kind} symbol '{name}' has type parameter names '{actual}', expected '{expected}'"
@@ -8351,10 +8358,7 @@ impl TypeChecker {
             name,
             symbol.type_parameter_count,
             expected.count,
-            CountValidation {
-                label: "type parameter count",
-                code: validation.count_code,
-            },
+            validation.count_validation(),
             span,
         );
 
@@ -10094,6 +10098,20 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(validation.name_code, "E0347");
         assert_eq!(validation.bound_code, "E0221");
         assert_eq!(validation.bound_ref_code, "E0351");
+    }
+
+    #[test]
+    fn type_parameter_validation_builds_count_validation() {
+        let validation = TypeParameterValidation {
+            count_code: "COUNT",
+            name_code: "NAMES",
+            bound_code: "BOUNDS",
+            bound_ref_code: "BOUND_REFS",
+        }
+        .count_validation();
+
+        assert_eq!(validation.label, "type parameter count");
+        assert_eq!(validation.code, "COUNT");
     }
 
     #[test]

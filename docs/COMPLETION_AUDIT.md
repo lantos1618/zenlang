@@ -178,6 +178,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver source-mismatch diagnostics now use centralized resolver-code
   bundles for module, stripped import, import, and local symbols, covered by
   `typechecker::tests::source_validation_uses_resolver_codes`.
+- Type-parameter resolver validation now adapts into shared count diagnostics
+  through its validation helper, covered by
+  `typechecker::tests::type_parameter_validation_builds_count_validation`.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths, covered by
   `typechecker::tests::resolver_symbol_metadata_helper_requires_symbol_and_selected_metadata`.

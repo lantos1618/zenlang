@@ -146,6 +146,9 @@ checked-in docs, tests, and commits only.
   extra declaration symbols, and extra local symbols.
 - Typechecker resolver validation now centralizes source-mismatch diagnostic
   code bundles for module, stripped import, import, and local resolver symbols.
+- Typechecker resolver validation now adapts type-parameter validation bundles
+  into shared count diagnostics through the validation helper instead of
+  constructing count diagnostics inline.
 - Typechecker resolver validation now stores expected behavior display
   signatures and typed method metadata as paired per-method expectations before
   deriving the resolver comparison lists.
