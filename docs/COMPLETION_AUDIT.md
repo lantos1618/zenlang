@@ -1228,6 +1228,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver import field absence validation now owns its resolver diagnostic
   code mapping, covered by
   `typechecker::tests::field_absence_validation_uses_import_resolver_codes`.
+- Resolver local field absence validation now owns its resolver diagnostic
+  code mapping, covered by
+  `typechecker::tests::field_absence_validation_uses_local_resolver_codes`.
 
 ## Unresolved Gaps
 

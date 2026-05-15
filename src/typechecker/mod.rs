@@ -635,6 +635,14 @@ impl FieldAbsenceValidation {
         }
     }
 
+    fn local_resolver_codes() -> Self {
+        Self {
+            count_code: "E0255",
+            type_name_code: "E0256",
+            typed_code: "E0383",
+        }
+    }
+
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 3] {
         [
             AbsentMetadataEntry::new(symbol.field_count.is_some(), self.count_code, "field count"),
@@ -7787,11 +7795,7 @@ impl TypeChecker {
             symbol,
             "local",
             name,
-            FieldAbsenceValidation {
-                count_code: "E0255",
-                type_name_code: "E0256",
-                typed_code: "E0383",
-            },
+            FieldAbsenceValidation::local_resolver_codes(),
             span,
         );
 
@@ -10987,6 +10991,15 @@ Point: { x: i32, y: i32 }
         assert_eq!(validation.count_code, "E0287");
         assert_eq!(validation.type_name_code, "E0288");
         assert_eq!(validation.typed_code, "E0365");
+    }
+
+    #[test]
+    fn field_absence_validation_uses_local_resolver_codes() {
+        let validation = FieldAbsenceValidation::local_resolver_codes();
+
+        assert_eq!(validation.count_code, "E0255");
+        assert_eq!(validation.type_name_code, "E0256");
+        assert_eq!(validation.typed_code, "E0383");
     }
 
     #[test]
