@@ -90,6 +90,9 @@ checked-in docs, tests, and commits only.
   display types, and typed parameter metadata through one shared parameter
   expectation object, keeping those resolver value-signature handoff checks
   aligned.
+- Typechecker resolver validation now carries value display-return and
+  typed-return metadata through one shared return expectation object, keeping
+  those resolver value-signature handoff checks aligned.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, reducing

@@ -153,8 +153,7 @@ struct DefaultBehaviorMethod {
 
 struct ExpectedValueSignature {
     params: ExpectedParameters,
-    return_type: AstType,
-    return_type_name: String,
+    return_type: ExpectedReturnType,
     type_params: ExpectedTypeParameters,
 }
 
@@ -164,6 +163,11 @@ struct ExpectedParameters {
     names: Vec<String>,
     types: Vec<AstType>,
     type_names: Vec<String>,
+}
+
+struct ExpectedReturnType {
+    ty: AstType,
+    type_name: String,
 }
 
 #[derive(Default)]
@@ -7377,19 +7381,20 @@ impl TypeChecker {
             ));
         }
 
-        if symbol.return_type_name.as_deref() != Some(expected_signature.return_type_name.as_str())
+        if symbol.return_type_name.as_deref()
+            != Some(expected_signature.return_type.type_name.as_str())
         {
             let actual = symbol.return_type_name.as_deref().unwrap_or("unknown");
             self.diagnostics.push(Diagnostic::error(
                 "E0212",
                 format!(
                     "resolver value symbol '{name}' has return type '{actual}', expected '{}'",
-                    expected_signature.return_type_name
+                    expected_signature.return_type.type_name
                 ),
                 span,
             ));
         }
-        if symbol.return_type.as_ref() != Some(&expected_signature.return_type) {
+        if symbol.return_type.as_ref() != Some(&expected_signature.return_type.ty) {
             let actual = symbol
                 .return_type
                 .as_ref()
@@ -7399,7 +7404,7 @@ impl TypeChecker {
                 "E0357",
                 format!(
                     "resolver value symbol '{name}' has typed return type '{actual}', expected '{}'",
-                    expected_signature.return_type.display_name()
+                    expected_signature.return_type.ty.display_name()
                 ),
                 span,
             ));
@@ -7521,6 +7526,13 @@ fn expected_return_type_name(return_type: &Option<AstType>) -> String {
         .display_name()
 }
 
+fn expected_return_type(return_type: &Option<AstType>) -> ExpectedReturnType {
+    ExpectedReturnType {
+        ty: return_type.clone().unwrap_or(AstType::Void),
+        type_name: expected_return_type_name(return_type),
+    }
+}
+
 fn visibility_name(is_public: bool) -> &'static str {
     if is_public {
         "public"
@@ -7551,8 +7563,7 @@ fn expected_value_signature(
     let type_params = expected_type_parameters(type_params);
     ExpectedValueSignature {
         params,
-        return_type: return_type.clone().unwrap_or(AstType::Void),
-        return_type_name: expected_return_type_name(return_type),
+        return_type: expected_return_type(return_type),
         type_params,
     }
 }
@@ -7726,16 +7737,17 @@ fn expected_behavior_methods(methods: &[ast::BehaviorMethod]) -> ExpectedBehavio
     let mut expected = ExpectedBehaviorMethods::default();
     for method in methods {
         let params = expected_parameters(&method.params);
+        let return_type = expected_return_type(&method.return_type);
         expected.signatures.push((
             method.name.clone(),
             params.type_names.clone(),
-            expected_return_type_name(&method.return_type),
+            return_type.type_name,
         ));
         expected.types.push(BehaviorMethodTypeMetadata {
             name: method.name.clone(),
             parameter_names: params.names,
             parameter_types: params.types,
-            return_type: method.return_type.clone().unwrap_or(AstType::Void),
+            return_type: return_type.ty,
         });
     }
     expected
