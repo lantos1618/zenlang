@@ -2984,7 +2984,6 @@ impl TypeChecker {
         self.validate_ast_behavior_generic_bounds(decls);
         self.validate_ast_behavior_extends(decls);
         self.collect_type_declarations(decls);
-        self.validate_ast_callable_generic_bounds(decls);
         self.collect_callable_declarations(decls);
         self.collect_impl_block_declarations(decls);
         self.collect_ast_import_declarations(decls);
@@ -3056,10 +3055,6 @@ impl TypeChecker {
     }
 
     fn validate_ast_callable_generic_bounds(&mut self, decls: &[Declaration]) {
-        if self.resolver_backed_collection {
-            return;
-        }
-
         for decl in decls {
             match decl {
                 Declaration::Function { type_params, .. }
@@ -3075,6 +3070,7 @@ impl TypeChecker {
         if self.resolver_backed_collection {
             self.collect_resolver_backed_callable_templates(decls);
         } else {
+            self.validate_ast_callable_generic_bounds(decls);
             self.collect_ast_callable_declarations(decls);
         }
     }

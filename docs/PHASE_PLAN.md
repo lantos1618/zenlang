@@ -571,8 +571,10 @@ checked-in docs, tests, and commits only.
   during resolver-backed collection and relying on per-helper guards.
   AST callable generic-bound validation, callable signature seeding, and
   resolver-backed callable template seeding now also have named helper passes.
-  Callable collection now dispatches to exactly one of AST signature seeding or
-  resolver-backed template seeding instead of invoking both guarded passes.
+  Callable collection now dispatches to exactly one of AST generic-bound
+  validation plus signature seeding, or resolver-backed template seeding,
+  instead of invoking guarded AST-only passes during resolver-backed
+  collection.
   AST impl method/default seeding and resolver-backed impl template seeding now
   also have named helper passes.
   Impl-block collection now dispatches to exactly one of those passes instead

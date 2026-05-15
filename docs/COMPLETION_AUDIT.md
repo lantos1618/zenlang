@@ -1103,9 +1103,10 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_enum_name_metadata`.
   AST callable generic-bound validation, callable signature seeding, and
   resolver-backed callable template seeding now also have named helper passes.
-  Callable collection now dispatches to exactly one of AST signature seeding or
-  resolver-backed template seeding instead of invoking both guarded passes,
-  covered by `typechecker::tests::generic_function_collection`,
+  Callable collection now dispatches to exactly one of AST generic-bound
+  validation plus signature seeding, or resolver-backed template seeding,
+  instead of invoking guarded AST-only passes during resolver-backed
+  collection, covered by `typechecker::tests::generic_function_collection`,
   `typechecker::tests::generic_method_collection`,
   `typechecker::tests::resolver_backed_callable_template_collection_defers_signature_metadata_to_resolver`,
   and
