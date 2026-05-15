@@ -559,9 +559,9 @@ checked-in docs, tests, and commits only.
   AST behavior signature seeding and resolver-backed behavior stub seeding are
   separate helper passes, keeping resolver placeholder collection out of the
   AST signature loop.
-  AST-only behavior inheritance validation now has its own helper after shared
-  self-type context validation, keeping resolver-backed collection out of the
-  extends/coherence traversal.
+  Behavior inheritance validation now dispatches through a shared self-type
+  context pass and an AST-only extends/coherence helper, keeping
+  resolver-backed collection out of the extends/coherence traversal.
   Behavior declaration collection now dispatches to AST signature seeding plus
   behavior generic-bound validation, or resolver-backed stub seeding, avoiding
   duplicate AST-only diagnostics from the remaining collection loop.

@@ -1083,8 +1083,8 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::resolver_backed_behavior_collection_defers_generic_metadata_to_resolver`,
   and
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_method_metadata`.
-  AST-only behavior inheritance validation now has its own helper after shared
-  self-type context validation, covered by
+  Behavior inheritance validation now dispatches through a shared self-type
+  context pass and an AST-only extends/coherence helper, covered by
   `typechecker::tests::behavior_extends_requires_parent_methods`,
   `typechecker::tests::behavior_extends_cycle_is_error`,
   `typechecker::tests::behavior_extends_conflicting_method_signature_is_error`,

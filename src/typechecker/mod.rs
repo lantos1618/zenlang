@@ -2981,7 +2981,7 @@ impl TypeChecker {
 
     fn collect_declarations(&mut self, decls: &[Declaration]) {
         self.collect_behavior_declarations(decls);
-        self.validate_ast_behavior_extends(decls);
+        self.validate_behavior_extends(decls);
         self.collect_type_declarations(decls);
         self.collect_callable_declarations(decls);
         self.collect_impl_block_declarations(decls);
@@ -3281,7 +3281,7 @@ impl TypeChecker {
         }
     }
 
-    fn validate_ast_behavior_extends(&mut self, decls: &[Declaration]) {
+    fn validate_behavior_extends(&mut self, decls: &[Declaration]) {
         self.validate_self_type_contexts(decls);
 
         if self.resolver_backed_collection {
