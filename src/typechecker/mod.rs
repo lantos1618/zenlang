@@ -1188,21 +1188,14 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    self.collect_resolver_top_level_method_signature(
-                        symbols,
-                        type_name,
-                        method_name,
-                        *span,
-                    );
+                    self.collect_resolver_method_signature(symbols, type_name, method_name, *span);
                 }
                 Declaration::ImplBlock {
                     type_name, methods, ..
                 } => {
                     for method in methods {
                         if let Declaration::Function { name, span, .. } = method {
-                            self.collect_resolver_impl_method_signature(
-                                symbols, type_name, name, *span,
-                            );
+                            self.collect_resolver_method_signature(symbols, type_name, name, *span);
                         }
                     }
                 }
@@ -1440,41 +1433,7 @@ impl TypeChecker {
         };
     }
 
-    fn collect_resolver_top_level_method_signature(
-        &mut self,
-        symbols: &SymbolTable,
-        type_name: &str,
-        method_name: &str,
-        span: Span,
-    ) {
-        let ast_key = format!("{type_name}.{method_name}");
-        let restored_key = symbols
-            .lookup(Namespace::Value, &ast_key)
-            .map(|symbol| symbol.name.clone())
-            .or_else(|| {
-                let prefix = format!("{type_name}.");
-                symbols
-                    .symbols()
-                    .iter()
-                    .find(|symbol| {
-                        symbol.namespace == Namespace::Value
-                            && symbol.name.starts_with(&prefix)
-                            && symbol.definition_span == span
-                    })
-                    .map(|symbol| symbol.name.clone())
-            })
-            .unwrap_or(ast_key.clone());
-
-        if restored_key != ast_key {
-            self.methods.remove(&ast_key);
-            if let Some(template) = self.generic_methods.remove(&ast_key) {
-                self.generic_methods.insert(restored_key.clone(), template);
-            }
-        }
-        self.collect_resolver_value_signature(symbols, &restored_key);
-    }
-
-    fn collect_resolver_impl_method_signature(
+    fn collect_resolver_method_signature(
         &mut self,
         symbols: &SymbolTable,
         type_name: &str,
