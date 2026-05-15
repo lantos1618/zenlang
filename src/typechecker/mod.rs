@@ -4140,7 +4140,7 @@ impl TypeChecker {
                             *public,
                             variant.span,
                         );
-                        self.validate_resolver_variant_payload_type(
+                        self.validate_resolver_variant_payload(
                             symbol,
                             &variant.name,
                             expected_variant_payload(&variant.payload),
@@ -6742,7 +6742,7 @@ impl TypeChecker {
         }
     }
 
-    fn validate_resolver_variant_payload_type(
+    fn validate_resolver_variant_payload(
         &mut self,
         symbol: &crate::resolver::Symbol,
         name: &str,

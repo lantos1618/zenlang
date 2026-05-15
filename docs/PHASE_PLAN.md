@@ -101,8 +101,8 @@ checked-in docs, tests, and commits only.
   metadata, and typed field metadata from one shared field expectation and
   validation path, keeping those resolver field handoff checks aligned.
 - Typechecker resolver validation now derives enum variant payload count,
-  display type, and typed payload metadata from one shared expectation pass,
-  keeping those resolver variant handoff checks aligned.
+  display type, and typed payload metadata from one shared payload expectation
+  and validation path, keeping those resolver variant handoff checks aligned.
 - Resolver-backed struct and enum collection now also uses typed resolver
   generic bound refs, so generic type templates no longer retain stale AST-only
   behavior bounds after resolver validation.
