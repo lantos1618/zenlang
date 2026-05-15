@@ -325,6 +325,13 @@ struct TypeParameterValidation {
     bound_ref_code: &'static str,
 }
 
+struct TypeParameterAbsenceValidation {
+    count_code: &'static str,
+    name_code: &'static str,
+    bound_code: &'static str,
+    bound_ref_code: &'static str,
+}
+
 struct ValueSignatureAbsenceValidation {
     parameter_count_code: &'static str,
     parameter_name_code: &'static str,
@@ -5088,30 +5095,23 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_type_parameter_metadata(
+            symbol,
+            "module",
+            &expected.name,
+            TypeParameterAbsenceValidation {
+                count_code: "E0269",
+                name_code: "E0348",
+                bound_code: "E0270",
+                bound_ref_code: "E0373",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "module",
             &expected.name,
             &[
-                (
-                    symbol.type_parameter_count.is_some(),
-                    "E0269",
-                    "type parameter count",
-                ),
-                (
-                    symbol.type_parameter_names.is_some(),
-                    "E0348",
-                    "type parameter names",
-                ),
-                (
-                    symbol.type_parameter_bounds.is_some(),
-                    "E0270",
-                    "type parameter bounds",
-                ),
-                (
-                    symbol.type_parameter_bound_refs.is_some(),
-                    "E0373",
-                    "typed type parameter bound refs",
-                ),
                 (symbol.field_count.is_some(), "E0271", "field count"),
                 (symbol.field_type_names.is_some(), "E0272", "field types"),
                 (symbol.field_types.is_some(), "E0374", "typed field types"),
@@ -6160,30 +6160,23 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_type_parameter_metadata(
+            symbol,
+            "import",
+            name,
+            TypeParameterAbsenceValidation {
+                count_code: "E0285",
+                name_code: "E0349",
+                bound_code: "E0286",
+                bound_ref_code: "E0364",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "import",
             name,
             &[
-                (
-                    symbol.type_parameter_count.is_some(),
-                    "E0285",
-                    "type parameter count",
-                ),
-                (
-                    symbol.type_parameter_names.is_some(),
-                    "E0349",
-                    "type parameter names",
-                ),
-                (
-                    symbol.type_parameter_bounds.is_some(),
-                    "E0286",
-                    "type parameter bounds",
-                ),
-                (
-                    symbol.type_parameter_bound_refs.is_some(),
-                    "E0364",
-                    "typed type parameter bound refs",
-                ),
                 (symbol.field_count.is_some(), "E0287", "field count"),
                 (symbol.field_type_names.is_some(), "E0288", "field types"),
                 (symbol.field_types.is_some(), "E0365", "typed field types"),
@@ -6619,30 +6612,23 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_type_parameter_metadata(
+            symbol,
+            "local",
+            name,
+            TypeParameterAbsenceValidation {
+                count_code: "E0253",
+                name_code: "E0350",
+                bound_code: "E0254",
+                bound_ref_code: "E0382",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "local",
             name,
             &[
-                (
-                    symbol.type_parameter_count.is_some(),
-                    "E0253",
-                    "type parameter count",
-                ),
-                (
-                    symbol.type_parameter_names.is_some(),
-                    "E0350",
-                    "type parameter names",
-                ),
-                (
-                    symbol.type_parameter_bounds.is_some(),
-                    "E0254",
-                    "type parameter bounds",
-                ),
-                (
-                    symbol.type_parameter_bound_refs.is_some(),
-                    "E0382",
-                    "typed type parameter bound refs",
-                ),
                 (symbol.field_count.is_some(), "E0255", "field count"),
                 (symbol.field_type_names.is_some(), "E0256", "field types"),
                 (symbol.field_types.is_some(), "E0383", "typed field types"),
@@ -6883,6 +6869,43 @@ impl TypeChecker {
                     symbol.return_type.is_some(),
                     validation.typed_return_type_code,
                     "typed return type",
+                ),
+            ],
+            span,
+        );
+    }
+
+    fn validate_resolver_absent_type_parameter_metadata(
+        &mut self,
+        symbol: &crate::resolver::Symbol,
+        symbol_kind: &str,
+        name: &str,
+        validation: TypeParameterAbsenceValidation,
+        span: Span,
+    ) {
+        self.validate_resolver_absent_metadata_entries(
+            symbol_kind,
+            name,
+            &[
+                (
+                    symbol.type_parameter_count.is_some(),
+                    validation.count_code,
+                    "type parameter count",
+                ),
+                (
+                    symbol.type_parameter_names.is_some(),
+                    validation.name_code,
+                    "type parameter names",
+                ),
+                (
+                    symbol.type_parameter_bounds.is_some(),
+                    validation.bound_code,
+                    "type parameter bounds",
+                ),
+                (
+                    symbol.type_parameter_bound_refs.is_some(),
+                    validation.bound_ref_code,
+                    "typed type parameter bound refs",
                 ),
             ],
             span,
@@ -7390,30 +7413,23 @@ impl TypeChecker {
             span,
         );
 
+        self.validate_resolver_absent_type_parameter_metadata(
+            symbol,
+            "variant",
+            name,
+            TypeParameterAbsenceValidation {
+                count_code: "E0334",
+                name_code: "E0351",
+                bound_code: "E0335",
+                bound_ref_code: "E0391",
+            },
+            span,
+        );
+
         self.validate_resolver_absent_metadata_entries(
             "variant",
             name,
             &[
-                (
-                    symbol.type_parameter_count.is_some(),
-                    "E0334",
-                    "type parameter count",
-                ),
-                (
-                    symbol.type_parameter_names.is_some(),
-                    "E0351",
-                    "type parameter names",
-                ),
-                (
-                    symbol.type_parameter_bounds.is_some(),
-                    "E0335",
-                    "type parameter bounds",
-                ),
-                (
-                    symbol.type_parameter_bound_refs.is_some(),
-                    "E0391",
-                    "typed type parameter bound refs",
-                ),
                 (symbol.field_count.is_some(), "E0336", "field count"),
                 (symbol.field_type_names.is_some(), "E0337", "field types"),
                 (symbol.field_types.is_some(), "E0392", "typed field types"),
