@@ -1355,6 +1355,10 @@ and do not assume Phase 4 is ready without evidence.
   metadata through one dedicated helper before restoring owner-scoped payloads,
   covered by
   `typechecker::tests::resolver_enum_variant_name_metadata_requires_variant_names`.
+- Resolver-backed behavior method collection now reads resolver method metadata
+  through one dedicated helper before restoring method signatures and defaults,
+  covered by
+  `typechecker::tests::resolver_behavior_method_metadata_requires_method_types`.
 - The docs truth gate now covers the quiet draft-PR CI trigger shape by
   rejecting `pull_request.synchronize`, requiring manual dispatch, and requiring
   the draft-PR guard on fmt, clippy, and test jobs.

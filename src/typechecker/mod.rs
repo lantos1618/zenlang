@@ -4256,7 +4256,7 @@ impl TypeChecker {
     fn collect_resolver_behavior_methods(&mut self, symbols: &SymbolTable, name: &str) {
         let Some((symbol, method_types)) =
             Self::resolver_symbol_metadata(symbols, Namespace::Behavior, name, |symbol| {
-                symbol.behavior_method_types.as_ref()
+                Self::resolver_behavior_method_metadata(symbol)
             })
         else {
             self.behaviors.remove(name);
@@ -4275,6 +4275,10 @@ impl TypeChecker {
             name.to_string(),
             behavior_info_from_resolver_methods(name.to_string(), symbol, methods),
         );
+    }
+
+    fn resolver_behavior_method_metadata(symbol: &Symbol) -> Option<&[BehaviorMethodTypeMetadata]> {
+        symbol.behavior_method_types.as_deref()
     }
 
     fn resolver_behavior_methods_from_metadata(
@@ -11839,6 +11843,39 @@ Option: Some(i32), None
             symbols
                 .lookup(Namespace::Type, "Option")
                 .expect("Option symbol")
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn resolver_behavior_method_metadata_requires_method_types() {
+        let program = parse_program(
+            r#"
+Json: behavior {
+    encode: (Self) str
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let methods = TypeChecker::resolver_behavior_method_metadata(
+            symbols
+                .lookup(Namespace::Behavior, "Json")
+                .expect("Json symbol"),
+        )
+        .expect("complete resolver behavior methods");
+
+        assert_eq!(methods.len(), 1);
+        assert_eq!(methods[0].name, "encode");
+        assert_eq!(methods[0].parameter_types, [AstType::SelfType]);
+        assert_eq!(methods[0].return_type, AstType::Str);
+
+        symbols.set_behavior_method_types_for_test(Namespace::Behavior, "Json", None);
+        assert!(TypeChecker::resolver_behavior_method_metadata(
+            symbols
+                .lookup(Namespace::Behavior, "Json")
+                .expect("Json symbol")
         )
         .is_none());
     }

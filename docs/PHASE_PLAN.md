@@ -1233,6 +1233,8 @@ checked-in docs, tests, and commits only.
   through one dedicated helper before restoring fields and defaults.
 - Resolver-backed enum variant collection now reads resolver variant-name
   metadata through one dedicated helper before restoring owner-scoped payloads.
+- Resolver-backed behavior method collection now reads resolver method metadata
+  through one dedicated helper before restoring method signatures and defaults.
 - The docs truth gate now locks the quiet draft-PR CI trigger shape: no
   `pull_request.synchronize`, manual dispatch retained, and fmt/clippy/test
   jobs guarded by the draft-PR condition.
