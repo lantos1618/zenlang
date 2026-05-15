@@ -1189,6 +1189,8 @@ checked-in docs, tests, and commits only.
   code mapping instead of constructing those codes at the call site.
 - Resolver local field absence validation now owns its resolver diagnostic
   code mapping instead of constructing those codes at the call site.
+- Resolver type-like field absence validation now owns its resolver diagnostic
+  code mapping instead of constructing those codes at the call site.
 
 ## Current Phase
 
