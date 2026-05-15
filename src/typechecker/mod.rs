@@ -615,6 +615,22 @@ impl ResolverSymbolPresenceValidation {
 }
 
 #[derive(Clone, Copy)]
+struct AbsentMetadataEntry {
+    present: bool,
+    code: &'static str,
+    label: &'static str,
+}
+
+impl AbsentMetadataEntry {
+    fn message(self, symbol_kind: &str, name: &str) -> String {
+        format!(
+            "resolver {symbol_kind} symbol '{name}' has {} metadata, expected none",
+            self.label
+        )
+    }
+}
+
+#[derive(Clone, Copy)]
 struct SourceValidation {
     code: &'static str,
     actual_missing: &'static str,
@@ -7479,17 +7495,13 @@ impl TypeChecker {
         &mut self,
         symbol_kind: &str,
         name: &str,
-        present: bool,
-        code: &'static str,
-        label: &'static str,
+        entry: AbsentMetadataEntry,
         span: Span,
     ) {
-        if present {
+        if entry.present {
             self.diagnostics.push(Diagnostic::error(
-                code,
-                format!(
-                    "resolver {symbol_kind} symbol '{name}' has {label} metadata, expected none"
-                ),
+                entry.code,
+                entry.message(symbol_kind, name),
                 span,
             ));
         }
@@ -7506,9 +7518,11 @@ impl TypeChecker {
             self.validate_resolver_absent_metadata_entry(
                 symbol_kind,
                 name,
-                *present,
-                code,
-                label,
+                AbsentMetadataEntry {
+                    present: *present,
+                    code,
+                    label,
+                },
                 span,
             );
         }
@@ -10108,6 +10122,21 @@ main = (mut input: i32) i32 {
         assert_eq!(
             unquoted.message("value", "main", Some("std"), None),
             "resolver value symbol 'main' has source 'std', expected none"
+        );
+    }
+
+    #[test]
+    fn absent_metadata_entry_formats_message() {
+        let entry = AbsentMetadataEntry {
+            present: true,
+            code: "ABSENT",
+            label: "parameter count",
+        };
+
+        assert_eq!(entry.code, "ABSENT");
+        assert_eq!(
+            entry.message("value", "main"),
+            "resolver value symbol 'main' has parameter count metadata, expected none"
         );
     }
 

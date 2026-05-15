@@ -1007,6 +1007,8 @@ checked-in docs, tests, and commits only.
   visibility and source diagnostic helpers.
 - Resolver absent value-signature metadata validation now reuses the shared
   absent-metadata entry helper.
+- Resolver absent-metadata entry validation now carries diagnostic message
+  formatting through an explicit absent metadata entry object.
 - Resolver absent value-signature detail validation now shares the same helper
   across module, import, local, type-like, and variant symbols.
 - Resolver absent value-signature metadata validation now lets the validation

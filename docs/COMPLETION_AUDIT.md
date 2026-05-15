@@ -954,6 +954,9 @@ and do not assume Phase 4 is ready without evidence.
   visibility and source diagnostic helpers.
 - Resolver absent value-signature metadata validation now reuses the shared
   absent-metadata entry helper.
+- Resolver absent-metadata entry validation now carries diagnostic message
+  formatting through an explicit absent metadata entry object, covered by
+  `typechecker::tests::absent_metadata_entry_formats_message`.
 - Resolver absent value-signature detail validation now shares the same helper
   across module, import, local, type-like, and variant symbols.
 - Resolver absent value-signature metadata validation now lets the validation
