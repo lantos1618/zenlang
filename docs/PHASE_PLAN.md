@@ -1004,6 +1004,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed struct field default validation now uses a dedicated
   resolver-restored field-default helper instead of keeping restored struct
   lookup inline in the broad declaration semantics loop.
+- Resolver-backed struct field defaults are now stored and validated under
+  resolver-owned field names by position, so stale AST-only field names cannot
+  skip default type checking.
 - Resolver/typechecker handoff coverage preserves generic type parameters in
   struct fields and enum payloads before type metadata collection.
 - Resolver enum variant symbols now carry payload-count metadata, and

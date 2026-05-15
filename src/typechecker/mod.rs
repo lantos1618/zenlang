@@ -3675,7 +3675,7 @@ impl TypeChecker {
             };
 
             if self.resolver_backed_collection {
-                self.validate_resolver_struct_field_defaults(symbols, name, fields, *span);
+                self.validate_resolver_struct_field_defaults(symbols, name, *span);
             } else {
                 self.validate_ast_struct_field_defaults(!type_params.is_empty(), fields);
             }
@@ -3686,7 +3686,6 @@ impl TypeChecker {
         &mut self,
         symbols: Option<&SymbolTable>,
         name: &str,
-        fields: &[StructField],
         span: Span,
     ) {
         let restored_name = Self::validation_symbol_name(symbols, Namespace::Type, name, span);
@@ -3696,11 +3695,9 @@ impl TypeChecker {
         if !info.type_params.is_empty() {
             return;
         }
-        let field_types: HashMap<_, _> = info.fields.into_iter().collect();
-        for field in fields {
-            if let (Some(default), Some(expected)) = (&field.default, field_types.get(&field.name))
-            {
-                self.validate_struct_field_default(&field.name, expected, default);
+        for (field_name, expected) in &info.fields {
+            if let Some(default) = info.field_defaults.get(field_name) {
+                self.validate_struct_field_default(field_name, expected, default);
             }
         }
     }
@@ -4123,17 +4120,25 @@ impl TypeChecker {
                 name.to_string(),
                 symbol,
                 field_types.to_vec(),
-                ast_fields
-                    .iter()
-                    .filter_map(|field| {
-                        field
-                            .default
-                            .as_ref()
-                            .map(|default| (field.name.clone(), default.clone()))
-                    })
-                    .collect(),
+                Self::resolver_struct_field_defaults(field_types, ast_fields),
             ),
         );
+    }
+
+    fn resolver_struct_field_defaults(
+        fields: &[(String, AstType)],
+        ast_fields: &[StructField],
+    ) -> HashMap<String, Expression> {
+        ast_fields
+            .iter()
+            .zip(fields.iter())
+            .filter_map(|(field, (restored_name, _))| {
+                field
+                    .default
+                    .as_ref()
+                    .map(|default| (restored_name.clone(), default.clone()))
+            })
+            .collect()
     }
 
     fn collect_resolver_enum_variants(&mut self, symbols: &SymbolTable, name: &str) {
@@ -14857,6 +14862,35 @@ Point: { x: i32 }
 
         assert!(tc.structs.contains_key("Point"));
         assert!(!tc.structs.contains_key("Missing"));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_struct_field_names_for_defaults() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 = true }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Struct { fields, .. } = &mut program.declarations[0] {
+            fields[0].name = "stale".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.iter().any(|diag| {
+                diag.code == "E3073"
+                    && diag
+                        .message
+                        .contains("field `x` default expects `i32`, found `bool`")
+            }),
+            "resolver-backed default validation should use resolver-restored field names: {:?}",
+            tc.diagnostics
+        );
     }
 
     #[test]

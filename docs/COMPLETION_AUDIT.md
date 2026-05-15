@@ -1154,6 +1154,10 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_does_not_validate_stale_struct_field_default_refs_when_fields_incomplete`,
   and
   `typechecker::tests::collect_declarations_with_symbols_clears_stale_struct_fields_after_name_restore`.
+- Resolver-backed struct field defaults are stored and validated under
+  resolver-owned field names by position, so stale AST-only field names cannot
+  skip default type checking, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_struct_field_names_for_defaults`.
 - Resolver/typechecker handoff coverage preserves generic type parameters in
   struct fields and enum payloads before type metadata collection.
 - Resolver enum variant symbols carry payload-count metadata, and typechecker
