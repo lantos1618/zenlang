@@ -327,7 +327,11 @@ struct TypeParameterValidation {
 
 struct ValueSignatureAbsenceValidation {
     parameter_count_code: &'static str,
+    parameter_name_code: &'static str,
+    parameter_type_name_code: &'static str,
+    parameter_type_code: &'static str,
     return_type_code: &'static str,
+    typed_return_type_code: &'static str,
 }
 
 struct SourceValidation {
@@ -5075,7 +5079,11 @@ impl TypeChecker {
             &expected.name,
             ValueSignatureAbsenceValidation {
                 parameter_count_code: "E0265",
+                parameter_name_code: "E0267",
+                parameter_type_name_code: "E0268",
+                parameter_type_code: "E0371",
                 return_type_code: "E0266",
+                typed_return_type_code: "E0372",
             },
             span,
         );
@@ -5084,18 +5092,6 @@ impl TypeChecker {
             "module",
             &expected.name,
             &[
-                (symbol.parameter_names.is_some(), "E0267", "parameter names"),
-                (
-                    symbol.parameter_type_names.is_some(),
-                    "E0268",
-                    "parameter types",
-                ),
-                (
-                    symbol.parameter_types.is_some(),
-                    "E0371",
-                    "typed parameter types",
-                ),
-                (symbol.return_type.is_some(), "E0372", "typed return type"),
                 (
                     symbol.type_parameter_count.is_some(),
                     "E0269",
@@ -6155,7 +6151,11 @@ impl TypeChecker {
             name,
             ValueSignatureAbsenceValidation {
                 parameter_count_code: "E0281",
+                parameter_name_code: "E0283",
+                parameter_type_name_code: "E0284",
+                parameter_type_code: "E0362",
                 return_type_code: "E0282",
+                typed_return_type_code: "E0363",
             },
             span,
         );
@@ -6164,18 +6164,6 @@ impl TypeChecker {
             "import",
             name,
             &[
-                (symbol.parameter_names.is_some(), "E0283", "parameter names"),
-                (
-                    symbol.parameter_type_names.is_some(),
-                    "E0284",
-                    "parameter types",
-                ),
-                (
-                    symbol.parameter_types.is_some(),
-                    "E0362",
-                    "typed parameter types",
-                ),
-                (symbol.return_type.is_some(), "E0363", "typed return type"),
                 (
                     symbol.type_parameter_count.is_some(),
                     "E0285",
@@ -6622,7 +6610,11 @@ impl TypeChecker {
             name,
             ValueSignatureAbsenceValidation {
                 parameter_count_code: "E0249",
+                parameter_name_code: "E0251",
+                parameter_type_name_code: "E0252",
+                parameter_type_code: "E0380",
                 return_type_code: "E0250",
+                typed_return_type_code: "E0381",
             },
             span,
         );
@@ -6631,18 +6623,6 @@ impl TypeChecker {
             "local",
             name,
             &[
-                (symbol.parameter_names.is_some(), "E0251", "parameter names"),
-                (
-                    symbol.parameter_type_names.is_some(),
-                    "E0252",
-                    "parameter types",
-                ),
-                (
-                    symbol.parameter_types.is_some(),
-                    "E0380",
-                    "typed parameter types",
-                ),
-                (symbol.return_type.is_some(), "E0381", "typed return type"),
                 (
                     symbol.type_parameter_count.is_some(),
                     "E0253",
@@ -6880,9 +6860,29 @@ impl TypeChecker {
                     "parameter count",
                 ),
                 (
+                    symbol.parameter_names.is_some(),
+                    validation.parameter_name_code,
+                    "parameter names",
+                ),
+                (
+                    symbol.parameter_type_names.is_some(),
+                    validation.parameter_type_name_code,
+                    "parameter types",
+                ),
+                (
+                    symbol.parameter_types.is_some(),
+                    validation.parameter_type_code,
+                    "typed parameter types",
+                ),
+                (
                     symbol.return_type_name.is_some(),
                     validation.return_type_code,
                     "return type",
+                ),
+                (
+                    symbol.return_type.is_some(),
+                    validation.typed_return_type_code,
+                    "typed return type",
                 ),
             ],
             span,
@@ -7133,7 +7133,11 @@ impl TypeChecker {
             name,
             ValueSignatureAbsenceValidation {
                 parameter_count_code: "E0310",
+                parameter_name_code: "E0312",
+                parameter_type_name_code: "E0313",
+                parameter_type_code: "E0360",
                 return_type_code: "E0311",
+                typed_return_type_code: "E0361",
             },
             span,
         );
@@ -7141,21 +7145,7 @@ impl TypeChecker {
         self.validate_resolver_absent_metadata_entries(
             namespace.diagnostic_name(),
             name,
-            &[
-                (symbol.parameter_names.is_some(), "E0312", "parameter names"),
-                (
-                    symbol.parameter_type_names.is_some(),
-                    "E0313",
-                    "parameter types",
-                ),
-                (
-                    symbol.parameter_types.is_some(),
-                    "E0360",
-                    "typed parameter types",
-                ),
-                (symbol.return_type.is_some(), "E0361", "typed return type"),
-                (symbol.is_mutable.is_some(), "E0314", "mutability"),
-            ],
+            &[(symbol.is_mutable.is_some(), "E0314", "mutability")],
             span,
         );
     }
@@ -7391,7 +7381,11 @@ impl TypeChecker {
             name,
             ValueSignatureAbsenceValidation {
                 parameter_count_code: "E0330",
+                parameter_name_code: "E0332",
+                parameter_type_name_code: "E0333",
+                parameter_type_code: "E0389",
                 return_type_code: "E0331",
+                typed_return_type_code: "E0390",
             },
             span,
         );
@@ -7400,18 +7394,6 @@ impl TypeChecker {
             "variant",
             name,
             &[
-                (symbol.parameter_names.is_some(), "E0332", "parameter names"),
-                (
-                    symbol.parameter_type_names.is_some(),
-                    "E0333",
-                    "parameter types",
-                ),
-                (
-                    symbol.parameter_types.is_some(),
-                    "E0389",
-                    "typed parameter types",
-                ),
-                (symbol.return_type.is_some(), "E0390", "typed return type"),
                 (
                     symbol.type_parameter_count.is_some(),
                     "E0334",

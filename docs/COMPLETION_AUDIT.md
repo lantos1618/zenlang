@@ -862,6 +862,8 @@ and do not assume Phase 4 is ready without evidence.
   visibility and source diagnostic helpers.
 - Resolver absent value-signature metadata validation now reuses the shared
   absent-metadata entry helper.
+- Resolver absent value-signature detail validation now shares the same helper
+  across module, import, local, type-like, and variant symbols.
 
 ## Unresolved Gaps
 
