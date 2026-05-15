@@ -1,0 +1,3 @@
+pub Option<T>:
+    None,
+    Some(T)
