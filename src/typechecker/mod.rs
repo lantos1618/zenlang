@@ -1481,14 +1481,20 @@ impl TypeChecker {
         let Some(existing) = self.behaviors.get(name).cloned() else {
             return;
         };
+        let mut method_types: VecDeque<BehaviorMethodTypeMetadata> =
+            method_types.iter().cloned().collect();
         let methods = existing
             .methods
             .into_iter()
             .map(|method| {
-                let Some(metadata) = method_types
+                let metadata = match method_types
                     .iter()
-                    .find(|metadata| metadata.name == method.name)
-                else {
+                    .position(|metadata| metadata.name == method.name)
+                {
+                    Some(index) => method_types.remove(index),
+                    None => method_types.pop_front(),
+                };
+                let Some(metadata) = metadata else {
                     return method;
                 };
                 if method.params.len() != metadata.parameter_types.len() {
@@ -1508,6 +1514,7 @@ impl TypeChecker {
                     .as_ref()
                     .map(|_| metadata.return_type.clone());
                 ast::BehaviorMethod {
+                    name: metadata.name,
                     params,
                     return_type,
                     ..method
@@ -8759,6 +8766,39 @@ Mapper: behavior {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             })
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_behavior_method_name_metadata() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
+            methods[0].name = "missing".to_string();
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        let info = tc.behaviors.get("Json").expect("behavior info");
+        assert_eq!(info.methods[0].name, "encode");
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored behavior method name metadata should avoid stale AST impl diagnostics: {:?}",
+            tc.diagnostics
         );
     }
 

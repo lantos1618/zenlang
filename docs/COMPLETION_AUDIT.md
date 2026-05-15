@@ -486,6 +486,9 @@ and do not assume Phase 4 is ready without evidence.
   validated resolver behavior symbols, including typed function-method metadata,
   reducing duplicate AST-only declaration collection for behavior method
   signatures.
+- Resolver-backed behavior method collection also restores method names from
+  validated resolver metadata, so stale AST-only behavior method names cannot
+  shadow resolver-owned signatures during impl conformance.
 - Resolver behavior method signature metadata preserves generic return types on
   generic behaviors, and typechecker setup rejects generic method-signature
   handoff drift before behavior metadata collection.
