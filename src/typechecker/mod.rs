@@ -132,6 +132,27 @@ struct ResolverTypeBehaviorRefreshTask {
     restored_name: String,
 }
 
+struct ResolverTypeBehaviorAssociationListTask<'a> {
+    symbol: &'a Symbol,
+    name: &'a str,
+    impl_edges: &'a [ExpectedBehaviorEdge],
+    required_edges: &'a [ExpectedBehaviorEdge],
+    span: Span,
+}
+
+struct ResolverBehaviorParentListTask<'a> {
+    symbol: &'a Symbol,
+    name: &'a str,
+    parent_edges: &'a [ExpectedBehaviorEdge],
+    span: Span,
+}
+
+#[derive(Default)]
+struct ResolverBehaviorAssociationListTasks<'a> {
+    type_associations: Vec<ResolverTypeBehaviorAssociationListTask<'a>>,
+    behavior_parents: Vec<ResolverBehaviorParentListTask<'a>>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorBound {
     pub behavior: String,
@@ -7376,7 +7397,6 @@ impl TypeChecker {
         self.validate_no_extra_resolver_declaration_symbols(program, symbols);
         self.validate_no_extra_resolver_local_symbols(program, symbols);
         self.validate_resolver_behavior_association_lists(program, symbols);
-        self.validate_resolver_behavior_parent_lists(program, symbols);
         self.validate_stripped_resolver_import_symbols(program, symbols);
     }
 
@@ -7456,51 +7476,78 @@ impl TypeChecker {
         program: &ast::Program,
         symbols: &SymbolTable,
     ) {
-        let expected = expected_behavior_associations(program);
-        for decl in &program.declarations {
-            let (Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. }) =
-                decl
-            else {
-                continue;
-            };
-            let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
-                continue;
-            };
+        let expected_associations = expected_behavior_associations(program);
+        let expected_parents = expected_behavior_parent_associations(program);
+        let tasks = Self::collect_resolver_behavior_association_list_tasks(
+            program,
+            symbols,
+            &expected_associations,
+            &expected_parents,
+        );
+
+        for task in tasks.type_associations {
             self.validate_resolver_behavior_impl_list(
-                symbol,
-                name,
-                expected.impls.edges_for(name),
-                *span,
+                task.symbol,
+                task.name,
+                task.impl_edges,
+                task.span,
             );
             self.validate_resolver_behavior_required_list(
-                symbol,
-                name,
-                expected.required.edges_for(name),
-                *span,
+                task.symbol,
+                task.name,
+                task.required_edges,
+                task.span,
+            );
+        }
+
+        for task in tasks.behavior_parents {
+            self.validate_resolver_behavior_parent_list(
+                task.symbol,
+                task.name,
+                task.parent_edges,
+                task.span,
             );
         }
     }
 
-    fn validate_resolver_behavior_parent_lists(
-        &mut self,
-        program: &ast::Program,
-        symbols: &SymbolTable,
-    ) {
-        let expected = expected_behavior_parent_associations(program);
+    fn collect_resolver_behavior_association_list_tasks<'a>(
+        program: &'a ast::Program,
+        symbols: &'a SymbolTable,
+        expected_associations: &'a ExpectedBehaviorAssociations,
+        expected_parents: &'a ExpectedBehaviorEdges,
+    ) -> ResolverBehaviorAssociationListTasks<'a> {
+        let mut tasks = ResolverBehaviorAssociationListTasks::default();
         for decl in &program.declarations {
-            let Declaration::Behavior { name, span, .. } = decl else {
-                continue;
-            };
-            let Some(symbol) = symbols.lookup(Namespace::Behavior, name) else {
-                continue;
-            };
-            self.validate_resolver_behavior_parent_list(
-                symbol,
-                name,
-                expected.edges_for(name),
-                *span,
-            );
+            match decl {
+                Declaration::Struct { name, span, .. } | Declaration::Enum { name, span, .. } => {
+                    let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
+                        continue;
+                    };
+                    tasks
+                        .type_associations
+                        .push(ResolverTypeBehaviorAssociationListTask {
+                            symbol,
+                            name,
+                            impl_edges: expected_associations.impls.edges_for(name),
+                            required_edges: expected_associations.required.edges_for(name),
+                            span: *span,
+                        });
+                }
+                Declaration::Behavior { name, span, .. } => {
+                    let Some(symbol) = symbols.lookup(Namespace::Behavior, name) else {
+                        continue;
+                    };
+                    tasks.behavior_parents.push(ResolverBehaviorParentListTask {
+                        symbol,
+                        name,
+                        parent_edges: expected_parents.edges_for(name),
+                        span: *span,
+                    });
+                }
+                _ => {}
+            }
         }
+        tasks
     }
 
     fn require_resolver_module_symbol(
@@ -12964,6 +13011,63 @@ Point.requires(Json<str>)
         assert_eq!(required_edge.display, "Json<str>");
         assert_eq!(required_edge.metadata.name, "Json");
         assert_eq!(required_edge.metadata.type_args, vec![AstType::Str]);
+    }
+
+    #[test]
+    fn resolver_behavior_association_list_tasks_collect_type_and_parent_edges_together() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let expected_associations = expected_behavior_associations(&program);
+        let expected_parents = expected_behavior_parent_associations(&program);
+
+        let tasks = TypeChecker::collect_resolver_behavior_association_list_tasks(
+            &program,
+            &symbols,
+            &expected_associations,
+            &expected_parents,
+        );
+
+        assert_eq!(tasks.type_associations.len(), 1);
+        let type_task = &tasks.type_associations[0];
+        assert_eq!(type_task.name, "Point");
+        assert_eq!(type_task.impl_edges[0].display, "Json<str>");
+        assert_eq!(type_task.required_edges[0].display, "Json<str>");
+
+        assert_eq!(tasks.behavior_parents.len(), 2);
+        let pretty_task = tasks
+            .behavior_parents
+            .iter()
+            .find(|task| task.name == "PrettyJson")
+            .expect("PrettyJson parent task");
+        assert_eq!(pretty_task.parent_edges[0].display, "Json<str>");
+        let json_task = tasks
+            .behavior_parents
+            .iter()
+            .find(|task| task.name == "Json")
+            .expect("Json empty parent task");
+        assert!(json_task.parent_edges.is_empty());
     }
 
     #[test]

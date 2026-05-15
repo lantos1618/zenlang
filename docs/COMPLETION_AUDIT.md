@@ -198,6 +198,10 @@ and do not assume Phase 4 is ready without evidence.
   methods while keeping declaration symbol checks at each call site.
 - Resolver-symbol validation now shares generic behavior-association
   type-argument validation across impl, requires, and extends declarations.
+- Resolver behavior association list validation now collects type-owned
+  impl/required tasks and behavior-owned parent tasks in one declaration pass,
+  covered by
+  `typechecker::tests::resolver_behavior_association_list_tasks_collect_type_and_parent_edges_together`.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate

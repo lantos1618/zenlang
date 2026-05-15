@@ -127,6 +127,9 @@ checked-in docs, tests, and commits only.
 - Resolver-symbol validation now shares generic behavior-association
   type-argument validation across impl, requires, and extends declarations,
   keeping unknown-tolerant resolver handoff checks on one path.
+- Resolver behavior association list validation now builds type-owned
+  impl/required tasks and behavior-owned parent tasks in one declaration pass
+  before replaying the existing resolver metadata list checks.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.
