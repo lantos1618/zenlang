@@ -65,6 +65,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed function type-reference validation now runs through a
   dedicated restored-function helper, reducing another inline resolver
   handoff inside the broad generic type-reference declaration scan.
+- Resolver-backed top-level method type-reference validation now runs through a
+  dedicated restored-method helper, aligning it with the restored-function
+  type-reference path.
 - Resolver-backed top-level method collection also restores method names from
   resolver value symbols by declaration span when AST-only method names are
   stale, so collected `Type.method` signatures use resolver-owned names.
