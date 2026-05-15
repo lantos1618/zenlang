@@ -395,6 +395,8 @@ checked-in docs, tests, and commits only.
   validation now use the same type-qualified method key helper.
 - Resolver symbol validation for top-level and impl method signatures now uses
   the shared type-qualified method key helper.
+- Behavior impl conformance now uses the shared type-qualified method key
+  helper before resolver-owned method name restoration.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths.
 - Generic method specialization preserves concrete `Self` receiver context in

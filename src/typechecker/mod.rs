@@ -4883,7 +4883,7 @@ impl TypeChecker {
                     Declaration::Function { name, .. } => name.as_str(),
                     _ => "",
                 };
-                let ast_key = format!("{type_name}.{ast_name}");
+                let ast_key = Self::method_key(type_name, ast_name);
                 let resolver_owned_name = self.resolver_backed_collection.then(|| {
                     Self::validation_method_key(symbols, &ast_key, type_name, method.span())
                 });
