@@ -968,6 +968,12 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_method_name_metadata_for_impl_checks`,
   and
   `typechecker::tests::collect_declarations_with_symbols_does_not_let_stale_ast_name_hide_extra_impl_method`.
+- Resolver-backed behavior impl conformance and default-method suppression now
+  share one collected method-signature lookup helper, covered by
+  `typechecker::tests::resolver_backed_method_signature_requires_resolver_collection`,
+  `typechecker::tests::impl_effective_method_name_prefers_resolver_then_ast_then_collected_signature`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_skips_default_when_resolver_restores_impl_method_name`.
 - Resolver-backed declaration collection now has named passes for resolver
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed

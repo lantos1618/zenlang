@@ -4944,11 +4944,8 @@ impl TypeChecker {
             };
 
             let (actual_params, actual_return_type, actual_span) = actual;
-            let method_key = format!("{}.{}", type_name, required.name);
-            let collected_signature = self
-                .resolver_backed_collection
-                .then(|| self.methods.get(&method_key))
-                .flatten();
+            let collected_signature =
+                self.resolver_backed_method_signature(type_name, &required.name);
             let actual_param_types: Vec<AstType> = collected_signature
                 .map(|info| {
                     info.params
@@ -5252,8 +5249,8 @@ impl TypeChecker {
             .any(|decl| matches!(decl, Declaration::Function { name, .. } if name == required_name))
             || (self.resolver_backed_collection
                 && self
-                    .methods
-                    .contains_key(&format!("{type_name}.{required_name}")))
+                    .resolver_backed_method_signature(type_name, required_name)
+                    .is_some())
     }
 
     fn impl_effective_method_name(
@@ -5278,8 +5275,8 @@ impl TypeChecker {
 
         if self.resolver_backed_collection {
             if let Some(index) = unmatched_required.iter().position(|required| {
-                self.methods
-                    .contains_key(&format!("{type_name}.{required}"))
+                self.resolver_backed_method_signature(type_name, required)
+                    .is_some()
             }) {
                 return unmatched_required
                     .remove(index)
@@ -5288,6 +5285,16 @@ impl TypeChecker {
         }
 
         ast_name.to_string()
+    }
+
+    fn resolver_backed_method_signature(
+        &self,
+        type_name: &str,
+        method_name: &str,
+    ) -> Option<&FuncInfo> {
+        self.resolver_backed_collection
+            .then(|| self.methods.get(&format!("{type_name}.{method_name}")))
+            .flatten()
     }
 
     fn remove_named_queue_entry(items: &mut VecDeque<String>, name: &str) -> Option<String> {
@@ -10970,6 +10977,31 @@ Point.get = (self: Point) i32 { return self.x }
             "describe"
         );
         assert!(unmatched.is_empty());
+    }
+
+    #[test]
+    fn resolver_backed_method_signature_requires_resolver_collection() {
+        let mut tc = TypeChecker::new();
+        tc.methods.insert(
+            "Point.encode".to_string(),
+            FuncInfo {
+                name: "Point.encode".to_string(),
+                params: Vec::new(),
+                return_type: AstType::Str,
+                type_params: Vec::new(),
+                type_param_bounds: HashMap::new(),
+            },
+        );
+
+        assert!(tc
+            .resolver_backed_method_signature("Point", "encode")
+            .is_none());
+        tc.resolver_backed_collection = true;
+        assert_eq!(
+            tc.resolver_backed_method_signature("Point", "encode")
+                .map(|info| info.return_type.clone()),
+            Some(AstType::Str)
+        );
     }
 
     #[test]

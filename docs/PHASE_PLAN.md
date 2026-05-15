@@ -386,6 +386,8 @@ checked-in docs, tests, and commits only.
 - Behavior impl conformance now resolves effective method names through a
   dedicated helper that shares resolver-owned name, AST-name, and collected
   signature fallback selection.
+- Resolver-backed behavior impl conformance and default-method suppression now
+  share one collected method-signature lookup helper.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths.
 - Generic method specialization preserves concrete `Self` receiver context in
