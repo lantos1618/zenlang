@@ -981,6 +981,12 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::resolver_backed_method_signature_requires_resolver_collection`,
   and
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_method_name_metadata_for_impl_checks`.
+- Resolver-backed method signature collection and generic type-reference
+  validation now use the same type-qualified method key helper, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_method_signature_for_type_refs`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_generic_method_name_for_body_type_refs`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_generic_method_name_for_body_type_refs`.
 - Resolver-backed declaration collection now has named passes for resolver
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed

@@ -391,6 +391,8 @@ checked-in docs, tests, and commits only.
 - Impl method collection, resolver-backed impl restoration, default seeding,
   and resolver-backed method lookup now share one type-qualified method key
   helper.
+- Resolver-backed method signature collection and generic type-reference
+  validation now use the same type-qualified method key helper.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths.
 - Generic method specialization preserves concrete `Self` receiver context in

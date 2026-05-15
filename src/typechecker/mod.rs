@@ -3857,7 +3857,7 @@ impl TypeChecker {
         method_name: &str,
         span: Span,
     ) {
-        let ast_key = format!("{type_name}.{method_name}");
+        let ast_key = Self::method_key(type_name, method_name);
         let restored_key =
             Self::resolver_method_signature_name_for(symbols, &ast_key, type_name, span);
 
@@ -5544,7 +5544,7 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    let ast_key = format!("{type_name}.{method_name}");
+                    let ast_key = Self::method_key(type_name, method_name);
                     if self.resolver_backed_collection {
                         self.validate_resolver_method_type_references(
                             symbols, &ast_key, type_name, body, *span,
@@ -5610,7 +5610,7 @@ impl TypeChecker {
                         } = method
                         {
                             if self.resolver_backed_collection {
-                                let ast_key = format!("{type_name}.{name}");
+                                let ast_key = Self::method_key(type_name, name);
                                 self.validate_resolver_method_type_references(
                                     symbols,
                                     &ast_key,
