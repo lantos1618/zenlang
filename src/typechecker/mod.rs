@@ -8940,6 +8940,42 @@ main = (value: i32) i32 { return value }
     }
 
     #[test]
+    fn collect_declarations_with_symbols_clears_stale_function_signature_after_name_restore() {
+        let mut program = parse_program(
+            r#"
+main = (value: i32) i32 { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "main", None);
+        if let Declaration::Function {
+            name,
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[0]
+        {
+            *name = "missing".to_string();
+            params[0].ty = AstType::Named("Stale".to_string());
+            *return_type = Some(AstType::Named("AlsoStale".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.functions.contains_key("missing"),
+            "resolver-backed collection should clear the stale AST function signature key after resolver name restoration"
+        );
+        assert!(
+            !tc.functions.contains_key("main"),
+            "resolver-backed collection should clear the restored function signature key when resolver signature metadata is incomplete"
+        );
+    }
+
+    #[test]
     fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_generic_function_template()
     {
         let mut program = parse_program(
@@ -9079,6 +9115,45 @@ Point.get = (self: Point) i32 { return self.x }
 
         assert!(tc.methods.contains_key("Point.get"));
         assert!(!tc.methods.contains_key("Missing.missing"));
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_clears_stale_method_signature_after_key_restore() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+Point.get = (self: Point) i32 { return self.x }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "Point.get", None);
+        if let Declaration::Method {
+            type_name,
+            method_name,
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[1]
+        {
+            *type_name = "Missing".to_string();
+            *method_name = "missing".to_string();
+            params[0].ty = AstType::Named("Stale".to_string());
+            *return_type = Some(AstType::Named("AlsoStale".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.methods.contains_key("Missing.missing"),
+            "resolver-backed collection should clear the stale AST method signature key after resolver key restoration"
+        );
+        assert!(
+            !tc.methods.contains_key("Point.get"),
+            "resolver-backed collection should clear the restored method signature key when resolver signature metadata is incomplete"
+        );
     }
 
     #[test]
