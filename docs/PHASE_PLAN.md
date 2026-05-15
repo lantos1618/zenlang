@@ -90,9 +90,9 @@ checked-in docs, tests, and commits only.
   display bounds, and typed bound refs from one shared expectation pass for
   value and type-like symbols, reducing duplicate resolver metadata handoff
   construction.
-- Typechecker resolver validation now derives struct field display metadata and
-  typed field metadata from one shared expectation pass, keeping those
-  resolver field handoff checks aligned.
+- Typechecker resolver validation now derives struct field count, display
+  metadata, and typed field metadata from one shared expectation pass, keeping
+  those resolver field handoff checks aligned.
 - Typechecker resolver validation now derives enum variant payload count,
   display type, and typed payload metadata from one shared expectation pass,
   keeping those resolver variant handoff checks aligned.

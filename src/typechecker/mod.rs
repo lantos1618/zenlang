@@ -193,6 +193,7 @@ struct ExpectedTypeLikeSymbol {
 
 #[derive(Default)]
 struct ExpectedFields {
+    count: usize,
     types: Vec<(String, AstType)>,
     type_names: Vec<(String, String)>,
 }
@@ -4060,13 +4061,6 @@ impl TypeChecker {
                     ) else {
                         continue;
                     };
-                    self.validate_resolver_field_count(
-                        symbol,
-                        Namespace::Type,
-                        name,
-                        fields.len(),
-                        *span,
-                    );
                     self.validate_resolver_field_types(
                         symbol,
                         Namespace::Type,
@@ -6601,30 +6595,6 @@ impl TypeChecker {
         }
     }
 
-    fn validate_resolver_field_count(
-        &mut self,
-        symbol: &crate::resolver::Symbol,
-        namespace: Namespace,
-        name: &str,
-        expected_field_count: usize,
-        span: Span,
-    ) {
-        if symbol.field_count != Some(expected_field_count) {
-            let actual = symbol
-                .field_count
-                .map(|count| count.to_string())
-                .unwrap_or_else(|| "unknown".to_string());
-            self.diagnostics.push(Diagnostic::error(
-                "E0214",
-                format!(
-                    "resolver {} symbol '{name}' has field count {actual}, expected {expected_field_count}",
-                    namespace.diagnostic_name()
-                ),
-                span,
-            ));
-        }
-    }
-
     fn validate_resolver_field_types(
         &mut self,
         symbol: &crate::resolver::Symbol,
@@ -6633,6 +6603,21 @@ impl TypeChecker {
         expected_fields: ExpectedFields,
         span: Span,
     ) {
+        if symbol.field_count != Some(expected_fields.count) {
+            let actual = symbol
+                .field_count
+                .map(|count| count.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+            self.diagnostics.push(Diagnostic::error(
+                "E0214",
+                format!(
+                    "resolver {} symbol '{name}' has field count {actual}, expected {}",
+                    namespace.diagnostic_name(),
+                    expected_fields.count
+                ),
+                span,
+            ));
+        }
         if symbol.field_types.as_deref() != Some(expected_fields.types.as_slice()) {
             let actual = format_field_types(symbol.field_types.as_deref());
             let expected = format_field_types(Some(&expected_fields.types));
@@ -7715,7 +7700,10 @@ fn format_parameter_names(names: Option<&[String]>) -> String {
 }
 
 fn expected_fields(fields: &[StructField]) -> ExpectedFields {
-    let mut expected = ExpectedFields::default();
+    let mut expected = ExpectedFields {
+        count: fields.len(),
+        ..ExpectedFields::default()
+    };
     for field in fields {
         expected.types.push((field.name.clone(), field.ty.clone()));
         expected
