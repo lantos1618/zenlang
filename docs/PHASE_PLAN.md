@@ -768,6 +768,9 @@ checked-in docs, tests, and commits only.
   consistently with shared type-parameter and visibility metadata.
 - Resolver value-signature expectation construction now uses metadata
   terminology consistently with parameter, return, and type-parameter metadata.
+- Resolver-backed value declaration collection no longer seeds AST-only
+  function or method signatures before resolver metadata restoration, while
+  preserving generic template bodies for later metadata replacement.
 
 ## Current Phase
 

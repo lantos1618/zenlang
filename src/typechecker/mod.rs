@@ -1201,6 +1201,23 @@ impl TypeChecker {
                     if !self.resolver_backed_collection {
                         self.validate_generic_bounds(type_params);
                     }
+                    if self.resolver_backed_collection {
+                        let collected_type_params: Vec<String> =
+                            type_params.iter().map(|tp| tp.name.clone()).collect();
+                        if !collected_type_params.is_empty() {
+                            self.generic_functions.insert(
+                                name.clone(),
+                                GenericFunctionTemplate::new(
+                                    collected_type_params,
+                                    params.clone(),
+                                    return_type.clone(),
+                                    body.clone(),
+                                    *span,
+                                ),
+                            );
+                        }
+                        continue;
+                    }
                     let ret = return_type.clone().unwrap_or(AstType::Void);
                     let collected_type_params: Vec<String> =
                         type_params.iter().map(|tp| tp.name.clone()).collect();
@@ -1243,6 +1260,23 @@ impl TypeChecker {
                 } => {
                     if !self.resolver_backed_collection {
                         self.validate_generic_bounds(type_params);
+                    }
+                    if self.resolver_backed_collection {
+                        let collected_type_params: Vec<String> =
+                            type_params.iter().map(|tp| tp.name.clone()).collect();
+                        if !collected_type_params.is_empty() {
+                            self.generic_methods.insert(
+                                format!("{}.{}", type_name, method_name),
+                                GenericFunctionTemplate::new(
+                                    collected_type_params,
+                                    params.clone(),
+                                    return_type.clone(),
+                                    body.clone(),
+                                    *span,
+                                ),
+                            );
+                        }
+                        continue;
                     }
                     let key = format!("{}.{}", type_name, method_name);
                     let ret = return_type.clone().unwrap_or(AstType::Void);
@@ -8600,6 +8634,36 @@ apply = (callback: (i32) i32) (i32) i32 {
                 params: vec![AstType::I32],
                 ret: Box::new(AstType::I32),
             }
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_function_signature() {
+        let mut program = parse_program(
+            r#"
+main = (value: i32) i32 { return value }
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_return_type_for_test(Namespace::Value, "main", None);
+        if let Declaration::Function {
+            params,
+            return_type,
+            ..
+        } = &mut program.declarations[0]
+        {
+            params[0].ty = AstType::Named("Stale".to_string());
+            *return_type = Some(AstType::Named("AlsoStale".to_string()));
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            !tc.functions.contains_key("main"),
+            "resolver-backed collection should not keep AST-only function metadata when resolver signature metadata is incomplete"
         );
     }
 
