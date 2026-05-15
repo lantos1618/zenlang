@@ -556,6 +556,9 @@ checked-in docs, tests, and commits only.
   `typechecker::tests::resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass`.
   AST behavior declaration seeding, behavior generic-bound validation, and
   AST-only behavior inheritance validation now also have named helper passes.
+  AST behavior signature seeding and resolver-backed behavior stub seeding are
+  separate helper passes, keeping resolver placeholder collection out of the
+  AST signature loop.
   Behavior generic-bound validation is owned by that named pass, avoiding
   duplicate AST-only diagnostics from the remaining collection loop.
   AST struct/enum generic-bound validation and type declaration seeding now

@@ -1077,6 +1077,12 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass`.
   AST behavior declaration seeding, behavior generic-bound validation, and
   AST-only behavior inheritance validation now also have named helper passes.
+  AST behavior signature seeding and resolver-backed behavior stub seeding are
+  separate helper passes, covered by
+  `typechecker::tests::behavior_declaration_collection`,
+  `typechecker::tests::resolver_backed_behavior_collection_defers_generic_metadata_to_resolver`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_method_metadata`.
   Behavior generic-bound validation is owned by that named pass, avoiding
   duplicate AST-only diagnostics from the remaining collection loop.
   AST struct/enum generic-bound validation and type declaration seeding now

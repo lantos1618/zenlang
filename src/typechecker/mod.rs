@@ -3237,6 +3237,14 @@ impl TypeChecker {
     }
 
     fn collect_ast_behavior_declarations(&mut self, decls: &[Declaration]) {
+        if self.resolver_backed_collection {
+            self.collect_resolver_backed_behavior_declaration_stubs(decls);
+        } else {
+            self.collect_ast_behavior_declaration_signatures(decls);
+        }
+    }
+
+    fn collect_ast_behavior_declaration_signatures(&mut self, decls: &[Declaration]) {
         for decl in decls {
             if let Declaration::Behavior {
                 name,
@@ -3245,22 +3253,33 @@ impl TypeChecker {
                 ..
             } = decl
             {
-                let info = if self.resolver_backed_collection {
-                    behavior_info_for_resolver_backed_stub(name.clone(), methods)
-                } else {
-                    behavior_info_from_ast_methods(name.clone(), type_params, methods)
-                };
-                self.behaviors.insert(name.clone(), info);
+                self.behaviors.insert(
+                    name.clone(),
+                    behavior_info_from_ast_methods(name.clone(), type_params, methods),
+                );
+            }
+        }
+    }
+
+    fn collect_resolver_backed_behavior_declaration_stubs(&mut self, decls: &[Declaration]) {
+        for decl in decls {
+            if let Declaration::Behavior { name, methods, .. } = decl {
+                self.behaviors.insert(
+                    name.clone(),
+                    behavior_info_for_resolver_backed_stub(name.clone(), methods),
+                );
             }
         }
     }
 
     fn validate_ast_behavior_generic_bounds(&mut self, decls: &[Declaration]) {
+        if self.resolver_backed_collection {
+            return;
+        }
+
         for decl in decls {
             if let Declaration::Behavior { type_params, .. } = decl {
-                if !self.resolver_backed_collection {
-                    self.validate_generic_bounds(type_params);
-                }
+                self.validate_generic_bounds(type_params);
             }
         }
     }
