@@ -1035,6 +1035,8 @@ checked-in docs, tests, and commits only.
   formatting through a validation bundle.
 - Resolver visibility validation now also owns its full diagnostic message
   formatting, matching the source/count validation helper shape.
+- Resolver local visibility validation now owns its resolver diagnostic code
+  mapping instead of constructing that code at the call site.
 - Resolver source validation now shares one diagnostic helper across module,
   import, and local symbols.
 - Resolver source validation now carries source diagnostic message formatting

@@ -701,6 +701,10 @@ struct VisibilityValidation {
 }
 
 impl VisibilityValidation {
+    fn local_resolver_code() -> Self {
+        Self { code: "E0247" }
+    }
+
     fn display(self, actual: bool, expected: bool) -> (&'static str, &'static str) {
         (visibility_name(actual), visibility_name(expected))
     }
@@ -7539,7 +7543,7 @@ impl TypeChecker {
             name,
             symbol.is_public,
             expected.is_public,
-            VisibilityValidation { code: "E0247" },
+            VisibilityValidation::local_resolver_code(),
             span,
         );
 
@@ -10709,6 +10713,13 @@ main = (mut input: i32) i32 {
             validation.message("import", "io", true, false),
             "resolver import symbol 'io' has visibility public, expected private"
         );
+    }
+
+    #[test]
+    fn visibility_validation_uses_local_resolver_code() {
+        let validation = VisibilityValidation::local_resolver_code();
+
+        assert_eq!(validation.code, "E0247");
     }
 
     #[test]
