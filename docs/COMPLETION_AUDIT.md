@@ -948,6 +948,12 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior association collection skips AST-only parent, impl,
   and required refs when resolver association metadata is missing, so stale AST
   associations cannot survive incomplete resolver handoff.
+- Resolver behavior-ref selection and behavior impl required-method restoration
+  now share one exact-match-then-front queue selector, covered by
+  `typechecker::tests::named_queue_selection_prefers_exact_then_front`,
+  `typechecker::tests::resolver_behavior_ref_queue_selection_prefers_exact_then_front`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_impl_method_name_metadata_for_impl_checks`.
 - Resolver-backed declaration collection now has named passes for resolver
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed

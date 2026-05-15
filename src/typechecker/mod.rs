@@ -4415,13 +4415,9 @@ impl TypeChecker {
             let Declaration::Function { name, .. } = method else {
                 continue;
             };
-            let restored_name = match required_methods
-                .iter()
-                .position(|required| required.name == *name)
-            {
-                Some(index) => required_methods.remove(index).map(|required| required.name),
-                None => required_methods.pop_front().map(|required| required.name),
-            };
+            let restored_name =
+                Self::named_queue_index(&required_methods, name, |required| required.name.as_str())
+                    .and_then(|index| required_methods.remove(index).map(|required| required.name));
             let Some(restored_name) = restored_name else {
                 continue;
             };
@@ -5147,9 +5143,18 @@ impl TypeChecker {
         refs: &VecDeque<BehaviorRefMetadata>,
         behavior: &str,
     ) -> Option<usize> {
-        refs.iter()
-            .position(|reference| reference.name == behavior)
-            .or_else(|| (!refs.is_empty()).then_some(0))
+        Self::named_queue_index(refs, behavior, |reference| reference.name.as_str())
+    }
+
+    fn named_queue_index<T>(
+        items: &VecDeque<T>,
+        name: &str,
+        item_name: impl Fn(&T) -> &str,
+    ) -> Option<usize> {
+        items
+            .iter()
+            .position(|item| item_name(item) == name)
+            .or_else(|| (!items.is_empty()).then_some(0))
     }
 
     fn resolver_behavior_impl_ref_parts<'a>(
@@ -10852,6 +10857,24 @@ Point.get = (self: Point) i32 { return self.x }
         );
         assert_eq!(
             TypeChecker::resolver_behavior_ref_queue_index(&VecDeque::new(), "Missing"),
+            None
+        );
+    }
+
+    #[test]
+    fn named_queue_selection_prefers_exact_then_front() {
+        let items = VecDeque::from(["Json".to_string(), "Debug".to_string()]);
+
+        assert_eq!(
+            TypeChecker::named_queue_index(&items, "Debug", String::as_str),
+            Some(1)
+        );
+        assert_eq!(
+            TypeChecker::named_queue_index(&items, "Missing", String::as_str),
+            Some(0)
+        );
+        assert_eq!(
+            TypeChecker::named_queue_index(&VecDeque::<String>::new(), "Missing", String::as_str),
             None
         );
     }
