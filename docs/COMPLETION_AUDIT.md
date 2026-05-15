@@ -203,6 +203,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver expected type-parameter construction now pairs generic bound display
   metadata and typed bound-ref metadata through one constructor, covered by
   `typechecker::tests::expected_type_parameter_builds_bound_display_and_ref_together`.
+- Resolver expected struct-field construction now pairs field display metadata
+  and typed field metadata through one constructor, covered by
+  `typechecker::tests::expected_field_builds_display_and_type_together`.
 - Resolver expected behavior association construction now pairs display names
   and typed refs through one constructor, covered by
   `typechecker::tests::expected_behavior_edge_builds_display_and_metadata_together`.

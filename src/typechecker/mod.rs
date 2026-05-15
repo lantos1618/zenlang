@@ -1345,6 +1345,15 @@ struct ExpectedField {
     display: (String, String),
 }
 
+impl ExpectedField {
+    fn new(name: &str, ty: &AstType) -> Self {
+        Self {
+            typed: (name.to_string(), ty.clone()),
+            display: (name.to_string(), ty.display_name()),
+        }
+    }
+}
+
 struct ExpectedFieldMetadata {
     count: usize,
     typed: Vec<(String, AstType)>,
@@ -9339,10 +9348,7 @@ fn format_parameter_names(names: Option<&[String]>) -> String {
 fn expected_field_metadata(fields: &[StructField]) -> Vec<ExpectedField> {
     let mut expected = Vec::new();
     for field in fields {
-        expected.push(ExpectedField {
-            typed: (field.name.clone(), field.ty.clone()),
-            display: (field.name.clone(), field.ty.display_name()),
-        });
+        expected.push(ExpectedField::new(&field.name, &field.ty));
     }
     expected
 }
@@ -10917,6 +10923,32 @@ Point.requires(Json<str>)
         assert_eq!(
             bound.reference.type_args,
             vec![AstType::Named("T".to_string())]
+        );
+    }
+
+    #[test]
+    fn expected_field_builds_display_and_type_together() {
+        let field = ExpectedField::new(
+            "mapper",
+            &AstType::Function {
+                params: vec![AstType::Named("Input".to_string())],
+                ret: Box::new(AstType::Named("Output".to_string())),
+            },
+        );
+
+        assert_eq!(
+            field.display,
+            ("mapper".to_string(), "(Input) Output".to_string())
+        );
+        assert_eq!(
+            field.typed,
+            (
+                "mapper".to_string(),
+                AstType::Function {
+                    params: vec![AstType::Named("Input".to_string())],
+                    ret: Box::new(AstType::Named("Output".to_string())),
+                }
+            )
         );
     }
 

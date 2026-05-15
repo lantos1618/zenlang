@@ -158,6 +158,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver expected type-parameter construction now pairs generic
   bound display metadata and typed bound-ref metadata through one expected
   type-parameter constructor.
+- Typechecker resolver expected struct-field construction now pairs field
+  display metadata and typed field metadata through one expected-field
+  constructor.
 - Typechecker resolver behavior-ref validation now separates role labels from
   per-check diagnostic code mappings, avoiding duplicated label bundles across
   contains and full-list checks.
