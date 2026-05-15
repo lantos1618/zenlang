@@ -203,6 +203,9 @@ and do not assume Phase 4 is ready without evidence.
   value-symbol expectation shape.
 - Typechecker resolver validation now names behavior method validation after
   the full display-signature and typed-metadata check it performs.
+- Typechecker resolver validation now carries struct and enum visibility,
+  type-parameter metadata, and kind-specific metadata through expected
+  type-symbol objects, keeping type declaration handoff checks aligned.
 - Typechecker resolver validation now derives and checks type-parameter
   counts, names, display bounds, and typed bound refs through shared
   expectation and validation paths for value and type-like symbols, keeping

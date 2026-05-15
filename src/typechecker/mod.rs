@@ -186,6 +186,16 @@ struct ExpectedBehaviorSymbol {
     methods: ExpectedBehaviorMethods,
 }
 
+struct ExpectedStructSymbol {
+    type_like: ExpectedTypeLikeSymbol,
+    fields: ExpectedFields,
+}
+
+struct ExpectedEnumSymbol {
+    type_like: ExpectedTypeLikeSymbol,
+    variant_names: Vec<String>,
+}
+
 struct ExpectedTypeParameters {
     count: usize,
     names: Vec<String>,
@@ -4064,23 +4074,17 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    let Some(symbol) = self.require_resolver_type_like_symbol(
-                        symbols,
-                        Namespace::Type,
-                        name,
-                        expected_type_like_symbol(type_params, Some(*public)),
-                        *span,
-                    ) else {
+                    if self
+                        .require_resolver_struct_symbol(
+                            symbols,
+                            name,
+                            expected_struct_symbol(type_params, fields, *public),
+                            *span,
+                        )
+                        .is_none()
+                    {
                         continue;
                     };
-                    self.validate_resolver_fields(
-                        symbol,
-                        Namespace::Type,
-                        name,
-                        expected_fields(fields),
-                        *span,
-                    );
-                    self.validate_resolver_struct_absent_enum_metadata(symbol, name, *span);
                     for field in fields {
                         if let Some(default) = &field.default {
                             let mut locals = scope_cursor.new_scope();
@@ -4101,21 +4105,12 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    if let Some(symbol) = self.require_resolver_type_like_symbol(
+                    self.require_resolver_enum_symbol(
                         symbols,
-                        Namespace::Type,
                         name,
-                        expected_type_like_symbol(type_params, Some(*public)),
+                        expected_enum_symbol(type_params, variants, *public),
                         *span,
-                    ) {
-                        self.validate_resolver_variant_names(
-                            symbol,
-                            name,
-                            expected_variant_names(variants),
-                            *span,
-                        );
-                        self.validate_resolver_enum_absent_struct_metadata(symbol, name, *span);
-                    }
+                    );
                     for variant in variants {
                         let Some(symbol) = symbols.lookup_variant(name, &variant.name) else {
                             if let Some(symbol) = symbols.lookup(Namespace::Variant, &variant.name)
@@ -6485,6 +6480,48 @@ impl TypeChecker {
         Some(symbol)
     }
 
+    fn require_resolver_struct_symbol<'a>(
+        &mut self,
+        symbols: &'a SymbolTable,
+        name: &str,
+        expected: ExpectedStructSymbol,
+        span: Span,
+    ) -> Option<&'a crate::resolver::Symbol> {
+        let symbol = self.require_resolver_type_like_symbol(
+            symbols,
+            Namespace::Type,
+            name,
+            expected.type_like,
+            span,
+        )?;
+
+        self.validate_resolver_fields(symbol, Namespace::Type, name, expected.fields, span);
+        self.validate_resolver_struct_absent_enum_metadata(symbol, name, span);
+
+        Some(symbol)
+    }
+
+    fn require_resolver_enum_symbol<'a>(
+        &mut self,
+        symbols: &'a SymbolTable,
+        name: &str,
+        expected: ExpectedEnumSymbol,
+        span: Span,
+    ) -> Option<&'a crate::resolver::Symbol> {
+        let symbol = self.require_resolver_type_like_symbol(
+            symbols,
+            Namespace::Type,
+            name,
+            expected.type_like,
+            span,
+        )?;
+
+        self.validate_resolver_variant_names(symbol, name, expected.variant_names, span);
+        self.validate_resolver_enum_absent_struct_metadata(symbol, name, span);
+
+        Some(symbol)
+    }
+
     fn require_resolver_behavior_symbol<'a>(
         &mut self,
         symbols: &'a SymbolTable,
@@ -7663,6 +7700,28 @@ fn expected_behavior_symbol(
     ExpectedBehaviorSymbol {
         type_like: expected_type_like_symbol(type_params, Some(is_public)),
         methods: expected_behavior_methods(methods),
+    }
+}
+
+fn expected_struct_symbol(
+    type_params: &[ast::TypeParam],
+    fields: &[StructField],
+    is_public: bool,
+) -> ExpectedStructSymbol {
+    ExpectedStructSymbol {
+        type_like: expected_type_like_symbol(type_params, Some(is_public)),
+        fields: expected_fields(fields),
+    }
+}
+
+fn expected_enum_symbol(
+    type_params: &[ast::TypeParam],
+    variants: &[EnumVariant],
+    is_public: bool,
+) -> ExpectedEnumSymbol {
+    ExpectedEnumSymbol {
+        type_like: expected_type_like_symbol(type_params, Some(is_public)),
+        variant_names: expected_variant_names(variants),
     }
 }
 
