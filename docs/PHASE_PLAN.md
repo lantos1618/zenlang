@@ -893,6 +893,8 @@ checked-in docs, tests, and commits only.
   fields instead of a positional tuple across monomorphization.
 - Generic template dependency save/restore now uses shared map helpers across
   structs, enums, functions, generic functions, methods, and generic methods.
+- Generic function and method specialization now share missing type-argument
+  inference diagnostics while preserving function/method wording.
 
 ## Current Phase
 

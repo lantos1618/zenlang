@@ -71,31 +71,13 @@ impl TypeChecker {
         span: Span,
     ) -> Option<String> {
         let template = self.generic_functions.get(name).cloned()?;
-        let missing: Vec<&str> = template
-            .type_params
-            .iter()
-            .map(String::as_str)
-            .filter(|param| !substitutions.contains_key(*param))
-            .collect();
-        if !missing.is_empty() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5000",
-                format!(
-                    "cannot infer type argument{} {} for generic function `{}`",
-                    if missing.len() == 1 {
-                        ""
-                    } else {
-                        "s"
-                    },
-                    missing
-                        .iter()
-                        .map(|name| format!("`{name}`"))
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                    name
-                ),
-                span,
-            ));
+        if self.reject_missing_generic_substitutions(
+            "function",
+            name,
+            &template.type_params,
+            substitutions,
+            span,
+        ) {
             return None;
         }
 
@@ -137,31 +119,13 @@ impl TypeChecker {
         span: Span,
     ) -> Option<String> {
         let template = self.generic_methods.get(name).cloned()?;
-        let missing: Vec<&str> = template
-            .type_params
-            .iter()
-            .map(String::as_str)
-            .filter(|param| !substitutions.contains_key(*param))
-            .collect();
-        if !missing.is_empty() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5000",
-                format!(
-                    "cannot infer type argument{} {} for generic method `{}`",
-                    if missing.len() == 1 {
-                        ""
-                    } else {
-                        "s"
-                    },
-                    missing
-                        .iter()
-                        .map(|name| format!("`{name}`"))
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                    name
-                ),
-                span,
-            ));
+        if self.reject_missing_generic_substitutions(
+            "method",
+            name,
+            &template.type_params,
+            substitutions,
+            span,
+        ) {
             return None;
         }
 
@@ -195,6 +159,45 @@ impl TypeChecker {
         self.current_self_type = saved_self_type;
 
         Some(mangled)
+    }
+
+    fn reject_missing_generic_substitutions(
+        &mut self,
+        kind: &str,
+        name: &str,
+        type_params: &[String],
+        substitutions: &HashMap<String, Type>,
+        span: Span,
+    ) -> bool {
+        let missing: Vec<&str> = type_params
+            .iter()
+            .map(String::as_str)
+            .filter(|param| !substitutions.contains_key(*param))
+            .collect();
+        if missing.is_empty() {
+            return false;
+        }
+
+        self.diagnostics.push(Diagnostic::error(
+            "E5000",
+            format!(
+                "cannot infer type argument{} {} for generic {} `{}`",
+                if missing.len() == 1 {
+                    ""
+                } else {
+                    "s"
+                },
+                missing
+                    .iter()
+                    .map(|name| format!("`{name}`"))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                kind,
+                name
+            ),
+            span,
+        ));
+        true
     }
 
     pub(crate) fn generic_method_self_type(
