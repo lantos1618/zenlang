@@ -989,6 +989,8 @@ checked-in docs, tests, and commits only.
   for counts, names, display types, and typed AST types.
 - Resolver value-parameter validation now carries name, display-type, and
   typed-type message formatting through a validation bundle.
+- Resolver value return-type validation now carries display and typed return
+  message formatting through a validation bundle.
 - Resolver behavior-association list validation now shares one expected
   metadata bundle for display names and typed refs.
 - Resolver behavior-association validation now uses one role/check mapping for

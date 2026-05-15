@@ -243,6 +243,24 @@ struct ExpectedReturnMetadata {
     display: String,
 }
 
+#[derive(Clone, Copy)]
+struct ReturnValidation {
+    display_code: &'static str,
+    typed_code: &'static str,
+}
+
+impl ReturnValidation {
+    fn display_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!("resolver value symbol '{name}' has return type '{actual}', expected '{expected}'")
+    }
+
+    fn typed_message(self, name: &str, actual: &str, expected: &str) -> String {
+        format!(
+            "resolver value symbol '{name}' has typed return type '{actual}', expected '{expected}'"
+        )
+    }
+}
+
 struct ExpectedBehaviorMethod {
     signature: MethodSignatureMetadata,
     metadata: BehaviorMethodTypeMetadata,
@@ -8609,25 +8627,25 @@ impl TypeChecker {
         expected: &ExpectedReturnMetadata,
         span: Span,
     ) {
+        let validation = ReturnValidation {
+            display_code: "E0212",
+            typed_code: "E0357",
+        };
+
         if symbol.return_type_name.as_deref() != Some(expected.display.as_str()) {
             let actual = resolver_metadata_display(symbol.return_type_name.as_deref());
             self.diagnostics.push(Diagnostic::error(
-                "E0212",
-                format!(
-                    "resolver value symbol '{name}' has return type '{actual}', expected '{}'",
-                    expected.display
-                ),
+                validation.display_code,
+                validation.display_message(name, actual, &expected.display),
                 span,
             ));
         }
         if symbol.return_type.as_ref() != Some(&expected.typed) {
             let actual = resolver_ast_type_metadata_display(symbol.return_type.as_ref());
+            let expected = expected.typed.display_name();
             self.diagnostics.push(Diagnostic::error(
-                "E0357",
-                format!(
-                    "resolver value symbol '{name}' has typed return type '{actual}', expected '{}'",
-                    expected.typed.display_name()
-                ),
+                validation.typed_code,
+                validation.typed_message(name, &actual, &expected),
                 span,
             ));
         }
@@ -9699,6 +9717,24 @@ Point.get = (self: Point) i32 { return self.x }
         assert_eq!(
             validation.typed_type_message("apply", "(i32)", "((i32) i32)"),
             "resolver value symbol 'apply' has typed parameter types '(i32)', expected '((i32) i32)'"
+        );
+    }
+
+    #[test]
+    fn return_validation_formats_messages() {
+        let validation = ReturnValidation {
+            display_code: "RETURN",
+            typed_code: "TYPED_RETURN",
+        };
+
+        assert_eq!(validation.display_code, "RETURN");
+        assert_eq!(
+            validation.display_message("main", "bool", "i32"),
+            "resolver value symbol 'main' has return type 'bool', expected 'i32'"
+        );
+        assert_eq!(
+            validation.typed_message("apply", "i32", "(i32) i32"),
+            "resolver value symbol 'apply' has typed return type 'i32', expected '(i32) i32'"
         );
     }
 
