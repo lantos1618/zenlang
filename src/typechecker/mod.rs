@@ -1196,10 +1196,9 @@ impl TypeChecker {
                     type_name, methods, ..
                 } => {
                     for method in methods {
-                        if let Declaration::Function { name, .. } = method {
-                            self.collect_resolver_value_signature(
-                                symbols,
-                                &format!("{type_name}.{name}"),
+                        if let Declaration::Function { name, span, .. } = method {
+                            self.collect_resolver_impl_method_signature(
+                                symbols, type_name, name, *span,
                             );
                         }
                     }
@@ -1435,6 +1434,40 @@ impl TypeChecker {
     }
 
     fn collect_resolver_top_level_method_signature(
+        &mut self,
+        symbols: &SymbolTable,
+        type_name: &str,
+        method_name: &str,
+        span: Span,
+    ) {
+        let ast_key = format!("{type_name}.{method_name}");
+        let restored_key = symbols
+            .lookup(Namespace::Value, &ast_key)
+            .map(|symbol| symbol.name.clone())
+            .or_else(|| {
+                let prefix = format!("{type_name}.");
+                symbols
+                    .symbols()
+                    .iter()
+                    .find(|symbol| {
+                        symbol.namespace == Namespace::Value
+                            && symbol.name.starts_with(&prefix)
+                            && symbol.definition_span == span
+                    })
+                    .map(|symbol| symbol.name.clone())
+            })
+            .unwrap_or(ast_key.clone());
+
+        if restored_key != ast_key {
+            self.methods.remove(&ast_key);
+            if let Some(template) = self.generic_methods.remove(&ast_key) {
+                self.generic_methods.insert(restored_key.clone(), template);
+            }
+        }
+        self.collect_resolver_value_signature(symbols, &restored_key);
+    }
+
+    fn collect_resolver_impl_method_signature(
         &mut self,
         symbols: &SymbolTable,
         type_name: &str,
@@ -8759,6 +8792,33 @@ Box.impl = {
             "resolver-restored impl method bounds should avoid stale AST generic-bound diagnostics: {:?}",
             tc.diagnostics
         );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_uses_resolver_type_impl_method_name_metadata() {
+        let mut program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Point.impl = {
+    get = (self: Point) i32 { return self.x }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[1] {
+            if let Declaration::Function { name, .. } = &mut methods[0] {
+                *name = "missing".to_string();
+            }
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(tc.methods.contains_key("Point.get"));
+        assert!(!tc.methods.contains_key("Point.missing"));
     }
 
     #[test]

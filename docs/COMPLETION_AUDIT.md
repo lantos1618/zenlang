@@ -95,6 +95,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed top-level method collection also restores method names from
   resolver value symbols by declaration span when AST-only method names are
   stale, so collected `Type.method` signatures use resolver-owned names.
+- Resolver-backed non-behavior `Type.impl` method collection restores method
+  names from resolver value symbols by declaration span when AST-only impl
+  method names are stale, covered by
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_type_impl_method_name_metadata`.
 - Resolver-backed generic type-reference validation also derives scoped generic
   type parameters and struct, enum, behavior, and impl-method declaration type
   references from collected resolver-restored metadata, so stale AST-only

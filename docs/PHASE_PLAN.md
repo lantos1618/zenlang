@@ -47,6 +47,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed top-level method collection also restores method names from
   resolver value symbols by declaration span when AST-only method names are
   stale, so collected `Type.method` signatures use resolver-owned names.
+- Resolver-backed non-behavior `Type.impl` method collection now uses the same
+  resolver-owned declaration-span handoff, so stale AST-only impl method names
+  cannot leave stale `Type.missing` method entries during setup.
 - Resolver-backed generic type-reference validation now also derives scoped
   generic type parameters and struct, enum, behavior, and impl-method
   declaration type references from collected resolver-restored metadata, so
