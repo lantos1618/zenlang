@@ -131,6 +131,31 @@ main = () i32 {
 }
 
 #[test]
+fn generic_function_inference_conflict_through_function_type_is_error() {
+    let errors = typecheck_errors(
+        r#"
+choose_with<T> = (left: T, mapper: (T) T) T {
+    return left
+}
+
+main = () i32 {
+    mapper = (value: str) str {
+        return value
+    }
+    return choose_with(1, mapper)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic function `choose_with`: inferred `i32` and `str`"
+        )),
+        "expected generic function function-type inference conflict diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_method_inference_conflict_is_error() {
     let errors = typecheck_errors(
         r#"

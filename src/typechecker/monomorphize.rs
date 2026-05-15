@@ -675,9 +675,34 @@ impl TypeChecker {
                     self.match_type_param(inner, actual_inner, type_params, map, conflicts);
                 }
             }
+            AstType::RawPtr(inner) => {
+                if let Type::RawPtr(actual_inner) = actual {
+                    self.match_type_param(inner, actual_inner, type_params, map, conflicts);
+                }
+            }
             AstType::Slice(inner) => {
                 if let Type::Slice(actual_inner) = actual {
                     self.match_type_param(inner, actual_inner, type_params, map, conflicts);
+                }
+            }
+            AstType::Array { elem, .. } => {
+                if let Type::Array {
+                    elem: actual_elem, ..
+                } = actual
+                {
+                    self.match_type_param(elem, actual_elem, type_params, map, conflicts);
+                }
+            }
+            AstType::Function { params, ret } => {
+                if let Type::Function {
+                    params: actual_params,
+                    ret: actual_ret,
+                } = actual
+                {
+                    for (param, actual_param) in params.iter().zip(actual_params.iter()) {
+                        self.match_type_param(param, actual_param, type_params, map, conflicts);
+                    }
+                    self.match_type_param(ret, actual_ret, type_params, map, conflicts);
                 }
             }
             AstType::Generic { name, .. } => {
