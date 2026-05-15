@@ -604,6 +604,9 @@ checked-in docs, tests, and commits only.
   arity diagnostics instead of resolver handoff mismatch diagnostics.
 - Compile-time `.requires` behavior assertions now have parser, resolver, and
   typechecker coverage for satisfied and missing behavior implementations.
+- Resolver-backed `.requires` semantic validation now restores the required
+  type target through a dedicated declaration helper instead of keeping that
+  resolver handoff inline in the broad declaration semantics loop.
 - Resolver now rejects duplicate method names inside local behavior
   declarations, covered by
   `resolver_phase2::resolver_rejects_duplicate_behavior_method_names`.

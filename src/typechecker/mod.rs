@@ -3566,22 +3566,39 @@ impl TypeChecker {
                 span,
             } = decl
             {
-                let type_name = symbols
-                    .map(|symbols| {
-                        self.resolver_required_type_name_for(
-                            symbols,
-                            type_name,
-                            behavior,
-                            behavior_type_args,
-                        )
-                    })
-                    .unwrap_or_else(|| type_name.clone());
-                self.check_behavior_requires(&type_name, behavior, behavior_type_args, *span);
+                self.validate_collected_behavior_requires_declaration(
+                    symbols,
+                    type_name,
+                    behavior,
+                    behavior_type_args,
+                    *span,
+                );
             }
         }
 
         self.validate_generic_type_references(decls, symbols);
         self.validate_struct_field_defaults(decls, symbols);
+    }
+
+    fn validate_collected_behavior_requires_declaration(
+        &mut self,
+        symbols: Option<&SymbolTable>,
+        type_name: &str,
+        behavior: &str,
+        behavior_type_args: &[AstType],
+        span: Span,
+    ) {
+        let type_name = symbols
+            .map(|symbols| {
+                self.resolver_required_type_name_for(
+                    symbols,
+                    type_name,
+                    behavior,
+                    behavior_type_args,
+                )
+            })
+            .unwrap_or_else(|| type_name.to_string());
+        self.check_behavior_requires(&type_name, behavior, behavior_type_args, span);
     }
 
     fn validate_struct_field_defaults(

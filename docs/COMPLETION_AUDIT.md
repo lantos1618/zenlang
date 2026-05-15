@@ -1088,6 +1088,14 @@ and do not assume Phase 4 is ready without evidence.
   and typed refs as paired edges before deriving resolver comparison lists.
 - Resolver behavior-association list validation now receives paired edge slices
   directly instead of wrapping the expected edge list.
+- Resolver-backed `.requires` semantic validation now restores the required
+  type target through a dedicated declaration helper, with focused coverage
+  from
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_required_metadata`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_required_target_metadata`,
+  `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_required_target_and_name_metadata`,
+  and
+  `typechecker::tests::collect_declarations_with_symbols_reports_resolver_restored_required_target_and_name`.
 - Resolver value-signature expectation building now uses one parameter pass for
   names, display types, and typed metadata.
 - Resolver behavior-method expectation building now reuses the shared
