@@ -838,6 +838,9 @@ checked-in docs, tests, and commits only.
 - Behavior impl method collection now has coverage for clearing restored method
   keys after stale AST target/name repair when resolver value-signature metadata
   is incomplete.
+- Resolver-backed `.requires` validation now restores stale AST target names
+  from unique missing required-ref metadata before skipping incomplete resolver
+  handoff, avoiding false diagnostics from stale AST-only required refs.
 
 ## Current Phase
 

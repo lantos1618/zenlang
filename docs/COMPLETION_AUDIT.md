@@ -562,6 +562,9 @@ and do not assume Phase 4 is ready without evidence.
 - Behavior impl method collection clears restored method keys after stale
   AST-only target/name repair when resolver value-signature metadata is
   incomplete, so partial handoff cannot retain stale impl method signatures.
+- Resolver-backed `.requires` validation restores stale AST target names from a
+  unique missing required-ref owner before skipping incomplete resolver handoff,
+  so stale AST-only required refs cannot produce false undefined-type errors.
 - Resolver-backed generic template collection also derives return-type presence
   from validated resolver metadata, so stale AST-only missing return annotations
   cannot erase resolver-owned generic function or method returns before

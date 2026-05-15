@@ -1859,6 +1859,13 @@ impl TypeChecker {
             }
         }
 
+        let mut candidates = self.resolver_missing_behavior_required_refs.iter();
+        if let Some(candidate) = candidates.next() {
+            if candidates.next().is_none() {
+                return candidate.clone();
+            }
+        }
+
         type_name.to_string()
     }
 
@@ -11425,6 +11432,49 @@ Point.requires(Json<str>)
         assert!(
             tc.diagnostics.is_empty(),
             "resolver-backed collection should not validate stale AST-only requires refs when resolver required metadata is incomplete: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn collect_declarations_with_symbols_does_not_validate_stale_requires_after_target_restore() {
+        let mut program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_behavior_required_refs_for_test(Namespace::Type, "Point", None);
+        if let Declaration::Requires {
+            type_name,
+            behavior,
+            behavior_type_args,
+            ..
+        } = &mut program.declarations[3]
+        {
+            *type_name = "Missing".to_string();
+            *behavior = "AlsoMissing".to_string();
+            behavior_type_args[0] = AstType::I32;
+        }
+        let mut tc = TypeChecker::new();
+
+        tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+        assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-backed collection should not validate stale AST-only requires refs after target restoration when resolver required metadata is incomplete: {:?}",
             tc.diagnostics
         );
     }
