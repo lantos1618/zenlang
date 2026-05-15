@@ -1010,6 +1010,11 @@ and do not assume Phase 4 is ready without evidence.
   by `typechecker::tests::generic_method_collection`,
   `generic_diagnostics::generic_method_inference_conflict_from_receiver_is_error`,
   and the `integration::test_generic_method*` fixtures.
+- Resolver value-symbol definition for top-level and impl methods now also
+  routes through a single type-qualified method key helper, covered by
+  `resolver::tests::resolver_method_key_formats_type_qualified_method_name`,
+  `resolver_phase2::resolver_records_method_signatures_as_value_symbols`, and
+  `resolver_phase2::resolver_accepts_non_behavior_impl_blocks_as_method_symbols`.
 - Resolver-backed declaration collection now has named passes for resolver
   declaration metadata refresh, behavior impl metadata refresh, semantic
   validation, and final impl association refresh, reducing the mixed

@@ -1216,7 +1216,7 @@ impl Resolver {
                 ..
             } => {
                 table.define_value(
-                    &format!("{type_name}.{method_name}"),
+                    &resolver_method_key(type_name, method_name),
                     *public,
                     resolver_value_signature(params, return_type, type_params),
                     *span,
@@ -1309,7 +1309,7 @@ impl Resolver {
                     } = method
                     {
                         table.define_value(
-                            &format!("{type_name}.{name}"),
+                            &resolver_method_key(type_name, name),
                             *public,
                             resolver_value_signature(params, return_type, type_params),
                             *span,
@@ -2694,6 +2694,10 @@ fn behavior_ref_display(behavior: &str, type_args: &[AstType]) -> String {
     }
 }
 
+fn resolver_method_key(type_name: &str, method_name: &str) -> String {
+    format!("{type_name}.{method_name}")
+}
+
 fn resolver_field_types(fields: &[StructField]) -> Vec<(String, AstType, String)> {
     fields
         .iter()
@@ -2705,6 +2709,16 @@ fn resolver_field_types(fields: &[StructField]) -> Vec<(String, AstType, String)
             )
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolver_method_key_formats_type_qualified_method_name() {
+        assert_eq!(resolver_method_key("Point", "get"), "Point.get");
+    }
 }
 
 fn resolver_variant_names(variants: &[crate::ast::EnumVariant]) -> Vec<String> {

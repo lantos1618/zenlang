@@ -401,6 +401,8 @@ checked-in docs, tests, and commits only.
   construction now route through the same type-qualified method key helper.
 - Expression method lookup for module fallbacks, concrete receivers, and
   generic receiver bases now also uses that shared method-key helper.
+- Resolver value-symbol definition for top-level and impl methods now also
+  routes through a single type-qualified method key helper.
 - Resolver symbol metadata lookup is now shared by struct, enum, behavior, and
   behavior-ref restoration paths.
 - Generic method specialization preserves concrete `Self` receiver context in
