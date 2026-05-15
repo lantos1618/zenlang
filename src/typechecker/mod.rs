@@ -6659,27 +6659,43 @@ impl TypeChecker {
         );
     }
 
-    fn validate_generic_type_ref_bounds_allow_unknowns(
-        &mut self,
-        ast_type: &AstType,
-        scoped_type_params: &HashSet<String>,
-        span: Span,
-    ) {
-        self.validate_generic_type_ref_bounds_with_unknowns(
-            ast_type,
-            scoped_type_params,
+    fn validate_generic_type_arg_refs_allow_unknowns(&mut self, type_args: &[AstType], span: Span) {
+        let scoped_type_params = HashSet::new();
+        self.validate_generic_type_arg_refs_with_unknowns(
+            type_args,
+            &scoped_type_params,
             span,
             false,
         );
     }
 
-    fn validate_generic_type_arg_refs_allow_unknowns(&mut self, type_args: &[AstType], span: Span) {
-        let scoped_type_params = HashSet::new();
+    fn validate_generic_type_arg_refs(
+        &mut self,
+        type_args: &[AstType],
+        scoped_type_params: &HashSet<String>,
+        span: Span,
+    ) {
+        self.validate_generic_type_arg_refs_with_unknowns(
+            type_args,
+            scoped_type_params,
+            span,
+            true,
+        );
+    }
+
+    fn validate_generic_type_arg_refs_with_unknowns(
+        &mut self,
+        type_args: &[AstType],
+        scoped_type_params: &HashSet<String>,
+        span: Span,
+        reject_unknown: bool,
+    ) {
         for type_arg in type_args {
-            self.validate_generic_type_ref_bounds_allow_unknowns(
+            self.validate_generic_type_ref_bounds_with_unknowns(
                 type_arg,
-                &scoped_type_params,
+                scoped_type_params,
                 span,
+                reject_unknown,
             );
         }
     }
@@ -6731,14 +6747,12 @@ impl TypeChecker {
                 }
             }
             AstType::Generic { name, type_args } => {
-                for type_arg in type_args {
-                    self.validate_generic_type_ref_bounds_with_unknowns(
-                        type_arg,
-                        scoped_type_params,
-                        span,
-                        reject_unknown,
-                    );
-                }
+                self.validate_generic_type_arg_refs_with_unknowns(
+                    type_args,
+                    scoped_type_params,
+                    span,
+                    reject_unknown,
+                );
 
                 if scoped_type_params.contains(name) {
                     return;
@@ -6816,14 +6830,12 @@ impl TypeChecker {
                 );
             }
             AstType::Function { params, ret } => {
-                for param in params {
-                    self.validate_generic_type_ref_bounds_with_unknowns(
-                        param,
-                        scoped_type_params,
-                        span,
-                        reject_unknown,
-                    );
-                }
+                self.validate_generic_type_arg_refs_with_unknowns(
+                    params,
+                    scoped_type_params,
+                    span,
+                    reject_unknown,
+                );
                 self.validate_generic_type_ref_bounds_with_unknowns(
                     ret,
                     scoped_type_params,
@@ -6853,9 +6865,7 @@ impl TypeChecker {
                 span,
                 ..
             } => {
-                for type_arg in type_args {
-                    self.validate_generic_type_ref_bounds(type_arg, scoped_type_params, *span);
-                }
+                self.validate_generic_type_arg_refs(type_args, scoped_type_params, *span);
                 for arg in args {
                     self.validate_generic_expr_type_references(arg, scoped_type_params);
                 }
@@ -6868,9 +6878,7 @@ impl TypeChecker {
                 ..
             } => {
                 self.validate_generic_expr_type_references(receiver, scoped_type_params);
-                for type_arg in type_args {
-                    self.validate_generic_type_ref_bounds(type_arg, scoped_type_params, *span);
-                }
+                self.validate_generic_type_arg_refs(type_args, scoped_type_params, *span);
                 for arg in args {
                     self.validate_generic_expr_type_references(arg, scoped_type_params);
                 }
@@ -6895,9 +6903,7 @@ impl TypeChecker {
                 span,
                 ..
             } => {
-                for type_arg in type_args {
-                    self.validate_generic_type_ref_bounds(type_arg, scoped_type_params, *span);
-                }
+                self.validate_generic_type_arg_refs(type_args, scoped_type_params, *span);
                 for (_, value) in fields {
                     self.validate_generic_expr_type_references(value, scoped_type_params);
                 }
@@ -6908,9 +6914,7 @@ impl TypeChecker {
                 span,
                 ..
             } => {
-                for type_arg in type_args {
-                    self.validate_generic_type_ref_bounds(type_arg, scoped_type_params, *span);
-                }
+                self.validate_generic_type_arg_refs(type_args, scoped_type_params, *span);
                 if let Some(payload) = payload {
                     self.validate_generic_expr_type_references(payload, scoped_type_params);
                 }

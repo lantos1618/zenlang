@@ -198,6 +198,9 @@ and do not assume Phase 4 is ready without evidence.
   methods while keeping declaration symbol checks at each call site.
 - Resolver-symbol validation now shares generic behavior-association
   type-argument validation across impl, requires, and extends declarations.
+- Generic type-reference validation now shares strict and unknown-tolerant
+  type-argument list walking across recursive type refs, expression type args,
+  and resolver-owned behavior association refs.
 - Resolver behavior association list validation now collects type-owned
   impl/required tasks and behavior-owned parent tasks in one declaration pass,
   covered by

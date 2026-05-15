@@ -127,6 +127,9 @@ checked-in docs, tests, and commits only.
 - Resolver-symbol validation now shares generic behavior-association
   type-argument validation across impl, requires, and extends declarations,
   keeping unknown-tolerant resolver handoff checks on one path.
+- Generic type-reference validation now shares strict and unknown-tolerant
+  type-argument list walking across recursive type refs, expression type args,
+  and resolver-owned behavior association refs.
 - Resolver behavior association list validation now builds type-owned
   impl/required tasks and behavior-owned parent tasks in one declaration pass
   before replaying the existing resolver metadata list checks.
