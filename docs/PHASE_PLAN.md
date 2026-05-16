@@ -135,6 +135,10 @@ checked-in docs, tests, and commits only.
 - Generic type-reference validation now shares strict and unknown-tolerant
   type-argument list walking across recursive type refs, expression type args,
   and resolver-owned behavior association refs.
+- Expression checking now delegates aggregate/access forms through focused
+  helpers for member access, struct literals, enum variants, array literals,
+  and index access, keeping `check_expr` as dispatch while preserving existing
+  diagnostics.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
