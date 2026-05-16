@@ -138,6 +138,28 @@ pub fn assert_c_function_definition_count(c_source: &str, name: &str, expected: 
     );
 }
 
+pub fn assert_generated_c_function_definitions_are_unique(c_source: &str) {
+    let definitions = c_function_definitions(c_source);
+    let mut duplicates = Vec::new();
+
+    for definition in &definitions {
+        if definitions
+            .iter()
+            .filter(|candidate| *candidate == definition)
+            .count()
+            > 1
+            && !duplicates.contains(definition)
+        {
+            duplicates.push(definition.clone());
+        }
+    }
+
+    assert!(
+        duplicates.is_empty(),
+        "generated C emitted duplicate function definitions: {duplicates:?}\n{c_source}"
+    );
+}
+
 pub fn assert_c_call_resolves_to_definition(c_source: &str, name: &str) {
     assert_c_function_definition(c_source, name);
     assert!(
