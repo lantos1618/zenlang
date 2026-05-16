@@ -1836,6 +1836,9 @@ checked-in docs, tests, and commits only.
 - Resolver validation replay now passes the full replay task bundle into
   behavior association list validation, which selects type and parent
   association lists internally.
+- Resolver extra declaration/local symbol validation now receives the full
+  resolver validation replay task bundle and selects expected symbol sets
+  internally, reducing another replay sub-bundle handoff.
 
 ## Current Phase
 

@@ -8470,11 +8470,8 @@ impl TypeChecker {
             }
         }
         let replay_tasks = Self::collect_resolver_validation_replay_tasks(program, symbols);
-        self.validate_no_extra_resolver_declaration_symbols(
-            &replay_tasks.expected_symbols,
-            symbols,
-        );
-        self.validate_no_extra_resolver_local_symbols(&replay_tasks.expected_symbols, symbols);
+        self.validate_no_extra_resolver_declaration_symbols(&replay_tasks, symbols);
+        self.validate_no_extra_resolver_local_symbols(&replay_tasks, symbols);
         self.validate_resolver_behavior_association_lists(&replay_tasks);
         self.validate_stripped_resolver_import_symbols(
             replay_tasks.expected_symbols.validate_imports,
@@ -8506,9 +8503,10 @@ impl TypeChecker {
 
     fn validate_no_extra_resolver_declaration_symbols(
         &mut self,
-        expected: &ResolverExpectedSymbolSets,
+        tasks: &ResolverValidationReplayTasks<'_>,
         symbols: &SymbolTable,
     ) {
+        let expected = &tasks.expected_symbols;
         for symbol in symbols.symbols() {
             if !expected.validate_imports
                 && matches!(symbol.namespace, Namespace::Module | Namespace::Import)
@@ -8542,9 +8540,10 @@ impl TypeChecker {
 
     fn validate_no_extra_resolver_local_symbols(
         &mut self,
-        expected: &ResolverExpectedSymbolSets,
+        tasks: &ResolverValidationReplayTasks<'_>,
         symbols: &SymbolTable,
     ) {
+        let expected = &tasks.expected_symbols;
         for symbol in symbols.symbols() {
             if symbol.namespace != Namespace::Local {
                 continue;
