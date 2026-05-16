@@ -8539,15 +8539,12 @@ impl TypeChecker {
                 Declaration::Function {
                     name, params, body, ..
                 } => {
-                    tasks
-                        .expected_symbols
-                        .declarations
-                        .insert((Namespace::Value, name.clone()));
-                    expected_resolver_callable_locals(
+                    push_expected_resolver_callable_symbol(
+                        name.clone(),
                         params,
                         body,
                         &mut scope_cursor,
-                        &mut tasks.expected_symbols.locals,
+                        &mut tasks.expected_symbols,
                     );
                 }
                 Declaration::Method {
@@ -8557,15 +8554,12 @@ impl TypeChecker {
                     body,
                     ..
                 } => {
-                    tasks.expected_symbols.declarations.insert((
-                        Namespace::Value,
+                    push_expected_resolver_callable_symbol(
                         method_signature_key(type_name, method_name),
-                    ));
-                    expected_resolver_callable_locals(
                         params,
                         body,
                         &mut scope_cursor,
-                        &mut tasks.expected_symbols.locals,
+                        &mut tasks.expected_symbols,
                     );
                 }
                 Declaration::Struct {
@@ -11618,12 +11612,26 @@ fn collect_expected_resolver_impl_method_symbols(
             name, params, body, ..
         } = method
         {
-            expected
-                .declarations
-                .insert((Namespace::Value, method_signature_key(type_name, name)));
-            expected_resolver_callable_locals(params, body, scope_cursor, &mut expected.locals);
+            push_expected_resolver_callable_symbol(
+                method_signature_key(type_name, name),
+                params,
+                body,
+                scope_cursor,
+                expected,
+            );
         }
     }
+}
+
+fn push_expected_resolver_callable_symbol(
+    name: String,
+    params: &[Param],
+    body: &Expression,
+    scope_cursor: &mut ResolverScopeCursor,
+    expected: &mut ResolverExpectedSymbolSets,
+) {
+    expected.declarations.insert((Namespace::Value, name));
+    expected_resolver_callable_locals(params, body, scope_cursor, &mut expected.locals);
 }
 
 fn expected_resolver_callable_locals(

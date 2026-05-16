@@ -1740,6 +1740,8 @@ checked-in docs, tests, and commits only.
   before replaying generic type-reference diagnostics.
 - Resolver validation replay now uses shared behavior-association and parent
   list push helpers before checking resolver metadata lists.
+- Resolver validation replay now uses a shared callable-symbol helper for
+  top-level functions, methods, and impl methods.
 
 ## Current Phase
 
