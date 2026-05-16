@@ -3907,42 +3907,8 @@ impl TypeChecker {
             Self::push_resolver_type_reference_validation_task(decl, &mut tasks.type_references);
             Self::push_resolver_type_declaration_metadata_task(decl, &mut tasks.types);
             Self::push_resolver_behavior_declaration_metadata_task(decl, &mut tasks.behaviors);
+            Self::push_resolver_callable_declaration_metadata_task(decl, &mut tasks.callable);
             match decl {
-                Declaration::Function { name, span, .. } => {
-                    tasks
-                        .callable
-                        .push(ResolverCallableDeclarationMetadataTask::Function {
-                            name,
-                            span: *span,
-                        });
-                }
-                Declaration::Method {
-                    type_name,
-                    method_name,
-                    span,
-                    ..
-                } => {
-                    tasks
-                        .callable
-                        .push(ResolverCallableDeclarationMetadataTask::Method {
-                            type_name,
-                            method_name,
-                            span: *span,
-                        });
-                }
-                Declaration::ImplBlock {
-                    type_name,
-                    behavior: None,
-                    methods,
-                    ..
-                } => {
-                    tasks
-                        .callable
-                        .push(ResolverCallableDeclarationMetadataTask::TypeImpl {
-                            type_name,
-                            methods,
-                        });
-                }
                 Declaration::ImplBlock {
                     type_name,
                     behavior: Some(behavior),
@@ -4033,6 +3999,50 @@ impl TypeChecker {
                 name: name.as_str(),
                 span: *span,
             });
+        }
+    }
+
+    #[cfg(test)]
+    fn collect_resolver_callable_declaration_metadata_tasks(
+        decls: &[Declaration],
+    ) -> Vec<ResolverCallableDeclarationMetadataTask<'_>> {
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_resolver_callable_declaration_metadata_task(decl, &mut tasks);
+        }
+        tasks
+    }
+
+    fn push_resolver_callable_declaration_metadata_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<ResolverCallableDeclarationMetadataTask<'a>>,
+    ) {
+        match decl {
+            Declaration::Function { name, span, .. } => {
+                tasks.push(ResolverCallableDeclarationMetadataTask::Function { name, span: *span });
+            }
+            Declaration::Method {
+                type_name,
+                method_name,
+                span,
+                ..
+            } => {
+                tasks.push(ResolverCallableDeclarationMetadataTask::Method {
+                    type_name,
+                    method_name,
+                    span: *span,
+                });
+            }
+            Declaration::ImplBlock {
+                type_name,
+                behavior: None,
+                methods,
+                ..
+            } => {
+                tasks
+                    .push(ResolverCallableDeclarationMetadataTask::TypeImpl { type_name, methods });
+            }
+            _ => {}
         }
     }
 
@@ -16087,6 +16097,48 @@ main = () i32 { return 1 }
 
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].name, "Json");
+    }
+
+    #[test]
+    fn resolver_callable_declaration_metadata_tasks_collect_callable_work() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+make = () Point { return Point { x: 1 } }
+
+Point.get = (self: Point) i32 { return self.x }
+
+Point.impl = {
+    plus = (self: Point, other: Point) i32 { return self.x + other.x }
+}
+"#,
+        );
+
+        let tasks = TypeChecker::collect_resolver_callable_declaration_metadata_tasks(
+            &program.declarations,
+        );
+
+        assert_eq!(tasks.len(), 3);
+        assert!(matches!(
+            tasks[0],
+            ResolverCallableDeclarationMetadataTask::Function { name: "make", .. }
+        ));
+        assert!(matches!(
+            tasks[1],
+            ResolverCallableDeclarationMetadataTask::Method {
+                type_name: "Point",
+                method_name: "get",
+                ..
+            }
+        ));
+        assert!(matches!(
+            tasks[2],
+            ResolverCallableDeclarationMetadataTask::TypeImpl {
+                type_name: "Point",
+                ..
+            }
+        ));
     }
 
     #[test]

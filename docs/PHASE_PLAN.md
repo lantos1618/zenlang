@@ -1711,6 +1711,8 @@ checked-in docs, tests, and commits only.
   metadata task bundle when only type default replay is needed.
 - Resolver-backed behavior declaration metadata now uses a narrow behavior
   metadata task collector shared by the full resolver metadata collector.
+- Resolver-backed callable declaration metadata now uses a narrow callable
+  metadata task collector shared by the full resolver metadata collector.
 
 ## Current Phase
 

@@ -2040,6 +2040,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_behavior_declaration_metadata_tasks_collect_only_behavior_work`
   and
   `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
+- Resolver-backed callable declaration metadata now uses a narrow callable
+  metadata task collector shared by the full resolver metadata collector,
+  covered by
+  `cargo test resolver_callable_declaration_metadata_tasks_collect_callable_work`
+  and
+  `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
 
 ## Unresolved Gaps
 
