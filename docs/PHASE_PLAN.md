@@ -1788,6 +1788,9 @@ checked-in docs, tests, and commits only.
 - The same standalone behavior-association task collector now also carries
   `.extends` parent edges for the early inheritance validation pass, replacing
   the old extends-only collector while preserving validation order.
+- Resolver declaration metadata tasks now store behavior edge work in the same
+  behavior-association bundle shape, so resolver-backed `.implements` and
+  `.requires` replay no longer uses separate top-level task fields.
 
 ## Current Phase
 

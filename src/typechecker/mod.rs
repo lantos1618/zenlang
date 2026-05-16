@@ -272,8 +272,7 @@ struct ResolverDeclarationMetadataTasks<'a> {
     callable: Vec<ResolverCallableDeclarationMetadataTask<'a>>,
     types: Vec<ResolverTypeDeclarationMetadataTask<'a>>,
     behaviors: Vec<ResolverBehaviorDeclarationMetadataTask<'a>>,
-    behavior_impl_blocks: Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
-    behavior_requires: Vec<BehaviorRequiresValidationTask<'a>>,
+    behavior_associations: BehaviorAssociationValidationTasks<'a>,
     type_references: Vec<ResolverTypeReferenceValidationTask<'a>>,
 }
 
@@ -3931,11 +3930,10 @@ impl TypeChecker {
 
         let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
         self.collect_resolver_declaration_metadata(symbols, &tasks);
-        self.collect_resolver_behavior_impl_metadata(&tasks.behavior_impl_blocks, symbols);
+        self.collect_resolver_behavior_impl_metadata(&tasks.behavior_associations.impls, symbols);
         self.validate_resolver_collected_declaration_semantics(
             symbols,
-            &tasks.behavior_impl_blocks,
-            &tasks.behavior_requires,
+            &tasks.behavior_associations,
             &tasks.types,
             &tasks.type_references,
         );
@@ -3976,7 +3974,7 @@ impl TypeChecker {
             } else {
                 Self::push_resolver_behavior_impl_replay_tasks(
                     decl,
-                    &mut tasks.behavior_impl_blocks,
+                    &mut tasks.behavior_associations.impls,
                     &mut tasks.type_references,
                 )
             };
@@ -3986,7 +3984,11 @@ impl TypeChecker {
                     &mut tasks.type_references,
                 );
             }
-            Self::push_behavior_requires_replay_task(decl, &mut tasks.behavior_requires);
+            Self::push_behavior_extends_replay_task(decl, &mut tasks.behavior_associations.extends);
+            Self::push_behavior_requires_replay_task(
+                decl,
+                &mut tasks.behavior_associations.requires,
+            );
         }
         tasks
     }
@@ -4489,14 +4491,16 @@ impl TypeChecker {
     fn validate_resolver_collected_declaration_semantics(
         &mut self,
         symbols: &SymbolTable,
-        behavior_impl_tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
-        behavior_requires_tasks: &[BehaviorRequiresValidationTask<'_>],
+        behavior_association_tasks: &BehaviorAssociationValidationTasks<'_>,
         type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
         type_reference_tasks: &[ResolverTypeReferenceValidationTask<'_>],
     ) {
         self.with_resolver_backed_collection(|checker| {
-            checker.validate_behavior_impl_tasks(behavior_impl_tasks, Some(symbols));
-            checker.validate_behavior_requires_tasks(behavior_requires_tasks, Some(symbols));
+            checker.validate_behavior_impl_tasks(&behavior_association_tasks.impls, Some(symbols));
+            checker.validate_behavior_requires_tasks(
+                &behavior_association_tasks.requires,
+                Some(symbols),
+            );
             checker.validate_resolver_type_reference_tasks(type_reference_tasks, Some(symbols));
             checker.validate_resolver_struct_field_default_tasks(type_tasks, Some(symbols));
         });
@@ -15193,13 +15197,14 @@ main = () i32 { 0 }
         assert_eq!(tasks.behaviors.len(), 1);
         assert_eq!(tasks.behaviors[0].name, "Json");
         assert_eq!(tasks.callable.len(), 2);
-        assert_eq!(tasks.behavior_impl_blocks.len(), 1);
-        let behavior_impl = &tasks.behavior_impl_blocks[0];
+        assert!(tasks.behavior_associations.extends.is_empty());
+        assert_eq!(tasks.behavior_associations.impls.len(), 1);
+        let behavior_impl = &tasks.behavior_associations.impls[0];
         assert_eq!(behavior_impl.ast_type_name, "Point");
         assert_eq!(behavior_impl.behavior, "Json");
         assert_eq!(behavior_impl.methods.len(), 1);
-        assert_eq!(tasks.behavior_requires.len(), 1);
-        let requires = &tasks.behavior_requires[0];
+        assert_eq!(tasks.behavior_associations.requires.len(), 1);
+        let requires = &tasks.behavior_associations.requires[0];
         assert_eq!(requires.type_name, "Point");
         assert_eq!(requires.behavior, "Json");
         assert_eq!(tasks.type_references.len(), 6);
