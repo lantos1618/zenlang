@@ -149,6 +149,7 @@ struct AstDeclarationCollectionTasks<'a> {
     callable: Vec<CallableDeclarationTask<'a>>,
     impl_blocks: Vec<ImplBlockDeclarationTask<'a>>,
     imports: Vec<AstImportDeclarationTask<'a>>,
+    precollection_validations: AstPrecollectionValidationTasks<'a>,
 }
 
 struct AstStructFieldDefaultValidationTask<'a> {
@@ -3433,7 +3434,7 @@ impl TypeChecker {
     fn collect_declarations(&mut self, decls: &[Declaration]) {
         let tasks = Self::collect_ast_declaration_collection_tasks(decls);
         self.collect_behavior_declarations_from_tasks(&tasks.behaviors);
-        self.validate_behavior_extends(decls);
+        self.validate_ast_precollection_tasks(&tasks.precollection_validations);
         if !self.resolver_backed_collection {
             self.collect_ast_type_declarations_from_tasks(&tasks.types);
         }
@@ -3452,6 +3453,17 @@ impl TypeChecker {
             Self::push_callable_declaration_task(decl, &mut tasks.callable);
             Self::push_impl_block_declaration_task(decl, &mut tasks.impl_blocks);
             Self::push_ast_import_declaration_task(decl, &mut tasks.imports);
+            Self::push_self_type_context_validation_task(
+                decl,
+                &mut tasks.precollection_validations.self_type_contexts,
+            );
+            Self::push_behavior_extends_replay_task(
+                decl,
+                &mut tasks
+                    .precollection_validations
+                    .behavior_associations
+                    .extends,
+            );
         }
         tasks
     }
@@ -3907,8 +3919,7 @@ impl TypeChecker {
         );
     }
 
-    fn validate_behavior_extends(&mut self, decls: &[Declaration]) {
-        let tasks = Self::collect_ast_precollection_validation_tasks(decls);
+    fn validate_ast_precollection_tasks(&mut self, tasks: &AstPrecollectionValidationTasks<'_>) {
         self.validate_self_type_context_tasks(&tasks.self_type_contexts);
 
         if self.resolver_backed_collection {
@@ -3918,6 +3929,7 @@ impl TypeChecker {
         self.validate_ast_behavior_extends_tasks(&tasks.behavior_associations);
     }
 
+    #[cfg(test)]
     fn collect_ast_precollection_validation_tasks(
         decls: &[Declaration],
     ) -> AstPrecollectionValidationTasks<'_> {
@@ -16381,6 +16393,38 @@ result := 1
         assert_eq!(tasks.behavior_associations.extends[0].parent, "Json");
         assert!(tasks.behavior_associations.impls.is_empty());
         assert!(tasks.behavior_associations.requires.is_empty());
+    }
+
+    #[test]
+    fn ast_declaration_collection_tasks_include_precollection_validation_work() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Pretty.extends(Json)
+
+make = () Point { Point { x: 1 } }
+"#,
+        );
+
+        let tasks = TypeChecker::collect_ast_declaration_collection_tasks(&program.declarations);
+
+        assert_eq!(tasks.types.len(), 1);
+        assert_eq!(tasks.behaviors.len(), 1);
+        assert_eq!(tasks.callable.len(), 1);
+        assert_eq!(tasks.precollection_validations.self_type_contexts.len(), 4);
+        assert_eq!(
+            tasks
+                .precollection_validations
+                .behavior_associations
+                .extends
+                .len(),
+            1
+        );
     }
 
     #[test]
