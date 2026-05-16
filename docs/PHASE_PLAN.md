@@ -183,6 +183,9 @@ checked-in docs, tests, and commits only.
 - Resolver absent-metadata entry and diagnostic helpers now live in dedicated
   resolver validation support files, keeping shared absence diagnostics
   separate from per-symbol absence descriptor code tables.
+- Parser behavior declaration and impl-block parsing now live in a dedicated
+  parser helper module, keeping behavior signatures and association syntax out
+  of the broad top-level declaration dispatcher.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,

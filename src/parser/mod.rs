@@ -10,6 +10,7 @@ use crate::error::{CompileError, FileId, Span};
 use crate::lexer::Token;
 
 mod atoms;
+mod behavior_declarations;
 mod declarations;
 mod expressions;
 mod patterns;
