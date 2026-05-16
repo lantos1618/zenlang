@@ -2178,6 +2178,8 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_command_routes_build_zen_through_deterministic_graph`.
   Multi-target execution is covered by
   `cargo test --test integration build_command_build_zen_compiles_multiple_executable_targets`.
+  Test-only graphs are rejected before execution starts through
+  `cargo test --test integration build_command_build_zen_rejects_graph_without_executable_targets`.
   The same entrypoint rejects undeclared host effects before multi-target
   execution,
   covered by

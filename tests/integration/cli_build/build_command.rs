@@ -166,6 +166,53 @@ main = () i32 {
 }
 
 #[test]
+fn build_command_build_zen_rejects_graph_without_executable_targets() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Test { name: "unit", root: "test.zen" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("test.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write test.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["build", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build build.zen");
+
+    assert!(
+        !output.status.success(),
+        "zen build build.zen unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("build graph execution requires at least one executable target"),
+        "expected no executable target diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        !tmp.path().join("build").exists(),
+        "build command should not create outputs for a test-only graph"
+    );
+}
+
+#[test]
 fn build_command_build_zen_compiles_executable_dependencies_first() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
