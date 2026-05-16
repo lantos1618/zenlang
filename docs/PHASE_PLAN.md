@@ -157,7 +157,9 @@ checked-in docs, tests, and commits only.
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order. Resolver-backed
   generic type-reference validation also routes through that same task
-  collector instead of maintaining a second declaration match.
+  collector instead of maintaining a second declaration match, and
+  resolver-backed struct field default validation reuses the same collected
+  type tasks on the fallback semantic path.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis.

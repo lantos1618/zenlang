@@ -3917,7 +3917,7 @@ impl TypeChecker {
             );
             checker.validate_behavior_requires_tasks(behavior_requires_tasks, Some(symbols));
             checker.validate_resolver_type_reference_tasks(type_reference_tasks, Some(symbols));
-            checker.validate_resolver_struct_field_default_tasks(type_tasks, symbols);
+            checker.validate_resolver_struct_field_default_tasks(type_tasks, Some(symbols));
         });
     }
 
@@ -4185,23 +4185,23 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: Option<&SymbolTable>,
     ) {
+        if self.resolver_backed_collection {
+            let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
+            self.validate_resolver_struct_field_default_tasks(&tasks.types, symbols);
+            return;
+        }
+
         for decl in decls {
             let Declaration::Struct {
-                name,
                 type_params,
                 fields,
-                span,
                 ..
             } = decl
             else {
                 continue;
             };
 
-            if self.resolver_backed_collection {
-                self.validate_resolver_struct_field_defaults(symbols, name, *span);
-            } else {
-                self.validate_ast_struct_field_defaults(!type_params.is_empty(), fields);
-            }
+            self.validate_ast_struct_field_defaults(!type_params.is_empty(), fields);
         }
     }
 
@@ -4228,11 +4228,11 @@ impl TypeChecker {
     fn validate_resolver_struct_field_default_tasks(
         &mut self,
         type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
-        symbols: &SymbolTable,
+        symbols: Option<&SymbolTable>,
     ) {
         for task in type_tasks {
             if let ResolverTypeDeclarationMetadataTask::Struct { name, span, .. } = task {
-                self.validate_resolver_struct_field_defaults(Some(symbols), name, *span);
+                self.validate_resolver_struct_field_defaults(symbols, name, *span);
             }
         }
     }
@@ -17135,7 +17135,7 @@ Point: { x: i32 = true }
         tc.collect_resolver_declaration_metadata(&symbols, &tasks);
 
         tc.with_resolver_backed_collection(|checker| {
-            checker.validate_resolver_struct_field_default_tasks(&tasks.types, &symbols);
+            checker.validate_resolver_struct_field_default_tasks(&tasks.types, Some(&symbols));
         });
 
         assert!(
@@ -17146,6 +17146,43 @@ Point: { x: i32 = true }
                         .contains("field `x` default expects `i32`, found `bool`")
             }),
             "resolver-backed default validation should use precollected type tasks: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn resolver_backed_struct_field_defaults_reuse_metadata_tasks() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 = true }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let mut stale_declarations = program.declarations.clone();
+        if let Declaration::Struct { fields, .. } = &mut stale_declarations[0] {
+            fields.clear();
+        }
+        let mut tc = TypeChecker::new();
+        tc.with_resolver_backed_collection(|checker| {
+            checker.collect_declarations(&stale_declarations)
+        });
+        let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+        tc.collect_resolver_declaration_metadata(&symbols, &tasks);
+
+        tc.with_resolver_backed_collection(|checker| {
+            checker.validate_struct_field_defaults(&program.declarations, Some(&symbols));
+        });
+
+        assert!(
+            tc.diagnostics.iter().any(|diag| {
+                diag.code == "E3073"
+                    && diag
+                        .message
+                        .contains("field `x` default expects `i32`, found `bool`")
+            }),
+            "resolver-backed default validation should reuse shared metadata tasks: {:?}",
             tc.diagnostics
         );
     }

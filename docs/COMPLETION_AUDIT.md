@@ -1941,6 +1941,9 @@ and do not assume Phase 4 is ready without evidence.
   metadata tasks instead of rescanning declarations during semantic replay,
   covered by
   `cargo test resolver_struct_field_defaults_validate_from_type_metadata_tasks`.
+  The fallback resolver-backed struct field default validation path also uses
+  the shared metadata task collector, covered by
+  `cargo test resolver_backed_struct_field_defaults_reuse_metadata_tasks`.
 - Resolver-backed generic type-reference validation now reuses type-reference
   tasks from the declaration metadata pass instead of rescanning declarations
   during semantic replay, covered by
