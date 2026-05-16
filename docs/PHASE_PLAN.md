@@ -1903,6 +1903,9 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_routes_through_deterministic_graph`, and
   rejects undeclared host effects through
   `direct_file_command_build_zen_rejects_undeclared_host_effects`.
+- Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes stay
+  rejected with a targeted `emit-json build-graph` diagnostic, covered by
+  `legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic`.
 
 ## Current Phase
 
@@ -1911,15 +1914,15 @@ slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
 Phase 4 build-driver work still has constrained `build.zen` semantics: normal
 `zen build build.zen` executes one graph target, `zen check build.zen` validates
 the graph, `zen emit build.zen` emits target C, and direct `zen build.zen`
-aliases the same graph build path.
+aliases the same graph build path. Legacy generic JSON emitters reject
+`build.zen` and point to `emit-json build-graph`.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Continue the next smallest build-driver slice by deciding whether
-`emit-json ast|symbols|typed|diagnostics build.zen` should stay rejected with
-the current targeted diagnostic, gain structured graph-aware output, or be
-removed from the advertised surface. Preserve the constrained accepted
-`build.zen` subset either way.
+Continue the next smallest build-driver slice by expanding graph execution only
+when a new positive graph fixture and a matching negative deterministic-effect
+fixture exist first. Preserve the constrained accepted `build.zen` subset until
+multi-target or richer build-script semantics are specified and tested.
