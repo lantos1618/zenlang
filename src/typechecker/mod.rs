@@ -8039,29 +8039,12 @@ impl TypeChecker {
                     behavior_type_args,
                     ..
                 } => {
-                    for method in methods {
-                        if let Declaration::Function {
-                            name, params, body, ..
-                        } = method
-                        {
-                            tasks
-                                .expected_symbols
-                                .declarations
-                                .insert((Namespace::Value, method_signature_key(type_name, name)));
-                            let mut locals = scope_cursor.new_scope();
-                            expected_resolver_parameter_locals(
-                                params,
-                                &mut locals,
-                                &mut tasks.expected_symbols.locals,
-                            );
-                            expected_resolver_expr_locals(
-                                body,
-                                &mut scope_cursor,
-                                &mut locals,
-                                &mut tasks.expected_symbols.locals,
-                            );
-                        }
-                    }
+                    collect_expected_resolver_impl_method_symbols(
+                        type_name,
+                        methods,
+                        &mut scope_cursor,
+                        &mut tasks.expected_symbols,
+                    );
                     expected_associations
                         .impls
                         .push(type_name, behavior, behavior_type_args);
@@ -8069,29 +8052,12 @@ impl TypeChecker {
                 Declaration::ImplBlock {
                     type_name, methods, ..
                 } => {
-                    for method in methods {
-                        if let Declaration::Function {
-                            name, params, body, ..
-                        } = method
-                        {
-                            tasks
-                                .expected_symbols
-                                .declarations
-                                .insert((Namespace::Value, method_signature_key(type_name, name)));
-                            let mut locals = scope_cursor.new_scope();
-                            expected_resolver_parameter_locals(
-                                params,
-                                &mut locals,
-                                &mut tasks.expected_symbols.locals,
-                            );
-                            expected_resolver_expr_locals(
-                                body,
-                                &mut scope_cursor,
-                                &mut locals,
-                                &mut tasks.expected_symbols.locals,
-                            );
-                        }
-                    }
+                    collect_expected_resolver_impl_method_symbols(
+                        type_name,
+                        methods,
+                        &mut scope_cursor,
+                        &mut tasks.expected_symbols,
+                    );
                 }
                 Declaration::Requires {
                     type_name,
@@ -11000,6 +10966,27 @@ fn expected_behavior_edge(behavior: &str, type_args: &[AstType]) -> ExpectedBeha
     ExpectedBehaviorEdge::new(behavior, type_args)
 }
 
+fn collect_expected_resolver_impl_method_symbols(
+    type_name: &str,
+    methods: &[Declaration],
+    scope_cursor: &mut ResolverScopeCursor,
+    expected: &mut ResolverExpectedSymbolSets,
+) {
+    for method in methods {
+        if let Declaration::Function {
+            name, params, body, ..
+        } = method
+        {
+            expected
+                .declarations
+                .insert((Namespace::Value, method_signature_key(type_name, name)));
+            let mut locals = scope_cursor.new_scope();
+            expected_resolver_parameter_locals(params, &mut locals, &mut expected.locals);
+            expected_resolver_expr_locals(body, scope_cursor, &mut locals, &mut expected.locals);
+        }
+    }
+}
+
 fn expected_resolver_parameter_locals(
     params: &[Param],
     locals: &mut ResolverLocalScope,
@@ -13688,6 +13675,39 @@ main = (input: i32) i32 {
         assert_eq!(type_task.impl_edges[0].display, "Json<str>");
         assert_eq!(type_task.required_edges[0].display, "Json<str>");
         assert_eq!(tasks.behavior_associations.behavior_parents.len(), 1);
+    }
+
+    #[test]
+    fn expected_resolver_impl_method_symbols_collect_value_symbols_and_locals() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Point.impl = {
+    x_value = (value: Point) i32 { return value.x }
+}
+"#,
+        );
+        let Declaration::ImplBlock {
+            type_name, methods, ..
+        } = &program.declarations[1]
+        else {
+            panic!("expected impl block");
+        };
+        let mut scope_cursor = ResolverScopeCursor::default();
+        let mut expected = ResolverExpectedSymbolSets::default();
+
+        collect_expected_resolver_impl_method_symbols(
+            type_name,
+            methods,
+            &mut scope_cursor,
+            &mut expected,
+        );
+
+        assert!(expected
+            .declarations
+            .contains(&(Namespace::Value, "Point.x_value".to_string())));
+        assert!(expected.locals.iter().any(|(name, _)| name == "value"));
     }
 
     #[test]

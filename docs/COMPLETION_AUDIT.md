@@ -217,6 +217,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::resolver_behavior_association_list_tasks_collect_type_and_parent_edges_together`,
   and
   `typechecker::tests::check_program_with_symbols_validates_stripped_resolver_import_sources`.
+  Behavior and non-behavior impl-block method expected-symbol collection also
+  share one helper, covered by
+  `typechecker::tests::expected_resolver_impl_method_symbols_collect_value_symbols_and_locals`.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate
