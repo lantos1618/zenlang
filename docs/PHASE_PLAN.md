@@ -2061,8 +2061,10 @@ checked-in docs, tests, and commits only.
 - `build-graph <build.zen>` now consumes the deterministic graph for one
   executable target without widening the accepted `build.zen` subset.
   `build_graph_command_compiles_single_executable_target` covers the positive
-  path, and `build_graph_command_rejects_missing_root_source` covers a target
-  execution failure before normal `zen build build.zen` is ungated.
+  path, `build_graph_command_rejects_undeclared_host_effects` covers
+  deterministic host-effect rejection before execution starts, and
+  `build_graph_command_rejects_missing_root_source` covers a target execution
+  failure before normal `zen build build.zen` is ungated.
 - Normal `zen build build.zen` now routes through the same constrained
   deterministic graph pipeline used by `build-graph <build.zen>`, covered by
   `build_command_routes_build_zen_through_deterministic_graph`. The normal
