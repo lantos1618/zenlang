@@ -2128,6 +2128,11 @@ and do not assume Phase 4 is ready without evidence.
   expected enum variant entries, covered by
   `cargo test check_program_with_symbols_requires_resolver_enum_variants` and
   `cargo test resolver_validation_replay_declaration_tasks_collect_sources_and_edges`.
+- Resolver validation replay now uses a shared scoped-expression helper for
+  struct field defaults and top-level expressions, covered by
+  `cargo test check_program_with_symbols_requires_resolver_top_level_expr_locals`,
+  `cargo test check_program_with_symbols_requires_resolver_struct_field_default_locals`,
+  and `cargo test expected_resolver_scoped_expr_locals_collects_block_bindings`.
 
 ## Unresolved Gaps
 

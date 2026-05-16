@@ -1750,6 +1750,8 @@ checked-in docs, tests, and commits only.
   requires, and parent edges.
 - Resolver validation replay now uses a shared variant-symbol helper for
   expected enum variant entries.
+- Resolver validation replay now uses a shared scoped-expression helper for
+  struct field defaults and top-level expressions.
 
 ## Current Phase
 

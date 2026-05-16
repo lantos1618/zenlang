@@ -8575,10 +8575,10 @@ impl TypeChecker {
                 } => {
                     for field in fields {
                         if let Some(default) = &field.default {
-                            expected_resolver_scoped_expr_locals(
+                            push_expected_resolver_scoped_expr_symbols(
                                 default,
                                 &mut scope_cursor,
-                                &mut tasks.expected_symbols.locals,
+                                &mut tasks.expected_symbols,
                             );
                         }
                     }
@@ -8698,10 +8698,10 @@ impl TypeChecker {
                     );
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
-                    expected_resolver_scoped_expr_locals(
+                    push_expected_resolver_scoped_expr_symbols(
                         expr,
                         &mut scope_cursor,
-                        &mut tasks.expected_symbols.locals,
+                        &mut tasks.expected_symbols,
                     );
                 }
                 _ => {}
@@ -11676,6 +11676,14 @@ fn push_expected_resolver_variant_symbols(
             .declarations
             .insert((Namespace::Variant, variant.name.clone()));
     }
+}
+
+fn push_expected_resolver_scoped_expr_symbols(
+    expr: &Expression,
+    scope_cursor: &mut ResolverScopeCursor,
+    expected: &mut ResolverExpectedSymbolSets,
+) {
+    expected_resolver_scoped_expr_locals(expr, scope_cursor, &mut expected.locals);
 }
 
 fn push_expected_resolver_callable_symbol(
