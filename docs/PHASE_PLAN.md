@@ -1760,6 +1760,10 @@ checked-in docs, tests, and commits only.
   metadata and type-reference validation tasks, so type declarations are
   classified once before restored field, variant, and body-reference replay
   paths run.
+- Resolver-backed behavior declaration replay now shares one helper for
+  behavior metadata and type-reference validation tasks, so behavior
+  declarations are classified once before restored method metadata and
+  default-body reference replay paths run.
 
 ## Current Phase
 

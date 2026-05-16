@@ -3970,13 +3970,21 @@ impl TypeChecker {
                     &mut tasks.type_references,
                 )
             };
-            if !callable_handled && !type_handled {
+            let behavior_handled = if callable_handled || type_handled {
+                false
+            } else {
+                Self::push_resolver_behavior_replay_tasks(
+                    decl,
+                    &mut tasks.behaviors,
+                    &mut tasks.type_references,
+                )
+            };
+            if !callable_handled && !type_handled && !behavior_handled {
                 Self::push_resolver_type_reference_validation_task(
                     decl,
                     &mut tasks.type_references,
                 );
             }
-            Self::push_resolver_behavior_declaration_metadata_task(decl, &mut tasks.behaviors);
             Self::push_resolver_behavior_impl_block_declaration_task(
                 decl,
                 &mut tasks.behavior_impl_blocks,
@@ -4059,6 +4067,7 @@ impl TypeChecker {
         tasks
     }
 
+    #[cfg(test)]
     fn push_resolver_behavior_declaration_metadata_task<'a>(
         decl: &'a Declaration,
         tasks: &mut Vec<ResolverBehaviorDeclarationMetadataTask<'a>>,
@@ -4068,6 +4077,33 @@ impl TypeChecker {
                 name: name.as_str(),
                 span: *span,
             });
+        }
+    }
+
+    fn push_resolver_behavior_replay_tasks<'a>(
+        decl: &'a Declaration,
+        behavior_tasks: &mut Vec<ResolverBehaviorDeclarationMetadataTask<'a>>,
+        type_reference_tasks: &mut Vec<ResolverTypeReferenceValidationTask<'a>>,
+    ) -> bool {
+        if let Declaration::Behavior {
+            name,
+            methods,
+            span,
+            ..
+        } = decl
+        {
+            behavior_tasks.push(ResolverBehaviorDeclarationMetadataTask {
+                name: name.as_str(),
+                span: *span,
+            });
+            type_reference_tasks.push(ResolverTypeReferenceValidationTask::Behavior {
+                name,
+                methods,
+                span: *span,
+            });
+            true
+        } else {
+            false
         }
     }
 
@@ -16401,6 +16437,33 @@ main = () i32 { return 1 }
 
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].name, "Json");
+    }
+
+    #[test]
+    fn resolver_behavior_replay_task_helper_pushes_metadata_and_type_refs_together() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+"#,
+        );
+        let mut behavior_tasks = Vec::new();
+        let mut type_reference_tasks = Vec::new();
+
+        let handled = TypeChecker::push_resolver_behavior_replay_tasks(
+            &program.declarations[0],
+            &mut behavior_tasks,
+            &mut type_reference_tasks,
+        );
+
+        assert!(handled);
+        assert_eq!(behavior_tasks.len(), 1);
+        assert_eq!(behavior_tasks[0].name, "Json");
+        assert!(matches!(
+            type_reference_tasks.as_slice(),
+            [ResolverTypeReferenceValidationTask::Behavior { name: "Json", .. }]
+        ));
     }
 
     #[test]

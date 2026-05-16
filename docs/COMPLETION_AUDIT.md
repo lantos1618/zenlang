@@ -2143,6 +2143,11 @@ and do not assume Phase 4 is ready without evidence.
   metadata and type-reference validation tasks, covered by
   `cargo test resolver_type_replay_task_helper_pushes_metadata_and_type_refs_together`
   and `cargo test resolver_type_declaration_metadata_tasks_collect_only_type_work`.
+- Resolver-backed behavior declaration replay now shares one helper for
+  behavior metadata and type-reference validation tasks, covered by
+  `cargo test resolver_behavior_replay_task_helper_pushes_metadata_and_type_refs_together`
+  and
+  `cargo test resolver_behavior_declaration_metadata_tasks_collect_only_behavior_work`.
 
 ## Unresolved Gaps
 
