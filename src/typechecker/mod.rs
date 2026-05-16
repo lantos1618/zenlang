@@ -4044,6 +4044,17 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: Option<&SymbolTable>,
     ) {
+        let impl_tasks = Self::collect_behavior_impl_validation_tasks(decls);
+        self.validate_behavior_impl_tasks(&impl_tasks, symbols);
+
+        self.validate_collected_behavior_requires_declarations(decls, symbols);
+        self.validate_generic_type_references(decls, symbols);
+        self.validate_struct_field_defaults(decls, symbols);
+    }
+
+    fn collect_behavior_impl_validation_tasks(
+        decls: &[Declaration],
+    ) -> Vec<BehaviorImplValidationTask<'_>> {
         let mut impl_tasks = Vec::new();
 
         for decl in decls {
@@ -4065,7 +4076,14 @@ impl TypeChecker {
                 });
             }
         }
+        impl_tasks
+    }
 
+    fn validate_behavior_impl_tasks(
+        &mut self,
+        impl_tasks: &[BehaviorImplValidationTask<'_>],
+        symbols: Option<&SymbolTable>,
+    ) {
         for task in impl_tasks {
             self.validate_collected_behavior_impl_declaration(
                 symbols,
@@ -4076,10 +4094,6 @@ impl TypeChecker {
                 task.span,
             );
         }
-
-        self.validate_collected_behavior_requires_declarations(decls, symbols);
-        self.validate_generic_type_references(decls, symbols);
-        self.validate_struct_field_defaults(decls, symbols);
     }
 
     fn validate_resolver_collected_behavior_impl_declarations(
@@ -13761,6 +13775,30 @@ Pretty.extends(Json<T>)
             tasks[0].parent_type_args,
             &[AstType::Named("T".to_string())]
         );
+    }
+
+    #[test]
+    fn behavior_impl_validation_tasks_collect_impl_blocks() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+
+        let tasks = TypeChecker::collect_behavior_impl_validation_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].type_name, "Point");
+        assert_eq!(tasks[0].behavior, "Json");
+        assert_eq!(tasks[0].methods.len(), 1);
     }
 
     #[test]

@@ -165,9 +165,9 @@ checked-in docs, tests, and commits only.
   default-method synthesis.
 - AST behavior-extends validation now uses a named validation task collector
   before parent, cycle, and method-coherence checks.
-- Collected declaration semantic validation now records behavior impl and
-  requires checks in one declaration dispatch before replaying the existing
-  impl-before-requires validation order.
+- Collected declaration semantic validation now records behavior impl checks
+  with a named validation task collector, then replays behavior impl before
+  requires validation.
 - Resolver-backed type behavior-impl refresh now uses explicit restored type
   tasks instead of a callback traversal for the final association restoration
   pass.
