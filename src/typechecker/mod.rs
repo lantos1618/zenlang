@@ -9428,14 +9428,8 @@ impl TypeChecker {
                 ..
             } => {
                 self.require_resolver_expr_locals(symbols, value, scope_cursor, locals);
-                if *constant || *mutable || !locals.is_mutable(name) {
-                    self.require_resolver_local_symbol(
-                        symbols,
-                        name,
-                        expected_local_symbol(*mutable, locals.current_scope_id),
-                        *span,
-                    );
-                    locals.insert(name.clone(), *mutable);
+                if resolver_var_decl_binds_local(name, *mutable, *constant, locals) {
+                    self.require_resolver_var_decl_local(symbols, name, *mutable, *span, locals);
                 }
             }
             ast::Statement::Assignment { target, value, .. } => {
@@ -9449,6 +9443,23 @@ impl TypeChecker {
                 self.require_resolver_block_locals(symbols, stmts, None, scope_cursor, locals);
             }
         }
+    }
+
+    fn require_resolver_var_decl_local(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        mutable: bool,
+        span: Span,
+        locals: &mut ResolverLocalScope,
+    ) {
+        self.require_resolver_local_symbol(
+            symbols,
+            name,
+            expected_local_symbol(mutable, locals.current_scope_id),
+            span,
+        );
+        locals.insert(name.to_string(), mutable);
     }
 
     fn require_resolver_pattern_locals(
@@ -11210,8 +11221,8 @@ fn expected_resolver_statement_locals(
             ..
         } => {
             expected_resolver_expr_locals(value, scope_cursor, locals, expected);
-            if *constant || *mutable || !locals.is_mutable(name) {
-                expected_resolver_local(name, *mutable, locals, expected);
+            if resolver_var_decl_binds_local(name, *mutable, *constant, locals) {
+                expected_resolver_var_decl_local(name, *mutable, locals, expected);
             }
         }
         ast::Statement::Assignment { target, value, .. } => {
@@ -11225,6 +11236,24 @@ fn expected_resolver_statement_locals(
             expected_resolver_block_locals(stmts, None, scope_cursor, locals, expected);
         }
     }
+}
+
+fn expected_resolver_var_decl_local(
+    name: &str,
+    mutable: bool,
+    locals: &mut ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    expected_resolver_local(name, mutable, locals, expected);
+}
+
+fn resolver_var_decl_binds_local(
+    name: &str,
+    mutable: bool,
+    constant: bool,
+    locals: &ResolverLocalScope,
+) -> bool {
+    constant || mutable || !locals.is_mutable(name)
 }
 
 fn expected_resolver_pattern_locals(
@@ -13968,6 +13997,23 @@ main = () i32 {
 
         assert!(expected.iter().any(|(name, _)| name == "value"));
         assert!(expected.iter().any(|(name, _)| name == "input"));
+    }
+
+    #[test]
+    fn expected_resolver_statement_locals_preserve_mutable_handoff() {
+        let mut scope_cursor = ResolverScopeCursor::default();
+        let mut locals = scope_cursor.new_scope();
+        locals.insert("value".to_string(), true);
+        let mut expected = HashSet::new();
+
+        if resolver_var_decl_binds_local("value", false, false, &locals) {
+            expected_resolver_var_decl_local("value", false, &mut locals, &mut expected);
+        }
+
+        assert!(
+            expected.iter().all(|(name, _)| name != "value"),
+            "immutable declaration should reuse the mutable handoff binding"
+        );
     }
 
     #[test]

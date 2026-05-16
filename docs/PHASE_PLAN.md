@@ -150,8 +150,9 @@ checked-in docs, tests, and commits only.
   shared for loop, while, and conditional branch scopes.
   Match-arm pattern/body local collection also shares one scoped helper, and
   pattern binding insertion is shared for identifier and struct shorthand
-  bindings. Block expression/statement local collection now shares one
-  block-scope helper.
+  bindings. Variable-declaration local binding and the mutable handoff
+  predicate are shared between required and expected statement replay. Block
+  expression/statement local collection now shares one block-scope helper.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.

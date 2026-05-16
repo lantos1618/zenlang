@@ -245,6 +245,9 @@ and do not assume Phase 4 is ready without evidence.
   Pattern binding insertion is shared for identifier and struct shorthand
   bindings, covered by
   `typechecker::tests::expected_resolver_pattern_locals_collects_struct_shorthand_bindings`.
+  Variable-declaration local binding and the mutable handoff predicate are
+  shared between required and expected statement replay, covered by
+  `typechecker::tests::expected_resolver_statement_locals_preserve_mutable_handoff`.
   Block expression/statement local collection is shared, covered by
   `typechecker::tests::expected_resolver_block_locals_collects_statement_and_final_expr_bindings`.
 - Resolver-backed declaration metadata collection now records callable, type,
