@@ -3931,12 +3931,7 @@ impl TypeChecker {
         let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
         self.collect_resolver_declaration_metadata(symbols, &tasks);
         self.collect_resolver_behavior_impl_metadata(&tasks.behavior_associations, symbols);
-        self.validate_resolver_collected_declaration_semantics(
-            symbols,
-            &tasks.behavior_associations,
-            &tasks.types,
-            &tasks.type_references,
-        );
+        self.validate_resolver_collected_declaration_semantics(symbols, &tasks);
         self.clear_resolver_behavior_ref_state();
         self.refresh_resolver_type_behavior_impls(&tasks.types, symbols);
     }
@@ -4491,14 +4486,13 @@ impl TypeChecker {
     fn validate_resolver_collected_declaration_semantics(
         &mut self,
         symbols: &SymbolTable,
-        behavior_association_tasks: &BehaviorAssociationValidationTasks<'_>,
-        type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
-        type_reference_tasks: &[ResolverTypeReferenceValidationTask<'_>],
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
     ) {
         self.with_resolver_backed_collection(|checker| {
-            checker.validate_behavior_association_tasks(behavior_association_tasks, Some(symbols));
-            checker.validate_resolver_type_reference_tasks(type_reference_tasks, Some(symbols));
-            checker.validate_resolver_struct_field_default_tasks(type_tasks, Some(symbols));
+            checker
+                .validate_behavior_association_tasks(&tasks.behavior_associations, Some(symbols));
+            checker.validate_resolver_type_reference_tasks(&tasks.type_references, Some(symbols));
+            checker.validate_resolver_struct_field_default_tasks(&tasks.types, Some(symbols));
         });
     }
 

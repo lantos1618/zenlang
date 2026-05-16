@@ -1797,6 +1797,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior impl metadata collection now receives the bundled
   behavior-association tasks and selects `.implements` entries internally,
   keeping resolver call sites aligned around the shared task shape.
+- Resolver-backed collected semantic validation now receives the full resolver
+  declaration metadata task bundle and selects behavior, type-reference, and
+  field-default work internally instead of taking parallel slices.
 
 ## Current Phase
 
