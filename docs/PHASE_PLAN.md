@@ -1768,6 +1768,10 @@ checked-in docs, tests, and commits only.
   behavior-impl metadata and impl-block type-reference validation tasks, so
   behavior implementation blocks are classified once before restored impl
   metadata and method body-reference replay paths run.
+- Behavior requires replay now uses one named helper for both standalone
+  semantic validation task collection and resolver-backed declaration metadata
+  collection, so requires declarations are classified consistently before
+  behavior-association validation runs.
 
 ## Current Phase
 

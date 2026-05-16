@@ -2154,6 +2154,13 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_behavior_impl_replay_task_helper_pushes_metadata_and_type_refs_together`
   and
   `cargo test resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls`.
+- Behavior requires replay now uses one named helper for both standalone
+  semantic validation task collection and resolver-backed declaration metadata
+  collection, covered by
+  `cargo test behavior_requires_replay_task_helper_pushes_requires_validation`,
+  `cargo test behavior_requires_validation_tasks_collect_requires_declarations`,
+  and
+  `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
 
 ## Unresolved Gaps
 
