@@ -88,6 +88,44 @@ fn parsed_project_build_zen_lowers_to_executable_graph() {
 }
 
 #[test]
+fn build_program_lowering_collects_multiple_executable_targets() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
+    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
+    .Ok(b.config())
+}
+"#,
+    );
+    let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
+
+    assert_eq!(graph.targets().len(), 2);
+    assert_eq!(graph.targets()[0].name(), "app");
+    assert_eq!(graph.targets()[0].sources(), ["app.zen"]);
+    match graph.targets()[0].kind() {
+        BuildTargetKind::Executable {
+            root_source_file,
+            out_dir,
+        } => {
+            assert_eq!(root_source_file, "app.zen");
+            assert_eq!(out_dir, "build/app/");
+        }
+    }
+    assert_eq!(graph.targets()[1].name(), "tool");
+    assert_eq!(graph.targets()[1].sources(), ["tool.zen"]);
+    match graph.targets()[1].kind() {
+        BuildTargetKind::Executable {
+            root_source_file,
+            out_dir,
+        } => {
+            assert_eq!(root_source_file, "tool.zen");
+            assert_eq!(out_dir, "build/tool/");
+        }
+    }
+}
+
+#[test]
 fn build_program_lowering_rejects_undeclared_env_reads() {
     let program = parse_program(
         r#"

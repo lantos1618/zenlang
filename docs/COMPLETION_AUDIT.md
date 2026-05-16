@@ -2166,12 +2166,15 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test behavior_extends_replay_task_helper_pushes_parent_validation`
   and `cargo test behavior_extends_validation_tasks_collect_parent_refs`.
 - Normal `zen build build.zen` now routes through the constrained
-  deterministic build graph pipeline and compiles one executable target,
+  deterministic build graph pipeline and compiles executable graph targets,
   covered by
   `cargo test --test integration build_command_routes_build_zen_through_deterministic_graph`.
-  The same entrypoint rejects undeclared host effects before target execution,
+  Multi-target execution is covered by
+  `cargo test --test integration build_command_build_zen_compiles_multiple_executable_targets`.
+  The same entrypoint rejects undeclared host effects before multi-target
+  execution,
   covered by
-  `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects`.
+  `cargo test --test integration build_command_multi_target_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen check build.zen` validates the constrained deterministic graph
   without compiling targets, covered by
   `cargo test --test integration check_command_validates_build_zen_graph`, and
@@ -2185,8 +2188,13 @@ and do not assume Phase 4 is ready without evidence.
 - Direct `zen build.zen` aliases the same constrained deterministic graph build
   path as `zen build build.zen`, covered by
   `cargo test --test integration direct_file_command_build_zen_routes_through_deterministic_graph`,
+  compiles multiple executable targets through
+  `cargo test --test integration direct_file_command_build_zen_compiles_multiple_executable_targets`,
   and rejects undeclared host effects through
   `cargo test --test integration direct_file_command_build_zen_rejects_undeclared_host_effects`.
+- Build script lowering collects multiple executable targets deterministically,
+  covered by
+  `cargo test --test build_graph build_program_lowering_collects_multiple_executable_targets`.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes remain
   rejected with a targeted graph diagnostic, covered by
   `cargo test --test integration legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic`.
@@ -2197,11 +2205,12 @@ and do not assume Phase 4 is ready without evidence.
   declaration collection for richer function type metadata and residual
   resolver-owned semantic handoffs.
 - build.zen entrypoints are not complete: the constrained graph path now covers
-  emission, one-target execution, normal `zen build build.zen`, normal
-  `zen check build.zen`, normal `zen emit build.zen`, and direct
-  `zen build.zen`, while legacy generic `emit-json` build.zen modes have a
-  targeted rejection. Broader graph execution still needs explicit
-  deterministic semantics before promotion.
+  graph emission, multi-executable target execution for normal
+  `zen build build.zen` and direct `zen build.zen`, normal
+  `zen check build.zen`, and single-target normal `zen emit build.zen`, while
+  legacy generic `emit-json` build.zen modes have a targeted rejection. Broader
+  graph semantics beyond executable targets still need explicit deterministic
+  semantics before promotion.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
