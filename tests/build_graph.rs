@@ -1,6 +1,13 @@
 use zen::build_graph::{
     BuildGraph, BuildGraphInput, BuildTargetInput, BuildTargetKind, HostEffect,
 };
+use zen::lexer;
+use zen::parser;
+
+fn parse_program(src: &str) -> zen::ast::Program {
+    let tokens = lexer::tokenize(src, 0).expect("lex build script");
+    parser::parse(tokens, 0).expect("parse build script")
+}
 
 fn executable_target(name: &str, sources: &[&str]) -> BuildTargetInput {
     BuildTargetInput {
@@ -53,6 +60,47 @@ fn build_graph_rejects_undeclared_host_effects() {
         used_host_effects: vec![HostEffect::ReadEnv("ZEN_STD".to_string())],
     })
     .expect_err("undeclared host effects should be rejected");
+
+    assert_eq!(
+        err.to_string(),
+        "undeclared host effect: read env `ZEN_STD`"
+    );
+}
+
+#[test]
+fn parsed_project_build_zen_lowers_to_executable_graph() {
+    let program = parse_program(include_str!("../examples/project/build.zen"));
+    let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
+
+    assert_eq!(graph.targets().len(), 1);
+    let target = &graph.targets()[0];
+    assert_eq!(target.name(), "myapp");
+    assert_eq!(target.sources(), ["main.zen"]);
+    match target.kind() {
+        BuildTargetKind::Executable {
+            root_source_file,
+            out_dir,
+        } => {
+            assert_eq!(root_source_file, "main.zen");
+            assert_eq!(out_dir, "build/");
+        }
+    }
+}
+
+#[test]
+fn build_program_lowering_rejects_undeclared_env_reads() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD")
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("undeclared build.zen env read should fail");
 
     assert_eq!(
         err.to_string(),
