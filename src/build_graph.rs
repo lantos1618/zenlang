@@ -190,6 +190,14 @@ impl BuildTarget {
     pub fn sources(&self) -> &[String] {
         &self.sources
     }
+
+    pub fn dependencies(&self) -> &[String] {
+        &self.dependencies
+    }
+
+    pub fn features(&self) -> &[String] {
+        &self.features
+    }
 }
 
 impl fmt::Display for HostEffect {
@@ -415,6 +423,8 @@ fn executable_target_from_fields(fields: &[(String, Expression)]) -> Option<Buil
     let root_source_file =
         string_field(fields, "main").or_else(|| string_field(fields, "root_source_file"))?;
     let out_dir = string_field(fields, "out_dir")?;
+    let dependencies = string_array_field(fields, "dependencies").unwrap_or_default();
+    let features = string_array_field(fields, "features").unwrap_or_default();
 
     Some(BuildTargetInput {
         name: target_name,
@@ -423,8 +433,8 @@ fn executable_target_from_fields(fields: &[(String, Expression)]) -> Option<Buil
             out_dir,
         },
         sources: vec![root_source_file],
-        dependencies: Vec::new(),
-        features: Vec::new(),
+        dependencies,
+        features,
     })
 }
 
@@ -433,6 +443,8 @@ fn test_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTarge
         string_field(fields, "root").or_else(|| string_field(fields, "root_source_file"))?;
     let target_name =
         string_field(fields, "name").unwrap_or_else(|| target_name_from_root(&root_source_file));
+    let dependencies = string_array_field(fields, "dependencies").unwrap_or_default();
+    let features = string_array_field(fields, "features").unwrap_or_default();
 
     Some(BuildTargetInput {
         name: target_name,
@@ -440,14 +452,16 @@ fn test_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTarge
             root_source_file: root_source_file.clone(),
         },
         sources: vec![root_source_file],
-        dependencies: Vec::new(),
-        features: Vec::new(),
+        dependencies,
+        features,
     })
 }
 
 fn library_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
     let target_name = string_field(fields, "name")?;
     let exports = string_array_field(fields, "exports")?;
+    let dependencies = string_array_field(fields, "dependencies").unwrap_or_default();
+    let features = string_array_field(fields, "features").unwrap_or_default();
     if exports.is_empty() {
         return None;
     }
@@ -458,8 +472,8 @@ fn library_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTa
             exports: exports.clone(),
         },
         sources: exports,
-        dependencies: Vec::new(),
-        features: Vec::new(),
+        dependencies,
+        features,
     })
 }
 
