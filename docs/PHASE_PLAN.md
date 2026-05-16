@@ -112,6 +112,8 @@ checked-in docs, tests, and commits only.
   a focused behavior-methods submodule, separate from signature metadata cases.
 - Resolver collection tests now keep generic `Type.impl` method integrity cases
   in a focused submodule, separate from template shape and mutability metadata.
+- Generic enum specialization coverage now includes a `Result<T, E>` enum method
+  fixture with generated-C assertions for the concrete mangled method.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with

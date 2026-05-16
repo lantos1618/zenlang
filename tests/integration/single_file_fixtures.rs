@@ -101,6 +101,11 @@ fn test_generic_result_enum() {
 }
 
 #[test]
+fn test_generic_result_enum_method() {
+    run_test("generic_result_enum_method");
+}
+
+#[test]
 fn test_generic_nested_result_enum() {
     run_test("generic_nested_result_enum");
 }
