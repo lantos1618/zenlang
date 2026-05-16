@@ -9219,6 +9219,19 @@ impl TypeChecker {
         self.require_resolver_expr_locals(symbols, expr, scope_cursor, &mut child_locals);
     }
 
+    fn require_resolver_pattern_expr_locals(
+        &mut self,
+        symbols: &SymbolTable,
+        pattern: &ast::Pattern,
+        expr: &Expression,
+        scope_cursor: &mut ResolverScopeCursor,
+        locals: &ResolverLocalScope,
+    ) {
+        let mut pattern_locals = scope_cursor.child_scope(locals);
+        self.require_resolver_pattern_locals(symbols, pattern, scope_cursor, &mut pattern_locals);
+        self.require_resolver_expr_locals(symbols, expr, scope_cursor, &mut pattern_locals);
+    }
+
     fn require_resolver_expr_locals(
         &mut self,
         symbols: &SymbolTable,
@@ -9273,32 +9286,20 @@ impl TypeChecker {
                 self.require_resolver_expr_locals(symbols, scrutinee, scope_cursor, locals);
                 for arm in arms {
                     if let Some(guard) = &arm.guard {
-                        let mut guard_locals = scope_cursor.child_scope(locals);
-                        self.require_resolver_pattern_locals(
+                        self.require_resolver_pattern_expr_locals(
                             symbols,
                             &arm.pattern,
-                            scope_cursor,
-                            &mut guard_locals,
-                        );
-                        self.require_resolver_expr_locals(
-                            symbols,
                             guard,
                             scope_cursor,
-                            &mut guard_locals,
+                            locals,
                         );
                     }
-                    let mut arm_locals = scope_cursor.child_scope(locals);
-                    self.require_resolver_pattern_locals(
+                    self.require_resolver_pattern_expr_locals(
                         symbols,
                         &arm.pattern,
-                        scope_cursor,
-                        &mut arm_locals,
-                    );
-                    self.require_resolver_expr_locals(
-                        symbols,
                         &arm.body,
                         scope_cursor,
-                        &mut arm_locals,
+                        locals,
                     );
                 }
             }
@@ -10987,6 +10988,18 @@ fn expected_resolver_child_expr_locals(
     expected_resolver_expr_locals(expr, scope_cursor, &mut child_locals, expected);
 }
 
+fn expected_resolver_pattern_expr_locals(
+    pattern: &ast::Pattern,
+    expr: &Expression,
+    scope_cursor: &mut ResolverScopeCursor,
+    locals: &ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    let mut pattern_locals = scope_cursor.child_scope(locals);
+    expected_resolver_pattern_locals(pattern, scope_cursor, &mut pattern_locals, expected);
+    expected_resolver_expr_locals(expr, scope_cursor, &mut pattern_locals, expected);
+}
+
 fn expected_resolver_parameter_locals(
     params: &[Param],
     locals: &mut ResolverLocalScope,
@@ -11050,23 +11063,21 @@ fn expected_resolver_expr_locals(
             expected_resolver_expr_locals(scrutinee, scope_cursor, locals, expected);
             for arm in arms {
                 if let Some(guard) = &arm.guard {
-                    let mut guard_locals = scope_cursor.child_scope(locals);
-                    expected_resolver_pattern_locals(
+                    expected_resolver_pattern_expr_locals(
                         &arm.pattern,
+                        guard,
                         scope_cursor,
-                        &mut guard_locals,
+                        locals,
                         expected,
                     );
-                    expected_resolver_expr_locals(guard, scope_cursor, &mut guard_locals, expected);
                 }
-                let mut arm_locals = scope_cursor.child_scope(locals);
-                expected_resolver_pattern_locals(
+                expected_resolver_pattern_expr_locals(
                     &arm.pattern,
+                    &arm.body,
                     scope_cursor,
-                    &mut arm_locals,
+                    locals,
                     expected,
                 );
-                expected_resolver_expr_locals(&arm.body, scope_cursor, &mut arm_locals, expected);
             }
         }
         Expression::WhileLoop {
@@ -13779,6 +13790,59 @@ main = () i32 {
         expected_resolver_child_expr_locals(body, &mut scope_cursor, &locals, &mut expected);
 
         assert!(expected.iter().any(|(name, _)| name == "value"));
+    }
+
+    #[test]
+    fn expected_resolver_pattern_expr_locals_collects_pattern_and_body_bindings() {
+        let program = parse_program(
+            r#"
+Option:
+    None,
+    Some(i32)
+
+main = (value: Option) i32 {
+    return value ?
+        | Some(inner) {
+            doubled := inner
+            doubled
+        }
+        | None { 0 }
+}
+"#,
+        );
+        let Declaration::Function { body, .. } = &program.declarations[1] else {
+            panic!("expected function");
+        };
+        let Expression::Block {
+            expr: Some(expr), ..
+        } = body
+        else {
+            panic!("expected block");
+        };
+        let Expression::Return {
+            value: Some(value), ..
+        } = expr.as_ref()
+        else {
+            panic!("expected return expression");
+        };
+        let Expression::Match { arms, .. } = value.as_ref() else {
+            panic!("expected match expression");
+        };
+        let arm = arms.first().expect("first match arm");
+        let mut scope_cursor = ResolverScopeCursor::default();
+        let locals = scope_cursor.new_scope();
+        let mut expected = HashSet::new();
+
+        expected_resolver_pattern_expr_locals(
+            &arm.pattern,
+            &arm.body,
+            &mut scope_cursor,
+            &locals,
+            &mut expected,
+        );
+
+        assert!(expected.iter().any(|(name, _)| name == "inner"));
+        assert!(expected.iter().any(|(name, _)| name == "doubled"));
     }
 
     #[test]

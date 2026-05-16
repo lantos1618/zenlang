@@ -230,6 +230,8 @@ and do not assume Phase 4 is ready without evidence.
   Child expression local collection is shared for loop, while, and conditional
   branch scopes, covered by
   `typechecker::tests::expected_resolver_child_expr_locals_collects_branch_bindings`.
+  Match-arm pattern/body local collection is shared, covered by
+  `typechecker::tests::expected_resolver_pattern_expr_locals_collects_pattern_and_body_bindings`.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate
