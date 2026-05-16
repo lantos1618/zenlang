@@ -1647,6 +1647,9 @@ checked-in docs, tests, and commits only.
 - Resolver behavior declaration metadata now uses a named metadata task instead
   of anonymous tuple fields, keeping behavior metadata replay aligned with the
   other resolver declaration task types.
+- Behavior impl conformance now carries effective impl methods as named
+  declaration/name records instead of positional tuples, keeping resolver-owned
+  method-name replay explicit.
 
 ## Current Phase
 

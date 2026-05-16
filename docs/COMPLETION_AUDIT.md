@@ -1905,6 +1905,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test collect_declarations_with_symbols_uses_resolver_behavior_method_metadata`,
   and
   `cargo test collect_declarations_with_symbols_clears_stale_behavior_methods_after_name_restore`.
+- Behavior impl conformance now carries effective impl methods as named
+  declaration/name records instead of positional tuples, covered by
+  `cargo test effective_behavior_impl_methods_carry_named_declaration_and_method_name`,
+  `cargo test impl_effective_method_name_prefers_resolver_then_ast_then_collected_signature`,
+  and
+  `cargo test collect_declarations_with_symbols_uses_resolver_behavior_impl_method_signature_target_and_name_metadata`.
 
 ## Unresolved Gaps
 

@@ -179,6 +179,11 @@ struct BehaviorRequiresValidationTask<'a> {
     span: Span,
 }
 
+struct EffectiveBehaviorImplMethod<'a> {
+    declaration: &'a Declaration,
+    method_name: String,
+}
+
 struct BehaviorExtendsValidationTask<'a> {
     behavior: &'a str,
     parent: &'a str,
@@ -5475,41 +5480,24 @@ impl TypeChecker {
             .iter()
             .map(|required| required.name.clone())
             .collect();
-        let effective_methods: Vec<(&Declaration, String)> = methods
-            .iter()
-            .map(|method| {
-                let ast_name = match method {
-                    Declaration::Function { name, .. } => name.as_str(),
-                    _ => "",
-                };
-                let ast_key = Self::method_key(type_name, ast_name);
-                let resolver_owned_name = self.resolver_backed_impl_method_key(
-                    symbols,
-                    &ast_key,
-                    type_name,
-                    method.span(),
-                );
-                let effective_name = self.impl_effective_method_name(
-                    &mut unmatched_required,
-                    ast_name,
-                    resolver_owned_name,
-                    type_name,
-                );
-                (method, effective_name)
-            })
-            .collect();
+        let effective_methods = self.effective_behavior_impl_methods(
+            symbols,
+            type_name,
+            methods,
+            &mut unmatched_required,
+        );
 
-        for (method, effective_name) in &effective_methods {
-            if let Declaration::Function { span, .. } = method {
+        for method in &effective_methods {
+            if let Declaration::Function { span, .. } = method.declaration {
                 if !required_methods
                     .iter()
-                    .any(|required| required.name == *effective_name)
+                    .any(|required| required.name == method.method_name)
                 {
                     self.diagnostics.push(Diagnostic::error(
                         "E6005",
                         format!(
                             "method `{}` is not declared by behavior `{}`",
-                            effective_name, behavior_key
+                            method.method_name, behavior_key
                         ),
                         *span,
                     ));
@@ -5521,13 +5509,15 @@ impl TypeChecker {
             let Some(actual) =
                 effective_methods
                     .iter()
-                    .find_map(|(decl, effective_name)| match decl {
+                    .find_map(|method| match method.declaration {
                         Declaration::Function {
                             params,
                             return_type,
                             span,
                             ..
-                        } if effective_name == &required.name => Some((params, return_type, *span)),
+                        } if method.method_name == required.name => {
+                            Some((params, return_type, *span))
+                        }
                         _ => None,
                     })
             else {
@@ -5905,6 +5895,41 @@ impl TypeChecker {
         }
 
         ast_name.to_string()
+    }
+
+    fn effective_behavior_impl_methods<'a>(
+        &self,
+        symbols: Option<&SymbolTable>,
+        type_name: &str,
+        methods: &'a [Declaration],
+        unmatched_required: &mut VecDeque<String>,
+    ) -> Vec<EffectiveBehaviorImplMethod<'a>> {
+        methods
+            .iter()
+            .map(|method| {
+                let ast_name = match method {
+                    Declaration::Function { name, .. } => name.as_str(),
+                    _ => "",
+                };
+                let ast_key = Self::method_key(type_name, ast_name);
+                let resolver_owned_name = self.resolver_backed_impl_method_key(
+                    symbols,
+                    &ast_key,
+                    type_name,
+                    method.span(),
+                );
+                let method_name = self.impl_effective_method_name(
+                    unmatched_required,
+                    ast_name,
+                    resolver_owned_name,
+                    type_name,
+                );
+                EffectiveBehaviorImplMethod {
+                    declaration: method,
+                    method_name,
+                }
+            })
+            .collect()
     }
 
     fn resolver_backed_behavior_impl_method_signature_name(
@@ -12121,6 +12146,42 @@ Point.implements(Json) {
             tc.resolver_backed_impl_method_key(Some(&symbols), &ast_key, "Missing", span),
             Some("Point.encode".to_string())
         );
+    }
+
+    #[test]
+    fn effective_behavior_impl_methods_carry_named_declaration_and_method_name() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let Declaration::ImplBlock { methods, .. } = &program.declarations[2] else {
+            panic!("expected impl block");
+        };
+        let mut tc = TypeChecker::new();
+        tc.resolver_backed_collection = true;
+        let mut unmatched = VecDeque::from(["encode".to_string()]);
+
+        let effective =
+            tc.effective_behavior_impl_methods(Some(&symbols), "Point", methods, &mut unmatched);
+
+        assert_eq!(effective.len(), 1);
+        assert_eq!(effective[0].method_name, "encode");
+        assert!(matches!(
+            effective[0].declaration,
+            Declaration::Function { name, .. } if name == "encode"
+        ));
+        assert!(unmatched.is_empty());
     }
 
     #[test]
