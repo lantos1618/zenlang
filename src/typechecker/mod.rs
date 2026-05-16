@@ -4631,16 +4631,16 @@ impl TypeChecker {
         tasks: &BehaviorAssociationValidationTasks<'_>,
         symbols: Option<&SymbolTable>,
     ) {
-        self.validate_behavior_impl_tasks(&tasks.impls, symbols);
-        self.validate_behavior_requires_tasks(&tasks.requires, symbols);
+        self.validate_behavior_impl_tasks(tasks, symbols);
+        self.validate_behavior_requires_tasks(tasks, symbols);
     }
 
     fn validate_behavior_impl_tasks(
         &mut self,
-        impl_tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
+        tasks: &BehaviorAssociationValidationTasks<'_>,
         symbols: Option<&SymbolTable>,
     ) {
-        for task in impl_tasks {
+        for task in &tasks.impls {
             self.validate_collected_behavior_impl_declaration(
                 symbols,
                 task.ast_type_name,
@@ -4677,10 +4677,10 @@ impl TypeChecker {
 
     fn validate_behavior_requires_tasks(
         &mut self,
-        requires_tasks: &[BehaviorRequiresValidationTask<'_>],
+        tasks: &BehaviorAssociationValidationTasks<'_>,
         symbols: Option<&SymbolTable>,
     ) {
-        for task in requires_tasks {
+        for task in &tasks.requires {
             self.validate_collected_behavior_requires_declaration(
                 symbols,
                 task.type_name,
