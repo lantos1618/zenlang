@@ -1785,6 +1785,9 @@ checked-in docs, tests, and commits only.
 - Standalone behavior-association validation now collects `.implements` and
   `.requires` tasks in one declaration pass before replaying the shared
   validators.
+- The same standalone behavior-association task collector now also carries
+  `.extends` parent edges for the early inheritance validation pass, replacing
+  the old extends-only collector while preserving validation order.
 
 ## Current Phase
 

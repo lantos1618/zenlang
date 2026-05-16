@@ -262,6 +262,7 @@ struct ResolverBehaviorDeclarationMetadataTask<'a> {
 
 #[derive(Default)]
 struct BehaviorAssociationValidationTasks<'a> {
+    extends: Vec<BehaviorExtendsValidationTask<'a>>,
     impls: Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
     requires: Vec<BehaviorRequiresValidationTask<'a>>,
 }
@@ -3885,20 +3886,10 @@ impl TypeChecker {
     }
 
     fn validate_ast_behavior_extends_declarations(&mut self, decls: &[Declaration]) {
-        let tasks = Self::collect_behavior_extends_validation_tasks(decls);
-        self.validate_behavior_extends_tasks(&tasks);
+        let tasks = Self::collect_behavior_association_validation_tasks(decls);
+        self.validate_behavior_extends_tasks(&tasks.extends);
         self.validate_behavior_extends_cycles();
         self.validate_behavior_method_coherence();
-    }
-
-    fn collect_behavior_extends_validation_tasks(
-        decls: &[Declaration],
-    ) -> Vec<BehaviorExtendsValidationTask<'_>> {
-        let mut tasks = Vec::new();
-        for decl in decls {
-            Self::push_behavior_extends_replay_task(decl, &mut tasks);
-        }
-        tasks
     }
 
     fn push_behavior_extends_replay_task<'a>(
@@ -4635,6 +4626,7 @@ impl TypeChecker {
     ) -> BehaviorAssociationValidationTasks<'_> {
         let mut tasks = BehaviorAssociationValidationTasks::default();
         for decl in decls {
+            Self::push_behavior_extends_replay_task(decl, &mut tasks.extends);
             Self::push_behavior_impl_block_declaration_task(decl, &mut tasks.impls);
             Self::push_behavior_requires_replay_task(decl, &mut tasks.requires);
         }
@@ -14658,30 +14650,6 @@ value := 1
     }
 
     #[test]
-    fn behavior_extends_validation_tasks_collect_parent_refs() {
-        let program = parse_program(
-            r#"
-Json<T>: behavior {
-}
-Pretty<T>: behavior {
-}
-
-Pretty.extends(Json<T>)
-"#,
-        );
-
-        let tasks = TypeChecker::collect_behavior_extends_validation_tasks(&program.declarations);
-
-        assert_eq!(tasks.len(), 1);
-        assert_eq!(tasks[0].behavior, "Pretty");
-        assert_eq!(tasks[0].parent, "Json");
-        assert_eq!(
-            tasks[0].parent_type_args,
-            &[AstType::Named("T".to_string())]
-        );
-    }
-
-    #[test]
     fn behavior_extends_replay_task_helper_pushes_parent_validation() {
         let program = parse_program(
             r#"
@@ -14734,7 +14702,7 @@ Point.requires(Json<str>)
     }
 
     #[test]
-    fn behavior_association_validation_tasks_collect_impls_and_requires_together() {
+    fn behavior_association_validation_tasks_collect_extends_impls_and_requires_together() {
         let program = parse_program(
             r#"
 Point: { x: i32 }
@@ -14742,6 +14710,12 @@ Point: { x: i32 }
 Json<T>: behavior {
     encode: (Self) T
 }
+
+Pretty<T>: behavior {
+    pretty: (Self) T
+}
+
+Pretty.extends(Json<T>)
 
 Point.implements(Json<str>) {
     encode = (value: Point) str { "point" }
@@ -14754,6 +14728,13 @@ Point.requires(Json<str>)
         let tasks =
             TypeChecker::collect_behavior_association_validation_tasks(&program.declarations);
 
+        assert_eq!(tasks.extends.len(), 1);
+        assert_eq!(tasks.extends[0].behavior, "Pretty");
+        assert_eq!(tasks.extends[0].parent, "Json");
+        assert_eq!(
+            tasks.extends[0].parent_type_args,
+            &[AstType::Named("T".to_string())]
+        );
         assert_eq!(tasks.impls.len(), 1);
         assert_eq!(tasks.impls[0].ast_type_name, "Point");
         assert_eq!(tasks.impls[0].behavior, "Json");
