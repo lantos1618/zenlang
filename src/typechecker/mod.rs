@@ -142,6 +142,15 @@ struct AstImportDeclarationTask<'a> {
     module_path: &'a [String],
 }
 
+#[derive(Default)]
+struct AstDeclarationCollectionTasks<'a> {
+    behaviors: Vec<BehaviorDeclarationTask<'a>>,
+    types: Vec<AstTypeDeclarationTask<'a>>,
+    callable: Vec<CallableDeclarationTask<'a>>,
+    impl_blocks: Vec<ImplBlockDeclarationTask<'a>>,
+    imports: Vec<AstImportDeclarationTask<'a>>,
+}
+
 struct AstStructFieldDefaultValidationTask<'a> {
     type_params: &'a [ast::TypeParam],
     fields: &'a [StructField],
@@ -3403,19 +3412,32 @@ impl TypeChecker {
     // ── Phase 1: Collect ──────────────────────────────────────────
 
     fn collect_declarations(&mut self, decls: &[Declaration]) {
-        self.collect_behavior_declarations(decls);
+        let tasks = Self::collect_ast_declaration_collection_tasks(decls);
+        self.collect_behavior_declarations_from_tasks(&tasks.behaviors);
         self.validate_behavior_extends(decls);
-        self.collect_type_declarations(decls);
-        self.collect_callable_declarations(decls);
-        self.collect_impl_block_declarations(decls);
-        self.collect_ast_import_declarations(decls);
+        if !self.resolver_backed_collection {
+            self.collect_ast_type_declarations_from_tasks(&tasks.types);
+        }
+        self.collect_callable_declarations_from_tasks(&tasks.callable);
+        self.collect_impl_block_declarations_from_tasks(&tasks.impl_blocks);
+        self.collect_ast_import_declarations_from_tasks(&tasks.imports);
     }
 
-    fn collect_ast_import_declarations(&mut self, decls: &[Declaration]) {
-        let tasks = Self::collect_ast_import_declaration_tasks(decls);
-        self.collect_ast_import_declarations_from_tasks(&tasks);
+    fn collect_ast_declaration_collection_tasks(
+        decls: &[Declaration],
+    ) -> AstDeclarationCollectionTasks<'_> {
+        let mut tasks = AstDeclarationCollectionTasks::default();
+        for decl in decls {
+            Self::push_behavior_declaration_task(decl, &mut tasks.behaviors);
+            Self::push_ast_type_declaration_task(decl, &mut tasks.types);
+            Self::push_callable_declaration_task(decl, &mut tasks.callable);
+            Self::push_impl_block_declaration_task(decl, &mut tasks.impl_blocks);
+            Self::push_ast_import_declaration_task(decl, &mut tasks.imports);
+        }
+        tasks
     }
 
+    #[cfg(test)]
     fn collect_ast_import_declaration_tasks(
         decls: &[Declaration],
     ) -> Vec<AstImportDeclarationTask<'_>> {
@@ -3449,11 +3471,7 @@ impl TypeChecker {
         }
     }
 
-    fn collect_impl_block_declarations(&mut self, decls: &[Declaration]) {
-        let tasks = Self::collect_impl_block_declaration_tasks(decls);
-        self.collect_impl_block_declarations_from_tasks(&tasks);
-    }
-
+    #[cfg(test)]
     fn collect_impl_block_declaration_tasks(
         decls: &[Declaration],
     ) -> Vec<ImplBlockDeclarationTask<'_>> {
@@ -3533,11 +3551,7 @@ impl TypeChecker {
         }
     }
 
-    fn collect_callable_declarations(&mut self, decls: &[Declaration]) {
-        let tasks = Self::collect_callable_declaration_tasks(decls);
-        self.collect_callable_declarations_from_tasks(&tasks);
-    }
-
+    #[cfg(test)]
     fn collect_callable_declaration_tasks(
         decls: &[Declaration],
     ) -> Vec<CallableDeclarationTask<'_>> {
@@ -3729,19 +3743,7 @@ impl TypeChecker {
         }
     }
 
-    fn collect_type_declarations(&mut self, decls: &[Declaration]) {
-        if self.resolver_backed_collection {
-            return;
-        }
-
-        self.collect_ast_type_declarations(decls);
-    }
-
-    fn collect_ast_type_declarations(&mut self, decls: &[Declaration]) {
-        let tasks = Self::collect_ast_type_declaration_tasks(decls);
-        self.collect_ast_type_declarations_from_tasks(&tasks);
-    }
-
+    #[cfg(test)]
     fn collect_ast_type_declaration_tasks(
         decls: &[Declaration],
     ) -> Vec<AstTypeDeclarationTask<'_>> {
@@ -3810,11 +3812,7 @@ impl TypeChecker {
         }
     }
 
-    fn collect_behavior_declarations(&mut self, decls: &[Declaration]) {
-        let tasks = Self::collect_behavior_declaration_tasks(decls);
-        self.collect_behavior_declarations_from_tasks(&tasks);
-    }
-
+    #[cfg(test)]
     fn collect_behavior_declaration_tasks(
         decls: &[Declaration],
     ) -> Vec<BehaviorDeclarationTask<'_>> {
