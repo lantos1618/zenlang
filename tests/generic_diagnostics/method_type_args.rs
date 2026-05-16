@@ -55,6 +55,39 @@ main = () i32 {
 }
 
 #[test]
+fn generic_enum_method_explicit_type_arg_arity_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Option<T>:
+    None,
+    Some(T)
+
+Option.unwrap_or<T> = (self: Self, fallback: T) T {
+    self ?
+        | Some(value) { value }
+        | None { fallback }
+}
+
+main = () i32 {
+    value = Option<i32>.Some(1)
+    value.unwrap_or<i32, str>(0)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("generic method `Option.unwrap_or` expects 1 type arguments, found 2")),
+        "expected generic enum method arity diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors.iter().all(|d| !d.message.contains("argument 2")),
+        "malformed generic enum method type arguments should not also report argument mismatch, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_method_inference_failure_is_error() {
     let errors = typecheck_errors(
         r#"
