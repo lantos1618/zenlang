@@ -116,6 +116,8 @@ checked-in docs, tests, and commits only.
   fixture with generated-C assertions for the concrete mangled method.
 - Generic diagnostics now cover explicit type-argument arity failures for
   two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
+- Generic diagnostics now cover receiver-vs-argument inference conflicts for
+  two-parameter `Result<T, E>` enum methods.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with
