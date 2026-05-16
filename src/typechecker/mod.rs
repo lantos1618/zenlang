@@ -48,6 +48,7 @@ pub struct TypeChecker {
     behavior_extends: HashMap<String, Vec<BehaviorParentRef>>,
     behavior_extends_spans: HashMap<String, Span>,
     behavior_impls: HashSet<(String, String)>,
+    behavior_refs_by_key: HashMap<String, BehaviorParentRef>,
     generic_functions: HashMap<String, GenericFunctionTemplate>,
     generic_methods: HashMap<String, GenericFunctionTemplate>,
     specialized_functions: Vec<TypedFunction>,
@@ -85,6 +86,7 @@ impl TypeChecker {
             behavior_extends: HashMap::new(),
             behavior_extends_spans: HashMap::new(),
             behavior_impls: HashSet::new(),
+            behavior_refs_by_key: HashMap::new(),
             generic_functions: HashMap::new(),
             generic_methods: HashMap::new(),
             specialized_functions: Vec::new(),
@@ -2546,8 +2548,12 @@ impl TypeChecker {
             return;
         };
 
-        for implementation in self.behavior_impl_refs_from_metadata(name, impl_refs) {
+        for behavior in impl_refs {
+            let behavior_ref = self.behavior_parent_ref(&behavior.name, &behavior.type_args);
+            let implementation = (name.to_string(), behavior_ref.key.clone());
             self.behavior_impls.insert(implementation);
+            self.behavior_refs_by_key
+                .insert(behavior_ref.key.clone(), behavior_ref);
         }
     }
 
@@ -2766,11 +2772,15 @@ impl TypeChecker {
         behavior: &str,
         behavior_type_args: &[AstType],
     ) {
-        let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
+        let behavior_ref = self.behavior_parent_ref(behavior, behavior_type_args);
+        let behavior_key = behavior_ref.key.clone();
         self.behavior_impls
             .insert((type_name.to_string(), behavior_key));
+        self.behavior_refs_by_key
+            .insert(behavior_ref.key.clone(), behavior_ref);
     }
 
+    #[cfg(test)]
     fn behavior_impl_refs_from_metadata(
         &self,
         type_name: &str,
@@ -2779,10 +2789,8 @@ impl TypeChecker {
         metadata
             .iter()
             .map(|behavior| {
-                (
-                    type_name.to_string(),
-                    self.behavior_reference_key(&behavior.name, &behavior.type_args),
-                )
+                let behavior_ref = self.behavior_parent_ref(&behavior.name, &behavior.type_args);
+                (type_name.to_string(), behavior_ref.key)
             })
             .collect()
     }
@@ -3112,12 +3120,60 @@ impl TypeChecker {
             return false;
         }
 
+        if self.behavior_extends_parent_matches(behavior, &HashMap::new(), parent, seen) {
+            return true;
+        }
+
+        self.behavior_refs_by_key
+            .get(behavior)
+            .is_some_and(|behavior_ref| {
+                let substitutions = self.behavior_type_param_substitutions(
+                    &behavior_ref.behavior,
+                    &behavior_ref.type_args,
+                );
+                self.behavior_extends_parent_matches(
+                    &behavior_ref.behavior,
+                    &substitutions,
+                    parent,
+                    seen,
+                )
+            })
+    }
+
+    fn behavior_extends_parent_matches(
+        &self,
+        behavior: &str,
+        substitutions: &HashMap<String, AstType>,
+        parent: &str,
+        seen: &mut HashSet<String>,
+    ) -> bool {
         self.behavior_extends.get(behavior).is_some_and(|parents| {
             parents.iter().any(|candidate| {
-                candidate.key == parent
-                    || self.behavior_inherits_from_inner(&candidate.key, parent, seen)
+                let candidate_args: Vec<AstType> = candidate
+                    .type_args
+                    .iter()
+                    .map(|type_arg| substitute_behavior_ast_type(type_arg, substitutions))
+                    .collect();
+                let candidate_ref = self.behavior_parent_ref(&candidate.behavior, &candidate_args);
+                candidate_ref.key == parent
+                    || self.behavior_ref_inherits_from_inner(&candidate_ref, parent, seen)
             })
         })
+    }
+
+    fn behavior_ref_inherits_from_inner(
+        &self,
+        behavior_ref: &BehaviorParentRef,
+        parent: &str,
+        seen: &mut HashSet<String>,
+    ) -> bool {
+        if !seen.insert(behavior_ref.key.clone()) {
+            return false;
+        }
+
+        let substitutions =
+            self.behavior_type_param_substitutions(&behavior_ref.behavior, &behavior_ref.type_args);
+        self.behavior_extends_parent_matches(&behavior_ref.behavior, &substitutions, parent, seen)
     }
 
     fn check_behavior_impl(
@@ -3192,6 +3248,10 @@ impl TypeChecker {
 
         self.behavior_impls
             .insert((type_name.to_string(), behavior_key.clone()));
+        self.behavior_refs_by_key.insert(
+            behavior_key.clone(),
+            self.behavior_parent_ref(behavior, behavior_type_args),
+        );
         let required_methods =
             self.behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new());
         let mut unmatched_required: VecDeque<String> = required_methods

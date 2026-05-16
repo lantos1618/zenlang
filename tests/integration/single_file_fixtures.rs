@@ -171,6 +171,11 @@ fn test_behavior_generic_parent_inheritance() {
 }
 
 #[test]
+fn test_behavior_generic_parent_type_arg_inheritance() {
+    run_test("behavior_generic_parent_type_arg_inheritance");
+}
+
+#[test]
 fn test_behavior_inherited_generic_dispatch() {
     run_test("behavior_inherited_generic_dispatch");
 }
