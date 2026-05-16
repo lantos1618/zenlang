@@ -26,6 +26,7 @@ fn generic_specializations_emit_each_generated_c_definition_once() {
         "multi_file_generic_imported_transitive_dependency/main.zen",
         "multi_file_generic_imported_type_dependency/main.zen",
         "multi_file_generic_imported_worklist_chain/main.zen",
+        "multi_file_generic_result_enum_method/main.zen",
         "multi_file_imported_generic_function_return_enum_dependency/main.zen",
         "multi_file_type_impl_return_enum_dependency/main.zen",
         "multi_file_type_method_nested_result_dependency/main.zen",
@@ -237,6 +238,19 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T Option_unwrap_or"));
     assert!(!c_source.contains("Option_unwrap_or(some"));
+
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_generic_result_enum_method/main.zen"),
+    );
+    assert!(c_source.contains("typedef struct Result_i32_str Result_i32_str;"));
+    assert!(c_source
+        .contains("int32_t Result_unwrap_or_i32_str(Result_i32_str self, int32_t fallback)"));
+    assert!(c_source.contains("Result_unwrap_or_i32_str(ok, 0LL)"));
+    assert!(c_source.contains("Result_unwrap_or_i32_str(err, 144LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_i32_str");
+    assert!(!c_source.contains("Result_T"));
+    assert!(!c_source.contains("T Result_unwrap_or"));
+    assert!(!c_source.contains("Result_unwrap_or(err"));
 
     let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_generic_imported_type_dependency/main.zen"),
