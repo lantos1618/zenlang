@@ -104,6 +104,8 @@ checked-in docs, tests, and commits only.
 - AST declaration collection now keeps callable task dispatch and generic
   function/method template collection in a focused module, separate from import,
   impl-block, type, behavior, and precollection work.
+- C codegen now keeps match, conditional, and controlled-loop lowering in a
+  focused module, separate from statement and inline-expression emission.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with
