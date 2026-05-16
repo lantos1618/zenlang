@@ -1764,6 +1764,10 @@ checked-in docs, tests, and commits only.
   behavior metadata and type-reference validation tasks, so behavior
   declarations are classified once before restored method metadata and
   default-body reference replay paths run.
+- Resolver-backed behavior impl-block replay now shares one helper for
+  behavior-impl metadata and impl-block type-reference validation tasks, so
+  behavior implementation blocks are classified once before restored impl
+  metadata and method body-reference replay paths run.
 
 ## Current Phase
 

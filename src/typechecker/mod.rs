@@ -3979,16 +3979,21 @@ impl TypeChecker {
                     &mut tasks.type_references,
                 )
             };
-            if !callable_handled && !type_handled && !behavior_handled {
+            let behavior_impl_handled = if callable_handled || type_handled || behavior_handled {
+                false
+            } else {
+                Self::push_resolver_behavior_impl_replay_tasks(
+                    decl,
+                    &mut tasks.behavior_impl_blocks,
+                    &mut tasks.type_references,
+                )
+            };
+            if !callable_handled && !type_handled && !behavior_handled && !behavior_impl_handled {
                 Self::push_resolver_type_reference_validation_task(
                     decl,
                     &mut tasks.type_references,
                 );
             }
-            Self::push_resolver_behavior_impl_block_declaration_task(
-                decl,
-                &mut tasks.behavior_impl_blocks,
-            );
             Self::push_behavior_requires_validation_task(decl, &mut tasks.behavior_requires);
         }
         tasks
@@ -4107,6 +4112,35 @@ impl TypeChecker {
         }
     }
 
+    fn push_resolver_behavior_impl_replay_tasks<'a>(
+        decl: &'a Declaration,
+        behavior_impl_tasks: &mut Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
+        type_reference_tasks: &mut Vec<ResolverTypeReferenceValidationTask<'a>>,
+    ) -> bool {
+        if let Declaration::ImplBlock {
+            type_name,
+            behavior: Some(behavior),
+            behavior_type_args,
+            methods,
+            span,
+            ..
+        } = decl
+        {
+            behavior_impl_tasks.push(ResolverBehaviorImplBlockDeclarationTask {
+                ast_type_name: type_name,
+                behavior,
+                behavior_type_args,
+                methods,
+                span: *span,
+            });
+            type_reference_tasks
+                .push(ResolverTypeReferenceValidationTask::ImplBlock { type_name, methods });
+            true
+        } else {
+            false
+        }
+    }
+
     #[cfg(test)]
     fn collect_resolver_behavior_impl_block_declaration_tasks(
         decls: &[Declaration],
@@ -4118,6 +4152,7 @@ impl TypeChecker {
         tasks
     }
 
+    #[cfg(test)]
     fn push_resolver_behavior_impl_block_declaration_task<'a>(
         decl: &'a Declaration,
         tasks: &mut Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
@@ -4232,13 +4267,6 @@ impl TypeChecker {
             } => {
                 callable_tasks
                     .push(ResolverCallableDeclarationMetadataTask::TypeImpl { type_name, methods });
-                type_reference_tasks
-                    .push(ResolverTypeReferenceValidationTask::ImplBlock { type_name, methods });
-                true
-            }
-            Declaration::ImplBlock {
-                type_name, methods, ..
-            } => {
                 type_reference_tasks
                     .push(ResolverTypeReferenceValidationTask::ImplBlock { type_name, methods });
                 true
@@ -16463,6 +16491,43 @@ Json<T>: behavior {
         assert!(matches!(
             type_reference_tasks.as_slice(),
             [ResolverTypeReferenceValidationTask::Behavior { name: "Json", .. }]
+        ));
+    }
+
+    #[test]
+    fn resolver_behavior_impl_replay_task_helper_pushes_metadata_and_type_refs_together() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (self: Point) str { return "point" }
+}
+"#,
+        );
+        let mut behavior_impl_tasks = Vec::new();
+        let mut type_reference_tasks = Vec::new();
+
+        let handled = TypeChecker::push_resolver_behavior_impl_replay_tasks(
+            &program.declarations[2],
+            &mut behavior_impl_tasks,
+            &mut type_reference_tasks,
+        );
+
+        assert!(handled);
+        assert_eq!(behavior_impl_tasks.len(), 1);
+        assert_eq!(behavior_impl_tasks[0].ast_type_name, "Point");
+        assert_eq!(behavior_impl_tasks[0].behavior, "Json");
+        assert!(matches!(
+            type_reference_tasks.as_slice(),
+            [ResolverTypeReferenceValidationTask::ImplBlock {
+                type_name: "Point",
+                ..
+            }]
         ));
     }
 
