@@ -108,6 +108,8 @@ checked-in docs, tests, and commits only.
   focused module, separate from statement and inline-expression emission.
 - C codegen now keeps closure definition scanning in a focused module, separate
   from type, program, function, and global emission.
+- Resolver collection tests now keep behavior default-method synthesis cases in
+  a focused behavior-methods submodule, separate from signature metadata cases.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with
