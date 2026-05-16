@@ -2133,6 +2133,9 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_compiles_multiple_executable_targets`. It
   compiles executable dependencies before dependents through
   `direct_file_command_build_zen_compiles_executable_dependencies_first`,
+  rejects dependencies on gated library and test targets through
+  `direct_file_command_build_zen_rejects_gated_library_dependencies` and
+  `direct_file_command_build_zen_rejects_gated_test_dependencies`,
   rejects test-only graphs before execution starts through
   `direct_file_command_build_zen_rejects_graph_without_executable_targets`,
   and rejects undeclared host effects for single-target and multi-target graphs
