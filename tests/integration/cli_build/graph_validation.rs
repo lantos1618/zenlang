@@ -180,6 +180,51 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn check_command_build_zen_accepts_declared_env_read_with_fallback() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD") ?
+        | .Ok(path) { path }
+        | .Err { "~/.zen/std" }
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("main.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write main.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["check", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen check build.zen");
+
+    assert!(
+        output.status.success(),
+        "zen check build.zen failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("1 build targets"),
+        "expected build graph check summary, stdout={}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}
+
+#[test]
 fn check_command_build_zen_rejects_undeclared_host_effects_before_source_validation() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
