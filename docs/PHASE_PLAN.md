@@ -82,6 +82,10 @@ checked-in docs, tests, and commits only.
 - Resolver validation support now keeps behavior-specific AST type
   substitution, bound display, and method-signature comparison helpers in a
   focused include, separate from generic type-info construction helpers.
+- Parser declaration dispatch now keeps struct, enum, and generic type
+  parameter parsing in a focused declaration-types module, leaving the main
+  declaration parser responsible for dispatch, imports, functions, and
+  top-level bindings.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with
