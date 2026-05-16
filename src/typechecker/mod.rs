@@ -4496,11 +4496,7 @@ impl TypeChecker {
         type_reference_tasks: &[ResolverTypeReferenceValidationTask<'_>],
     ) {
         self.with_resolver_backed_collection(|checker| {
-            checker.validate_behavior_impl_tasks(&behavior_association_tasks.impls, Some(symbols));
-            checker.validate_behavior_requires_tasks(
-                &behavior_association_tasks.requires,
-                Some(symbols),
-            );
+            checker.validate_behavior_association_tasks(behavior_association_tasks, Some(symbols));
             checker.validate_resolver_type_reference_tasks(type_reference_tasks, Some(symbols));
             checker.validate_resolver_struct_field_default_tasks(type_tasks, Some(symbols));
         });
@@ -4619,8 +4615,7 @@ impl TypeChecker {
         symbols: Option<&SymbolTable>,
     ) {
         let behavior_association_tasks = Self::collect_behavior_association_validation_tasks(decls);
-        self.validate_behavior_impl_tasks(&behavior_association_tasks.impls, symbols);
-        self.validate_behavior_requires_tasks(&behavior_association_tasks.requires, symbols);
+        self.validate_behavior_association_tasks(&behavior_association_tasks, symbols);
         self.validate_generic_type_references(decls, symbols);
         self.validate_struct_field_defaults(decls, symbols);
     }
@@ -4635,6 +4630,15 @@ impl TypeChecker {
             Self::push_behavior_requires_replay_task(decl, &mut tasks.requires);
         }
         tasks
+    }
+
+    fn validate_behavior_association_tasks(
+        &mut self,
+        tasks: &BehaviorAssociationValidationTasks<'_>,
+        symbols: Option<&SymbolTable>,
+    ) {
+        self.validate_behavior_impl_tasks(&tasks.impls, symbols);
+        self.validate_behavior_requires_tasks(&tasks.requires, symbols);
     }
 
     fn validate_behavior_impl_tasks(
@@ -14747,6 +14751,37 @@ Point.requires(Json<str>)
         assert_eq!(tasks.requires[0].type_name, "Point");
         assert_eq!(tasks.requires[0].behavior, "Json");
         assert_eq!(tasks.requires[0].behavior_type_args, &[AstType::Str]);
+    }
+
+    #[test]
+    fn behavior_association_validation_helper_replays_impls_and_requires() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let mut checker = TypeChecker::new();
+        checker.collect_declarations(&program.declarations);
+        let tasks =
+            TypeChecker::collect_behavior_association_validation_tasks(&program.declarations);
+
+        checker.validate_behavior_association_tasks(&tasks, None);
+
+        assert!(
+            checker.diagnostics().is_empty(),
+            "valid impl+requires replay should not emit diagnostics: {:?}",
+            checker.diagnostics()
+        );
     }
 
     #[test]

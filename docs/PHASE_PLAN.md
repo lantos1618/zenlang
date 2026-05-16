@@ -1791,6 +1791,9 @@ checked-in docs, tests, and commits only.
 - Resolver declaration metadata tasks now store behavior edge work in the same
   behavior-association bundle shape, so resolver-backed `.implements` and
   `.requires` replay no longer uses separate top-level task fields.
+- Standalone and resolver-backed behavior-association semantic replay now share
+  one validator over the bundled tasks, while the underlying impl/required edge
+  checks remain focused helpers.
 
 ## Current Phase
 
