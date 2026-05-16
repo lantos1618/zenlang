@@ -133,11 +133,16 @@ enum ResolverTypeReferenceValidationTask<'a> {
     },
 }
 
+struct ResolverBehaviorDeclarationMetadataTask<'a> {
+    name: &'a str,
+    span: Span,
+}
+
 #[derive(Default)]
 struct ResolverDeclarationMetadataTasks<'a> {
     callable: Vec<ResolverCallableDeclarationMetadataTask<'a>>,
     types: Vec<ResolverTypeDeclarationMetadataTask<'a>>,
-    behaviors: Vec<(&'a str, Span)>,
+    behaviors: Vec<ResolverBehaviorDeclarationMetadataTask<'a>>,
     behavior_impl_blocks: Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
     behavior_requires: Vec<BehaviorRequiresValidationTask<'a>>,
     type_references: Vec<ResolverTypeReferenceValidationTask<'a>>,
@@ -3687,7 +3692,12 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    tasks.behaviors.push((name.as_str(), *span));
+                    tasks
+                        .behaviors
+                        .push(ResolverBehaviorDeclarationMetadataTask {
+                            name: name.as_str(),
+                            span: *span,
+                        });
                     tasks
                         .type_references
                         .push(ResolverTypeReferenceValidationTask::Behavior {
@@ -3720,10 +3730,10 @@ impl TypeChecker {
     fn collect_resolver_behavior_declaration_metadata_pass(
         &mut self,
         symbols: &SymbolTable,
-        tasks: &[(&str, Span)],
+        tasks: &[ResolverBehaviorDeclarationMetadataTask<'_>],
     ) {
-        for (name, span) in tasks {
-            self.collect_resolver_behavior_declaration(symbols, name, *span);
+        for task in tasks {
+            self.collect_resolver_behavior_declaration(symbols, task.name, task.span);
         }
     }
 
@@ -13439,7 +13449,7 @@ main = () i32 { return 0 }
 
         assert_eq!(tasks.types.len(), 2);
         assert_eq!(tasks.behaviors.len(), 1);
-        assert_eq!(tasks.behaviors[0].0, "Json");
+        assert_eq!(tasks.behaviors[0].name, "Json");
         assert_eq!(tasks.callable.len(), 2);
         assert_eq!(tasks.behavior_impl_blocks.len(), 1);
         let behavior_impl = &tasks.behavior_impl_blocks[0];

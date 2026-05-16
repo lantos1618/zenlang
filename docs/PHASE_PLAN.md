@@ -1644,6 +1644,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed generic type-reference validation now reuses type-reference
   tasks from the declaration metadata pass instead of rescanning declarations
   during semantic replay.
+- Resolver behavior declaration metadata now uses a named metadata task instead
+  of anonymous tuple fields, keeping behavior metadata replay aligned with the
+  other resolver declaration task types.
 
 ## Current Phase
 

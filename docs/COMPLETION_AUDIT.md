@@ -1899,6 +1899,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test collect_declarations_with_symbols_uses_resolver_function_type_metadata`,
   and
   `cargo test collect_declarations_with_symbols_does_not_validate_stale_generic_function_body_refs_when_signature_incomplete`.
+- Resolver behavior declaration metadata now uses a named metadata task instead
+  of anonymous tuple fields, covered by
+  `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`,
+  `cargo test collect_declarations_with_symbols_uses_resolver_behavior_method_metadata`,
+  and
+  `cargo test collect_declarations_with_symbols_clears_stale_behavior_methods_after_name_restore`.
 
 ## Unresolved Gaps
 
