@@ -1857,6 +1857,9 @@ checked-in docs, tests, and commits only.
 - AST declaration collection now carries pre-collection validation tasks in
   the same declaration task bundle, so behavior declarations are collected and
   pre-collection validations are replayed without a second declaration scan.
+- Resolver-backed declaration semantic validation now builds one resolver
+  metadata task bundle and replays behavior-association, type-reference, and
+  struct field-default validation from it.
 
 ## Current Phase
 
