@@ -74,6 +74,10 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata",
         "collect_declarations_with_symbols_clears_stale_behavior_impl_generic_method_template_after_key_restore",
         "resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass",
+        "resolver_type_declaration_metadata_tasks_collect_only_type_work",
+        "resolver_callable_declaration_metadata_tasks_collect_callable_work",
+        "resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls",
+        "resolver_type_reference_validation_tasks_collect_only_type_reference_work",
     ] {
         assert!(
             plan.contains(required),
@@ -147,6 +151,10 @@ fn completion_audit_records_recovery_objective_evidence_and_gaps() {
         "collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata",
         "collect_declarations_with_symbols_clears_stale_behavior_impl_generic_method_template_after_key_restore",
         "resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass",
+        "resolver_type_declaration_metadata_tasks_collect_only_type_work",
+        "resolver_callable_declaration_metadata_tasks_collect_callable_work",
+        "resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls",
+        "resolver_type_reference_validation_tasks_collect_only_type_reference_work",
     ] {
         assert!(
             audit.contains(required),
