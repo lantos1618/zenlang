@@ -3,6 +3,7 @@
 
 mod aggregate_support;
 mod call_support;
+mod call_validation;
 mod control_flow_support;
 
 use crate::ast::expressions::StringPart;

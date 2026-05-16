@@ -186,6 +186,9 @@ checked-in docs, tests, and commits only.
 - Parser behavior declaration and impl-block parsing now live in a dedicated
   parser helper module, keeping behavior signatures and association syntax out
   of the broad top-level declaration dispatcher.
+- Typechecker call signature and generic validation helpers now live in a
+  dedicated expression helper module, keeping call-expression dispatch separate
+  from argument, annotation, and return-flow validation.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
