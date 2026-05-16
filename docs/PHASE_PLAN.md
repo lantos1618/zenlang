@@ -1703,6 +1703,9 @@ checked-in docs, tests, and commits only.
   declaration-specific `Self` allowance checks.
 - Resolver validation replay now separates declaration replay collection from
   final behavior-association replay task construction.
+- Resolver-backed type-reference validation now uses a narrow type-reference
+  task collector instead of collecting the full resolver metadata task bundle
+  when only type-reference replay is needed.
 
 ## Current Phase
 

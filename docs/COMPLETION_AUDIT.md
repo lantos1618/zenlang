@@ -2021,6 +2021,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_validation_replay_tasks_collect_symbols_and_behavior_associations_together`,
   and
   `cargo test resolver_behavior_association_list_tasks_collect_type_and_parent_edges_together`.
+- Resolver-backed type-reference validation now uses a narrow type-reference
+  task collector instead of collecting the full resolver metadata task bundle
+  when only type-reference replay is needed, covered by
+  `cargo test resolver_type_reference_validation_tasks_collect_only_type_reference_work`
+  and
+  `cargo test collect_declarations_with_symbols_uses_resolver_type_metadata_for_type_refs`.
 
 ## Unresolved Gaps
 
