@@ -705,6 +705,9 @@ checked-in docs, tests, and commits only.
 - Generic behavior inheritance accepts parent type arguments that reference the
   child behavior's own type parameters, deferring those bound checks until a
   concrete behavior specialization is instantiated.
+- Generic behavior inheritance now also substitutes concrete child behavior
+  type arguments while satisfying inherited parent behavior requirements,
+  covered by `tests/zen/behavior_generic_parent_type_arg_inheritance.zen`.
 - UFCS dispatch through a substituted generic behavior bound is covered by
   `tests/zen/behavior_json_generic_bound_ufcs.zen` and generated-C checks that
   reject unresolved `T_encode` calls.

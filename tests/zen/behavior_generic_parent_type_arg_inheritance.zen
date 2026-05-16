@@ -1,0 +1,36 @@
+{ io } = std
+
+Point: {
+    x: i32
+}
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Pretty<T>: behavior {
+    pretty: (Self) T
+}
+
+Pretty.extends(Json<T>)
+
+Point.implements(Pretty<Point>) {
+    encode = (value: Point) Point {
+        value
+    }
+
+    pretty = (value: Point) Point {
+        value
+    }
+}
+
+Point.requires(Json<Point>)
+
+main = () i32 {
+    point = Point { x: 7 }
+    encoded = point.encode()
+    pretty = point.pretty()
+    io.println("${encoded.x}")
+    io.println("${pretty.x}")
+    0
+}
