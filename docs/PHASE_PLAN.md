@@ -177,6 +177,9 @@ checked-in docs, tests, and commits only.
 - Resolver type-reference validation now lives in a dedicated resolver helper
   module, keeping parameter, type-parameter, and known-symbol checks separate
   from declaration and expression traversal.
+- Resolver expression and local-symbol validation now live in dedicated
+  resolver helper modules, keeping expression traversal, statement traversal,
+  and scoped local binding separate from declaration validation.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
