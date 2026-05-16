@@ -1794,6 +1794,9 @@ checked-in docs, tests, and commits only.
 - Standalone and resolver-backed behavior-association semantic replay now share
   one validator over the bundled tasks, while the underlying impl/required edge
   checks remain focused helpers.
+- Resolver-backed behavior impl metadata collection now receives the bundled
+  behavior-association tasks and selects `.implements` entries internally,
+  keeping resolver call sites aligned around the shared task shape.
 
 ## Current Phase
 

@@ -3930,7 +3930,7 @@ impl TypeChecker {
 
         let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
         self.collect_resolver_declaration_metadata(symbols, &tasks);
-        self.collect_resolver_behavior_impl_metadata(&tasks.behavior_associations.impls, symbols);
+        self.collect_resolver_behavior_impl_metadata(&tasks.behavior_associations, symbols);
         self.validate_resolver_collected_declaration_semantics(
             symbols,
             &tasks.behavior_associations,
@@ -4458,10 +4458,10 @@ impl TypeChecker {
 
     fn collect_resolver_behavior_impl_metadata(
         &mut self,
-        raw_tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
+        association_tasks: &BehaviorAssociationValidationTasks<'_>,
         symbols: &SymbolTable,
     ) {
-        let tasks = self.resolver_behavior_impl_block_tasks(raw_tasks, symbols);
+        let tasks = self.resolver_behavior_impl_block_tasks(&association_tasks.impls, symbols);
 
         self.with_resolver_backed_collection(|checker| {
             for task in &tasks {
