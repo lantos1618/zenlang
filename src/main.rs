@@ -97,6 +97,9 @@ fn main() {
 fn cmd_check(path_str: &str) {
     if is_build_zen_path(path_str) {
         let graph = load_build_graph(path_str);
+        let build_path = Path::new(path_str);
+        let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
+        validate_build_graph_sources(base_dir, &graph);
         println!("  {} build targets — ok", graph.targets().len());
         return;
     }
@@ -493,6 +496,21 @@ fn validate_executed_dependency_targets(
                 dependency_target.name()
             );
             process::exit(1);
+        }
+    }
+}
+
+fn validate_build_graph_sources(base_dir: &Path, graph: &zen::build_graph::BuildGraph) {
+    for target in graph.targets() {
+        for source in target.sources() {
+            if !base_dir.join(source).exists() {
+                eprintln!(
+                    "build graph target `{}` source not found: {}",
+                    target.name(),
+                    source
+                );
+                process::exit(1);
+            }
         }
     }
 }

@@ -1925,8 +1925,15 @@ checked-in docs, tests, and commits only.
   `build_command_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen check build.zen` validates the same constrained deterministic
   graph without compiling targets, covered by
-  `check_command_validates_build_zen_graph`, and rejects undeclared host effects
-  through `check_command_build_zen_rejects_undeclared_host_effects`.
+  `check_command_validates_build_zen_graph`. It rejects missing executable,
+  test, and library sources through
+  `check_command_build_zen_rejects_missing_executable_source`,
+  `check_command_build_zen_rejects_missing_test_source`, and
+  `check_command_build_zen_rejects_missing_library_source`, and rejects
+  undeclared host effects before source validation through
+  `check_command_build_zen_rejects_undeclared_host_effects_before_source_validation`.
+  The single-target host-effect rejection remains covered by
+  `check_command_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
   `test_command_build_zen_runs_test_targets`, and rejects undeclared host
   effects before test execution through
