@@ -1,0 +1,9 @@
+pub Option<T>:
+    None,
+    Some(T)
+
+pub Option.unwrap_or<T> = (self: Self, fallback: T) T {
+    self ?
+        | Some(value) { value }
+        | None { fallback }
+}

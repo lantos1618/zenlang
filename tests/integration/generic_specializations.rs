@@ -176,6 +176,18 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("unwrap_result(err"));
 
     let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_generic_enum_method/main.zen"),
+    );
+    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
+    assert!(c_source.contains("int32_t Option_unwrap_or_i32(Option_i32 self, int32_t fallback)"));
+    assert!(c_source.contains("Option_unwrap_or_i32(some, 0LL)"));
+    assert!(c_source.contains("Option_unwrap_or_i32(none, 89LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "Option_unwrap_or_i32");
+    assert!(!c_source.contains("Option_T"));
+    assert!(!c_source.contains("T Option_unwrap_or"));
+    assert!(!c_source.contains("Option_unwrap_or(some"));
+
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_generic_imported_type_dependency/main.zen"),
     );
     assert!(c_source.contains("typedef struct Holder_i32 Holder_i32;"));
