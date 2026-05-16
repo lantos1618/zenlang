@@ -1440,7 +1440,7 @@ impl TypeChecker {
                     std::collections::HashSet::new();
                 for p in params {
                     let ty = self.resolve_type(&p.ty);
-                    self.define_var(&p.name, ty.clone());
+                    self.define_var_with_mutability(&p.name, ty.clone(), p.mutable);
                     param_types.push(ty);
                     param_names.insert(p.name.clone());
                 }

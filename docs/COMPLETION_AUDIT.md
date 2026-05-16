@@ -225,6 +225,8 @@ and do not assume Phase 4 is ready without evidence.
   Scoped expression local collection is shared for struct field defaults and
   top-level expressions, covered by
   `typechecker::tests::expected_resolver_scoped_expr_locals_collects_block_bindings`.
+  Closure parameters now reuse the same parameter-local helpers for expected
+  and required resolver locals, preserving mutable parameter metadata.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate
@@ -677,6 +679,10 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver rejects duplicate parameter names in behavior method signatures
   before typechecker metadata collection, covered by
   `resolver_phase2::resolver_rejects_duplicate_signature_parameter_names`.
+- Resolver records mutable closure parameter locals and typechecker
+  resolver-backed validation rejects closure parameter mutability drift, covered
+  by `resolver_phase2::resolver_records_mutable_closure_parameter_locals` and
+  `typechecker::tests::check_program_with_symbols_validates_resolver_closure_parameter_mutability`.
 - Resolver type symbols carry behavior impl and `.requires` association
   metadata, and typechecker setup rejects missing or extra association metadata
   before collecting behavior impls/requires from the AST. Specialized behavior

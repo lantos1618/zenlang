@@ -236,6 +236,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "check_program_with_symbols_requires_resolver_top_level_expr_locals",
         "resolver_records_closure_locals",
         "check_program_with_symbols_requires_resolver_closure_locals",
+        "resolver_records_mutable_closure_parameter_locals",
+        "check_program_with_symbols_validates_resolver_closure_parameter_mutability",
         "resolver_records_pattern_locals",
         "check_program_with_symbols_requires_resolver_pattern_locals",
         "resolver_records_same_name_locals_in_distinct_scopes",

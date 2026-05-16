@@ -9354,15 +9354,7 @@ impl TypeChecker {
             }
             Expression::Closure { params, body, .. } => {
                 let mut closure_locals = scope_cursor.child_scope(locals);
-                for param in params {
-                    self.require_resolver_local_symbol(
-                        symbols,
-                        &param.name,
-                        expected_local_symbol(false, closure_locals.current_scope_id),
-                        param.span,
-                    );
-                    closure_locals.insert(param.name.clone(), false);
-                }
+                self.require_resolver_parameter_locals(symbols, params, &mut closure_locals);
                 self.require_resolver_expr_locals(symbols, body, scope_cursor, &mut closure_locals);
             }
             Expression::Cast { expr, .. } | Expression::Defer { expr, .. } => {
@@ -11113,9 +11105,7 @@ fn expected_resolver_expr_locals(
         }
         Expression::Closure { params, body, .. } => {
             let mut closure_locals = scope_cursor.child_scope(locals);
-            for param in params {
-                expected_resolver_local(&param.name, false, &mut closure_locals, expected);
-            }
+            expected_resolver_parameter_locals(params, &mut closure_locals, expected);
             expected_resolver_expr_locals(body, scope_cursor, &mut closure_locals, expected);
         }
         Expression::Cast { expr, .. } | Expression::Defer { expr, .. } => {
@@ -21393,6 +21383,37 @@ main = () i32 {
     }
 
     #[test]
+    fn check_program_with_symbols_validates_resolver_closure_parameter_mutability() {
+        let program = parse_program(
+            r#"
+main = () i32 {
+    mapper = (mut input: i32) i32 {
+        input = input + 1
+        input
+    }
+    return 0
+}
+"#,
+        );
+        let mut symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        symbols.set_local_mutability_for_test("input", Some(false));
+        let mut tc = TypeChecker::new();
+
+        let err = tc
+            .check_program_with_symbols(&program, &symbols)
+            .expect_err("resolver closure parameter mutability mismatch should fail");
+
+        assert!(
+            err.iter().any(|d| d.message.contains(
+                "resolver local symbol 'input' has mutability immutable, expected mutable"
+            )),
+            "expected resolver closure parameter mutability diagnostic, got {err:?}"
+        );
+    }
+
+    #[test]
     fn check_program_with_symbols_requires_resolver_struct_field_default_locals() {
         let program = parse_program(
             r#"
@@ -24211,6 +24232,24 @@ main = () void {
                 .contains("cannot assign to immutable variable `x`")),
             "expected immutable assignment diagnostic, got {errors:?}"
         );
+    }
+
+    #[test]
+    fn assignment_to_mutable_closure_parameter_is_allowed() {
+        let program = parse_program(
+            r#"
+main = () void {
+    mapper = (mut input: i32) i32 {
+        input = input + 1
+        input
+    }
+}
+"#,
+        );
+
+        let mut tc = TypeChecker::new();
+        tc.check_program(&program)
+            .expect("mutable closure parameter assignment should pass");
     }
 
     #[test]

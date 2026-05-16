@@ -2093,6 +2093,28 @@ main = () i32 {
 }
 
 #[test]
+fn resolver_records_mutable_closure_parameter_locals() {
+    let program = parse_program(
+        r#"
+main = () i32 {
+    mapper = (mut input: i32) i32 {
+        input = input + 1
+        input
+    }
+    return 0
+}
+"#,
+    );
+
+    let table = Resolver::new().resolve_program(&program).expect("resolve");
+    let input = table
+        .lookup_scoped(Namespace::Local, "input")
+        .expect("closure parameter local symbol");
+
+    assert_eq!(input.is_mutable, Some(true));
+}
+
+#[test]
 fn resolver_records_pattern_locals() {
     let program = parse_program(
         r#"

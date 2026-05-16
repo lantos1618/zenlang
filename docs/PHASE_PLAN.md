@@ -143,7 +143,8 @@ checked-in docs, tests, and commits only.
   share the same helper inside that replay collector, and callable parameter/body
   local collection now shares one expected-local helper. Scoped expression local
   collection is also shared for struct field defaults and top-level
-  expressions.
+  expressions. Closure parameter local collection now reuses the same parameter
+  helper, preserving mutable parameter handoff metadata.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.
@@ -773,6 +774,10 @@ checked-in docs, tests, and commits only.
 - Resolver now rejects duplicate parameter names in behavior method signatures
   before typechecker metadata collection, covered by
   `resolver_phase2::resolver_rejects_duplicate_signature_parameter_names`.
+- Resolver now records mutable closure parameter locals and typechecker
+  resolver-backed validation rejects closure parameter mutability drift, covered
+  by `resolver_phase2::resolver_records_mutable_closure_parameter_locals` and
+  `typechecker::tests::check_program_with_symbols_validates_resolver_closure_parameter_mutability`.
 - Resolver type symbols now carry behavior impl and `.requires` association
   metadata, and typechecker setup rejects missing or extra association metadata
   before collecting behavior impls/requires from the AST.

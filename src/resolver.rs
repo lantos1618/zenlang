@@ -2309,7 +2309,7 @@ impl Resolver {
                     self.define_local_symbol(
                         table,
                         &param.name,
-                        false,
+                        param.mutable,
                         param.span,
                         &mut closure_locals,
                         diagnostics,
