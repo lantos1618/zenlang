@@ -95,6 +95,7 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "resolver_callable_declaration_metadata_tasks_collect_callable_work",
         "resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls",
         "resolver_type_reference_validation_tasks_collect_only_type_reference_work",
+        "generic_enum_constructor_without_type_args_is_error",
     ] {
         assert!(
             plan.contains(required),
@@ -190,6 +191,7 @@ fn completion_audit_records_recovery_objective_evidence_and_gaps() {
         "resolver_callable_declaration_metadata_tasks_collect_callable_work",
         "resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls",
         "resolver_type_reference_validation_tasks_collect_only_type_reference_work",
+        "generic_enum_constructor_without_type_args_is_error",
     ] {
         assert!(
             audit.contains(required),

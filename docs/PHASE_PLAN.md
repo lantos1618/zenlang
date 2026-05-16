@@ -116,6 +116,9 @@ checked-in docs, tests, and commits only.
   fixture with generated-C assertions for the concrete mangled method.
 - Generic diagnostics now cover explicit type-argument arity failures for
   two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
+- Generic diagnostics now cover generic enum constructor arity failures without
+  leaking raw type-parameter payload mismatch followups, including
+  `generic_enum_constructor_without_type_args_is_error`.
 - Generic diagnostics now cover receiver-vs-argument inference conflicts for
   two-parameter `Result<T, E>` enum methods.
 - Generic diagnostics now cover bound failures on `Result<T, E>` enum methods
