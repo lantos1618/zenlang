@@ -99,8 +99,8 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   graph, `zen emit build.zen` emits target C, `zen build build.zen` compiles
   one executable target through that graph, and direct `zen build.zen` aliases
   that same graph build path. Legacy `emit-json ast|symbols|typed|diagnostics`
-  modes for `build.zen` remain gated until their deterministic semantics are
-  specified and tested.
+  modes for `build.zen` are explicitly rejected with a diagnostic that points to
+  `emit-json build-graph`.
 - Errors: `Result<T, E>` and `.raise()` are v1 design goals, but `.raise()` is
   gated until typechecked propagation and lowering are implemented.
 - ABI: stable layouts for structs, enums, options/results, strings, slices,
@@ -122,7 +122,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | `Typed allocators` | gated | Sync and async allocator tests |
 | Comptime type matching | gated | Type metadata and derive tests |
 | Actors in std | gated | Mailbox, scheduling, supervisor tests |
-| `build.zen` check/emit/build/direct execution | constrained | Deterministic graph validation, target C emission, and one-target build tests |
+| `build.zen` check/emit/build/direct execution | constrained | Deterministic graph validation, target C emission, one-target build tests, and legacy emit-json rejection tests |
 | Existing broad stdlib files | experimental | Must compile before promotion |
 | Formatter, package manager, alternate backends | removed from v1 claims | Reintroduce only with tests and binaries |
 
