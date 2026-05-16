@@ -195,6 +195,8 @@ checked-in docs, tests, and commits only.
   a dedicated test module, keeping module graph/load entry points compact.
 - Resolver expected-local traversal now lives in a dedicated validation support
   helper, keeping expected metadata formatting separate from scoped local walks.
+- Build graph lowering from parsed build.zen programs now lives beside the
+  graph model, keeping graph validation separate from AST traversal details.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
