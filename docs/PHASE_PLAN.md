@@ -168,6 +168,9 @@ checked-in docs, tests, and commits only.
 - Typechecker monomorphization type conversion and mangling helpers now live in
   a dedicated utility module, keeping symbol-safe mangle keys and Type/AstType
   round-tripping out of specialization emission.
+- Resolver metadata construction helpers now live in a dedicated resolver
+  module, keeping value signatures, type-parameter metadata, behavior refs, and
+  method-key formatting out of the broad resolver traversal.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
