@@ -36,6 +36,13 @@ fn test_multi_file_generic_imported_transitive_dependency_imports() {
 }
 
 #[test]
+fn test_multi_file_generic_enum_method_imports() {
+    let zen_path = test_dir().join("multi_file_generic_enum_method/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "21\n89\n");
+}
+
+#[test]
 fn test_multi_file_type_impl_imports() {
     let zen_path = test_dir().join("multi_file_type_impl/main.zen");
     let actual = compile_and_run(&zen_path);
