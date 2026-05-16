@@ -220,6 +220,8 @@ and do not assume Phase 4 is ready without evidence.
   Behavior and non-behavior impl-block method expected-symbol collection also
   share one helper, covered by
   `typechecker::tests::expected_resolver_impl_method_symbols_collect_value_symbols_and_locals`.
+  Callable parameter/body expected-local collection is shared, covered by
+  `typechecker::tests::expected_resolver_callable_locals_collect_params_and_body`.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate

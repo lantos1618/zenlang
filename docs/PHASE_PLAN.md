@@ -140,7 +140,8 @@ checked-in docs, tests, and commits only.
   replay tasks in one declaration pass before checking resolver-owned extras,
   stripped resolver import metadata, and resolver behavior association lists.
   Behavior and non-behavior impl-block method expected-symbol collection now
-  share the same helper inside that replay collector.
+  share the same helper inside that replay collector, and callable parameter/body
+  local collection now shares one expected-local helper.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.

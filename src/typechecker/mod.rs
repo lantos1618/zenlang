@@ -7905,16 +7905,10 @@ impl TypeChecker {
                         .expected_symbols
                         .declarations
                         .insert((Namespace::Value, name.clone()));
-                    let mut locals = scope_cursor.new_scope();
-                    expected_resolver_parameter_locals(
+                    expected_resolver_callable_locals(
                         params,
-                        &mut locals,
-                        &mut tasks.expected_symbols.locals,
-                    );
-                    expected_resolver_expr_locals(
                         body,
                         &mut scope_cursor,
-                        &mut locals,
                         &mut tasks.expected_symbols.locals,
                     );
                 }
@@ -7929,16 +7923,10 @@ impl TypeChecker {
                         Namespace::Value,
                         method_signature_key(type_name, method_name),
                     ));
-                    let mut locals = scope_cursor.new_scope();
-                    expected_resolver_parameter_locals(
+                    expected_resolver_callable_locals(
                         params,
-                        &mut locals,
-                        &mut tasks.expected_symbols.locals,
-                    );
-                    expected_resolver_expr_locals(
                         body,
                         &mut scope_cursor,
-                        &mut locals,
                         &mut tasks.expected_symbols.locals,
                     );
                 }
@@ -7998,16 +7986,10 @@ impl TypeChecker {
                         .insert((Namespace::Behavior, name.clone()));
                     for method in methods {
                         if let Some(default_body) = &method.default_body {
-                            let mut locals = scope_cursor.new_scope();
-                            expected_resolver_parameter_locals(
+                            expected_resolver_callable_locals(
                                 &method.params,
-                                &mut locals,
-                                &mut tasks.expected_symbols.locals,
-                            );
-                            expected_resolver_expr_locals(
                                 default_body,
                                 &mut scope_cursor,
-                                &mut locals,
                                 &mut tasks.expected_symbols.locals,
                             );
                         }
@@ -10980,11 +10962,20 @@ fn collect_expected_resolver_impl_method_symbols(
             expected
                 .declarations
                 .insert((Namespace::Value, method_signature_key(type_name, name)));
-            let mut locals = scope_cursor.new_scope();
-            expected_resolver_parameter_locals(params, &mut locals, &mut expected.locals);
-            expected_resolver_expr_locals(body, scope_cursor, &mut locals, &mut expected.locals);
+            expected_resolver_callable_locals(params, body, scope_cursor, &mut expected.locals);
         }
     }
+}
+
+fn expected_resolver_callable_locals(
+    params: &[Param],
+    body: &Expression,
+    scope_cursor: &mut ResolverScopeCursor,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    let mut locals = scope_cursor.new_scope();
+    expected_resolver_parameter_locals(params, &mut locals, expected);
+    expected_resolver_expr_locals(body, scope_cursor, &mut locals, expected);
 }
 
 fn expected_resolver_parameter_locals(
@@ -13708,6 +13699,28 @@ Point.impl = {
             .declarations
             .contains(&(Namespace::Value, "Point.x_value".to_string())));
         assert!(expected.locals.iter().any(|(name, _)| name == "value"));
+    }
+
+    #[test]
+    fn expected_resolver_callable_locals_collect_params_and_body() {
+        let program = parse_program(
+            r#"
+main = (input: i32) i32 {
+    value := input
+    return value
+}
+"#,
+        );
+        let Declaration::Function { params, body, .. } = &program.declarations[0] else {
+            panic!("expected function");
+        };
+        let mut scope_cursor = ResolverScopeCursor::default();
+        let mut expected = HashSet::new();
+
+        expected_resolver_callable_locals(params, body, &mut scope_cursor, &mut expected);
+
+        assert!(expected.iter().any(|(name, _)| name == "input"));
+        assert!(expected.iter().any(|(name, _)| name == "value"));
     }
 
     #[test]
