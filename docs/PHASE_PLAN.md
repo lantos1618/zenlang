@@ -1701,6 +1701,8 @@ checked-in docs, tests, and commits only.
   replaying declaration-specific type and expression reference checks.
 - Self-type context validation now uses a named task collector before replaying
   declaration-specific `Self` allowance checks.
+- Resolver validation replay now separates declaration replay collection from
+  final behavior-association replay task construction.
 
 ## Current Phase
 

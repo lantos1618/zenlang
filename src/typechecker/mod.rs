@@ -358,6 +358,35 @@ struct ResolverValidationReplayTasks<'a> {
     behavior_associations: ResolverBehaviorAssociationListTasks<'a>,
 }
 
+struct ResolverValidationBehaviorAssociationSource<'a> {
+    name: &'a str,
+    symbol: &'a Symbol,
+    span: Span,
+}
+
+struct ResolverValidationReplayDeclarationTasks<'a> {
+    expected_symbols: ResolverExpectedSymbolSets,
+    expected_associations: ExpectedBehaviorAssociations,
+    expected_parents: ExpectedBehaviorEdges,
+    type_declarations: Vec<ResolverValidationBehaviorAssociationSource<'a>>,
+    behavior_declarations: Vec<ResolverValidationBehaviorAssociationSource<'a>>,
+}
+
+impl Default for ResolverValidationReplayDeclarationTasks<'_> {
+    fn default() -> Self {
+        Self {
+            expected_symbols: ResolverExpectedSymbolSets::default(),
+            expected_associations: ExpectedBehaviorAssociations {
+                impls: ExpectedBehaviorEdges::default(),
+                required: ExpectedBehaviorEdges::default(),
+            },
+            expected_parents: ExpectedBehaviorEdges::default(),
+            type_declarations: Vec::new(),
+            behavior_declarations: Vec::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorBound {
     pub behavior: String,
@@ -8301,15 +8330,53 @@ impl TypeChecker {
         program: &'a ast::Program,
         symbols: &'a SymbolTable,
     ) -> ResolverValidationReplayTasks<'a> {
-        let mut tasks = ResolverValidationReplayTasks::default();
-        let mut scope_cursor = ResolverScopeCursor::default();
-        let mut expected_associations = ExpectedBehaviorAssociations {
-            impls: ExpectedBehaviorEdges::default(),
-            required: ExpectedBehaviorEdges::default(),
+        let declaration_tasks =
+            Self::collect_resolver_validation_replay_declaration_tasks(program, symbols);
+        let mut tasks = ResolverValidationReplayTasks {
+            expected_symbols: declaration_tasks.expected_symbols,
+            behavior_associations: ResolverBehaviorAssociationListTasks::default(),
         };
-        let mut expected_parents = ExpectedBehaviorEdges::default();
-        let mut type_declarations = Vec::new();
-        let mut behavior_declarations = Vec::new();
+
+        for source in declaration_tasks.type_declarations {
+            tasks.behavior_associations.type_associations.push(
+                ResolverTypeBehaviorAssociationListTask {
+                    symbol: source.symbol,
+                    name: source.name,
+                    impl_edges: declaration_tasks
+                        .expected_associations
+                        .impls
+                        .owned_edges_for(source.name),
+                    required_edges: declaration_tasks
+                        .expected_associations
+                        .required
+                        .owned_edges_for(source.name),
+                    span: source.span,
+                },
+            );
+        }
+        for source in declaration_tasks.behavior_declarations {
+            tasks
+                .behavior_associations
+                .behavior_parents
+                .push(ResolverBehaviorParentListTask {
+                    symbol: source.symbol,
+                    name: source.name,
+                    parent_edges: declaration_tasks
+                        .expected_parents
+                        .owned_edges_for(source.name),
+                    span: source.span,
+                });
+        }
+
+        tasks
+    }
+
+    fn collect_resolver_validation_replay_declaration_tasks<'a>(
+        program: &'a ast::Program,
+        symbols: &'a SymbolTable,
+    ) -> ResolverValidationReplayDeclarationTasks<'a> {
+        let mut tasks = ResolverValidationReplayDeclarationTasks::default();
+        let mut scope_cursor = ResolverScopeCursor::default();
 
         for decl in &program.declarations {
             match decl {
@@ -8364,7 +8431,13 @@ impl TypeChecker {
                     let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
                         continue;
                     };
-                    type_declarations.push((name.as_str(), symbol, *span));
+                    tasks
+                        .type_declarations
+                        .push(ResolverValidationBehaviorAssociationSource {
+                            name,
+                            symbol,
+                            span: *span,
+                        });
                 }
                 Declaration::Enum {
                     name,
@@ -8385,7 +8458,13 @@ impl TypeChecker {
                     let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
                         continue;
                     };
-                    type_declarations.push((name.as_str(), symbol, *span));
+                    tasks
+                        .type_declarations
+                        .push(ResolverValidationBehaviorAssociationSource {
+                            name,
+                            symbol,
+                            span: *span,
+                        });
                 }
                 Declaration::Behavior {
                     name,
@@ -8410,7 +8489,13 @@ impl TypeChecker {
                     let Some(symbol) = symbols.lookup(Namespace::Behavior, name) else {
                         continue;
                     };
-                    behavior_declarations.push((name.as_str(), symbol, *span));
+                    tasks
+                        .behavior_declarations
+                        .push(ResolverValidationBehaviorAssociationSource {
+                            name,
+                            symbol,
+                            span: *span,
+                        });
                 }
                 Declaration::Import {
                     names, module_path, ..
@@ -8440,7 +8525,8 @@ impl TypeChecker {
                         &mut scope_cursor,
                         &mut tasks.expected_symbols,
                     );
-                    expected_associations
+                    tasks
+                        .expected_associations
                         .impls
                         .push(type_name, behavior, behavior_type_args);
                 }
@@ -8460,9 +8546,11 @@ impl TypeChecker {
                     behavior_type_args,
                     ..
                 } => {
-                    expected_associations
-                        .required
-                        .push(type_name, behavior, behavior_type_args);
+                    tasks.expected_associations.required.push(
+                        type_name,
+                        behavior,
+                        behavior_type_args,
+                    );
                 }
                 Declaration::BehaviorExtends {
                     behavior,
@@ -8470,7 +8558,9 @@ impl TypeChecker {
                     parent_type_args,
                     ..
                 } => {
-                    expected_parents.push(behavior, parent, parent_type_args);
+                    tasks
+                        .expected_parents
+                        .push(behavior, parent, parent_type_args);
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
                     expected_resolver_scoped_expr_locals(
@@ -8481,29 +8571,6 @@ impl TypeChecker {
                 }
                 _ => {}
             }
-        }
-
-        for (name, symbol, span) in type_declarations {
-            tasks.behavior_associations.type_associations.push(
-                ResolverTypeBehaviorAssociationListTask {
-                    symbol,
-                    name,
-                    impl_edges: expected_associations.impls.owned_edges_for(name),
-                    required_edges: expected_associations.required.owned_edges_for(name),
-                    span,
-                },
-            );
-        }
-        for (name, symbol, span) in behavior_declarations {
-            tasks
-                .behavior_associations
-                .behavior_parents
-                .push(ResolverBehaviorParentListTask {
-                    symbol,
-                    name,
-                    parent_edges: expected_parents.owned_edges_for(name),
-                    span,
-                });
         }
 
         tasks
@@ -14112,6 +14179,52 @@ main = (input: i32) i32 {
             .contains(&(Namespace::Value, "main".to_string())));
         assert!(expected.locals.contains(&("input".to_string(), 2)));
         assert!(expected.locals.contains(&("value".to_string(), 3)));
+    }
+
+    #[test]
+    fn resolver_validation_replay_declaration_tasks_collect_sources_and_edges() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { return "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+
+        let tasks =
+            TypeChecker::collect_resolver_validation_replay_declaration_tasks(&program, &symbols);
+
+        assert!(tasks
+            .expected_symbols
+            .declarations
+            .contains(&(Namespace::Type, "Point".to_string())));
+        assert_eq!(tasks.type_declarations.len(), 1);
+        assert_eq!(tasks.type_declarations[0].name, "Point");
+        assert_eq!(
+            tasks.expected_associations.impls.owned_edges_for("Point")[0].display,
+            "Json<str>"
+        );
+        assert_eq!(
+            tasks
+                .expected_associations
+                .required
+                .owned_edges_for("Point")[0]
+                .display,
+            "Json<str>"
+        );
+        assert_eq!(tasks.behavior_declarations.len(), 1);
+        assert_eq!(tasks.behavior_declarations[0].name, "Json");
     }
 
     #[test]

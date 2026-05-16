@@ -2015,6 +2015,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test self_type_context_validation_tasks_collect_declarations`,
   `cargo test check_program_rejects_self_type_outside_method_or_behavior`,
   and `cargo test behavior_declaration_collection`.
+- Resolver validation replay now separates declaration replay collection from
+  final behavior-association task construction, covered by
+  `cargo test resolver_validation_replay_declaration_tasks_collect_sources_and_edges`,
+  `cargo test resolver_validation_replay_tasks_collect_symbols_and_behavior_associations_together`,
+  and
+  `cargo test resolver_behavior_association_list_tasks_collect_type_and_parent_edges_together`.
 
 ## Unresolved Gaps
 
