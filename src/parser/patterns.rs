@@ -18,6 +18,7 @@ impl Parser {
                 let (_, span) = self.advance();
                 Ok(Pattern::Wildcard { span })
             }
+            Token::Dot => self.parse_shorthand_enum_pattern(),
             Token::Identifier(ref name) if first_char_is_upper(name) => {
                 // Enum variant pattern: VariantName or VariantName(binding)
                 let name = name.clone();
@@ -84,5 +85,28 @@ impl Parser {
                 Some(self.peek_span()),
             )),
         }
+    }
+
+    fn parse_shorthand_enum_pattern(&mut self) -> Result<Pattern, CompileError> {
+        let (_, dot_span) = self.advance();
+        let (variant, variant_span) = self.expect_identifier()?;
+        let mut span = dot_span.merge(variant_span);
+
+        let payload = if matches!(self.peek(), Token::LParen) {
+            self.advance();
+            let inner = self.parse_pattern()?;
+            let end = self.expect(&Token::RParen)?;
+            span = span.merge(end);
+            Some(Box::new(inner))
+        } else {
+            None
+        };
+
+        Ok(Pattern::Enum {
+            enum_name: String::new(),
+            variant,
+            payload,
+            span,
+        })
     }
 }

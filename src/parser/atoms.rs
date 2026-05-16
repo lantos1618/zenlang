@@ -135,6 +135,8 @@ impl Parser {
                 })
             }
 
+            Token::Dot => self.parse_shorthand_enum_variant_expr(),
+
             // Module-qualified: @builtin.func(args), @std.mod.func(args)
             Token::AtBuiltin => {
                 let (_, span) = self.advance();
@@ -257,6 +259,30 @@ impl Parser {
                 ))
             }
         }
+    }
+
+    fn parse_shorthand_enum_variant_expr(&mut self) -> Result<Expression, CompileError> {
+        let (_, dot_span) = self.advance();
+        let (variant, variant_span) = self.expect_identifier()?;
+        let mut span = dot_span.merge(variant_span);
+
+        let payload = if matches!(self.peek(), Token::LParen) {
+            self.advance();
+            let expr = self.parse_expression()?;
+            let end = self.expect(&Token::RParen)?;
+            span = span.merge(end);
+            Some(Box::new(expr))
+        } else {
+            None
+        };
+
+        Ok(Expression::EnumVariant {
+            enum_name: String::new(),
+            type_args: Vec::new(),
+            variant,
+            payload,
+            span,
+        })
     }
 
     // ── Match / conditional / while ───────────────────────────

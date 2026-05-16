@@ -1865,13 +1865,18 @@ checked-in docs, tests, and commits only.
   proves canonical graph emission for an executable target, and
   `build_graph_rejects_undeclared_host_effects` proves undeclared host effects
   are rejected before any `build.zen` execution is promoted.
+- The checked-in `examples/project/build.zen` syntax is covered by
+  `parse_project_build_zen_example`, and leading-dot enum shorthand used by
+  build-style result/config flows is covered by
+  `parse_shorthand_enum_variant_expr_and_pattern`.
 
 ## Current Phase
 
 Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
 Phase 4 build-driver work is still gated by the lack of a constrained
-`build.zen` evaluator that lowers into the deterministic build graph.
+`build.zen` evaluator that lowers parsed build scripts into the deterministic
+build graph.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
@@ -1879,7 +1884,7 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 ## Next Small Slice
 
 Continue the next smallest build-driver slice by adding a constrained
-`build.zen` evaluation boundary that can lower a declared executable target into
-`BuildGraph` without allowing undeclared host effects. Keep CLI `build.zen`
-execution gated until that boundary has positive and negative integration
-coverage.
+`build.zen` evaluation boundary that can lower the parsed project build script
+into `BuildGraph` without allowing undeclared host effects. Keep CLI
+`build.zen` execution gated until that boundary has positive and negative
+integration coverage.
