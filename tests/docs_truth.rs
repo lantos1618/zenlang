@@ -206,6 +206,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "Actors in std",
         "JSON/YAML IR boundaries",
         "zen emit-json ast <file>",
+        "zen emit-json symbols <file>",
         "zen emit-json typed <file>",
         "zen emit-json diagnostics <file>",
         "build.zen",

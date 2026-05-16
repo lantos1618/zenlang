@@ -1331,6 +1331,86 @@ fn emit_json_typed_command_outputs_checked_program() {
 }
 
 #[test]
+fn emit_json_symbols_command_outputs_module_symbol_tables() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let math_path = tmp.path().join("math.zen");
+    std::fs::write(
+        &math_path,
+        r#"
+pub add = (a: i32, b: i32) i32 {
+    a + b
+}
+"#,
+    )
+    .expect("write imported module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ add } = math
+
+main = () i32 {
+    add(20, 22)
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "symbols", main_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json symbols");
+
+    assert!(
+        output.status.success(),
+        "zen emit-json symbols failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("emit-json symbols stdout is json");
+    assert_eq!(json["format"], "zen.symbols.v0");
+    assert_eq!(json["entry_module"], 0);
+    assert_eq!(json["modules"].as_array().expect("modules array").len(), 2);
+
+    let entry_symbols = json["modules"][0]["symbols"]
+        .as_array()
+        .expect("entry symbols array");
+    assert!(
+        entry_symbols.iter().any(|symbol| {
+            symbol["namespace"] == "Value"
+                && symbol["name"] == "main"
+                && symbol["return_type_name"] == "i32"
+        }),
+        "entry symbols should contain main value symbol: {json}"
+    );
+    assert!(
+        entry_symbols.iter().any(|symbol| {
+            symbol["namespace"] == "Import"
+                && symbol["name"] == "add"
+                && symbol["import_source"] == "math"
+        }),
+        "entry symbols should contain add import symbol: {json}"
+    );
+
+    let imported_symbols = json["modules"][1]["symbols"]
+        .as_array()
+        .expect("imported symbols array");
+    assert!(
+        imported_symbols.iter().any(|symbol| {
+            symbol["namespace"] == "Value"
+                && symbol["name"] == "add"
+                && symbol["is_public"] == true
+                && symbol["parameter_count"] == 2
+                && symbol["return_type_name"] == "i32"
+        }),
+        "imported symbols should contain public add signature: {json}"
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_command_outputs_machine_readable_errors() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let zen_path = tmp.path().join("bad_type.zen");
