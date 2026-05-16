@@ -3906,6 +3906,7 @@ impl TypeChecker {
         for decl in decls {
             Self::push_resolver_type_reference_validation_task(decl, &mut tasks.type_references);
             Self::push_resolver_type_declaration_metadata_task(decl, &mut tasks.types);
+            Self::push_resolver_behavior_declaration_metadata_task(decl, &mut tasks.behaviors);
             match decl {
                 Declaration::Function { name, span, .. } => {
                     tasks
@@ -3975,14 +3976,6 @@ impl TypeChecker {
                             span: *span,
                         });
                 }
-                Declaration::Behavior { name, span, .. } => {
-                    tasks
-                        .behaviors
-                        .push(ResolverBehaviorDeclarationMetadataTask {
-                            name: name.as_str(),
-                            span: *span,
-                        });
-                }
                 _ => {}
             }
         }
@@ -4017,6 +4010,29 @@ impl TypeChecker {
                 tasks.push(ResolverTypeDeclarationMetadataTask::Enum { name, span: *span });
             }
             _ => {}
+        }
+    }
+
+    #[cfg(test)]
+    fn collect_resolver_behavior_declaration_metadata_tasks(
+        decls: &[Declaration],
+    ) -> Vec<ResolverBehaviorDeclarationMetadataTask<'_>> {
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_resolver_behavior_declaration_metadata_task(decl, &mut tasks);
+        }
+        tasks
+    }
+
+    fn push_resolver_behavior_declaration_metadata_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<ResolverBehaviorDeclarationMetadataTask<'a>>,
+    ) {
+        if let Declaration::Behavior { name, span, .. } = decl {
+            tasks.push(ResolverBehaviorDeclarationMetadataTask {
+                name: name.as_str(),
+                span: *span,
+            });
         }
     }
 
@@ -16049,6 +16065,28 @@ main = () i32 { return 1 }
             tasks[1],
             ResolverTypeDeclarationMetadataTask::Enum { name: "Option", .. }
         ));
+    }
+
+    #[test]
+    fn resolver_behavior_declaration_metadata_tasks_collect_only_behavior_work() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+main = () i32 { return 1 }
+"#,
+        );
+
+        let tasks = TypeChecker::collect_resolver_behavior_declaration_metadata_tasks(
+            &program.declarations,
+        );
+
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].name, "Json");
     }
 
     #[test]

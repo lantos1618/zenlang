@@ -2034,6 +2034,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_backed_struct_field_defaults_reuse_metadata_tasks`,
   and
   `cargo test resolver_struct_field_defaults_validate_from_type_metadata_tasks`.
+- Resolver-backed behavior declaration metadata now uses a narrow behavior
+  metadata task collector shared by the full resolver metadata collector,
+  covered by
+  `cargo test resolver_behavior_declaration_metadata_tasks_collect_only_behavior_work`
+  and
+  `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
 
 ## Unresolved Gaps
 
