@@ -1,12 +1,13 @@
 use crate::ast::expressions::BinaryOp;
 use crate::ast::expressions::UnaryOp;
 use crate::error::Span;
+use serde::Serialize;
 
 // ─── Resolved Type ───────────────────────────────────────────────────────────
 // Fully resolved types — no generics, no inference variables.
 // This is the typechecker's output; codegen only sees these.
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Type {
     // Integers
     I8,
@@ -154,7 +155,7 @@ impl Type {
 // We keep this minimal for now — it will be fleshed out when building the typechecker.
 
 /// A typed expression: the expression kind + its resolved type + span.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedExpression {
     pub kind: TypedExprKind,
     pub ty: Type,
@@ -162,7 +163,7 @@ pub struct TypedExpression {
 }
 
 /// Typed expression kinds — mirrors Expression but types are resolved.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TypedExprKind {
     IntLiteral(i64),
     FloatLiteral(f64),
@@ -259,7 +260,7 @@ pub enum TypedExprKind {
 }
 
 /// Sema resolves which kind of control flow `?` represents.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum MatchKind {
     /// `expr ? | true { } | false { }` → if/else
     ConditionalElse,
@@ -273,14 +274,14 @@ pub enum MatchKind {
     ValueMatch,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedMatchArm {
     pub pattern: TypedPattern,
     pub body: TypedBlock,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TypedPattern {
     Bool(bool),
     EnumVariant {
@@ -292,14 +293,14 @@ pub enum TypedPattern {
     Value(Box<TypedExpression>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Capture {
     pub name: std::string::String,
     pub ty: Type,
     pub by_ref: bool,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TypedStringPart {
     Literal(std::string::String),
     Expr(TypedExpression),
@@ -307,13 +308,13 @@ pub enum TypedStringPart {
 
 // ─── Typed Statements ────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedStatement {
     pub kind: TypedStatementKind,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TypedStatementKind {
     VarDecl {
         name: std::string::String,
@@ -326,7 +327,7 @@ pub enum TypedStatementKind {
 
 // ─── Typed Blocks ────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedBlock {
     pub statements: Vec<TypedStatement>,
     pub expr: Option<Box<TypedExpression>>,
@@ -336,7 +337,7 @@ pub struct TypedBlock {
 
 // ─── Typed Declarations ──────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedFunction {
     pub name: std::string::String,
     pub params: Vec<TypedParam>,
@@ -346,14 +347,14 @@ pub struct TypedFunction {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedParam {
     pub name: std::string::String,
     pub ty: Type,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedTypeDef {
     pub name: std::string::String,
     pub kind: TypeDefKind,
@@ -361,7 +362,7 @@ pub struct TypedTypeDef {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TypeDefKind {
     Struct {
         fields: Vec<(std::string::String, Type)>,
@@ -371,14 +372,14 @@ pub enum TypeDefKind {
     },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedVariant {
     pub name: std::string::String,
     pub tag: u32,
     pub payload: Option<Vec<(std::string::String, Type)>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedGlobal {
     pub name: std::string::String,
     pub ty: Type,
@@ -389,7 +390,7 @@ pub struct TypedGlobal {
 
 // ─── Top-Level Program ───────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedProgram {
     pub functions: Vec<TypedFunction>,
     pub types: Vec<TypedTypeDef>,

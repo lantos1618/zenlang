@@ -90,8 +90,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   for compiler-owned AST, typed HIR, MIR, symbol tables, type layouts, and
   diagnostics. YAML is the human-authored format for target descriptions, ABI
   rules, intrinsic tables, allocator templates, backend options, and build graphs.
-  Current JSON evidence is limited to resolved AST graph emission and
-  machine-readable diagnostics emission through `zen emit-json ast <file>` and
+  Current JSON evidence is limited to resolved AST graph emission, checked typed
+  program emission, and machine-readable diagnostics emission through
+  `zen emit-json ast <file>`, `zen emit-json typed <file>`, and
   `zen emit-json diagnostics <file>`.
 - `build.zen`: gated. `build.zen` executes under deterministic comptime APIs and
   builds a graph of targets, sources, dependencies, features, output dirs, and

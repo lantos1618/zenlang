@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+use crate::ast::typed::TypedProgram;
 use crate::ast::Program;
 use crate::error::{Diagnostic, FileTable, Label, Span};
 use crate::module_system::{ImportBinding, ResolvedModuleGraph};
@@ -28,6 +29,12 @@ struct AstJsonImport<'a> {
     span: Span,
 }
 
+#[derive(Serialize)]
+struct TypedJsonProgram<'a> {
+    format: &'static str,
+    program: &'a TypedProgram,
+}
+
 pub fn ast_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<String> {
     let mut modules: Vec<_> = graph.modules().values().collect();
     modules.sort_by_key(|module| module.info.id.0);
@@ -45,6 +52,15 @@ pub fn ast_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<Stri
                 program: &module.program,
             })
             .collect(),
+    };
+
+    serde_json::to_string_pretty(&graph)
+}
+
+pub fn typed_program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
+    let graph = TypedJsonProgram {
+        format: "zen.typed.v0",
+        program,
     };
 
     serde_json::to_string_pretty(&graph)

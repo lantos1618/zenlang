@@ -18,6 +18,7 @@ fn main() {
         eprintln!("  build <file>   Compile a .zen file to a binary");
         eprintln!("  emit  <file>   Emit C source (no compilation)");
         eprintln!("  emit-json ast <file>   Emit resolved AST JSON");
+        eprintln!("  emit-json typed <file>   Emit checked typed program JSON");
         eprintln!("  emit-json diagnostics <file>   Emit diagnostics JSON");
         eprintln!("  <file>         Run a .zen file");
         process::exit(1);
@@ -47,14 +48,15 @@ fn main() {
         }
         "emit-json" => {
             if args.len() < 4 {
-                eprintln!("Usage: zen emit-json <ast|diagnostics> <file.zen>");
+                eprintln!("Usage: zen emit-json <ast|typed|diagnostics> <file.zen>");
                 process::exit(1);
             }
             match args[2].as_str() {
                 "ast" => cmd_emit_json_ast(&args[3]),
+                "typed" => cmd_emit_json_typed(&args[3]),
                 "diagnostics" => cmd_emit_json_diagnostics(&args[3]),
                 _ => {
-                    eprintln!("Usage: zen emit-json <ast|diagnostics> <file.zen>");
+                    eprintln!("Usage: zen emit-json <ast|typed|diagnostics> <file.zen>");
                     process::exit(1);
                 }
             }
@@ -129,6 +131,18 @@ fn cmd_emit_json_ast(path_str: &str) {
     reject_build_zen(path_str);
     let (graph, _files) = load_module_graph(path_str);
     match zen::ir_json::ast_graph_to_json(&graph) {
+        Ok(json) => println!("{json}"),
+        Err(e) => {
+            eprintln!("json emit error: {}", e);
+            process::exit(1);
+        }
+    }
+}
+
+fn cmd_emit_json_typed(path_str: &str) {
+    reject_build_zen(path_str);
+    let typed = graph_frontend(path_str);
+    match zen::ir_json::typed_program_to_json(&typed) {
         Ok(json) => println!("{json}"),
         Err(e) => {
             eprintln!("json emit error: {}", e);
