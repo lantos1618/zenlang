@@ -1874,21 +1874,26 @@ checked-in docs, tests, and commits only.
   covers the checked-in project executable target, and
   `build_program_lowering_rejects_undeclared_env_reads` keeps undeclared host
   effects rejected during lowering.
+- `emit-json build-graph <build.zen>` now exposes the constrained graph-emission
+  path without enabling normal build execution. `emit_json_build_graph_outputs_project_build_graph`
+  covers the positive CLI path, and
+  `emit_json_build_graph_rejects_undeclared_host_effects` covers the negative
+  host-effect path through the advertised compiler command.
 
 ## Current Phase
 
 Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
-Phase 4 build-driver work is still gated by the lack of a CLI integration path
-that executes only the constrained `build.zen` subset and emits the
-deterministic build graph.
+Phase 4 build-driver work is still gated by the lack of target graph execution:
+`build.zen` can now emit a deterministic compiler-owned graph, but
+`zen build build.zen` still does not execute targets.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Continue the next smallest build-driver slice by adding positive and negative
-CLI integration coverage for the constrained `build.zen` graph-emission path.
-Keep normal `zen build build.zen` execution gated until graph emission proves the
-lowering boundary through the advertised compiler path.
+Continue the next smallest build-driver slice by adding target graph execution
+tests that consume the deterministic graph without widening the accepted
+`build.zen` language subset. Keep normal `zen build build.zen` gated until one
+executable target can be compiled from graph data with matching negative tests.

@@ -390,6 +390,8 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "parse_shorthand_enum_variant_expr_and_pattern",
         "parsed_project_build_zen_lowers_to_executable_graph",
         "build_program_lowering_rejects_undeclared_env_reads",
+        "emit_json_build_graph_outputs_project_build_graph",
+        "emit_json_build_graph_rejects_undeclared_host_effects",
         "collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata",
         "collect_declarations_with_symbols_clears_stale_behavior_impl_generic_method_template_after_key_restore",
         "resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass",
