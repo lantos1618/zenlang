@@ -122,6 +122,33 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn build_program_lowering_collects_library_target() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library { name: "core", exports: ["src/math.zen", "src/strings.zen"] })
+    .Ok(b.config())
+}
+"#,
+    );
+    let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
+
+    assert_eq!(graph.targets().len(), 1);
+    let target = &graph.targets()[0];
+    assert_eq!(target.name(), "core");
+    assert_eq!(target.sources(), ["src/math.zen", "src/strings.zen"]);
+    match target.kind() {
+        BuildTargetKind::Library { exports } => {
+            assert_eq!(
+                exports,
+                &vec!["src/math.zen".to_string(), "src/strings.zen".to_string()]
+            );
+        }
+        other => panic!("expected library target, got {other:?}"),
+    }
+}
+
+#[test]
 fn build_program_lowering_collects_multiple_executable_targets() {
     let program = parse_program(
         r#"

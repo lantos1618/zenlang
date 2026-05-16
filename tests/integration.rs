@@ -2116,6 +2116,75 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn emit_json_build_graph_outputs_library_target() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let build_path = tmp.path().join("build.zen");
+    std::fs::write(
+        &build_path,
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library { name: "core", exports: ["src/math.zen", "src/strings.zen"] })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "build-graph", build_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json build-graph");
+
+    assert!(
+        output.status.success(),
+        "emit-json build-graph failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout).expect("build graph json");
+    assert_eq!(json["targets"][0]["name"], "core");
+    assert_eq!(json["targets"][0]["kind"]["kind"], "library");
+    assert_eq!(json["targets"][0]["kind"]["exports"][0], "src/math.zen");
+    assert_eq!(json["targets"][0]["kind"]["exports"][1], "src/strings.zen");
+}
+
+#[test]
+fn emit_json_build_graph_rejects_undeclared_host_effects_before_library_target_lowering() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let build_path = tmp.path().join("build.zen");
+    std::fs::write(
+        &build_path,
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD")
+    b.add(Library { name: "core", exports: ["src/math.zen"] })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "build-graph", build_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json build-graph");
+
+    assert!(
+        !output.status.success(),
+        "emit-json build-graph unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("undeclared host effect: read env `ZEN_STD`"),
+        "expected undeclared host effect diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(

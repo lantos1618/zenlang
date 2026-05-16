@@ -30,6 +30,9 @@ pub enum BuildTargetKind {
     Test {
         root_source_file: String,
     },
+    Library {
+        exports: Vec<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -362,6 +365,7 @@ fn build_target_from_builder_add(expr: &Expression) -> Option<BuildTargetInput> 
     match name.as_str() {
         "Executable" => executable_target_from_fields(fields),
         "Test" => test_target_from_fields(fields),
+        "Library" => library_target_from_fields(fields),
         _ => None,
     }
 }
@@ -401,6 +405,24 @@ fn test_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTarge
     })
 }
 
+fn library_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
+    let target_name = string_field(fields, "name")?;
+    let exports = string_array_field(fields, "exports")?;
+    if exports.is_empty() {
+        return None;
+    }
+
+    Some(BuildTargetInput {
+        name: target_name,
+        kind: BuildTargetKind::Library {
+            exports: exports.clone(),
+        },
+        sources: exports,
+        dependencies: Vec::new(),
+        features: Vec::new(),
+    })
+}
+
 fn target_name_from_root(root: &str) -> String {
     std::path::Path::new(root)
         .file_stem()
@@ -416,6 +438,24 @@ fn string_field(fields: &[(String, Expression)], field_name: &str) -> Option<Str
             Expression::StringLiteral { value, .. } => Some(value.clone()),
             _ => None,
         })?
+    })
+}
+
+fn string_array_field(fields: &[(String, Expression)], field_name: &str) -> Option<Vec<String>> {
+    fields.iter().find_map(|(name, value)| {
+        if name != field_name {
+            return None;
+        }
+        let Expression::ArrayLiteral { elements, .. } = value else {
+            return None;
+        };
+        elements
+            .iter()
+            .map(|element| match element {
+                Expression::StringLiteral { value, .. } => Some(value.clone()),
+                _ => None,
+            })
+            .collect()
     })
 }
 

@@ -2199,9 +2199,15 @@ and do not assume Phase 4 is ready without evidence.
   `Test { root: ... }` targets, covered by
   `cargo test --test build_graph parsed_project_build_zen_lowers_to_executable_and_test_graph`
   and `cargo test --test build_graph build_program_lowering_collects_test_target`.
+- Build script lowering includes graph-only library targets, covered by
+  `cargo test --test build_graph build_program_lowering_collects_library_target`.
 - `emit-json build-graph` keeps host-effect rejection ahead of test target graph
   emission, covered by
   `cargo test --test integration emit_json_build_graph_rejects_undeclared_host_effects_before_test_target_lowering`.
+- `emit-json build-graph` emits graph-only library targets and keeps host-effect
+  rejection ahead of library target graph emission, covered by
+  `cargo test --test integration emit_json_build_graph_outputs_library_target`
+  and `cargo test --test integration emit_json_build_graph_rejects_undeclared_host_effects_before_library_target_lowering`.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes remain
   rejected with a targeted graph diagnostic, covered by
   `cargo test --test integration legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic`.
@@ -2214,10 +2220,10 @@ and do not assume Phase 4 is ready without evidence.
 - build.zen entrypoints are not complete: the constrained graph path now covers
   graph emission, multi-executable target execution for normal
   `zen build build.zen` and direct `zen build.zen`, normal
-  `zen check build.zen`, test target graph lowering/emission, and single-target
-  normal `zen emit build.zen`, while legacy generic `emit-json` build.zen modes
-  have a targeted rejection. Test execution, library targets, package/link
-  semantics, and other broader graph semantics still need explicit
+  `zen check build.zen`, test and library target graph lowering/emission, and
+  single-target normal `zen emit build.zen`, while legacy generic `emit-json`
+  build.zen modes have a targeted rejection. Test/library execution,
+  package/link semantics, and other broader graph semantics still need explicit
   deterministic semantics before promotion.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
