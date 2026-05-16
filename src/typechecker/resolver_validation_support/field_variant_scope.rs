@@ -220,7 +220,7 @@ impl<'a> ImportedMethodSignature<'a> {
 }
 
 #[derive(Debug, Clone)]
-struct BehaviorParentRef {
+pub(crate) struct BehaviorParentRef {
     behavior: String,
     type_args: Vec<AstType>,
     key: String,
