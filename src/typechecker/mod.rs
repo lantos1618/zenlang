@@ -8632,17 +8632,11 @@ impl TypeChecker {
                 Declaration::Import {
                     names, module_path, ..
                 } => {
-                    tasks.expected_symbols.validate_imports = true;
-                    tasks
-                        .expected_symbols
-                        .declarations
-                        .insert((Namespace::Module, module_path.join(".")));
-                    for name in names {
-                        tasks
-                            .expected_symbols
-                            .declarations
-                            .insert((Namespace::Import, name.clone()));
-                    }
+                    push_expected_resolver_import_symbols(
+                        names,
+                        module_path,
+                        &mut tasks.expected_symbols,
+                    );
                 }
                 Declaration::ImplBlock {
                     type_name,
@@ -11616,6 +11610,22 @@ fn push_resolver_validation_association_source<'a>(
     expected.declarations.insert((namespace, name.to_string()));
     if let Some(symbol) = symbols.lookup(namespace, name) {
         sources.push(ResolverValidationBehaviorAssociationSource { name, symbol, span });
+    }
+}
+
+fn push_expected_resolver_import_symbols(
+    names: &[String],
+    module_path: &[String],
+    expected: &mut ResolverExpectedSymbolSets,
+) {
+    expected.validate_imports = true;
+    expected
+        .declarations
+        .insert((Namespace::Module, module_path.join(".")));
+    for name in names {
+        expected
+            .declarations
+            .insert((Namespace::Import, name.clone()));
     }
 }
 

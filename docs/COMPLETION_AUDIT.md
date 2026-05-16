@@ -2114,6 +2114,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_validation_replay_declaration_tasks_collect_sources_and_edges`
   and
   `cargo test resolver_expected_symbol_sets_collect_declarations_and_locals_together`.
+- Resolver validation replay now uses a shared import-symbol helper for
+  expected module and import entries, covered by
+  `cargo test resolver_expected_symbol_sets_collect_declarations_and_locals_together`
+  and `cargo test ast_import_declaration_tasks_collect_import_bindings`.
 
 ## Unresolved Gaps
 

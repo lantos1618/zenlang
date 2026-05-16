@@ -1744,6 +1744,8 @@ checked-in docs, tests, and commits only.
   top-level functions, methods, and impl methods.
 - Resolver validation replay now uses a shared association-source helper for
   type and behavior declaration symbols.
+- Resolver validation replay now uses a shared import-symbol helper for
+  expected module and import entries.
 
 ## Current Phase
 
