@@ -171,6 +171,9 @@ checked-in docs, tests, and commits only.
 - Resolver metadata construction helpers now live in a dedicated resolver
   module, keeping value signatures, type-parameter metadata, behavior refs, and
   method-key formatting out of the broad resolver traversal.
+- Resolver declaration definition now lives in a dedicated resolver helper
+  module, keeping top-level symbol registration separate from resolver
+  validation replay.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
