@@ -1886,27 +1886,32 @@ checked-in docs, tests, and commits only.
   execution failure before normal `zen build build.zen` is ungated.
 - Normal `zen build build.zen` now routes through the same constrained
   deterministic graph pipeline used by `build-graph <build.zen>`, covered by
-  `build_command_routes_build_zen_through_deterministic_graph`. `check`, `emit`,
-  and direct `build.zen` invocation remain gated to keep build scripts on the
-  build-only entrypoint. The normal build path also rejects undeclared host
-  effects before target execution, covered by
+  `build_command_routes_build_zen_through_deterministic_graph`. The normal
+  build path also rejects undeclared host effects before target execution,
+  covered by
   `build_command_build_zen_rejects_undeclared_host_effects`.
+- Normal `zen check build.zen` validates the same constrained deterministic
+  graph without compiling targets, covered by
+  `check_command_validates_build_zen_graph`, and rejects undeclared host effects
+  through `check_command_build_zen_rejects_undeclared_host_effects`. `emit` and
+  direct `build.zen` invocation remain gated until they have explicit
+  deterministic semantics.
 
 ## Current Phase
 
 Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
 Phase 4 build-driver work still has constrained `build.zen` semantics: normal
-`zen build build.zen` executes one graph target, while `check`, `emit`, and
-direct `build.zen` invocation remain gated until those entrypoints have their
-own deterministic semantics.
+`zen build build.zen` executes one graph target, `zen check build.zen` validates
+the graph, and `emit` plus direct `build.zen` invocation remain gated until
+those entrypoints have their own deterministic semantics.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Continue the next smallest build-driver slice by deciding whether `zen check
-build.zen` should validate only the deterministic graph or remain gated until
-there is a typed build-script surface. Preserve the constrained accepted
-`build.zen` subset either way.
+Continue the next smallest build-driver slice by deciding whether `zen emit
+build.zen` should emit deterministic graph JSON, generated target C, or remain
+gated until there is a typed build-script surface. Preserve the constrained
+accepted `build.zen` subset either way.
