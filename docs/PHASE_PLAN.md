@@ -1732,6 +1732,8 @@ checked-in docs, tests, and commits only.
   before replaying generic-bound validation and type registration.
 - Behavior declaration collection now uses a shared behavior-task push helper
   before replaying signature setup and behavior generic-bound validation.
+- Self type context validation now uses a shared context-task push helper
+  before replaying declaration and expression `Self` checks.
 
 ## Current Phase
 

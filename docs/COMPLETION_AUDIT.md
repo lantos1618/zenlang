@@ -2087,6 +2087,10 @@ and do not assume Phase 4 is ready without evidence.
   before replaying signature setup and behavior generic-bound validation,
   covered by `cargo test behavior_declaration_tasks_collect_behavior_signatures`
   and `cargo test behavior_generic_bound_accepts_later_behavior_declaration`.
+- Self type context validation now uses a shared context-task push helper
+  before replaying declaration and expression `Self` checks, covered by
+  `cargo test self_type_context_validation_tasks_collect_declarations` and
+  `cargo test check_program_rejects_self_type_outside_method_or_behavior`.
 
 ## Unresolved Gaps
 
