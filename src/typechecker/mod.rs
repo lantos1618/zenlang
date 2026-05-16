@@ -7939,11 +7939,9 @@ impl TypeChecker {
                         .insert((Namespace::Type, name.clone()));
                     for field in fields {
                         if let Some(default) = &field.default {
-                            let mut locals = scope_cursor.new_scope();
-                            expected_resolver_expr_locals(
+                            expected_resolver_scoped_expr_locals(
                                 default,
                                 &mut scope_cursor,
-                                &mut locals,
                                 &mut tasks.expected_symbols.locals,
                             );
                         }
@@ -8060,11 +8058,9 @@ impl TypeChecker {
                     expected_parents.push(behavior, parent, parent_type_args);
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
-                    let mut locals = scope_cursor.new_scope();
-                    expected_resolver_expr_locals(
+                    expected_resolver_scoped_expr_locals(
                         expr,
                         &mut scope_cursor,
-                        &mut locals,
                         &mut tasks.expected_symbols.locals,
                     );
                 }
@@ -10978,6 +10974,15 @@ fn expected_resolver_callable_locals(
     expected_resolver_expr_locals(body, scope_cursor, &mut locals, expected);
 }
 
+fn expected_resolver_scoped_expr_locals(
+    expr: &Expression,
+    scope_cursor: &mut ResolverScopeCursor,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    let mut locals = scope_cursor.new_scope();
+    expected_resolver_expr_locals(expr, scope_cursor, &mut locals, expected);
+}
+
 fn expected_resolver_parameter_locals(
     params: &[Param],
     locals: &mut ResolverLocalScope,
@@ -13720,6 +13725,27 @@ main = (input: i32) i32 {
         expected_resolver_callable_locals(params, body, &mut scope_cursor, &mut expected);
 
         assert!(expected.iter().any(|(name, _)| name == "input"));
+        assert!(expected.iter().any(|(name, _)| name == "value"));
+    }
+
+    #[test]
+    fn expected_resolver_scoped_expr_locals_collects_block_bindings() {
+        let program = parse_program(
+            r#"
+main = () i32 {
+    value := 1
+    return value
+}
+"#,
+        );
+        let Declaration::Function { body, .. } = &program.declarations[0] else {
+            panic!("expected function");
+        };
+        let mut scope_cursor = ResolverScopeCursor::default();
+        let mut expected = HashSet::new();
+
+        expected_resolver_scoped_expr_locals(body, &mut scope_cursor, &mut expected);
+
         assert!(expected.iter().any(|(name, _)| name == "value"));
     }
 

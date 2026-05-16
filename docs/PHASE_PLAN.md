@@ -141,7 +141,9 @@ checked-in docs, tests, and commits only.
   stripped resolver import metadata, and resolver behavior association lists.
   Behavior and non-behavior impl-block method expected-symbol collection now
   share the same helper inside that replay collector, and callable parameter/body
-  local collection now shares one expected-local helper.
+  local collection now shares one expected-local helper. Scoped expression local
+  collection is also shared for struct field defaults and top-level
+  expressions.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.
