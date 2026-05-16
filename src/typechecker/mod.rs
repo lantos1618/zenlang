@@ -4336,7 +4336,7 @@ impl TypeChecker {
         tasks: &ResolverDeclarationMetadataTasks<'_>,
     ) {
         self.collect_resolver_callable_declaration_metadata(symbols, tasks);
-        self.collect_resolver_type_declaration_metadata(symbols, &tasks.types);
+        self.collect_resolver_type_declaration_metadata(symbols, tasks);
         self.collect_resolver_behavior_declaration_metadata_pass(symbols, &tasks.behaviors);
     }
 
@@ -4353,9 +4353,9 @@ impl TypeChecker {
     fn collect_resolver_type_declaration_metadata(
         &mut self,
         symbols: &SymbolTable,
-        tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
     ) {
-        for task in tasks {
+        for task in &tasks.types {
             match task {
                 ResolverTypeDeclarationMetadataTask::Struct { name, fields, span } => {
                     self.collect_resolver_struct_declaration_metadata(symbols, name, fields, *span);
