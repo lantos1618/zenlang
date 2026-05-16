@@ -2139,6 +2139,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_callable_declaration_metadata_tasks_collect_callable_work`,
   and
   `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
+- Resolver-backed type declaration replay now shares one helper for struct/enum
+  metadata and type-reference validation tasks, covered by
+  `cargo test resolver_type_replay_task_helper_pushes_metadata_and_type_refs_together`
+  and `cargo test resolver_type_declaration_metadata_tasks_collect_only_type_work`.
 
 ## Unresolved Gaps
 

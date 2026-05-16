@@ -1756,6 +1756,10 @@ checked-in docs, tests, and commits only.
   and callable type-reference validation tasks, so functions, top-level
   methods, and impl methods are classified once before their restored
   signature and body-reference replay paths run.
+- Resolver-backed type declaration replay now shares one helper for struct/enum
+  metadata and type-reference validation tasks, so type declarations are
+  classified once before restored field, variant, and body-reference replay
+  paths run.
 
 ## Current Phase
 

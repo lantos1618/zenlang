@@ -3961,13 +3961,21 @@ impl TypeChecker {
                 &mut tasks.callable,
                 &mut tasks.type_references,
             );
-            if !callable_handled {
+            let type_handled = if callable_handled {
+                false
+            } else {
+                Self::push_resolver_type_replay_tasks(
+                    decl,
+                    &mut tasks.types,
+                    &mut tasks.type_references,
+                )
+            };
+            if !callable_handled && !type_handled {
                 Self::push_resolver_type_reference_validation_task(
                     decl,
                     &mut tasks.type_references,
                 );
             }
-            Self::push_resolver_type_declaration_metadata_task(decl, &mut tasks.types);
             Self::push_resolver_behavior_declaration_metadata_task(decl, &mut tasks.behaviors);
             Self::push_resolver_behavior_impl_block_declaration_task(
                 decl,
@@ -4006,6 +4014,37 @@ impl TypeChecker {
                 tasks.push(ResolverTypeDeclarationMetadataTask::Enum { name, span: *span });
             }
             _ => {}
+        }
+    }
+
+    fn push_resolver_type_replay_tasks<'a>(
+        decl: &'a Declaration,
+        type_tasks: &mut Vec<ResolverTypeDeclarationMetadataTask<'a>>,
+        type_reference_tasks: &mut Vec<ResolverTypeReferenceValidationTask<'a>>,
+    ) -> bool {
+        match decl {
+            Declaration::Struct {
+                name, fields, span, ..
+            } => {
+                type_tasks.push(ResolverTypeDeclarationMetadataTask::Struct {
+                    name,
+                    fields,
+                    span: *span,
+                });
+                type_reference_tasks.push(ResolverTypeReferenceValidationTask::Struct {
+                    name,
+                    fields,
+                    span: *span,
+                });
+                true
+            }
+            Declaration::Enum { name, span, .. } => {
+                type_tasks.push(ResolverTypeDeclarationMetadataTask::Enum { name, span: *span });
+                type_reference_tasks
+                    .push(ResolverTypeReferenceValidationTask::Enum { name, span: *span });
+                true
+            }
+            _ => false,
         }
     }
 
@@ -16312,6 +16351,33 @@ main = () i32 { return 1 }
         assert!(matches!(
             tasks[1],
             ResolverTypeDeclarationMetadataTask::Enum { name: "Option", .. }
+        ));
+    }
+
+    #[test]
+    fn resolver_type_replay_task_helper_pushes_metadata_and_type_refs_together() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 = 1 }
+"#,
+        );
+        let mut type_tasks = Vec::new();
+        let mut type_reference_tasks = Vec::new();
+
+        let handled = TypeChecker::push_resolver_type_replay_tasks(
+            &program.declarations[0],
+            &mut type_tasks,
+            &mut type_reference_tasks,
+        );
+
+        assert!(handled);
+        assert!(matches!(
+            type_tasks.as_slice(),
+            [ResolverTypeDeclarationMetadataTask::Struct { name: "Point", .. }]
+        ));
+        assert!(matches!(
+            type_reference_tasks.as_slice(),
+            [ResolverTypeReferenceValidationTask::Struct { name: "Point", .. }]
         ));
     }
 
