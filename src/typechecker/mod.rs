@@ -147,6 +147,39 @@ struct AstStructFieldDefaultValidationTask<'a> {
     fields: &'a [StructField],
 }
 
+enum AstTypeReferenceValidationTask<'a> {
+    Struct {
+        type_params: &'a [ast::TypeParam],
+        fields: &'a [StructField],
+    },
+    Enum {
+        type_params: &'a [ast::TypeParam],
+        variants: &'a [EnumVariant],
+    },
+    Function {
+        type_params: &'a [ast::TypeParam],
+        params: &'a [Param],
+        return_type: &'a Option<AstType>,
+        body: &'a Expression,
+    },
+    Method {
+        type_params: &'a [ast::TypeParam],
+        params: &'a [Param],
+        return_type: &'a Option<AstType>,
+        body: &'a Expression,
+    },
+    Behavior {
+        type_params: &'a [ast::TypeParam],
+        methods: &'a [BehaviorMethod],
+    },
+    ImplBlock {
+        methods: &'a [Declaration],
+    },
+    TopLevelExpr {
+        expr: &'a Expression,
+    },
+}
+
 enum ResolverTypeReferenceValidationTask<'a> {
     Struct {
         name: &'a str,
@@ -6427,54 +6460,106 @@ impl TypeChecker {
             return;
         }
 
-        for decl in decls {
-            match decl {
+        let tasks = Self::collect_ast_type_reference_validation_tasks(decls);
+        self.validate_ast_type_reference_tasks(&tasks);
+    }
+
+    fn collect_ast_type_reference_validation_tasks(
+        decls: &[Declaration],
+    ) -> Vec<AstTypeReferenceValidationTask<'_>> {
+        decls
+            .iter()
+            .filter_map(|decl| match decl {
                 Declaration::Struct {
                     type_params,
                     fields,
                     ..
-                } => {
-                    let scoped = type_param_name_set(type_params);
-                    for field in fields {
-                        self.validate_generic_type_ref_bounds(&field.ty, &scoped, field.span);
-                        if let Some(default) = &field.default {
-                            self.validate_generic_expr_type_references(default, &scoped);
-                        }
-                    }
-                }
+                } => Some(AstTypeReferenceValidationTask::Struct {
+                    type_params,
+                    fields,
+                }),
                 Declaration::Enum {
                     type_params,
                     variants,
                     ..
-                } => {
-                    let scoped = type_param_name_set(type_params);
-                    for variant in variants {
-                        if let Some(payload) = &variant.payload {
-                            self.validate_generic_type_ref_bounds(payload, &scoped, variant.span);
-                        }
-                    }
-                }
+                } => Some(AstTypeReferenceValidationTask::Enum {
+                    type_params,
+                    variants,
+                }),
                 Declaration::Function {
                     type_params,
                     params,
                     return_type,
                     body,
                     ..
-                } => {
-                    self.validate_ast_callable_type_references(
-                        type_params,
-                        params,
-                        return_type,
-                        body,
-                        Span::dummy(),
-                    );
-                }
+                } => Some(AstTypeReferenceValidationTask::Function {
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                }),
                 Declaration::Method {
                     type_params,
                     params,
                     return_type,
                     body,
                     ..
+                } => Some(AstTypeReferenceValidationTask::Method {
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                }),
+                Declaration::Behavior {
+                    type_params,
+                    methods,
+                    ..
+                } => Some(AstTypeReferenceValidationTask::Behavior {
+                    type_params,
+                    methods,
+                }),
+                Declaration::ImplBlock { methods, .. } => {
+                    Some(AstTypeReferenceValidationTask::ImplBlock { methods })
+                }
+                Declaration::TopLevelExpr { expr, .. } => {
+                    Some(AstTypeReferenceValidationTask::TopLevelExpr { expr })
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn validate_ast_type_reference_tasks(&mut self, tasks: &[AstTypeReferenceValidationTask<'_>]) {
+        for task in tasks {
+            match task {
+                AstTypeReferenceValidationTask::Struct {
+                    type_params,
+                    fields,
+                } => {
+                    let scoped = type_param_name_set(type_params);
+                    for field in *fields {
+                        self.validate_generic_type_ref_bounds(&field.ty, &scoped, field.span);
+                        if let Some(default) = &field.default {
+                            self.validate_generic_expr_type_references(default, &scoped);
+                        }
+                    }
+                }
+                AstTypeReferenceValidationTask::Enum {
+                    type_params,
+                    variants,
+                } => {
+                    let scoped = type_param_name_set(type_params);
+                    for variant in *variants {
+                        if let Some(payload) = &variant.payload {
+                            self.validate_generic_type_ref_bounds(payload, &scoped, variant.span);
+                        }
+                    }
+                }
+                AstTypeReferenceValidationTask::Function {
+                    type_params,
+                    params,
+                    return_type,
+                    body,
                 } => {
                     self.validate_ast_callable_type_references(
                         type_params,
@@ -6484,13 +6569,26 @@ impl TypeChecker {
                         Span::dummy(),
                     );
                 }
-                Declaration::Behavior {
+                AstTypeReferenceValidationTask::Method {
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                } => {
+                    self.validate_ast_callable_type_references(
+                        type_params,
+                        params,
+                        return_type,
+                        body,
+                        Span::dummy(),
+                    );
+                }
+                AstTypeReferenceValidationTask::Behavior {
                     type_params,
                     methods,
-                    ..
                 } => {
                     let scoped = type_param_name_set(type_params);
-                    for method in methods {
+                    for method in *methods {
                         for param in &method.params {
                             self.validate_generic_type_ref_bounds(&param.ty, &scoped, param.span);
                         }
@@ -6506,8 +6604,8 @@ impl TypeChecker {
                         }
                     }
                 }
-                Declaration::ImplBlock { methods, .. } => {
-                    for method in methods {
+                AstTypeReferenceValidationTask::ImplBlock { methods } => {
+                    for method in *methods {
                         if let Declaration::Function {
                             type_params,
                             params,
@@ -6526,10 +6624,9 @@ impl TypeChecker {
                         }
                     }
                 }
-                Declaration::TopLevelExpr { expr, .. } => {
+                AstTypeReferenceValidationTask::TopLevelExpr { expr } => {
                     self.validate_generic_expr_type_references(expr, &HashSet::new());
                 }
-                _ => {}
             }
         }
     }
@@ -15574,6 +15671,62 @@ Box<T>: { value: T }
         assert_eq!(tasks[0].fields.len(), 1);
         assert_eq!(tasks[1].type_params.len(), 1);
         assert_eq!(tasks[1].fields.len(), 1);
+    }
+
+    #[test]
+    fn ast_type_reference_validation_tasks_collect_declarations() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+Option<T>: Some(T), None
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+make = () Point { return Point { x: 1 } }
+
+Point.get = (self: Point) i32 { return self.x }
+
+Point.impl = {
+    x_value = (self: Point) i32 { return self.x }
+}
+
+result := make()
+"#,
+        );
+
+        let tasks = TypeChecker::collect_ast_type_reference_validation_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 7);
+        assert!(matches!(
+            tasks[0],
+            AstTypeReferenceValidationTask::Struct { .. }
+        ));
+        assert!(matches!(
+            tasks[1],
+            AstTypeReferenceValidationTask::Enum { .. }
+        ));
+        assert!(matches!(
+            tasks[2],
+            AstTypeReferenceValidationTask::Behavior { .. }
+        ));
+        assert!(matches!(
+            tasks[3],
+            AstTypeReferenceValidationTask::Function { .. }
+        ));
+        assert!(matches!(
+            tasks[4],
+            AstTypeReferenceValidationTask::Method { .. }
+        ));
+        assert!(matches!(
+            tasks[5],
+            AstTypeReferenceValidationTask::ImplBlock { .. }
+        ));
+        assert!(matches!(
+            tasks[6],
+            AstTypeReferenceValidationTask::TopLevelExpr { .. }
+        ));
     }
 
     #[test]

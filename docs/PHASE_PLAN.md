@@ -1697,6 +1697,8 @@ checked-in docs, tests, and commits only.
   seeding imported names into the typechecker import table.
 - AST struct field-default validation now uses a named task collector before
   replaying default expression checks for nongeneric structs.
+- AST generic type-reference validation now uses a named task collector before
+  replaying declaration-specific type and expression reference checks.
 
 ## Current Phase
 

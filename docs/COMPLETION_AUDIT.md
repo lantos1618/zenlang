@@ -2005,6 +2005,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test check_program_rejects_struct_field_default_type_mismatch`,
   and
   `cargo test check_program_rejects_unknown_type_references_in_struct_field_defaults`.
+- AST generic type-reference validation now uses named declaration tasks before
+  replaying declaration-specific type and expression reference checks, covered
+  by `cargo test ast_type_reference_validation_tasks_collect_declarations`,
+  `cargo test check_program_rejects_unknown_type_references`, and
+  `cargo test check_program_rejects_unknown_type_references_in_struct_field_defaults`.
 
 ## Unresolved Gaps
 
