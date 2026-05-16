@@ -114,6 +114,8 @@ checked-in docs, tests, and commits only.
   in a focused submodule, separate from template shape and mutability metadata.
 - Generic enum specialization coverage now includes a `Result<T, E>` enum method
   fixture with generated-C assertions for the concrete mangled method.
+- Generic diagnostics now cover explicit type-argument arity failures for
+  two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with
