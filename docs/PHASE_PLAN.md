@@ -2114,7 +2114,8 @@ checked-in docs, tests, and commits only.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `emit_command_build_zen_outputs_target_c_source`, rejects ambiguous
-  multi-executable C emission through
+  zero-target and multi-executable C emission through
+  `emit_command_build_zen_rejects_graph_without_executable_targets` and
   `emit_command_build_zen_rejects_multiple_executable_targets`, and rejects
   undeclared host effects through
   `emit_command_build_zen_rejects_undeclared_host_effects`.

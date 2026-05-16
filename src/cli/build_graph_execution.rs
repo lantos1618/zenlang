@@ -35,7 +35,7 @@ impl BuildGraphExecutionKind {
 }
 
 pub(super) fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget {
-    let mut targets = executable_build_targets(path_str);
+    let mut targets = collect_executable_build_targets(path_str);
     if targets.len() != 1 {
         eprintln!(
             "build graph C emission supports exactly one target, found {}",
@@ -71,6 +71,15 @@ pub(super) fn test_build_targets(path_str: &str) -> Vec<BuildGraphTestTarget> {
 }
 
 pub(super) fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
+    let targets = collect_executable_build_targets(path_str);
+    if targets.is_empty() {
+        eprintln!("build graph execution requires at least one executable target");
+        process::exit(1);
+    }
+    targets
+}
+
+fn collect_executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
     let graph = super::load_build_graph(path_str);
     validate_executed_dependency_targets(&graph, BuildGraphExecutionKind::Executable);
     let build_path = Path::new(path_str);
@@ -86,10 +95,6 @@ pub(super) fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutab
         .into_iter()
         .filter_map(|target| executable_build_target(base_dir, target))
         .collect();
-    if targets.is_empty() {
-        eprintln!("build graph execution requires at least one executable target");
-        process::exit(1);
-    }
     targets
 }
 
