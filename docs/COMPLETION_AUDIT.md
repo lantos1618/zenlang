@@ -2224,6 +2224,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration direct_file_command_build_zen_compiles_multiple_executable_targets`,
   compiles executable dependencies before dependents through
   `cargo test --test integration direct_file_command_build_zen_compiles_executable_dependencies_first`,
+  rejects dependencies on gated library and test targets through
+  `cargo test --test integration direct_file_command_build_zen_rejects_gated_library_dependencies`
+  and
+  `cargo test --test integration direct_file_command_build_zen_rejects_gated_test_dependencies`,
   rejects test-only graphs before execution starts through
   `cargo test --test integration direct_file_command_build_zen_rejects_graph_without_executable_targets`,
   and rejects undeclared host effects for single-target and multi-target graphs
