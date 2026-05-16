@@ -120,6 +120,8 @@ checked-in docs, tests, and commits only.
   two-parameter `Result<T, E>` enum methods.
 - Generic diagnostics now cover bound failures on `Result<T, E>` enum methods
   without specializing failed method bodies into followup errors.
+- Generic diagnostics now also guard plain generic function and method
+  inference conflicts against argument/return mismatch followups.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with

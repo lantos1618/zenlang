@@ -21,6 +21,16 @@ main = () i32 {
         )),
         "expected generic function inference conflict diagnostic, got {errors:?}"
     );
+    assert!(
+        errors.iter().all(|d| !d.message.contains("argument 2")),
+        "generic function inference conflict should not also report argument mismatch, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("return type mismatch")),
+        "generic function inference conflict should not also report return mismatch, got {errors:?}"
+    );
 }
 
 #[test]
@@ -118,6 +128,16 @@ main = () i32 {
             "conflicting inferred type argument `T` for generic method `Box.choose`: inferred `i32` and `str`"
         )),
         "expected generic method inference conflict diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors.iter().all(|d| !d.message.contains("argument 2")),
+        "generic method inference conflict should not also report argument mismatch, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("return type mismatch")),
+        "generic method inference conflict should not also report return mismatch, got {errors:?}"
     );
 }
 
