@@ -3908,42 +3908,11 @@ impl TypeChecker {
             Self::push_resolver_type_declaration_metadata_task(decl, &mut tasks.types);
             Self::push_resolver_behavior_declaration_metadata_task(decl, &mut tasks.behaviors);
             Self::push_resolver_callable_declaration_metadata_task(decl, &mut tasks.callable);
-            match decl {
-                Declaration::ImplBlock {
-                    type_name,
-                    behavior: Some(behavior),
-                    behavior_type_args,
-                    methods,
-                    span,
-                    ..
-                } => {
-                    tasks
-                        .behavior_impl_blocks
-                        .push(ResolverBehaviorImplBlockDeclarationTask {
-                            ast_type_name: type_name,
-                            behavior,
-                            behavior_type_args,
-                            methods,
-                            span: *span,
-                        });
-                }
-                Declaration::Requires {
-                    type_name,
-                    behavior,
-                    behavior_type_args,
-                    span,
-                } => {
-                    tasks
-                        .behavior_requires
-                        .push(BehaviorRequiresValidationTask {
-                            type_name,
-                            behavior,
-                            behavior_type_args,
-                            span: *span,
-                        });
-                }
-                _ => {}
-            }
+            Self::push_resolver_behavior_impl_block_declaration_task(
+                decl,
+                &mut tasks.behavior_impl_blocks,
+            );
+            Self::push_behavior_requires_validation_task(decl, &mut tasks.behavior_requires);
         }
         tasks
     }
@@ -3997,6 +3966,40 @@ impl TypeChecker {
         if let Declaration::Behavior { name, span, .. } = decl {
             tasks.push(ResolverBehaviorDeclarationMetadataTask {
                 name: name.as_str(),
+                span: *span,
+            });
+        }
+    }
+
+    #[cfg(test)]
+    fn collect_resolver_behavior_impl_block_declaration_tasks(
+        decls: &[Declaration],
+    ) -> Vec<ResolverBehaviorImplBlockDeclarationTask<'_>> {
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_resolver_behavior_impl_block_declaration_task(decl, &mut tasks);
+        }
+        tasks
+    }
+
+    fn push_resolver_behavior_impl_block_declaration_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
+    ) {
+        if let Declaration::ImplBlock {
+            type_name,
+            behavior: Some(behavior),
+            behavior_type_args,
+            methods,
+            span,
+            ..
+        } = decl
+        {
+            tasks.push(ResolverBehaviorImplBlockDeclarationTask {
+                ast_type_name: type_name,
+                behavior,
+                behavior_type_args,
+                methods,
                 span: *span,
             });
         }
@@ -4487,23 +4490,30 @@ impl TypeChecker {
     ) -> Vec<BehaviorRequiresValidationTask<'_>> {
         let mut requires_tasks = Vec::new();
         for decl in decls {
-            if let Declaration::Requires {
-                type_name,
-                behavior,
-                behavior_type_args,
-                span,
-            } = decl
-            {
-                requires_tasks.push(BehaviorRequiresValidationTask {
-                    type_name,
-                    behavior,
-                    behavior_type_args,
-                    span: *span,
-                });
-            }
+            Self::push_behavior_requires_validation_task(decl, &mut requires_tasks);
         }
 
         requires_tasks
+    }
+
+    fn push_behavior_requires_validation_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<BehaviorRequiresValidationTask<'a>>,
+    ) {
+        if let Declaration::Requires {
+            type_name,
+            behavior,
+            behavior_type_args,
+            span,
+        } = decl
+        {
+            tasks.push(BehaviorRequiresValidationTask {
+                type_name,
+                behavior,
+                behavior_type_args,
+                span: *span,
+            });
+        }
     }
 
     fn validate_behavior_requires_tasks(
@@ -16139,6 +16149,36 @@ Point.impl = {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.impl = {
+    x_value = (value: Point) i32 { return value.x }
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+
+        let tasks = TypeChecker::collect_resolver_behavior_impl_block_declaration_tasks(
+            &program.declarations,
+        );
+
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].ast_type_name, "Point");
+        assert_eq!(tasks[0].behavior, "Json");
+        assert_eq!(tasks[0].methods.len(), 1);
     }
 
     #[test]

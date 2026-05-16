@@ -2046,6 +2046,17 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_callable_declaration_metadata_tasks_collect_callable_work`
   and
   `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
+- Resolver-backed behavior impl block metadata now uses a narrow impl-block
+  task collector shared by the full resolver metadata collector, covered by
+  `cargo test resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls`
+  and
+  `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
+- Resolver-backed behavior requires validation now shares one requires-task
+  push helper between the dedicated requires collector and the full resolver
+  metadata collector, covered by
+  `cargo test behavior_requires_validation_tasks_collect_requires_declarations`
+  and
+  `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
 
 ## Unresolved Gaps
 

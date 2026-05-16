@@ -1713,6 +1713,11 @@ checked-in docs, tests, and commits only.
   metadata task collector shared by the full resolver metadata collector.
 - Resolver-backed callable declaration metadata now uses a narrow callable
   metadata task collector shared by the full resolver metadata collector.
+- Resolver-backed behavior impl block metadata now uses a narrow impl-block
+  task collector shared by the full resolver metadata collector.
+- Resolver-backed behavior requires validation now shares one requires-task
+  push helper between the dedicated requires collector and the full resolver
+  metadata collector.
 
 ## Current Phase
 
