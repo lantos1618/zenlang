@@ -17,7 +17,7 @@ fn executable_target(name: &str, sources: &[&str]) -> BuildTargetInput {
             out_dir: "build".to_string(),
         },
         sources: sources.iter().map(|source| source.to_string()).collect(),
-        dependencies: vec!["std".to_string(), "math".to_string()],
+        dependencies: Vec::new(),
         features: vec!["release".to_string(), "lto".to_string()],
     }
 }
@@ -64,6 +64,24 @@ fn build_graph_rejects_undeclared_host_effects() {
     assert_eq!(
         err.to_string(),
         "undeclared host effect: read env `ZEN_STD`"
+    );
+}
+
+#[test]
+fn build_graph_rejects_unknown_target_dependencies() {
+    let mut target = executable_target("app", &["src/main.zen"]);
+    target.dependencies = vec!["core".to_string()];
+
+    let err = BuildGraph::from_input(BuildGraphInput {
+        targets: vec![target],
+        declared_host_effects: Vec::new(),
+        used_host_effects: Vec::new(),
+    })
+    .expect_err("unknown target dependency should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "build target `app` depends on unknown target `core`"
     );
 }
 
@@ -193,11 +211,12 @@ fn build_program_lowering_collects_target_dependencies_and_features() {
     let program = parse_program(
         r#"
 build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library { name: "core", exports: ["src/lib.zen"] })
     b.add(Executable {
         name: "app",
         main: "app.zen",
         out_dir: "build/app/",
-        dependencies: ["core", "std"],
+        dependencies: ["core"],
         features: ["lto", "release"],
     })
     .Ok(b.config())
@@ -206,11 +225,36 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     );
     let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
 
-    assert_eq!(graph.targets().len(), 1);
+    assert_eq!(graph.targets().len(), 2);
     let target = &graph.targets()[0];
     assert_eq!(target.name(), "app");
-    assert_eq!(target.dependencies(), ["core", "std"]);
+    assert_eq!(target.dependencies(), ["core"]);
     assert_eq!(target.features(), ["lto", "release"]);
+}
+
+#[test]
+fn build_program_lowering_rejects_unknown_target_dependencies() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        dependencies: ["core"],
+    })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("unknown build target dependency should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "build target `app` depends on unknown target `core`"
+    );
 }
 
 #[test]

@@ -2204,6 +2204,10 @@ and do not assume Phase 4 is ready without evidence.
 - Build script lowering includes target dependency and feature metadata arrays,
   covered by
   `cargo test --test build_graph build_program_lowering_collects_target_dependencies_and_features`.
+- Build graph validation rejects unresolved target dependencies, covered by
+  `cargo test --test build_graph build_graph_rejects_unknown_target_dependencies`
+  and
+  `cargo test --test build_graph build_program_lowering_rejects_unknown_target_dependencies`.
 - `emit-json build-graph` keeps host-effect rejection ahead of test target graph
   emission, covered by
   `cargo test --test integration emit_json_build_graph_rejects_undeclared_host_effects_before_test_target_lowering`.
@@ -2216,6 +2220,9 @@ and do not assume Phase 4 is ready without evidence.
   covered by
   `cargo test --test integration emit_json_build_graph_outputs_target_dependencies_and_features`
   and `cargo test --test integration emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering`.
+- `emit-json build-graph` rejects unresolved target dependencies through the
+  advertised graph-emission path, covered by
+  `cargo test --test integration emit_json_build_graph_rejects_unknown_target_dependencies`.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes remain
   rejected with a targeted graph diagnostic, covered by
   `cargo test --test integration legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic`.
