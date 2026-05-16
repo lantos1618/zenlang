@@ -18,6 +18,7 @@ fn main() {
         eprintln!("  build <file>   Compile a .zen file to a binary");
         eprintln!("  emit  <file>   Emit C source (no compilation)");
         eprintln!("  emit-json ast <file>   Emit resolved AST JSON");
+        eprintln!("  emit-json diagnostics <file>   Emit diagnostics JSON");
         eprintln!("  <file>         Run a .zen file");
         process::exit(1);
     }
@@ -45,11 +46,18 @@ fn main() {
             cmd_emit(&args[2]);
         }
         "emit-json" => {
-            if args.len() < 4 || args[2].as_str() != "ast" {
-                eprintln!("Usage: zen emit-json ast <file.zen>");
+            if args.len() < 4 {
+                eprintln!("Usage: zen emit-json <ast|diagnostics> <file.zen>");
                 process::exit(1);
             }
-            cmd_emit_json_ast(&args[3]);
+            match args[2].as_str() {
+                "ast" => cmd_emit_json_ast(&args[3]),
+                "diagnostics" => cmd_emit_json_diagnostics(&args[3]),
+                _ => {
+                    eprintln!("Usage: zen emit-json <ast|diagnostics> <file.zen>");
+                    process::exit(1);
+                }
+            }
         }
         arg if arg.ends_with(".zen") => {
             cmd_build(arg);
@@ -126,6 +134,49 @@ fn cmd_emit_json_ast(path_str: &str) {
             eprintln!("json emit error: {}", e);
             process::exit(1);
         }
+    }
+}
+
+fn cmd_emit_json_diagnostics(path_str: &str) {
+    reject_build_zen(path_str);
+
+    let path = Path::new(path_str);
+    if !path.exists() {
+        eprintln!("error: file not found: {}", path_str);
+        process::exit(1);
+    }
+
+    let mut files = FileTable::new();
+    let mut module_system = ModuleSystem::new();
+    let mut diagnostics = match module_system.load_module_graph(path, &mut files) {
+        Ok(graph) => {
+            let mut checker = TypeChecker::new();
+            match checker.check_module_graph_entry(&graph) {
+                Ok(_) => checker.diagnostics().to_vec(),
+                Err(diags) => diags,
+            }
+        }
+        Err(errs) => errs.into_iter().map(Into::into).collect(),
+    };
+
+    diagnostics.sort_by_key(|diagnostic| {
+        diagnostic
+            .span
+            .map(|span| (span.file_id, span.start, span.end))
+            .unwrap_or((u32::MAX, u32::MAX, u32::MAX))
+    });
+
+    let has_errors = diagnostics.iter().any(|diagnostic| diagnostic.is_error());
+    match zen::ir_json::diagnostics_to_json(&diagnostics, &files) {
+        Ok(json) => println!("{json}"),
+        Err(e) => {
+            eprintln!("json emit error: {}", e);
+            process::exit(1);
+        }
+    }
+
+    if has_errors {
+        process::exit(1);
     }
 }
 
