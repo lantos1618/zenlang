@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 use std::fmt;
+use std::str::FromStr;
 
 use crate::ast::{Declaration, Expression, MatchArm, Program, Statement};
 use serde::Serialize;
@@ -33,6 +34,46 @@ pub enum BuildTargetKind {
     Library {
         exports: Vec<String>,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BuildTargetDslKind {
+    Executable,
+    Test,
+    Library,
+}
+
+impl BuildTargetDslKind {
+    const EXECUTABLE: &'static str = "Executable";
+    const TEST: &'static str = "Test";
+    const LIBRARY: &'static str = "Library";
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Executable => Self::EXECUTABLE,
+            Self::Test => Self::TEST,
+            Self::Library => Self::LIBRARY,
+        }
+    }
+}
+
+impl fmt::Display for BuildTargetDslKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl FromStr for BuildTargetDslKind {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            Self::EXECUTABLE => Ok(Self::Executable),
+            Self::TEST => Ok(Self::Test),
+            Self::LIBRARY => Ok(Self::Library),
+            _ => Err(()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -362,11 +403,10 @@ fn build_target_from_builder_add(expr: &Expression) -> Option<BuildTargetInput> 
     let Expression::StructLiteral { name, fields, .. } = arg else {
         return None;
     };
-    match name.as_str() {
-        "Executable" => executable_target_from_fields(fields),
-        "Test" => test_target_from_fields(fields),
-        "Library" => library_target_from_fields(fields),
-        _ => None,
+    match name.parse::<BuildTargetDslKind>().ok()? {
+        BuildTargetDslKind::Executable => executable_target_from_fields(fields),
+        BuildTargetDslKind::Test => test_target_from_fields(fields),
+        BuildTargetDslKind::Library => library_target_from_fields(fields),
     }
 }
 
@@ -501,4 +541,23 @@ fn is_builder_os(expr: &Expression) -> bool {
             if field == "os"
                 && matches!(object.as_ref(), Expression::Identifier { name, .. } if name == "b")
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BuildTargetDslKind;
+
+    #[test]
+    fn build_target_dsl_kind_owns_source_spelling() {
+        assert_eq!(BuildTargetDslKind::Executable.as_str(), "Executable");
+        assert_eq!(BuildTargetDslKind::Test.as_str(), "Test");
+        assert_eq!(BuildTargetDslKind::Library.as_str(), "Library");
+        assert_eq!("Executable".parse(), Ok(BuildTargetDslKind::Executable));
+        assert_eq!("Test".parse(), Ok(BuildTargetDslKind::Test));
+        assert_eq!("Library".parse(), Ok(BuildTargetDslKind::Library));
+        assert!("Benchmark".parse::<BuildTargetDslKind>().is_err());
+        assert_eq!(BuildTargetDslKind::Executable.to_string(), "Executable");
+        assert_eq!(BuildTargetDslKind::Test.to_string(), "Test");
+        assert_eq!(BuildTargetDslKind::Library.to_string(), "Library");
+    }
 }
