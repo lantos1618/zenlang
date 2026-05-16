@@ -2195,9 +2195,13 @@ and do not assume Phase 4 is ready without evidence.
   The single-target host-effect rejection remains covered by
   `cargo test --test integration check_command_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
-  `cargo test --test integration test_command_build_zen_runs_test_targets`, and
-  rejects undeclared host effects before test execution through
-  `cargo test --test integration test_command_build_zen_rejects_undeclared_host_effects`.
+  `cargo test --test integration test_command_build_zen_runs_test_targets`,
+  compiles and runs multiple test graph targets through
+  `cargo test --test integration test_command_build_zen_runs_multiple_test_targets`,
+  and rejects undeclared host effects before test execution through
+  `cargo test --test integration test_command_build_zen_rejects_undeclared_host_effects`
+  and
+  `cargo test --test integration test_command_multi_target_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `cargo test --test integration emit_command_build_zen_outputs_target_c_source`,
