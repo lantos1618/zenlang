@@ -2103,8 +2103,11 @@ checked-in docs, tests, and commits only.
   `test_command_build_zen_rejects_gated_executable_dependencies`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
-  `emit_command_build_zen_outputs_target_c_source`, and rejects undeclared host
-  effects through `emit_command_build_zen_rejects_undeclared_host_effects`.
+  `emit_command_build_zen_outputs_target_c_source`, rejects ambiguous
+  multi-executable C emission through
+  `emit_command_build_zen_rejects_multiple_executable_targets`, and rejects
+  undeclared host effects through
+  `emit_command_build_zen_rejects_undeclared_host_effects`.
 - Direct `zen build.zen` now aliases the same constrained deterministic graph
   build path as `zen build build.zen`, covered by
   `direct_file_command_build_zen_routes_through_deterministic_graph`, and
