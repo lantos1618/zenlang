@@ -8475,7 +8475,7 @@ impl TypeChecker {
             symbols,
         );
         self.validate_no_extra_resolver_local_symbols(&replay_tasks.expected_symbols, symbols);
-        self.validate_resolver_behavior_association_lists(replay_tasks.behavior_associations);
+        self.validate_resolver_behavior_association_lists(&replay_tasks);
         self.validate_stripped_resolver_import_symbols(
             replay_tasks.expected_symbols.validate_imports,
             symbols,
@@ -8565,9 +8565,9 @@ impl TypeChecker {
 
     fn validate_resolver_behavior_association_lists(
         &mut self,
-        tasks: ResolverBehaviorAssociationListTasks<'_>,
+        tasks: &ResolverValidationReplayTasks<'_>,
     ) {
-        for task in tasks.type_associations {
+        for task in &tasks.behavior_associations.type_associations {
             self.validate_resolver_behavior_impl_list(
                 task.symbol,
                 task.name,
@@ -8582,7 +8582,7 @@ impl TypeChecker {
             );
         }
 
-        for task in tasks.behavior_parents {
+        for task in &tasks.behavior_associations.behavior_parents {
             self.validate_resolver_behavior_parent_list(
                 task.symbol,
                 task.name,

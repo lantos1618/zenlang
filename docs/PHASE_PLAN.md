@@ -1833,6 +1833,9 @@ checked-in docs, tests, and commits only.
 - Behavior association semantic validation now accepts either the standalone
   behavior-association bundle or the full resolver declaration metadata bundle,
   so resolver semantic replay no longer passes a nested association slice.
+- Resolver validation replay now passes the full replay task bundle into
+  behavior association list validation, which selects type and parent
+  association lists internally.
 
 ## Current Phase
 
