@@ -162,6 +162,9 @@ checked-in docs, tests, and commits only.
 - Typechecker generic type-reference validation now delegates recursive type,
   expression, and statement walking to a dedicated helper module, keeping
   declaration task replay separate from AST traversal details.
+- Typechecker monomorphization inference now lives in a dedicated helper
+  module, keeping generic argument matching and conflict reporting separate
+  from specialization emission and type substitution.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
