@@ -1860,19 +1860,26 @@ checked-in docs, tests, and commits only.
 - Resolver-backed declaration semantic validation now builds one resolver
   metadata task bundle and replays behavior-association, type-reference, and
   struct field-default validation from it.
+- The first deterministic build-graph core is covered by
+  `tests/build_graph.rs`: `deterministic_build_graph_creates_one_executable_target`
+  proves canonical graph emission for an executable target, and
+  `build_graph_rejects_undeclared_host_effects` proves undeclared host effects
+  are rejected before any `build.zen` execution is promoted.
 
 ## Current Phase
 
 Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
-Phase 4 build-driver work is still gated by the lack of deterministic
-`build.zen` graph tests and implementation.
+Phase 4 build-driver work is still gated by the lack of a constrained
+`build.zen` evaluator that lowers into the deterministic build graph.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Continue the next smallest behavior-association handoff or resolver/typechecker
-integration slice that reduces duplicate declaration collection. Do not promote
-`build.zen` until a dedicated deterministic graph test exists.
+Continue the next smallest build-driver slice by adding a constrained
+`build.zen` evaluation boundary that can lower a declared executable target into
+`BuildGraph` without allowing undeclared host effects. Keep CLI `build.zen`
+execution gated until that boundary has positive and negative integration
+coverage.
