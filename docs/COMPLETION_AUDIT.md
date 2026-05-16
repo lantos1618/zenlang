@@ -2109,6 +2109,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_expected_symbol_sets_collect_declarations_and_locals_together`
   and
   `cargo test expected_resolver_impl_method_symbols_collect_value_symbols_and_locals`.
+- Resolver validation replay now uses a shared association-source helper for
+  type and behavior declaration symbols, covered by
+  `cargo test resolver_validation_replay_declaration_tasks_collect_sources_and_edges`
+  and
+  `cargo test resolver_expected_symbol_sets_collect_declarations_and_locals_together`.
 
 ## Unresolved Gaps
 

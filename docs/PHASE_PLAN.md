@@ -1742,6 +1742,8 @@ checked-in docs, tests, and commits only.
   list push helpers before checking resolver metadata lists.
 - Resolver validation replay now uses a shared callable-symbol helper for
   top-level functions, methods, and impl methods.
+- Resolver validation replay now uses a shared association-source helper for
+  type and behavior declaration symbols.
 
 ## Current Phase
 

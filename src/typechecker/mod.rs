@@ -8565,10 +8565,6 @@ impl TypeChecker {
                 Declaration::Struct {
                     name, fields, span, ..
                 } => {
-                    tasks
-                        .expected_symbols
-                        .declarations
-                        .insert((Namespace::Type, name.clone()));
                     for field in fields {
                         if let Some(default) = &field.default {
                             expected_resolver_scoped_expr_locals(
@@ -8578,16 +8574,14 @@ impl TypeChecker {
                             );
                         }
                     }
-                    let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
-                        continue;
-                    };
-                    tasks
-                        .type_declarations
-                        .push(ResolverValidationBehaviorAssociationSource {
-                            name,
-                            symbol,
-                            span: *span,
-                        });
+                    push_resolver_validation_association_source(
+                        Namespace::Type,
+                        name,
+                        *span,
+                        symbols,
+                        &mut tasks.expected_symbols,
+                        &mut tasks.type_declarations,
+                    );
                 }
                 Declaration::Enum {
                     name,
@@ -8595,26 +8589,20 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    tasks
-                        .expected_symbols
-                        .declarations
-                        .insert((Namespace::Type, name.clone()));
                     for variant in variants {
                         tasks
                             .expected_symbols
                             .declarations
                             .insert((Namespace::Variant, variant.name.clone()));
                     }
-                    let Some(symbol) = symbols.lookup(Namespace::Type, name) else {
-                        continue;
-                    };
-                    tasks
-                        .type_declarations
-                        .push(ResolverValidationBehaviorAssociationSource {
-                            name,
-                            symbol,
-                            span: *span,
-                        });
+                    push_resolver_validation_association_source(
+                        Namespace::Type,
+                        name,
+                        *span,
+                        symbols,
+                        &mut tasks.expected_symbols,
+                        &mut tasks.type_declarations,
+                    );
                 }
                 Declaration::Behavior {
                     name,
@@ -8622,10 +8610,6 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    tasks
-                        .expected_symbols
-                        .declarations
-                        .insert((Namespace::Behavior, name.clone()));
                     for method in methods {
                         if let Some(default_body) = &method.default_body {
                             expected_resolver_callable_locals(
@@ -8636,16 +8620,14 @@ impl TypeChecker {
                             );
                         }
                     }
-                    let Some(symbol) = symbols.lookup(Namespace::Behavior, name) else {
-                        continue;
-                    };
-                    tasks
-                        .behavior_declarations
-                        .push(ResolverValidationBehaviorAssociationSource {
-                            name,
-                            symbol,
-                            span: *span,
-                        });
+                    push_resolver_validation_association_source(
+                        Namespace::Behavior,
+                        name,
+                        *span,
+                        symbols,
+                        &mut tasks.expected_symbols,
+                        &mut tasks.behavior_declarations,
+                    );
                 }
                 Declaration::Import {
                     names, module_path, ..
@@ -11620,6 +11602,20 @@ fn collect_expected_resolver_impl_method_symbols(
                 expected,
             );
         }
+    }
+}
+
+fn push_resolver_validation_association_source<'a>(
+    namespace: Namespace,
+    name: &'a str,
+    span: Span,
+    symbols: &'a SymbolTable,
+    expected: &mut ResolverExpectedSymbolSets,
+    sources: &mut Vec<ResolverValidationBehaviorAssociationSource<'a>>,
+) {
+    expected.declarations.insert((namespace, name.to_string()));
+    if let Some(symbol) = symbols.lookup(namespace, name) {
+        sources.push(ResolverValidationBehaviorAssociationSource { name, symbol, span });
     }
 }
 
