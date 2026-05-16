@@ -3718,32 +3718,40 @@ impl TypeChecker {
     fn collect_ast_type_declaration_tasks(
         decls: &[Declaration],
     ) -> Vec<AstTypeDeclarationTask<'_>> {
-        decls
-            .iter()
-            .filter_map(|decl| match decl {
-                Declaration::Struct {
-                    name,
-                    type_params,
-                    fields,
-                    ..
-                } => Some(AstTypeDeclarationTask::Struct {
-                    name,
-                    type_params,
-                    fields,
-                }),
-                Declaration::Enum {
-                    name,
-                    type_params,
-                    variants,
-                    ..
-                } => Some(AstTypeDeclarationTask::Enum {
-                    name,
-                    type_params,
-                    variants,
-                }),
-                _ => None,
-            })
-            .collect()
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_ast_type_declaration_task(decl, &mut tasks);
+        }
+        tasks
+    }
+
+    fn push_ast_type_declaration_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<AstTypeDeclarationTask<'a>>,
+    ) {
+        match decl {
+            Declaration::Struct {
+                name,
+                type_params,
+                fields,
+                ..
+            } => tasks.push(AstTypeDeclarationTask::Struct {
+                name,
+                type_params,
+                fields,
+            }),
+            Declaration::Enum {
+                name,
+                type_params,
+                variants,
+                ..
+            } => tasks.push(AstTypeDeclarationTask::Enum {
+                name,
+                type_params,
+                variants,
+            }),
+            _ => {}
+        }
     }
 
     fn collect_ast_type_declarations_from_tasks(&mut self, tasks: &[AstTypeDeclarationTask<'_>]) {

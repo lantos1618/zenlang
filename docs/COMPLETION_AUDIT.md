@@ -2079,6 +2079,10 @@ and do not assume Phase 4 is ready without evidence.
   before replaying function and method signature setup, covered by
   `cargo test callable_declaration_tasks_collect_functions_and_methods` and
   `cargo test generic_function_collection`.
+- AST type declaration collection now uses a shared type-task push helper
+  before replaying generic-bound validation and type registration, covered by
+  `cargo test ast_type_declaration_tasks_collect_structs_and_enums` and
+  `cargo test generic_enum_type_arg_arity_is_error`.
 
 ## Unresolved Gaps
 

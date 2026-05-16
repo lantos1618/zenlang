@@ -1728,6 +1728,8 @@ checked-in docs, tests, and commits only.
   before seeding imported names.
 - Callable declaration collection now uses a shared callable-task push helper
   before replaying function and method signature setup.
+- AST type declaration collection now uses a shared type-task push helper
+  before replaying generic-bound validation and type registration.
 
 ## Current Phase
 
