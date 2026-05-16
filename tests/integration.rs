@@ -1772,8 +1772,88 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
-fn direct_file_command_rejects_build_zen_as_build_only_entrypoint() {
-    assert_build_zen_rejected(&[], "zen build.zen");
+fn direct_file_command_build_zen_routes_through_deterministic_graph() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("main.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write main.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .arg("build.zen")
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build.zen");
+
+    assert!(
+        output.status.success(),
+        "zen build.zen failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let bin_path = tmp.path().join("build").join("myapp");
+    assert!(
+        bin_path.exists(),
+        "expected {} to exist",
+        bin_path.display()
+    );
+    let run = Command::new(&bin_path).output().expect("run built binary");
+    assert!(
+        run.status.success(),
+        "built binary exited with {}",
+        run.status
+    );
+}
+
+#[test]
+fn direct_file_command_build_zen_rejects_undeclared_host_effects() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD")
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .arg("build.zen")
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build.zen");
+
+    assert!(
+        !output.status.success(),
+        "zen build.zen unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("undeclared host effect: read env `ZEN_STD`"),
+        "expected undeclared host effect diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 #[test]
@@ -1911,41 +1991,6 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
         String::from_utf8_lossy(&output.stderr)
             .contains("build graph target `myapp` root source not found: missing.zen"),
         "expected missing root source diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-}
-
-fn assert_build_zen_rejected(prefix_args: &[&str], command_name: &str) {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let build_path = tmp.path().join("build.zen");
-    std::fs::write(
-        &build_path,
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write build.zen");
-
-    let mut args = prefix_args.to_vec();
-    args.push(build_path.to_str().unwrap());
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(args)
-        .output()
-        .unwrap_or_else(|err| panic!("run {command_name}: {err}"));
-
-    assert!(
-        !output.status.success(),
-        "{command_name} unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr).contains(
-            "build.zen is only supported through `zen check build.zen`, `zen emit build.zen`, or `zen build build.zen`"
-        ),
-        "expected build.zen gated diagnostic for {command_name}, stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
 }
