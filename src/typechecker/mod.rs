@@ -8597,12 +8597,7 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    for variant in variants {
-                        tasks
-                            .expected_symbols
-                            .declarations
-                            .insert((Namespace::Variant, variant.name.clone()));
-                    }
+                    push_expected_resolver_variant_symbols(variants, &mut tasks.expected_symbols);
                     push_resolver_validation_association_source(
                         Namespace::Type,
                         name,
@@ -11669,6 +11664,17 @@ fn push_expected_resolver_import_symbols(
         expected
             .declarations
             .insert((Namespace::Import, name.clone()));
+    }
+}
+
+fn push_expected_resolver_variant_symbols(
+    variants: &[EnumVariant],
+    expected: &mut ResolverExpectedSymbolSets,
+) {
+    for variant in variants {
+        expected
+            .declarations
+            .insert((Namespace::Variant, variant.name.clone()));
     }
 }
 

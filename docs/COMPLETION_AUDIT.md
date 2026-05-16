@@ -2124,6 +2124,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_validation_replay_declaration_tasks_collect_sources_and_edges`,
   and
   `cargo test resolver_behavior_association_list_tasks_collect_type_and_parent_edges_together`.
+- Resolver validation replay now uses a shared variant-symbol helper for
+  expected enum variant entries, covered by
+  `cargo test check_program_with_symbols_requires_resolver_enum_variants` and
+  `cargo test resolver_validation_replay_declaration_tasks_collect_sources_and_edges`.
 
 ## Unresolved Gaps
 

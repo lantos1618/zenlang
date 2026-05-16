@@ -1748,6 +1748,8 @@ checked-in docs, tests, and commits only.
   expected module and import entries.
 - Resolver validation replay now uses shared behavior-edge helpers for impl,
   requires, and parent edges.
+- Resolver validation replay now uses a shared variant-symbol helper for
+  expected enum variant entries.
 
 ## Current Phase
 
