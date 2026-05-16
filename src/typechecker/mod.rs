@@ -24,6 +24,7 @@ mod generic_type_validation;
 mod monomorphize;
 mod monomorphize_dependencies;
 mod monomorphize_inference;
+mod monomorphize_specialized_types;
 mod monomorphize_types;
 mod patterns;
 mod program_checking;
