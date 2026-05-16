@@ -2094,10 +2094,12 @@ checked-in docs, tests, and commits only.
   The single-target host-effect rejection remains covered by
   `check_command_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
-  `test_command_build_zen_runs_test_targets`, and rejects undeclared host
-  effects before test execution through
-  `test_command_build_zen_rejects_undeclared_host_effects`. Test execution also
-  rejects dependencies on gated library targets through
+  `test_command_build_zen_runs_test_targets`, compiles and runs multiple test
+  graph targets through `test_command_build_zen_runs_multiple_test_targets`,
+  and rejects undeclared host effects before test execution through
+  `test_command_build_zen_rejects_undeclared_host_effects` and
+  `test_command_multi_target_build_zen_rejects_undeclared_host_effects`.
+  Test execution also rejects dependencies on gated library targets through
   `test_command_build_zen_rejects_gated_library_dependencies`, and rejects
   test-target dependencies on gated executable targets through
   `test_command_build_zen_rejects_gated_executable_dependencies`.
@@ -2127,7 +2129,7 @@ Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
 Phase 4 build-driver work still has constrained `build.zen` semantics: normal
 `zen build build.zen` and direct `zen build.zen` execute multiple executable
-graph targets, `zen test build.zen` executes test graph targets,
+graph targets, `zen test build.zen` executes multiple test graph targets,
 `zen check build.zen` validates executable, test, and library targets in the
 graph, `zen emit build.zen` emits target C for a single executable graph target,
 and build/test execution rejects dependencies on gated library targets while
