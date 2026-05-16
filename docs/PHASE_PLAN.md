@@ -144,6 +144,9 @@ checked-in docs, tests, and commits only.
   and loop-control lowering behavior unchanged while shrinking the dispatcher.
 - Typechecker scope and import lookup methods now live in a dedicated
   scope-management helper module instead of the broad typechecker root.
+- Typechecker resolver behavior-ref metadata collection and restoration now
+  lives in a dedicated helper module, keeping resolver-owned impl/requires/
+  extends handoff state out of the broad typechecker root.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
