@@ -18,6 +18,7 @@ mod declaration_collection_ast;
 mod environment;
 mod expressions;
 mod generic_bound_validation;
+mod generic_type_reference_walker;
 mod generic_type_validation;
 mod monomorphize;
 mod patterns;
