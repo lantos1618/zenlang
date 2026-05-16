@@ -165,6 +165,9 @@ checked-in docs, tests, and commits only.
 - Typechecker monomorphization inference now lives in a dedicated helper
   module, keeping generic argument matching and conflict reporting separate
   from specialization emission and type substitution.
+- Typechecker monomorphization type conversion and mangling helpers now live in
+  a dedicated utility module, keeping symbol-safe mangle keys and Type/AstType
+  round-tripping out of specialization emission.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
