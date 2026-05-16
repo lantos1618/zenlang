@@ -1,0 +1,157 @@
+use super::*;
+
+#[test]
+fn phase_plan_records_recovered_progress_and_next_slice() {
+    let plan = read("docs/PHASE_PLAN.md");
+
+    for required in [
+        "Recovery Point",
+        "183d140c",
+        "Completed Evidence",
+        "Current Phase",
+        "Next Small Slice",
+        "Sync/Async are real effects",
+        "typed allocators",
+        "actors live in std first",
+        "AST/HIR traversal is tooling/metaprogramming",
+        "type matching and behavior association are separate",
+        "JSON is compiler-owned IR output",
+        "YAML is human-authored config/spec input",
+        "build.zen is deterministic comptime build graph",
+        "deterministic_build_graph_creates_one_executable_target",
+        "build_graph_rejects_undeclared_host_effects",
+        "parse_project_build_zen_example",
+        "parse_shorthand_enum_variant_expr_and_pattern",
+        "parsed_project_build_zen_lowers_to_executable_and_test_graph",
+        "build_program_lowering_collects_test_target",
+        "build_program_lowering_collects_library_target",
+        "build_program_lowering_collects_target_dependencies_and_features",
+        "build_graph_orders_targets_before_dependents",
+        "build_graph_rejects_cyclic_target_dependencies",
+        "build_program_lowering_rejects_cyclic_target_dependencies",
+        "build_graph_rejects_self_target_dependencies",
+        "build_program_lowering_rejects_self_target_dependencies",
+        "build_graph_rejects_unknown_target_dependencies",
+        "build_program_lowering_rejects_unknown_target_dependencies",
+        "build_program_lowering_rejects_undeclared_env_reads",
+        "emit_json_build_graph_outputs_project_build_graph",
+        "emit_json_build_graph_outputs_library_target",
+        "emit_json_build_graph_outputs_target_dependencies_and_features",
+        "emit_json_build_graph_rejects_cyclic_target_dependencies",
+        "emit_json_build_graph_rejects_self_target_dependencies",
+        "emit_json_build_graph_rejects_unknown_target_dependencies",
+        "emit_json_build_graph_rejects_undeclared_host_effects",
+        "emit_json_build_graph_rejects_undeclared_host_effects_before_test_target_lowering",
+        "emit_json_build_graph_rejects_undeclared_host_effects_before_library_target_lowering",
+        "emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering",
+        "build_graph_command_compiles_single_executable_target",
+        "build_graph_command_rejects_missing_root_source",
+        "build_command_routes_build_zen_through_deterministic_graph",
+        "build_command_build_zen_compiles_multiple_executable_targets",
+        "build_command_build_zen_compiles_executable_dependencies_first",
+        "build_command_build_zen_rejects_gated_library_dependencies",
+        "build_command_build_zen_rejects_undeclared_host_effects",
+        "build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution",
+        "build_command_multi_target_build_zen_rejects_undeclared_host_effects",
+        "check_command_validates_build_zen_graph",
+        "check_command_build_zen_rejects_missing_executable_source",
+        "check_command_build_zen_rejects_missing_test_source",
+        "check_command_build_zen_rejects_missing_library_source",
+        "check_command_build_zen_rejects_undeclared_host_effects_before_source_validation",
+        "check_command_build_zen_rejects_undeclared_host_effects",
+        "test_command_build_zen_runs_test_targets",
+        "test_command_build_zen_rejects_gated_library_dependencies",
+        "test_command_build_zen_rejects_undeclared_host_effects",
+        "emit_command_build_zen_outputs_target_c_source",
+        "emit_command_build_zen_rejects_undeclared_host_effects",
+        "direct_file_command_build_zen_routes_through_deterministic_graph",
+        "direct_file_command_build_zen_compiles_multiple_executable_targets",
+        "direct_file_command_build_zen_rejects_undeclared_host_effects",
+        "build_program_lowering_collects_multiple_executable_targets",
+        "legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic",
+        "collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata",
+        "collect_declarations_with_symbols_clears_stale_behavior_impl_generic_method_template_after_key_restore",
+        "resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass",
+    ] {
+        assert!(
+            plan.contains(required),
+            "docs/PHASE_PLAN.md is missing durable plan text: {required}"
+        );
+    }
+
+    assert!(
+        !plan.contains("Generic behavior inheritance in `.extends` is still explicitly gated"),
+        "docs/PHASE_PLAN.md still claims generic behavior inheritance is gated"
+    );
+}
+
+#[test]
+fn completion_audit_records_recovery_objective_evidence_and_gaps() {
+    let audit = read("docs/COMPLETION_AUDIT.md");
+
+    for required in [
+        "Objective Restatement",
+        "Prompt-To-Artifact Checklist",
+        "183d140c",
+        "docs/PHASE_PLAN.md",
+        "cargo fmt --check",
+        "cargo clippy -- -D warnings",
+        "cargo test --lib",
+        "cargo test --tests",
+        "Design Decisions Preserved",
+        "Unresolved Gaps",
+        "build.zen entrypoints are not complete",
+        "Do not mark the objective complete",
+        "build_command_routes_build_zen_through_deterministic_graph",
+        "build_command_build_zen_compiles_multiple_executable_targets",
+        "build_command_build_zen_compiles_executable_dependencies_first",
+        "build_command_build_zen_rejects_gated_library_dependencies",
+        "build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution",
+        "build_command_multi_target_build_zen_rejects_undeclared_host_effects",
+        "check_command_validates_build_zen_graph",
+        "check_command_build_zen_rejects_missing_executable_source",
+        "check_command_build_zen_rejects_missing_test_source",
+        "check_command_build_zen_rejects_missing_library_source",
+        "check_command_build_zen_rejects_undeclared_host_effects_before_source_validation",
+        "test_command_build_zen_runs_test_targets",
+        "test_command_build_zen_rejects_gated_library_dependencies",
+        "test_command_build_zen_rejects_undeclared_host_effects",
+        "emit_command_build_zen_outputs_target_c_source",
+        "direct_file_command_build_zen_routes_through_deterministic_graph",
+        "direct_file_command_build_zen_compiles_multiple_executable_targets",
+        "build_program_lowering_collects_multiple_executable_targets",
+        "parsed_project_build_zen_lowers_to_executable_and_test_graph",
+        "build_program_lowering_collects_test_target",
+        "build_program_lowering_collects_library_target",
+        "build_program_lowering_collects_target_dependencies_and_features",
+        "build_graph_orders_targets_before_dependents",
+        "build_graph_rejects_cyclic_target_dependencies",
+        "build_program_lowering_rejects_cyclic_target_dependencies",
+        "build_graph_rejects_self_target_dependencies",
+        "build_program_lowering_rejects_self_target_dependencies",
+        "build_graph_rejects_unknown_target_dependencies",
+        "build_program_lowering_rejects_unknown_target_dependencies",
+        "emit_json_build_graph_outputs_library_target",
+        "emit_json_build_graph_outputs_target_dependencies_and_features",
+        "emit_json_build_graph_rejects_cyclic_target_dependencies",
+        "emit_json_build_graph_rejects_self_target_dependencies",
+        "emit_json_build_graph_rejects_unknown_target_dependencies",
+        "emit_json_build_graph_rejects_undeclared_host_effects_before_test_target_lowering",
+        "emit_json_build_graph_rejects_undeclared_host_effects_before_library_target_lowering",
+        "emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering",
+        "legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic",
+        "collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata",
+        "collect_declarations_with_symbols_clears_stale_behavior_impl_generic_method_template_after_key_restore",
+        "resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass",
+    ] {
+        assert!(
+            audit.contains(required),
+            "docs/COMPLETION_AUDIT.md is missing audit evidence text: {required}"
+        );
+    }
+
+    assert!(
+        !audit.contains("Generic behavior inheritance in `.extends` is still explicitly gated"),
+        "docs/COMPLETION_AUDIT.md still claims generic behavior inheritance is gated"
+    );
+}
