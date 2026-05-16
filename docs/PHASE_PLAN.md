@@ -1695,6 +1695,8 @@ checked-in docs, tests, and commits only.
   replaying AST signature registration or resolver-backed behavior stubs.
 - AST import declaration collection now uses a named task collector before
   seeding imported names into the typechecker import table.
+- AST struct field-default validation now uses a named task collector before
+  replaying default expression checks for nongeneric structs.
 
 ## Current Phase
 

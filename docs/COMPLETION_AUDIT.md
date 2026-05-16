@@ -1999,6 +1999,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test ast_import_declaration_tasks_collect_import_bindings`,
   `cargo test collect_import_info`, and
   `cargo test check_program_with_symbols_uses_resolver_import_bindings`.
+- AST struct field-default validation now uses named struct tasks before
+  replaying nongeneric default expression checks, covered by
+  `cargo test ast_struct_field_default_validation_tasks_collect_structs`,
+  `cargo test check_program_rejects_struct_field_default_type_mismatch`,
+  and
+  `cargo test check_program_rejects_unknown_type_references_in_struct_field_defaults`.
 
 ## Unresolved Gaps
 

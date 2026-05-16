@@ -142,6 +142,11 @@ struct AstImportDeclarationTask<'a> {
     module_path: &'a [String],
 }
 
+struct AstStructFieldDefaultValidationTask<'a> {
+    type_params: &'a [ast::TypeParam],
+    fields: &'a [StructField],
+}
+
 enum ResolverTypeReferenceValidationTask<'a> {
     Struct {
         name: &'a str,
@@ -4416,17 +4421,35 @@ impl TypeChecker {
             return;
         }
 
-        for decl in decls {
-            let Declaration::Struct {
-                type_params,
-                fields,
-                ..
-            } = decl
-            else {
-                continue;
-            };
+        let tasks = Self::collect_ast_struct_field_default_validation_tasks(decls);
+        self.validate_ast_struct_field_default_tasks(&tasks);
+    }
 
-            self.validate_ast_struct_field_defaults(!type_params.is_empty(), fields);
+    fn collect_ast_struct_field_default_validation_tasks(
+        decls: &[Declaration],
+    ) -> Vec<AstStructFieldDefaultValidationTask<'_>> {
+        decls
+            .iter()
+            .filter_map(|decl| match decl {
+                Declaration::Struct {
+                    type_params,
+                    fields,
+                    ..
+                } => Some(AstStructFieldDefaultValidationTask {
+                    type_params,
+                    fields,
+                }),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn validate_ast_struct_field_default_tasks(
+        &mut self,
+        tasks: &[AstStructFieldDefaultValidationTask<'_>],
+    ) {
+        for task in tasks {
+            self.validate_ast_struct_field_defaults(!task.type_params.is_empty(), task.fields);
         }
     }
 
@@ -15532,6 +15555,25 @@ Point: { x: i32 = "bad" }
                 .contains("field `x` default expects `i32`, found `str`")),
             "expected field default type mismatch diagnostic, got {err:?}"
         );
+    }
+
+    #[test]
+    fn ast_struct_field_default_validation_tasks_collect_structs() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 = 1 }
+Box<T>: { value: T }
+"#,
+        );
+
+        let tasks =
+            TypeChecker::collect_ast_struct_field_default_validation_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(tasks[0].type_params.len(), 0);
+        assert_eq!(tasks[0].fields.len(), 1);
+        assert_eq!(tasks[1].type_params.len(), 1);
+        assert_eq!(tasks[1].fields.len(), 1);
     }
 
     #[test]
