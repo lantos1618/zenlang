@@ -16,6 +16,7 @@ fn main() {
         eprintln!("Commands:");
         eprintln!("  check <file>   Parse and typecheck a .zen file");
         eprintln!("  build <file>   Compile a .zen file to a binary");
+        eprintln!("  build-graph <build.zen>   Compile one target from deterministic build graph");
         eprintln!("  emit  <file>   Emit C source (no compilation)");
         eprintln!("  emit-json ast <file>   Emit resolved AST JSON");
         eprintln!("  emit-json symbols <file>   Emit resolver symbol tables JSON");
@@ -40,6 +41,13 @@ fn main() {
                 process::exit(1);
             }
             cmd_build(&args[2]);
+        }
+        "build-graph" => {
+            if args.len() < 3 {
+                eprintln!("Usage: zen build-graph <build.zen>");
+                process::exit(1);
+            }
+            cmd_build_graph(&args[2]);
         }
         "emit" => {
             if args.len() < 3 {
@@ -213,6 +221,17 @@ fn cmd_emit_json_diagnostics(path_str: &str) {
 }
 
 fn cmd_emit_json_build_graph(path_str: &str) {
+    let graph = load_build_graph(path_str);
+    match graph.canonical_json() {
+        Ok(json) => println!("{json}"),
+        Err(err) => {
+            eprintln!("json emit error: {}", err);
+            process::exit(1);
+        }
+    }
+}
+
+fn load_build_graph(path_str: &str) -> zen::build_graph::BuildGraph {
     let path = Path::new(path_str);
     if !path.exists() {
         eprintln!("error: file not found: {}", path_str);
@@ -255,13 +274,7 @@ fn cmd_emit_json_build_graph(path_str: &str) {
         }
     };
 
-    match graph.canonical_json() {
-        Ok(json) => println!("{json}"),
-        Err(err) => {
-            eprintln!("json emit error: {}", err);
-            process::exit(1);
-        }
-    }
+    graph
 }
 
 fn cmd_emit(path_str: &str) {
@@ -281,7 +294,48 @@ fn cmd_emit(path_str: &str) {
 
 fn cmd_build(path_str: &str) {
     reject_build_zen(path_str);
+    compile_file_to_binary(path_str, None, None);
+}
 
+fn cmd_build_graph(path_str: &str) {
+    let graph = load_build_graph(path_str);
+    let [target] = graph.targets() else {
+        eprintln!(
+            "build graph execution supports exactly one target, found {}",
+            graph.targets().len()
+        );
+        process::exit(1);
+    };
+
+    let build_path = Path::new(path_str);
+    let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
+    let zen::build_graph::BuildTargetKind::Executable {
+        root_source_file,
+        out_dir,
+    } = target.kind();
+    let root_path = base_dir.join(root_source_file);
+    if !root_path.exists() {
+        eprintln!(
+            "build graph target `{}` root source not found: {}",
+            target.name(),
+            root_source_file
+        );
+        process::exit(1);
+    }
+    let out_dir = base_dir.join(out_dir);
+    if let Err(err) = std::fs::create_dir_all(&out_dir) {
+        eprintln!("error creating {}: {}", out_dir.display(), err);
+        process::exit(1);
+    }
+
+    compile_file_to_binary(
+        root_path.to_str().unwrap_or(root_source_file),
+        Some(&out_dir),
+        Some(target.name()),
+    );
+}
+
+fn compile_file_to_binary(path_str: &str, output_dir: Option<&Path>, output_name: Option<&str>) {
     let typed = graph_frontend(path_str);
     let backend = CBackend;
     let c_source = match backend.generate(&typed) {
@@ -297,25 +351,33 @@ fn cmd_build(path_str: &str) {
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("out");
-    let c_path = format!("{}.c", stem);
-    let bin_path = stem.to_string();
+    let output_stem = output_name.unwrap_or(stem);
+    let c_path = output_dir
+        .map(|dir| dir.join(format!("{output_stem}.c")))
+        .unwrap_or_else(|| Path::new(&format!("{output_stem}.c")).to_path_buf());
+    let bin_path = output_dir
+        .map(|dir| dir.join(output_stem))
+        .unwrap_or_else(|| Path::new(output_stem).to_path_buf());
 
     // Write C source
     if let Err(e) = std::fs::write(&c_path, &c_source) {
-        eprintln!("error writing {}: {}", c_path, e);
+        eprintln!("error writing {}: {}", c_path.display(), e);
         process::exit(1);
     }
-    println!("  emitted {}", c_path);
+    println!("  emitted {}", c_path.display());
 
     // Compile with cc
     let cc = std::env::var("CC").unwrap_or_else(|_| "cc".into());
     let status = process::Command::new(&cc)
-        .args([&c_path, "-o", &bin_path, "-lm"])
+        .arg(&c_path)
+        .arg("-o")
+        .arg(&bin_path)
+        .arg("-lm")
         .status();
 
     match status {
         Ok(s) if s.success() => {
-            println!("  compiled → {}", bin_path);
+            println!("  compiled → {}", bin_path.display());
         }
         Ok(s) => {
             eprintln!("  {} exited with {}", cc, s);
@@ -323,7 +385,7 @@ fn cmd_build(path_str: &str) {
         }
         Err(e) => {
             eprintln!("  failed to run {}: {}", cc, e);
-            eprintln!("  (C source saved to {})", c_path);
+            eprintln!("  (C source saved to {})", c_path.display());
             process::exit(1);
         }
     }

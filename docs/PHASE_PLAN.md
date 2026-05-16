@@ -1879,21 +1879,26 @@ checked-in docs, tests, and commits only.
   covers the positive CLI path, and
   `emit_json_build_graph_rejects_undeclared_host_effects` covers the negative
   host-effect path through the advertised compiler command.
+- `build-graph <build.zen>` now consumes the deterministic graph for one
+  executable target without widening the accepted `build.zen` subset.
+  `build_graph_command_compiles_single_executable_target` covers the positive
+  path, and `build_graph_command_rejects_missing_root_source` covers a target
+  execution failure before normal `zen build build.zen` is ungated.
 
 ## Current Phase
 
 Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
-Phase 4 build-driver work is still gated by the lack of target graph execution:
-`build.zen` can now emit a deterministic compiler-owned graph, but
-`zen build build.zen` still does not execute targets.
+Phase 4 build-driver work is still gated by the normal `zen build build.zen`
+entrypoint: deterministic graph emission and one-target execution exist through
+explicit experimental commands, but the standard build command remains gated.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Continue the next smallest build-driver slice by adding target graph execution
-tests that consume the deterministic graph without widening the accepted
-`build.zen` language subset. Keep normal `zen build build.zen` gated until one
-executable target can be compiled from graph data with matching negative tests.
+Continue the next smallest build-driver slice by routing normal
+`zen build build.zen` through the constrained graph pipeline while preserving
+the existing negative cases for `check`, `emit`, and direct `build.zen`
+execution. Do not widen the accepted `build.zen` subset while doing so.
