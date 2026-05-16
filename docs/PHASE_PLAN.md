@@ -1824,6 +1824,9 @@ checked-in docs, tests, and commits only.
 - Behavior association impl and requires validators now receive the full
   behavior-association task bundle and select their entries internally,
   shrinking the remaining slice handoffs in association validation replay.
+- Resolver-backed struct field-default validation now receives the full
+  resolver declaration metadata task bundle and selects type declarations
+  internally, removing another `tasks.types` handoff from semantic replay.
 
 ## Current Phase
 
