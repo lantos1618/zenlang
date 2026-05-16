@@ -204,6 +204,9 @@ checked-in docs, tests, and commits only.
 - Resolver absence validation for type parameters and value signatures now
   lives in a focused helper, separate from field/variant/behavior absence
   checks.
+- Resolver-backed behavior impl method signature restoration tests now live in
+  a focused resolver collection test module, keeping default/conformance tests
+  separate from restored signature and generic-template coverage.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
