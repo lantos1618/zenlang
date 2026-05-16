@@ -1,3 +1,4 @@
+mod closures;
 mod emit;
 mod intrinsics;
 mod matches;
