@@ -86,6 +86,24 @@ fn build_graph_rejects_unknown_target_dependencies() {
 }
 
 #[test]
+fn build_graph_rejects_self_target_dependencies() {
+    let mut target = executable_target("app", &["src/main.zen"]);
+    target.dependencies = vec!["app".to_string()];
+
+    let err = BuildGraph::from_input(BuildGraphInput {
+        targets: vec![target],
+        declared_host_effects: Vec::new(),
+        used_host_effects: Vec::new(),
+    })
+    .expect_err("self target dependency should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "build target `app` cannot depend on itself"
+    );
+}
+
+#[test]
 fn parsed_project_build_zen_lowers_to_executable_and_test_graph() {
     let program = parse_program(include_str!("../examples/project/build.zen"));
     let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
@@ -254,6 +272,31 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     assert_eq!(
         err.to_string(),
         "build target `app` depends on unknown target `core`"
+    );
+}
+
+#[test]
+fn build_program_lowering_rejects_self_target_dependencies() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        dependencies: ["app"],
+    })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("self build target dependency should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "build target `app` cannot depend on itself"
     );
 }
 
