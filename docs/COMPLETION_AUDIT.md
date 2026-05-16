@@ -2218,6 +2218,8 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration direct_file_command_build_zen_routes_through_deterministic_graph`,
   compiles multiple executable targets through
   `cargo test --test integration direct_file_command_build_zen_compiles_multiple_executable_targets`,
+  rejects test-only graphs before execution starts through
+  `cargo test --test integration direct_file_command_build_zen_rejects_graph_without_executable_targets`,
   and rejects undeclared host effects through
   `cargo test --test integration direct_file_command_build_zen_rejects_undeclared_host_effects`.
 - Build script lowering collects multiple executable targets deterministically,
