@@ -207,6 +207,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver struct/enum metadata tests now keep variant absence
   metadata coverage in a focused child module, separate from positive struct
   field and enum payload metadata mismatch cases.
+- Resolver phase 2 generic behavior tests now keep association edge coverage
+  in a focused integration module, separate from generic behavior declaration
+  and method metadata capture.
 - Module-system unit tests now live beside the module-system implementation in
   a dedicated test module, keeping module graph/load entry points compact.
 - Resolver expected-local traversal now lives in a dedicated validation support
