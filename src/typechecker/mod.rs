@@ -164,6 +164,13 @@ struct ResolverBehaviorImplBlockTask<'a> {
     methods: &'a [Declaration],
 }
 
+struct ImplBlockDeclarationTask<'a> {
+    type_name: &'a str,
+    behavior: Option<&'a str>,
+    behavior_type_args: &'a [AstType],
+    methods: &'a [Declaration],
+}
+
 struct BehaviorImplValidationTask<'a> {
     type_name: &'a str,
     behavior: &'a str,
@@ -3247,6 +3254,14 @@ impl TypeChecker {
     }
 
     fn collect_impl_block_declarations(&mut self, decls: &[Declaration]) {
+        let tasks = Self::collect_impl_block_declaration_tasks(decls);
+        self.collect_impl_block_declarations_from_tasks(&tasks);
+    }
+
+    fn collect_impl_block_declaration_tasks(
+        decls: &[Declaration],
+    ) -> Vec<ImplBlockDeclarationTask<'_>> {
+        let mut tasks = Vec::new();
         for decl in decls {
             let Declaration::ImplBlock {
                 type_name,
@@ -3259,14 +3274,29 @@ impl TypeChecker {
                 continue;
             };
 
+            tasks.push(ImplBlockDeclarationTask {
+                type_name,
+                behavior: behavior.as_deref(),
+                behavior_type_args,
+                methods,
+            });
+        }
+        tasks
+    }
+
+    fn collect_impl_block_declarations_from_tasks(
+        &mut self,
+        tasks: &[ImplBlockDeclarationTask<'_>],
+    ) {
+        for task in tasks {
             if self.resolver_backed_collection {
-                self.collect_resolver_backed_impl_block_templates(type_name, methods);
+                self.collect_resolver_backed_impl_block_templates(task.type_name, task.methods);
             } else {
                 self.collect_ast_impl_block_declaration(
-                    type_name,
-                    behavior.as_deref(),
-                    behavior_type_args,
-                    methods,
+                    task.type_name,
+                    task.behavior,
+                    task.behavior_type_args,
+                    task.methods,
                 );
             }
         }
@@ -13828,6 +13858,36 @@ Point.requires(Json<str>)
         assert_eq!(tasks[0].type_name, "Point");
         assert_eq!(tasks[0].behavior, "Json");
         assert_eq!(tasks[0].behavior_type_args, &[AstType::Str]);
+    }
+
+    #[test]
+    fn impl_block_declaration_tasks_collect_behavior_and_plain_impls() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.impl = {
+    x_value = (value: Point) i32 { return value.x }
+}
+
+Point.implements(Json) {
+    encode = (value: Point) str { return "point" }
+}
+"#,
+        );
+
+        let tasks = TypeChecker::collect_impl_block_declaration_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(tasks[0].type_name, "Point");
+        assert_eq!(tasks[0].behavior, None);
+        assert_eq!(tasks[1].type_name, "Point");
+        assert_eq!(tasks[1].behavior, Some("Json"));
+        assert_eq!(tasks[1].methods.len(), 1);
     }
 
     #[test]

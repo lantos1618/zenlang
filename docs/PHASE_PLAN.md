@@ -162,7 +162,8 @@ checked-in docs, tests, and commits only.
   type tasks on the fallback semantic path.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
-  default-method synthesis.
+  default-method synthesis. Impl-block declaration collection now also uses a
+  named task collector for plain and behavior impl blocks.
 - AST behavior-extends validation now uses a named validation task collector
   before parent, cycle, and method-coherence checks.
 - Collected declaration semantic validation now records behavior impl checks

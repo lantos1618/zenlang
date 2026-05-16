@@ -1931,6 +1931,7 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver-backed behavior impl semantic validation now reuses the collected
   behavior-impl block tasks instead of rebuilding impl tasks from declarations,
   covered by
+  `cargo test impl_block_declaration_tasks_collect_behavior_and_plain_impls`,
   `cargo test behavior_impl_validation_tasks_collect_impl_blocks` and
   `cargo test collect_declarations_with_symbols_reports_resolver_restored_impl_target_and_name`.
 - Resolver-backed behavior requires semantic validation now reuses collected
