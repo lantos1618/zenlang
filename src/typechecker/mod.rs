@@ -86,6 +86,26 @@ enum ResolverCallableDeclarationMetadataTask<'a> {
     },
 }
 
+enum CallableDeclarationTask<'a> {
+    Function {
+        name: &'a str,
+        type_params: &'a [ast::TypeParam],
+        params: &'a [Param],
+        return_type: &'a Option<AstType>,
+        body: &'a Expression,
+        span: Span,
+    },
+    Method {
+        type_name: &'a str,
+        method_name: &'a str,
+        type_params: &'a [ast::TypeParam],
+        params: &'a [Param],
+        return_type: &'a Option<AstType>,
+        body: &'a Expression,
+        span: Span,
+    },
+}
+
 enum ResolverTypeDeclarationMetadataTask<'a> {
     Struct {
         name: &'a str,
@@ -3333,8 +3353,16 @@ impl TypeChecker {
     }
 
     fn collect_callable_declarations(&mut self, decls: &[Declaration]) {
-        for decl in decls {
-            match decl {
+        let tasks = Self::collect_callable_declaration_tasks(decls);
+        self.collect_callable_declarations_from_tasks(&tasks);
+    }
+
+    fn collect_callable_declaration_tasks(
+        decls: &[Declaration],
+    ) -> Vec<CallableDeclarationTask<'_>> {
+        decls
+            .iter()
+            .filter_map(|decl| match decl {
                 Declaration::Function {
                     name,
                     type_params,
@@ -3343,6 +3371,47 @@ impl TypeChecker {
                     body,
                     span,
                     ..
+                } => Some(CallableDeclarationTask::Function {
+                    name,
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                    span: *span,
+                }),
+                Declaration::Method {
+                    type_name,
+                    method_name,
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                    span,
+                    ..
+                } => Some(CallableDeclarationTask::Method {
+                    type_name,
+                    method_name,
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                    span: *span,
+                }),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn collect_callable_declarations_from_tasks(&mut self, tasks: &[CallableDeclarationTask<'_>]) {
+        for task in tasks {
+            match task {
+                CallableDeclarationTask::Function {
+                    name,
+                    type_params,
+                    params,
+                    return_type,
+                    body,
+                    span,
                 } => {
                     if self.resolver_backed_collection {
                         self.collect_resolver_backed_function_template(
@@ -3363,7 +3432,7 @@ impl TypeChecker {
                         );
                     }
                 }
-                Declaration::Method {
+                CallableDeclarationTask::Method {
                     type_name,
                     method_name,
                     type_params,
@@ -3371,7 +3440,6 @@ impl TypeChecker {
                     return_type,
                     body,
                     span,
-                    ..
                 } => {
                     if self.resolver_backed_collection {
                         self.collect_resolver_backed_method_template(
@@ -3394,7 +3462,6 @@ impl TypeChecker {
                         );
                     }
                 }
-                _ => {}
             }
         }
     }
@@ -13888,6 +13955,38 @@ Point.implements(Json) {
         assert_eq!(tasks[1].type_name, "Point");
         assert_eq!(tasks[1].behavior, Some("Json"));
         assert_eq!(tasks[1].methods.len(), 1);
+    }
+
+    #[test]
+    fn callable_declaration_tasks_collect_functions_and_methods() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+make = () Point { return Point { x: 1 } }
+
+Point.get = (self: Point) i32 { return self.x }
+"#,
+        );
+
+        let tasks = TypeChecker::collect_callable_declaration_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 2);
+        match &tasks[0] {
+            CallableDeclarationTask::Function { name, .. } => assert_eq!(*name, "make"),
+            _ => panic!("expected function task"),
+        }
+        match &tasks[1] {
+            CallableDeclarationTask::Method {
+                type_name,
+                method_name,
+                ..
+            } => {
+                assert_eq!(*type_name, "Point");
+                assert_eq!(*method_name, "get");
+            }
+            _ => panic!("expected method task"),
+        }
     }
 
     #[test]

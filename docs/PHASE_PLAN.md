@@ -1685,6 +1685,9 @@ checked-in docs, tests, and commits only.
 - Generic template dependency save/restore entries now use named `name` and
   `previous` fields instead of raw `(name, previous)` tuples in the
   monomorphization dependency snapshots.
+- Callable declaration collection now uses a named task collector for
+  top-level functions and methods before replaying the existing AST or
+  resolver-backed collection path.
 
 ## Current Phase
 

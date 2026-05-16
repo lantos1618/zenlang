@@ -1978,6 +1978,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test check_module_graph_entry_specializes_imported_generic_functions`,
   and
   `cargo test check_module_graph_entry_specializes_public_generic_methods_for_imported_types`.
+- Callable declaration collection now uses named function and method tasks
+  before replaying AST or resolver-backed collection, covered by
+  `cargo test callable_declaration_tasks_collect_functions_and_methods`,
+  `cargo test collect_declarations_with_symbols_uses_resolver_function_type_metadata`,
+  and
+  `cargo test collect_declarations_with_symbols_uses_resolver_method_signature_for_type_refs`.
 
 ## Unresolved Gaps
 
