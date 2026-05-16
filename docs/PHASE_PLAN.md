@@ -1876,7 +1876,9 @@ checked-in docs, tests, and commits only.
   `Test { root: ... }`, `build_program_lowering_collects_library_target`
   covers graph-only `Library { name: ..., exports: ... }` targets,
   `build_program_lowering_collects_target_dependencies_and_features` covers
-  target metadata arrays, and
+  target metadata arrays,
+  `build_program_lowering_rejects_unknown_target_dependencies` covers
+  unresolved target dependency rejection, and
   `build_program_lowering_rejects_undeclared_env_reads` keeps undeclared host
   effects rejected during lowering.
 - `emit-json build-graph <build.zen>` now exposes the constrained graph-emission
@@ -1890,6 +1892,8 @@ checked-in docs, tests, and commits only.
   and `emit_json_build_graph_rejects_undeclared_host_effects_before_library_target_lowering`
   and `emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering`
   cover negative host-effect paths through the advertised compiler command.
+  `emit_json_build_graph_rejects_unknown_target_dependencies` covers unresolved
+  target dependency rejection through the same graph-emission path.
 - `build-graph <build.zen>` now consumes the deterministic graph for one
   executable target without widening the accepted `build.zen` subset.
   `build_graph_command_compiles_single_executable_target` covers the positive
