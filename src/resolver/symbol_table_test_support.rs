@@ -1,4 +1,5 @@
 use super::*;
+use crate::ast::AstType;
 
 impl SymbolTable {
     #[cfg(test)]
