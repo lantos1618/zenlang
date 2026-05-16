@@ -2063,7 +2063,9 @@ checked-in docs, tests, and commits only.
   `build_graph_command_compiles_single_executable_target` covers the
   single-target positive path,
   `build_graph_command_compiles_multiple_executable_targets` covers
-  multi-target execution, `build_graph_command_rejects_undeclared_host_effects`
+  multi-target execution,
+  `build_graph_command_compiles_executable_dependencies_first` covers
+  dependency-ordered execution, `build_graph_command_rejects_undeclared_host_effects`
   and `build_graph_command_multi_target_rejects_undeclared_host_effects` cover
   deterministic host-effect rejection before execution starts,
   `build_graph_command_rejects_graph_without_executable_targets` covers

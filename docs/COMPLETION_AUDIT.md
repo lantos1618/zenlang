@@ -2283,6 +2283,8 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_compiles_single_executable_target`
   and
   `cargo test --test integration build_graph_command_compiles_multiple_executable_targets`.
+  Dependency-ordered executable target execution is covered by
+  `cargo test --test integration build_graph_command_compiles_executable_dependencies_first`.
   Single-target and multi-target host-effect rejection are covered by
   `cargo test --test integration build_graph_command_rejects_undeclared_host_effects`
   and
