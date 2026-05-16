@@ -196,6 +196,8 @@ checked-in docs, tests, and commits only.
   coverage separate.
 - Lexer unit tests now live beside the lexer implementation in a dedicated test
   module, keeping the public lexer API and character-span helpers compact.
+- Parser block, closure, and argument-list helpers now live in a dedicated
+  parser module, keeping atom parsing focused on prefix expression dispatch.
 - Module-system unit tests now live beside the module-system implementation in
   a dedicated test module, keeping module graph/load entry points compact.
 - Resolver expected-local traversal now lives in a dedicated validation support
