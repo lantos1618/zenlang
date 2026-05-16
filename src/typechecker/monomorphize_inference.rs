@@ -47,8 +47,8 @@ impl TypeChecker {
         param_types: &[(String, AstType)],
         arg_types: &[Type],
     ) -> (HashMap<String, Type>, Vec<InferenceConflict>) {
-        let (mut map, mut conflicts) =
-            self.infer_type_args_with_conflicts(type_params, param_types, arg_types);
+        let mut map = HashMap::new();
+        let mut conflicts = Vec::new();
         if let (Some(receiver_name), Some(receiver_ty)) = (
             super::method_signature_receiver_name(method_name),
             arg_types.first(),
@@ -60,6 +60,9 @@ impl TypeChecker {
                 &mut map,
                 &mut conflicts,
             );
+        }
+        for ((_name, param_ty), arg_ty) in param_types.iter().zip(arg_types.iter()) {
+            self.match_type_param(param_ty, arg_ty, type_params, &mut map, &mut conflicts);
         }
         (map, conflicts)
     }

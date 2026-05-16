@@ -98,7 +98,8 @@ impl TypeChecker {
         callee: &str,
         conflicts: Vec<InferenceConflict>,
         span: Span,
-    ) {
+    ) -> bool {
+        let valid = conflicts.is_empty();
         for conflict in conflicts {
             self.diagnostics.push(Diagnostic::error(
                 "E5000",
@@ -113,6 +114,7 @@ impl TypeChecker {
                 span,
             ));
         }
+        valid
     }
 
     pub(super) fn explicit_type_arg_substitutions(

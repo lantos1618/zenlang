@@ -31,8 +31,9 @@ impl TypeChecker {
                         &info.params,
                         &arg_types,
                     );
-                    self.report_inference_conflicts("function", &full_name, conflicts, span);
-                    (subs, true)
+                    let inferred_type_args_valid =
+                        self.report_inference_conflicts("function", &full_name, conflicts, span);
+                    (subs, inferred_type_args_valid)
                 } else {
                     self.explicit_type_arg_substitutions(
                         "function",
@@ -228,8 +229,9 @@ impl TypeChecker {
                         &info.params,
                         &arg_types,
                     );
-                    self.report_inference_conflicts("method", &method_key, conflicts, span);
-                    (subs, true)
+                    let inferred_type_args_valid =
+                        self.report_inference_conflicts("method", &method_key, conflicts, span);
+                    (subs, inferred_type_args_valid)
                 } else {
                     self.explicit_type_arg_substitutions(
                         "method",
@@ -320,13 +322,13 @@ impl TypeChecker {
                             &info.params,
                             &arg_types,
                         );
-                        self.report_inference_conflicts(
+                        let inferred_type_args_valid = self.report_inference_conflicts(
                             "method",
                             &generic_method_key,
                             conflicts,
                             span,
                         );
-                        (subs, true)
+                        (subs, inferred_type_args_valid)
                     } else {
                         self.explicit_type_arg_substitutions(
                             "method",
@@ -434,8 +436,9 @@ impl TypeChecker {
                         &info.params,
                         &arg_types,
                     );
-                    self.report_inference_conflicts("function", method, conflicts, span);
-                    (subs, true)
+                    let inferred_type_args_valid =
+                        self.report_inference_conflicts("function", method, conflicts, span);
+                    (subs, inferred_type_args_valid)
                 } else {
                     self.explicit_type_arg_substitutions(
                         "function",
