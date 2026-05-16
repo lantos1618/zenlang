@@ -4118,6 +4118,13 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: Option<&SymbolTable>,
     ) {
+        let requires_tasks = Self::collect_behavior_requires_validation_tasks(decls);
+        self.validate_behavior_requires_tasks(&requires_tasks, symbols);
+    }
+
+    fn collect_behavior_requires_validation_tasks(
+        decls: &[Declaration],
+    ) -> Vec<BehaviorRequiresValidationTask<'_>> {
         let mut requires_tasks = Vec::new();
         for decl in decls {
             if let Declaration::Requires {
@@ -4136,7 +4143,7 @@ impl TypeChecker {
             }
         }
 
-        self.validate_behavior_requires_tasks(&requires_tasks, symbols);
+        requires_tasks
     }
 
     fn validate_behavior_requires_tasks(
@@ -13799,6 +13806,28 @@ Point.implements(Json) {
         assert_eq!(tasks[0].type_name, "Point");
         assert_eq!(tasks[0].behavior, "Json");
         assert_eq!(tasks[0].methods.len(), 1);
+    }
+
+    #[test]
+    fn behavior_requires_validation_tasks_collect_requires_declarations() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+
+        let tasks = TypeChecker::collect_behavior_requires_validation_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].type_name, "Point");
+        assert_eq!(tasks[0].behavior, "Json");
+        assert_eq!(tasks[0].behavior_type_args, &[AstType::Str]);
     }
 
     #[test]

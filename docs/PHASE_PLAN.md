@@ -167,7 +167,8 @@ checked-in docs, tests, and commits only.
   before parent, cycle, and method-coherence checks.
 - Collected declaration semantic validation now records behavior impl checks
   with a named validation task collector, then replays behavior impl before
-  requires validation.
+  requires validation. Behavior requires validation also uses a named task
+  collector before replay.
 - Resolver-backed type behavior-impl refresh now uses explicit restored type
   tasks instead of a callback traversal for the final association restoration
   pass.
