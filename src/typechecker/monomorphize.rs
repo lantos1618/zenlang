@@ -18,19 +18,25 @@ pub(crate) struct InferenceConflict {
 fn install_dependency_map<T: Clone>(
     target: &mut HashMap<String, T>,
     dependencies: &HashMap<String, T>,
-) -> Vec<(String, Option<T>)> {
+) -> Vec<super::TemplateDependencyEntry<T>> {
     dependencies
         .iter()
-        .map(|(name, value)| (name.clone(), target.insert(name.clone(), value.clone())))
+        .map(|(name, value)| super::TemplateDependencyEntry {
+            name: name.clone(),
+            previous: target.insert(name.clone(), value.clone()),
+        })
         .collect()
 }
 
-fn restore_dependency_map<T>(target: &mut HashMap<String, T>, state: Vec<(String, Option<T>)>) {
-    for (name, previous) in state {
-        if let Some(previous) = previous {
-            target.insert(name, previous);
+fn restore_dependency_map<T>(
+    target: &mut HashMap<String, T>,
+    state: Vec<super::TemplateDependencyEntry<T>>,
+) {
+    for entry in state {
+        if let Some(previous) = entry.previous {
+            target.insert(entry.name, previous);
         } else {
-            target.remove(&name);
+            target.remove(&entry.name);
         }
     }
 }

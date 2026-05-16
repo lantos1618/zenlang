@@ -307,13 +307,19 @@ impl GenericFunctionTemplate {
     }
 }
 
-pub(crate) type TemplateStructDependencyState = Vec<(String, Option<StructInfo>)>;
-pub(crate) type TemplateEnumDependencyState = Vec<(String, Option<EnumInfo>)>;
-pub(crate) type TemplateFunctionDependencyState = Vec<(String, Option<FuncInfo>)>;
-pub(crate) type TemplateGenericDependencyState = Vec<(String, Option<GenericFunctionTemplate>)>;
-pub(crate) type TemplateMethodDependencyState = Vec<(String, Option<FuncInfo>)>;
+pub(crate) struct TemplateDependencyEntry<T> {
+    name: String,
+    previous: Option<T>,
+}
+
+pub(crate) type TemplateStructDependencyState = Vec<TemplateDependencyEntry<StructInfo>>;
+pub(crate) type TemplateEnumDependencyState = Vec<TemplateDependencyEntry<EnumInfo>>;
+pub(crate) type TemplateFunctionDependencyState = Vec<TemplateDependencyEntry<FuncInfo>>;
+pub(crate) type TemplateGenericDependencyState =
+    Vec<TemplateDependencyEntry<GenericFunctionTemplate>>;
+pub(crate) type TemplateMethodDependencyState = Vec<TemplateDependencyEntry<FuncInfo>>;
 pub(crate) type TemplateGenericMethodDependencyState =
-    Vec<(String, Option<GenericFunctionTemplate>)>;
+    Vec<TemplateDependencyEntry<GenericFunctionTemplate>>;
 
 pub(crate) struct TemplateDependencyState {
     structs: TemplateStructDependencyState,
@@ -12182,6 +12188,17 @@ Point.implements(Json) {
             Declaration::Function { name, .. } if name == "encode"
         ));
         assert!(unmatched.is_empty());
+    }
+
+    #[test]
+    fn template_dependency_entries_use_named_fields() {
+        let entry = TemplateDependencyEntry::<StructInfo> {
+            name: "Point".to_string(),
+            previous: None,
+        };
+
+        assert_eq!(entry.name, "Point");
+        assert!(entry.previous.is_none());
     }
 
     #[test]

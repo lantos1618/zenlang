@@ -1650,6 +1650,9 @@ checked-in docs, tests, and commits only.
 - Behavior impl conformance now carries effective impl methods as named
   declaration/name records instead of positional tuples, keeping resolver-owned
   method-name replay explicit.
+- Generic template dependency save/restore entries now use named `name` and
+  `previous` fields instead of raw `(name, previous)` tuples in the
+  monomorphization dependency snapshots.
 
 ## Current Phase
 
