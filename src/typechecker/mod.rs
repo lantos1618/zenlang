@@ -7759,7 +7759,7 @@ impl TypeChecker {
         self.validate_no_extra_resolver_declaration_symbols(&expected_symbols, symbols);
         self.validate_no_extra_resolver_local_symbols(&expected_symbols, symbols);
         self.validate_resolver_behavior_association_lists(program, symbols);
-        self.validate_stripped_resolver_import_symbols(program, symbols);
+        self.validate_stripped_resolver_import_symbols(expected_symbols.validate_imports, symbols);
     }
 
     fn require_resolver_callable_locals(
@@ -8035,14 +8035,10 @@ impl TypeChecker {
 
     fn validate_stripped_resolver_import_symbols(
         &mut self,
-        program: &ast::Program,
+        validate_imports: bool,
         symbols: &SymbolTable,
     ) {
-        if program
-            .declarations
-            .iter()
-            .any(|decl| matches!(decl, Declaration::Import { .. }))
-        {
+        if validate_imports {
             return;
         }
 

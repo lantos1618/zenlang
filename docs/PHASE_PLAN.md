@@ -141,7 +141,7 @@ checked-in docs, tests, and commits only.
   existing resolver metadata list checks.
 - Resolver extra-symbol validation now collects expected declaration symbols,
   expected local symbols, and import-validation state in one declaration pass
-  before checking resolver-owned extras.
+  before checking resolver-owned extras and stripped resolver import metadata.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.

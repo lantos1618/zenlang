@@ -215,6 +215,9 @@ and do not assume Phase 4 is ready without evidence.
   expected local symbols, and import-validation state in one declaration pass,
   covered by
   `typechecker::tests::resolver_expected_symbol_sets_collect_declarations_and_locals_together`.
+  Stripped resolver import validation also reuses that collected import state,
+  covered by
+  `typechecker::tests::check_program_with_symbols_validates_stripped_resolver_import_sources`.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate
