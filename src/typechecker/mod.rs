@@ -4258,6 +4258,7 @@ impl TypeChecker {
         }
     }
 
+    #[cfg(test)]
     fn collect_resolver_type_reference_validation_tasks(
         decls: &[Declaration],
     ) -> Vec<ResolverTypeReferenceValidationTask<'_>> {
@@ -4493,7 +4494,7 @@ impl TypeChecker {
         self.with_resolver_backed_collection(|checker| {
             checker
                 .validate_behavior_association_tasks(&tasks.behavior_associations, Some(symbols));
-            checker.validate_resolver_type_reference_tasks(&tasks.type_references, Some(symbols));
+            checker.validate_resolver_type_reference_tasks(tasks, Some(symbols));
             checker.validate_resolver_struct_field_default_tasks(tasks, Some(symbols));
         });
     }
@@ -6970,16 +6971,16 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: Option<&SymbolTable>,
     ) {
-        let tasks = Self::collect_resolver_type_reference_validation_tasks(decls);
+        let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
         self.validate_resolver_type_reference_tasks(&tasks, symbols);
     }
 
     fn validate_resolver_type_reference_tasks(
         &mut self,
-        tasks: &[ResolverTypeReferenceValidationTask<'_>],
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
         symbols: Option<&SymbolTable>,
     ) {
-        for task in tasks {
+        for task in &tasks.type_references {
             match task {
                 ResolverTypeReferenceValidationTask::Struct { name, fields, span } => {
                     self.validate_resolver_struct_type_references(symbols, name, fields, *span);
