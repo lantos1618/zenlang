@@ -2161,6 +2161,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test behavior_requires_validation_tasks_collect_requires_declarations`,
   and
   `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
+- Behavior extends replay now uses one named helper for parent-edge semantic
+  validation task collection, covered by
+  `cargo test behavior_extends_replay_task_helper_pushes_parent_validation`
+  and `cargo test behavior_extends_validation_tasks_collect_parent_refs`.
 
 ## Unresolved Gaps
 

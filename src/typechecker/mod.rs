@@ -3898,15 +3898,15 @@ impl TypeChecker {
     ) -> Vec<BehaviorExtendsValidationTask<'_>> {
         let mut tasks = Vec::new();
         for decl in decls {
-            Self::push_behavior_extends_validation_task(decl, &mut tasks);
+            Self::push_behavior_extends_replay_task(decl, &mut tasks);
         }
         tasks
     }
 
-    fn push_behavior_extends_validation_task<'a>(
+    fn push_behavior_extends_replay_task<'a>(
         decl: &'a Declaration,
         tasks: &mut Vec<BehaviorExtendsValidationTask<'a>>,
-    ) {
+    ) -> bool {
         if let Declaration::BehaviorExtends {
             behavior,
             parent,
@@ -3920,6 +3920,9 @@ impl TypeChecker {
                 parent_type_args,
                 span: *span,
             });
+            true
+        } else {
+            false
         }
     }
 
@@ -14743,6 +14746,33 @@ Pretty.extends(Json<T>)
 
         let tasks = TypeChecker::collect_behavior_extends_validation_tasks(&program.declarations);
 
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].behavior, "Pretty");
+        assert_eq!(tasks[0].parent, "Json");
+        assert_eq!(
+            tasks[0].parent_type_args,
+            &[AstType::Named("T".to_string())]
+        );
+    }
+
+    #[test]
+    fn behavior_extends_replay_task_helper_pushes_parent_validation() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+}
+Pretty<T>: behavior {
+}
+
+Pretty.extends(Json<T>)
+"#,
+        );
+        let mut tasks = Vec::new();
+
+        let handled =
+            TypeChecker::push_behavior_extends_replay_task(&program.declarations[2], &mut tasks);
+
+        assert!(handled);
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].behavior, "Pretty");
         assert_eq!(tasks[0].parent, "Json");

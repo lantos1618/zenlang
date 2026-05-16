@@ -1772,6 +1772,10 @@ checked-in docs, tests, and commits only.
   semantic validation task collection and resolver-backed declaration metadata
   collection, so requires declarations are classified consistently before
   behavior-association validation runs.
+- Behavior extends replay now uses one named helper for parent-edge semantic
+  validation task collection, so behavior inheritance declarations are
+  classified consistently before parent validation, cycle checks, and method
+  coherence run.
 
 ## Current Phase
 
