@@ -149,7 +149,9 @@ checked-in docs, tests, and commits only.
   collection now shares one scoped helper. Child expression local collection is
   shared for loop, while, and conditional branch scopes.
   Match-arm pattern/body local collection also shares one scoped helper, and
-  block expression/statement local collection now shares one block-scope helper.
+  pattern binding insertion is shared for identifier and struct shorthand
+  bindings. Block expression/statement local collection now shares one
+  block-scope helper.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.

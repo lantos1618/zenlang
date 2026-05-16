@@ -9460,26 +9460,14 @@ impl TypeChecker {
     ) {
         match pattern {
             ast::Pattern::Identifier { name, span } => {
-                self.require_resolver_local_symbol(
-                    symbols,
-                    name,
-                    expected_local_symbol(false, locals.current_scope_id),
-                    *span,
-                );
-                locals.insert(name.clone(), false);
+                self.require_resolver_pattern_binding(symbols, name, *span, locals);
             }
             ast::Pattern::Struct { fields, span, .. } => {
                 for (name, nested) in fields {
                     if let Some(nested) = nested {
                         self.require_resolver_pattern_locals(symbols, nested, scope_cursor, locals);
                     } else {
-                        self.require_resolver_local_symbol(
-                            symbols,
-                            name,
-                            expected_local_symbol(false, locals.current_scope_id),
-                            *span,
-                        );
-                        locals.insert(name.clone(), false);
+                        self.require_resolver_pattern_binding(symbols, name, *span, locals);
                     }
                 }
             }
@@ -9506,6 +9494,22 @@ impl TypeChecker {
             | ast::Pattern::BoolTrue { .. }
             | ast::Pattern::BoolFalse { .. } => {}
         }
+    }
+
+    fn require_resolver_pattern_binding(
+        &mut self,
+        symbols: &SymbolTable,
+        name: &str,
+        span: Span,
+        locals: &mut ResolverLocalScope,
+    ) {
+        self.require_resolver_local_symbol(
+            symbols,
+            name,
+            expected_local_symbol(false, locals.current_scope_id),
+            span,
+        );
+        locals.insert(name.to_string(), false);
     }
 
     fn require_resolver_local_symbol(
@@ -11231,14 +11235,14 @@ fn expected_resolver_pattern_locals(
 ) {
     match pattern {
         ast::Pattern::Identifier { name, .. } => {
-            expected_resolver_local(name, false, locals, expected);
+            expected_resolver_pattern_binding(name, locals, expected);
         }
         ast::Pattern::Struct { fields, .. } => {
             for (name, nested) in fields {
                 if let Some(nested) = nested {
                     expected_resolver_pattern_locals(nested, scope_cursor, locals, expected);
                 } else {
-                    expected_resolver_local(name, false, locals, expected);
+                    expected_resolver_pattern_binding(name, locals, expected);
                 }
             }
         }
@@ -11265,6 +11269,14 @@ fn expected_resolver_pattern_locals(
         | ast::Pattern::BoolTrue { .. }
         | ast::Pattern::BoolFalse { .. } => {}
     }
+}
+
+fn expected_resolver_pattern_binding(
+    name: &str,
+    locals: &mut ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    expected_resolver_local(name, false, locals, expected);
 }
 
 fn expected_resolver_local(
@@ -13873,6 +13885,52 @@ main = (value: Option) i32 {
 
         assert!(expected.iter().any(|(name, _)| name == "inner"));
         assert!(expected.iter().any(|(name, _)| name == "doubled"));
+    }
+
+    #[test]
+    fn expected_resolver_pattern_locals_collects_struct_shorthand_bindings() {
+        let program = parse_program(
+            r#"
+Point: { x: i32, y: i32 }
+
+main = (point: Point) i32 {
+    return point ?
+        | Point { x, y } { x + y }
+}
+"#,
+        );
+        let Declaration::Function { body, .. } = &program.declarations[1] else {
+            panic!("expected function");
+        };
+        let Expression::Block {
+            expr: Some(expr), ..
+        } = body
+        else {
+            panic!("expected block");
+        };
+        let Expression::Return {
+            value: Some(value), ..
+        } = expr.as_ref()
+        else {
+            panic!("expected return expression");
+        };
+        let Expression::Match { arms, .. } = value.as_ref() else {
+            panic!("expected match expression");
+        };
+        let arm = arms.first().expect("first match arm");
+        let mut scope_cursor = ResolverScopeCursor::default();
+        let mut locals = scope_cursor.new_scope();
+        let mut expected = HashSet::new();
+
+        expected_resolver_pattern_locals(
+            &arm.pattern,
+            &mut scope_cursor,
+            &mut locals,
+            &mut expected,
+        );
+
+        assert!(expected.iter().any(|(name, _)| name == "x"));
+        assert!(expected.iter().any(|(name, _)| name == "y"));
     }
 
     #[test]

@@ -242,6 +242,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::expected_resolver_child_expr_locals_collects_branch_bindings`.
   Match-arm pattern/body local collection is shared, covered by
   `typechecker::tests::expected_resolver_pattern_expr_locals_collects_pattern_and_body_bindings`.
+  Pattern binding insertion is shared for identifier and struct shorthand
+  bindings, covered by
+  `typechecker::tests::expected_resolver_pattern_locals_collects_struct_shorthand_bindings`.
   Block expression/statement local collection is shared, covered by
   `typechecker::tests::expected_resolver_block_locals_collects_statement_and_final_expr_bindings`.
 - Resolver-backed declaration metadata collection now records callable, type,
