@@ -17,26 +17,29 @@ count_to = (n: i32) void {
 find_power_of_two = (target: i32) i32 {
     val ::= 1
     loop {
-        val >= target ? | true { return val }
+        val >= target ? | true { break }
         val = val * 2
     }
+    val
 }
 
 // Fibonacci using loop
 fibonacci = (n: i32) i32 {
-    n <= 1 ? | true { return n }
-
-    a ::= 0
-    b ::= 1
-    i ::= 2
-    loop {
-        i > n ? | true { break }
-        temp = a + b
-        a = b
-        b = temp
-        i = i + 1
-    }
-    return b
+    n <= 1 ?
+        | true { n }
+        | false {
+            a ::= 0
+            b ::= 1
+            i ::= 2
+            loop {
+                i > n ? | true { break }
+                temp = a + b
+                a = b
+                b = temp
+                i = i + 1
+            }
+            b
+        }
 }
 
 // Collection loop
@@ -48,7 +51,7 @@ sum_array = (arr: [i32; 5]) i32 {
         total = total + arr[i]
         i = i + 1
     })
-    return total
+    total
 }
 
 main = () i32 {
@@ -69,5 +72,5 @@ main = () i32 {
     numbers = [10, 20, 30, 40, 50]
     io.println("Sum: ${sum_array(numbers)}")
 
-    return 0
+    0
 }

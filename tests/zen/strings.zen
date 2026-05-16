@@ -1,0 +1,9 @@
+{ io } = std
+
+main = () i32 {
+    name = "Zen"
+    version = 1
+    io.println("Hello from ${name} v${version}!")
+    io.println("1 + 2 = ${1 + 2}")
+    0
+}

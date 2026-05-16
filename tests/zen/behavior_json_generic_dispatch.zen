@@ -1,0 +1,25 @@
+{ io } = std
+
+Json: behavior {
+    to_json: (Self) str
+}
+
+Point: {
+    x: i32
+}
+
+Point.implements(Json) {
+    to_json = (self: Point) str {
+        "point"
+    }
+}
+
+encode<T: Json> = (value: T) str {
+    value.to_json()
+}
+
+main = () i32 {
+    point = Point { x: 1 }
+    io.println(encode(point))
+    0
+}

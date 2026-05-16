@@ -1,4 +1,4 @@
-// Zen Standard Library: Vector Type
+// Zen Standard Library: Dynamic Vector Type
 // Generic growable array with allocator support
 
 { compiler } = @std
@@ -6,8 +6,8 @@
 { Option } = @std.core.option
 { Allocator } = @std.memory.allocator
 
-// Vec<T> - Growable Array (Owned, Must Be Freed)
-Vec<T>: {
+// DynDynVec<T> - Growable Array (Owned, Must Be Freed)
+DynDynVec<T>: {
     data: Ptr<T>,
     len: usize,
     capacity: usize,
@@ -19,8 +19,8 @@ Vec<T>: {
 // ============================================================================
 
 // Create new empty vector
-Vec<T>.new = (allocator: Allocator) Vec<T> {
-    return Vec<T> {
+DynVec<T>.new = (allocator: Allocator) DynVec<T> {
+    return DynVec<T> {
         data: Ptr<T>.none(),
         len: 0,
         capacity: 0,
@@ -29,16 +29,16 @@ Vec<T>.new = (allocator: Allocator) Vec<T> {
 }
 
 // Create vector with initial capacity
-Vec<T>.with_capacity = (allocator: Allocator, initial_capacity: usize) Vec<T> {
+DynVec<T>.with_capacity = (allocator: Allocator, initial_capacity: usize) DynVec<T> {
     initial_capacity == 0 ?
-        | true { return Vec<T>.new(allocator) }
+        | true { return DynVec<T>.new(allocator) }
         | false {
             item_size = compiler.sizeof<T>()
             total_size = initial_capacity * item_size
             raw_ptr = allocator.allocate(total_size)
             data = Ptr<T>.from_addr(raw_ptr)
             
-            return Vec<T> {
+            return DynVec<T> {
                 data: data,
                 len: 0,
                 capacity: initial_capacity,
@@ -52,17 +52,17 @@ Vec<T>.with_capacity = (allocator: Allocator, initial_capacity: usize) Vec<T> {
 // ============================================================================
 
 // Get current length
-Vec<T>.len = (self: Vec<T>) usize {
+DynVec<T>.len = (self: DynVec<T>) usize {
     return self.len
 }
 
 // Get allocated capacity
-Vec<T>.capacity = (self: Vec<T>) usize {
+DynVec<T>.capacity = (self: DynVec<T>) usize {
     return self.capacity
 }
 
 // Check if empty
-Vec<T>.is_empty = (self: Vec<T>) bool {
+DynVec<T>.is_empty = (self: DynVec<T>) bool {
     return self.len == 0
 }
 
@@ -71,7 +71,7 @@ Vec<T>.is_empty = (self: Vec<T>) bool {
 // ============================================================================
 
 // Get element at index (returns Option<T>)
-Vec<T>.get = (self: Vec<T>, index: usize) Option<T> {
+DynVec<T>.get = (self: DynVec<T>, index: usize) Option<T> {
     index >= self.len ?
         | true { return Option.None }
         | false {
@@ -89,7 +89,7 @@ Vec<T>.get = (self: Vec<T>, index: usize) Option<T> {
 }
 
 // Check if index is valid
-Vec<T>.is_valid_index = (self: Vec<T>, index: usize) bool {
+DynVec<T>.is_valid_index = (self: DynVec<T>, index: usize) bool {
     return index < self.len
 }
 
@@ -98,7 +98,7 @@ Vec<T>.is_valid_index = (self: Vec<T>, index: usize) bool {
 // ============================================================================
 
 // Push element to end (auto-grows)
-Vec<T>.push = (self: MutPtr<Vec<T>>, elem: T) void {
+DynVec<T>.push = (self: MutPtr<DynVec<T>>, elem: T) void {
     item_size = compiler.sizeof<T>()
 
     // Initial allocation if empty
@@ -136,14 +136,14 @@ Vec<T>.push = (self: MutPtr<Vec<T>>, elem: T) void {
 }
 
 // Pop element from end
-Vec<T>.pop = (self: MutPtr<Vec<T>>) void {
+DynVec<T>.pop = (self: MutPtr<DynVec<T>>) void {
     self.val.len > 0 ?
         | true { self.val.len = self.val.len - 1 }
         | false { }
 }
 
 // Clear without deallocating
-Vec<T>.clear = (self: MutPtr<Vec<T>>) void {
+DynVec<T>.clear = (self: MutPtr<DynVec<T>>) void {
     self.val.len = 0
 }
 
@@ -152,7 +152,7 @@ Vec<T>.clear = (self: MutPtr<Vec<T>>) void {
 // ============================================================================
 
 // Reserve additional capacity
-Vec<T>.reserve = (self: MutPtr<Vec<T>>, additional: usize) void {
+DynVec<T>.reserve = (self: MutPtr<DynVec<T>>, additional: usize) void {
     needed = self.val.len + additional
     needed > self.val.capacity ?
         | true {
@@ -169,7 +169,7 @@ Vec<T>.reserve = (self: MutPtr<Vec<T>>, additional: usize) void {
 }
 
 // Deallocate vector
-Vec<T>.free = (self: MutPtr<Vec<T>>) void {
+DynVec<T>.free = (self: MutPtr<DynVec<T>>) void {
     raw_addr = self.val.data.addr()
     item_size = compiler.sizeof<T>()
     total_size = self.val.capacity * item_size
@@ -184,16 +184,16 @@ Vec<T>.free = (self: MutPtr<Vec<T>>) void {
 // Iterator Support
 // ============================================================================
 
-// VecIterator - Iterates over Vec elements
-VecIterator<T>: {
+// DynVecIterator - Iterates over DynVec elements
+DynVecIterator<T>: {
     data: Ptr<T>,
     index: usize,
     len: usize
 }
 
 // Create an iterator over the vector
-Vec<T>.iter = (self: Vec<T>) VecIterator<T> {
-    return VecIterator<T> {
+DynVec<T>.iter = (self: DynVec<T>) DynVecIterator<T> {
+    return DynVecIterator<T> {
         data: self.data,
         index: 0,
         len: self.len
@@ -201,7 +201,7 @@ Vec<T>.iter = (self: Vec<T>) VecIterator<T> {
 }
 
 // Get next element from iterator
-VecIterator<T>.next = (self: MutPtr<VecIterator<T>>) Option<T> {
+DynVecIterator<T>.next = (self: MutPtr<DynVecIterator<T>>) Option<T> {
     self.val.index < self.val.len ?
         | true {
             // Get element at current index
@@ -219,6 +219,6 @@ VecIterator<T>.next = (self: MutPtr<VecIterator<T>>) Option<T> {
 }
 
 // Check if iterator has more elements
-VecIterator<T>.has_next = (self: VecIterator<T>) bool {
+DynVecIterator<T>.has_next = (self: DynVecIterator<T>) bool {
     return self.index < self.len
 }

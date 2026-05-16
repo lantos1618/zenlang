@@ -1,0 +1,30 @@
+{ io } = std
+
+Json: behavior {
+    to_json: (Self) str {
+        "default-json"
+    }
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+
+Point: {
+    x: i32
+}
+
+Point.implements(PrettyJson) {
+    pretty = (value: Point) str {
+        "pretty-point"
+    }
+}
+
+main = () i32 {
+    point = Point { x: 1 }
+    io.println(point.to_json())
+    io.println(point.pretty())
+    0
+}

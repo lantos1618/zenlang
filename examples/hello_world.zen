@@ -1,8 +1,0 @@
-// Hello World in Zen
-
-{ io } = std
-
-main = () i32 {
-    io.println("Hello, World!")
-    return 0
-}

@@ -1,40 +1,14 @@
-//! Type representations in the AST
+use crate::error::Span;
+use serde::Serialize;
 
-use std::collections::HashMap;
-use std::fmt;
-
-use crate::intrinsics::well_known;
-
-use super::fields::{AstFields, FieldValue};
-
-// ============================================================================
-// TYPE NAME UTILITIES
-// Centralized helpers to avoid string parsing duplication across codebase
-// ============================================================================
-
-/// Check if a string looks like a type name (starts with uppercase).
-/// Used for heuristic type detection in LSP and parsing.
+/// Parser-level type representation.
 ///
-/// This is used in 15+ places across the codebase.
-#[inline]
-pub fn looks_like_type_name(name: &str) -> bool {
-    name.chars().next().is_some_and(|c| c.is_ascii_uppercase())
-}
-
-/// Resolve String type from stdlib - returns the struct type definition
-/// String is defined in stdlib/string.zen as:
-/// struct String {
-///     data: Ptr<u8>
-///     len: u64
-///     capacity: usize
-///     allocator: Allocator
-/// }
-pub fn resolve_string_struct_type() -> AstType {
-    crate::stdlib_types::stdlib_types().get_string_type()
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// These types may be unresolved — `Named("Point")` hasn't been looked up yet,
+/// `Inferred` means the typechecker must figure it out. The typechecker resolves
+/// these into fully concrete `Type` values (see `typed.rs`).
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum AstType {
+    // Integers
     I8,
     I16,
     I32,
@@ -44,409 +18,100 @@ pub enum AstType {
     U32,
     U64,
     Usize,
+
+    // Floats
     F32,
     F64,
+
+    // Other primitives
     Bool,
-    StaticLiteral, // Internal: Compiler-known string literals (LLVM use only)
-    StaticString,  // User-facing: StringLiteral (compile-time, immutable, no allocator)
-    // String is defined in stdlib/string.zen as a struct, not a compiler primitive
-    // Use resolve_string_struct_type() helper to get the struct type
     Void,
-    // [T] - Slice type (pointer + length, no ownership)
-    Slice(Box<AstType>),
-    // [T; N] - Fixed-size array (inline, stack-allocated)
-    FixedArray {
-        element_type: Box<AstType>,
-        size: usize,
-    },
-    // Note: Vec<T>, DynVec<T>, HashMap<K,V> etc. are stdlib generic types,
-    // represented as AstType::Generic { name: "Vec", type_args: [T] }
-    Function {
-        args: Vec<AstType>,
-        return_type: Box<AstType>,
-    },
-    FunctionPointer {
-        param_types: Vec<AstType>,
-        return_type: Box<AstType>,
-    },
-    Struct {
-        name: String,
-        fields: Vec<(String, AstType)>,
-    },
-    #[allow(dead_code)]
-    Enum {
-        name: String,
-        variants: Vec<EnumVariant>,
-    },
-    // Enhanced type system support
-    Ref(Box<AstType>), // Managed reference
-    // NOTE: Option<T> and Result<T, E> are now defined in stdlib/core/option.zen and stdlib/core/result.zen
-    // They should be referenced as Generic { name: "Option", type_args: [T] } or Generic { name: "Result", type_args: [T, E] }
-    Range {
-        start_type: Box<AstType>,
-        end_type: Box<AstType>,
-        inclusive: bool,
-    }, // Range types for .. and ..=
-    // For generic types (future)
+
+    // Strings
+    Str,    // static string: { ptr, len }
+    String, // heap string: { ptr, len, cap, alloc }
+
+    // User-defined / unresolved named type
+    Named(std::string::String),
+
+    // Generic type application: `Channel<SensorReading>`, `Result<T, E>`
     Generic {
-        name: String,
+        name: std::string::String,
         type_args: Vec<AstType>,
     },
-    // For enum type references (e.g., when MyOption is used as an identifier)
-    #[allow(dead_code)]
-    EnumType {
-        name: String,
+
+    // Collections
+    Array {
+        elem: Box<AstType>,
+        size: Option<usize>,
     },
-    // For stdlib module references (e.g., math, io when imported)
-    StdModule,
-}
+    Slice(Box<AstType>),
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct EnumVariant {
-    pub name: String,
-    pub payload: Option<AstType>, // Some(type) for variants with data, None for unit variants
-}
+    // Pointers
+    Ptr(Box<AstType>),
+    MutPtr(Box<AstType>),
+    RawPtr(Box<AstType>),
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TypeParameter {
-    pub name: String,
-    pub constraints: Vec<TraitConstraint>, // Trait bounds like T: Geometric + Serializable
-}
+    // Function type: `(i32, i32) i32`
+    Function {
+        params: Vec<AstType>,
+        ret: Box<AstType>,
+    },
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TraitConstraint {
-    pub trait_name: String,
-}
+    // Self type — used in method signatures and behavior definitions
+    SelfType,
 
-// ============================================================================
-// Helper constructors for pointer types (use these instead of direct variants)
-// These create Generic types that codegen recognizes via well_known registry
-// ============================================================================
+    // Type to be inferred by the typechecker
+    Inferred,
+}
 
 impl AstType {
-    /// Create a Self-type placeholder for implicit `self` parameters.
-    /// This is resolved during type checking based on the implementing type.
-    pub fn self_type() -> AstType {
-        AstType::Generic {
-            name: "Self".to_string(),
-            type_args: Vec::new(),
-        }
-    }
-
-    /// Returns the variant name of this type as a static string.
-    pub fn variant_name(&self) -> &'static str {
+    /// Returns the span-free name for display/error messages.
+    pub fn display_name(&self) -> std::string::String {
         match self {
-            AstType::I8 => "I8",
-            AstType::I16 => "I16",
-            AstType::I32 => "I32",
-            AstType::I64 => "I64",
-            AstType::U8 => "U8",
-            AstType::U16 => "U16",
-            AstType::U32 => "U32",
-            AstType::U64 => "U64",
-            AstType::Usize => "Usize",
-            AstType::F32 => "F32",
-            AstType::F64 => "F64",
-            AstType::Bool => "Bool",
-            AstType::StaticLiteral => "StaticLiteral",
-            AstType::StaticString => "StaticString",
-            AstType::Void => "Void",
-            AstType::Slice(_) => "Slice",
-            AstType::FixedArray { .. } => "FixedArray",
-            AstType::Function { .. } => "Function",
-            AstType::FunctionPointer { .. } => "FunctionPointer",
-            AstType::Struct { .. } => "Struct",
-            AstType::Enum { .. } => "Enum",
-            AstType::Ref(_) => "Ref",
-            AstType::Range { .. } => "Range",
-            AstType::Generic { .. } => "Generic",
-            AstType::EnumType { .. } => "EnumType",
-            AstType::StdModule => "StdModule",
-        }
-    }
-
-    /// Create a Ptr<T> type (immutable pointer)
-    pub fn ptr(inner: AstType) -> AstType {
-        AstType::Generic {
-            name: well_known().ptr_name().to_string(),
-            type_args: vec![inner],
-        }
-    }
-
-    /// Create a MutPtr<T> type (mutable pointer)
-    pub fn mut_ptr(inner: AstType) -> AstType {
-        AstType::Generic {
-            name: well_known().mut_ptr_name().to_string(),
-            type_args: vec![inner],
-        }
-    }
-
-    /// Create a RawPtr<T> type (raw/unsafe pointer)
-    pub fn raw_ptr(inner: AstType) -> AstType {
-        AstType::Generic {
-            name: well_known().raw_ptr_name().to_string(),
-            type_args: vec![inner],
-        }
-    }
-
-    pub fn is_ptr_type(&self) -> bool {
-        matches!(self, AstType::Generic { name, type_args } if type_args.len() == 1 && well_known().is_ptr(name))
-    }
-
-    pub fn is_immutable_ptr(&self) -> bool {
-        matches!(self, AstType::Generic { name, type_args } if type_args.len() == 1 && well_known().is_immutable_ptr(name))
-    }
-
-    pub fn is_mutable_ptr(&self) -> bool {
-        matches!(self, AstType::Generic { name, type_args } if type_args.len() == 1 && well_known().is_mutable_ptr(name))
-    }
-
-    pub fn is_raw_ptr(&self) -> bool {
-        matches!(self, AstType::Generic { name, type_args } if type_args.len() == 1 && well_known().is_raw_ptr(name))
-    }
-
-    pub fn ptr_inner(&self) -> Option<&AstType> {
-        match self {
-            AstType::Generic { name, type_args }
-                if type_args.len() == 1 && well_known().is_ptr(name) =>
-            {
-                Some(&type_args[0])
-            }
-            _ => None,
-        }
-    }
-
-    /// Get the type name for struct, enum, and generic types
-    /// Returns None for primitive types
-    pub fn get_type_name(&self) -> Option<String> {
-        match self {
-            AstType::Struct { name, .. } => Some(name.clone()),
-            AstType::Enum { name, .. } => Some(name.clone()),
-            AstType::Generic { name, .. } => Some(name.clone()),
-            _ => None,
-        }
-    }
-
-    /// Returns the base type name for named types (structs, enums, generics),
-    /// falling back to primitive names for built-in types.
-    /// Returns None for complex types like slices, arrays, functions, etc.
-    pub fn base_name(&self) -> Option<&str> {
-        match self {
-            AstType::Struct { name, .. } => Some(name.as_str()),
-            AstType::Generic { name, .. } => Some(name.as_str()),
-            AstType::Enum { name, .. } => Some(name.as_str()),
-            AstType::EnumType { name } => Some(name.as_str()),
-            // Primitive types
-            AstType::I8 => Some("i8"),
-            AstType::I16 => Some("i16"),
-            AstType::I32 => Some("i32"),
-            AstType::I64 => Some("i64"),
-            AstType::U8 => Some("u8"),
-            AstType::U16 => Some("u16"),
-            AstType::U32 => Some("u32"),
-            AstType::U64 => Some("u64"),
-            AstType::Usize => Some("usize"),
-            AstType::F32 => Some("f32"),
-            AstType::F64 => Some("f64"),
-            AstType::Bool => Some("bool"),
-            AstType::Void => Some("void"),
-            AstType::StaticLiteral => Some("StringLiteral"),
-            AstType::StaticString => Some("StringLiteral"),
-            // Complex types return None
-            AstType::Slice(_) => None,
-            AstType::FixedArray { .. } => None,
-            AstType::Function { .. } => None,
-            AstType::FunctionPointer { .. } => None,
-            AstType::Ref(_) => None,
-            AstType::Range { .. } => None,
-            AstType::StdModule => Some("std"),
-        }
-    }
-}
-
-// Display implementation for generating clean type names
-impl fmt::Display for AstType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AstType::I8 => write!(f, "i8"),
-            AstType::I16 => write!(f, "i16"),
-            AstType::I32 => write!(f, "i32"),
-            AstType::I64 => write!(f, "i64"),
-            AstType::U8 => write!(f, "u8"),
-            AstType::U16 => write!(f, "u16"),
-            AstType::U32 => write!(f, "u32"),
-            AstType::U64 => write!(f, "u64"),
-            AstType::Usize => write!(f, "usize"),
-            AstType::F32 => write!(f, "f32"),
-            AstType::F64 => write!(f, "f64"),
-            AstType::Bool => write!(f, "bool"),
-            AstType::StaticLiteral => write!(f, "StringLiteral"), // Display as StringLiteral to users
-            AstType::StaticString => write!(f, "StringLiteral"),
-            // String is now a struct type from stdlib, resolved via Struct variant
-            AstType::Void => write!(f, "void"),
-            AstType::Slice(inner) => write!(f, "[{}]", inner),
-            AstType::FixedArray { element_type, size } => {
-                write!(f, "[{}; {}]", element_type, size)
-            }
-            AstType::Function { args, return_type } => {
-                write!(f, "(")?;
-                for (i, arg) in args.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}", arg)?;
-                }
-                write!(f, ") {}", return_type)
-            }
-            AstType::FunctionPointer {
-                param_types,
-                return_type,
-            } => {
-                write!(f, "(")?;
-                for (i, param) in param_types.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}", param)?;
-                }
-                write!(f, ") {}", return_type)
-            }
-            AstType::Struct { name, .. } => write!(f, "{}", name),
-            AstType::Enum { name, .. } => write!(f, "{}", name),
-            AstType::Ref(inner) => write!(f, "Ref<{}>", inner),
-            // Option and Result are now Generic types - handled above
-            AstType::Range {
-                start_type,
-                inclusive,
-                ..
-            } => {
-                if *inclusive {
-                    write!(f, "Range<{}..={}>", start_type, start_type)
-                } else {
-                    write!(f, "Range<{}..{}>", start_type, start_type)
-                }
-            }
+            AstType::I8 => "i8".into(),
+            AstType::I16 => "i16".into(),
+            AstType::I32 => "i32".into(),
+            AstType::I64 => "i64".into(),
+            AstType::U8 => "u8".into(),
+            AstType::U16 => "u16".into(),
+            AstType::U32 => "u32".into(),
+            AstType::U64 => "u64".into(),
+            AstType::Usize => "usize".into(),
+            AstType::F32 => "f32".into(),
+            AstType::F64 => "f64".into(),
+            AstType::Bool => "bool".into(),
+            AstType::Void => "void".into(),
+            AstType::Str => "str".into(),
+            AstType::String => "String".into(),
+            AstType::Named(n) => n.clone(),
             AstType::Generic { name, type_args } => {
-                write!(f, "{}", name)?;
-                if !type_args.is_empty() {
-                    write!(f, "<")?;
-                    for (i, arg) in type_args.iter().enumerate() {
-                        if i > 0 {
-                            write!(f, ", ")?;
-                        }
-                        write!(f, "{}", arg)?;
-                    }
-                    write!(f, ">")?;
-                }
-                Ok(())
+                let args: Vec<_> = type_args.iter().map(|a| a.display_name()).collect();
+                format!("{}<{}>", name, args.join(", "))
             }
-            AstType::EnumType { name } => write!(f, "{}", name),
-            AstType::StdModule => write!(f, "std"),
+            AstType::Array { elem, size } => match size {
+                Some(n) => format!("[{}; {}]", elem.display_name(), n),
+                None => format!("[{}]", elem.display_name()),
+            },
+            AstType::Slice(elem) => format!("[{}]", elem.display_name()),
+            AstType::Ptr(inner) => format!("Ptr<{}>", inner.display_name()),
+            AstType::MutPtr(inner) => format!("MutPtr<{}>", inner.display_name()),
+            AstType::RawPtr(inner) => format!("RawPtr<{}>", inner.display_name()),
+            AstType::Function { params, ret } => {
+                let ps: Vec<_> = params.iter().map(|p| p.display_name()).collect();
+                format!("({}) {}", ps.join(", "), ret.display_name())
+            }
+            AstType::SelfType => "Self".into(),
+            AstType::Inferred => "_".into(),
         }
     }
 }
 
-impl AstFields for AstType {
-    fn ast_fields(&self) -> Vec<(&'static str, FieldValue)> {
-        match self {
-            AstType::I8
-            | AstType::I16
-            | AstType::I32
-            | AstType::I64
-            | AstType::U8
-            | AstType::U16
-            | AstType::U32
-            | AstType::U64
-            | AstType::Usize
-            | AstType::F32
-            | AstType::F64
-            | AstType::Bool
-            | AstType::StaticLiteral
-            | AstType::StaticString
-            | AstType::Void
-            | AstType::StdModule => vec![],
-
-            AstType::Slice(inner) => {
-                vec![("element_type", FieldValue::boxed_ty(inner))]
-            }
-            AstType::FixedArray { element_type, size } => vec![
-                ("element_type", FieldValue::boxed_ty(element_type)),
-                ("size", FieldValue::I64(*size as i64)),
-            ],
-            AstType::Function { args, return_type } => vec![
-                ("args", FieldValue::type_array(args)),
-                ("return_type", FieldValue::boxed_ty(return_type)),
-            ],
-            AstType::FunctionPointer {
-                param_types,
-                return_type,
-            } => vec![
-                ("param_types", FieldValue::type_array(param_types)),
-                ("return_type", FieldValue::boxed_ty(return_type)),
-            ],
-            AstType::Struct { name, fields: fs } => vec![
-                ("name", FieldValue::String(name.clone())),
-                (
-                    "fields",
-                    FieldValue::Array(
-                        fs.iter()
-                            .map(|(n, t)| FieldValue::Struct {
-                                name: "StructTypeField".to_string(),
-                                fields: HashMap::from([
-                                    ("name".to_string(), FieldValue::String(n.clone())),
-                                    ("field_type".to_string(), FieldValue::ty(t)),
-                                ]),
-                            })
-                            .collect(),
-                    ),
-                ),
-            ],
-            AstType::Enum { name, variants } => vec![
-                ("name", FieldValue::String(name.clone())),
-                (
-                    "variants",
-                    FieldValue::Array(
-                        variants
-                            .iter()
-                            .map(|v| {
-                                let mut fields = HashMap::new();
-                                fields
-                                    .insert("name".to_string(), FieldValue::String(v.name.clone()));
-                                fields.insert(
-                                    "payload".to_string(),
-                                    match &v.payload {
-                                        Some(t) => FieldValue::ty(t),
-                                        None => FieldValue::Null,
-                                    },
-                                );
-                                FieldValue::Struct {
-                                    name: "EnumVariant".to_string(),
-                                    fields,
-                                }
-                            })
-                            .collect(),
-                    ),
-                ),
-            ],
-            AstType::Ref(inner) => {
-                vec![("inner", FieldValue::boxed_ty(inner))]
-            }
-            AstType::Range {
-                start_type,
-                end_type,
-                inclusive,
-            } => vec![
-                ("start_type", FieldValue::boxed_ty(start_type)),
-                ("end_type", FieldValue::boxed_ty(end_type)),
-                ("inclusive", FieldValue::Bool(*inclusive)),
-            ],
-            AstType::Generic { name, type_args } => vec![
-                ("name", FieldValue::String(name.clone())),
-                ("type_args", FieldValue::type_array(type_args)),
-            ],
-            AstType::EnumType { name } => {
-                vec![("name", FieldValue::String(name.clone()))]
-            }
-        }
-    }
+/// A typed parameter in a function/method/closure signature.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Param {
+    pub name: std::string::String,
+    pub ty: AstType,
+    pub mutable: bool,
+    pub span: Span,
 }

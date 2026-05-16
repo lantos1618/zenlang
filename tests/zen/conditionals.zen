@@ -1,0 +1,13 @@
+{ io } = std
+
+check = (x: i32) StaticString {
+    x > 0 ?
+        | true { "positive" }
+        | false { "non-positive" }
+}
+
+main = () i32 {
+    io.println(check(42))
+    io.println(check(-1))
+    0
+}

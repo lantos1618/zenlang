@@ -1,0 +1,32 @@
+{ io } = std
+{ Json, FancyJson } = traits
+
+Point: {
+    x: i32
+}
+
+Point.implements(FancyJson) {
+    encode = (value: Point) str {
+        "encoded"
+    }
+
+    pretty = (value: Point) str {
+        "pretty"
+    }
+
+    fancy = (value: Point) str {
+        "fancy"
+    }
+}
+
+encode<T: Json<str>> = (value: T) str {
+    value.encode()
+}
+
+main = () i32 {
+    point = Point { x: 11 }
+    io.println(encode(point))
+    io.println(point.pretty())
+    io.println(point.fancy())
+    0
+}

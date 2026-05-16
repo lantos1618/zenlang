@@ -1,0 +1,11 @@
+inner<T> = (value: T) T {
+    value
+}
+
+middle<T> = (value: T) T {
+    inner(value)
+}
+
+pub outer<T> = (value: T) T {
+    middle(value)
+}

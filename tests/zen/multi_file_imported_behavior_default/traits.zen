@@ -1,0 +1,12 @@
+pub Json: behavior {
+    to_json: (Self) str {
+        "default-json"
+    }
+}
+
+pub Point: {
+    x: i32
+}
+
+Point.implements(Json) {
+}

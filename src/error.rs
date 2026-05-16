@@ -1,700 +1,441 @@
-use inkwell::builder::BuilderError;
-use inkwell::support::LLVMString;
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq)]
+use serde::Serialize;
+
+// ── FileId & FileTable ─────────────────────────────────────────────
+
+/// Index into the FileTable. 0 is reserved for "no file" / test usage.
+pub type FileId = u32;
+
+/// Maps FileId → (path, source text, line_starts cache).
+pub struct FileTable {
+    files: Vec<SourceFile>,
+}
+
+struct SourceFile {
+    path: String,
+    source: String,
+    /// Byte offsets of each line start (computed on insert, cached).
+    line_starts: Vec<u32>,
+}
+
+impl FileTable {
+    pub fn new() -> Self {
+        Self { files: Vec::new() }
+    }
+
+    /// Add a file and return its FileId.
+    pub fn add_file(&mut self, path: String, source: String) -> FileId {
+        let line_starts = compute_line_starts(&source);
+        let id = self.files.len() as FileId;
+        self.files.push(SourceFile {
+            path,
+            source,
+            line_starts,
+        });
+        id
+    }
+
+    pub fn get_source(&self, file_id: FileId) -> Option<&str> {
+        self.files.get(file_id as usize).map(|f| f.source.as_str())
+    }
+
+    pub fn get_path(&self, file_id: FileId) -> Option<&str> {
+        self.files.get(file_id as usize).map(|f| f.path.as_str())
+    }
+
+    /// Resolve a byte offset to (line, col), both 0-based.
+    /// Returns None if file_id is invalid or offset is out of range.
+    pub fn line_col(&self, file_id: FileId, byte_offset: u32) -> Option<(u32, u32)> {
+        let file = self.files.get(file_id as usize)?;
+        let line = match file.line_starts.binary_search(&byte_offset) {
+            Ok(exact) => exact,
+            Err(insert) => insert.saturating_sub(1),
+        };
+        let col = byte_offset - file.line_starts[line];
+        Some((line as u32, col))
+    }
+
+    pub fn file_count(&self) -> usize {
+        self.files.len()
+    }
+}
+
+impl Default for FileTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Compute byte offsets of each line start in `source`.
+fn compute_line_starts(source: &str) -> Vec<u32> {
+    let mut starts = vec![0u32];
+    for (i, b) in source.bytes().enumerate() {
+        if b == b'\n' {
+            starts.push((i + 1) as u32);
+        }
+    }
+    starts
+}
+
+// ── Span ───────────────────────────────────────────────────────────
+
+/// Byte range within a specific file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Span {
-    pub start: usize,
-    pub end: usize,
-    pub line: usize,
-    pub column: usize,
+    pub file_id: FileId,
+    pub start: u32,
+    pub end: u32,
 }
 
+impl Span {
+    pub fn new(file_id: FileId, start: u32, end: u32) -> Self {
+        Self {
+            file_id,
+            start,
+            end,
+        }
+    }
+
+    /// A zero-width span at file 0 — useful for tests and synthetic nodes.
+    pub fn dummy() -> Self {
+        Self {
+            file_id: 0,
+            start: 0,
+            end: 0,
+        }
+    }
+
+    pub fn len(&self) -> u32 {
+        self.end - self.start
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.start == self.end
+    }
+
+    /// Merge two spans (must be in the same file). Takes the min start and max end.
+    pub fn merge(&self, other: Span) -> Span {
+        debug_assert_eq!(self.file_id, other.file_id);
+        Span {
+            file_id: self.file_id,
+            start: self.start.min(other.start),
+            end: self.end.max(other.end),
+        }
+    }
+}
+
+// ── Severity ───────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Severity {
+    Error,
+    Warning,
+    Hint,
+    Info,
+}
+
+impl fmt::Display for Severity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Severity::Error => write!(f, "error"),
+            Severity::Warning => write!(f, "warning"),
+            Severity::Hint => write!(f, "hint"),
+            Severity::Info => write!(f, "info"),
+        }
+    }
+}
+
+// ── Label ──────────────────────────────────────────────────────────
+
+/// A secondary annotation pointing at a span with a message.
+#[derive(Debug, Clone)]
+pub struct Label {
+    pub span: Span,
+    pub message: String,
+}
+
+impl Label {
+    pub fn new(span: Span, message: impl Into<String>) -> Self {
+        Self {
+            span,
+            message: message.into(),
+        }
+    }
+}
+
+// ── Context Frames ────────────────────────────────────────────────
+
+/// What kind of context led to this diagnostic.
 #[derive(Debug, Clone, PartialEq)]
+pub enum ContextKind {
+    InFunction,
+    InModule,
+    InGenericInstantiation,
+    InTraitImpl,
+    InImport,
+    InMacroExpansion,
+}
+
+/// A frame in the context stack showing how we reached the error.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ContextFrame {
+    pub span: Span,
+    pub kind: ContextKind,
+    pub message: String,
+}
+
+// ── Diagnostic ─────────────────────────────────────────────────────
+
+/// A single compiler diagnostic — shared across all phases.
+#[derive(Debug, Clone)]
+pub struct Diagnostic {
+    pub severity: Severity,
+    pub code: String,
+    pub message: String,
+    pub span: Option<Span>,
+    pub labels: Vec<Label>,
+    pub notes: Vec<String>,
+    pub context: Vec<ContextFrame>,
+}
+
+impl Diagnostic {
+    /// Create an error diagnostic.
+    pub fn error(code: impl Into<String>, message: impl Into<String>, span: Span) -> Self {
+        Self {
+            severity: Severity::Error,
+            code: code.into(),
+            message: message.into(),
+            span: Some(span),
+            labels: Vec::new(),
+            notes: Vec::new(),
+            context: Vec::new(),
+        }
+    }
+
+    /// Create a warning diagnostic.
+    pub fn warning(code: impl Into<String>, message: impl Into<String>, span: Span) -> Self {
+        Self {
+            severity: Severity::Warning,
+            code: code.into(),
+            message: message.into(),
+            span: Some(span),
+            labels: Vec::new(),
+            notes: Vec::new(),
+            context: Vec::new(),
+        }
+    }
+
+    /// Add a secondary label.
+    pub fn with_label(mut self, span: Span, message: impl Into<String>) -> Self {
+        self.labels.push(Label::new(span, message));
+        self
+    }
+
+    /// Add a help/note string.
+    pub fn with_note(mut self, note: impl Into<String>) -> Self {
+        self.notes.push(note.into());
+        self
+    }
+
+    /// Add a context frame showing how we reached this diagnostic.
+    pub fn with_context(mut self, frame: ContextFrame) -> Self {
+        self.context.push(frame);
+        self
+    }
+
+    pub fn is_error(&self) -> bool {
+        self.severity == Severity::Error
+    }
+}
+
+impl fmt::Display for Diagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}[{}]: {}", self.severity, self.code, self.message)?;
+        for frame in &self.context {
+            write!(f, "\n   = {}", frame.message)?;
+        }
+        Ok(())
+    }
+}
+
+// ── CompileError ───────────────────────────────────────────────────
+
+/// Simple error enum for use in `Result<T, CompileError>`.
+/// For richer reporting, convert to `Diagnostic`.
+#[derive(Debug, Clone)]
 pub enum CompileError {
-    SyntaxError(String, Option<Span>),
-    UndeclaredVariable(String, Option<Span>),
-    UndeclaredFunction(String, Option<Span>),
-    TypeMismatch {
-        expected: String,
-        found: String,
-        span: Option<Span>,
-    },
-    InvalidLoopCondition(String, Option<Span>),
-    MissingReturnStatement(String, Option<Span>),
-    InternalError(String, Option<Span>),
-    UnsupportedFeature(String, Option<Span>),
-    TypeError(String, Option<Span>),
-    FileNotFound(String, Option<String>),
-    ParseError(String, Option<Span>),
-    ComptimeError(String, Option<Span>),
-    UnexpectedToken {
-        expected: Vec<String>,
-        found: String,
-        span: Option<Span>,
-    },
-    InvalidPattern(String, Option<Span>),
-    ImportError(String, Option<Span>),
-    FFIError(String, Option<Span>),
-    InvalidSyntax {
-        message: String,
-        suggestion: String,
-        span: Option<Span>,
-    },
-    MissingTypeAnnotation(String, Option<Span>),
-    DuplicateDeclaration {
-        name: String,
-        first_location: Option<Span>,
-        duplicate_location: Option<Span>,
-    },
-    BuildError(String, Option<Span>),
-    FileError(String, Option<Span>),
-    CyclicDependency(String, Option<Span>),
-}
-
-impl From<BuilderError> for CompileError {
-    fn from(err: BuilderError) -> Self {
-        CompileError::InternalError(err.to_string(), None)
-    }
-}
-
-impl From<String> for CompileError {
-    fn from(err: String) -> Self {
-        CompileError::InternalError(err, None)
-    }
-}
-
-impl CompileError {
-    // ========================================================================
-    // CONVENIENCE CONSTRUCTORS
-    // Use these instead of manually formatting error messages to ensure
-    // consistent error formatting across the codebase
-    // ========================================================================
-
-    /// Create a type mismatch error with formatted types
-    pub fn type_mismatch<E: std::fmt::Debug, F: std::fmt::Debug>(
-        expected: E,
-        found: F,
-        span: Option<Span>,
-    ) -> Self {
-        CompileError::TypeMismatch {
-            expected: format!("{:?}", expected),
-            found: format!("{:?}", found),
-            span,
-        }
-    }
-
-    /// Create an "unknown function" type error
-    pub fn unknown_function(name: &str, span: Option<Span>) -> Self {
-        CompileError::TypeError(format!("Unknown function: {}", name), span)
-    }
-
-    /// Create an "unknown variable" type error
-    pub fn unknown_variable(name: &str, span: Option<Span>) -> Self {
-        CompileError::UndeclaredVariable(name.to_string(), span)
-    }
-
-    /// Create a "not a function" type error
-    pub fn not_a_function(name: &str, span: Option<Span>) -> Self {
-        CompileError::TypeError(format!("'{}' is not a function", name), span)
-    }
-
-    /// Create a variable type mismatch error (for assignments)
-    pub fn variable_type_mismatch<E: std::fmt::Debug, F: std::fmt::Debug>(
-        var_name: &str,
-        expected: E,
-        found: F,
-        span: Option<Span>,
-    ) -> Self {
-        CompileError::TypeError(
-            format!(
-                "Type mismatch: cannot assign {:?} to variable '{}' of type {:?}",
-                found, var_name, expected
-            ),
-            span,
-        )
-    }
-
-    /// Create a declaration type mismatch error
-    pub fn declaration_type_mismatch<E: std::fmt::Debug, F: std::fmt::Debug>(
-        name: &str,
-        declared_type: E,
-        actual_type: F,
-        span: Option<Span>,
-    ) -> Self {
-        CompileError::TypeError(
-            format!(
-                "Type mismatch: '{}' declared as {:?} but has value of type {:?}",
-                name, declared_type, actual_type
-            ),
-            span,
-        )
-    }
-
-    #[allow(dead_code)]
-    pub fn span(&self) -> Option<&Span> {
-        match self {
-            CompileError::SyntaxError(_, span) => span.as_ref(),
-            CompileError::UndeclaredVariable(_, span) => span.as_ref(),
-            CompileError::UndeclaredFunction(_, span) => span.as_ref(),
-            CompileError::TypeMismatch { span, .. } => span.as_ref(),
-            CompileError::InvalidLoopCondition(_, span) => span.as_ref(),
-            CompileError::MissingReturnStatement(_, span) => span.as_ref(),
-            CompileError::InternalError(_, span) => span.as_ref(),
-            CompileError::UnsupportedFeature(_, span) => span.as_ref(),
-            CompileError::TypeError(_, span) => span.as_ref(),
-            CompileError::ParseError(_, span) => span.as_ref(),
-            CompileError::UnexpectedToken { span, .. } => span.as_ref(),
-            CompileError::InvalidPattern(_, span) => span.as_ref(),
-            CompileError::ImportError(_, span) => span.as_ref(),
-            CompileError::FFIError(_, span) => span.as_ref(),
-            CompileError::InvalidSyntax { span, .. } => span.as_ref(),
-            CompileError::MissingTypeAnnotation(_, span) => span.as_ref(),
-            CompileError::DuplicateDeclaration {
-                duplicate_location, ..
-            } => duplicate_location.as_ref(),
-            CompileError::ComptimeError(_, span) => span.as_ref(),
-            CompileError::BuildError(_, span) => span.as_ref(),
-            CompileError::FileError(_, span) => span.as_ref(),
-            CompileError::CyclicDependency(_, span) => span.as_ref(),
-            _ => None,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn message(&self) -> String {
-        match self {
-            CompileError::SyntaxError(msg, _) => msg.clone(),
-            CompileError::UndeclaredVariable(var, _) => format!("Undeclared variable: {}", var),
-            CompileError::UndeclaredFunction(func, _) => format!("Undeclared function: {}", func),
-            CompileError::TypeMismatch {
-                expected, found, ..
-            } => {
-                format!("Type mismatch: expected {}, found {}", expected, found)
-            }
-            CompileError::InvalidLoopCondition(msg, _) => msg.clone(),
-            CompileError::MissingReturnStatement(msg, _) => msg.clone(),
-            CompileError::InternalError(msg, _) => format!("Internal error: {}", msg),
-            CompileError::UnsupportedFeature(msg, _) => format!("Unsupported feature: {}", msg),
-            CompileError::TypeError(msg, _) => msg.clone(),
-            CompileError::FileNotFound(file, _) => format!("File not found: {}", file),
-            CompileError::ParseError(msg, _) => format!("Parse error: {}", msg),
-            CompileError::ComptimeError(msg, _) => format!("Comptime error: {}", msg),
-            CompileError::UnexpectedToken {
-                expected, found, ..
-            } => {
-                format!("Unexpected token: expected {:?}, found {}", expected, found)
-            }
-            CompileError::InvalidPattern(msg, _) => format!("Invalid pattern: {}", msg),
-            CompileError::ImportError(msg, _) => format!("Import error: {}", msg),
-            CompileError::FFIError(msg, _) => format!("FFI error: {}", msg),
-            CompileError::InvalidSyntax {
-                message,
-                suggestion,
-                ..
-            } => {
-                format!("{} (suggestion: {})", message, suggestion)
-            }
-            CompileError::MissingTypeAnnotation(msg, _) => {
-                format!("Missing type annotation: {}", msg)
-            }
-            CompileError::DuplicateDeclaration { name, .. } => {
-                format!("Duplicate declaration: {}", name)
-            }
-            CompileError::BuildError(msg, _) => format!("Build error: {}", msg),
-            CompileError::FileError(msg, _) => format!("File error: {}", msg),
-            CompileError::CyclicDependency(msg, _) => format!("Cyclic dependency: {}", msg),
-        }
-    }
-}
-
-impl From<LLVMString> for CompileError {
-    fn from(err: LLVMString) -> Self {
-        CompileError::InternalError(err.to_string(), None)
-    }
+    Syntax(String, Option<Span>),
+    Type(String, Option<Span>),
+    Resolution(String, Option<Span>),
+    Internal(String),
 }
 
 impl fmt::Display for CompileError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CompileError::SyntaxError(msg, span) => write!(
-                f,
-                "Syntax Error: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::UndeclaredVariable(name, span) => write!(
-                f,
-                "Undeclared variable: '{}'{}",
-                name,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::UndeclaredFunction(name, span) => write!(
-                f,
-                "Undeclared function: '{}'{}",
-                name,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::TypeMismatch {
-                expected,
-                found,
-                span,
-            } => write!(
-                f,
-                "Type mismatch: Expected {}, found {}{}",
-                expected,
-                found,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::InvalidLoopCondition(msg, span) => write!(
-                f,
-                "Invalid loop condition: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::MissingReturnStatement(func_name, span) => write!(
-                f,
-                "Missing return statement in function '{}'{}",
-                func_name,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::InternalError(msg, span) => write!(
-                f,
-                "Internal Compiler Error: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::UnsupportedFeature(msg, _) => write!(f, "Unsupported feature: {}", msg),
-            CompileError::TypeError(msg, span) => write!(
-                f,
-                "Type error: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::FileNotFound(path, detail) => write!(
-                f,
-                "File not found: {}{}",
-                path,
-                detail
-                    .as_ref()
-                    .map(|d| format!(" ({})", d))
-                    .unwrap_or_default()
-            ),
-            CompileError::ParseError(msg, span) => write!(
-                f,
-                "Parse error: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::ComptimeError(msg, span) => write!(
-                f,
-                "Compile-time error: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::UnexpectedToken {
-                expected,
-                found,
-                span,
-            } => {
-                let expected_str = if expected.len() == 1 {
-                    expected[0].clone()
-                } else {
-                    format!("one of {}", expected.join(", "))
-                };
-                write!(
-                    f,
-                    "Unexpected token: expected {}, found '{}'{}",
-                    expected_str,
-                    found,
-                    span.as_ref()
-                        .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                        .unwrap_or_default()
-                )
-            }
-            CompileError::InvalidPattern(msg, span) => write!(
-                f,
-                "Invalid pattern: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::ImportError(msg, span) => write!(
-                f,
-                "Import error: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::FFIError(msg, span) => write!(
-                f,
-                "FFI error: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::InvalidSyntax {
-                message,
-                suggestion,
-                span,
-            } => write!(
-                f,
-                "Invalid syntax: {}. Suggestion: {}{}",
-                message,
-                suggestion,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::MissingTypeAnnotation(name, span) => write!(
-                f,
-                "Missing type annotation for '{}'{}",
-                name,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::DuplicateDeclaration {
-                name,
-                first_location,
-                duplicate_location,
-            } => {
-                write!(f, "Duplicate declaration of '{}'", name)?;
-                if let Some(first) = first_location {
-                    write!(
-                        f,
-                        ", first declared at line {} column {}",
-                        first.line,
-                        first.column + 1
-                    )?;
-                }
-                if let Some(dup) = duplicate_location {
-                    write!(
-                        f,
-                        ", duplicate at line {} column {}",
-                        dup.line,
-                        dup.column + 1
-                    )?;
-                }
-                Ok(())
-            }
-            CompileError::BuildError(msg, span) => write!(
-                f,
-                "Build error: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::FileError(msg, span) => write!(
-                f,
-                "File error: {}{}",
-                msg,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
-            CompileError::CyclicDependency(module, span) => write!(
-                f,
-                "Cyclic dependency detected: {}{}",
-                module,
-                span.as_ref()
-                    .map(|s| format!(" at line {} column {}", s.line, s.column + 1))
-                    .unwrap_or_default()
-            ),
+            CompileError::Syntax(msg, _) => write!(f, "syntax error: {msg}"),
+            CompileError::Type(msg, _) => write!(f, "type error: {msg}"),
+            CompileError::Resolution(msg, _) => write!(f, "resolution error: {msg}"),
+            CompileError::Internal(msg) => write!(f, "internal error: {msg}"),
         }
-    }
-}
-
-impl CompileError {
-    /// Extract position information from the error if available
-    #[allow(dead_code)]
-    pub fn position(&self) -> Option<&Span> {
-        match self {
-            CompileError::SyntaxError(_, span)
-            | CompileError::UndeclaredVariable(_, span)
-            | CompileError::UndeclaredFunction(_, span)
-            | CompileError::InvalidLoopCondition(_, span)
-            | CompileError::MissingReturnStatement(_, span)
-            | CompileError::InternalError(_, span)
-            | CompileError::UnsupportedFeature(_, span)
-            | CompileError::TypeError(_, span)
-            | CompileError::ParseError(_, span)
-            | CompileError::InvalidPattern(_, span)
-            | CompileError::ImportError(_, span)
-            | CompileError::FFIError(_, span)
-            | CompileError::MissingTypeAnnotation(_, span) => span.as_ref(),
-            CompileError::TypeMismatch { span, .. }
-            | CompileError::UnexpectedToken { span, .. }
-            | CompileError::InvalidSyntax { span, .. } => span.as_ref(),
-            CompileError::DuplicateDeclaration {
-                duplicate_location, ..
-            } => duplicate_location.as_ref(),
-            CompileError::ComptimeError(_, span)
-            | CompileError::BuildError(_, span)
-            | CompileError::FileError(_, span)
-            | CompileError::CyclicDependency(_, span) => span.as_ref(),
-            CompileError::FileNotFound(_, _) => None,
-        }
-    }
-
-    /// Get a detailed error message with suggestions for fixing
-    #[allow(dead_code)]
-    pub fn detailed_message(&self, source_lines: &[&str]) -> String {
-        let mut result = self.to_string();
-
-        // Add source code context if we have position information
-        if let Some(span) = self.position() {
-            if span.line > 0 && span.line <= source_lines.len() {
-                let line_idx = span.line - 1;
-                let line = source_lines[line_idx];
-
-                // Show context with error location
-                result.push_str("\n\n📍 Error Location:");
-                result.push_str(&format!("\n   {} | {}", span.line, line));
-
-                // Add pointer to exact column (convert from 0-based to display position)
-                let prefix_len = format!("   {} | ", span.line).len();
-                let pointer = " ".repeat(prefix_len + span.column) + "^";
-
-                // For multi-character errors, show the full span
-                if span.end > span.start {
-                    let error_len = span.end - span.start;
-                    let underline =
-                        "^".repeat(error_len.min(line.len().saturating_sub(span.column)));
-                    result.push_str(&format!(
-                        "\n{}{}\n",
-                        " ".repeat(prefix_len + span.column),
-                        underline
-                    ));
-                } else {
-                    result.push_str(&format!("\n{}\n", pointer));
-                }
-
-                // Add surrounding context (lines before and after)
-                if line_idx > 0 {
-                    let prev_line = source_lines[line_idx - 1];
-                    // Find the error location marker to insert context before it
-                    if let Some(marker_pos) = result.find("📍 Error Location:") {
-                        let marker_str = "📍 Error Location:";
-                        result.insert_str(
-                            marker_pos + marker_str.len(),
-                            &format!("\n   {} | {}", span.line - 1, prev_line),
-                        );
-                    }
-                }
-                if line_idx + 1 < source_lines.len() {
-                    let next_line = source_lines[line_idx + 1];
-                    result.push_str(&format!("   {} | {}", span.line + 1, next_line));
-                }
-            }
-        }
-
-        // Add context and suggestions based on error type
-        match self {
-            CompileError::SyntaxError(msg, _span) => {
-                result.push_str("\n\n💡 Suggestions:");
-                if msg.contains("if") || msg.contains("else") || msg.contains("match") {
-                    result.push_str("\n  • Zen uses the '?' operator for pattern matching instead of if/else/match keywords.");
-                    result.push_str("\n  • Example: value ? | true => action1 | false => action2");
-                    result.push_str("\n  • For boolean checks: condition ? { do_something() }");
-                } else if msg.contains("function") {
-                    result.push_str(
-                        "\n  • Function syntax in Zen: name = (params) ReturnType { body }",
-                    );
-                    result.push_str("\n  • Example: add = (a: i32, b: i32) i32 { a + b }");
-                    result.push_str("\n  • No parameters: greet = () void { print(\"Hello\") }");
-                    result.push_str("\n  • With generics: identity<T> = (value: T) T { value }");
-                } else if msg.contains("struct") {
-                    result.push_str("\n\nStruct syntax in Zen:");
-                    result.push_str("\n  StructName = { field1: Type, field2: Type }");
-                } else if msg.contains("loop") {
-                    result.push_str("\n\nLoop syntax in Zen:");
-                    result.push_str("\n  loop (condition) { body }  // conditional loop");
-                    result.push_str("\n  loop { body }              // infinite loop");
-                } else if msg.contains("variable") || msg.contains("binding") {
-                    result.push_str("\n\nVariable declaration in Zen:");
-                    result.push_str("\n  • Immutable: name = value  or  name: Type = value");
-                    result.push_str("\n  • Mutable: name ::= value  or  name:: Type = value");
-                    result.push_str("\n  • Example: counter ::= 0  // mutable counter");
-                } else if msg.contains("pattern") {
-                    result.push_str("\n\nPattern matching in Zen:");
-                    result.push_str("\n  • Basic: value ? | pattern => result");
-                    result.push_str("\n  • Multiple: value ? | 1  { \"one\" | 2  { \"two\" | _  { \"other\" } } }");
-                    result.push_str("\n  • With binding: value ? | Some(x) { use_x(x) }");
-                } else if msg.contains("import") || msg.contains("module") {
-                    result.push_str("\n\nModule system in Zen:");
-                    result.push_str("\n  • Import: io := @std.build.import(\"io\")");
-                    result.push_str(
-                        "\n  • Destructure: { Vec, HashMap } := @std.build.import(\"collections\")",
-                    );
-                    result.push_str(
-                        "\n  • Note: Imports must be at module level, not inside functions",
-                    );
-                }
-            }
-            CompileError::UndeclaredVariable(name, _) => {
-                result.push_str(&format!("\n\nDid you mean to declare '{}'?", name));
-                result.push_str("\n  - Use ':=' for immutable variables: name := value");
-                result.push_str("\n  - Use '::=' for mutable variables: name ::= value");
-                result.push_str("\n  - Use ': Type =' for typed immutable: name: Type = value");
-                result.push_str("\n  - Use ':: Type =' for typed mutable: name:: Type = value");
-            }
-            CompileError::InvalidPattern(msg, _) => {
-                result.push_str("\n\nZen pattern matching syntax:");
-                result.push_str("\n  value ? | pattern1 { result1 }");
-                result.push_str("\n          | pattern2 { result2 }");
-                result.push_str("\n          | _  { default }");
-                result.push_str("\n\nPatterns can include:");
-                result.push_str("\n  - Literals: 42, \"hello\"");
-                result.push_str("\n  - Ranges: 0..=10");
-                result.push_str("\n  - Destructuring: Ok(val)");
-                result.push_str("\n  - Guards: x -> x > 0");
-
-                if msg.contains("bool") {
-                    result.push_str("\n\nBool patterns (special syntax):");
-                    result.push_str("\n  condition ? { true_branch }  // simple bool check");
-                    result.push_str("\n  condition ? | 1  { true_branch }");
-                    result.push_str("\n              | 0  { false_branch }");
-                }
-            }
-            CompileError::ImportError(msg, _) => {
-                if msg.contains("comptime") {
-                    result.push_str("\n\nImports are not allowed inside comptime blocks.");
-                    result.push_str("\nMove import statements to module level.");
-                } else if msg.contains("function") {
-                    result.push_str("\n\nImports must be at module level, not inside functions.");
-                } else {
-                    result.push_str("\n\nImport syntax in Zen:");
-                    result.push_str("\n  build := @std.build");
-                    result.push_str("\n  io := build.import(\"io\")");
-                    result.push_str("\n  { Vec, HashMap } := build.import(\"collections\")");
-                }
-            }
-            CompileError::FFIError(msg, _) => {
-                result.push_str("\n\nFFI usage in Zen:");
-                result.push_str("\n  lib := FFI.lib(\"library_name\")");
-                result.push_str("\n    .path(\"/path/to/library\")");
-                result.push_str("\n    .function(\"func_name\", signature)");
-                result.push_str("\n    .constant(\"CONST_NAME\", type)");
-                result.push_str("\n    .build()");
-
-                if msg.contains("signature") {
-                    result.push_str("\n\nFunction signature example:");
-                    result.push_str("\n  FnSignature::new(vec![types::i32()], types::void())");
-                }
-            }
-            CompileError::TypeMismatch {
-                expected, found, ..
-            } => {
-                result.push_str("\n\nType conversion needed:");
-                result.push_str(&format!("\n  Expected: {}", expected));
-                result.push_str(&format!("\n  Found: {}", found));
-
-                // Suggest common conversions
-                if expected == "i32" && found == "f64" {
-                    result.push_str("\n  Use: value as i32");
-                } else if expected == "string" && found.contains("str") {
-                    result.push_str("\n  Use: value.to_string()");
-                }
-            }
-            CompileError::UnexpectedToken {
-                expected, found, ..
-            } => {
-                result.push_str("\n\nExpected tokens:");
-                for exp in expected {
-                    result.push_str(&format!("\n  - {}", exp));
-                }
-                result.push_str(&format!("\nFound: '{}'", found));
-
-                // Common fixes
-                if expected.contains(&"=".to_string()) {
-                    result
-                        .push_str("\n\nDid you forget '=' in a function or variable declaration?");
-                } else if expected.contains(&")".to_string()) {
-                    result.push_str("\n\nCheck for unclosed parentheses");
-                } else if expected.contains(&"}".to_string()) {
-                    result.push_str("\n\nCheck for unclosed braces");
-                }
-            }
-            CompileError::MissingTypeAnnotation(name, _) => {
-                result.push_str(&format!("\n\nVariable '{}' needs a type annotation.", name));
-                result.push_str("\n\nOptions:");
-                result.push_str("\n  1. Use type inference: name := value");
-                result.push_str("\n  2. Explicit type: name: Type = value");
-                result.push_str("\n  3. Mutable with type: name:: Type = value");
-            }
-            CompileError::DuplicateDeclaration { name, .. } => {
-                result.push_str(&format!("\n\n'{}' has already been declared.", name));
-                result.push_str("\n\nPossible solutions:");
-                result.push_str("\n  1. Use a different name");
-                result.push_str("\n  2. Remove the duplicate declaration");
-                result.push_str("\n  3. Use shadowing in a nested scope");
-            }
-            CompileError::InvalidLoopCondition(msg, _) => {
-                result.push_str("\n\nValid loop forms:");
-                result.push_str("\n  loop { ... }           // infinite loop");
-                result.push_str("\n  loop (condition) { ... } // conditional loop");
-                result.push_str("\n  (0..10).loop((i) => { ... }) // range iteration");
-
-                if msg.contains("bool") {
-                    result.push_str("\n\nLoop condition must evaluate to bool");
-                }
-            }
-            CompileError::MissingReturnStatement(func, _) => {
-                result.push_str(&format!("\n\nFunction '{}' must return a value.", func));
-                result.push_str("\n\nOptions:");
-                result.push_str("\n  1. Add explicit return: return value");
-                result.push_str("\n  2. Use implicit return (no semicolon on last expression)");
-                result.push_str("\n  3. Change return type to void if no value needed");
-            }
-            CompileError::ComptimeError(msg, _) => {
-                result.push_str("\n\n💡 Comptime Requirements:");
-                result.push_str("\n  • Code must be deterministic");
-                result.push_str("\n  • No side effects allowed");
-                result.push_str("\n  • Only pure computations");
-                result.push_str("\n  • No imports in comptime blocks");
-
-                if msg.contains("import") {
-                    result.push_str(
-                        "\n\n⚠️ Imports must be at module level, outside comptime blocks",
-                    );
-                }
-            }
-            CompileError::InvalidSyntax { suggestion, .. } => {
-                result.push_str("\n\n💡 Suggestion: ");
-                result.push_str(suggestion);
-            }
-            _ => {}
-        }
-
-        result
     }
 }
 
 impl std::error::Error for CompileError {}
 
-pub type Result<T> = std::result::Result<T, CompileError>;
+impl From<CompileError> for Diagnostic {
+    fn from(err: CompileError) -> Self {
+        match err {
+            CompileError::Syntax(msg, span) => Diagnostic {
+                severity: Severity::Error,
+                code: "E2000".to_string(),
+                message: msg,
+                span,
+                labels: Vec::new(),
+                notes: Vec::new(),
+                context: Vec::new(),
+            },
+            CompileError::Type(msg, span) => Diagnostic {
+                severity: Severity::Error,
+                code: "E3000".to_string(),
+                message: msg,
+                span,
+                labels: Vec::new(),
+                notes: Vec::new(),
+                context: Vec::new(),
+            },
+            CompileError::Resolution(msg, span) => Diagnostic {
+                severity: Severity::Error,
+                code: "E3500".to_string(),
+                message: msg,
+                span,
+                labels: Vec::new(),
+                notes: Vec::new(),
+                context: Vec::new(),
+            },
+            CompileError::Internal(msg) => Diagnostic {
+                severity: Severity::Error,
+                code: "E9999".to_string(),
+                message: msg,
+                span: None,
+                labels: Vec::new(),
+                notes: Vec::new(),
+                context: Vec::new(),
+            },
+        }
+    }
+}
+
+// ── Tests ──────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn file_table_add_and_lookup() {
+        let mut ft = FileTable::new();
+        let id = ft.add_file("test.zen".into(), "hello\nworld\n".into());
+        assert_eq!(id, 0);
+        assert_eq!(ft.get_source(id), Some("hello\nworld\n"));
+        assert_eq!(ft.get_path(id), Some("test.zen"));
+    }
+
+    #[test]
+    fn file_table_multiple_files() {
+        let mut ft = FileTable::new();
+        let a = ft.add_file("a.zen".into(), "aaa".into());
+        let b = ft.add_file("b.zen".into(), "bbb".into());
+        assert_eq!(a, 0);
+        assert_eq!(b, 1);
+        assert_eq!(ft.get_source(a), Some("aaa"));
+        assert_eq!(ft.get_source(b), Some("bbb"));
+    }
+
+    #[test]
+    fn file_table_invalid_id() {
+        let ft = FileTable::new();
+        assert_eq!(ft.get_source(99), None);
+        assert_eq!(ft.get_path(99), None);
+    }
+
+    #[test]
+    fn line_col_simple() {
+        let mut ft = FileTable::new();
+        // "hello\nworld\n"
+        //  01234 5 678...
+        let id = ft.add_file("t.zen".into(), "hello\nworld\n".into());
+        assert_eq!(ft.line_col(id, 0), Some((0, 0))); // 'h'
+        assert_eq!(ft.line_col(id, 4), Some((0, 4))); // 'o'
+        assert_eq!(ft.line_col(id, 6), Some((1, 0))); // 'w'
+        assert_eq!(ft.line_col(id, 10), Some((1, 4))); // 'd'
+    }
+
+    #[test]
+    fn span_dummy() {
+        let s = Span::dummy();
+        assert_eq!(s.file_id, 0);
+        assert_eq!(s.start, 0);
+        assert_eq!(s.end, 0);
+        assert!(s.is_empty());
+    }
+
+    #[test]
+    fn span_merge() {
+        let a = Span::new(0, 5, 10);
+        let b = Span::new(0, 8, 15);
+        let merged = a.merge(b);
+        assert_eq!(merged.start, 5);
+        assert_eq!(merged.end, 15);
+    }
+
+    #[test]
+    fn diagnostic_error_constructor() {
+        let d = Diagnostic::error("E1001", "unterminated string", Span::new(0, 5, 10));
+        assert_eq!(d.severity, Severity::Error);
+        assert_eq!(d.code, "E1001");
+        assert!(d.is_error());
+    }
+
+    #[test]
+    fn diagnostic_warning_constructor() {
+        let d = Diagnostic::warning("W3001", "unused variable", Span::new(0, 0, 3));
+        assert_eq!(d.severity, Severity::Warning);
+        assert!(!d.is_error());
+    }
+
+    #[test]
+    fn diagnostic_builder_chain() {
+        let d = Diagnostic::error("E3001", "type mismatch", Span::new(0, 10, 20))
+            .with_label(Span::new(0, 30, 40), "expected i32 here")
+            .with_note("try casting with `as i32`");
+        assert_eq!(d.labels.len(), 1);
+        assert_eq!(d.notes.len(), 1);
+        assert_eq!(d.labels[0].message, "expected i32 here");
+    }
+
+    #[test]
+    fn diagnostic_display() {
+        let d = Diagnostic::error("E1001", "bad token", Span::dummy());
+        assert_eq!(format!("{d}"), "error[E1001]: bad token");
+    }
+
+    #[test]
+    fn compile_error_display() {
+        let e = CompileError::Syntax("unexpected token".into(), None);
+        assert_eq!(format!("{e}"), "syntax error: unexpected token");
+
+        let e = CompileError::Internal("oops".into());
+        assert_eq!(format!("{e}"), "internal error: oops");
+    }
+
+    #[test]
+    fn compile_error_to_diagnostic() {
+        let e = CompileError::Type("mismatch".into(), Some(Span::new(1, 5, 10)));
+        let d: Diagnostic = e.into();
+        assert_eq!(d.severity, Severity::Error);
+        assert_eq!(d.code, "E3000");
+        assert_eq!(d.span, Some(Span::new(1, 5, 10)));
+    }
+}

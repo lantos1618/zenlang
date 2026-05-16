@@ -63,5 +63,5 @@ main = () i32 {
     float_val = cast(int_val, f64)
     io.println("Cast i32 ${int_val} to f64: ${float_val}")
 
-    return 0
+    0
 }

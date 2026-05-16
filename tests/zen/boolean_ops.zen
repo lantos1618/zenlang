@@ -1,0 +1,13 @@
+{ io } = std
+
+main = () i32 {
+    a = true
+    b = false
+    c = a && b
+    c ? | true { io.println("and: true") } | false { io.println("and: false") }
+    d = a || b
+    d ? | true { io.println("or: true") } | false { io.println("or: false") }
+    e = !a
+    e ? | true { io.println("not: true") } | false { io.println("not: false") }
+    0
+}

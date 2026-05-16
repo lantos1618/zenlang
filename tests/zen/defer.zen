@@ -1,0 +1,18 @@
+{ io } = std
+
+cleanup = () void {
+    io.println("cleanup called")
+}
+
+process = () i32 {
+    io.println("start")
+    @this.defer(cleanup())
+    io.println("middle")
+    42
+}
+
+main = () i32 {
+    result = process()
+    io.println("result: ${result}")
+    0
+}

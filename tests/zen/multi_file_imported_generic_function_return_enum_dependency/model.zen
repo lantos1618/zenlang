@@ -1,0 +1,11 @@
+{ Option } = types
+
+pub wrap<T> = (value: T) Option<T> {
+    Option<T>.Some(value)
+}
+
+pub unwrap<T> = (value: Option<T>, fallback: T) T {
+    value ?
+        | Some(inner) { inner }
+        | None { fallback }
+}

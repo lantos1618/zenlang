@@ -1,0 +1,8 @@
+{ io } = std
+{ wrap, unwrap } = model
+
+main = () i32 {
+    value = wrap(107)
+    io.println("${unwrap(value, 0)}")
+    0
+}

@@ -1,0 +1,9 @@
+pub Box<T>: {
+    value: T
+}
+
+Box.impl = {
+    pub get<T> = (self: Box<T>) T {
+        self.value
+    }
+}

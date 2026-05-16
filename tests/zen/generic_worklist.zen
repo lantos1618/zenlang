@@ -1,0 +1,16 @@
+{ io } = std
+
+inner<T> = (value: T) T {
+    value
+}
+
+outer<T> = (value: T) T {
+    a = inner(value)
+    b = inner(value)
+    a
+}
+
+main = () i32 {
+    io.println("${outer(12)}")
+    0
+}

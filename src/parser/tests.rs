@@ -1,0 +1,734 @@
+use super::*;
+use crate::lexer;
+
+fn parse_str(src: &str) -> Result<Program, Vec<CompileError>> {
+    let tokens = lexer::tokenize(src, 0).map_err(|e| vec![e])?;
+    parse(tokens, 0)
+}
+
+fn parse_ok(src: &str) -> Program {
+    parse_str(src).unwrap_or_else(|errs| {
+        for e in &errs {
+            eprintln!("{:?}", e);
+        }
+        panic!("parse failed with {} errors", errs.len());
+    })
+}
+
+#[test]
+fn parse_simple_function() {
+    let prog = parse_ok("add = (a: i32, b: i32) i32 {\n    a + b\n}");
+    assert_eq!(prog.declarations.len(), 1);
+    match &prog.declarations[0] {
+        Declaration::Function { name, params, .. } => {
+            assert_eq!(name, "add");
+            assert_eq!(params.len(), 2);
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_generic_function_call_type_args() {
+    let prog = parse_ok("f = () i32 { identity<i32>(1) }");
+    match &prog.declarations[0] {
+        Declaration::Function { body, .. } => match body {
+            Expression::Block {
+                expr: Some(expr), ..
+            } => match expr.as_ref() {
+                Expression::FunctionCall {
+                    name, type_args, ..
+                } => {
+                    assert_eq!(name, "identity");
+                    assert_eq!(type_args, &vec![AstType::I32]);
+                }
+                other => panic!("expected generic function call, got {:?}", other),
+            },
+            other => panic!("expected block body, got {:?}", other),
+        },
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_generic_method_call_type_args() {
+    let prog = parse_ok("f = (box: Box<i32>) i32 { box.get<i32>() }");
+    match &prog.declarations[0] {
+        Declaration::Function { body, .. } => match body {
+            Expression::Block {
+                expr: Some(expr), ..
+            } => match expr.as_ref() {
+                Expression::MethodCall {
+                    method, type_args, ..
+                } => {
+                    assert_eq!(method, "get");
+                    assert_eq!(type_args, &vec![AstType::I32]);
+                }
+                other => panic!("expected generic method call, got {:?}", other),
+            },
+            other => panic!("expected block body, got {:?}", other),
+        },
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_struct_def() {
+    let prog = parse_ok("Point: {\n    x: f64,\n    y: f64\n}");
+    assert_eq!(prog.declarations.len(), 1);
+    match &prog.declarations[0] {
+        Declaration::Struct { name, fields, .. } => {
+            assert_eq!(name, "Point");
+            assert_eq!(fields.len(), 2);
+            assert_eq!(fields[0].name, "x");
+            assert_eq!(fields[1].name, "y");
+        }
+        other => panic!("expected Struct, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_enum_def() {
+    let prog = parse_ok("Color:\n    Red,\n    Green,\n    Blue");
+    assert_eq!(prog.declarations.len(), 1);
+    match &prog.declarations[0] {
+        Declaration::Enum { name, variants, .. } => {
+            assert_eq!(name, "Color");
+            assert_eq!(variants.len(), 3);
+            assert_eq!(variants[0].name, "Red");
+        }
+        other => panic!("expected Enum, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_import() {
+    let prog = parse_ok("{ io } = std");
+    assert_eq!(prog.declarations.len(), 1);
+    match &prog.declarations[0] {
+        Declaration::Import {
+            names, module_path, ..
+        } => {
+            assert_eq!(names, &["io"]);
+            assert_eq!(module_path, &["std"]);
+        }
+        other => panic!("expected Import, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_import_multi() {
+    let prog = parse_ok("{ Channel, Mutex } = std.sync");
+    assert_eq!(prog.declarations.len(), 1);
+    match &prog.declarations[0] {
+        Declaration::Import {
+            names, module_path, ..
+        } => {
+            assert_eq!(names, &["Channel", "Mutex"]);
+            assert_eq!(module_path, &["std", "sync"]);
+        }
+        other => panic!("expected Import, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_method() {
+    let prog = parse_ok("Point.distance = (self: Ptr<Point>, other: Ptr<Point>) f64 {\n    0.0\n}");
+    assert_eq!(prog.declarations.len(), 1);
+    match &prog.declarations[0] {
+        Declaration::Method {
+            type_name,
+            method_name,
+            ..
+        } => {
+            assert_eq!(type_name, "Point");
+            assert_eq!(method_name, "distance");
+        }
+        other => panic!("expected Method, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_pattern_match() {
+    let prog = parse_ok(
+        r#"f = (x: bool) i32 {
+    x ?
+        | true { 1 }
+        | false { 0 }
+}"#,
+    );
+    assert_eq!(prog.declarations.len(), 1);
+    match &prog.declarations[0] {
+        Declaration::Function { name, body, .. } => {
+            assert_eq!(name, "f");
+            // Body is a block containing a match expression
+            if let Expression::Block {
+                statements, expr, ..
+            } = body
+            {
+                // The match should be the final expression or a statement
+                assert!(
+                    !statements.is_empty() || expr.is_some(),
+                    "block should have content"
+                );
+            }
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_string_interpolation() {
+    let prog = parse_ok(r#"f = () void { io.println("hello ${name}!") }"#);
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_var_decl_mutable() {
+    let prog = parse_ok("f = () void {\n    i ::= 0\n}");
+    match &prog.declarations[0] {
+        Declaration::Function { body, .. } => {
+            if let Expression::Block { statements, .. } = body {
+                assert_eq!(statements.len(), 1);
+                match &statements[0] {
+                    Statement::VarDecl { name, mutable, .. } => {
+                        assert_eq!(name, "i");
+                        assert!(*mutable);
+                    }
+                    other => panic!("expected VarDecl, got {:?}", other),
+                }
+            }
+        }
+        _ => panic!("expected Function"),
+    }
+}
+
+#[test]
+fn parse_struct_literal() {
+    let prog = parse_ok(
+        r#"f = () void {
+    p = Person {
+        name: "Alice",
+        age: 30
+    }
+}"#,
+    );
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_enum_variant_expr() {
+    let prog = parse_ok("f = () void {\n    s = Status.Active\n}");
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_enum_variant_payload_expr() {
+    let prog = parse_ok("f = () void {\n    s = Maybe.Some(42)\n}");
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_ufc_chain() {
+    let prog = parse_ok("f = () void {\n    result = 5.double().add_ten()\n}");
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_cast_expr() {
+    let prog = parse_ok("f = (a: f64) i32 {\n    cast(a, i32)\n}");
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_loop_expr() {
+    let prog = parse_ok(
+        r#"f = () void {
+    loop(() {
+        break
+    })
+}"#,
+    );
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_while_loop() {
+    let prog = parse_ok(
+        r#"f = () void {
+    x ::= 0
+    x < 10 ? {
+        x = x + 1
+    }
+}"#,
+    );
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_nested_conditionals() {
+    let prog = parse_ok(
+        r#"f = (hour: i32) void {
+    hour < 12 ?
+        | true { greeting = "morning" }
+        | false {
+            hour < 18 ?
+                | true { greeting = "afternoon" }
+                | false { greeting = "evening" }
+        }
+}"#,
+    );
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_project_example() {
+    let src = std::fs::read_to_string("examples/project/main.zen");
+    if let Ok(src) = src {
+        let result = parse_str(&src);
+        match result {
+            Ok(prog) => {
+                assert!(
+                    !prog.declarations.is_empty(),
+                    "project example should have declarations, got {}",
+                    prog.declarations.len()
+                );
+            }
+            Err(errs) => {
+                for e in &errs {
+                    eprintln!("{:?}", e);
+                }
+                panic!("demo parse failed with {} errors", errs.len());
+            }
+        }
+    }
+}
+
+#[test]
+fn parse_nested_generics() {
+    // Single-level generic
+    let prog = parse_ok("foo = (x: Vec<i32>) void { }");
+    assert_eq!(prog.declarations.len(), 1);
+
+    // Nested: Vec<Ptr<i32>> — the >> must not be parsed as ShiftRight
+    let prog = parse_ok("bar = (x: Vec<Ptr<i32>>) void { }");
+    assert_eq!(prog.declarations.len(), 1);
+
+    // Triple-nested: Map<str, Vec<Ptr<f64>>>
+    let prog = parse_ok("baz = (x: Map<str, Vec<Ptr<f64>>>) void { }");
+    assert_eq!(prog.declarations.len(), 1);
+
+    // Deeply nested: A<B<C<D<i32>>>>
+    let prog = parse_ok("deep = (x: A<B<C<D<i32>>>>) void { }");
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
+fn parse_slice_type() {
+    let prog = parse_ok("foo = (s: Slice<i32>) void { }");
+    assert_eq!(prog.declarations.len(), 1);
+    match &prog.declarations[0] {
+        Declaration::Function { params, .. } => {
+            assert!(
+                matches!(&params[0].ty, AstType::Slice(inner) if **inner == AstType::I32),
+                "expected Slice<I32>, got {:?}",
+                params[0].ty
+            );
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_string_type_is_named() {
+    // String should parse as AstType::Named("String"), NOT AstType::Str
+    let prog = parse_ok("foo = (s: String) void { }");
+    match &prog.declarations[0] {
+        Declaration::Function { params, .. } => match &params[0].ty {
+            AstType::Named(n) => assert_eq!(n, "String"),
+            AstType::Str => panic!("String should not parse as Str"),
+            other => panic!("expected Named(\"String\"), got {:?}", other),
+        },
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_static_string_is_str() {
+    // StaticString should still parse as AstType::Str
+    let prog = parse_ok("foo = (s: StaticString) void { }");
+    match &prog.declarations[0] {
+        Declaration::Function { params, .. } => {
+            assert!(
+                matches!(&params[0].ty, AstType::Str),
+                "expected Str, got {:?}",
+                params[0].ty
+            );
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+// ── Error / negative parser tests ────────────────────────
+
+#[test]
+fn parse_error_missing_closing_brace() {
+    let result = parse_str("foo = () void {");
+    assert!(
+        result.is_err(),
+        "expected parse error for missing closing brace"
+    );
+}
+
+#[test]
+fn parse_error_unexpected_token() {
+    let result = parse_str("foo = () i32 + +");
+    assert!(
+        result.is_err(),
+        "expected parse error for unexpected tokens"
+    );
+}
+
+#[test]
+fn parse_behavior_requires_assertion() {
+    let prog = parse_ok("Point.requires(Json)");
+    match &prog.declarations[0] {
+        Declaration::Requires {
+            type_name,
+            behavior,
+            ..
+        } => {
+            assert_eq!(type_name, "Point");
+            assert_eq!(behavior, "Json");
+        }
+        other => panic!("expected Requires, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_behavior_extends_declaration() {
+    let prog = parse_ok("PrettyPrint.extends(Json)");
+    match &prog.declarations[0] {
+        Declaration::BehaviorExtends {
+            behavior, parent, ..
+        } => {
+            assert_eq!(behavior, "PrettyPrint");
+            assert_eq!(parent, "Json");
+        }
+        other => panic!("expected BehaviorExtends, got {:?}", other),
+    }
+}
+
+// ── Additional feature tests ─────────────────────────────
+
+#[test]
+fn parse_behavior_declaration() {
+    let prog = parse_ok(
+        "Serializable: behavior {\n    to_json: (Self) String\n    eq: (left: Self, right: Self) bool\n}",
+    );
+    match &prog.declarations[0] {
+        Declaration::Behavior { name, methods, .. } => {
+            assert_eq!(name, "Serializable");
+            assert_eq!(methods.len(), 2);
+            assert_eq!(methods[0].name, "to_json");
+            assert_eq!(methods[0].params.len(), 1);
+            assert!(matches!(methods[0].params[0].ty, AstType::SelfType));
+            assert_eq!(methods[1].params[0].name, "left");
+            assert_eq!(methods[1].params[1].name, "right");
+        }
+        other => panic!("expected Behavior, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_public_behavior_declaration() {
+    let prog = parse_ok("pub Json<T>: behavior {\n    encode: (Self) T\n}");
+    match &prog.declarations[0] {
+        Declaration::Behavior {
+            name,
+            type_params,
+            public,
+            ..
+        } => {
+            assert_eq!(name, "Json");
+            assert_eq!(type_params.len(), 1);
+            assert!(*public);
+        }
+        other => panic!("expected Behavior, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_behavior_impl_block() {
+    let prog = parse_ok("Point.implements(Json) {\n    to_json = (value: Point) str { \"{}\" }\n}");
+    match &prog.declarations[0] {
+        Declaration::ImplBlock {
+            type_name,
+            behavior,
+            methods,
+            ..
+        } => {
+            assert_eq!(type_name, "Point");
+            assert_eq!(behavior.as_deref(), Some("Json"));
+            assert_eq!(methods.len(), 1);
+            assert_eq!(methods[0].name(), Some("to_json"));
+        }
+        other => panic!("expected ImplBlock, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_impl_block() {
+    let prog = parse_ok("Point.impl = {\n    get = (self: Point) i32 { self.x }\n}");
+    match &prog.declarations[0] {
+        Declaration::ImplBlock {
+            type_name,
+            behavior,
+            methods,
+            ..
+        } => {
+            assert_eq!(type_name, "Point");
+            assert_eq!(behavior, &None);
+            assert_eq!(methods.len(), 1);
+            assert_eq!(methods[0].name(), Some("get"));
+        }
+        other => panic!("expected ImplBlock, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_behavior_impl_with_generic_behavior_args() {
+    let prog = parse_ok("Point.implements(Json<i32>) { }");
+    match &prog.declarations[0] {
+        Declaration::ImplBlock {
+            behavior,
+            behavior_type_args,
+            ..
+        } => {
+            assert_eq!(behavior.as_deref(), Some("Json"));
+            assert_eq!(behavior_type_args, &vec![AstType::I32]);
+        }
+        other => panic!("expected ImplBlock, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_behavior_requires_with_generic_behavior_args() {
+    let prog = parse_ok("Point.requires(Json<i32>)");
+    match &prog.declarations[0] {
+        Declaration::Requires {
+            behavior,
+            behavior_type_args,
+            ..
+        } => {
+            assert_eq!(behavior, "Json");
+            assert_eq!(behavior_type_args, &vec![AstType::I32]);
+        }
+        other => panic!("expected Requires, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_behavior_extends_with_generic_parent_args() {
+    let prog = parse_ok("PrettyJson.extends(Json<i32>)");
+    match &prog.declarations[0] {
+        Declaration::BehaviorExtends {
+            behavior,
+            parent,
+            parent_type_args,
+            ..
+        } => {
+            assert_eq!(behavior, "PrettyJson");
+            assert_eq!(parent, "Json");
+            assert_eq!(parent_type_args, &vec![AstType::I32]);
+        }
+        other => panic!("expected BehaviorExtends, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_generic_behavior_function_bound_with_type_args() {
+    let prog = parse_ok("encode<T: Json<T>> = (value: T) str { \"\" }");
+    match &prog.declarations[0] {
+        Declaration::Function { type_params, .. } => {
+            assert_eq!(type_params.len(), 1);
+            assert_eq!(type_params[0].name, "T");
+            assert_eq!(type_params[0].constraint.as_deref(), Some("Json"));
+            assert_eq!(
+                type_params[0].constraint_type_args,
+                vec![AstType::Named("T".into())]
+            );
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_generic_behavior_type_bound_with_type_args() {
+    let prog = parse_ok("Box<T: Json<T>>: { value: T }");
+    match &prog.declarations[0] {
+        Declaration::Struct { type_params, .. } => {
+            assert_eq!(type_params.len(), 1);
+            assert_eq!(type_params[0].name, "T");
+            assert_eq!(type_params[0].constraint.as_deref(), Some("Json"));
+            assert_eq!(
+                type_params[0].constraint_type_args,
+                vec![AstType::Named("T".into())]
+            );
+        }
+        other => panic!("expected Struct, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_pointer_types() {
+    let prog = parse_ok("foo = (p: Ptr<i32>, q: MutPtr<u8>) void { }");
+    match &prog.declarations[0] {
+        Declaration::Function { params, .. } => {
+            assert!(
+                matches!(&params[0].ty, AstType::Ptr(inner) if **inner == AstType::I32),
+                "expected Ptr<I32>, got {:?}",
+                params[0].ty
+            );
+            assert!(
+                matches!(&params[1].ty, AstType::MutPtr(inner) if **inner == AstType::U8),
+                "expected MutPtr<U8>, got {:?}",
+                params[1].ty
+            );
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_multiple_functions() {
+    let prog = parse_ok("foo = () void { }\nbar = () i32 { 1 }");
+    assert_eq!(prog.declarations.len(), 2);
+}
+
+#[test]
+fn parse_mutable_var() {
+    let prog = parse_ok("main = () void {\n    x ::= 5\n}");
+    match &prog.declarations[0] {
+        Declaration::Function { body, .. } => {
+            if let Expression::Block { statements, .. } = body {
+                match &statements[0] {
+                    Statement::VarDecl { name, mutable, .. } => {
+                        assert_eq!(name, "x");
+                        assert!(*mutable, "expected mutable variable");
+                    }
+                    other => panic!("expected VarDecl, got {:?}", other),
+                }
+            } else {
+                panic!("expected Block body");
+            }
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_immutable_var() {
+    let prog = parse_ok("main = () void {\n    x = 5\n}");
+    match &prog.declarations[0] {
+        Declaration::Function { body, .. } => {
+            if let Expression::Block { statements, .. } = body {
+                match &statements[0] {
+                    Statement::VarDecl { name, mutable, .. } => {
+                        assert_eq!(name, "x");
+                        assert!(!*mutable, "expected immutable variable");
+                    }
+                    other => panic!("expected VarDecl, got {:?}", other),
+                }
+            } else {
+                panic!("expected Block body");
+            }
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_enum_with_payload() {
+    let prog = parse_ok("Shape:\n    Circle(i32),\n    Square(i32),\n    Empty\n");
+    match &prog.declarations[0] {
+        Declaration::Enum { name, variants, .. } => {
+            assert_eq!(name, "Shape");
+            assert_eq!(variants.len(), 3);
+            assert_eq!(variants[0].name, "Circle");
+            assert!(variants[0].payload.is_some());
+            assert_eq!(variants[2].name, "Empty");
+            assert!(variants[2].payload.is_none());
+        }
+        other => panic!("expected Enum, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_struct_with_many_fields() {
+    let prog = parse_ok("Rect: {\n    x: i32,\n    y: i32,\n    w: u32,\n    h: u32,\n}\n");
+    match &prog.declarations[0] {
+        Declaration::Struct { name, fields, .. } => {
+            assert_eq!(name, "Rect");
+            assert_eq!(fields.len(), 4);
+            assert_eq!(fields[0].name, "x");
+            assert_eq!(fields[3].name, "h");
+        }
+        other => panic!("expected Struct, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_boolean_expressions() {
+    let prog = parse_ok("main = () void {\n    x = true\n    y = false\n}");
+    match &prog.declarations[0] {
+        Declaration::Function { body, .. } => {
+            if let Expression::Block { statements, .. } = body {
+                assert_eq!(statements.len(), 2);
+            }
+        }
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_return_keyword_is_removed() {
+    let err = parse_str("main = () void {\n    return\n}")
+        .expect_err("return keyword should no longer parse as language syntax");
+    assert!(
+        err.iter()
+            .any(|err| err.to_string().contains("return keyword has been removed")),
+        "expected removed return keyword diagnostic, got {err:?}"
+    );
+}
+
+#[test]
+fn parse_nested_generic_type() {
+    // DynVec<Ptr<i32>> with nested generics
+    let prog = parse_ok("foo = (v: DynVec<Ptr<i32>>) void { }");
+    match &prog.declarations[0] {
+        Declaration::Function { params, .. } => match &params[0].ty {
+            AstType::Generic { name, type_args } => {
+                assert_eq!(name, "DynVec");
+                assert_eq!(type_args.len(), 1);
+                assert!(matches!(&type_args[0], AstType::Ptr(inner) if **inner == AstType::I32));
+            }
+            other => panic!("expected Generic, got {:?}", other),
+        },
+        other => panic!("expected Function, got {:?}", other),
+    }
+}
+
+#[test]
+fn parse_multi_import() {
+    let prog = parse_ok("{ foo, bar, baz } = mymod\n");
+    match &prog.declarations[0] {
+        Declaration::Import {
+            names, module_path, ..
+        } => {
+            assert_eq!(names.len(), 3);
+            assert_eq!(module_path, &vec!["mymod".to_string()]);
+        }
+        other => panic!("expected Import, got {:?}", other),
+    }
+}

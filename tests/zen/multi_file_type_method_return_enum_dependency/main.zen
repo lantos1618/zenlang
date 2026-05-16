@@ -1,0 +1,8 @@
+{ io } = std
+{ Box } = model
+
+main = () i32 {
+    box = Box<i32> { value: 97 }
+    io.println("${box.value_or(0)}")
+    0
+}

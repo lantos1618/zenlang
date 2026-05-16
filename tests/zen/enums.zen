@@ -1,0 +1,19 @@
+{ io } = std
+
+Color:
+    Red,
+    Green,
+    Blue
+
+describe = (c: Color) StaticString {
+    c ?
+        | Red { "red" }
+        | Green { "green" }
+        | Blue { "blue" }
+}
+
+main = () i32 {
+    io.println(describe(Color.Red))
+    io.println(describe(Color.Blue))
+    0
+}

@@ -2,7 +2,7 @@
 // Testing utilities and test runners
 
 { io, memory, compiler } = @std
-{ Vec } = @std.collections.vec
+{ DynVec } = @std.collections.vec
 
 // ============================================================================
 // Test Result Enum
@@ -39,7 +39,7 @@ TestCase: {
 // Collection of tests with tracking for passed/failed
 TestSuite: {
     name: String,
-    tests: Vec<TestCase>,
+    tests: DynVec<TestCase>,
     passed: i32,
     failed: i32,
     allocator: memory.Allocator
@@ -49,7 +49,7 @@ TestSuite: {
 new_test_suite = (name: String, allocator: memory.Allocator) TestSuite {
     return TestSuite {
         name: name,
-        tests: Vec<TestCase>.new(allocator),
+        tests: DynVec<TestCase>.new(allocator),
         passed: 0,
         failed: 0,
         allocator: allocator

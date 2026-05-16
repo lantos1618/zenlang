@@ -1,12 +1,12 @@
 // Zen Standard Library: HashMap
 // Hash-based key-value map
-// Uses compile-time generics with Vec<T>
+// Uses compile-time generics with DynVec<T>
 
 { compiler } = @std
 { Ptr } = @std.core.ptr
 { Option } = @std.core.option
 { Allocator } = @std.memory.allocator
-{ Vec } = @std.collections.vec
+{ DynVec } = @std.collections.vec
 
 // Entry for a single key-value pair
 Entry<K, V>: {
@@ -17,7 +17,7 @@ Entry<K, V>: {
 
 // HashMap<K, V> - simple hash map using linear probing
 HashMap<K, V>: {
-    entries: Vec<Entry<K, V>>,
+    entries: DynVec<Entry<K, V>>,
     size: usize,
     capacity: usize,
     allocator: Allocator
@@ -30,7 +30,7 @@ HashMap<K, V>: {
 // Create new empty hashmap
 HashMap<K, V>.new = (allocator: Allocator) HashMap<K, V> {
     return HashMap<K, V> {
-        entries: Vec<Entry<K, V>>.new(allocator),
+        entries: DynVec<Entry<K, V>>.new(allocator),
         size: 0,
         capacity: 0,
         allocator: allocator
@@ -40,7 +40,7 @@ HashMap<K, V>.new = (allocator: Allocator) HashMap<K, V> {
 // Create hashmap with initial capacity
 HashMap<K, V>.with_capacity = (allocator: Allocator, capacity: usize) HashMap<K, V> {
     return HashMap<K, V> {
-        entries: Vec<Entry<K, V>>.with_capacity(allocator, capacity),
+        entries: DynVec<Entry<K, V>>.with_capacity(allocator, capacity),
         size: 0,
         capacity: capacity,
         allocator: allocator
@@ -130,7 +130,7 @@ keys_equal<K> = (key1: K, key2: K) bool {
 }
 
 // Helper: Find slot for key using linear probing (recursive)
-find_slot<K, V> = (entries: Vec<Entry<K, V>>, key: K, start_index: usize, probe: usize, capacity: usize) usize {
+find_slot<K, V> = (entries: DynVec<Entry<K, V>>, key: K, start_index: usize, probe: usize, capacity: usize) usize {
     probe >= capacity ?
         | true {
             // Failed to find slot (table full) - return start_index
@@ -166,7 +166,7 @@ find_slot<K, V> = (entries: Vec<Entry<K, V>>, key: K, start_index: usize, probe:
 // ============================================================================
 
 // Helper: Initialize empty entries in vector (recursive)
-init_entries<K, V> = (vec: MutPtr<Vec<Entry<K, V>>>, count: usize, dummy_key: K, dummy_val: V) void {
+init_entries<K, V> = (vec: MutPtr<DynVec<Entry<K, V>>>, count: usize, dummy_key: K, dummy_val: V) void {
     count > 0 ?
         | true {
             empty_entry = Entry<K, V> {
@@ -352,7 +352,7 @@ HashMap<K, V>.free = (self: MutPtr<HashMap<K, V>>) void {
 
 // HashMapIterator - Iterates over key-value pairs in HashMap
 HashMapIterator<K, V>: {
-    entries: Vec<Entry<K, V>>,
+    entries: DynVec<Entry<K, V>>,
     index: usize,
     capacity: usize
 }
@@ -373,7 +373,7 @@ KeyValuePair<K, V>: {
 }
 
 // Helper: find next occupied entry (recursive)
-find_next_occupied<K, V> = (entries: Vec<Entry<K, V>>, start: usize, capacity: usize) Option<usize> {
+find_next_occupied<K, V> = (entries: DynVec<Entry<K, V>>, start: usize, capacity: usize) Option<usize> {
     start >= capacity ?
         | true { return Option.None }
         | false {

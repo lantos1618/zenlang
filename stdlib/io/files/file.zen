@@ -7,7 +7,7 @@
 { Option } = @std.core.option
 { String } = @std.collections.string
 { Allocator } = @std.memory.allocator
-{ Vec } = @std.collections.vec
+{ DynVec } = @std.collections.vec
 { Ptr } = @std.core.ptr
 { SYS_READ, SYS_WRITE, SYS_OPEN, SYS_CLOSE, SYS_STAT, SYS_FSTAT,
   SYS_LSEEK, SYS_MMAP, SYS_MUNMAP, SYS_ACCESS, SYS_MKDIR, SYS_RMDIR,
@@ -404,7 +404,7 @@ chdir = (path: String, allocator: Allocator) Result<void, IoError> {
 // ============================================================================
 
 // Read entire file as bytes
-read_file = (path: String, allocator: Allocator) Result<Vec<u8>, IoError> {
+read_file = (path: String, allocator: Allocator) Result<DynVec<u8>, IoError> {
     // Open file
     fd_result = open_read(path, allocator)
     fd_result ?
@@ -431,8 +431,8 @@ read_file = (path: String, allocator: Allocator) Result<Vec<u8>, IoError> {
                             return Result.Err(e)
                         }
                         | Ok(bytes_read) {
-                            // Create Vec from raw buffer
-                            vec = Vec<u8> {
+                            // Create DynVec from raw buffer
+                            vec = DynVec<u8> {
                                 data: Ptr<u8>.from_addr(buf),
                                 len: bytes_read,
                                 capacity: size,
@@ -445,7 +445,7 @@ read_file = (path: String, allocator: Allocator) Result<Vec<u8>, IoError> {
 }
 
 // Write bytes to file
-write_file = (path: String, data: Vec<u8>, allocator: Allocator) Result<void, IoError> {
+write_file = (path: String, data: DynVec<u8>, allocator: Allocator) Result<void, IoError> {
     // Open file for writing
     fd_result = open_write(path, allocator)
     fd_result ?

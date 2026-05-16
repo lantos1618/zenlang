@@ -1,192 +1,86 @@
-# Zen Programming Language
+# Zen
 
-**The World's First AI-Native Systems Programming Language**
-
-A revolutionary programming language with **ZERO KEYWORDS**. All control flow through pattern matching (`?`), UFC (Uniform Function Call), and powerful metaprogramming.
-
-> *"No keywords. Pure expression. Allocator-driven concurrency."*
-
----
-
-## Project Status: Late Alpha (90% Core Complete)
-
-The Zen compiler is functional with all core language features working. The project has a comprehensive test suite and full LSP support for IDE integration.
-
-### What Works
-
-- **Zero-keyword syntax** - Pattern matching with `?` replaces all conditionals
-- **All 6 variable forms** - Immutable/mutable, typed/inferred declarations
-- **Type system** - Structs, enums, generics, Option<T>, Result<T,E>
-- **UFC** - Uniform Function Call for method chaining
-- **Error handling** - `.raise()` for error propagation
-- **Collections** - Vec<T>, String with allocator support
-- **Behaviors** - Structural trait system
-- **I/O** - Syscall-based file and network I/O (Linux x86-64)
-- **LSP** - Full IDE support with semantic completion, hover, go-to-def, etc.
-- **25+ intrinsics** - Memory, pointers, syscalls, atomics
-
-### In Progress
-
-- Module system improvements for cross-boundary generics
-- Iterator combinators (map, filter, collect)
-- First-class closure support
-
-### Planned
-
-- Cross-platform (macOS, Windows)
-- Package manager
-- Self-hosting compiler
-
----
-
-## Quick Start
-
-```bash
-# Build the compiler
-cargo build --release
-
-# Run a Zen program
-./target/release/zen examples/showcase.zen
-
-# Compile to executable
-./target/release/zen examples/hello.zen -o hello
-./hello
-
-# Run test suite
-cargo test --all
-```
-
----
-
-## Language at a Glance
-
-### Variables (No Keywords)
+Zen is a systems language for code that should stay readable when programs get
+large: declarations are compact, data shapes are explicit, and control flow is
+driven by expressions and pattern matching instead of statement-heavy ceremony.
 
 ```zen
-x = 10              // Immutable, inferred
-x ::= 10            // Mutable, inferred
-x : i32 = 10         // Immutable, typed
-x :: i32 = 10        // Mutable, typed
-```
+{ io } = std
 
-### Pattern Matching (Replaces if/else/match)
+Result<T, E>:
+    Ok(T),
+    Err(E)
 
-```zen
-value ?
-    | Some(x) { use(x) }
-    | None { handle_empty() }
+Point: {
+    x: i32,
+    y: i32,
+}
 
-status ?
-    | .Active { process() }
-    | .Inactive { wait() }
-```
+Point.sum = (self: Point) i32 {
+    self.x + self.y
+}
 
-### Functions and UFC
+main = () i32 {
+    p = Point { x: 20, y: 22 }
 
-```zen
-add = (a: i32, b: i32) i32 { return a + b }
+    p.sum() == 42 ?
+        | true { io.println("the point adds up") }
+        | false { io.println("try another point") }
 
-// Both work:
-result = add(5, 3)
-result = 5.add(3)
-```
-
-### Structs and Enums
-
-```zen
-Point: { x: f64, y: f64 }
-Color: Red, Green, Blue
-Option<T>: Some: T, None
-```
-
-### Error Handling
-
-```zen
-load = (path: string) Result<Data, Error> {
-    file = File.open(path).raise()  // Early return on error
-    return Ok(file.read())
+    0
 }
 ```
 
-### Memory (Zig-Style Allocators)
+## Why Zen
+
+- Prefix-first declarations keep functions, structs, enums, imports, methods,
+  and behaviors visually regular.
+- Pattern matching is the core branching form, so booleans, enums, results, and
+  options all use the same `?` shape.
+- Algebraic data types make absence and failure explicit with `Option<T>` and
+  `Result<T, E>` instead of nulls and hidden exceptions.
+- Dot calls work for ordinary functions and declared methods, which keeps APIs
+  fluent without requiring class-based design.
+- Behaviors describe required capabilities directly, so generic code can state
+  the operations it needs.
+- The language is designed for predictable native programs: explicit types,
+  explicit imports, and no hidden object model.
+
+## Language Shape
 
 ```zen
-allocator = GPA.new()
-vec = Vec<i32>.new(allocator)
-vec.mut_ref().push(42)
-vec.mut_ref().free()
+{ io } = std
+
+Option<T>:
+    None,
+    Some(T)
+
+unwrap_or<T> = (value: Option<T>, fallback: T) T {
+    value ?
+        | Some(inner) { inner }
+        | None { fallback }
+}
+
+Display: behavior {
+    display: (Self) str
+}
 ```
 
----
+Zen code is meant to read from the outside in:
 
-## Documentation
+- imports bind names from modules with destructuring syntax;
+- data types are named first, then shaped with fields or variants;
+- functions put the name first, then parameters, result type, and body;
+- methods attach behavior to a type with `Type.method`;
+- generic constraints use behavior bounds such as `T: Display`.
 
-| Document | Description |
-|----------|-------------|
-| [docs/OVERVIEW.md](docs/OVERVIEW.md) | Complete language overview |
-| [docs/QUICK_START.md](docs/QUICK_START.md) | Getting started guide |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Compiler architecture |
-| [docs/INTRINSICS_REFERENCE.md](docs/INTRINSICS_REFERENCE.md) | Intrinsics reference |
-| [LANGUAGE_SPEC.zen](LANGUAGE_SPEC.zen) | Language specification |
+## Learn
 
-For contributors:
-- [docs/design/STDLIB_DESIGN.md](docs/design/STDLIB_DESIGN.md) - Standard library design
-- [docs/ROADMAP.md](docs/ROADMAP.md) - Current roadmap
+- [Learn Zen In Y Minutes](docs/learn_zen_in_y_minutes.md)
+- [Examples](examples/README.md)
+- [V1 language contract](docs/V1_SPEC.md)
+- [Phase plan](docs/PHASE_PLAN.md)
+- [Completion audit](docs/COMPLETION_AUDIT.md)
 
----
-
-## Project Structure
-
-```
-zenlang/
-+-- src/                # Rust compiler source
-|   +-- parser/         # Syntax analysis
-|   +-- typechecker/    # Type inference
-|   +-- codegen/llvm/   # LLVM backend
-|   +-- lsp/            # Language server
-+-- stdlib/             # Standard library (Zen)
-+-- tests/              # Test suite
-+-- examples/           # Example programs
-+-- docs/               # Documentation
-+-- vscode-extension/   # VS Code integration
-```
-
----
-
-## Design Principles
-
-1. **Zero Keywords** - Pattern matching for all control flow
-2. **Explicit Over Implicit** - Allocators, pointers, errors all explicit
-3. **UFC Everywhere** - Any function callable as method
-4. **No Null** - Only Option<T> with Some/None
-5. **Syscall-First** - Direct syscalls, minimal runtime
-
----
-
-## Building
-
-### Prerequisites
-
-- Rust 1.75+
-- LLVM 18.1
-- Linux x86-64 (primary target)
-
-### Commands
-
-```bash
-cargo build --release          # Build compiler
-cargo test --all               # Run tests
-cargo build --bin zen-lsp      # Build LSP
-```
-
----
-
-## Contributing
-
-This project implements the specification in [LANGUAGE_SPEC.zen](LANGUAGE_SPEC.zen). All contributions must align with this specification.
-
----
-
-## License
-
-MIT
+The README is intentionally about the language. Current implementation status,
+gates, and audit details live in the docs linked above.

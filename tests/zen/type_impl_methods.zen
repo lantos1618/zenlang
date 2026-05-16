@@ -1,0 +1,22 @@
+{ io } = std
+
+Point: {
+    x: i32
+}
+
+Point.impl = {
+    get = (self: Point) i32 {
+        self.x
+    }
+
+    keep<T> = (self: Point, value: T) T {
+        value
+    }
+}
+
+main = () i32 {
+    point = Point { x: 42 }
+    io.println("${point.get()}")
+    io.println("${point.keep<i32>(7)}")
+    0
+}

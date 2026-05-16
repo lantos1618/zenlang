@@ -72,5 +72,5 @@ main = () i32 {
     io.println("NO async/await! NO function coloring!")
     io.println("")
 
-    return 0
+    0
 }

@@ -1,0 +1,12 @@
+{ Holder } = helper
+
+pub Box<T>: {
+    value: T
+}
+
+Box.impl = {
+    pub get_held<T> = (self: Box<T>) T {
+        holder = Holder<T> { value: self.value }
+        holder.get<T>()
+    }
+}

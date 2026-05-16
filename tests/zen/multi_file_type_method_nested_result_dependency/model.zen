@@ -1,0 +1,21 @@
+{ Option, Result } = types
+
+pub Box<T>: {
+    value: T
+}
+
+pub Box.wrap_result<T> = (self: Box<T>) Result<Option<T>, str> {
+    Result<Option<T>, str>.Ok(Option<T>.Some(self.value))
+}
+
+pub unwrap_option<T> = (value: Option<T>, fallback: T) T {
+    value ?
+        | Some(inner) { inner }
+        | None { fallback }
+}
+
+pub unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
+    value ?
+        | Ok(inner) { inner }
+        | Err(_) { fallback }
+}

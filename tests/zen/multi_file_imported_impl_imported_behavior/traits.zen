@@ -1,0 +1,9 @@
+pub Json<T>: behavior {
+    encode: (Self) T
+}
+
+pub PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<str>)

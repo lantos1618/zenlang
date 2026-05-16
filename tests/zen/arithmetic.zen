@@ -1,0 +1,16 @@
+{ io } = std
+
+add = (a: i32, b: i32) i32 {
+    a + b
+}
+
+multiply = (a: i32, b: i32) i32 {
+    a * b
+}
+
+main = () i32 {
+    io.println("${add(10, 5)}")
+    io.println("${multiply(6, 7)}")
+    io.println("${100 - 37}")
+    0
+}

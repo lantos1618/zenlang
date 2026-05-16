@@ -1,0 +1,6 @@
+{ Holder } = helper
+
+pub get_held<T> = (value: T) T {
+    holder = Holder<T> { value: value }
+    holder.get<T>()
+}

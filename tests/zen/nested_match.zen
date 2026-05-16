@@ -1,0 +1,23 @@
+{ io } = std
+
+classify = (x: i32) StaticString {
+    x > 0 ?
+        | true {
+            x > 100 ?
+                | true { "big positive" }
+                | false { "small positive" }
+        }
+        | false {
+            x == 0 ?
+                | true { "zero" }
+                | false { "negative" }
+        }
+}
+
+main = () i32 {
+    io.println(classify(200))
+    io.println(classify(5))
+    io.println(classify(0))
+    io.println(classify(-3))
+    0
+}

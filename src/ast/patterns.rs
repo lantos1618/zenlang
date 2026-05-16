@@ -1,138 +1,65 @@
-//! Pattern matching constructs
+use crate::ast::expressions::Expression;
+use crate::error::Span;
+use serde::Serialize;
 
-use std::collections::HashMap;
-
-use super::expressions::Expression;
-use super::fields::{AstFields, FieldValue};
-
-#[derive(Debug, Clone, PartialEq)]
+/// Pattern — used in match arms and destructuring.
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Pattern {
-    Literal(Expression),
-    Identifier(String),
+    /// `_` — matches anything, binds nothing.
+    Wildcard { span: Span },
+
+    /// A name that binds the matched value: `x`, `value`
+    Identifier { name: String, span: Span },
+
+    /// A literal value: `42`, `"hello"`
+    Literal { value: Expression, span: Span },
+
+    /// Struct destructuring: `Point { x, y }` or `Warning { message }`
     Struct {
         name: String,
-        fields: Vec<(String, Pattern)>,
+        fields: Vec<(String, Option<Pattern>)>,
+        span: Span,
     },
-    EnumVariant {
+
+    /// Enum variant: `Ok(value)`, `Some(v)`, `Normal`
+    Enum {
         enum_name: String,
         variant: String,
         payload: Option<Box<Pattern>>,
+        span: Span,
     },
-    Wildcard, // _ pattern
-    // For pattern matching like .Some(val) or .None
-    EnumLiteral {
-        variant: String,
-        payload: Option<Box<Pattern>>,
-    },
-    Or(Vec<Pattern>),    // | pattern1 | pattern2
-    Tuple(Vec<Pattern>), // (pattern1, pattern2, ...)
+
+    /// Or-pattern: `A | B | C`
+    Or { patterns: Vec<Pattern>, span: Span },
+
+    /// Range pattern: `1..5` or `1..=5`
     Range {
-        start: Box<Expression>,
-        end: Box<Expression>,
+        start: Expression,
+        end: Expression,
         inclusive: bool,
-    }, // For range patterns like 1..=10
-    #[allow(dead_code)]
-    Binding {
-        name: String,
-        pattern: Box<Pattern>,
-    }, // For -> binding in patterns
-    Type {
-        type_name: String,
-        binding: Option<String>, // Optional binding like: i32 -> n
+        span: Span,
     },
-    Guard {
-        pattern: Box<Pattern>,
-        condition: Box<Expression>,
-    },
+
+    /// `true`
+    BoolTrue { span: Span },
+
+    /// `false`
+    BoolFalse { span: Span },
 }
 
 impl Pattern {
-    /// Returns the variant name of this pattern as a static string.
-    pub fn variant_name(&self) -> &'static str {
+    /// Returns the span of this pattern.
+    pub fn span(&self) -> Span {
         match self {
-            Pattern::Literal(_) => "Literal",
-            Pattern::Identifier(_) => "Identifier",
-            Pattern::Struct { .. } => "Struct",
-            Pattern::EnumVariant { .. } => "EnumVariant",
-            Pattern::Wildcard => "Wildcard",
-            Pattern::EnumLiteral { .. } => "EnumLiteral",
-            Pattern::Or(_) => "Or",
-            Pattern::Tuple(_) => "Tuple",
-            Pattern::Range { .. } => "Range",
-            Pattern::Binding { .. } => "Binding",
-            Pattern::Type { .. } => "Type",
-            Pattern::Guard { .. } => "Guard",
-        }
-    }
-}
-
-impl AstFields for Pattern {
-    fn ast_fields(&self) -> Vec<(&'static str, FieldValue)> {
-        match self {
-            Pattern::Literal(expr) => {
-                vec![("value", FieldValue::expr(expr))]
-            }
-            Pattern::Identifier(name) => {
-                vec![("name", FieldValue::String(name.clone()))]
-            }
-            Pattern::Struct { name, fields: fs } => vec![
-                ("name", FieldValue::String(name.clone())),
-                (
-                    "fields",
-                    FieldValue::Array(
-                        fs.iter()
-                            .map(|(n, p)| FieldValue::Struct {
-                                name: "PatternField".to_string(),
-                                fields: HashMap::from([
-                                    ("name".to_string(), FieldValue::String(n.clone())),
-                                    ("pattern".to_string(), FieldValue::pat(p)),
-                                ]),
-                            })
-                            .collect(),
-                    ),
-                ),
-            ],
-            Pattern::EnumVariant {
-                enum_name,
-                variant,
-                payload,
-            } => vec![
-                ("enum_name", FieldValue::String(enum_name.clone())),
-                ("variant", FieldValue::String(variant.clone())),
-                ("payload", FieldValue::opt_pattern(payload)),
-            ],
-            Pattern::Wildcard => vec![],
-            Pattern::EnumLiteral { variant, payload } => vec![
-                ("variant", FieldValue::String(variant.clone())),
-                ("payload", FieldValue::opt_pattern(payload)),
-            ],
-            Pattern::Or(pats) => {
-                vec![("patterns", FieldValue::pat_array(pats))]
-            }
-            Pattern::Tuple(pats) => {
-                vec![("patterns", FieldValue::pat_array(pats))]
-            }
-            Pattern::Range {
-                start,
-                end,
-                inclusive,
-            } => vec![
-                ("start", FieldValue::boxed_expr(start)),
-                ("end", FieldValue::boxed_expr(end)),
-                ("inclusive", FieldValue::Bool(*inclusive)),
-            ],
-            Pattern::Binding { name, pattern } => vec![
-                ("name", FieldValue::String(name.clone())),
-                ("pattern", FieldValue::Pat(pattern.clone())),
-            ],
-            Pattern::Type { type_name, binding } => vec![
-                ("type_name", FieldValue::String(type_name.clone())),
-                ("binding", FieldValue::opt_label(binding)),
-            ],
-            Pattern::Guard { pattern, condition } => vec![
-                ("pattern", FieldValue::Pat(pattern.clone())),
-                ("condition", FieldValue::boxed_expr(condition)),
-            ],
+            Pattern::Wildcard { span }
+            | Pattern::Identifier { span, .. }
+            | Pattern::Literal { span, .. }
+            | Pattern::Struct { span, .. }
+            | Pattern::Enum { span, .. }
+            | Pattern::Or { span, .. }
+            | Pattern::Range { span, .. }
+            | Pattern::BoolTrue { span }
+            | Pattern::BoolFalse { span } => *span,
         }
     }
 }

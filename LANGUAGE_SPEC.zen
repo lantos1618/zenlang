@@ -1,3 +1,10 @@
+// Archived aspirational notes.
+//
+// docs/V1_SPEC.md is the versioned v1 source of truth for the rewrite baseline.
+// This file is retained as historical design material only. Do not treat the
+// syntax, stdlib, comptime, allocator, actor, package, or tooling examples below
+// as implemented unless docs/V1_SPEC.md and tests say so.
+//
 // ============================================================================
 // ZEN LANGUAGE SPECIFICATION
 // ============================================================================

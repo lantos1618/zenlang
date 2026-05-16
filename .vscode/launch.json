@@ -2,16 +2,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Zen LSP Server",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/target/debug/zen-lsp",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "sourceMap": {},
-            "console": "internalConsole"
-        },
-        {
             "name": "Debug Zen Program",
             "type": "lldb",
             "request": "launch",

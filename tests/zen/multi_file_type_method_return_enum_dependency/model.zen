@@ -1,0 +1,16 @@
+{ Option } = types
+
+pub Box<T>: {
+    value: T
+}
+
+pub Box.wrap<T> = (self: Box<T>) Option<T> {
+    Option<T>.Some(self.value)
+}
+
+pub Box.value_or<T> = (self: Box<T>, fallback: T) T {
+    value = self.wrap()
+    value ?
+        | Some(inner) { inner }
+        | None { fallback }
+}

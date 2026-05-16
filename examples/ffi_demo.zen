@@ -23,7 +23,7 @@ main = () i32 {
             compiler.is_null(err) ?
                 | true { io.println("No error message available") }
                 | false { io.println("Error loading library") }
-            return 1
+            1
         }
         | false {
             io.println("Successfully loaded libm.so.6")
@@ -36,7 +36,7 @@ main = () i32 {
         | true {
             io.println("Failed to find 'sin' symbol")
             compiler.unload_library(lib)
-            return 1
+            1
         }
         | false {
             io.println("Found 'sin' function at address")
@@ -71,5 +71,5 @@ main = () i32 {
     io.println("Library unloaded")
 
     io.println("=== FFI Demo Complete ===")
-    return 0
+    0
 }

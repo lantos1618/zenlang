@@ -1,0 +1,36 @@
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+Option<T>:
+    None,
+    Some(T)
+
+Box.copy<T> = (self: Self) Self {
+    self
+}
+
+Option.copy<T> = (self: Self) Self {
+    self
+}
+
+main = () i32 {
+    box = Box<i32> { value: 42 }
+    copied = box.copy()
+    io.println("${copied.value}")
+    nested = Box<Option<i32>> { value: Option<i32>.Some(7) }
+    copied_nested = nested.copy()
+    unwrapped = copied_nested.value ?
+        | Some(value) { value }
+        | None { 0 }
+    io.println("${unwrapped}")
+    option = Option<i32>.Some(11)
+    copied_option = option.copy()
+    option_value = copied_option ?
+        | Some(value) { value }
+        | None { 0 }
+    io.println("${option_value}")
+    0
+}

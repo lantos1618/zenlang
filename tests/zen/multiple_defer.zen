@@ -1,0 +1,18 @@
+{ io } = std
+
+step1 = () void { io.println("defer 1") }
+step2 = () void { io.println("defer 2") }
+step3 = () void { io.println("defer 3") }
+
+work = () void {
+    @this.defer(step1())
+    @this.defer(step2())
+    io.println("working")
+    @this.defer(step3())
+    io.println("done")
+}
+
+main = () i32 {
+    work()
+    0
+}

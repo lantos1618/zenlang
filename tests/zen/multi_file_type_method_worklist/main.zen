@@ -1,0 +1,8 @@
+{ io } = std
+{ Box } = model
+
+main = () i32 {
+    box = Box<i32> { value: 31 }
+    io.println("${box.get_inner<i32>()}")
+    0
+}

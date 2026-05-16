@@ -2,7 +2,7 @@
 // Re-exports all collection types from sub-modules
 
 { HashMap } = @std.collections.hashmap
-{ Vec } = @std.collections.vec
+{ DynVec } = @std.collections.vec
 { Queue } = @std.collections.queue
 { Stack } = @std.collections.stack
 { Set } = @std.collections.set

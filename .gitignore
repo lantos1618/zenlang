@@ -51,6 +51,10 @@ build/**/zen*
 /zenc
 /zen-check
 /zen-lsp
+/main
+
+# IDE/tool config
+.lsp.json
 
 # Test outputs and temporary files
 test_output/
@@ -91,3 +95,4 @@ secrets.yml
 .opencode/
 vscode-extension/out/extension.js
 examples/build_demo/target/
+examples/demo_project/target/

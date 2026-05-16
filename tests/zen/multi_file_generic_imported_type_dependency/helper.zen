@@ -1,0 +1,7 @@
+pub Holder<T>: {
+    value: T
+}
+
+pub Holder.get<T> = (self: Holder<T>) T {
+    self.value
+}
