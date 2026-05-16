@@ -225,6 +225,11 @@ and do not assume Phase 4 is ready without evidence.
   Scoped expression local collection is shared for struct field defaults and
   top-level expressions, covered by
   `typechecker::tests::expected_resolver_scoped_expr_locals_collects_block_bindings`.
+  The required resolver-symbol path uses the same scoped expression helper,
+  covered by
+  `typechecker::tests::check_program_with_symbols_requires_resolver_struct_field_default_locals`
+  and
+  `typechecker::tests::check_program_with_symbols_requires_resolver_top_level_expr_locals`.
   Closure parameters now reuse the same parameter-local helpers for expected
   and required resolver locals, preserving mutable parameter metadata.
   Child expression local collection is shared for loop, while, and conditional

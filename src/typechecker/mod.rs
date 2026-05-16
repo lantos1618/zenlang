@@ -7577,12 +7577,10 @@ impl TypeChecker {
                     };
                     for field in fields {
                         if let Some(default) = &field.default {
-                            let mut locals = scope_cursor.new_scope();
-                            self.require_resolver_expr_locals(
+                            self.require_resolver_scoped_expr_locals(
                                 symbols,
                                 default,
                                 &mut scope_cursor,
-                                &mut locals,
                             );
                         }
                     }
@@ -7750,13 +7748,7 @@ impl TypeChecker {
                     }
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
-                    let mut locals = scope_cursor.new_scope();
-                    self.require_resolver_expr_locals(
-                        symbols,
-                        expr,
-                        &mut scope_cursor,
-                        &mut locals,
-                    );
+                    self.require_resolver_scoped_expr_locals(symbols, expr, &mut scope_cursor);
                 }
                 Declaration::Error { .. } => {}
             }
@@ -7784,6 +7776,16 @@ impl TypeChecker {
         let mut locals = scope_cursor.new_scope();
         self.require_resolver_parameter_locals(symbols, params, &mut locals);
         self.require_resolver_expr_locals(symbols, body, scope_cursor, &mut locals);
+    }
+
+    fn require_resolver_scoped_expr_locals(
+        &mut self,
+        symbols: &SymbolTable,
+        expr: &Expression,
+        scope_cursor: &mut ResolverScopeCursor,
+    ) {
+        let mut locals = scope_cursor.new_scope();
+        self.require_resolver_expr_locals(symbols, expr, scope_cursor, &mut locals);
     }
 
     fn validate_no_extra_resolver_declaration_symbols(
