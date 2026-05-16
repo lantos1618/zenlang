@@ -104,6 +104,28 @@ fn build_graph_rejects_self_target_dependencies() {
 }
 
 #[test]
+fn build_graph_orders_targets_before_dependents() {
+    let mut app = executable_target("app", &["src/app.zen"]);
+    app.dependencies = vec!["tool".to_string()];
+    let tool = executable_target("tool", &["src/tool.zen"]);
+
+    let graph = BuildGraph::from_input(BuildGraphInput {
+        targets: vec![app, tool],
+        declared_host_effects: Vec::new(),
+        used_host_effects: Vec::new(),
+    })
+    .expect("build graph");
+
+    let ordered_names: Vec<_> = graph
+        .targets_in_dependency_order()
+        .expect("dependency order")
+        .into_iter()
+        .map(|target| target.name().to_string())
+        .collect();
+    assert_eq!(ordered_names, ["tool", "app"]);
+}
+
+#[test]
 fn parsed_project_build_zen_lowers_to_executable_and_test_graph() {
     let program = parse_program(include_str!("../examples/project/build.zen"));
     let graph = BuildGraph::from_build_program(&program).expect("lower build graph");

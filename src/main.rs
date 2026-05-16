@@ -351,9 +351,15 @@ fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
     let graph = load_build_graph(path_str);
     let build_path = Path::new(path_str);
     let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
-    let targets: Vec<_> = graph
-        .targets()
-        .iter()
+    let ordered_targets = match graph.targets_in_dependency_order() {
+        Ok(targets) => targets,
+        Err(err) => {
+            eprintln!("build graph error: {}", err);
+            process::exit(1);
+        }
+    };
+    let targets: Vec<_> = ordered_targets
+        .into_iter()
         .filter_map(|target| executable_build_target(base_dir, target))
         .collect();
     if targets.is_empty() {
