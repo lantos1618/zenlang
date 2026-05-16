@@ -229,6 +229,18 @@ fn parse_enum_variant_payload_expr() {
 }
 
 #[test]
+fn parse_shorthand_enum_variant_expr_and_pattern() {
+    let prog = parse_ok(
+        r#"f = (value: Result<i32, str>) Result<i32, str> {
+    value ?
+        | .Ok(v) { .Ok(v) }
+        | .Err(msg) { .Err(msg) }
+}"#,
+    );
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
 fn parse_ufc_chain() {
     let prog = parse_ok("f = () void {\n    result = 5.double().add_ten()\n}");
     assert_eq!(prog.declarations.len(), 1);
@@ -313,6 +325,29 @@ fn parse_project_example() {
                     eprintln!("{:?}", e);
                 }
                 panic!("demo parse failed with {} errors", errs.len());
+            }
+        }
+    }
+}
+
+#[test]
+fn parse_project_build_zen_example() {
+    let src = std::fs::read_to_string("examples/project/build.zen");
+    if let Ok(src) = src {
+        let result = parse_str(&src);
+        match result {
+            Ok(prog) => {
+                assert!(
+                    !prog.declarations.is_empty(),
+                    "project build.zen should have declarations, got {}",
+                    prog.declarations.len()
+                );
+            }
+            Err(errs) => {
+                for e in &errs {
+                    eprintln!("{:?}", e);
+                }
+                panic!("project build.zen parse failed with {} errors", errs.len());
             }
         }
     }
