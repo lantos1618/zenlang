@@ -1994,7 +1994,8 @@ and do not assume Phase 4 is ready without evidence.
 - AST type declaration collection now uses named struct and enum tasks before
   replaying generic-bound validation and type registration, covered by
   `cargo test ast_type_declaration_tasks_collect_structs_and_enums`,
-  `cargo test generic_enum_type_arg_arity_is_error`, and
+  `cargo test generic_enum_type_arg_arity_is_error`,
+  `cargo test generic_enum_constructor_without_type_args_is_error`, and
   `cargo test check_program_with_symbols_uses_resolver_type_metadata_for_type_refs`.
 - Behavior declaration collection now uses named behavior tasks before
   replaying AST signature registration or resolver-backed stubs, covered by
@@ -2092,8 +2093,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test generic_function_collection`.
 - AST type declaration collection now uses a shared type-task push helper
   before replaying generic-bound validation and type registration, covered by
-  `cargo test ast_type_declaration_tasks_collect_structs_and_enums` and
-  `cargo test generic_enum_type_arg_arity_is_error`.
+  `cargo test ast_type_declaration_tasks_collect_structs_and_enums`,
+  `cargo test generic_enum_type_arg_arity_is_error`, and
+  `cargo test generic_enum_constructor_without_type_args_is_error`.
 - Behavior declaration collection now uses a shared behavior-task push helper
   before replaying signature setup and behavior generic-bound validation,
   covered by `cargo test behavior_declaration_tasks_collect_behavior_signatures`

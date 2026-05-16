@@ -221,11 +221,25 @@ impl TypeChecker {
             Some(p) => Some(Box::new(self.check_expr(p)?)),
             None => None,
         };
+        let enum_info = self.enums.get(enum_name).cloned();
+        let type_arg_count = enum_info.as_ref().map(|info| info.type_params.len());
+        let type_args_valid = type_arg_count.is_none_or(|expected| expected == type_args.len());
+
         let (type_name, ty, variant_defs) = if type_args.is_empty() {
             let ty = self.resolve_type(&AstType::Named(enum_name.to_string()));
-            let variant_defs = self
-                .enums
-                .get(enum_name)
+            if let Some(expected) = type_arg_count.filter(|expected| *expected > 0) {
+                self.diagnostics.push(Diagnostic::error(
+                    "E5001",
+                    format!(
+                        "generic enum `{}` expects {} type arguments, found 0",
+                        enum_name, expected
+                    ),
+                    span,
+                ));
+            }
+            let variant_defs = enum_info
+                .as_ref()
+                .filter(|_| type_args_valid)
                 .map(|info| {
                     info.variants
                         .iter()
@@ -248,7 +262,7 @@ impl TypeChecker {
             let variant_defs = self.specialize_generic_enum(enum_name, type_args, span);
             (type_name, ty, variant_defs)
         };
-        if self.enums.contains_key(enum_name) {
+        if self.enums.contains_key(enum_name) && type_args_valid {
             match variant_defs.get(variant) {
                 Some(expected_payload) => match (expected_payload, &typed_payload) {
                     (Some(expected_ast), Some(actual)) => {
