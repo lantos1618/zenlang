@@ -21,6 +21,7 @@ fn main() {
         eprintln!("  emit-json symbols <file>   Emit resolver symbol tables JSON");
         eprintln!("  emit-json typed <file>   Emit checked typed program JSON");
         eprintln!("  emit-json diagnostics <file>   Emit diagnostics JSON");
+        eprintln!("  emit-json build-graph <build.zen>   Emit deterministic build graph JSON");
         eprintln!("  <file>         Run a .zen file");
         process::exit(1);
     }
@@ -57,8 +58,11 @@ fn main() {
                 "symbols" => cmd_emit_json_symbols(&args[3]),
                 "typed" => cmd_emit_json_typed(&args[3]),
                 "diagnostics" => cmd_emit_json_diagnostics(&args[3]),
+                "build-graph" => cmd_emit_json_build_graph(&args[3]),
                 _ => {
-                    eprintln!("Usage: zen emit-json <ast|symbols|typed|diagnostics> <file.zen>");
+                    eprintln!(
+                        "Usage: zen emit-json <ast|symbols|typed|diagnostics|build-graph> <file.zen>"
+                    );
                     process::exit(1);
                 }
             }
@@ -205,6 +209,58 @@ fn cmd_emit_json_diagnostics(path_str: &str) {
 
     if has_errors {
         process::exit(1);
+    }
+}
+
+fn cmd_emit_json_build_graph(path_str: &str) {
+    let path = Path::new(path_str);
+    if !path.exists() {
+        eprintln!("error: file not found: {}", path_str);
+        process::exit(1);
+    }
+    if !is_build_zen_path(path_str) {
+        eprintln!("error: emit-json build-graph expects a build.zen file");
+        process::exit(1);
+    }
+
+    let source = match std::fs::read_to_string(path) {
+        Ok(source) => source,
+        Err(err) => {
+            eprintln!("error reading {}: {}", path_str, err);
+            process::exit(1);
+        }
+    };
+
+    let mut files = FileTable::new();
+    let file_id = files.add_file(path_str.to_string(), source.clone());
+    let tokens = match zen::lexer::tokenize(&source, file_id) {
+        Ok(tokens) => tokens,
+        Err(err) => {
+            print_errors(&[err], &files);
+            process::exit(1);
+        }
+    };
+    let program = match zen::parser::parse(tokens, file_id) {
+        Ok(program) => program,
+        Err(errs) => {
+            print_errors(&errs, &files);
+            process::exit(1);
+        }
+    };
+    let graph = match zen::build_graph::BuildGraph::from_build_program(&program) {
+        Ok(graph) => graph,
+        Err(err) => {
+            eprintln!("build graph error: {}", err);
+            process::exit(1);
+        }
+    };
+
+    match graph.canonical_json() {
+        Ok(json) => println!("{json}"),
+        Err(err) => {
+            eprintln!("json emit error: {}", err);
+            process::exit(1);
+        }
     }
 }
 
