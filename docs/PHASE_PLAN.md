@@ -1779,6 +1779,9 @@ checked-in docs, tests, and commits only.
 - Behavior impl validation now reuses the resolver behavior-impl declaration
   task shape and helper, so standalone validation and resolver metadata replay
   classify `.implements` blocks through the same path.
+- Resolver-backed behavior impl validation now calls the shared behavior-impl
+  validator directly, removing the resolver-only forwarding loop over the same
+  `.implements` task data.
 
 ## Current Phase
 

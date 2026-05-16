@@ -4498,10 +4498,7 @@ impl TypeChecker {
         type_reference_tasks: &[ResolverTypeReferenceValidationTask<'_>],
     ) {
         self.with_resolver_backed_collection(|checker| {
-            checker.validate_resolver_collected_behavior_impl_declarations(
-                symbols,
-                behavior_impl_tasks,
-            );
+            checker.validate_behavior_impl_tasks(behavior_impl_tasks, Some(symbols));
             checker.validate_behavior_requires_tasks(behavior_requires_tasks, Some(symbols));
             checker.validate_resolver_type_reference_tasks(type_reference_tasks, Some(symbols));
             checker.validate_resolver_struct_field_default_tasks(type_tasks, Some(symbols));
@@ -4647,23 +4644,6 @@ impl TypeChecker {
         for task in impl_tasks {
             self.validate_collected_behavior_impl_declaration(
                 symbols,
-                task.ast_type_name,
-                task.behavior,
-                task.behavior_type_args,
-                task.methods,
-                task.span,
-            );
-        }
-    }
-
-    fn validate_resolver_collected_behavior_impl_declarations(
-        &mut self,
-        symbols: &SymbolTable,
-        tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
-    ) {
-        for task in tasks {
-            self.validate_collected_behavior_impl_declaration(
-                Some(symbols),
                 task.ast_type_name,
                 task.behavior,
                 task.behavior_type_args,
