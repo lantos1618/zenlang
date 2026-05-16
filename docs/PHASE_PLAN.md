@@ -180,6 +180,9 @@ checked-in docs, tests, and commits only.
 - Resolver expression and local-symbol validation now live in dedicated
   resolver helper modules, keeping expression traversal, statement traversal,
   and scoped local binding separate from declaration validation.
+- Resolver absent-metadata entry and diagnostic helpers now live in dedicated
+  resolver validation support files, keeping shared absence diagnostics
+  separate from per-symbol absence descriptor code tables.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,

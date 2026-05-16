@@ -1,5 +1,7 @@
 include!("resolver_validation_support/replay_tasks.rs");
 include!("resolver_validation_support/expected_symbols.rs");
+include!("resolver_validation_support/absence_entries.rs");
+include!("resolver_validation_support/absence_diagnostics.rs");
 include!("resolver_validation_support/absence_validation.rs");
 include!("resolver_validation_support/field_variant_scope.rs");
 include!("resolver_validation_support/type_helpers.rs");
