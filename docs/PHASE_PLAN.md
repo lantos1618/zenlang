@@ -1815,6 +1815,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed type declaration metadata collection now receives the full
   resolver declaration metadata task bundle and selects type entries
   internally, keeping declaration metadata replay helpers bundle-shaped.
+- Resolver-backed behavior declaration metadata collection now receives the
+  full resolver declaration metadata task bundle and selects behavior entries
+  internally, completing the declaration metadata replay helper bundle shape.
 
 ## Current Phase
 
