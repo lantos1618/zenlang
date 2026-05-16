@@ -2058,10 +2058,13 @@ checked-in docs, tests, and commits only.
   `emit_json_build_graph_rejects_self_target_dependencies` covers
   self-dependency rejection there. `emit_json_build_graph_rejects_cyclic_target_dependencies`
   covers dependency-cycle rejection on that graph-emission path.
-- `build-graph <build.zen>` now consumes the deterministic graph for one
-  executable target without widening the accepted `build.zen` subset.
-  `build_graph_command_compiles_single_executable_target` covers the positive
-  path, `build_graph_command_rejects_undeclared_host_effects` covers
+- `build-graph <build.zen>` now consumes the deterministic graph for executable
+  targets without widening the accepted `build.zen` subset.
+  `build_graph_command_compiles_single_executable_target` covers the
+  single-target positive path,
+  `build_graph_command_compiles_multiple_executable_targets` covers
+  multi-target execution, `build_graph_command_rejects_undeclared_host_effects`
+  and `build_graph_command_multi_target_rejects_undeclared_host_effects` cover
   deterministic host-effect rejection before execution starts,
   `build_graph_command_rejects_graph_without_executable_targets` covers
   test-only graph rejection before execution starts, and

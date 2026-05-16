@@ -2272,12 +2272,16 @@ and do not assume Phase 4 is ready without evidence.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes remain
   rejected with a targeted graph diagnostic, covered by
   `cargo test --test integration legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic`.
-- `build-graph <build.zen>` consumes the deterministic graph for one executable
-  target and rejects undeclared host effects before execution starts, covered
+- `build-graph <build.zen>` consumes the deterministic graph for executable
+  targets and rejects undeclared host effects before execution starts, covered
   by
   `cargo test --test integration build_graph_command_compiles_single_executable_target`
   and
-  `cargo test --test integration build_graph_command_rejects_undeclared_host_effects`.
+  `cargo test --test integration build_graph_command_compiles_multiple_executable_targets`.
+  Single-target and multi-target host-effect rejection are covered by
+  `cargo test --test integration build_graph_command_rejects_undeclared_host_effects`
+  and
+  `cargo test --test integration build_graph_command_multi_target_rejects_undeclared_host_effects`.
   Test-only graphs are rejected before execution starts, covered by
   `cargo test --test integration build_graph_command_rejects_graph_without_executable_targets`.
 - Executable build graph targets now execute dependencies before dependents,
