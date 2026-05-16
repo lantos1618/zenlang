@@ -1884,21 +1884,29 @@ checked-in docs, tests, and commits only.
   `build_graph_command_compiles_single_executable_target` covers the positive
   path, and `build_graph_command_rejects_missing_root_source` covers a target
   execution failure before normal `zen build build.zen` is ungated.
+- Normal `zen build build.zen` now routes through the same constrained
+  deterministic graph pipeline used by `build-graph <build.zen>`, covered by
+  `build_command_routes_build_zen_through_deterministic_graph`. `check`, `emit`,
+  and direct `build.zen` invocation remain gated to keep build scripts on the
+  build-only entrypoint. The normal build path also rejects undeclared host
+  effects before target execution, covered by
+  `build_command_build_zen_rejects_undeclared_host_effects`.
 
 ## Current Phase
 
 Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
-Phase 4 build-driver work is still gated by the normal `zen build build.zen`
-entrypoint: deterministic graph emission and one-target execution exist through
-explicit experimental commands, but the standard build command remains gated.
+Phase 4 build-driver work still has constrained `build.zen` semantics: normal
+`zen build build.zen` executes one graph target, while `check`, `emit`, and
+direct `build.zen` invocation remain gated until those entrypoints have their
+own deterministic semantics.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Continue the next smallest build-driver slice by routing normal
-`zen build build.zen` through the constrained graph pipeline while preserving
-the existing negative cases for `check`, `emit`, and direct `build.zen`
-execution. Do not widen the accepted `build.zen` subset while doing so.
+Continue the next smallest build-driver slice by deciding whether `zen check
+build.zen` should validate only the deterministic graph or remain gated until
+there is a typed build-script surface. Preserve the constrained accepted
+`build.zen` subset either way.

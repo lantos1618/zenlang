@@ -2165,16 +2165,27 @@ and do not assume Phase 4 is ready without evidence.
   validation task collection, covered by
   `cargo test behavior_extends_replay_task_helper_pushes_parent_validation`
   and `cargo test behavior_extends_validation_tasks_collect_parent_refs`.
+- Normal `zen build build.zen` now routes through the constrained
+  deterministic build graph pipeline and compiles one executable target,
+  covered by
+  `cargo test --test integration build_command_routes_build_zen_through_deterministic_graph`.
+  The same entrypoint rejects undeclared host effects before target execution,
+  covered by
+  `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects`.
+  `check`, `emit`, and direct `build.zen` invocation remain gated to the
+  build-only entrypoint.
 
 ## Unresolved Gaps
 
 - Phase 2 is not complete: resolver/typechecker integration still has duplicate
   declaration collection for richer function type metadata and residual
   resolver-owned semantic handoffs.
-- Phase 4 is not complete: deterministic `build.zen` graph tests and
-  implementation are still absent.
+- build.zen entrypoints are not complete: the constrained graph path now covers
+  emission, one-target execution, and normal `zen build build.zen`, but `check`,
+  `emit`, and direct file invocation still need explicit deterministic
+  semantics before they can be promoted.
 - Effect checking, typed allocator semantics, actors in std integration,
-  JSON/YAML IR boundaries, and build graph execution remain gated by
+  JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
 
 ## Decision

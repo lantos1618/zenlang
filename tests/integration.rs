@@ -1538,22 +1538,102 @@ main = () i32 {
 }
 
 #[test]
-fn build_command_rejects_build_zen_until_deterministic_graph_exists() {
-    assert_build_zen_rejected(&["build"], "zen build build.zen");
+fn build_command_routes_build_zen_through_deterministic_graph() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("main.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write main.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["build", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build build.zen");
+
+    assert!(
+        output.status.success(),
+        "zen build build.zen failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let bin_path = tmp.path().join("build").join("myapp");
+    assert!(
+        bin_path.exists(),
+        "expected {} to exist",
+        bin_path.display()
+    );
+    let run = Command::new(&bin_path).output().expect("run built binary");
+    assert!(
+        run.status.success(),
+        "built binary exited with {}",
+        run.status
+    );
 }
 
 #[test]
-fn check_command_rejects_build_zen_until_deterministic_graph_exists() {
+fn build_command_build_zen_rejects_undeclared_host_effects() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD")
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["build", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build build.zen");
+
+    assert!(
+        !output.status.success(),
+        "zen build build.zen unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("undeclared host effect: read env `ZEN_STD`"),
+        "expected undeclared host effect diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn check_command_rejects_build_zen_as_build_only_entrypoint() {
     assert_build_zen_rejected(&["check"], "zen check build.zen");
 }
 
 #[test]
-fn emit_command_rejects_build_zen_until_deterministic_graph_exists() {
+fn emit_command_rejects_build_zen_as_build_only_entrypoint() {
     assert_build_zen_rejected(&["emit"], "zen emit build.zen");
 }
 
 #[test]
-fn direct_file_command_rejects_build_zen_until_deterministic_graph_exists() {
+fn direct_file_command_rejects_build_zen_as_build_only_entrypoint() {
     assert_build_zen_rejected(&[], "zen build.zen");
 }
 
@@ -1723,9 +1803,8 @@ main = () i32 {
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(
-        String::from_utf8_lossy(&output.stderr).contains(
-            "build.zen execution is gated until deterministic build graph support exists"
-        ),
+        String::from_utf8_lossy(&output.stderr)
+            .contains("build.zen is only executable through `zen build build.zen`"),
         "expected build.zen gated diagnostic for {command_name}, stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
