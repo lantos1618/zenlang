@@ -478,6 +478,11 @@ fn test_behavior_default_method_dispatch() {
 }
 
 #[test]
+fn test_behavior_generic_default_method() {
+    run_test("behavior_generic_default_method");
+}
+
+#[test]
 fn test_behavior_inherited_default_method() {
     run_test("behavior_inherited_default_method");
 }
@@ -876,6 +881,15 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Point_to_json");
     assert_c_call_resolves_to_definition(&c_source, "render_Point");
     assert!(!c_source.contains("T_to_json"));
+
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("behavior_generic_default_method.zen"),
+    );
+    assert!(c_source.contains("zen_str Point_encode(Point __arg0)"));
+    assert!(c_source.contains("Point_encode(point)"));
+    assert_c_call_resolves_to_definition(&c_source, "Point_encode");
+    assert!(!c_source.contains("Json_T"));
+    assert!(!c_source.contains("T Point_encode"));
 
     let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_imported_impl_imported_behavior/main.zen"),
