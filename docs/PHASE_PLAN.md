@@ -1879,6 +1879,8 @@ checked-in docs, tests, and commits only.
   target metadata arrays,
   `build_program_lowering_rejects_self_target_dependencies` covers
   self-dependency rejection,
+  `build_program_lowering_rejects_cyclic_target_dependencies` covers
+  dependency-cycle rejection,
   `build_program_lowering_rejects_unknown_target_dependencies` covers
   unresolved target dependency rejection, and
   `build_program_lowering_rejects_undeclared_env_reads` keeps undeclared host
@@ -1897,7 +1899,8 @@ checked-in docs, tests, and commits only.
   `emit_json_build_graph_rejects_unknown_target_dependencies` covers unresolved
   target dependency rejection through the same graph-emission path, and
   `emit_json_build_graph_rejects_self_target_dependencies` covers
-  self-dependency rejection there.
+  self-dependency rejection there. `emit_json_build_graph_rejects_cyclic_target_dependencies`
+  covers dependency-cycle rejection on that graph-emission path.
 - `build-graph <build.zen>` now consumes the deterministic graph for one
   executable target without widening the accepted `build.zen` subset.
   `build_graph_command_compiles_single_executable_target` covers the positive
