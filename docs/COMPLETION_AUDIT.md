@@ -2118,6 +2118,12 @@ and do not assume Phase 4 is ready without evidence.
   expected module and import entries, covered by
   `cargo test resolver_expected_symbol_sets_collect_declarations_and_locals_together`
   and `cargo test ast_import_declaration_tasks_collect_import_bindings`.
+- Resolver validation replay now uses shared behavior-edge helpers for impl,
+  requires, and parent edges, covered by
+  `cargo test expected_behavior_associations_build_impl_and_required_edges_together`,
+  `cargo test resolver_validation_replay_declaration_tasks_collect_sources_and_edges`,
+  and
+  `cargo test resolver_behavior_association_list_tasks_collect_type_and_parent_edges_together`.
 
 ## Unresolved Gaps
 

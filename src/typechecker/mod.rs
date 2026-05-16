@@ -2965,7 +2965,12 @@ impl ExpectedBehaviorAssociations {
                     behavior_type_args,
                     ..
                 } => {
-                    expected.impls.push(type_name, behavior, behavior_type_args);
+                    push_expected_behavior_impl_edge(
+                        &mut expected,
+                        type_name,
+                        behavior,
+                        behavior_type_args,
+                    );
                 }
                 Declaration::Requires {
                     type_name,
@@ -2973,9 +2978,12 @@ impl ExpectedBehaviorAssociations {
                     behavior_type_args,
                     ..
                 } => {
-                    expected
-                        .required
-                        .push(type_name, behavior, behavior_type_args);
+                    push_expected_behavior_required_edge(
+                        &mut expected,
+                        type_name,
+                        behavior,
+                        behavior_type_args,
+                    );
                 }
                 _ => {}
             }
@@ -8651,10 +8659,12 @@ impl TypeChecker {
                         &mut scope_cursor,
                         &mut tasks.expected_symbols,
                     );
-                    tasks
-                        .expected_associations
-                        .impls
-                        .push(type_name, behavior, behavior_type_args);
+                    push_expected_behavior_impl_edge(
+                        &mut tasks.expected_associations,
+                        type_name,
+                        behavior,
+                        behavior_type_args,
+                    );
                 }
                 Declaration::ImplBlock {
                     type_name, methods, ..
@@ -8672,7 +8682,8 @@ impl TypeChecker {
                     behavior_type_args,
                     ..
                 } => {
-                    tasks.expected_associations.required.push(
+                    push_expected_behavior_required_edge(
+                        &mut tasks.expected_associations,
                         type_name,
                         behavior,
                         behavior_type_args,
@@ -8684,9 +8695,12 @@ impl TypeChecker {
                     parent_type_args,
                     ..
                 } => {
-                    tasks
-                        .expected_parents
-                        .push(behavior, parent, parent_type_args);
+                    push_expected_behavior_parent_edge(
+                        &mut tasks.expected_parents,
+                        behavior,
+                        parent,
+                        parent_type_args,
+                    );
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
                     expected_resolver_scoped_expr_locals(
@@ -11575,6 +11589,35 @@ fn expected_behavior_method_metadata(
 
 fn expected_behavior_edge(behavior: &str, type_args: &[AstType]) -> ExpectedBehaviorEdge {
     ExpectedBehaviorEdge::new(behavior, type_args)
+}
+
+fn push_expected_behavior_impl_edge(
+    expected: &mut ExpectedBehaviorAssociations,
+    type_name: &str,
+    behavior: &str,
+    behavior_type_args: &[AstType],
+) {
+    expected.impls.push(type_name, behavior, behavior_type_args);
+}
+
+fn push_expected_behavior_required_edge(
+    expected: &mut ExpectedBehaviorAssociations,
+    type_name: &str,
+    behavior: &str,
+    behavior_type_args: &[AstType],
+) {
+    expected
+        .required
+        .push(type_name, behavior, behavior_type_args);
+}
+
+fn push_expected_behavior_parent_edge(
+    expected: &mut ExpectedBehaviorEdges,
+    behavior: &str,
+    parent: &str,
+    parent_type_args: &[AstType],
+) {
+    expected.push(behavior, parent, parent_type_args);
 }
 
 fn collect_expected_resolver_impl_method_symbols(

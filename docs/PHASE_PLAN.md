@@ -1746,6 +1746,8 @@ checked-in docs, tests, and commits only.
   type and behavior declaration symbols.
 - Resolver validation replay now uses a shared import-symbol helper for
   expected module and import entries.
+- Resolver validation replay now uses shared behavior-edge helpers for impl,
+  requires, and parent edges.
 
 ## Current Phase
 
