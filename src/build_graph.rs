@@ -27,6 +27,9 @@ pub enum BuildTargetKind {
         root_source_file: String,
         out_dir: String,
     },
+    Test {
+        root_source_file: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -207,7 +210,7 @@ impl BuildProgramLowering {
         if let Some(effect) = declared_env_read_effect(expr) {
             self.declared_host_effects.push(effect);
         }
-        if let Some(target) = executable_target_from_builder_add(expr) {
+        if let Some(target) = build_target_from_builder_add(expr) {
             self.targets.push(target);
         }
 
@@ -335,7 +338,7 @@ impl BuildProgramLowering {
     }
 }
 
-fn executable_target_from_builder_add(expr: &Expression) -> Option<BuildTargetInput> {
+fn build_target_from_builder_add(expr: &Expression) -> Option<BuildTargetInput> {
     let Expression::MethodCall {
         receiver,
         method,
@@ -356,10 +359,14 @@ fn executable_target_from_builder_add(expr: &Expression) -> Option<BuildTargetIn
     let Expression::StructLiteral { name, fields, .. } = arg else {
         return None;
     };
-    if name != "Executable" {
-        return None;
+    match name.as_str() {
+        "Executable" => executable_target_from_fields(fields),
+        "Test" => test_target_from_fields(fields),
+        _ => None,
     }
+}
 
+fn executable_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
     let target_name = string_field(fields, "name")?;
     let root_source_file =
         string_field(fields, "main").or_else(|| string_field(fields, "root_source_file"))?;
@@ -375,6 +382,32 @@ fn executable_target_from_builder_add(expr: &Expression) -> Option<BuildTargetIn
         dependencies: Vec::new(),
         features: Vec::new(),
     })
+}
+
+fn test_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
+    let root_source_file =
+        string_field(fields, "root").or_else(|| string_field(fields, "root_source_file"))?;
+    let target_name =
+        string_field(fields, "name").unwrap_or_else(|| target_name_from_root(&root_source_file));
+
+    Some(BuildTargetInput {
+        name: target_name,
+        kind: BuildTargetKind::Test {
+            root_source_file: root_source_file.clone(),
+        },
+        sources: vec![root_source_file],
+        dependencies: Vec::new(),
+        features: Vec::new(),
+    })
+}
+
+fn target_name_from_root(root: &str) -> String {
+    std::path::Path::new(root)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .filter(|stem| !stem.is_empty())
+        .unwrap_or("test")
+        .to_string()
 }
 
 fn string_field(fields: &[(String, Expression)], field_name: &str) -> Option<String> {

@@ -351,21 +351,29 @@ fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
     let graph = load_build_graph(path_str);
     let build_path = Path::new(path_str);
     let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
-    graph
+    let targets: Vec<_> = graph
         .targets()
         .iter()
-        .map(|target| executable_build_target(base_dir, target))
-        .collect()
+        .filter_map(|target| executable_build_target(base_dir, target))
+        .collect();
+    if targets.is_empty() {
+        eprintln!("build graph execution requires at least one executable target");
+        process::exit(1);
+    }
+    targets
 }
 
 fn executable_build_target(
     base_dir: &Path,
     target: &zen::build_graph::BuildTarget,
-) -> BuildGraphExecutableTarget {
+) -> Option<BuildGraphExecutableTarget> {
     let zen::build_graph::BuildTargetKind::Executable {
         root_source_file,
         out_dir,
-    } = target.kind();
+    } = target.kind()
+    else {
+        return None;
+    };
     let root_path = base_dir.join(root_source_file);
     if !root_path.exists() {
         eprintln!(
@@ -376,12 +384,12 @@ fn executable_build_target(
         process::exit(1);
     }
 
-    BuildGraphExecutableTarget {
+    Some(BuildGraphExecutableTarget {
         name: target.name().to_string(),
         root_source_file: root_source_file.clone(),
         root_path,
         out_dir: base_dir.join(out_dir),
-    }
+    })
 }
 
 fn compile_file_to_c_source(path: &Path) -> String {

@@ -68,11 +68,11 @@ fn build_graph_rejects_undeclared_host_effects() {
 }
 
 #[test]
-fn parsed_project_build_zen_lowers_to_executable_graph() {
+fn parsed_project_build_zen_lowers_to_executable_and_test_graph() {
     let program = parse_program(include_str!("../examples/project/build.zen"));
     let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
 
-    assert_eq!(graph.targets().len(), 1);
+    assert_eq!(graph.targets().len(), 2);
     let target = &graph.targets()[0];
     assert_eq!(target.name(), "myapp");
     assert_eq!(target.sources(), ["main.zen"]);
@@ -84,6 +84,40 @@ fn parsed_project_build_zen_lowers_to_executable_graph() {
             assert_eq!(root_source_file, "main.zen");
             assert_eq!(out_dir, "build/");
         }
+        other => panic!("expected executable target, got {other:?}"),
+    }
+    let target = &graph.targets()[1];
+    assert_eq!(target.name(), "test");
+    assert_eq!(target.sources(), ["test.zen"]);
+    match target.kind() {
+        BuildTargetKind::Test { root_source_file } => {
+            assert_eq!(root_source_file, "test.zen");
+        }
+        other => panic!("expected test target, got {other:?}"),
+    }
+}
+
+#[test]
+fn build_program_lowering_collects_test_target() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Test { root: "tests/math.zen" })
+    .Ok(b.config())
+}
+"#,
+    );
+    let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
+
+    assert_eq!(graph.targets().len(), 1);
+    let target = &graph.targets()[0];
+    assert_eq!(target.name(), "math");
+    assert_eq!(target.sources(), ["tests/math.zen"]);
+    match target.kind() {
+        BuildTargetKind::Test { root_source_file } => {
+            assert_eq!(root_source_file, "tests/math.zen");
+        }
+        other => panic!("expected test target, got {other:?}"),
     }
 }
 
@@ -111,6 +145,7 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
             assert_eq!(root_source_file, "app.zen");
             assert_eq!(out_dir, "build/app/");
         }
+        other => panic!("expected executable target, got {other:?}"),
     }
     assert_eq!(graph.targets()[1].name(), "tool");
     assert_eq!(graph.targets()[1].sources(), ["tool.zen"]);
@@ -122,6 +157,7 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
             assert_eq!(root_source_file, "tool.zen");
             assert_eq!(out_dir, "build/tool/");
         }
+        other => panic!("expected executable target, got {other:?}"),
     }
 }
 
