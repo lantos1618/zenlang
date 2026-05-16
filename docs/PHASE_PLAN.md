@@ -163,6 +163,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis.
+- AST behavior-extends validation now uses a named validation task collector
+  before parent, cycle, and method-coherence checks.
 - Collected declaration semantic validation now records behavior impl and
   requires checks in one declaration dispatch before replaying the existing
   impl-before-requires validation order.

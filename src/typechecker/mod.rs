@@ -3542,6 +3542,15 @@ impl TypeChecker {
     }
 
     fn validate_ast_behavior_extends_declarations(&mut self, decls: &[Declaration]) {
+        let tasks = Self::collect_behavior_extends_validation_tasks(decls);
+        self.validate_behavior_extends_tasks(&tasks);
+        self.validate_behavior_extends_cycles();
+        self.validate_behavior_method_coherence();
+    }
+
+    fn collect_behavior_extends_validation_tasks(
+        decls: &[Declaration],
+    ) -> Vec<BehaviorExtendsValidationTask<'_>> {
         let mut tasks = Vec::new();
         for decl in decls {
             if let Declaration::BehaviorExtends {
@@ -3559,6 +3568,10 @@ impl TypeChecker {
                 });
             }
         }
+        tasks
+    }
+
+    fn validate_behavior_extends_tasks(&mut self, tasks: &[BehaviorExtendsValidationTask<'_>]) {
         for task in tasks {
             self.check_behavior_extends(
                 task.behavior,
@@ -3567,8 +3580,6 @@ impl TypeChecker {
                 task.span,
             );
         }
-        self.validate_behavior_extends_cycles();
-        self.validate_behavior_method_coherence();
     }
 
     fn collect_declarations_with_symbols(&mut self, decls: &[Declaration], symbols: &SymbolTable) {
@@ -13725,6 +13736,30 @@ value := 1
                 .iter()
                 .any(|task| matches!(task, ResolverTypeReferenceValidationTask::TopLevelExpr { .. })),
             "top-level expression type references should stay in the shared resolver task collector"
+        );
+    }
+
+    #[test]
+    fn behavior_extends_validation_tasks_collect_parent_refs() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+}
+Pretty<T>: behavior {
+}
+
+Pretty.extends(Json<T>)
+"#,
+        );
+
+        let tasks = TypeChecker::collect_behavior_extends_validation_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].behavior, "Pretty");
+        assert_eq!(tasks[0].parent, "Json");
+        assert_eq!(
+            tasks[0].parent_type_args,
+            &[AstType::Named("T".to_string())]
         );
     }
 
