@@ -4456,8 +4456,7 @@ impl TypeChecker {
         tasks: &ResolverDeclarationMetadataTasks<'_>,
         symbols: &SymbolTable,
     ) {
-        let impl_tasks =
-            self.resolver_behavior_impl_block_tasks(&tasks.behavior_associations.impls, symbols);
+        let impl_tasks = self.resolver_behavior_impl_block_tasks(tasks, symbols);
 
         self.with_resolver_backed_collection(|checker| {
             for task in &impl_tasks {
@@ -4523,18 +4522,18 @@ impl TypeChecker {
 
     fn resolver_behavior_impl_block_tasks<'a>(
         &self,
-        raw_tasks: &'a [ResolverBehaviorImplBlockDeclarationTask<'a>],
+        tasks: &'a ResolverDeclarationMetadataTasks<'a>,
         symbols: &SymbolTable,
     ) -> Vec<ResolverBehaviorImplBlockTask<'a>> {
-        let mut tasks = Vec::new();
-        for raw_task in raw_tasks {
+        let mut impl_tasks = Vec::new();
+        for raw_task in &tasks.behavior_associations.impls {
             let restored_type_name = self.resolver_impl_type_name_for(
                 symbols,
                 raw_task.ast_type_name,
                 raw_task.methods,
                 Some((raw_task.behavior, raw_task.behavior_type_args)),
             );
-            tasks.push(ResolverBehaviorImplBlockTask {
+            impl_tasks.push(ResolverBehaviorImplBlockTask {
                 ast_type_name: raw_task.ast_type_name,
                 restored_type_name,
                 behavior: raw_task.behavior,
@@ -4542,7 +4541,7 @@ impl TypeChecker {
                 methods: raw_task.methods,
             });
         }
-        tasks
+        impl_tasks
     }
 
     fn resolver_type_behavior_refresh_tasks(
