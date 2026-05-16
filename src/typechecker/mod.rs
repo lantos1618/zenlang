@@ -216,6 +216,13 @@ struct ResolverBehaviorAssociationListTasks<'a> {
     behavior_parents: Vec<ResolverBehaviorParentListTask<'a>>,
 }
 
+#[derive(Default)]
+struct ResolverExpectedSymbolSets {
+    declarations: HashSet<(Namespace, String)>,
+    locals: HashSet<(String, u32)>,
+    validate_imports: bool,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BehaviorBound {
     pub behavior: String,
@@ -7748,8 +7755,9 @@ impl TypeChecker {
                 Declaration::Error { .. } => {}
             }
         }
-        self.validate_no_extra_resolver_declaration_symbols(program, symbols);
-        self.validate_no_extra_resolver_local_symbols(program, symbols);
+        let expected_symbols = collect_expected_resolver_symbol_sets(program);
+        self.validate_no_extra_resolver_declaration_symbols(&expected_symbols, symbols);
+        self.validate_no_extra_resolver_local_symbols(&expected_symbols, symbols);
         self.validate_resolver_behavior_association_lists(program, symbols);
         self.validate_stripped_resolver_import_symbols(program, symbols);
     }
@@ -7768,16 +7776,11 @@ impl TypeChecker {
 
     fn validate_no_extra_resolver_declaration_symbols(
         &mut self,
-        program: &ast::Program,
+        expected: &ResolverExpectedSymbolSets,
         symbols: &SymbolTable,
     ) {
-        let expected = expected_resolver_declaration_symbols(program);
-        let validate_imports = program
-            .declarations
-            .iter()
-            .any(|decl| matches!(decl, Declaration::Import { .. }));
         for symbol in symbols.symbols() {
-            if !validate_imports
+            if !expected.validate_imports
                 && matches!(symbol.namespace, Namespace::Module | Namespace::Import)
             {
                 continue;
@@ -7793,7 +7796,10 @@ impl TypeChecker {
             ) {
                 continue;
             }
-            if !expected.contains(&(symbol.namespace, symbol.name.clone())) {
+            if !expected
+                .declarations
+                .contains(&(symbol.namespace, symbol.name.clone()))
+            {
                 self.validate_extra_resolver_symbol(
                     symbol.namespace.diagnostic_name(),
                     &symbol.name,
@@ -7806,15 +7812,17 @@ impl TypeChecker {
 
     fn validate_no_extra_resolver_local_symbols(
         &mut self,
-        program: &ast::Program,
+        expected: &ResolverExpectedSymbolSets,
         symbols: &SymbolTable,
     ) {
-        let expected = expected_resolver_local_symbols(program);
         for symbol in symbols.symbols() {
             if symbol.namespace != Namespace::Local {
                 continue;
             }
-            if !expected.contains(&(symbol.name.clone(), symbol.scope_id)) {
+            if !expected
+                .locals
+                .contains(&(symbol.name.clone(), symbol.scope_id))
+            {
                 self.validate_extra_resolver_symbol(
                     "local",
                     &symbol.name,
@@ -10793,78 +10801,51 @@ fn expected_behavior_edge(behavior: &str, type_args: &[AstType]) -> ExpectedBeha
     ExpectedBehaviorEdge::new(behavior, type_args)
 }
 
-fn expected_resolver_declaration_symbols(program: &ast::Program) -> HashSet<(Namespace, String)> {
-    let mut expected = HashSet::new();
-    let validate_imports = program
-        .declarations
-        .iter()
-        .any(|decl| matches!(decl, Declaration::Import { .. }));
+fn collect_expected_resolver_symbol_sets(program: &ast::Program) -> ResolverExpectedSymbolSets {
+    let mut expected = ResolverExpectedSymbolSets::default();
+    let mut scope_cursor = ResolverScopeCursor::default();
+
     for decl in &program.declarations {
         match decl {
-            Declaration::Function { name, .. } => {
-                expected.insert((Namespace::Value, name.clone()));
+            Declaration::Function {
+                name, params, body, ..
+            } => {
+                expected
+                    .declarations
+                    .insert((Namespace::Value, name.clone()));
+                let mut locals = scope_cursor.new_scope();
+                expected_resolver_parameter_locals(params, &mut locals, &mut expected.locals);
+                expected_resolver_expr_locals(
+                    body,
+                    &mut scope_cursor,
+                    &mut locals,
+                    &mut expected.locals,
+                );
             }
             Declaration::Method {
                 type_name,
                 method_name,
+                params,
+                body,
                 ..
             } => {
-                expected.insert((
+                expected.declarations.insert((
                     Namespace::Value,
                     method_signature_key(type_name, method_name),
                 ));
-            }
-            Declaration::Struct { name, .. } => {
-                expected.insert((Namespace::Type, name.clone()));
-            }
-            Declaration::Enum { name, variants, .. } => {
-                expected.insert((Namespace::Type, name.clone()));
-                for variant in variants {
-                    expected.insert((Namespace::Variant, variant.name.clone()));
-                }
-            }
-            Declaration::Behavior { name, .. } => {
-                expected.insert((Namespace::Behavior, name.clone()));
-            }
-            Declaration::Import {
-                names, module_path, ..
-            } if validate_imports => {
-                expected.insert((Namespace::Module, module_path.join(".")));
-                for name in names {
-                    expected.insert((Namespace::Import, name.clone()));
-                }
-            }
-            Declaration::ImplBlock {
-                type_name, methods, ..
-            } => {
-                for method in methods {
-                    if let Declaration::Function { name, .. } = method {
-                        expected.insert((Namespace::Value, method_signature_key(type_name, name)));
-                    }
-                }
-            }
-            Declaration::Import { .. }
-            | Declaration::Requires { .. }
-            | Declaration::BehaviorExtends { .. }
-            | Declaration::TopLevelExpr { .. }
-            | Declaration::Error { .. } => {}
-        }
-    }
-    expected
-}
-
-fn expected_resolver_local_symbols(program: &ast::Program) -> HashSet<(String, u32)> {
-    let mut expected = HashSet::new();
-    let mut scope_cursor = ResolverScopeCursor::default();
-    for decl in &program.declarations {
-        match decl {
-            Declaration::Function { params, body, .. }
-            | Declaration::Method { params, body, .. } => {
                 let mut locals = scope_cursor.new_scope();
-                expected_resolver_parameter_locals(params, &mut locals, &mut expected);
-                expected_resolver_expr_locals(body, &mut scope_cursor, &mut locals, &mut expected);
+                expected_resolver_parameter_locals(params, &mut locals, &mut expected.locals);
+                expected_resolver_expr_locals(
+                    body,
+                    &mut scope_cursor,
+                    &mut locals,
+                    &mut expected.locals,
+                );
             }
-            Declaration::Struct { fields, .. } => {
+            Declaration::Struct { name, fields, .. } => {
+                expected
+                    .declarations
+                    .insert((Namespace::Type, name.clone()));
                 for field in fields {
                     if let Some(default) = &field.default {
                         let mut locals = scope_cursor.new_scope();
@@ -10872,50 +10853,91 @@ fn expected_resolver_local_symbols(program: &ast::Program) -> HashSet<(String, u
                             default,
                             &mut scope_cursor,
                             &mut locals,
-                            &mut expected,
+                            &mut expected.locals,
                         );
                     }
                 }
             }
-            Declaration::Behavior { methods, .. } => {
+            Declaration::Enum { name, variants, .. } => {
+                expected
+                    .declarations
+                    .insert((Namespace::Type, name.clone()));
+                for variant in variants {
+                    expected
+                        .declarations
+                        .insert((Namespace::Variant, variant.name.clone()));
+                }
+            }
+            Declaration::Behavior { name, methods, .. } => {
+                expected
+                    .declarations
+                    .insert((Namespace::Behavior, name.clone()));
                 for method in methods {
                     if let Some(default_body) = &method.default_body {
                         let mut locals = scope_cursor.new_scope();
                         expected_resolver_parameter_locals(
                             &method.params,
                             &mut locals,
-                            &mut expected,
+                            &mut expected.locals,
                         );
                         expected_resolver_expr_locals(
                             default_body,
                             &mut scope_cursor,
                             &mut locals,
-                            &mut expected,
+                            &mut expected.locals,
                         );
                     }
                 }
             }
-            Declaration::ImplBlock { methods, .. } => {
+            Declaration::Import {
+                names, module_path, ..
+            } => {
+                expected.validate_imports = true;
+                expected
+                    .declarations
+                    .insert((Namespace::Module, module_path.join(".")));
+                for name in names {
+                    expected
+                        .declarations
+                        .insert((Namespace::Import, name.clone()));
+                }
+            }
+            Declaration::ImplBlock {
+                type_name, methods, ..
+            } => {
                 for method in methods {
-                    if let Declaration::Function { params, body, .. } = method {
+                    if let Declaration::Function {
+                        name, params, body, ..
+                    } = method
+                    {
+                        expected
+                            .declarations
+                            .insert((Namespace::Value, method_signature_key(type_name, name)));
                         let mut locals = scope_cursor.new_scope();
-                        expected_resolver_parameter_locals(params, &mut locals, &mut expected);
+                        expected_resolver_parameter_locals(
+                            params,
+                            &mut locals,
+                            &mut expected.locals,
+                        );
                         expected_resolver_expr_locals(
                             body,
                             &mut scope_cursor,
                             &mut locals,
-                            &mut expected,
+                            &mut expected.locals,
                         );
                     }
                 }
             }
             Declaration::TopLevelExpr { expr, .. } => {
                 let mut locals = scope_cursor.new_scope();
-                expected_resolver_expr_locals(expr, &mut scope_cursor, &mut locals, &mut expected);
+                expected_resolver_expr_locals(
+                    expr,
+                    &mut scope_cursor,
+                    &mut locals,
+                    &mut expected.locals,
+                );
             }
-            Declaration::Enum { .. }
-            | Declaration::Import { .. }
-            | Declaration::Requires { .. }
+            Declaration::Requires { .. }
             | Declaration::BehaviorExtends { .. }
             | Declaration::Error { .. } => {}
         }
@@ -13521,6 +13543,40 @@ Point.requires(Json<str>)
             .find(|task| task.name == "Json")
             .expect("Json empty parent task");
         assert!(json_task.parent_edges.is_empty());
+    }
+
+    #[test]
+    fn resolver_expected_symbol_sets_collect_declarations_and_locals_together() {
+        let program = parse_program(
+            r#"
+{ io } = std
+
+Point: { x: i32 = 1 }
+
+main = (input: i32) i32 {
+    value := input
+    return value
+}
+"#,
+        );
+
+        let expected = collect_expected_resolver_symbol_sets(&program);
+
+        assert!(expected.validate_imports);
+        assert!(expected
+            .declarations
+            .contains(&(Namespace::Module, "std".to_string())));
+        assert!(expected
+            .declarations
+            .contains(&(Namespace::Import, "io".to_string())));
+        assert!(expected
+            .declarations
+            .contains(&(Namespace::Type, "Point".to_string())));
+        assert!(expected
+            .declarations
+            .contains(&(Namespace::Value, "main".to_string())));
+        assert!(expected.locals.contains(&("input".to_string(), 2)));
+        assert!(expected.locals.contains(&("value".to_string(), 3)));
     }
 
     #[test]

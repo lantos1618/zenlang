@@ -211,6 +211,10 @@ and do not assume Phase 4 is ready without evidence.
   impl/requires/extends edges with type-owned impl/required tasks and
   behavior-owned parent tasks in one declaration pass, covered by
   `typechecker::tests::resolver_behavior_association_list_tasks_collect_type_and_parent_edges_together`.
+- Resolver extra-symbol validation now collects expected declaration symbols,
+  expected local symbols, and import-validation state in one declaration pass,
+  covered by
+  `typechecker::tests::resolver_expected_symbol_sets_collect_declarations_and_locals_together`.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate
