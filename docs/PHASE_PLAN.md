@@ -92,6 +92,9 @@ checked-in docs, tests, and commits only.
 - Typechecker declaration collection now keeps resolver replay task construction
   in a focused module, separate from declaration collection orchestration and
   resolver metadata application.
+- Resolver validation now keeps expression, statement, and pattern local-scope
+  traversal in a focused include, separate from resolver symbol/import and local
+  symbol metadata validation.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with
