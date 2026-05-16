@@ -15,6 +15,7 @@ mod behavior_ref_metadata;
 mod closures;
 mod declaration_collection;
 mod declaration_collection_ast;
+mod declaration_collection_resolver_tasks;
 mod environment;
 mod expressions;
 mod generic_bound_validation;

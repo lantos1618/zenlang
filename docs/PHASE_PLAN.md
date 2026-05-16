@@ -89,6 +89,9 @@ checked-in docs, tests, and commits only.
 - Resolver symbol table data-model definitions now live in a focused core
   include, leaving symbol-table lookup and definition behavior in the parent
   implementation file.
+- Typechecker declaration collection now keeps resolver replay task construction
+  in a focused module, separate from declaration collection orchestration and
+  resolver metadata application.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with
