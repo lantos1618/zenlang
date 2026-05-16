@@ -8483,37 +8483,48 @@ impl TypeChecker {
         };
 
         for source in declaration_tasks.type_declarations {
-            tasks.behavior_associations.type_associations.push(
-                ResolverTypeBehaviorAssociationListTask {
-                    symbol: source.symbol,
-                    name: source.name,
-                    impl_edges: declaration_tasks
-                        .expected_associations
-                        .impls
-                        .owned_edges_for(source.name),
-                    required_edges: declaration_tasks
-                        .expected_associations
-                        .required
-                        .owned_edges_for(source.name),
-                    span: source.span,
-                },
+            Self::push_resolver_type_behavior_association_list_task(
+                source,
+                &declaration_tasks.expected_associations,
+                &mut tasks.behavior_associations.type_associations,
             );
         }
         for source in declaration_tasks.behavior_declarations {
-            tasks
-                .behavior_associations
-                .behavior_parents
-                .push(ResolverBehaviorParentListTask {
-                    symbol: source.symbol,
-                    name: source.name,
-                    parent_edges: declaration_tasks
-                        .expected_parents
-                        .owned_edges_for(source.name),
-                    span: source.span,
-                });
+            Self::push_resolver_behavior_parent_list_task(
+                source,
+                &declaration_tasks.expected_parents,
+                &mut tasks.behavior_associations.behavior_parents,
+            );
         }
 
         tasks
+    }
+
+    fn push_resolver_type_behavior_association_list_task<'a>(
+        source: ResolverValidationBehaviorAssociationSource<'a>,
+        expected: &ExpectedBehaviorAssociations,
+        tasks: &mut Vec<ResolverTypeBehaviorAssociationListTask<'a>>,
+    ) {
+        tasks.push(ResolverTypeBehaviorAssociationListTask {
+            symbol: source.symbol,
+            name: source.name,
+            impl_edges: expected.impls.owned_edges_for(source.name),
+            required_edges: expected.required.owned_edges_for(source.name),
+            span: source.span,
+        });
+    }
+
+    fn push_resolver_behavior_parent_list_task<'a>(
+        source: ResolverValidationBehaviorAssociationSource<'a>,
+        expected: &ExpectedBehaviorEdges,
+        tasks: &mut Vec<ResolverBehaviorParentListTask<'a>>,
+    ) {
+        tasks.push(ResolverBehaviorParentListTask {
+            symbol: source.symbol,
+            name: source.name,
+            parent_edges: expected.owned_edges_for(source.name),
+            span: source.span,
+        });
     }
 
     fn collect_resolver_validation_replay_declaration_tasks<'a>(

@@ -1738,6 +1738,8 @@ checked-in docs, tests, and commits only.
   before replaying declaration and expression `Self` checks.
 - AST type reference validation now uses a shared reference-task push helper
   before replaying generic type-reference diagnostics.
+- Resolver validation replay now uses shared behavior-association and parent
+  list push helpers before checking resolver metadata lists.
 
 ## Current Phase
 

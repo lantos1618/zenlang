@@ -2099,6 +2099,11 @@ and do not assume Phase 4 is ready without evidence.
   before replaying generic type-reference diagnostics, covered by
   `cargo test ast_type_reference_validation_tasks_collect_declarations` and
   `cargo test check_program_rejects_unknown_type_references`.
+- Resolver validation replay now uses shared behavior-association and parent
+  list push helpers before checking resolver metadata lists, covered by
+  `cargo test resolver_validation_replay_tasks_collect_symbols_and_behavior_associations_together`
+  and
+  `cargo test resolver_behavior_association_list_tasks_collect_type_and_parent_edges_together`.
 
 ## Unresolved Gaps
 
