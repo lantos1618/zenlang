@@ -139,6 +139,9 @@ checked-in docs, tests, and commits only.
   helpers for member access, struct literals, enum variants, array literals,
   and index access, keeping `check_expr` as dispatch while preserving existing
   diagnostics.
+- Expression checking now delegates match, conditional, and loop lowering
+  through focused control-flow helpers, keeping pattern binding, exhaustiveness,
+  and loop-control lowering behavior unchanged while shrinking the dispatcher.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
