@@ -345,6 +345,50 @@ main = () i32 {
 }
 
 #[test]
+fn generic_result_enum_method_behavior_bound_failure_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+Point: {
+    x: i32
+}
+
+Result<T, E>:
+    Ok(T),
+    Err(E)
+
+Result.map<T, E, U: Json> = (self: Self, fallback: U) U {
+    fallback.encode()
+    fallback
+}
+
+main = () i32 {
+    value = Result<i32, str>.Ok(1)
+    point = Point { x: 1 }
+    bad = value.map(point)
+    0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("type `Point` does not implement behavior `Json` required by `U`")),
+        "expected generic Result enum method bound diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("has no method `encode`")),
+        "generic Result enum method bound failure should not also specialize body method errors, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_ufc_function_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
