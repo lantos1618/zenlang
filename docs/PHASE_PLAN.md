@@ -1812,6 +1812,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed callable metadata collection now receives the full resolver
   declaration metadata task bundle and selects callable entries internally,
   continuing the resolver replay move away from parallel slices.
+- Resolver-backed type declaration metadata collection now receives the full
+  resolver declaration metadata task bundle and selects type entries
+  internally, keeping declaration metadata replay helpers bundle-shaped.
 
 ## Current Phase
 
