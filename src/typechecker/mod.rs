@@ -9234,6 +9234,28 @@ impl TypeChecker {
         self.require_resolver_expr_locals(symbols, expr, scope_cursor, &mut pattern_locals);
     }
 
+    fn require_resolver_block_locals(
+        &mut self,
+        symbols: &SymbolTable,
+        statements: &[ast::Statement],
+        expr: Option<&Expression>,
+        scope_cursor: &mut ResolverScopeCursor,
+        locals: &ResolverLocalScope,
+    ) {
+        let mut block_locals = scope_cursor.child_scope(locals);
+        for statement in statements {
+            self.require_resolver_statement_locals(
+                symbols,
+                statement,
+                scope_cursor,
+                &mut block_locals,
+            );
+        }
+        if let Some(expr) = expr {
+            self.require_resolver_expr_locals(symbols, expr, scope_cursor, &mut block_locals);
+        }
+    }
+
     fn require_resolver_expr_locals(
         &mut self,
         symbols: &SymbolTable,
@@ -9334,23 +9356,13 @@ impl TypeChecker {
             Expression::Block {
                 statements, expr, ..
             } => {
-                let mut block_locals = scope_cursor.child_scope(locals);
-                for statement in statements {
-                    self.require_resolver_statement_locals(
-                        symbols,
-                        statement,
-                        scope_cursor,
-                        &mut block_locals,
-                    );
-                }
-                if let Some(expr) = expr {
-                    self.require_resolver_expr_locals(
-                        symbols,
-                        expr,
-                        scope_cursor,
-                        &mut block_locals,
-                    );
-                }
+                self.require_resolver_block_locals(
+                    symbols,
+                    statements,
+                    expr.as_deref(),
+                    scope_cursor,
+                    locals,
+                );
             }
             Expression::Return { value, .. } => {
                 if let Some(value) = value {
@@ -9423,15 +9435,7 @@ impl TypeChecker {
                 self.require_resolver_expr_locals(symbols, expr, scope_cursor, locals);
             }
             ast::Statement::Block { stmts, .. } => {
-                let mut block_locals = scope_cursor.child_scope(locals);
-                for statement in stmts {
-                    self.require_resolver_statement_locals(
-                        symbols,
-                        statement,
-                        scope_cursor,
-                        &mut block_locals,
-                    );
-                }
+                self.require_resolver_block_locals(symbols, stmts, None, scope_cursor, locals);
             }
         }
     }
@@ -11002,6 +11006,22 @@ fn expected_resolver_pattern_expr_locals(
     expected_resolver_expr_locals(expr, scope_cursor, &mut pattern_locals, expected);
 }
 
+fn expected_resolver_block_locals(
+    statements: &[ast::Statement],
+    expr: Option<&Expression>,
+    scope_cursor: &mut ResolverScopeCursor,
+    locals: &ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    let mut block_locals = scope_cursor.child_scope(locals);
+    for statement in statements {
+        expected_resolver_statement_locals(statement, scope_cursor, &mut block_locals, expected);
+    }
+    if let Some(expr) = expr {
+        expected_resolver_expr_locals(expr, scope_cursor, &mut block_locals, expected);
+    }
+}
+
 fn expected_resolver_parameter_locals(
     params: &[Param],
     locals: &mut ResolverLocalScope,
@@ -11106,18 +11126,13 @@ fn expected_resolver_expr_locals(
         Expression::Block {
             statements, expr, ..
         } => {
-            let mut block_locals = scope_cursor.child_scope(locals);
-            for statement in statements {
-                expected_resolver_statement_locals(
-                    statement,
-                    scope_cursor,
-                    &mut block_locals,
-                    expected,
-                );
-            }
-            if let Some(expr) = expr {
-                expected_resolver_expr_locals(expr, scope_cursor, &mut block_locals, expected);
-            }
+            expected_resolver_block_locals(
+                statements,
+                expr.as_deref(),
+                scope_cursor,
+                locals,
+                expected,
+            );
         }
         Expression::Return { value, .. } => {
             if let Some(value) = value {
@@ -11182,15 +11197,7 @@ fn expected_resolver_statement_locals(
             expected_resolver_expr_locals(expr, scope_cursor, locals, expected);
         }
         ast::Statement::Block { stmts, .. } => {
-            let mut block_locals = scope_cursor.child_scope(locals);
-            for statement in stmts {
-                expected_resolver_statement_locals(
-                    statement,
-                    scope_cursor,
-                    &mut block_locals,
-                    expected,
-                );
-            }
+            expected_resolver_block_locals(stmts, None, scope_cursor, locals, expected);
         }
     }
 }
@@ -13845,6 +13852,43 @@ main = (value: Option) i32 {
 
         assert!(expected.iter().any(|(name, _)| name == "inner"));
         assert!(expected.iter().any(|(name, _)| name == "doubled"));
+    }
+
+    #[test]
+    fn expected_resolver_block_locals_collects_statement_and_final_expr_bindings() {
+        let program = parse_program(
+            r#"
+main = () i32 {
+    value := 1
+    (input: i32) i32 {
+        return input
+    }
+}
+"#,
+        );
+        let Declaration::Function { body, .. } = &program.declarations[0] else {
+            panic!("expected function");
+        };
+        let Expression::Block {
+            statements, expr, ..
+        } = body
+        else {
+            panic!("expected block");
+        };
+        let mut scope_cursor = ResolverScopeCursor::default();
+        let locals = scope_cursor.new_scope();
+        let mut expected = HashSet::new();
+
+        expected_resolver_block_locals(
+            statements,
+            expr.as_deref(),
+            &mut scope_cursor,
+            &locals,
+            &mut expected,
+        );
+
+        assert!(expected.iter().any(|(name, _)| name == "value"));
+        assert!(expected.iter().any(|(name, _)| name == "input"));
     }
 
     #[test]
