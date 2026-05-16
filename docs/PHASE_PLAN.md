@@ -1782,6 +1782,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior impl validation now calls the shared behavior-impl
   validator directly, removing the resolver-only forwarding loop over the same
   `.implements` task data.
+- Standalone behavior-association validation now collects `.implements` and
+  `.requires` tasks in one declaration pass before replaying the shared
+  validators.
 
 ## Current Phase
 

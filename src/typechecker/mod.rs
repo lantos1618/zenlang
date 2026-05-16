@@ -261,6 +261,12 @@ struct ResolverBehaviorDeclarationMetadataTask<'a> {
 }
 
 #[derive(Default)]
+struct BehaviorAssociationValidationTasks<'a> {
+    impls: Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
+    requires: Vec<BehaviorRequiresValidationTask<'a>>,
+}
+
+#[derive(Default)]
 struct ResolverDeclarationMetadataTasks<'a> {
     callable: Vec<ResolverCallableDeclarationMetadataTask<'a>>,
     types: Vec<ResolverTypeDeclarationMetadataTask<'a>>,
@@ -4617,23 +4623,22 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: Option<&SymbolTable>,
     ) {
-        let impl_tasks = Self::collect_behavior_impl_validation_tasks(decls);
-        self.validate_behavior_impl_tasks(&impl_tasks, symbols);
-
-        self.validate_collected_behavior_requires_declarations(decls, symbols);
+        let behavior_association_tasks = Self::collect_behavior_association_validation_tasks(decls);
+        self.validate_behavior_impl_tasks(&behavior_association_tasks.impls, symbols);
+        self.validate_behavior_requires_tasks(&behavior_association_tasks.requires, symbols);
         self.validate_generic_type_references(decls, symbols);
         self.validate_struct_field_defaults(decls, symbols);
     }
 
-    fn collect_behavior_impl_validation_tasks(
+    fn collect_behavior_association_validation_tasks(
         decls: &[Declaration],
-    ) -> Vec<ResolverBehaviorImplBlockDeclarationTask<'_>> {
-        let mut impl_tasks = Vec::new();
-
+    ) -> BehaviorAssociationValidationTasks<'_> {
+        let mut tasks = BehaviorAssociationValidationTasks::default();
         for decl in decls {
-            Self::push_behavior_impl_block_declaration_task(decl, &mut impl_tasks);
+            Self::push_behavior_impl_block_declaration_task(decl, &mut tasks.impls);
+            Self::push_behavior_requires_replay_task(decl, &mut tasks.requires);
         }
-        impl_tasks
+        tasks
     }
 
     fn validate_behavior_impl_tasks(
@@ -4651,26 +4656,6 @@ impl TypeChecker {
                 task.span,
             );
         }
-    }
-
-    fn validate_collected_behavior_requires_declarations(
-        &mut self,
-        decls: &[Declaration],
-        symbols: Option<&SymbolTable>,
-    ) {
-        let requires_tasks = Self::collect_behavior_requires_validation_tasks(decls);
-        self.validate_behavior_requires_tasks(&requires_tasks, symbols);
-    }
-
-    fn collect_behavior_requires_validation_tasks(
-        decls: &[Declaration],
-    ) -> Vec<BehaviorRequiresValidationTask<'_>> {
-        let mut requires_tasks = Vec::new();
-        for decl in decls {
-            Self::push_behavior_requires_replay_task(decl, &mut requires_tasks);
-        }
-
-        requires_tasks
     }
 
     fn push_behavior_requires_replay_task<'a>(
@@ -14724,52 +14709,6 @@ Pretty.extends(Json<T>)
     }
 
     #[test]
-    fn behavior_impl_validation_tasks_collect_impl_blocks() {
-        let program = parse_program(
-            r#"
-Point: { x: i32 }
-
-Json: behavior {
-    encode: (Self) str
-}
-
-Point.implements(Json) {
-    encode = (value: Point) str { "point" }
-}
-"#,
-        );
-
-        let tasks = TypeChecker::collect_behavior_impl_validation_tasks(&program.declarations);
-
-        assert_eq!(tasks.len(), 1);
-        assert_eq!(tasks[0].ast_type_name, "Point");
-        assert_eq!(tasks[0].behavior, "Json");
-        assert_eq!(tasks[0].methods.len(), 1);
-    }
-
-    #[test]
-    fn behavior_requires_validation_tasks_collect_requires_declarations() {
-        let program = parse_program(
-            r#"
-Point: { x: i32 }
-
-Json<T>: behavior {
-    encode: (Self) T
-}
-
-Point.requires(Json<str>)
-"#,
-        );
-
-        let tasks = TypeChecker::collect_behavior_requires_validation_tasks(&program.declarations);
-
-        assert_eq!(tasks.len(), 1);
-        assert_eq!(tasks[0].type_name, "Point");
-        assert_eq!(tasks[0].behavior, "Json");
-        assert_eq!(tasks[0].behavior_type_args, &[AstType::Str]);
-    }
-
-    #[test]
     fn behavior_requires_replay_task_helper_pushes_requires_validation() {
         let program = parse_program(
             r#"
@@ -14792,6 +14731,37 @@ Point.requires(Json<str>)
         assert_eq!(tasks[0].type_name, "Point");
         assert_eq!(tasks[0].behavior, "Json");
         assert_eq!(tasks[0].behavior_type_args, &[AstType::Str]);
+    }
+
+    #[test]
+    fn behavior_association_validation_tasks_collect_impls_and_requires_together() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+        );
+
+        let tasks =
+            TypeChecker::collect_behavior_association_validation_tasks(&program.declarations);
+
+        assert_eq!(tasks.impls.len(), 1);
+        assert_eq!(tasks.impls[0].ast_type_name, "Point");
+        assert_eq!(tasks.impls[0].behavior, "Json");
+        assert_eq!(tasks.impls[0].behavior_type_args, &[AstType::Str]);
+        assert_eq!(tasks.requires.len(), 1);
+        assert_eq!(tasks.requires[0].type_name, "Point");
+        assert_eq!(tasks.requires[0].behavior, "Json");
+        assert_eq!(tasks.requires[0].behavior_type_args, &[AstType::Str]);
     }
 
     #[test]
