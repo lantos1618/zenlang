@@ -14,6 +14,7 @@ mod behavior_impl_validation;
 mod behavior_ref_metadata;
 mod closures;
 mod declaration_collection;
+mod declaration_collection_ast;
 mod environment;
 mod expressions;
 mod generic_type_validation;
