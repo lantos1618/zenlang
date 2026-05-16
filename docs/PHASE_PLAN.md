@@ -86,6 +86,9 @@ checked-in docs, tests, and commits only.
   parameter parsing in a focused declaration-types module, leaving the main
   declaration parser responsible for dispatch, imports, functions, and
   top-level bindings.
+- Resolver symbol table data-model definitions now live in a focused core
+  include, leaving symbol-table lookup and definition behavior in the parent
+  implementation file.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with
