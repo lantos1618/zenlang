@@ -1874,16 +1874,21 @@ checked-in docs, tests, and commits only.
   covers the checked-in project executable and test targets,
   `build_program_lowering_collects_test_target` covers default naming for
   `Test { root: ... }`, `build_program_lowering_collects_library_target`
-  covers graph-only `Library { name: ..., exports: ... }` targets, and
+  covers graph-only `Library { name: ..., exports: ... }` targets,
+  `build_program_lowering_collects_target_dependencies_and_features` covers
+  target metadata arrays, and
   `build_program_lowering_rejects_undeclared_env_reads` keeps undeclared host
   effects rejected during lowering.
 - `emit-json build-graph <build.zen>` now exposes the constrained graph-emission
   path without enabling normal build execution. `emit_json_build_graph_outputs_project_build_graph`
   covers the positive CLI path, `emit_json_build_graph_outputs_library_target`
-  covers graph-only library target JSON emission, and
+  covers graph-only library target JSON emission,
+  `emit_json_build_graph_outputs_target_dependencies_and_features` covers
+  target metadata JSON emission, and
   `emit_json_build_graph_rejects_undeclared_host_effects` plus
   `emit_json_build_graph_rejects_undeclared_host_effects_before_test_target_lowering`
   and `emit_json_build_graph_rejects_undeclared_host_effects_before_library_target_lowering`
+  and `emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering`
   cover negative host-effect paths through the advertised compiler command.
 - `build-graph <build.zen>` now consumes the deterministic graph for one
   executable target without widening the accepted `build.zen` subset.
