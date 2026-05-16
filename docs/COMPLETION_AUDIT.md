@@ -2075,6 +2075,10 @@ and do not assume Phase 4 is ready without evidence.
   before seeding imported names, covered by
   `cargo test ast_import_declaration_tasks_collect_import_bindings` and
   `cargo test collect_import_info`.
+- Impl-block declaration collection now uses a shared impl-block task push
+  helper before replaying type and behavior impl setup, covered by
+  `cargo test impl_block_declaration_tasks_collect_behavior_and_plain_impls`
+  and `cargo test test_type_impl_methods`.
 - Callable declaration collection now uses a shared callable-task push helper
   before replaying function and method signature setup, covered by
   `cargo test callable_declaration_tasks_collect_functions_and_methods` and

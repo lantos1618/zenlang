@@ -3437,17 +3437,23 @@ impl TypeChecker {
     ) -> Vec<ImplBlockDeclarationTask<'_>> {
         let mut tasks = Vec::new();
         for decl in decls {
-            let Declaration::ImplBlock {
-                type_name,
-                behavior,
-                behavior_type_args,
-                methods,
-                ..
-            } = decl
-            else {
-                continue;
-            };
+            Self::push_impl_block_declaration_task(decl, &mut tasks);
+        }
+        tasks
+    }
 
+    fn push_impl_block_declaration_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<ImplBlockDeclarationTask<'a>>,
+    ) {
+        if let Declaration::ImplBlock {
+            type_name,
+            behavior,
+            behavior_type_args,
+            methods,
+            ..
+        } = decl
+        {
             tasks.push(ImplBlockDeclarationTask {
                 type_name,
                 behavior: behavior.as_deref(),
@@ -3455,7 +3461,6 @@ impl TypeChecker {
                 methods,
             });
         }
-        tasks
     }
 
     fn collect_impl_block_declarations_from_tasks(
