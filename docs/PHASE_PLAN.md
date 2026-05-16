@@ -1718,6 +1718,8 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior requires validation now shares one requires-task
   push helper between the dedicated requires collector and the full resolver
   metadata collector.
+- Behavior impl validation now uses a shared impl-task push helper before
+  replaying conformance checks.
 
 ## Current Phase
 

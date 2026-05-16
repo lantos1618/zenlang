@@ -2057,6 +2057,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test behavior_requires_validation_tasks_collect_requires_declarations`
   and
   `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
+- Behavior impl validation now uses a shared impl-task push helper before
+  replaying conformance checks, covered by
+  `cargo test behavior_impl_validation_tasks_collect_impl_blocks`,
+  `cargo test resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls`,
+  and
+  `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
 
 ## Unresolved Gaps
 

@@ -4421,25 +4421,32 @@ impl TypeChecker {
         let mut impl_tasks = Vec::new();
 
         for decl in decls {
-            if let Declaration::ImplBlock {
-                type_name,
-                behavior: Some(behavior),
-                behavior_type_args,
-                methods,
-                span,
-                ..
-            } = decl
-            {
-                impl_tasks.push(BehaviorImplValidationTask {
-                    type_name,
-                    behavior,
-                    behavior_type_args,
-                    methods,
-                    span: *span,
-                });
-            }
+            Self::push_behavior_impl_validation_task(decl, &mut impl_tasks);
         }
         impl_tasks
+    }
+
+    fn push_behavior_impl_validation_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<BehaviorImplValidationTask<'a>>,
+    ) {
+        if let Declaration::ImplBlock {
+            type_name,
+            behavior: Some(behavior),
+            behavior_type_args,
+            methods,
+            span,
+            ..
+        } = decl
+        {
+            tasks.push(BehaviorImplValidationTask {
+                type_name,
+                behavior,
+                behavior_type_args,
+                methods,
+                span: *span,
+            });
+        }
     }
 
     fn validate_behavior_impl_tasks(
