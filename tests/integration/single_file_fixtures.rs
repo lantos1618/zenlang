@@ -66,6 +66,11 @@ fn test_generic_enum_option() {
 }
 
 #[test]
+fn test_generic_enum_method() {
+    run_test("generic_enum_method");
+}
+
+#[test]
 fn test_generic_method() {
     run_test("generic_method");
 }
