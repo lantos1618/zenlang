@@ -1830,6 +1830,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed type-reference validation now receives the full resolver
   declaration metadata task bundle and selects type-reference replay entries
   internally, keeping collected semantic replay on the bundled task shape.
+- Behavior association semantic validation now accepts either the standalone
+  behavior-association bundle or the full resolver declaration metadata bundle,
+  so resolver semantic replay no longer passes a nested association slice.
 
 ## Current Phase
 

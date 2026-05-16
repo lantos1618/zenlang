@@ -267,6 +267,16 @@ struct BehaviorAssociationValidationTasks<'a> {
     requires: Vec<BehaviorRequiresValidationTask<'a>>,
 }
 
+trait BehaviorAssociationValidationTaskSource<'a> {
+    fn behavior_association_tasks(&self) -> &BehaviorAssociationValidationTasks<'a>;
+}
+
+impl<'a> BehaviorAssociationValidationTaskSource<'a> for BehaviorAssociationValidationTasks<'a> {
+    fn behavior_association_tasks(&self) -> &BehaviorAssociationValidationTasks<'a> {
+        self
+    }
+}
+
 #[derive(Default)]
 struct ResolverDeclarationMetadataTasks<'a> {
     callable: Vec<ResolverCallableDeclarationMetadataTask<'a>>,
@@ -274,6 +284,12 @@ struct ResolverDeclarationMetadataTasks<'a> {
     behaviors: Vec<ResolverBehaviorDeclarationMetadataTask<'a>>,
     behavior_associations: BehaviorAssociationValidationTasks<'a>,
     type_references: Vec<ResolverTypeReferenceValidationTask<'a>>,
+}
+
+impl<'a> BehaviorAssociationValidationTaskSource<'a> for ResolverDeclarationMetadataTasks<'a> {
+    fn behavior_association_tasks(&self) -> &BehaviorAssociationValidationTasks<'a> {
+        &self.behavior_associations
+    }
 }
 
 struct ResolverBehaviorImplBlockDeclarationTask<'a> {
@@ -4492,8 +4508,7 @@ impl TypeChecker {
         tasks: &ResolverDeclarationMetadataTasks<'_>,
     ) {
         self.with_resolver_backed_collection(|checker| {
-            checker
-                .validate_behavior_association_tasks(&tasks.behavior_associations, Some(symbols));
+            checker.validate_behavior_association_tasks(tasks, Some(symbols));
             checker.validate_resolver_type_reference_tasks(tasks, Some(symbols));
             checker.validate_resolver_struct_field_default_tasks(tasks, Some(symbols));
         });
@@ -4629,11 +4644,12 @@ impl TypeChecker {
         tasks
     }
 
-    fn validate_behavior_association_tasks(
+    fn validate_behavior_association_tasks<'a>(
         &mut self,
-        tasks: &BehaviorAssociationValidationTasks<'_>,
+        tasks: &impl BehaviorAssociationValidationTaskSource<'a>,
         symbols: Option<&SymbolTable>,
     ) {
+        let tasks = tasks.behavior_association_tasks();
         self.validate_behavior_impl_tasks(tasks, symbols);
         self.validate_behavior_requires_tasks(tasks, symbols);
     }
