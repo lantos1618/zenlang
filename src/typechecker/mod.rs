@@ -4337,15 +4337,15 @@ impl TypeChecker {
     ) {
         self.collect_resolver_callable_declaration_metadata(symbols, tasks);
         self.collect_resolver_type_declaration_metadata(symbols, tasks);
-        self.collect_resolver_behavior_declaration_metadata_pass(symbols, &tasks.behaviors);
+        self.collect_resolver_behavior_declaration_metadata_pass(symbols, tasks);
     }
 
     fn collect_resolver_behavior_declaration_metadata_pass(
         &mut self,
         symbols: &SymbolTable,
-        tasks: &[ResolverBehaviorDeclarationMetadataTask<'_>],
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
     ) {
-        for task in tasks {
+        for task in &tasks.behaviors {
             self.collect_resolver_behavior_declaration(symbols, task.name, task.span);
         }
     }
