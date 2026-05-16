@@ -1693,6 +1693,8 @@ checked-in docs, tests, and commits only.
   path.
 - Behavior declaration collection now uses a named task collector before
   replaying AST signature registration or resolver-backed behavior stubs.
+- AST import declaration collection now uses a named task collector before
+  seeding imported names into the typechecker import table.
 
 ## Current Phase
 

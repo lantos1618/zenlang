@@ -1994,6 +1994,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test behavior_declaration_tasks_collect_behavior_signatures`,
   `cargo test behavior_declaration_collection`, and
   `cargo test resolver_backed_behavior_collection_defers_generic_metadata_to_resolver`.
+- AST import declaration collection now uses named import tasks before seeding
+  imported names into the typechecker import table, covered by
+  `cargo test ast_import_declaration_tasks_collect_import_bindings`,
+  `cargo test collect_import_info`, and
+  `cargo test check_program_with_symbols_uses_resolver_import_bindings`.
 
 ## Unresolved Gaps
 

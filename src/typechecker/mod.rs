@@ -137,6 +137,11 @@ struct BehaviorDeclarationTask<'a> {
     methods: &'a [BehaviorMethod],
 }
 
+struct AstImportDeclarationTask<'a> {
+    names: &'a [String],
+    module_path: &'a [String],
+}
+
 enum ResolverTypeReferenceValidationTask<'a> {
     Struct {
         name: &'a str,
@@ -3278,16 +3283,31 @@ impl TypeChecker {
     }
 
     fn collect_ast_import_declarations(&mut self, decls: &[Declaration]) {
-        for decl in decls {
-            let Declaration::Import {
-                names, module_path, ..
-            } = decl
-            else {
-                continue;
-            };
+        let tasks = Self::collect_ast_import_declaration_tasks(decls);
+        self.collect_ast_import_declarations_from_tasks(&tasks);
+    }
 
-            for name in names {
-                self.imports.insert(name.clone(), module_path.clone());
+    fn collect_ast_import_declaration_tasks(
+        decls: &[Declaration],
+    ) -> Vec<AstImportDeclarationTask<'_>> {
+        decls
+            .iter()
+            .filter_map(|decl| match decl {
+                Declaration::Import {
+                    names, module_path, ..
+                } => Some(AstImportDeclarationTask { names, module_path }),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn collect_ast_import_declarations_from_tasks(
+        &mut self,
+        tasks: &[AstImportDeclarationTask<'_>],
+    ) {
+        for task in tasks {
+            for name in task.names {
+                self.imports.insert(name.clone(), task.module_path.to_vec());
             }
         }
     }
@@ -15601,6 +15621,23 @@ main = () i32 {
         tc.collect_declarations(&program.declarations);
         assert_eq!(tc.imports.get("io"), Some(&vec!["std".to_string()]));
         assert_eq!(tc.imports.get("fmt"), Some(&vec!["std".to_string()]));
+    }
+
+    #[test]
+    fn ast_import_declaration_tasks_collect_import_bindings() {
+        let program = parse_program("{ Channel, Mutex } = std.sync");
+
+        let tasks = TypeChecker::collect_ast_import_declaration_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(
+            tasks[0].names,
+            &["Channel".to_string(), "Mutex".to_string()]
+        );
+        assert_eq!(
+            tasks[0].module_path,
+            &["std".to_string(), "sync".to_string()]
+        );
     }
 
     #[test]
