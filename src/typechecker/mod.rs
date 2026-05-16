@@ -3988,6 +3988,7 @@ impl TypeChecker {
         tasks
     }
 
+    #[cfg(test)]
     fn collect_resolver_type_declaration_metadata_tasks(
         decls: &[Declaration],
     ) -> Vec<ResolverTypeDeclarationMetadataTask<'_>> {
@@ -3998,6 +3999,7 @@ impl TypeChecker {
         tasks
     }
 
+    #[cfg(test)]
     fn push_resolver_type_declaration_metadata_task<'a>(
         decl: &'a Declaration,
         tasks: &mut Vec<ResolverTypeDeclarationMetadataTask<'a>>,
@@ -4492,7 +4494,7 @@ impl TypeChecker {
             checker
                 .validate_behavior_association_tasks(&tasks.behavior_associations, Some(symbols));
             checker.validate_resolver_type_reference_tasks(&tasks.type_references, Some(symbols));
-            checker.validate_resolver_struct_field_default_tasks(&tasks.types, Some(symbols));
+            checker.validate_resolver_struct_field_default_tasks(tasks, Some(symbols));
         });
     }
 
@@ -4747,7 +4749,7 @@ impl TypeChecker {
         symbols: Option<&SymbolTable>,
     ) {
         if self.resolver_backed_collection {
-            let tasks = Self::collect_resolver_type_declaration_metadata_tasks(decls);
+            let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
             self.validate_resolver_struct_field_default_tasks(&tasks, symbols);
             return;
         }
@@ -4814,10 +4816,10 @@ impl TypeChecker {
 
     fn validate_resolver_struct_field_default_tasks(
         &mut self,
-        type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
         symbols: Option<&SymbolTable>,
     ) {
-        for task in type_tasks {
+        for task in &tasks.types {
             if let ResolverTypeDeclarationMetadataTask::Struct { name, span, .. } = task {
                 self.validate_resolver_struct_field_defaults(symbols, name, *span);
             }
@@ -18692,7 +18694,7 @@ Point: { x: i32 = true }
         tc.collect_resolver_declaration_metadata(&symbols, &tasks);
 
         tc.with_resolver_backed_collection(|checker| {
-            checker.validate_resolver_struct_field_default_tasks(&tasks.types, Some(&symbols));
+            checker.validate_resolver_struct_field_default_tasks(&tasks, Some(&symbols));
         });
 
         assert!(
