@@ -1,0 +1,342 @@
+use super::*;
+
+#[test]
+fn collect_declarations_with_symbols_uses_resolver_generic_method_template_metadata() {
+    let mut program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Debug: behavior {
+    debug: (Self) str
+}
+Box: { value: i32 }
+Box.apply<U: Json<U>> = (self: Box, callback: (U) U) (U) U {
+    callback
+}
+"#,
+    );
+    let symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    if let Declaration::Method {
+        type_params,
+        params,
+        return_type,
+        ..
+    } = &mut program.declarations[3]
+    {
+        type_params[0].name = "Stale".to_string();
+        type_params[0].constraint = Some("Debug".to_string());
+        type_params[0].constraint_type_args.clear();
+        params[1].ty = AstType::I32;
+        *return_type = Some(AstType::I32);
+    }
+    let mut tc = TypeChecker::new();
+
+    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+    let template = tc
+        .generic_methods
+        .get("Box.apply")
+        .expect("generic method template");
+    assert_eq!(template.type_params, vec!["U".to_string()]);
+    assert_eq!(
+        tc.methods
+            .get("Box.apply")
+            .expect("method info")
+            .type_param_bounds
+            .get("U"),
+        Some(&BehaviorBound {
+            behavior: "Json".to_string(),
+            type_args: vec![AstType::Named("U".to_string())],
+        })
+    );
+    assert_eq!(
+        template.params[1].ty,
+        AstType::Function {
+            params: vec![AstType::Named("U".to_string())],
+            ret: Box::new(AstType::Named("U".to_string())),
+        }
+    );
+    assert_eq!(
+        template.return_type,
+        Some(AstType::Function {
+            params: vec![AstType::Named("U".to_string())],
+            ret: Box::new(AstType::Named("U".to_string())),
+        })
+    );
+}
+
+#[test]
+fn collect_declarations_with_symbols_clears_generic_method_template_type_params_when_resolver_bounds_missing(
+) {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+Box: { value: i32 }
+Box.keep<U: Json<U>> = (self: Box, value: U) U { value }
+"#,
+    );
+    let mut symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    symbols.set_type_parameter_bound_refs_for_test(Namespace::Value, "Box.keep", None);
+    let mut tc = TypeChecker::new();
+
+    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+    let template = tc
+        .generic_methods
+        .get("Box.keep")
+        .expect("generic method template");
+    assert!(
+            template.type_params.is_empty(),
+            "resolver-backed generic method templates should not keep type parameter names when typed bound metadata is incomplete"
+        );
+    assert!(
+            tc.methods
+                .get("Box.keep")
+                .expect("method info")
+                .type_params
+                .is_empty(),
+            "method info and template type parameter handoff should agree when resolver metadata is incomplete"
+        );
+}
+
+#[test]
+fn collect_declarations_with_symbols_uses_resolver_generic_method_template_return_presence() {
+    let mut program = parse_program(
+        r#"
+Box: { value: i32 }
+Box.keep<T> = (self: Box, value: T) T {
+    value
+}
+"#,
+    );
+    let symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    if let Declaration::Method { return_type, .. } = &mut program.declarations[1] {
+        *return_type = None;
+    }
+    let mut tc = TypeChecker::new();
+
+    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+    let template = tc
+        .generic_methods
+        .get("Box.keep")
+        .expect("generic method template");
+    assert_eq!(template.return_type, Some(AstType::Named("T".to_string())));
+}
+
+#[test]
+fn collect_declarations_with_symbols_uses_resolver_generic_method_template_parameter_count() {
+    let mut program = parse_program(
+        r#"
+Box: { value: i32 }
+Box.choose<T> = (self: Box, left: T, right: T) T {
+    left
+}
+"#,
+    );
+    let symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    if let Declaration::Method { params, .. } = &mut program.declarations[1] {
+        params.pop();
+    }
+    let mut tc = TypeChecker::new();
+
+    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+    let template = tc
+        .generic_methods
+        .get("Box.choose")
+        .expect("generic method template");
+    assert_eq!(template.params.len(), 3);
+    assert_eq!(template.params[0].name, "self");
+    assert_eq!(template.params[1].name, "left");
+    assert_eq!(template.params[2].name, "right");
+    assert_eq!(template.params[0].ty, AstType::Named("Box".to_string()));
+    assert_eq!(template.params[1].ty, AstType::Named("T".to_string()));
+    assert_eq!(template.params[2].ty, AstType::Named("T".to_string()));
+}
+
+#[test]
+fn collect_declarations_with_symbols_preserves_generic_method_template_param_mutability_by_position(
+) {
+    let mut program = parse_program(
+        r#"
+Box: { value: i32 }
+Box.keep<T> = (self: Box, mut value: T) T {
+    value = value
+    value
+}
+"#,
+    );
+    let symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    if let Declaration::Method { params, .. } = &mut program.declarations[1] {
+        params[1].name = "stale".to_string();
+    }
+    let mut tc = TypeChecker::new();
+
+    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+    let template = tc
+        .generic_methods
+        .get("Box.keep")
+        .expect("generic method template");
+    assert_eq!(template.params[1].name, "value");
+    assert!(
+        template.params[1].mutable,
+        "resolver-restored method parameter name should preserve positional mutability"
+    );
+}
+
+#[test]
+fn collect_declarations_with_symbols_ignores_stale_generic_method_template_param_names_for_mutability(
+) {
+    let mut program = parse_program(
+        r#"
+Box: { value: i32 }
+Box.choose<T> = (self: Box, left: T, mut right: T) T {
+    right = right
+    right
+}
+"#,
+    );
+    let symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    if let Declaration::Method { params, .. } = &mut program.declarations[1] {
+        params.swap(1, 2);
+    }
+    let mut tc = TypeChecker::new();
+
+    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+    let template = tc
+        .generic_methods
+        .get("Box.choose")
+        .expect("generic method template");
+    assert_eq!(template.params[1].name, "left");
+    assert_eq!(template.params[2].name, "right");
+    assert!(
+            template.params[1].mutable,
+            "resolver-restored first non-self method parameter should keep first AST position mutability"
+        );
+    assert!(
+            !template.params[2].mutable,
+            "resolver-restored second non-self method parameter should keep second AST position mutability"
+        );
+}
+
+#[test]
+fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_generic_method_template() {
+    let mut program = parse_program(
+        r#"
+Box: { value: i32 }
+Box.keep<T> = (self: Box, value: T) T { value }
+"#,
+    );
+    let mut symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    symbols.set_return_type_for_test(Namespace::Value, "Box.keep", None);
+    if let Declaration::Method {
+        params,
+        return_type,
+        ..
+    } = &mut program.declarations[1]
+    {
+        params[1].ty = AstType::Named("Stale".to_string());
+        *return_type = Some(AstType::Named("AlsoStale".to_string()));
+    }
+    let mut tc = TypeChecker::new();
+
+    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+    assert!(
+            !tc.generic_methods.contains_key("Box.keep"),
+            "resolver-backed collection should not keep AST-only generic method templates when resolver signature metadata is incomplete"
+        );
+}
+
+#[test]
+fn collect_declarations_with_symbols_clears_stale_generic_method_template_after_key_restore() {
+    let mut program = parse_program(
+        r#"
+Box: { value: i32 }
+Box.keep<T> = (self: Box, value: T) T { value }
+"#,
+    );
+    let mut symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    symbols.set_return_type_for_test(Namespace::Value, "Box.keep", None);
+    if let Declaration::Method {
+        type_name,
+        method_name,
+        params,
+        return_type,
+        ..
+    } = &mut program.declarations[1]
+    {
+        *type_name = "Missing".to_string();
+        *method_name = "missing".to_string();
+        params[1].ty = AstType::Named("Stale".to_string());
+        *return_type = Some(AstType::Named("AlsoStale".to_string()));
+    }
+    let mut tc = TypeChecker::new();
+
+    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+    assert!(
+            !tc.generic_methods.contains_key("Missing.missing"),
+            "resolver-backed collection should clear the stale AST generic method template key after resolver key restoration"
+        );
+    assert!(
+            !tc.generic_methods.contains_key("Box.keep"),
+            "resolver-backed collection should clear the restored generic method template key when resolver signature metadata is incomplete"
+        );
+}
+
+#[test]
+fn collect_declarations_with_symbols_uses_resolver_generic_method_name_for_body_type_refs() {
+    let mut program = parse_program(
+        r#"
+Box: { value: i32 }
+Box.keep<T> = (self: Box, value: T) T {
+    same: T = value
+    same
+}
+"#,
+    );
+    let symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    if let Declaration::Method {
+        method_name,
+        type_params,
+        ..
+    } = &mut program.declarations[1]
+    {
+        *method_name = "missing".to_string();
+        type_params[0].name = "Stale".to_string();
+    }
+    let mut tc = TypeChecker::new();
+
+    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
+
+    assert!(
+            tc.diagnostics.is_empty(),
+            "resolver-restored generic method name and type parameters should avoid stale AST body type-ref diagnostics: {:?}",
+            tc.diagnostics
+        );
+}
