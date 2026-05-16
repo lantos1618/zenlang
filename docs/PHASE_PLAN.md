@@ -1914,6 +1914,8 @@ checked-in docs, tests, and commits only.
   graph targets now compile dependencies before dependents, covered by
   `build_graph_orders_targets_before_dependents` and
   `build_command_build_zen_compiles_executable_dependencies_first`, and reject
+  dependencies on gated library targets through
+  `build_command_build_zen_rejects_gated_library_dependencies`. They reject
   undeclared host effects before dependency-ordered execution through
   `build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
   The normal build path also rejects undeclared host effects before
@@ -1928,7 +1930,9 @@ checked-in docs, tests, and commits only.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
   `test_command_build_zen_runs_test_targets`, and rejects undeclared host
   effects before test execution through
-  `test_command_build_zen_rejects_undeclared_host_effects`.
+  `test_command_build_zen_rejects_undeclared_host_effects`. Test execution also
+  rejects dependencies on gated library targets through
+  `test_command_build_zen_rejects_gated_library_dependencies`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `emit_command_build_zen_outputs_target_c_source`, and rejects undeclared host
@@ -1955,7 +1959,8 @@ Phase 4 build-driver work still has constrained `build.zen` semantics: normal
 graph targets, `zen test build.zen` executes test graph targets,
 `zen check build.zen` validates executable, test, and library targets in the
 graph, `zen emit build.zen` emits target C for a single executable graph target,
-and library execution remains gated. Legacy generic JSON emitters reject
+and build/test execution rejects dependencies on gated library targets while
+library execution remains gated. Legacy generic JSON emitters reject
 `build.zen` and point to
 `emit-json build-graph`.
 
