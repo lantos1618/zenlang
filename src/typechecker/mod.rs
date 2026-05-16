@@ -21,6 +21,7 @@ mod generic_bound_validation;
 mod generic_type_reference_walker;
 mod generic_type_validation;
 mod monomorphize;
+mod monomorphize_inference;
 mod patterns;
 mod program_checking;
 mod resolve;

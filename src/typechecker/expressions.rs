@@ -11,7 +11,7 @@ use crate::ast::{AstType, Expression, Param};
 use crate::error::{Diagnostic, Span};
 
 use super::closures::collect_captures;
-use super::monomorphize::InferenceConflict;
+use super::monomorphize_inference::InferenceConflict;
 use super::{BehaviorBound, TypeChecker};
 
 impl TypeChecker {
