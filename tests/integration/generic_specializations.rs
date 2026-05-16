@@ -15,6 +15,7 @@ fn generic_specializations_emit_each_generated_c_definition_once() {
         "generic_method_worklist.zen",
         "generic_nested_result_enum.zen",
         "generic_result_enum.zen",
+        "generic_result_enum_method.zen",
         "generic_struct.zen",
         "generic_ufc_function.zen",
         "generic_vec.zen",
@@ -178,6 +179,18 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T unwrap_or"));
     assert!(!c_source.contains("unwrap_or(err"));
+
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_result_enum_method.zen"));
+    assert!(c_source.contains("typedef struct Result_i32_str Result_i32_str;"));
+    assert!(c_source
+        .contains("int32_t Result_unwrap_or_i32_str(Result_i32_str self, int32_t fallback)"));
+    assert!(c_source.contains("Result_unwrap_or_i32_str(ok, 0LL)"));
+    assert!(c_source.contains("Result_unwrap_or_i32_str(err, 34LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_i32_str");
+    assert!(!c_source.contains("Result_T"));
+    assert!(!c_source.contains("T Result_unwrap_or"));
+    assert!(!c_source.contains("Result_unwrap_or(err"));
 
     let c_source =
         compile_to_c_with_generated_call_check(&test_dir().join("generic_nested_result_enum.zen"));
