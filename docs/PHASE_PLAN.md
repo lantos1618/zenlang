@@ -204,6 +204,9 @@ checked-in docs, tests, and commits only.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
+- Typechecker resolver struct/enum metadata tests now keep variant absence
+  metadata coverage in a focused child module, separate from positive struct
+  field and enum payload metadata mismatch cases.
 - Module-system unit tests now live beside the module-system implementation in
   a dedicated test module, keeping module graph/load entry points compact.
 - Resolver expected-local traversal now lives in a dedicated validation support
