@@ -1989,6 +1989,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test ast_type_declaration_tasks_collect_structs_and_enums`,
   `cargo test generic_enum_type_arg_arity_is_error`, and
   `cargo test check_program_with_symbols_uses_resolver_type_metadata_for_type_refs`.
+- Behavior declaration collection now uses named behavior tasks before
+  replaying AST signature registration or resolver-backed stubs, covered by
+  `cargo test behavior_declaration_tasks_collect_behavior_signatures`,
+  `cargo test behavior_declaration_collection`, and
+  `cargo test resolver_backed_behavior_collection_defers_generic_metadata_to_resolver`.
 
 ## Unresolved Gaps
 

@@ -131,6 +131,12 @@ enum AstTypeDeclarationTask<'a> {
     },
 }
 
+struct BehaviorDeclarationTask<'a> {
+    name: &'a str,
+    type_params: &'a [ast::TypeParam],
+    methods: &'a [BehaviorMethod],
+}
+
 enum ResolverTypeReferenceValidationTask<'a> {
     Struct {
         name: &'a str,
@@ -3627,22 +3633,46 @@ impl TypeChecker {
     }
 
     fn collect_behavior_declarations(&mut self, decls: &[Declaration]) {
+        let tasks = Self::collect_behavior_declaration_tasks(decls);
+        self.collect_behavior_declarations_from_tasks(&tasks);
+    }
+
+    fn collect_behavior_declaration_tasks(
+        decls: &[Declaration],
+    ) -> Vec<BehaviorDeclarationTask<'_>> {
+        decls
+            .iter()
+            .filter_map(|decl| match decl {
+                Declaration::Behavior {
+                    name,
+                    type_params,
+                    methods,
+                    ..
+                } => Some(BehaviorDeclarationTask {
+                    name,
+                    type_params,
+                    methods,
+                }),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn collect_behavior_declarations_from_tasks(&mut self, tasks: &[BehaviorDeclarationTask<'_>]) {
         let mut type_params_to_validate = Vec::new();
 
-        for decl in decls {
-            if let Declaration::Behavior {
+        for task in tasks {
+            let BehaviorDeclarationTask {
                 name,
                 type_params,
                 methods,
-                ..
-            } = decl
-            {
-                if self.resolver_backed_collection {
-                    self.collect_resolver_backed_behavior_declaration_stub(name, methods);
-                } else {
-                    self.collect_ast_behavior_declaration_signature(name, type_params, methods);
-                    type_params_to_validate.push(type_params);
-                }
+            } = task;
+
+            if self.resolver_backed_collection {
+                self.collect_resolver_backed_behavior_declaration_stub(name, methods);
+            } else {
+                self.collect_ast_behavior_declaration_signature(name, type_params, methods);
+                type_params_to_validate.push(type_params);
             }
         }
 
@@ -14067,6 +14097,25 @@ Option<T>: Some(T), None
             }
             _ => panic!("expected enum task"),
         }
+    }
+
+    #[test]
+    fn behavior_declaration_tasks_collect_behavior_signatures() {
+        let program = parse_program(
+            r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+"#,
+        );
+
+        let tasks = TypeChecker::collect_behavior_declaration_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].name, "Json");
+        assert_eq!(tasks[0].type_params.len(), 1);
+        assert_eq!(tasks[0].methods.len(), 1);
+        assert_eq!(tasks[0].methods[0].name, "encode");
     }
 
     #[test]

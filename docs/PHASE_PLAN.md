@@ -1691,6 +1691,8 @@ checked-in docs, tests, and commits only.
 - AST struct and enum declaration collection now uses a named task collector
   before replaying the existing generic-bound validation and type registration
   path.
+- Behavior declaration collection now uses a named task collector before
+  replaying AST signature registration or resolver-backed behavior stubs.
 
 ## Current Phase
 
