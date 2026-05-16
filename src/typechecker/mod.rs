@@ -3791,22 +3791,30 @@ impl TypeChecker {
     fn collect_behavior_declaration_tasks(
         decls: &[Declaration],
     ) -> Vec<BehaviorDeclarationTask<'_>> {
-        decls
-            .iter()
-            .filter_map(|decl| match decl {
-                Declaration::Behavior {
-                    name,
-                    type_params,
-                    methods,
-                    ..
-                } => Some(BehaviorDeclarationTask {
-                    name,
-                    type_params,
-                    methods,
-                }),
-                _ => None,
-            })
-            .collect()
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_behavior_declaration_task(decl, &mut tasks);
+        }
+        tasks
+    }
+
+    fn push_behavior_declaration_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<BehaviorDeclarationTask<'a>>,
+    ) {
+        if let Declaration::Behavior {
+            name,
+            type_params,
+            methods,
+            ..
+        } = decl
+        {
+            tasks.push(BehaviorDeclarationTask {
+                name,
+                type_params,
+                methods,
+            });
+        }
     }
 
     fn collect_behavior_declarations_from_tasks(&mut self, tasks: &[BehaviorDeclarationTask<'_>]) {

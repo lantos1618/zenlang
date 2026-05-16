@@ -1730,6 +1730,8 @@ checked-in docs, tests, and commits only.
   before replaying function and method signature setup.
 - AST type declaration collection now uses a shared type-task push helper
   before replaying generic-bound validation and type registration.
+- Behavior declaration collection now uses a shared behavior-task push helper
+  before replaying signature setup and behavior generic-bound validation.
 
 ## Current Phase
 
