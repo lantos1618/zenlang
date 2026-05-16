@@ -76,7 +76,7 @@ fn main() {
             }
         }
         arg if arg.ends_with(".zen") => {
-            cmd_build(arg);
+            cmd_run_file(arg);
         }
         other => {
             eprintln!("unknown command: {}", other);
@@ -293,6 +293,14 @@ fn cmd_emit(path_str: &str) {
 }
 
 fn cmd_build(path_str: &str) {
+    if is_build_zen_path(path_str) {
+        cmd_build_graph(path_str);
+    } else {
+        compile_file_to_binary(path_str, None, None);
+    }
+}
+
+fn cmd_run_file(path_str: &str) {
     reject_build_zen(path_str);
     compile_file_to_binary(path_str, None, None);
 }
@@ -400,9 +408,7 @@ fn is_build_zen_path(path_str: &str) -> bool {
 
 fn reject_build_zen(path_str: &str) {
     if is_build_zen_path(path_str) {
-        eprintln!(
-            "error: build.zen execution is gated until deterministic build graph support exists"
-        );
+        eprintln!("error: build.zen is only executable through `zen build build.zen`");
         process::exit(1);
     }
 }
