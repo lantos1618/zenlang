@@ -3397,15 +3397,23 @@ impl TypeChecker {
     fn collect_ast_import_declaration_tasks(
         decls: &[Declaration],
     ) -> Vec<AstImportDeclarationTask<'_>> {
-        decls
-            .iter()
-            .filter_map(|decl| match decl {
-                Declaration::Import {
-                    names, module_path, ..
-                } => Some(AstImportDeclarationTask { names, module_path }),
-                _ => None,
-            })
-            .collect()
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_ast_import_declaration_task(decl, &mut tasks);
+        }
+        tasks
+    }
+
+    fn push_ast_import_declaration_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<AstImportDeclarationTask<'a>>,
+    ) {
+        if let Declaration::Import {
+            names, module_path, ..
+        } = decl
+        {
+            tasks.push(AstImportDeclarationTask { names, module_path });
+        }
     }
 
     fn collect_ast_import_declarations_from_tasks(

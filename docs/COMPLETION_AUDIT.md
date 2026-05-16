@@ -2071,6 +2071,10 @@ and do not assume Phase 4 is ready without evidence.
   helper before replaying default expression checks, covered by
   `cargo test ast_struct_field_default_validation_tasks_collect_structs` and
   `cargo test check_program_rejects_struct_field_default_type_mismatch`.
+- AST import declaration collection now uses a shared import-task push helper
+  before seeding imported names, covered by
+  `cargo test ast_import_declaration_tasks_collect_import_bindings` and
+  `cargo test collect_import_info`.
 
 ## Unresolved Gaps
 

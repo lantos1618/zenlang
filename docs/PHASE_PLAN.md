@@ -1724,6 +1724,8 @@ checked-in docs, tests, and commits only.
   replaying parent-edge checks.
 - AST struct field-default validation now uses a shared default-task push
   helper before replaying default expression checks.
+- AST import declaration collection now uses a shared import-task push helper
+  before seeding imported names.
 
 ## Current Phase
 
