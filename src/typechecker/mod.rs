@@ -4335,7 +4335,7 @@ impl TypeChecker {
         symbols: &SymbolTable,
         tasks: &ResolverDeclarationMetadataTasks<'_>,
     ) {
-        self.collect_resolver_callable_declaration_metadata(symbols, &tasks.callable);
+        self.collect_resolver_callable_declaration_metadata(symbols, tasks);
         self.collect_resolver_type_declaration_metadata(symbols, &tasks.types);
         self.collect_resolver_behavior_declaration_metadata_pass(symbols, &tasks.behaviors);
     }
@@ -4370,9 +4370,9 @@ impl TypeChecker {
     fn collect_resolver_callable_declaration_metadata(
         &mut self,
         symbols: &SymbolTable,
-        tasks: &[ResolverCallableDeclarationMetadataTask<'_>],
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
     ) {
-        for task in tasks {
+        for task in &tasks.callable {
             match task {
                 ResolverCallableDeclarationMetadataTask::Function { name, span } => {
                     self.collect_resolver_function_signature(symbols, name, *span);
