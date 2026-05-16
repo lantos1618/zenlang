@@ -310,20 +310,21 @@ fn cmd_run_file(path_str: &str) {
 }
 
 fn cmd_build_graph(path_str: &str) {
-    let target = single_executable_build_target(path_str);
-    if let Err(err) = std::fs::create_dir_all(&target.out_dir) {
-        eprintln!("error creating {}: {}", target.out_dir.display(), err);
-        process::exit(1);
-    }
+    for target in executable_build_targets(path_str) {
+        if let Err(err) = std::fs::create_dir_all(&target.out_dir) {
+            eprintln!("error creating {}: {}", target.out_dir.display(), err);
+            process::exit(1);
+        }
 
-    compile_file_to_binary(
-        target
-            .root_path
-            .to_str()
-            .unwrap_or(&target.root_source_file),
-        Some(&target.out_dir),
-        Some(&target.name),
-    );
+        compile_file_to_binary(
+            target
+                .root_path
+                .to_str()
+                .unwrap_or(&target.root_source_file),
+            Some(&target.out_dir),
+            Some(&target.name),
+        );
+    }
 }
 
 struct BuildGraphExecutableTarget {
@@ -334,17 +335,33 @@ struct BuildGraphExecutableTarget {
 }
 
 fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget {
-    let graph = load_build_graph(path_str);
-    let [target] = graph.targets() else {
+    let mut targets = executable_build_targets(path_str);
+    if targets.len() != 1 {
         eprintln!(
-            "build graph execution supports exactly one target, found {}",
-            graph.targets().len()
+            "build graph C emission supports exactly one target, found {}",
+            targets.len()
         );
         process::exit(1);
-    };
+    }
 
+    targets.pop().expect("one target")
+}
+
+fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
+    let graph = load_build_graph(path_str);
     let build_path = Path::new(path_str);
     let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
+    graph
+        .targets()
+        .iter()
+        .map(|target| executable_build_target(base_dir, target))
+        .collect()
+}
+
+fn executable_build_target(
+    base_dir: &Path,
+    target: &zen::build_graph::BuildTarget,
+) -> BuildGraphExecutableTarget {
     let zen::build_graph::BuildTargetKind::Executable {
         root_source_file,
         out_dir,
@@ -358,13 +375,12 @@ fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget 
         );
         process::exit(1);
     }
-    let out_dir = base_dir.join(out_dir);
 
     BuildGraphExecutableTarget {
         name: target.name().to_string(),
         root_source_file: root_source_file.clone(),
         root_path,
-        out_dir,
+        out_dir: base_dir.join(out_dir),
     }
 }
 

@@ -1887,8 +1887,11 @@ checked-in docs, tests, and commits only.
 - Normal `zen build build.zen` now routes through the same constrained
   deterministic graph pipeline used by `build-graph <build.zen>`, covered by
   `build_command_routes_build_zen_through_deterministic_graph`. The normal
-  build path also rejects undeclared host effects before target execution,
-  covered by
+  build path now compiles multiple executable targets, covered by
+  `build_command_build_zen_compiles_multiple_executable_targets`, and rejects
+  undeclared host effects before multi-target execution through
+  `build_command_multi_target_build_zen_rejects_undeclared_host_effects`. The
+  single-target rejection remains covered by
   `build_command_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen check build.zen` validates the same constrained deterministic
   graph without compiling targets, covered by
@@ -1901,8 +1904,12 @@ checked-in docs, tests, and commits only.
 - Direct `zen build.zen` now aliases the same constrained deterministic graph
   build path as `zen build build.zen`, covered by
   `direct_file_command_build_zen_routes_through_deterministic_graph`, and
+  now compiles multiple executable targets through
+  `direct_file_command_build_zen_compiles_multiple_executable_targets`. It
   rejects undeclared host effects through
   `direct_file_command_build_zen_rejects_undeclared_host_effects`.
+- Build script lowering collects multiple executable targets deterministically,
+  covered by `build_program_lowering_collects_multiple_executable_targets`.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes stay
   rejected with a targeted `emit-json build-graph` diagnostic, covered by
   `legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic`.
@@ -1912,10 +1919,10 @@ checked-in docs, tests, and commits only.
 Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
 Phase 4 build-driver work still has constrained `build.zen` semantics: normal
-`zen build build.zen` executes one graph target, `zen check build.zen` validates
-the graph, `zen emit build.zen` emits target C, and direct `zen build.zen`
-aliases the same graph build path. Legacy generic JSON emitters reject
-`build.zen` and point to `emit-json build-graph`.
+`zen build build.zen` and direct `zen build.zen` execute multiple executable
+graph targets, `zen check build.zen` validates the graph, and `zen emit
+build.zen` emits target C for a single graph target. Legacy generic JSON
+emitters reject `build.zen` and point to `emit-json build-graph`.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
