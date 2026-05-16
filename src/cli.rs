@@ -23,7 +23,9 @@ pub fn main() {
         eprintln!("  check <file>   Parse and typecheck a .zen file");
         eprintln!("  build <file>   Compile a .zen file to a binary");
         eprintln!("  test <build.zen>   Compile and run deterministic test targets");
-        eprintln!("  build-graph <build.zen>   Compile one target from deterministic build graph");
+        eprintln!(
+            "  build-graph <build.zen>   Compile executable targets from deterministic build graph"
+        );
         eprintln!("  emit  <file>   Emit C source (no compilation)");
         eprintln!("  emit-json ast <file>   Emit resolved AST JSON");
         eprintln!("  emit-json symbols <file>   Emit resolver symbol tables JSON");

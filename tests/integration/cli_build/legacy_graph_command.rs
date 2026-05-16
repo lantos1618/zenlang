@@ -1,6 +1,26 @@
 use std::process::Command;
 
 #[test]
+fn cli_usage_describes_build_graph_executable_targets() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .output()
+        .expect("run zen without args");
+
+    assert!(
+        !output.status.success(),
+        "zen without args unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("build-graph <build.zen>   Compile executable targets"),
+        "expected build-graph plural target usage, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
@@ -88,6 +108,71 @@ main = () i32 {
 }
 
 #[test]
+fn build_graph_command_compiles_multiple_executable_targets() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
+    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("app.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write app.zen");
+    std::fs::write(
+        tmp.path().join("tool.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write tool.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["build-graph", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build-graph");
+
+    assert!(
+        output.status.success(),
+        "zen build-graph failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    for bin_path in [
+        tmp.path().join("build").join("app").join("app"),
+        tmp.path().join("build").join("tool").join("tool"),
+    ] {
+        assert!(
+            bin_path.exists(),
+            "expected {} to exist",
+            bin_path.display()
+        );
+        let run = Command::new(&bin_path).output().expect("run built binary");
+        assert!(
+            run.status.success(),
+            "built binary {} exited with {}",
+            bin_path.display(),
+            run.status
+        );
+    }
+}
+
+#[test]
 fn build_graph_command_rejects_undeclared_host_effects() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
@@ -132,6 +217,46 @@ main = () i32 {
     assert!(
         !tmp.path().join("build").exists(),
         "build-graph command should not start after graph validation fails"
+    );
+}
+
+#[test]
+fn build_graph_command_multi_target_rejects_undeclared_host_effects() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD")
+    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
+    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["build-graph", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build-graph");
+
+    assert!(
+        !output.status.success(),
+        "zen build-graph unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("undeclared host effect: read env `ZEN_STD`"),
+        "expected undeclared host effect diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        !tmp.path().join("build").exists(),
+        "multi-target build-graph command should not start after graph validation fails"
     );
 }
 
