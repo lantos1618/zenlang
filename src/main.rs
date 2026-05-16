@@ -147,7 +147,7 @@ fn graph_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
 }
 
 fn cmd_emit_json_ast(path_str: &str) {
-    reject_build_zen(path_str);
+    reject_build_zen_for_emit_json_mode(path_str);
     let (graph, _files) = load_module_graph(path_str);
     match zen::ir_json::ast_graph_to_json(&graph) {
         Ok(json) => println!("{json}"),
@@ -159,7 +159,7 @@ fn cmd_emit_json_ast(path_str: &str) {
 }
 
 fn cmd_emit_json_symbols(path_str: &str) {
-    reject_build_zen(path_str);
+    reject_build_zen_for_emit_json_mode(path_str);
     let (graph, _files) = load_module_graph(path_str);
     match zen::ir_json::symbols_graph_to_json(&graph) {
         Ok(json) => println!("{json}"),
@@ -171,7 +171,7 @@ fn cmd_emit_json_symbols(path_str: &str) {
 }
 
 fn cmd_emit_json_typed(path_str: &str) {
-    reject_build_zen(path_str);
+    reject_build_zen_for_emit_json_mode(path_str);
     let typed = graph_frontend(path_str);
     match zen::ir_json::typed_program_to_json(&typed) {
         Ok(json) => println!("{json}"),
@@ -183,7 +183,7 @@ fn cmd_emit_json_typed(path_str: &str) {
 }
 
 fn cmd_emit_json_diagnostics(path_str: &str) {
-    reject_build_zen(path_str);
+    reject_build_zen_for_emit_json_mode(path_str);
 
     let path = Path::new(path_str);
     if !path.exists() {
@@ -302,8 +302,11 @@ fn cmd_build(path_str: &str) {
 }
 
 fn cmd_run_file(path_str: &str) {
-    reject_build_zen(path_str);
-    compile_file_to_binary(path_str, None, None);
+    if is_build_zen_path(path_str) {
+        cmd_build_graph(path_str);
+    } else {
+        compile_file_to_binary(path_str, None, None);
+    }
 }
 
 fn cmd_build_graph(path_str: &str) {
@@ -440,9 +443,11 @@ fn is_build_zen_path(path_str: &str) -> bool {
         .is_some_and(|name| name == "build.zen")
 }
 
-fn reject_build_zen(path_str: &str) {
+fn reject_build_zen_for_emit_json_mode(path_str: &str) {
     if is_build_zen_path(path_str) {
-        eprintln!("error: build.zen is only supported through `zen check build.zen`, `zen emit build.zen`, or `zen build build.zen`");
+        eprintln!(
+            "error: this emit-json mode does not support build.zen; use `emit-json build-graph`"
+        );
         process::exit(1);
     }
 }

@@ -96,10 +96,11 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `zen emit-json symbols <file>`, `zen emit-json typed <file>`, and
   `zen emit-json diagnostics <file>`.
 - `build.zen`: constrained. `zen check build.zen` validates the deterministic
-  graph, `zen emit build.zen` emits target C, and `zen build build.zen`
-  compiles one executable target through that graph. Other `build.zen`
-  entrypoints remain gated until their deterministic semantics are specified
-  and tested.
+  graph, `zen emit build.zen` emits target C, `zen build build.zen` compiles
+  one executable target through that graph, and direct `zen build.zen` aliases
+  that same graph build path. Legacy `emit-json ast|symbols|typed|diagnostics`
+  modes for `build.zen` remain gated until their deterministic semantics are
+  specified and tested.
 - Errors: `Result<T, E>` and `.raise()` are v1 design goals, but `.raise()` is
   gated until typechecked propagation and lowering are implemented.
 - ABI: stable layouts for structs, enums, options/results, strings, slices,
@@ -121,7 +122,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | `Typed allocators` | gated | Sync and async allocator tests |
 | Comptime type matching | gated | Type metadata and derive tests |
 | Actors in std | gated | Mailbox, scheduling, supervisor tests |
-| `build.zen` check/emit/build execution | constrained | Deterministic graph validation, target C emission, and one-target build tests |
+| `build.zen` check/emit/build/direct execution | constrained | Deterministic graph validation, target C emission, and one-target build tests |
 | Existing broad stdlib files | experimental | Must compile before promotion |
 | Formatter, package manager, alternate backends | removed from v1 claims | Reintroduce only with tests and binaries |
 
