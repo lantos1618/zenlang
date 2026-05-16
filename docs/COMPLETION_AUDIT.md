@@ -2010,6 +2010,11 @@ and do not assume Phase 4 is ready without evidence.
   by `cargo test ast_type_reference_validation_tasks_collect_declarations`,
   `cargo test check_program_rejects_unknown_type_references`, and
   `cargo test check_program_rejects_unknown_type_references_in_struct_field_defaults`.
+- Self-type context validation now uses named declaration tasks before
+  replaying declaration-specific `Self` allowance checks, covered by
+  `cargo test self_type_context_validation_tasks_collect_declarations`,
+  `cargo test check_program_rejects_self_type_outside_method_or_behavior`,
+  and `cargo test behavior_declaration_collection`.
 
 ## Unresolved Gaps
 

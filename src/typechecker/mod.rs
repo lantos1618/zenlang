@@ -180,6 +180,46 @@ enum AstTypeReferenceValidationTask<'a> {
     },
 }
 
+enum SelfTypeContextValidationTask<'a> {
+    Struct {
+        fields: &'a [StructField],
+    },
+    Enum {
+        variants: &'a [EnumVariant],
+    },
+    Function {
+        params: &'a [Param],
+        return_type: &'a Option<AstType>,
+        body: &'a Expression,
+        span: Span,
+    },
+    Method {
+        params: &'a [Param],
+        return_type: &'a Option<AstType>,
+        body: &'a Expression,
+        span: Span,
+    },
+    Behavior {
+        methods: &'a [BehaviorMethod],
+    },
+    ImplBlock {
+        behavior_type_args: &'a [AstType],
+        methods: &'a [Declaration],
+        span: Span,
+    },
+    Requires {
+        behavior_type_args: &'a [AstType],
+        span: Span,
+    },
+    BehaviorExtends {
+        parent_type_args: &'a [AstType],
+        span: Span,
+    },
+    TopLevelExpr {
+        expr: &'a Expression,
+    },
+}
+
 enum ResolverTypeReferenceValidationTask<'a> {
     Struct {
         name: &'a str,
@@ -6924,22 +6964,21 @@ impl TypeChecker {
     }
 
     fn validate_self_type_contexts(&mut self, decls: &[Declaration]) {
-        for decl in decls {
-            match decl {
+        let tasks = Self::collect_self_type_context_validation_tasks(decls);
+        self.validate_self_type_context_tasks(&tasks);
+    }
+
+    fn collect_self_type_context_validation_tasks(
+        decls: &[Declaration],
+    ) -> Vec<SelfTypeContextValidationTask<'_>> {
+        decls
+            .iter()
+            .filter_map(|decl| match decl {
                 Declaration::Struct { fields, .. } => {
-                    for field in fields {
-                        self.validate_self_type_ref(&field.ty, field.span, false);
-                        if let Some(default) = &field.default {
-                            self.validate_self_type_expr(default, false);
-                        }
-                    }
+                    Some(SelfTypeContextValidationTask::Struct { fields })
                 }
                 Declaration::Enum { variants, .. } => {
-                    for variant in variants {
-                        if let Some(payload) = &variant.payload {
-                            self.validate_self_type_ref(payload, variant.span, false);
-                        }
-                    }
+                    Some(SelfTypeContextValidationTask::Enum { variants })
                 }
                 Declaration::Function {
                     params,
@@ -6947,20 +6986,97 @@ impl TypeChecker {
                     body,
                     span,
                     ..
-                } => {
-                    self.validate_self_type_callable(params, return_type, body, *span, false);
-                }
+                } => Some(SelfTypeContextValidationTask::Function {
+                    params,
+                    return_type,
+                    body,
+                    span: *span,
+                }),
                 Declaration::Method {
                     params,
                     return_type,
                     body,
                     span,
                     ..
+                } => Some(SelfTypeContextValidationTask::Method {
+                    params,
+                    return_type,
+                    body,
+                    span: *span,
+                }),
+                Declaration::Behavior { methods, .. } => {
+                    Some(SelfTypeContextValidationTask::Behavior { methods })
+                }
+                Declaration::ImplBlock {
+                    behavior_type_args,
+                    methods,
+                    span,
+                    ..
+                } => Some(SelfTypeContextValidationTask::ImplBlock {
+                    behavior_type_args,
+                    methods,
+                    span: *span,
+                }),
+                Declaration::Requires {
+                    behavior_type_args,
+                    span,
+                    ..
+                } => Some(SelfTypeContextValidationTask::Requires {
+                    behavior_type_args,
+                    span: *span,
+                }),
+                Declaration::BehaviorExtends {
+                    parent_type_args,
+                    span,
+                    ..
+                } => Some(SelfTypeContextValidationTask::BehaviorExtends {
+                    parent_type_args,
+                    span: *span,
+                }),
+                Declaration::TopLevelExpr { expr, .. } => {
+                    Some(SelfTypeContextValidationTask::TopLevelExpr { expr })
+                }
+                Declaration::Import { .. } | Declaration::Error { .. } => None,
+            })
+            .collect()
+    }
+
+    fn validate_self_type_context_tasks(&mut self, tasks: &[SelfTypeContextValidationTask<'_>]) {
+        for task in tasks {
+            match task {
+                SelfTypeContextValidationTask::Struct { fields } => {
+                    for field in *fields {
+                        self.validate_self_type_ref(&field.ty, field.span, false);
+                        if let Some(default) = &field.default {
+                            self.validate_self_type_expr(default, false);
+                        }
+                    }
+                }
+                SelfTypeContextValidationTask::Enum { variants } => {
+                    for variant in *variants {
+                        if let Some(payload) = &variant.payload {
+                            self.validate_self_type_ref(payload, variant.span, false);
+                        }
+                    }
+                }
+                SelfTypeContextValidationTask::Function {
+                    params,
+                    return_type,
+                    body,
+                    span,
+                } => {
+                    self.validate_self_type_callable(params, return_type, body, *span, false);
+                }
+                SelfTypeContextValidationTask::Method {
+                    params,
+                    return_type,
+                    body,
+                    span,
                 } => {
                     self.validate_self_type_callable(params, return_type, body, *span, true);
                 }
-                Declaration::Behavior { methods, .. } => {
-                    for method in methods {
+                SelfTypeContextValidationTask::Behavior { methods } => {
+                    for method in *methods {
                         let Some(default_body) = &method.default_body else {
                             self.validate_self_type_params(&method.params, true);
                             if let Some(return_type) = &method.return_type {
@@ -6977,14 +7093,13 @@ impl TypeChecker {
                         );
                     }
                 }
-                Declaration::ImplBlock {
+                SelfTypeContextValidationTask::ImplBlock {
                     behavior_type_args,
                     methods,
                     span,
-                    ..
                 } => {
                     self.validate_self_type_refs(behavior_type_args, *span, false);
-                    for method in methods {
+                    for method in *methods {
                         if let Declaration::Function {
                             params,
                             return_type,
@@ -7003,24 +7118,21 @@ impl TypeChecker {
                         }
                     }
                 }
-                Declaration::Requires {
+                SelfTypeContextValidationTask::Requires {
                     behavior_type_args,
                     span,
-                    ..
                 } => {
                     self.validate_self_type_refs(behavior_type_args, *span, false);
                 }
-                Declaration::BehaviorExtends {
+                SelfTypeContextValidationTask::BehaviorExtends {
                     parent_type_args,
                     span,
-                    ..
                 } => {
                     self.validate_self_type_refs(parent_type_args, *span, false);
                 }
-                Declaration::TopLevelExpr { expr, .. } => {
+                SelfTypeContextValidationTask::TopLevelExpr { expr } => {
                     self.validate_self_type_expr(expr, false);
                 }
-                Declaration::Import { .. } | Declaration::Error { .. } => {}
             }
         }
     }
@@ -15581,6 +15693,74 @@ main = (value: Self) i32 { return 0 }
                 .any(|d| d.message.contains("Self type is only valid")),
             "expected invalid Self type diagnostic, got {err:?}"
         );
+    }
+
+    #[test]
+    fn self_type_context_validation_tasks_collect_declarations() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+Option<T>: Some(T), None
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Pretty.extends(Json)
+
+make = () Point { return Point { x: 1 } }
+
+Point.get = (self: Point) i32 { return self.x }
+
+Point.impl = {
+    x_value = (self: Point) i32 { return self.x }
+}
+
+Point.requires(Json)
+
+result := 1
+"#,
+        );
+
+        let tasks = TypeChecker::collect_self_type_context_validation_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 9);
+        assert!(matches!(
+            tasks[0],
+            SelfTypeContextValidationTask::Struct { .. }
+        ));
+        assert!(matches!(
+            tasks[1],
+            SelfTypeContextValidationTask::Enum { .. }
+        ));
+        assert!(matches!(
+            tasks[2],
+            SelfTypeContextValidationTask::Behavior { .. }
+        ));
+        assert!(matches!(
+            tasks[3],
+            SelfTypeContextValidationTask::BehaviorExtends { .. }
+        ));
+        assert!(matches!(
+            tasks[4],
+            SelfTypeContextValidationTask::Function { .. }
+        ));
+        assert!(matches!(
+            tasks[5],
+            SelfTypeContextValidationTask::Method { .. }
+        ));
+        assert!(matches!(
+            tasks[6],
+            SelfTypeContextValidationTask::ImplBlock { .. }
+        ));
+        assert!(matches!(
+            tasks[7],
+            SelfTypeContextValidationTask::Requires { .. }
+        ));
+        assert!(matches!(
+            tasks[8],
+            SelfTypeContextValidationTask::TopLevelExpr { .. }
+        ));
     }
 
     #[test]

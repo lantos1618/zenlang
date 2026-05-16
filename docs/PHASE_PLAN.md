@@ -1699,6 +1699,8 @@ checked-in docs, tests, and commits only.
   replaying default expression checks for nongeneric structs.
 - AST generic type-reference validation now uses a named task collector before
   replaying declaration-specific type and expression reference checks.
+- Self-type context validation now uses a named task collector before replaying
+  declaration-specific `Self` allowance checks.
 
 ## Current Phase
 
