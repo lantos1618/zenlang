@@ -155,7 +155,9 @@ checked-in docs, tests, and commits only.
   expression/statement local collection now shares one block-scope helper.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
-  existing callable/type/behavior restoration order.
+  existing callable/type/behavior restoration order. Resolver-backed
+  generic type-reference validation also routes through that same task
+  collector instead of maintaining a second declaration match.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis.

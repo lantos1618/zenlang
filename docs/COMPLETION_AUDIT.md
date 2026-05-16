@@ -1948,6 +1948,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test collect_declarations_with_symbols_uses_resolver_function_type_metadata`,
   and
   `cargo test collect_declarations_with_symbols_does_not_validate_stale_generic_function_body_refs_when_signature_incomplete`.
+  The fallback resolver-backed type-reference validation path now also routes
+  through the same declaration metadata task collector, preserving top-level
+  expression validation coverage with
+  `cargo test resolver_declaration_metadata_tasks_collect_top_level_type_reference_tasks`.
 - Resolver behavior declaration metadata now uses a named metadata task instead
   of anonymous tuple fields, covered by
   `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`,

@@ -6309,52 +6309,8 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: Option<&SymbolTable>,
     ) {
-        for decl in decls {
-            match decl {
-                Declaration::Struct {
-                    name, fields, span, ..
-                } => {
-                    self.validate_resolver_struct_type_references(symbols, name, fields, *span);
-                }
-                Declaration::Enum { name, span, .. } => {
-                    self.validate_resolver_enum_type_references(symbols, name, *span);
-                }
-                Declaration::Function {
-                    name, body, span, ..
-                } => {
-                    self.validate_resolver_function_type_references(symbols, name, body, *span);
-                }
-                Declaration::Method {
-                    body,
-                    type_name,
-                    method_name,
-                    span,
-                    ..
-                } => {
-                    let ast_key = Self::method_key(type_name, method_name);
-                    self.validate_resolver_method_type_references(
-                        symbols, &ast_key, type_name, body, *span,
-                    );
-                }
-                Declaration::Behavior {
-                    name,
-                    methods,
-                    span,
-                    ..
-                } => {
-                    self.validate_resolver_behavior_type_references(symbols, name, methods, *span);
-                }
-                Declaration::ImplBlock {
-                    type_name, methods, ..
-                } => {
-                    self.validate_resolver_impl_method_type_references(symbols, type_name, methods);
-                }
-                Declaration::TopLevelExpr { expr, .. } => {
-                    self.validate_generic_expr_type_references(expr, &HashSet::new());
-                }
-                _ => {}
-            }
-        }
+        let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
+        self.validate_resolver_type_reference_tasks(&tasks.type_references, symbols);
     }
 
     fn validate_resolver_type_reference_tasks(
@@ -13751,6 +13707,25 @@ main = (input: i32) i32 {
         assert_eq!(type_task.impl_edges[0].display, "Json<str>");
         assert_eq!(type_task.required_edges[0].display, "Json<str>");
         assert_eq!(tasks.behavior_associations.behavior_parents.len(), 1);
+    }
+
+    #[test]
+    fn resolver_declaration_metadata_tasks_collect_top_level_type_reference_tasks() {
+        let program = parse_program(
+            r#"
+value := 1
+"#,
+        );
+
+        let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+
+        assert!(
+            tasks
+                .type_references
+                .iter()
+                .any(|task| matches!(task, ResolverTypeReferenceValidationTask::TopLevelExpr { .. })),
+            "top-level expression type references should stay in the shared resolver task collector"
+        );
     }
 
     #[test]
