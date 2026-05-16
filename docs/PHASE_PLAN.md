@@ -194,6 +194,8 @@ checked-in docs, tests, and commits only.
 - C backend expression-emission unit tests now live in their own test helper,
   keeping backend generation, C type mapping, and low-level expression emission
   coverage separate.
+- Lexer unit tests now live beside the lexer implementation in a dedicated test
+  module, keeping the public lexer API and character-span helpers compact.
 - Module-system unit tests now live beside the module-system implementation in
   a dedicated test module, keeping module graph/load entry points compact.
 - Resolver expected-local traversal now lives in a dedicated validation support
