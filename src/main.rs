@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
 
 use zen::codegen::c::CBackend;
@@ -283,18 +283,14 @@ fn load_build_graph(path_str: &str) -> zen::build_graph::BuildGraph {
 }
 
 fn cmd_emit(path_str: &str) {
-    reject_build_zen(path_str);
-    let typed = graph_frontend(path_str);
-    let backend = CBackend;
-    match backend.generate(&typed) {
-        Ok(c_source) => {
-            print!("{}", c_source);
-        }
-        Err(e) => {
-            eprintln!("codegen error: {}", e);
-            process::exit(1);
-        }
+    if is_build_zen_path(path_str) {
+        let target = single_executable_build_target(path_str);
+        print!("{}", compile_file_to_c_source(&target.root_path));
+        return;
     }
+
+    let typed = graph_frontend(path_str);
+    print!("{}", typed_program_to_c_source(&typed));
 }
 
 fn cmd_build(path_str: &str) {
@@ -311,6 +307,30 @@ fn cmd_run_file(path_str: &str) {
 }
 
 fn cmd_build_graph(path_str: &str) {
+    let target = single_executable_build_target(path_str);
+    if let Err(err) = std::fs::create_dir_all(&target.out_dir) {
+        eprintln!("error creating {}: {}", target.out_dir.display(), err);
+        process::exit(1);
+    }
+
+    compile_file_to_binary(
+        target
+            .root_path
+            .to_str()
+            .unwrap_or(&target.root_source_file),
+        Some(&target.out_dir),
+        Some(&target.name),
+    );
+}
+
+struct BuildGraphExecutableTarget {
+    name: String,
+    root_source_file: String,
+    root_path: PathBuf,
+    out_dir: PathBuf,
+}
+
+fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget {
     let graph = load_build_graph(path_str);
     let [target] = graph.targets() else {
         eprintln!(
@@ -336,28 +356,37 @@ fn cmd_build_graph(path_str: &str) {
         process::exit(1);
     }
     let out_dir = base_dir.join(out_dir);
-    if let Err(err) = std::fs::create_dir_all(&out_dir) {
-        eprintln!("error creating {}: {}", out_dir.display(), err);
-        process::exit(1);
-    }
 
-    compile_file_to_binary(
-        root_path.to_str().unwrap_or(root_source_file),
-        Some(&out_dir),
-        Some(target.name()),
-    );
+    BuildGraphExecutableTarget {
+        name: target.name().to_string(),
+        root_source_file: root_source_file.clone(),
+        root_path,
+        out_dir,
+    }
 }
 
-fn compile_file_to_binary(path_str: &str, output_dir: Option<&Path>, output_name: Option<&str>) {
+fn compile_file_to_c_source(path: &Path) -> String {
+    let path_str = path.to_str().unwrap_or_else(|| {
+        eprintln!("error: non-utf8 source path: {}", path.display());
+        process::exit(1);
+    });
     let typed = graph_frontend(path_str);
+    typed_program_to_c_source(&typed)
+}
+
+fn typed_program_to_c_source(typed: &zen::ast::typed::TypedProgram) -> String {
     let backend = CBackend;
-    let c_source = match backend.generate(&typed) {
-        Ok(s) => s,
+    match backend.generate(typed) {
+        Ok(c_source) => c_source,
         Err(e) => {
             eprintln!("codegen error: {}", e);
             process::exit(1);
         }
-    };
+    }
+}
+
+fn compile_file_to_binary(path_str: &str, output_dir: Option<&Path>, output_name: Option<&str>) {
+    let c_source = compile_file_to_c_source(Path::new(path_str));
 
     // Determine output paths
     let stem = Path::new(path_str)
@@ -413,7 +442,7 @@ fn is_build_zen_path(path_str: &str) -> bool {
 
 fn reject_build_zen(path_str: &str) {
     if is_build_zen_path(path_str) {
-        eprintln!("error: build.zen is only supported through `zen check build.zen` or `zen build build.zen`");
+        eprintln!("error: build.zen is only supported through `zen check build.zen`, `zen emit build.zen`, or `zen build build.zen`");
         process::exit(1);
     }
 }

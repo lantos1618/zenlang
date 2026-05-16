@@ -1893,8 +1893,12 @@ checked-in docs, tests, and commits only.
 - Normal `zen check build.zen` validates the same constrained deterministic
   graph without compiling targets, covered by
   `check_command_validates_build_zen_graph`, and rejects undeclared host effects
-  through `check_command_build_zen_rejects_undeclared_host_effects`. `emit` and
-  direct `build.zen` invocation remain gated until they have explicit
+  through `check_command_build_zen_rejects_undeclared_host_effects`.
+- Normal `zen emit build.zen` emits generated C for the single executable graph
+  target without compiling a binary, covered by
+  `emit_command_build_zen_outputs_target_c_source`, and rejects undeclared host
+  effects through `emit_command_build_zen_rejects_undeclared_host_effects`.
+  Direct `build.zen` invocation remains gated until it has explicit
   deterministic semantics.
 
 ## Current Phase
@@ -1903,15 +1907,15 @@ Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
 Phase 4 build-driver work still has constrained `build.zen` semantics: normal
 `zen build build.zen` executes one graph target, `zen check build.zen` validates
-the graph, and `emit` plus direct `build.zen` invocation remain gated until
-those entrypoints have their own deterministic semantics.
+the graph, `zen emit build.zen` emits target C, and direct `build.zen`
+invocation remains gated until it has its own deterministic semantics.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Continue the next smallest build-driver slice by deciding whether `zen emit
-build.zen` should emit deterministic graph JSON, generated target C, or remain
-gated until there is a typed build-script surface. Preserve the constrained
-accepted `build.zen` subset either way.
+Continue the next smallest build-driver slice by deciding whether direct
+`zen build.zen` should alias `zen build build.zen`, print a targeted diagnostic,
+or stay gated until there is a typed build-script surface. Preserve the
+constrained accepted `build.zen` subset either way.

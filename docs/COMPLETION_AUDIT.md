@@ -2177,8 +2177,13 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration check_command_validates_build_zen_graph`, and
   rejects undeclared host effects through
   `cargo test --test integration check_command_build_zen_rejects_undeclared_host_effects`.
-  `emit` and direct `build.zen` invocation remain gated until they have
-  explicit deterministic semantics.
+- Normal `zen emit build.zen` emits generated C for the single executable graph
+  target without compiling a binary, covered by
+  `cargo test --test integration emit_command_build_zen_outputs_target_c_source`,
+  and rejects undeclared host effects through
+  `cargo test --test integration emit_command_build_zen_rejects_undeclared_host_effects`.
+  Direct `build.zen` invocation remains gated until it has explicit
+  deterministic semantics.
 
 ## Unresolved Gaps
 
@@ -2187,8 +2192,9 @@ and do not assume Phase 4 is ready without evidence.
   resolver-owned semantic handoffs.
 - build.zen entrypoints are not complete: the constrained graph path now covers
   emission, one-target execution, normal `zen build build.zen`, and normal
-  `zen check build.zen`, but `emit` and direct file invocation still need
-  explicit deterministic semantics before they can be promoted.
+  `zen check build.zen`, and normal `zen emit build.zen`, but direct file
+  invocation still needs explicit deterministic semantics before it can be
+  promoted.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
