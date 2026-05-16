@@ -2067,6 +2067,10 @@ and do not assume Phase 4 is ready without evidence.
   replaying parent-edge checks, covered by
   `cargo test behavior_extends_validation_tasks_collect_parent_refs` and
   `cargo test behavior_extends_duplicate_parent_is_error`.
+- AST struct field-default validation now uses a shared default-task push
+  helper before replaying default expression checks, covered by
+  `cargo test ast_struct_field_default_validation_tasks_collect_structs` and
+  `cargo test check_program_rejects_struct_field_default_type_mismatch`.
 
 ## Unresolved Gaps
 

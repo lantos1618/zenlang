@@ -1722,6 +1722,8 @@ checked-in docs, tests, and commits only.
   replaying conformance checks.
 - Behavior extends validation now uses a shared extends-task push helper before
   replaying parent-edge checks.
+- AST struct field-default validation now uses a shared default-task push
+  helper before replaying default expression checks.
 
 ## Current Phase
 

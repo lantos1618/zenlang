@@ -4614,20 +4614,28 @@ impl TypeChecker {
     fn collect_ast_struct_field_default_validation_tasks(
         decls: &[Declaration],
     ) -> Vec<AstStructFieldDefaultValidationTask<'_>> {
-        decls
-            .iter()
-            .filter_map(|decl| match decl {
-                Declaration::Struct {
-                    type_params,
-                    fields,
-                    ..
-                } => Some(AstStructFieldDefaultValidationTask {
-                    type_params,
-                    fields,
-                }),
-                _ => None,
-            })
-            .collect()
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_ast_struct_field_default_validation_task(decl, &mut tasks);
+        }
+        tasks
+    }
+
+    fn push_ast_struct_field_default_validation_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<AstStructFieldDefaultValidationTask<'a>>,
+    ) {
+        if let Declaration::Struct {
+            type_params,
+            fields,
+            ..
+        } = decl
+        {
+            tasks.push(AstStructFieldDefaultValidationTask {
+                type_params,
+                fields,
+            });
+        }
     }
 
     fn validate_ast_struct_field_default_tasks(
