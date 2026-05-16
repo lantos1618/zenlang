@@ -6,5 +6,5 @@ main = () i32 {
     z = 3.14 as i32
     io.println("x as i64: ${y}")
     io.println("3.14 as i32: ${z}")
-    return 0
+    0
 }

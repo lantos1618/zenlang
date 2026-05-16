@@ -8,6 +8,6 @@ pub Point: {
 
 Point.implements(Json<str>) {
     encode = (value: Point) str {
-        return "required"
+        "required"
     }
 }

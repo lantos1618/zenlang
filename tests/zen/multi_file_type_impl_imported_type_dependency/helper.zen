@@ -3,5 +3,5 @@ pub Holder<T>: {
 }
 
 pub Holder.get<T> = (self: Holder<T>) T {
-    return self.value
+    self.value
 }

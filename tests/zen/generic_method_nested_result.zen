@@ -13,7 +13,7 @@ Result<T, E>:
     Err(E)
 
 Box.wrap_result<T> = (self: Box<T>) Result<Option<T>, str> {
-    return Result<Option<T>, str>.Ok(Option<T>.Some(self.value))
+    Result<Option<T>, str>.Ok(Option<T>.Some(self.value))
 }
 
 unwrap_option<T> = (value: Option<T>, fallback: T) T {
@@ -36,5 +36,5 @@ main = () i32 {
     other = unwrap_result(fallback, Option<i32>.Some(7))
     io.println("${unwrap_option(some, 0)}")
     io.println("${unwrap_option(other, 0)}")
-    return 0
+    0
 }

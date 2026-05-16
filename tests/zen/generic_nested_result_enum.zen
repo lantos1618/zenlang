@@ -27,5 +27,5 @@ main = () i32 {
     fallback = unwrap_result(err, Option<i32>.Some(7))
     io.println("${unwrap_option(some, 0)}")
     io.println("${unwrap_option(fallback, 0)}")
-    return 0
+    0
 }

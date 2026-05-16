@@ -4,5 +4,5 @@
 main = () i32 {
     box = Box<i32> { value: 31 }
     io.println("${box.get_inner<i32>()}")
-    return 0
+    0
 }

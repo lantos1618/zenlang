@@ -16,21 +16,21 @@ Point: {
 
 Point.implements(PrettyJson) {
     to_json = (value: Point) str {
-        return "point-json"
+        "point-json"
     }
 
     pretty = (value: Point) str {
-        return "pretty-point"
+        "pretty-point"
     }
 }
 
 encode<T: Json> = (value: T) str {
-    return value.to_json()
+    value.to_json()
 }
 
 main = () i32 {
     point = Point { x: 1 }
     io.println(encode(point))
     io.println(point.pretty())
-    return 0
+    0
 }

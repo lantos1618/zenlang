@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod codegen;
 pub mod error;
+pub mod ir_json;
 pub mod lexer;
 pub mod module_system;
 pub mod parser;

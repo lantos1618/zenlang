@@ -1,7 +1,10 @@
 # Learn Zen In Y Minutes
 
-Zen is a small work-in-progress systems language. This guide uses examples that
-match the current tested compiler surface in this repository.
+Zen is a systems language built around compact declarations, explicit data
+shapes, pattern matching, generics, behaviors, and predictable native output.
+
+This guide separates the tested language surface from gated design previews.
+Runnable examples live in `tests/zen/` and `examples/`.
 
 ## Hello
 
@@ -10,16 +13,18 @@ match the current tested compiler surface in this repository.
 
 main = () i32 {
     io.println("hello")
-    return 0
+    0
 }
 ```
 
-Top-level declarations use prefix-style forms:
+Top-level declarations use prefix-first forms:
 
 - imports: `{ io } = std`
 - functions: `name = (...) ReturnType { ... }`
 - structs: `Name: { ... }`
 - enums: `Name: Variant, Variant(Payload)`
+- methods: `Type.method = (...) ReturnType { ... }`
+- impl blocks: `Type.impl = { ... }`
 - behaviors: `Name: behavior { ... }`
 
 ## Values
@@ -29,26 +34,50 @@ main = () i32 {
     answer = 42
     message = "zen"
     ok = true
-    return answer
+
+    count ::= 0
+    count = count + 1
+
+    answer + count
 }
 ```
 
-Local bindings are immutable by default. Use explicit mutable forms only where
-the current compiler tests cover them.
+Local bindings are immutable by default. Use `::=` for a mutable inferred
+binding and `name:: Type = value` for a mutable typed binding.
+
+## Types
+
+```zen
+main = () i32 {
+    signed: i32 = 42
+    wide: i64 = cast(signed, i64)
+    ratio: f64 = 3.5
+    flag: bool = true
+    label: str = "static text"
+
+    flag ?
+        | true { cast(wide, i32) }
+        | false { cast(ratio, i32) }
+}
+```
+
+Numeric conversions are explicit. Mixed numeric widths need casts instead of
+implicit widening.
 
 ## Functions
 
 ```zen
 add = (a: i32, b: i32) i32 {
-    return a + b
+    a + b
 }
 
 main = () i32 {
-    return add(20, 22)
+    add(20, 22)
 }
 ```
 
-Functions are expressions with typed parameters and an explicit return type.
+Functions have typed parameters and an explicit result type. A non-void
+function's final expression must produce that result on every non-error path.
 
 ## Structs
 
@@ -56,19 +85,24 @@ Functions are expressions with typed parameters and an explicit return type.
 { io } = std
 
 Person: {
-    name: StaticString,
+    name: str,
     age: i32,
 }
 
-main = () i32 {
-    p = Person {
-        name: "Alice",
-        age: 30
+birthday = (p: Person) Person {
+    Person {
+        name: p.name,
+        age: p.age + 1
     }
+}
 
-    io.println("${p.name}")
-    io.println("${p.age}")
-    return 0
+main = () i32 {
+    p = Person { name: "Ada", age: 36 }
+    older = birthday(p)
+
+    io.println("${older.name}")
+    io.println("${older.age}")
+    0
 }
 ```
 
@@ -92,8 +126,8 @@ opposite = (d: Direction) Direction {
 }
 ```
 
-The `?` operator is the main pattern-match form. Enum matches are checked for
-exhaustiveness and duplicate arms in the current compiler.
+The `?` operator is the main pattern-match form. Enum and bool matches are
+checked for missing and duplicate arms.
 
 ## Payload Enums
 
@@ -107,55 +141,16 @@ unwrap_or<T> = (value: Option<T>, fallback: T) T {
         | Some(inner) { inner }
         | None { fallback }
 }
-```
-
-Generic enum variants are constructed with the specialized enum name:
-
-```zen
-some = Option<i32>.Some(42)
-none = Option<i32>.None
-```
-
-## Methods
-
-```zen
-Point: {
-    x: i32,
-    y: i32,
-}
-
-Point.sum = (self: Point) i32 {
-    return self.x + self.y
-}
 
 main = () i32 {
-    p = Point { x: 10, y: 32 }
-    return p.sum()
+    some = Option<i32>.Some(42)
+    none = Option<i32>.None
+
+    unwrap_or(some, unwrap_or(none, 0))
 }
 ```
 
-Methods are declared as `Type.method = (...) ReturnType { ... }`. Calls use
-normal dot syntax.
-
-## Generics
-
-```zen
-Box<T>: {
-    value: T
-}
-
-Box.get<T> = (self: Box<T>) T {
-    return self.value
-}
-
-main = () i32 {
-    box = Box<i32> { value: 42 }
-    return box.get()
-}
-```
-
-The current compiler monomorphizes reachable generic functions, structs, enums,
-and methods into concrete generated C symbols.
+Generic enum variants are constructed with the specialized enum name.
 
 ## Result And Nested Generics
 
@@ -173,19 +168,94 @@ unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
         | Ok(inner) { inner }
         | Err(_) { fallback }
 }
+
+main = () i32 {
+    value = Result<Option<i32>, str>.Ok(Option<i32>.Some(7))
+
+    value ?
+        | Ok(option) { option.unwrap_or(0) }
+        | Err(_) { 0 }
+}
 ```
 
-Nested generic types are written directly:
+Nested generic types are written directly, such as
+`Result<Option<i32>, str>`.
+
+## Methods
 
 ```zen
-value = Result<Option<i32>, str>.Ok(Option<i32>.Some(1))
+Point: {
+    x: i32,
+    y: i32,
+}
+
+Point.sum = (self: Point) i32 {
+    self.x + self.y
+}
+
+main = () i32 {
+    p = Point { x: 10, y: 32 }
+    p.sum()
+}
 ```
+
+Methods are declared as `Type.method = (...) ReturnType { ... }`. Calls use dot
+syntax.
+
+## Impl Blocks
+
+```zen
+Counter: {
+    value: i32,
+}
+
+Counter.impl = {
+    inc = (self: Counter) Counter {
+        Counter { value: self.value + 1 }
+    }
+
+    get = (self: Counter) i32 {
+        self.value
+    }
+}
+
+main = () i32 {
+    counter = Counter { value: 41 }
+    counter.inc().get()
+}
+```
+
+Non-behavior `Type.impl = { ... }` groups methods under a type.
+
+## Generics
+
+```zen
+Box<T>: {
+    value: T
+}
+
+Box.get<T> = (self: Box<T>) T {
+    self.value
+}
+
+identity<T> = (value: T) T {
+    value
+}
+
+main = () i32 {
+    box = Box<i32> { value: 42 }
+    identity(box.get())
+}
+```
+
+The compiler monomorphizes reachable generic functions, structs, enums, and
+methods into concrete generated C symbols.
 
 ## Behaviors
 
 ```zen
 Json: behavior {
-    to_json: (Self) str
+    encode: (Self) str
 }
 
 Point: {
@@ -193,38 +263,155 @@ Point: {
 }
 
 Point.implements(Json) {
-    to_json = (self: Point) str {
-        return "point"
+    encode = (self: Point) str {
+        "point"
     }
 }
 
 encode<T: Json> = (value: T) str {
-    return value.to_json()
+    value.encode()
 }
 ```
 
 Behaviors describe required methods. Generic functions can use behavior bounds
 with `T: BehaviorName`.
 
-## Imports
+## Behavior Inheritance And Requires
+
+```zen
+Json: behavior {
+    encode: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+
+Point.requires(Json)
+```
+
+`.extends` makes a behavior inherit parent requirements. `.requires` asserts
+that a type must have a behavior implementation.
+
+## Loops
+
+```zen
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop {
+        i > limit ?
+            | true { break }
+            | false {
+                total = total + i
+                i = i + 1
+                continue
+            }
+    }
+
+    total
+}
+```
+
+Loops use `loop { ... }` with `break` and `continue`. See
+`examples/05_loops.zen` for the tutorial version.
+
+## Defer
 
 ```zen
 { io } = std
+
+main = () i32 {
+    @this.defer(io.println("leaving main"))
+    io.println("inside main")
+    0
+}
 ```
 
-Imports use destructuring-style binding from a module path. Multi-file examples
-live under `tests/zen/multi_file_*`.
+`defer` runs cleanup expressions before leaving the current scope.
 
-## What Is Still Not Stable
+## Imports And Modules
 
-These are design goals, not stable language promises yet:
+```zen
+{ clamp, factorial } = math_utils
 
-- full `build.zen` execution
-- typed allocator semantics
-- Sync/Async effect checking
-- actor runtime integration
-- JSON/YAML IR and config boundaries
-- package manager and formatter
+main = () i32 {
+    clamp(factorial(4), 0, 100)
+}
+```
 
-For the current contract, see `docs/V1_SPEC.md`. For runnable examples, see
-`tests/zen/` and `examples/project/`.
+Imports use destructuring-style binding from a module path. Local files import
+by module name, and dotted paths resolve through subdirectories. See
+`examples/project/main.zen` for the project-style example.
+
+## Strings
+
+```zen
+{ io } = std
+
+main = () i32 {
+    name = "Zen"
+    io.println("hello ${name}")
+    0
+}
+```
+
+String interpolation embeds expressions with `${...}`.
+
+## Gated Preview: Sync, Async, And Allocators
+
+The following syntax and APIs are gated design goals, not stable compiler
+behavior yet. They are included here because they are central to the intended
+language shape.
+
+```zen
+Allocator<T, Sync>: behavior {
+    alloc: (Self, count: usize) Result<RawPtr<T>, AllocError>
+}
+
+Allocator<T, Async>: behavior {
+    alloc: (Self, count: usize) Task<Result<RawPtr<T>, AllocError>>
+}
+
+Buffer<T, A: Allocator<T, Sync>>: {
+    ptr: RawPtr<T>,
+    len: usize,
+    allocator: A,
+}
+
+make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer<T, A>, AllocError> {
+    ptr = allocator.alloc(len).raise()
+    Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> {
+        ptr: ptr,
+        len: len,
+        allocator: allocator
+    })
+}
+```
+
+The intended model is:
+
+- `Sync` and `Async` are real effects, not marker-only names.
+- Sync code cannot call async operations without an explicit runtime boundary.
+- `Allocator<T, Sync>` and `Allocator<T, Async>` are distinct capabilities.
+- Allocation returns explicit `Result` or task-shaped results, not hidden
+  exceptions.
+- `.raise()` is the planned Result propagation operator, but it is gated until
+  typechecked propagation and lowering are implemented.
+
+For the current contract and gate status, see `docs/V1_SPEC.md`.
+
+## More To Read
+
+- `examples/01_hello_world.zen`
+- `examples/02_variables_and_types.zen`
+- `examples/03_pattern_matching.zen`
+- `examples/04_structs_and_methods.zen`
+- `examples/05_loops.zen`
+- `examples/06_error_handling.zen`
+- `examples/project/main.zen`
+- `tests/zen/` for executable compiler fixtures
+- `docs/V1_SPEC.md` for implemented versus gated language promises

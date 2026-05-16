@@ -1,7 +1,7 @@
 { io } = std
 
 identity<T> = (value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
@@ -10,5 +10,5 @@ main = () i32 {
     io.println("${x}")
     io.println("${y}")
     io.println(identity<str>("ok"))
-    return 0
+    0
 }

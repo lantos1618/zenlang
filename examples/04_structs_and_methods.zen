@@ -11,19 +11,19 @@ Point: {
 
 // Functions that work as methods via UFC
 distance_squared = (p: Point) f64 {
-    return p.x * p.x + p.y * p.y
+    p.x * p.x + p.y * p.y
 }
 
 add_points = (a: Point, b: Point) Point {
-    return Point { x: a.x + b.x, y: a.y + b.y }
+    Point { x: a.x + b.x, y: a.y + b.y }
 }
 
 scale = (p: Point, factor: f64) Point {
-    return Point { x: p.x * factor, y: p.y * factor }
+    Point { x: p.x * factor, y: p.y * factor }
 }
 
 to_string = (p: Point) StringLiteral {
-    return "(${p.x}, ${p.y})"
+    "(${p.x}, ${p.y})"
 }
 
 // A more complex struct
@@ -34,17 +34,17 @@ Rectangle: {
 }
 
 area = (r: Rectangle) f64 {
-    return r.width * r.height
+    r.width * r.height
 }
 
 perimeter = (r: Rectangle) f64 {
-    return 2.0 * (r.width + r.height)
+    2.0 * (r.width + r.height)
 }
 
 contains = (r: Rectangle, p: Point) bool {
     x_in = p.x >= r.origin.x && p.x <= r.origin.x + r.width
     y_in = p.y >= r.origin.y && p.y <= r.origin.y + r.height
-    return x_in && y_in
+    x_in && y_in
 }
 
 main = () i32 {
@@ -86,5 +86,5 @@ main = () i32 {
         | true { io.println("(15,3) is inside") }
         | false { io.println("(15,3) is outside") }
 
-    return 0
+    0
 }

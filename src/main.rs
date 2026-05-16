@@ -17,6 +17,7 @@ fn main() {
         eprintln!("  check <file>   Parse and typecheck a .zen file");
         eprintln!("  build <file>   Compile a .zen file to a binary");
         eprintln!("  emit  <file>   Emit C source (no compilation)");
+        eprintln!("  emit-json ast <file>   Emit resolved AST JSON");
         eprintln!("  <file>         Run a .zen file");
         process::exit(1);
     }
@@ -43,6 +44,13 @@ fn main() {
             }
             cmd_emit(&args[2]);
         }
+        "emit-json" => {
+            if args.len() < 4 || args[2].as_str() != "ast" {
+                eprintln!("Usage: zen emit-json ast <file.zen>");
+                process::exit(1);
+            }
+            cmd_emit_json_ast(&args[3]);
+        }
         arg if arg.ends_with(".zen") => {
             cmd_build(arg);
         }
@@ -63,7 +71,7 @@ fn cmd_check(path_str: &str) {
     );
 }
 
-fn graph_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
+fn load_module_graph(path_str: &str) -> (zen::module_system::ResolvedModuleGraph, FileTable) {
     let path = Path::new(path_str);
     if !path.exists() {
         eprintln!("error: file not found: {}", path_str);
@@ -80,6 +88,12 @@ fn graph_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
             process::exit(1);
         }
     };
+
+    (graph, files)
+}
+
+fn graph_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
+    let (graph, files) = load_module_graph(path_str);
 
     let mut checker = TypeChecker::new();
     match checker.check_module_graph_entry(&graph) {
@@ -98,6 +112,18 @@ fn graph_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
                 .filter(|d| d.severity == zen::error::Severity::Error)
                 .count();
             eprintln!("  {} error(s)", errors);
+            process::exit(1);
+        }
+    }
+}
+
+fn cmd_emit_json_ast(path_str: &str) {
+    reject_build_zen(path_str);
+    let (graph, _files) = load_module_graph(path_str);
+    match zen::ir_json::ast_graph_to_json(&graph) {
+        Ok(json) => println!("{json}"),
+        Err(e) => {
+            eprintln!("json emit error: {}", e);
             process::exit(1);
         }
     }

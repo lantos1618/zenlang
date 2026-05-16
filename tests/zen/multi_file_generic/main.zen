@@ -10,5 +10,5 @@ main = () i32 {
     io.println("${unwrap_option(none, 7)}")
     io.println("${unwrap_result(ok, 0)}")
     io.println("${unwrap_result(err, 9)}")
-    return 0
+    0
 }

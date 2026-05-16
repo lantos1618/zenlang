@@ -4,5 +4,5 @@
 main = () i32 {
     point = make_point()
     io.println("${encode_point(point)}")
-    return 0
+    0
 }

@@ -3,12 +3,12 @@
 { Point } = model
 
 encode<T: Json<str>> = (value: T) str {
-    return value.encode()
+    value.encode()
 }
 
 main = () i32 {
     point = Point { x: 23 }
     io.println(encode(point))
     io.println(point.pretty())
-    return 0
+    0
 }

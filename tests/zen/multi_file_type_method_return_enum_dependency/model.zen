@@ -5,7 +5,7 @@ pub Box<T>: {
 }
 
 pub Box.wrap<T> = (self: Box<T>) Option<T> {
-    return Option<T>.Some(self.value)
+    Option<T>.Some(self.value)
 }
 
 pub Box.value_or<T> = (self: Box<T>, fallback: T) T {

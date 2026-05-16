@@ -8,11 +8,11 @@ process = () i32 {
     io.println("start")
     @this.defer(cleanup())
     io.println("middle")
-    return 42
+    42
 }
 
 main = () i32 {
     result = process()
     io.println("result: ${result}")
-    return 0
+    0
 }

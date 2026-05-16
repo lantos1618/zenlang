@@ -3,9 +3,9 @@ pub Box<T>: {
 }
 
 Box.inner<T> = (self: Box<T>) T {
-    return self.value
+    self.value
 }
 
 pub Box.get_inner<T> = (self: Box<T>) T {
-    return self.inner<T>()
+    self.inner<T>()
 }

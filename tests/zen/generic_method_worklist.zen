@@ -5,15 +5,15 @@ Box<T>: {
 }
 
 inner<T> = (value: T) T {
-    return value
+    value
 }
 
 Box.get_inner<T> = (self: Box<T>) T {
-    return inner(self.value)
+    inner(self.value)
 }
 
 main = () i32 {
     box = Box<i32> { value: 23 }
     io.println("${box.get_inner<i32>()}")
-    return 0
+    0
 }

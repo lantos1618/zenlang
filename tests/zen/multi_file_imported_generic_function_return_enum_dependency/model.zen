@@ -1,7 +1,7 @@
 { Option } = types
 
 pub wrap<T> = (value: T) Option<T> {
-    return Option<T>.Some(value)
+    Option<T>.Some(value)
 }
 
 pub unwrap<T> = (value: Option<T>, fallback: T) T {

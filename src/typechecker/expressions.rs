@@ -53,19 +53,32 @@ impl TypeChecker {
         self.pop_scope();
         self.current_return_type = None;
 
-        if ret_type != Type::Void
-            && ret_type != Type::Never
-            && !self.block_satisfies_return(&body_block, &ret_type)
-        {
-            return Err(Diagnostic::error(
-                "E3031",
-                format!(
-                    "function `{}` must return `{}` on all non-error paths",
-                    name,
-                    ret_type.display_name()
-                ),
-                *_span,
-            ));
+        if ret_type != Type::Void && ret_type != Type::Never {
+            if let Some(expr) = &body_block.expr {
+                if expr.ty != Type::Never && !self.types_compatible(&ret_type, &expr.ty) {
+                    return Err(Diagnostic::error(
+                        "E3030",
+                        format!(
+                            "return type mismatch: expected `{}`, found `{}`",
+                            ret_type.display_name(),
+                            expr.ty.display_name()
+                        ),
+                        expr.span,
+                    ));
+                }
+            }
+
+            if !self.block_satisfies_return(&body_block, &ret_type) {
+                return Err(Diagnostic::error(
+                    "E3031",
+                    format!(
+                        "function `{}` must return `{}` on all non-error paths",
+                        name,
+                        ret_type.display_name()
+                    ),
+                    *_span,
+                ));
+            }
         }
 
         // Collect defers accumulated during this function's body (LIFO order)

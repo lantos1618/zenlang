@@ -2,11 +2,11 @@
 { Json, Point } = traits
 
 render<T: Json> = (value: T) str {
-    return value.to_json()
+    value.to_json()
 }
 
 main = () i32 {
     point = Point { x: 17 }
     io.println(render(point))
-    return 0
+    0
 }

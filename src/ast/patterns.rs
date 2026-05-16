@@ -1,8 +1,9 @@
 use crate::ast::expressions::Expression;
 use crate::error::Span;
+use serde::Serialize;
 
 /// Pattern — used in match arms and destructuring.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Pattern {
     /// `_` — matches anything, binds nothing.
     Wildcard { span: Span },

@@ -1,11 +1,11 @@
 inner<T> = (value: T) T {
-    return value
+    value
 }
 
 middle<T> = (value: T) T {
-    return inner(value)
+    inner(value)
 }
 
 pub outer<T> = (value: T) T {
-    return middle(value)
+    middle(value)
 }

@@ -15,5 +15,5 @@ main = () i32 {
     y = Option<i32>.None
     io.println("${unwrap_or(x, 0)}")
     io.println("${unwrap_or(y, 7)}")
-    return 0
+    0
 }

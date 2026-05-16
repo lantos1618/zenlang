@@ -2,9 +2,10 @@ use crate::ast::patterns::Pattern;
 use crate::ast::statements::Statement;
 use crate::ast::types::{AstType, Param};
 use crate::error::Span;
+use serde::Serialize;
 
 /// Binary operators.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum BinaryOp {
     // Arithmetic
     Add,
@@ -60,7 +61,7 @@ impl BinaryOp {
 }
 
 /// Unary operators.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum UnaryOp {
     Neg,    // -x
     Not,    // !x
@@ -79,14 +80,14 @@ impl UnaryOp {
 
 /// Parts of a string interpolation: `"Hello, ${name}!"` becomes
 /// `[Literal("Hello, "), Expr(<name>), Literal("!")]`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum StringPart {
     Literal(String),
     Expr(Expression),
 }
 
 /// A match arm: `| pattern guard? { body }`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MatchArm {
     pub pattern: Pattern,
     pub guard: Option<Expression>,
@@ -100,7 +101,7 @@ pub struct MatchArm {
 /// Key invariants:
 /// - `FunctionCall` / `MethodCall` have `type_args` — generics are NEVER encoded in the name
 /// - `FunctionCall` has `module: Option<String>` — module is NEVER encoded in the name
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Expression {
     // ─── Literals ────────────────────────────────────────────────────
     IntLiteral {

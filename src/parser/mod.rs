@@ -308,28 +308,6 @@ impl Parser {
         }
     }
 
-    /// Check if current token could start an expression.
-    fn is_expression_start(&self) -> bool {
-        matches!(
-            self.peek(),
-            Token::Identifier(_)
-                | Token::IntLiteral(_)
-                | Token::FloatLiteral(_)
-                | Token::StringLiteral(_)
-                | Token::StringChunk(_)
-                | Token::InterpolationStart
-                | Token::LParen
-                | Token::LBrace
-                | Token::LBracket
-                | Token::Minus
-                | Token::Not
-                | Token::Tilde
-                | Token::AtThis
-                | Token::AtBuiltin
-                | Token::AtStd
-        )
-    }
-
     /// Skip newlines only if the next non-newline token is a continuation
     /// (operator, dot, etc.) — prevents consuming newlines that separate statements.
     fn skip_newlines_if_continuation(&mut self) {

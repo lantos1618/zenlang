@@ -10,7 +10,7 @@ Point: {
 
 Point.implements(Json<str>) {
     encode = (self: Point) str {
-        return "point"
+        "point"
     }
 }
 
@@ -19,5 +19,5 @@ Point.requires(Json<str>)
 main = () i32 {
     point = Point { x: 1 }
     io.println(point.encode())
-    return 0
+    0
 }

@@ -7,5 +7,5 @@ main = () i32 {
     io.println("x = ${x}")
     x = x * 2
     io.println("x = ${x}")
-    return 0
+    0
 }

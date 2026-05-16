@@ -17,7 +17,7 @@ Point: {
 }
 
 Point.sum = (self: Point) i32 {
-    return self.x + self.y
+    self.x + self.y
 }
 
 main = () i32 {
@@ -27,7 +27,7 @@ main = () i32 {
         | true { io.println("the point adds up") }
         | false { io.println("try another point") }
 
-    return 0
+    0
 }
 ```
 
@@ -70,7 +70,7 @@ Zen code is meant to read from the outside in:
 
 - imports bind names from modules with destructuring syntax;
 - data types are named first, then shaped with fields or variants;
-- functions put the name first, then parameters, return type, and body;
+- functions put the name first, then parameters, result type, and body;
 - methods attach behavior to a type with `Type.method`;
 - generic constraints use behavior bounds such as `T: Display`.
 

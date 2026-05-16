@@ -7,6 +7,6 @@ pub Box<T>: {
 Box.impl = {
     pub get_held<T> = (self: Box<T>) T {
         holder = Holder<T> { value: self.value }
-        return holder.get<T>()
+        holder.get<T>()
     }
 }

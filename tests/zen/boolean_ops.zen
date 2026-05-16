@@ -9,5 +9,5 @@ main = () i32 {
     d ? | true { io.println("or: true") } | false { io.println("or: false") }
     e = !a
     e ? | true { io.println("not: true") } | false { io.println("not: false") }
-    return 0
+    0
 }

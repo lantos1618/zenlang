@@ -15,5 +15,5 @@ describe = (c: Color) StaticString {
 main = () i32 {
     io.println(describe(Color.Red))
     io.println(describe(Color.Blue))
-    return 0
+    0
 }

@@ -6,7 +6,7 @@ Vec<T>: {
 }
 
 Vec<T>.len = (self: Vec<T>) i32 {
-    return self.len
+    self.len
 }
 
 main = () i32 {
@@ -14,5 +14,5 @@ main = () i32 {
     words = Vec<str> { first: "zen", len: 1 }
     io.println("${ints.len()}")
     io.println("${words.len()}")
-    return 0
+    0
 }

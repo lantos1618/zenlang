@@ -4,5 +4,5 @@
 main = () i32 {
     value = wrap(107)
     io.println("${unwrap(value, 0)}")
-    return 0
+    0
 }

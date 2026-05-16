@@ -1,6 +1,6 @@
 # Zen Language Makefile
 
-.PHONY: all build test clean install format check lint help safe-build mem-watch
+.PHONY: all build test clean install format check lint help
 
 all: build
 
@@ -33,7 +33,8 @@ check:
 	@echo "✓ Check complete"
 
 lint:
-	@./scripts/lint.sh
+	@cargo fmt --check
+	@cargo clippy -- -D warnings
 
 clean:
 	@cargo clean
@@ -42,12 +43,6 @@ clean:
 
 docs:
 	@cargo doc --no-deps --open
-
-safe-build:
-	@./scripts/safe-build.sh build
-
-mem-watch:
-	@./scripts/mem-watch.sh
 
 release: clean
 	@cargo build --release
@@ -63,9 +58,7 @@ help:
 	@echo "  make install    - Install compiler"
 	@echo "  make format     - Format code"
 	@echo "  make check      - Check without building"
-	@echo "  make lint       - Run clippy"
+	@echo "  make lint       - Run fmt and clippy checks"
 	@echo "  make clean      - Clean artifacts"
 	@echo "  make docs       - Build docs"
-	@echo "  make safe-build - Build with OOM protection"
-	@echo "  make mem-watch  - Monitor memory"
 	@echo "  make release    - Build stripped release"

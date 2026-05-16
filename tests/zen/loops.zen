@@ -8,5 +8,5 @@ main = () i32 {
         i = i + 1
     })
     io.println("")
-    return 0
+    0
 }

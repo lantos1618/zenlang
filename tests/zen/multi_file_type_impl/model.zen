@@ -4,6 +4,6 @@ pub Box<T>: {
 
 Box.impl = {
     pub get<T> = (self: Box<T>) T {
-        return self.value
+        self.value
     }
 }

@@ -5,5 +5,5 @@ pub Box<T>: {
 }
 
 pub Box.get_inner<T> = (self: Box<T>) T {
-    return inner(self.value)
+    inner(self.value)
 }

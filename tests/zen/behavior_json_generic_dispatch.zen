@@ -10,16 +10,16 @@ Point: {
 
 Point.implements(Json) {
     to_json = (self: Point) str {
-        return "point"
+        "point"
     }
 }
 
 encode<T: Json> = (value: T) str {
-    return value.to_json()
+    value.to_json()
 }
 
 main = () i32 {
     point = Point { x: 1 }
     io.println(encode(point))
-    return 0
+    0
 }

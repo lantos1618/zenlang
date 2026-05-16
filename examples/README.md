@@ -6,7 +6,7 @@ these files as focused language samples.
 ## Tutorial Sequence
 
 - [examples/01_hello_world.zen](01_hello_world.zen): imports, `main`, printing,
-  and return values.
+  and final expression results.
 - [examples/02_variables_and_types.zen](02_variables_and_types.zen): bindings,
   numbers, booleans, strings, and casts.
 - [examples/03_pattern_matching.zen](03_pattern_matching.zen): `?` branches,

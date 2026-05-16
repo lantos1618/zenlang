@@ -7,17 +7,17 @@ Point: {
 
 Point.implements(Json<Point>) {
     encode = (value: Point) Point {
-        return value
+        value
     }
 }
 
 encode<T: Json<T>> = (value: T) T {
-    return value.encode()
+    value.encode()
 }
 
 main = () i32 {
     point = Point { x: 11 }
     encoded = encode(point)
     io.println("${encoded.x}")
-    return 0
+    0
 }

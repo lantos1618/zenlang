@@ -1,6 +1,6 @@
 pub Json: behavior {
     to_json: (Self) str {
-        return "default-json"
+        "default-json"
     }
 }
 

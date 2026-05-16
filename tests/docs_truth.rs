@@ -93,6 +93,69 @@ fn examples_index_uses_canonical_tutorial_and_project_paths() {
 }
 
 #[test]
+fn learn_zen_guide_covers_core_tour_and_gated_previews() {
+    let guide = read("docs/learn_zen_in_y_minutes.md");
+
+    for required in [
+        "## Loops",
+        "loop",
+        "break",
+        "continue",
+        "## Imports And Modules",
+        "## Defer",
+        "## Gated Preview: Sync, Async, And Allocators",
+        "Sync",
+        "Async",
+        "Allocator<T, Sync>",
+        "Allocator<T, Async>",
+        "gated design",
+        "docs/V1_SPEC.md",
+        "examples/05_loops.zen",
+    ] {
+        assert!(
+            guide.contains(required),
+            "Learn guide is missing expected tour or gated-preview text: {required}"
+        );
+    }
+}
+
+#[test]
+fn public_language_docs_and_examples_do_not_teach_return_keyword() {
+    for path in [
+        "README.md",
+        "docs/learn_zen_in_y_minutes.md",
+        "examples/01_hello_world.zen",
+        "examples/02_variables_and_types.zen",
+        "examples/03_pattern_matching.zen",
+        "examples/04_structs_and_methods.zen",
+        "examples/05_loops.zen",
+        "examples/06_error_handling.zen",
+        "examples/ffi_demo.zen",
+        "examples/project/main.zen",
+        "examples/project/math_utils.zen",
+        "examples/project/build.zen",
+        "examples/unified_allocator_demo.zen",
+    ] {
+        let contents = read(path);
+        assert!(
+            !contents.contains("return "),
+            "{path} still teaches the removed return keyword"
+        );
+    }
+}
+
+#[test]
+fn stale_generated_tooling_directories_are_removed() {
+    for path in [".claude", "scripts", "examples/demo_project"] {
+        let absolute_path = repo_root().join(path);
+        assert!(
+            !absolute_path.exists(),
+            "{path} should not exist; stale generated tooling/examples should stay out of the repo"
+        );
+    }
+}
+
+#[test]
 fn contributor_docs_require_tests_first_for_language_work() {
     let contributing = read("CONTRIBUTING.md");
 
@@ -403,7 +466,6 @@ fn ci_and_release_only_advertise_existing_targets() {
     let makefile = read("Makefile");
     let vscode_settings = read(".vscode/settings.json");
     let vscode_launch = read(".vscode/launch.json");
-    let agent = read(".claude/agents/zen-dev.yaml");
     let extension_readme = read("vscode-extension/README.md");
     let extension_package = read("vscode-extension/package.json");
     let extension_source = read("vscode-extension/src/extension.ts");
@@ -450,10 +512,6 @@ fn ci_and_release_only_advertise_existing_targets() {
             ".vscode/launch.json advertises unsupported target/artifact: {unsupported}"
         );
         assert!(
-            !agent.contains(unsupported),
-            ".claude/agents/zen-dev.yaml advertises unsupported target/artifact: {unsupported}"
-        );
-        assert!(
             !extension_readme.contains(unsupported),
             "vscode-extension/README.md advertises unsupported target/artifact: {unsupported}"
         );
@@ -481,8 +539,6 @@ fn checked_in_configs_do_not_contain_secret_literals() {
         ".vscode/settings.json",
         ".vscode/launch.json",
         ".vscode/zen-language-config.json",
-        ".claude/agents/zen-dev.yaml",
-        ".claude/agents/zen-reviewer.yaml",
     ];
 
     for path in config_paths {

@@ -2,5 +2,5 @@
 
 pub get_held<T> = (value: T) T {
     holder = Holder<T> { value: value }
-    return holder.get<T>()
+    holder.get<T>()
 }

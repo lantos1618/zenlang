@@ -44,5 +44,5 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
     b.add(Test { root: "test.zen" })
 
-    return .Ok(b.config())
+    .Ok(b.config())
 }

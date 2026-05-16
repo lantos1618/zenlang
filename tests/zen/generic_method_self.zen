@@ -9,11 +9,11 @@ Option<T>:
     Some(T)
 
 Box.copy<T> = (self: Self) Self {
-    return self
+    self
 }
 
 Option.copy<T> = (self: Self) Self {
-    return self
+    self
 }
 
 main = () i32 {
@@ -32,5 +32,5 @@ main = () i32 {
         | Some(value) { value }
         | None { 0 }
     io.println("${option_value}")
-    return 0
+    0
 }

@@ -7,20 +7,20 @@ Point: {
 
 Point.implements(FancyJson) {
     encode = (value: Point) str {
-        return "encoded"
+        "encoded"
     }
 
     pretty = (value: Point) str {
-        return "pretty"
+        "pretty"
     }
 
     fancy = (value: Point) str {
-        return "fancy"
+        "fancy"
     }
 }
 
 encode<T: Json<str>> = (value: T) str {
-    return value.encode()
+    value.encode()
 }
 
 main = () i32 {
@@ -28,5 +28,5 @@ main = () i32 {
     io.println(encode(point))
     io.println(point.pretty())
     io.println(point.fancy())
-    return 0
+    0
 }

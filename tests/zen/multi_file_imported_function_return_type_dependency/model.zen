@@ -6,14 +6,14 @@ pub Point: {
 
 Point.implements(Json<i32>) {
     encode = (value: Point) i32 {
-        return value.x
+        value.x
     }
 }
 
 pub make_point = () Point {
-    return Point { x: 101 }
+    Point { x: 101 }
 }
 
 pub encode<T: Json<i32>> = (value: T) i32 {
-    return value.encode()
+    value.encode()
 }

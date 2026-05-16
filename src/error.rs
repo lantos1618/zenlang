@@ -1,5 +1,7 @@
 use std::fmt;
 
+use serde::Serialize;
+
 // ── FileId & FileTable ─────────────────────────────────────────────
 
 /// Index into the FileTable. 0 is reserved for "no file" / test usage.
@@ -79,7 +81,7 @@ fn compute_line_starts(source: &str) -> Vec<u32> {
 // ── Span ───────────────────────────────────────────────────────────
 
 /// Byte range within a specific file.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Span {
     pub file_id: FileId,
     pub start: u32,

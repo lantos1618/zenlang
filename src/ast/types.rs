@@ -1,11 +1,12 @@
 use crate::error::Span;
+use serde::Serialize;
 
 /// Parser-level type representation.
 ///
 /// These types may be unresolved — `Named("Point")` hasn't been looked up yet,
 /// `Inferred` means the typechecker must figure it out. The typechecker resolves
 /// these into fully concrete `Type` values (see `typed.rs`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum AstType {
     // Integers
     I8,
@@ -107,7 +108,7 @@ impl AstType {
 }
 
 /// A typed parameter in a function/method/closure signature.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Param {
     pub name: std::string::String,
     pub ty: AstType,

@@ -979,7 +979,7 @@ fn check_command_runs_resolver_diagnostics() {
         &zen_path,
         r#"
 main = () i32 {
-    return missing_local
+    missing_local
 }
 "#,
     )
@@ -1011,11 +1011,11 @@ fn check_command_reports_imported_module_resolver_diagnostics() {
         &math_path,
         r#"
 pub add = (a: i32, b: i32) i32 {
-    return a + b
+    a + b
 }
 
 pub broken = () i32 {
-    return missing_dep_local
+    missing_dep_local
 }
 "#,
     )
@@ -1028,7 +1028,7 @@ pub broken = () i32 {
 { add } = math
 
 main = () i32 {
-    return add(1, 2)
+    add(1, 2)
 }
 "#,
     )
@@ -1061,11 +1061,11 @@ fn check_command_reports_imported_module_type_diagnostics() {
         &math_path,
         r#"
 pub add = (a: i32, b: i32) i32 {
-    return a + b
+    a + b
 }
 
 pub broken = () i32 {
-    return true
+    true
 }
 "#,
     )
@@ -1078,7 +1078,7 @@ pub broken = () i32 {
 { add } = math
 
 main = () i32 {
-    return add(1, 2)
+    add(1, 2)
 }
 "#,
     )
@@ -1130,7 +1130,7 @@ pub Point: {
 Point.requires(Json<str>)
 
 main = () i32 {
-    return 0
+    0
 }
 "#,
     )
@@ -1169,11 +1169,11 @@ fn emit_command_reports_imported_module_type_diagnostics() {
         &math_path,
         r#"
 pub add = (a: i32, b: i32) i32 {
-    return a + b
+    a + b
 }
 
 pub broken = () i32 {
-    return true
+    true
 }
 "#,
     )
@@ -1186,7 +1186,7 @@ pub broken = () i32 {
 { add } = math
 
 main = () i32 {
-    return add(1, 2)
+    add(1, 2)
 }
 "#,
     )
@@ -1212,18 +1212,14 @@ main = () i32 {
 }
 
 #[test]
-fn build_command_reports_imported_module_type_diagnostics() {
+fn emit_json_ast_command_outputs_resolved_module_graph() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let math_path = tmp.path().join("math.zen");
     std::fs::write(
         &math_path,
         r#"
 pub add = (a: i32, b: i32) i32 {
-    return a + b
-}
-
-pub broken = () i32 {
-    return true
+    a + b
 }
 "#,
     )
@@ -1236,7 +1232,81 @@ pub broken = () i32 {
 { add } = math
 
 main = () i32 {
-    return add(1, 2)
+    add(20, 22)
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "ast", main_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json ast");
+
+    assert!(
+        output.status.success(),
+        "zen emit-json ast failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("emit-json ast stdout is json");
+    assert_eq!(json["format"], "zen.ast.v0");
+    assert_eq!(json["entry_module"], 0);
+    assert_eq!(json["modules"].as_array().expect("modules array").len(), 2);
+
+    let entry = &json["modules"][0];
+    assert_eq!(entry["id"], 0);
+    assert_eq!(entry["imports"][0]["local_name"], "add");
+    assert_eq!(entry["imports"][0]["source_symbol"], "add");
+    assert!(
+        entry["program"]["declarations"]
+            .as_array()
+            .expect("entry declarations")
+            .iter()
+            .any(|decl| decl["Function"]["name"] == "main"),
+        "entry AST should contain main function: {entry}"
+    );
+
+    let imported = &json["modules"][1];
+    assert_eq!(imported["id"], 1);
+    assert!(
+        imported["program"]["declarations"]
+            .as_array()
+            .expect("imported declarations")
+            .iter()
+            .any(|decl| decl["Function"]["name"] == "add"),
+        "imported AST should contain add function: {imported}"
+    );
+}
+
+#[test]
+fn build_command_reports_imported_module_type_diagnostics() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let math_path = tmp.path().join("math.zen");
+    std::fs::write(
+        &math_path,
+        r#"
+pub add = (a: i32, b: i32) i32 {
+    a + b
+}
+
+pub broken = () i32 {
+    true
+}
+"#,
+    )
+    .expect("write imported module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ add } = math
+
+main = () i32 {
+    add(1, 2)
 }
 "#,
     )
@@ -1289,7 +1359,7 @@ fn assert_build_zen_rejected(prefix_args: &[&str], command_name: &str) {
         &build_path,
         r#"
 main = () i32 {
-    return 0
+    0
 }
 "#,
     )
@@ -1325,7 +1395,7 @@ fn integration_frontend_helper_runs_resolver_diagnostics() {
         &zen_path,
         r#"
 main = () i32 {
-    return missing_local
+    missing_local
 }
 "#,
     )
@@ -1353,11 +1423,11 @@ fn integration_frontend_helper_reports_imported_module_type_diagnostics() {
         &math_path,
         r#"
 pub add = (a: i32, b: i32) i32 {
-    return a + b
+    a + b
 }
 
 pub broken = () i32 {
-    return true
+    true
 }
 "#,
     )
@@ -1370,7 +1440,7 @@ pub broken = () i32 {
 { add } = math
 
 main = () i32 {
-    return add(1, 2)
+    add(1, 2)
 }
 "#,
     )
@@ -1422,12 +1492,12 @@ Point: {
 
 Point.implements(PrettyJson) {
     pretty = (value: Point) str {
-        return "point"
+        "point"
     }
 }
 
 main = () i32 {
-    return 0
+    0
 }
 "#,
     )
@@ -1488,12 +1558,12 @@ Point: {
 
 Point.implements(PrettyJson) {
     pretty = (value: Point) str {
-        return "point"
+        "point"
     }
 }
 
 main = () i32 {
-    return 0
+    0
 }
 "#,
     )
@@ -1550,16 +1620,16 @@ Point: {
 
 Point.implements(FancyJson) {
     pretty = (value: Point) str {
-        return "pretty"
+        "pretty"
     }
 
     fancy = (value: Point) str {
-        return "fancy"
+        "fancy"
     }
 }
 
 main = () i32 {
-    return 0
+    0
 }
 "#,
     )
@@ -1736,7 +1806,7 @@ fn imported_type_method_worklist_helpers_are_not_directly_visible() {
         &model_path,
         r#"
 inner<T> = (value: T) T {
-    return value
+    value
 }
 
 pub Box<T>: {
@@ -1744,7 +1814,7 @@ pub Box<T>: {
 }
 
 pub Box.get_inner<T> = (self: Box<T>) T {
-    return inner(self.value)
+    inner(self.value)
 }
 "#,
     )
@@ -1757,7 +1827,7 @@ pub Box.get_inner<T> = (self: Box<T>) T {
 { Box } = model
 
 main = () i32 {
-    return inner<i32>(1)
+    inner<i32>(1)
 }
 "#,
     )
@@ -1790,11 +1860,11 @@ pub Box<T>: {
 }
 
 Box.inner<T> = (self: Box<T>) T {
-    return self.value
+    self.value
 }
 
 pub Box.get_inner<T> = (self: Box<T>) T {
-    return self.inner<T>()
+    self.inner<T>()
 }
 "#,
     )
@@ -1808,7 +1878,7 @@ pub Box.get_inner<T> = (self: Box<T>) T {
 
 main = () i32 {
     box = Box<i32> { value: 47 }
-    return box.inner<i32>()
+    box.inner<i32>()
 }
 "#,
     )
@@ -1837,7 +1907,7 @@ fn imported_type_method_imported_dependencies_are_not_directly_visible() {
         &helper_path,
         r#"
 pub inner<T> = (value: T) T {
-    return value
+    value
 }
 "#,
     )
@@ -1854,7 +1924,7 @@ pub Box<T>: {
 }
 
 pub Box.get_inner<T> = (self: Box<T>) T {
-    return inner(self.value)
+    inner(self.value)
 }
 "#,
     )
@@ -1867,7 +1937,7 @@ pub Box.get_inner<T> = (self: Box<T>) T {
 { Box } = model
 
 main = () i32 {
-    return inner<i32>(59)
+    inner<i32>(59)
 }
 "#,
     )
@@ -1900,7 +1970,7 @@ pub Holder<T>: {
 }
 
 pub Holder.get<T> = (self: Holder<T>) T {
-    return self.value
+    self.value
 }
 "#,
     )
@@ -1919,7 +1989,7 @@ pub Box<T>: {
 Box.impl = {
     pub get_held<T> = (self: Box<T>) T {
         holder = Holder<T> { value: self.value }
-        return holder.get<T>()
+        holder.get<T>()
     }
 }
 "#,
@@ -1934,7 +2004,7 @@ Box.impl = {
 
 main = () i32 {
     holder = Holder<i32> { value: 61 }
-    return holder.get<i32>()
+    holder.get<i32>()
 }
 "#,
     )
@@ -1969,7 +2039,7 @@ pub Holder<T>: {
 }
 
 pub Holder.get<T> = (self: Holder<T>) T {
-    return self.value
+    self.value
 }
 "#,
     )
@@ -1983,7 +2053,7 @@ pub Holder.get<T> = (self: Holder<T>) T {
 
 pub get_held<T> = (value: T) T {
     holder = Holder<T> { value: value }
-    return holder.get<T>()
+    holder.get<T>()
 }
 "#,
     )
@@ -1997,7 +2067,7 @@ pub get_held<T> = (value: T) T {
 
 main = () i32 {
     holder = Holder<i32> { value: 73 }
-    return holder.get<i32>()
+    holder.get<i32>()
 }
 "#,
     )
@@ -2028,11 +2098,11 @@ fn imported_generic_function_transitive_dependencies_are_not_directly_visible() 
         &helper_path,
         r#"
 inner<T> = (value: T) T {
-    return value
+    value
 }
 
 pub middle<T> = (value: T) T {
-    return inner(value)
+    inner(value)
 }
 "#,
     )
@@ -2045,7 +2115,7 @@ pub middle<T> = (value: T) T {
 { middle } = helper
 
 pub outer<T> = (value: T) T {
-    return middle(value)
+    middle(value)
 }
 "#,
     )
@@ -2058,7 +2128,7 @@ pub outer<T> = (value: T) T {
 { outer } = model
 
 main = () i32 {
-    return middle<i32>(89)
+    middle<i32>(89)
 }
 "#,
     )
@@ -2091,7 +2161,7 @@ pub Point: {
 }
 
 pub make_point = () Point {
-    return Point { x: 109 }
+    Point { x: 109 }
 }
 "#,
     )
@@ -2105,7 +2175,7 @@ pub make_point = () Point {
 
 main = () i32 {
     point = Point { x: 109 }
-    return point.x
+    point.x
 }
 "#,
     )
@@ -2140,7 +2210,7 @@ pub Box<T>: {
 
 Box.impl = {
     get<T> = (self: Box<T>) T {
-        return self.value
+        self.value
     }
 }
 "#,
@@ -2155,7 +2225,7 @@ Box.impl = {
 
 main = () i32 {
     box = Box<i32> { value: 34 }
-    return box.get<i32>()
+    box.get<i32>()
 }
 "#,
     )
@@ -2192,7 +2262,7 @@ pub Point: {
 
 Point.implements(Hidden) {
     reveal = (value: Point) str {
-        return "hidden"
+        "hidden"
     }
 }
 "#,
@@ -2207,7 +2277,7 @@ Point.implements(Hidden) {
 
 main = () i32 {
     point = Point { x: 34 }
-    return point.reveal()
+    point.reveal()
 }
 "#,
     )

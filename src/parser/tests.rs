@@ -17,7 +17,7 @@ fn parse_ok(src: &str) -> Program {
 
 #[test]
 fn parse_simple_function() {
-    let prog = parse_ok("add = (a: i32, b: i32) i32 {\n    return a + b\n}");
+    let prog = parse_ok("add = (a: i32, b: i32) i32 {\n    a + b\n}");
     assert_eq!(prog.declarations.len(), 1);
     match &prog.declarations[0] {
         Declaration::Function { name, params, .. } => {
@@ -133,8 +133,7 @@ fn parse_import_multi() {
 
 #[test]
 fn parse_method() {
-    let prog =
-        parse_ok("Point.distance = (self: Ptr<Point>, other: Ptr<Point>) f64 {\n    return 0.0\n}");
+    let prog = parse_ok("Point.distance = (self: Ptr<Point>, other: Ptr<Point>) f64 {\n    0.0\n}");
     assert_eq!(prog.declarations.len(), 1);
     match &prog.declarations[0] {
         Declaration::Method {
@@ -237,7 +236,7 @@ fn parse_ufc_chain() {
 
 #[test]
 fn parse_cast_expr() {
-    let prog = parse_ok("f = (a: f64) i32 {\n    return cast(a, i32)\n}");
+    let prog = parse_ok("f = (a: f64) i32 {\n    cast(a, i32)\n}");
     assert_eq!(prog.declarations.len(), 1);
 }
 
@@ -461,8 +460,7 @@ fn parse_public_behavior_declaration() {
 
 #[test]
 fn parse_behavior_impl_block() {
-    let prog =
-        parse_ok("Point.implements(Json) {\n    to_json = (value: Point) str { return \"{}\" }\n}");
+    let prog = parse_ok("Point.implements(Json) {\n    to_json = (value: Point) str { \"{}\" }\n}");
     match &prog.declarations[0] {
         Declaration::ImplBlock {
             type_name,
@@ -481,7 +479,7 @@ fn parse_behavior_impl_block() {
 
 #[test]
 fn parse_impl_block() {
-    let prog = parse_ok("Point.impl = {\n    get = (self: Point) i32 { return self.x }\n}");
+    let prog = parse_ok("Point.impl = {\n    get = (self: Point) i32 { self.x }\n}");
     match &prog.declarations[0] {
         Declaration::ImplBlock {
             type_name,
@@ -550,7 +548,7 @@ fn parse_behavior_extends_with_generic_parent_args() {
 
 #[test]
 fn parse_generic_behavior_function_bound_with_type_args() {
-    let prog = parse_ok("encode<T: Json<T>> = (value: T) str { return \"\" }");
+    let prog = parse_ok("encode<T: Json<T>> = (value: T) str { \"\" }");
     match &prog.declarations[0] {
         Declaration::Function { type_params, .. } => {
             assert_eq!(type_params.len(), 1);
@@ -604,7 +602,7 @@ fn parse_pointer_types() {
 
 #[test]
 fn parse_multiple_functions() {
-    let prog = parse_ok("foo = () void { }\nbar = () i32 { return 1 }");
+    let prog = parse_ok("foo = () void { }\nbar = () i32 { 1 }");
     assert_eq!(prog.declarations.len(), 2);
 }
 
@@ -694,9 +692,14 @@ fn parse_boolean_expressions() {
 }
 
 #[test]
-fn parse_return_without_value() {
-    let prog = parse_ok("main = () void {\n    return\n}");
-    assert_eq!(prog.declarations.len(), 1);
+fn parse_return_keyword_is_removed() {
+    let err = parse_str("main = () void {\n    return\n}")
+        .expect_err("return keyword should no longer parse as language syntax");
+    assert!(
+        err.iter()
+            .any(|err| err.to_string().contains("return keyword has been removed")),
+        "expected removed return keyword diagnostic, got {err:?}"
+    );
 }
 
 #[test]

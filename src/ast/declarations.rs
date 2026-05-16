@@ -1,9 +1,10 @@
 use crate::ast::expressions::Expression;
 use crate::ast::types::{AstType, Param};
 use crate::error::Span;
+use serde::Serialize;
 
 /// A field in a struct definition.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct StructField {
     pub name: String,
     pub ty: AstType,
@@ -13,7 +14,7 @@ pub struct StructField {
 }
 
 /// A variant in an enum definition.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct EnumVariant {
     pub name: String,
     pub payload: Option<AstType>,
@@ -21,7 +22,7 @@ pub struct EnumVariant {
 }
 
 /// A method signature in a behavior (trait) definition.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BehaviorMethod {
     pub name: String,
     pub params: Vec<Param>,
@@ -32,7 +33,7 @@ pub struct BehaviorMethod {
 
 /// Generic type parameter, optionally constrained by a behavior.
 /// e.g. `T` or `T: Serializable`
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypeParam {
     pub name: String,
     pub constraint: Option<String>,
@@ -41,7 +42,7 @@ pub struct TypeParam {
 }
 
 /// Declaration — top-level constructs in a Zen program.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Declaration {
     /// Named function: `add = (a: i32, b: i32) i32 { ... }`
     /// Generic function: `identity<T> = (value: T) T { ... }`

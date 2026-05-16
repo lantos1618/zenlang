@@ -27,5 +27,5 @@ main = () i32 {
     io.println(name(d))
     io.println(name(opposite(d)))
     io.println(name(opposite(Direction.East)))
-    return 0
+    0
 }

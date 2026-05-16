@@ -13,9 +13,10 @@ pub use statements::Statement;
 pub use types::{AstType, Param};
 
 use crate::error::FileId;
+use serde::Serialize;
 
 /// Program — the top-level container produced by the parser for a single file.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Program {
     pub declarations: Vec<Declaration>,
     pub file_id: FileId,

@@ -5,11 +5,11 @@ Box<T>: {
 }
 
 Box.get<T> = (self: Box<T>) T {
-    return self.value
+    self.value
 }
 
 main = () i32 {
     box = Box<i32> { value: 99 }
     io.println("${box.get<i32>()}")
-    return 0
+    0
 }

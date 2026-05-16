@@ -25,5 +25,5 @@ main = () i32 {
     second = Second<bool>.None
     io.println(describe_first(first))
     io.println(describe_second(second))
-    return 0
+    0
 }

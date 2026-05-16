@@ -8,6 +8,6 @@ pub Point: {
 
 Point.implements(Json<i32>) {
     encode = (value: Point) i32 {
-        return value.x
+        value.x
     }
 }

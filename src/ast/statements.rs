@@ -1,9 +1,10 @@
 use crate::ast::expressions::Expression;
 use crate::ast::types::AstType;
 use crate::error::Span;
+use serde::Serialize;
 
 /// Statement — things that don't produce a value (or whose value is discarded).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Statement {
     /// Variable declaration: `x = 42`, `y ::= 0`, `z: i32 = 10`
     VarDecl {

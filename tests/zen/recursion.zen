@@ -2,13 +2,13 @@
 
 factorial = (n: i32) i32 {
     n > 1 ?
-        | true { return n * factorial(n - 1) }
-        | false { return 1 }
+        | true { n * factorial(n - 1) }
+        | false { 1 }
 }
 
 main = () i32 {
     io.println("5! = ${factorial(5)}")
     io.println("0! = ${factorial(0)}")
     io.println("10! = ${factorial(10)}")
-    return 0
+    0
 }

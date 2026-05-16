@@ -14,5 +14,5 @@ work = () void {
 
 main = () i32 {
     work()
-    return 0
+    0
 }

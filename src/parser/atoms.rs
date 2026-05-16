@@ -66,7 +66,7 @@ impl Parser {
             // String interpolation
             Token::StringChunk(_) | Token::InterpolationStart => self.parse_string_interpolation(),
 
-            // Identifier (or keyword-like: true, false, return, break, continue, loop, cast)
+            // Identifier (or keyword-like: true, false, break, continue, loop, cast)
             Token::Identifier(ref name) => match name.as_str() {
                 "true" => {
                     let (_, span) = self.advance();
@@ -78,17 +78,11 @@ impl Parser {
                 }
                 "return" => {
                     let (_, span) = self.advance();
-                    self.skip_newlines();
-                    let value = if self.is_expression_start() {
-                        Some(Box::new(self.parse_expression()?))
-                    } else {
-                        None
-                    };
-                    let end = value.as_ref().map(|v| v.span()).unwrap_or(span);
-                    Ok(Expression::Return {
-                        value,
-                        span: span.merge(end),
-                    })
+                    Err(CompileError::Syntax(
+                        "return keyword has been removed; use the final expression in the block"
+                            .into(),
+                        Some(span),
+                    ))
                 }
                 "break" => {
                     let (_, span) = self.advance();

@@ -7,8 +7,8 @@
 // A function that can fail
 divide = (a: f64, b: f64) Result<f64, StringLiteral> {
     b == 0.0 ?
-        | true { return .Err("division by zero") }
-        | false { return .Ok(a / b) }
+        | true { .Err("division by zero") }
+        | false { .Ok(a / b) }
 }
 
 // A function that might not have a value
@@ -16,10 +16,10 @@ find_first_positive = (values: [i32; 5]) Option<i32> {
     i ::= 0
     loop i < 5 {
         values[i] > 0 ?
-            | true { return .Some(values[i]) }
+            | true { .Some(values[i]) }
         i = i + 1
     }
-    return .None
+    .None
 }
 
 // Using .raise() for early error propagation
@@ -27,7 +27,7 @@ find_first_positive = (values: [i32; 5]) Option<i32> {
 calculate_ratio = (a: f64, b: f64, c: f64) Result<f64, StringLiteral> {
     first = divide(a, b).raise()
     second = divide(first, c).raise()
-    return .Ok(second)
+    .Ok(second)
 }
 
 main = () i32 {
@@ -60,5 +60,5 @@ main = () i32 {
         | .Ok(val) { io.println("Ratio: ${val}") }
         | .Err(msg) { io.println("Ratio error: ${msg}") }
 
-    return 0
+    0
 }

@@ -35,12 +35,12 @@ Box: {
 }
 
 Box.get = (self: Box) i32 {
-    return self.value
+    self.value
 }
 
 main = () i32 {
     box = Box { value: 1 }
-    return box.get<i32>()
+    box.get<i32>()
 }
 "#,
     );
@@ -62,12 +62,12 @@ Box<T>: {
 }
 
 Box.get<T> = (self: Box<T>) T {
-    return self.value
+    self.value
 }
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    return box.get<i32, str>()
+    box.get<i32, str>()
 }
 "#,
     );
@@ -89,12 +89,12 @@ Box: {
 }
 
 Box.make<T> = (self: Box) T {
-    return self.value
+    self.value
 }
 
 main = () i32 {
     box = Box { value: 1 }
-    return box.make()
+    box.make()
 }
 "#,
     );
@@ -116,12 +116,12 @@ Box<T>: {
 }
 
 Box.get<T> = (self: Box<T>) T {
-    return self.value
+    self.value
 }
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    return box.get(2)
+    box.get(2)
 }
 "#,
     );
@@ -139,11 +139,11 @@ fn generic_function_explicit_type_arg_arity_does_not_emit_inference_followup() {
     let errors = typecheck_errors(
         r#"
 pick<T, U> = (value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
-    return pick<i32>(1)
+    pick<i32>(1)
 }
 "#,
     );
@@ -171,12 +171,12 @@ Box: {
 }
 
 Box.pick<T, U> = (self: Box, value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
     box = Box { value: 1 }
-    return box.pick<i32>(1)
+    box.pick<i32>(1)
 }
 "#,
     );
@@ -200,11 +200,11 @@ fn generic_function_explicit_type_arg_arity_does_not_emit_argument_followup() {
     let errors = typecheck_errors(
         r#"
 take_second<T, U> = (value: U) U {
-    return value
+    value
 }
 
 main = () i32 {
-    return take_second<i32>(1)
+    take_second<i32>(1)
 }
 "#,
     );
@@ -230,12 +230,12 @@ Box: {
 }
 
 Box.take_second<T, U> = (self: Box, value: U) U {
-    return value
+    value
 }
 
 main = () i32 {
     box = Box { value: 1 }
-    return box.take_second<i32>(1)
+    box.take_second<i32>(1)
 }
 "#,
     );
@@ -257,12 +257,12 @@ fn generic_function_inference_conflict_is_error() {
     let errors = typecheck_errors(
         r#"
 choose<T> = (left: T, right: T) T {
-    return left
+    left
 }
 
 main = () i32 {
     value = choose(1, "bad")
-    return value
+    value
 }
 "#,
     );
@@ -280,14 +280,14 @@ fn generic_function_inference_conflict_through_function_type_is_error() {
     let errors = typecheck_errors(
         r#"
 choose_with<T> = (left: T, mapper: (T) T) T {
-    return left
+    left
 }
 
 main = () i32 {
     mapper = (value: str) str {
-        return value
+        value
     }
-    return choose_with(1, mapper)
+    choose_with(1, mapper)
 }
 "#,
     );
@@ -305,12 +305,12 @@ fn generic_function_inference_conflict_through_array_type_is_error() {
     let errors = typecheck_errors(
         r#"
 choose_array<T> = (left: T, items: [T; 1]) T {
-    return left
+    left
 }
 
 main = () i32 {
     items = ["bad"]
-    return choose_array(1, items)
+    choose_array(1, items)
 }
 "#,
     );
@@ -328,12 +328,12 @@ fn generic_function_inference_conflict_through_raw_pointer_type_is_error() {
     let errors = typecheck_errors(
         r#"
 choose_raw<T> = (left: T, ptr: RawPtr<T>) T {
-    return left
+    left
 }
 
 main = () i32 {
     ptr = cast("bad", RawPtr<str>)
-    return choose_raw(1, ptr)
+    choose_raw(1, ptr)
 }
 "#,
     );
@@ -355,12 +355,12 @@ Box<T>: {
 }
 
 Box.choose<T> = (self: Box<T>, other: T) T {
-    return self.value
+    self.value
 }
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    return box.choose("bad")
+    box.choose("bad")
 }
 "#,
     );
@@ -382,12 +382,12 @@ Box<T>: {
 }
 
 Box.replace<T> = (self: Box<T>, value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    return box.replace("bad")
+    box.replace("bad")
 }
 "#,
     );
@@ -409,15 +409,15 @@ Box<T>: {
 }
 
 Box.choose_with<T> = (self: Box<T>, mapper: (T) T) T {
-    return self.value
+    self.value
 }
 
 main = () i32 {
     box = Box<i32> { value: 1 }
     mapper = (value: str) str {
-        return value
+        value
     }
-    return box.choose_with(mapper)
+    box.choose_with(mapper)
 }
 "#,
     );
@@ -439,13 +439,13 @@ Box<T>: {
 }
 
 Box.choose_array<T> = (self: Box<T>, items: [T; 1]) T {
-    return self.value
+    self.value
 }
 
 main = () i32 {
     box = Box<i32> { value: 1 }
     items = ["bad"]
-    return box.choose_array(items)
+    box.choose_array(items)
 }
 "#,
     );
@@ -467,13 +467,13 @@ Box<T>: {
 }
 
 Box.choose_raw<T> = (self: Box<T>, ptr: RawPtr<T>) T {
-    return self.value
+    self.value
 }
 
 main = () i32 {
     box = Box<i32> { value: 1 }
     ptr = cast("bad", RawPtr<str>)
-    return box.choose_raw(ptr)
+    box.choose_raw(ptr)
 }
 "#,
     );
@@ -495,13 +495,13 @@ Box<T>: {
 }
 
 Box.choose_slice<T> = (self: Box<T>, items: Slice<T>) T {
-    return self.value
+    self.value
 }
 
 main = () i32 {
     box = Box<i32> { value: 1 }
     items = cast("bad", Slice<str>)
-    return box.choose_slice(items)
+    box.choose_slice(items)
 }
 "#,
     );
@@ -523,13 +523,13 @@ Box<T>: {
 }
 
 identity<T> = (value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
     box = Box<i32> { value: 1 }
     bad = identity<Box<i32, str>>(box)
-    return bad.value
+    bad.value
 }
 "#,
     );
@@ -559,14 +559,14 @@ Holder: {
 }
 
 Holder.wrap<T> = (self: Holder, value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
     holder = Holder { value: 1 }
     box = Box<i32> { value: 1 }
     bad = holder.wrap<Box<i32, str>>(box)
-    return bad.value
+    bad.value
 }
 "#,
     );
@@ -596,14 +596,14 @@ Holder: {
 }
 
 Holder.wrap<T> = (self: Holder, value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
     holder = Holder { value: 1 }
     box = Box<i32> { value: 1 }
     bad = holder.wrap<Box>(box)
-    return bad.value
+    bad.value
 }
 "#,
     );
@@ -626,9 +626,9 @@ Box<T>: {
 
 main = () i32 {
     f = (box: Box<i32, str>) i32 {
-        return 0
+        0
     }
-    return 0
+    0
 }
 "#,
     );
@@ -651,9 +651,9 @@ Box<T>: {
 
 main = () i32 {
     f = () Box {
-        return Box<i32> { value: 1 }
+        Box<i32> { value: 1 }
     }
-    return 0
+    0
 }
 "#,
     );
@@ -677,7 +677,7 @@ Box<T>: {
 main = () i32 {
     box = Box<i32> { value: 1 }
     bad = cast(box, Box<i32, str>)
-    return bad.value
+    bad.value
 }
 "#,
     );
@@ -701,7 +701,7 @@ Box<T>: {
 main = () i32 {
     box = Box<i32> { value: 1 }
     bad = box as Box
-    return 0
+    0
 }
 "#,
     );
@@ -724,7 +724,7 @@ Box<T>: {
 
 main = () i32 {
     box = Box<i32, str> { value: 1 }
-    return box.value
+    box.value
 }
 "#,
     );
@@ -747,7 +747,7 @@ Option<T>:
 
 main = () i32 {
     value = Option<i32, str>.Some(1)
-    return 0
+    0
 }
 "#,
     );
@@ -769,7 +769,7 @@ Box<T>: {
 }
 
 read = (box: Box<i32, str>) i32 {
-    return 0
+    0
 }
 "#,
     );
@@ -791,7 +791,7 @@ Option<T>:
     Some(T)
 
 read = (value: Option<i32, str>) i32 {
-    return 0
+    0
 }
 "#,
     );
@@ -813,7 +813,7 @@ Box<T>: {
 }
 
 read = (box: Box) i32 {
-    return 0
+    0
 }
 "#,
     );
@@ -835,7 +835,7 @@ Option<T>:
     Some(T)
 
 read = (value: Option) i32 {
-    return 0
+    0
 }
 "#,
     );
@@ -858,7 +858,7 @@ Box<T>: {
 
 main = () i32 {
     box: Box<i32, str> = Box<i32> { value: 1 }
-    return box.value
+    box.value
 }
 "#,
     );
@@ -881,7 +881,7 @@ Box<T>: {
 
 main = () i32 {
     box: Box = Box<i32> { value: 1 }
-    return 0
+    0
 }
 "#,
     );
@@ -904,7 +904,7 @@ Option<T>:
 
 main = () i32 {
     value: Option<i32, str> = Option<i32>.Some(1)
-    return 0
+    0
 }
 "#,
     );
@@ -927,7 +927,7 @@ Option<T>:
 
 main = () i32 {
     value: Option = Option<i32>.Some(1)
-    return 0
+    0
 }
 "#,
     );
@@ -953,7 +953,7 @@ Option<T>:
     Some(T)
 
 read = (box: Box<Option<i32, str>>) i32 {
-    return 0
+    0
 }
 "#,
     );
@@ -980,7 +980,7 @@ Option<T>:
 
 main = () i32 {
     value = Box<Option<i32, str>> { value: Option<i32>.Some(1) }
-    return 0
+    0
 }
 "#,
     );
@@ -1002,7 +1002,7 @@ Box<T>: {
 }
 
 call = (f: (Box<i32, str>) i32) i32 {
-    return 0
+    0
 }
 "#,
     );
@@ -1024,7 +1024,7 @@ Box<T>: {
 }
 
 factory = () () Box {
-    return 0
+    0
 }
 "#,
     );
@@ -1046,7 +1046,7 @@ Box<T>: {
 }
 
 read = (ptr: Ptr<Box<i32, str>>) i32 {
-    return 0
+    0
 }
 "#,
     );
@@ -1068,7 +1068,7 @@ Box<T>: {
 }
 
 read = (slice: Slice<Box>) i32 {
-    return 0
+    0
 }
 "#,
     );
@@ -1090,7 +1090,7 @@ Box<T>: {
 }
 
 read = (items: [Box<i32, str>; 1]) i32 {
-    return 0
+    0
 }
 "#,
     );
@@ -1122,7 +1122,7 @@ Box<T: Json>: {
 main = () i32 {
     point = Point { x: 1 }
     box = Box<Point> { value: point }
-    return box.value.x
+    box.value.x
 }
 "#,
     );
@@ -1154,7 +1154,7 @@ Option<T: Json>:
 main = () i32 {
     point = Point { x: 1 }
     value = Option<Point>.Some(point)
-    return 0
+    0
 }
 "#,
     );
@@ -1184,7 +1184,7 @@ Box<T: Json>: {
 }
 
 read = (box: Box<Point>) i32 {
-    return box.value.x
+    box.value.x
 }
 "#,
     );
@@ -1214,7 +1214,7 @@ Option<T: Json>:
     Some(T)
 
 read = (value: Option<Point>) i32 {
-    return 0
+    0
 }
 "#,
     );
@@ -1246,7 +1246,7 @@ Box<T: Json>: {
 main = () i32 {
     point = Point { x: 1 }
     box: Box<Point> = Box<Point> { value: point }
-    return box.value.x
+    box.value.x
 }
 "#,
     );
@@ -1278,7 +1278,7 @@ Option<T: Json>:
 main = () i32 {
     point = Point { x: 1 }
     value: Option<Point> = Option<Point>.Some(point)
-    return 0
+    0
 }
 "#,
     );
@@ -1304,13 +1304,13 @@ Point: {
 }
 
 encode<T: Json> = (value: T) str {
-    return value.encode()
+    value.encode()
 }
 
 main = () i32 {
     point = Point { x: 1 }
     text = encode(point)
-    return 0
+    0
 }
 "#,
     );
@@ -1343,18 +1343,18 @@ Point: {
 
 Point.implements(Json<Point>) {
     encode = (value: Point) Point {
-        return value
+        value
     }
 }
 
 decode<T: Json<T>> = (value: T) T {
-    return value.serialize()
+    value.serialize()
 }
 
 main = () i32 {
     point = Point { x: 1 }
     decoded = decode(point)
-    return decoded.x
+    decoded.x
 }
 "#,
     );
@@ -1384,14 +1384,14 @@ Holder: {
 }
 
 Holder.wrap<T: Json> = (self: Holder, value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
     holder = Holder { value: 1 }
     point = Point { x: 1 }
     bad = holder.wrap(point)
-    return 0
+    0
 }
 "#,
     );
@@ -1427,14 +1427,14 @@ Box<T>: {
 }
 
 Box.map<U: Json> = (self: Box<i32>, value: U) U {
-    return value
+    value
 }
 
 main = () i32 {
     box = Box<i32> { value: 1 }
     point = Point { x: 1 }
     bad = box.map(point)
-    return 0
+    0
 }
 "#,
     );
@@ -1460,13 +1460,13 @@ Point: {
 }
 
 as_json<T: Json> = (value: T) str {
-    return value.encode()
+    value.encode()
 }
 
 main = () i32 {
     point = Point { x: 1 }
     text = point.as_json()
-    return 0
+    0
 }
 "#,
     );
@@ -1495,7 +1495,7 @@ Json: behavior {
 
 Missing.implements(Json) {
     to_json = (value: Missing) str {
-        return "missing"
+        "missing"
     }
 }
 "#,
@@ -1523,7 +1523,7 @@ Json: behavior {
 
 Box.implements(Json) {
     to_json = (value: Box) str {
-        return "box"
+        "box"
     }
 }
 "#,
@@ -1575,11 +1575,11 @@ Json: behavior {
 
 Point.implements(Json) {
     to_json = (value: Point) str {
-        return "point"
+        "point"
     }
 
     extra = (value: Point) str {
-        return "extra"
+        "extra"
     }
 }
 "#,
@@ -1608,11 +1608,11 @@ Json: behavior {
 
 Point.implements(Json) {
     to_json = (value: Point) str {
-        return "point"
+        "point"
     }
 
     to_json = (value: Point) str {
-        return "point again"
+        "point again"
     }
 }
 "#,

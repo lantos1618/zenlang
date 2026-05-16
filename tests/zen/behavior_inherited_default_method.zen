@@ -2,7 +2,7 @@
 
 Json: behavior {
     to_json: (Self) str {
-        return "default-json"
+        "default-json"
     }
 }
 
@@ -18,7 +18,7 @@ Point: {
 
 Point.implements(PrettyJson) {
     pretty = (value: Point) str {
-        return "pretty-point"
+        "pretty-point"
     }
 }
 
@@ -26,5 +26,5 @@ main = () i32 {
     point = Point { x: 1 }
     io.println(point.to_json())
     io.println(point.pretty())
-    return 0
+    0
 }

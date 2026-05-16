@@ -6,10 +6,10 @@ pub Point: {
 
 Point.implements(PrettyJson) {
     encode = (value: Point) str {
-        return "encoded"
+        "encoded"
     }
 
     pretty = (value: Point) str {
-        return "pretty"
+        "pretty"
     }
 }

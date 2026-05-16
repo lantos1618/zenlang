@@ -15,7 +15,7 @@ fn resolver_assigns_symbol_ids_in_separate_namespaces() {
     let program = parse_program(
         r#"
 Point: { x: i32 }
-Point = () i32 { return 1 }
+Point = () i32 { 1 }
 Color: Red, Blue
 "#,
     );
@@ -64,8 +64,8 @@ pub PublicPoint: { x: i32 }
 PrivatePoint: { x: i32 }
 pub Json<T>: behavior { encode: (Self) T }
 InternalJson: behavior { encode: (Self) i32 }
-pub exported = () i32 { return 1 }
-internal = () i32 { return 2 }
+pub exported = () i32 { 1 }
+internal = () i32 { 2 }
 "#,
     );
 
@@ -114,7 +114,7 @@ fn resolver_rejects_unknown_type_references_in_declarations() {
     let program = parse_program(
         r#"
 Point: { next: MissingPoint }
-distance = (point: Point) UnknownReturn { return 0 }
+distance = (point: Point) UnknownReturn { 0 }
 "#,
     );
 
@@ -138,7 +138,7 @@ distance = (point: Point) UnknownReturn { return 0 }
 fn resolver_rejects_method_on_unknown_type() {
     let program = parse_program(
         r#"
-Missing.label = () str { return "missing" }
+Missing.label = () str { "missing" }
 "#,
     );
 
@@ -162,7 +162,7 @@ Box<T>: {
 }
 
 Box.get<T> = (self: Box<T>) T {
-    return self.value
+    self.value
 }
 "#,
     );
@@ -199,7 +199,7 @@ Box<T>: {
 }
 
 Box.map<T> = (self: Box<T>, callback: (T) T) (T) T {
-    return callback
+    callback
 }
 "#,
     );
@@ -231,7 +231,7 @@ Box.map<T> = (self: Box<T>, callback: (T) T) (T) T {
 fn resolver_rejects_self_type_outside_method_or_behavior() {
     let program = parse_program(
         r#"
-main = (value: Self) i32 { return 0 }
+main = (value: Self) i32 { 0 }
 "#,
     );
 
@@ -251,7 +251,7 @@ fn resolver_records_import_bindings_as_symbols() {
     let program = parse_program(
         r#"
 { ExternalPoint, helper } = geometry
-distance = (point: ExternalPoint) i32 { return helper() }
+distance = (point: ExternalPoint) i32 { helper() }
 "#,
     );
 
@@ -283,7 +283,7 @@ Json: behavior {
 Point: { x: i32 }
 
 Point.implements(Json) {
-    stringify = (value: Point) str { return "point" }
+    stringify = (value: Point) str { "point" }
 }
 "#,
     );
@@ -342,7 +342,7 @@ fn resolver_accepts_non_behavior_impl_blocks_as_method_symbols() {
 Point: { x: i32 }
 
 Point.impl = {
-    get = (self: Point) i32 { return self.x }
+    get = (self: Point) i32 { self.x }
 }
 "#,
     );
@@ -368,8 +368,8 @@ fn resolver_rejects_duplicate_non_behavior_impl_method_names() {
 Point: { x: i32 }
 
 Point.impl = {
-    get = (self: Point) i32 { return self.x }
-    get = (self: Point) i32 { return self.x }
+    get = (self: Point) i32 { self.x }
+    get = (self: Point) i32 { self.x }
 }
 "#,
     );
@@ -391,10 +391,10 @@ fn resolver_rejects_non_behavior_impl_method_colliding_with_top_level_method() {
         r#"
 Point: { x: i32 }
 
-Point.get = (self: Point) i32 { return self.x }
+Point.get = (self: Point) i32 { self.x }
 
 Point.impl = {
-    get = (self: Point) i32 { return self.x }
+    get = (self: Point) i32 { self.x }
 }
 "#,
     );
@@ -422,7 +422,7 @@ Point: { x: i32 }
 
 Point.implements(Mapper) {
     map = (value: Point, callback: (i32) i32) (i32) i32 {
-        return callback
+        callback
     }
 }
 "#,
@@ -462,7 +462,7 @@ Point: { x: i32 }
 Point.implements(Json) {
     stringify = (value: Point) str {
         label = "point"
-        return label
+        label
     }
 }
 "#,
@@ -618,9 +618,9 @@ fn resolver_rejects_behavior_extends_unknown_symbols() {
 fn resolver_records_value_symbol_parameter_counts() {
     let program = parse_program(
         r#"
-add = (a: i32, b: i32) i32 { return a + b }
+add = (a: i32, b: i32) i32 { a + b }
 Point: { x: i32 }
-Point.shift = (self: Point, dx: i32) Point { return self }
+Point.shift = (self: Point, dx: i32) Point { self }
 "#,
     );
 
@@ -646,9 +646,9 @@ Point.shift = (self: Point, dx: i32) Point { return self }
 fn resolver_records_value_symbol_parameter_types() {
     let program = parse_program(
         r#"
-add = (a: i32, b: f64) f64 { return b }
+add = (a: i32, b: f64) f64 { b }
 Point: { x: i32 }
-Point.shift = (self: Point, dx: i32) Point { return self }
+Point.shift = (self: Point, dx: i32) Point { self }
 "#,
     );
 
@@ -676,9 +676,9 @@ Point.shift = (self: Point, dx: i32) Point { return self }
 fn resolver_records_value_symbol_parameter_names() {
     let program = parse_program(
         r#"
-add = (a: i32, b: f64) f64 { return b }
+add = (a: i32, b: f64) f64 { b }
 Point: { x: i32 }
-Point.shift = (self: Point, dx: i32) Point { return self }
+Point.shift = (self: Point, dx: i32) Point { self }
 "#,
     );
 
@@ -706,8 +706,8 @@ Point.shift = (self: Point, dx: i32) Point { return self }
 fn resolver_records_value_symbol_return_types() {
     let program = parse_program(
         r#"
-main = () i32 { return 0 }
-log = () { return }
+main = () i32 { 0 }
+log = () { }
 "#,
     );
 
@@ -735,7 +735,7 @@ log = () { return }
 fn resolver_records_value_symbol_function_type_metadata() {
     let program = parse_program(
         r#"
-apply = (callback: (i32) i32, value: i32) (i32) i32 { return callback }
+apply = (callback: (i32) i32, value: i32) (i32) i32 { callback }
 "#,
     );
 
@@ -755,9 +755,9 @@ apply = (callback: (i32) i32, value: i32) (i32) i32 { return callback }
 fn resolver_records_value_symbol_generic_parameter_counts() {
     let program = parse_program(
         r#"
-identity<T> = (value: T) T { return value }
+identity<T> = (value: T) T { value }
 Point: { x: i32 }
-Point.wrap<T> = (self: Point, value: T) Point { return self }
+Point.wrap<T> = (self: Point, value: T) Point { self }
 "#,
     );
 
@@ -804,7 +804,7 @@ fn resolver_records_value_symbol_generic_bounds() {
 Json: behavior {
     encode: (Self) str
 }
-encode<T: Json> = (value: T) str { return "encoded" }
+encode<T: Json> = (value: T) str { "encoded" }
 "#,
     );
 
@@ -909,7 +909,7 @@ Option<T, T>: Some(T), None
 Serializable<T, T>: behavior {
     encode: (T) str
 }
-identity<T, T> = (value: T) T { return value }
+identity<T, T> = (value: T) T { value }
 "#,
     );
 
@@ -981,7 +981,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 Box<T: Json<T>>: { value: T }
-encode<T: Json<T>> = (value: T) T { return value }
+encode<T: Json<T>> = (value: T) T { value }
 Serializable<T: Json<T>>: behavior {
     serialize: (Self) T
 }
@@ -1231,7 +1231,7 @@ fn resolver_records_behavior_default_method_body_locals() {
 Json: behavior {
     stringify: (Self) str {
         label = "json"
-        return label
+        label
     }
 }
 "#,
@@ -1285,7 +1285,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -1593,7 +1593,7 @@ Point: { x: i32 }
 
 main = () i32 {
     point = Point { x: 1, x: 2 }
-    return 0
+    0
 }
 "#,
     );
@@ -1617,7 +1617,7 @@ Point: { x: i32 }
 
 main = () i32 {
     point = Point { x: 1, y: 2 }
-    return 0
+    0
 }
 "#,
     );
@@ -1641,7 +1641,7 @@ Point: { x: i32, y: i32 }
 
 main = () i32 {
     point = Point { x: 1 }
-    return 0
+    0
 }
 "#,
     );
@@ -1663,7 +1663,7 @@ fn resolver_rejects_unknown_struct_literal_types() {
         r#"
 main = () i32 {
     point = Point { x: 1 }
-    return 0
+    0
 }
 "#,
     );
@@ -1922,8 +1922,8 @@ Callback<T>: Wrap((T) T), None
 fn resolver_rejects_unknown_unqualified_function_calls() {
     let program = parse_program(
         r#"
-known = () i32 { return 1 }
-main = () i32 { return missing() }
+known = () i32 { 1 }
+main = () i32 { missing() }
 "#,
     );
 
@@ -1945,7 +1945,7 @@ fn resolver_records_parameter_and_local_symbols() {
 main = (mut input: i32) i32 {
     value ::= input
     frozen = value
-    return frozen
+    frozen
 }
 "#,
     );
@@ -1993,7 +1993,7 @@ Status: Ok, Err
 
 main = () i32 {
     value = Status.Pending
-    return 0
+    0
 }
 "#,
     );
@@ -2017,7 +2017,7 @@ Maybe: Some(i32), None
 
 main = () i32 {
     value = Maybe.Some
-    return 0
+    0
 }
 "#,
     );
@@ -2042,7 +2042,7 @@ Maybe: Some(i32), None
 
 main = () i32 {
     value = Maybe.None(1)
-    return 0
+    0
 }
 "#,
     );
@@ -2068,7 +2068,7 @@ main = () i32 {
         inner = input
         inner
     }
-    return 0
+    0
 }
 "#,
     );
@@ -2101,7 +2101,7 @@ main = () i32 {
         input = input + 1
         input
     }
-    return 0
+    0
 }
 "#,
     );
@@ -2123,7 +2123,7 @@ Option:
     Some(i32)
 
 main = (value: Option) i32 {
-    return value ?
+    value ?
         | Some(inner) { inner }
         | None { 0 }
 }
@@ -2153,7 +2153,7 @@ main = () i32 {
         value := 2
         value
     }
-    return value
+    value
 }
 "#,
     );
@@ -2178,7 +2178,7 @@ fn resolver_rejects_duplicate_bindings_in_same_scope() {
 main = (input: i32, input: i32) i32 {
     value = 1
     value = 2
-    return value
+    value
 }
 "#,
     );
@@ -2204,7 +2204,7 @@ fn resolver_rejects_unknown_local_identifier_references() {
     let program = parse_program(
         r#"
 main = () i32 {
-    return missing_local
+    missing_local
 }
 "#,
     );

@@ -3,5 +3,5 @@ pub Point: {
 }
 
 pub Point.keep<T> = (self: Point, value: T) T {
-    return value
+    value
 }

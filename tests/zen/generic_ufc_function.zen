@@ -1,10 +1,10 @@
 { io } = std
 
 id<T> = (value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
     io.println("${12.id<i32>()}")
-    return 0
+    0
 }

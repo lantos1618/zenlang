@@ -754,7 +754,7 @@ mod tests {
         let math_path = tmp.path().join("math.zen");
         fs::write(
             &math_path,
-            "pub add = (a: i32, b: i32) i32 {\n    return a + b\n}\n",
+            "pub add = (a: i32, b: i32) i32 {\n    a + b\n}\n",
         )
         .unwrap();
 
@@ -762,7 +762,7 @@ mod tests {
         let main_path = tmp.path().join("main.zen");
         fs::write(
             &main_path,
-            "{ add } = math\n\nmain = () i32 {\n    return add(1, 2)\n}\n",
+            "{ add } = math\n\nmain = () i32 {\n    add(1, 2)\n}\n",
         )
         .unwrap();
 
@@ -786,16 +786,12 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let math_path = tmp.path().join("math.zen");
-        fs::write(
-            &math_path,
-            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
-        )
-        .unwrap();
+        fs::write(&math_path, "pub add = (a: i32, b: i32) i32 { a + b }\n").unwrap();
 
         let main_path = tmp.path().join("main.zen");
         fs::write(
             &main_path,
-            "{ add } = math\n\nmain = () i32 {\n    return add(1, 2)\n}\n",
+            "{ add } = math\n\nmain = () i32 {\n    add(1, 2)\n}\n",
         )
         .unwrap();
 
@@ -841,14 +837,14 @@ mod tests {
         let math_path = tmp.path().join("math.zen");
         fs::write(
             &math_path,
-            "pub Point: { x: i32 }\npub add = (a: i32, b: i32) i32 { return a + b }\n",
+            "pub Point: { x: i32 }\npub add = (a: i32, b: i32) i32 { a + b }\n",
         )
         .unwrap();
 
         let main_path = tmp.path().join("main.zen");
         fs::write(
             &main_path,
-            "{ add, Point } = math\n\nmain = () i32 { return add(1, 2) }\n",
+            "{ add, Point } = math\n\nmain = () i32 { add(1, 2) }\n",
         )
         .unwrap();
 
@@ -889,14 +885,10 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let math_path = tmp.path().join("math.zen");
-        fs::write(&math_path, "pub add = () Missing { return 0 }\n").unwrap();
+        fs::write(&math_path, "pub add = () Missing { 0 }\n").unwrap();
 
         let main_path = tmp.path().join("main.zen");
-        fs::write(
-            &main_path,
-            "{ add } = math\n\nmain = () i32 { return add() }\n",
-        )
-        .unwrap();
+        fs::write(&main_path, "{ add } = math\n\nmain = () i32 { add() }\n").unwrap();
 
         let mut files = FileTable::new();
         let mut ms = ModuleSystem::new();
@@ -918,12 +910,12 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let math_path = tmp.path().join("math.zen");
-        fs::write(&math_path, "add = (a: i32, b: i32) i32 { return a + b }\n").unwrap();
+        fs::write(&math_path, "add = (a: i32, b: i32) i32 { a + b }\n").unwrap();
 
         let main_path = tmp.path().join("main.zen");
         fs::write(
             &main_path,
-            "{ add } = math\n\nmain = () i32 { return add(1, 2) }\n",
+            "{ add } = math\n\nmain = () i32 { add(1, 2) }\n",
         )
         .unwrap();
 
@@ -944,10 +936,10 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let a_path = tmp.path().join("a.zen");
-        fs::write(&a_path, "{ bar } = b\n\npub foo = () i32 { return 1 }\n").unwrap();
+        fs::write(&a_path, "{ bar } = b\n\npub foo = () i32 { 1 }\n").unwrap();
 
         let b_path = tmp.path().join("b.zen");
-        fs::write(&b_path, "{ foo } = a\n\npub bar = () i32 { return 2 }\n").unwrap();
+        fs::write(&b_path, "{ foo } = a\n\npub bar = () i32 { 2 }\n").unwrap();
 
         let mut files = FileTable::new();
         let mut ms = ModuleSystem::new();
@@ -967,11 +959,11 @@ mod tests {
 
         // a.zen imports from b
         let a_path = tmp.path().join("a.zen");
-        fs::write(&a_path, "{ bar } = b\n\nfoo = () i32 { return 1 }\n").unwrap();
+        fs::write(&a_path, "{ bar } = b\n\nfoo = () i32 { 1 }\n").unwrap();
 
         // b.zen imports from a (circular!)
         let b_path = tmp.path().join("b.zen");
-        fs::write(&b_path, "{ foo } = a\n\nbar = () i32 { return 2 }\n").unwrap();
+        fs::write(&b_path, "{ foo } = a\n\nbar = () i32 { 2 }\n").unwrap();
 
         let mut files = FileTable::new();
         let mut ms = ModuleSystem::new();
@@ -992,11 +984,7 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let main_path = tmp.path().join("main.zen");
-        fs::write(
-            &main_path,
-            "{ Foo } = nonexistent\n\nmain = () i32 { return 0 }\n",
-        )
-        .unwrap();
+        fs::write(&main_path, "{ Foo } = nonexistent\n\nmain = () i32 { 0 }\n").unwrap();
 
         let mut files = FileTable::new();
         let mut ms = ModuleSystem::new();
@@ -1017,7 +1005,7 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let main_path = tmp.path().join("main.zen");
-        fs::write(&main_path, "{ io } = std\n\nmain = () i32 { return 0 }\n").unwrap();
+        fs::write(&main_path, "{ io } = std\n\nmain = () i32 { 0 }\n").unwrap();
 
         let mut files = FileTable::new();
         let mut ms = ModuleSystem::new();
@@ -1035,16 +1023,12 @@ mod tests {
         let tmp = setup_temp_dir();
         let stdlib = tmp.path().join("stdlib");
         fs::create_dir(&stdlib).unwrap();
-        fs::write(
-            &stdlib.join("math.zen"),
-            "pub answer = () i32 { return 42 }\n",
-        )
-        .unwrap();
+        fs::write(&stdlib.join("math.zen"), "pub answer = () i32 { 42 }\n").unwrap();
 
         let main_path = tmp.path().join("main.zen");
         fs::write(
             &main_path,
-            "{ answer } = std.math\n\nmain = () i32 { return answer() }\n",
+            "{ answer } = std.math\n\nmain = () i32 { answer() }\n",
         )
         .unwrap();
 
@@ -1081,26 +1065,14 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let math_path = tmp.path().join("math.zen");
-        fs::write(
-            &math_path,
-            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
-        )
-        .unwrap();
+        fs::write(&math_path, "pub add = (a: i32, b: i32) i32 { a + b }\n").unwrap();
 
         // Two files both import math
         let a_path = tmp.path().join("a.zen");
-        fs::write(
-            &a_path,
-            "{ add } = math\n\nfoo = () i32 { return add(1, 2) }\n",
-        )
-        .unwrap();
+        fs::write(&a_path, "{ add } = math\n\nfoo = () i32 { add(1, 2) }\n").unwrap();
 
         let b_path = tmp.path().join("b.zen");
-        fs::write(
-            &b_path,
-            "{ add } = math\n\nbar = () i32 { return add(3, 4) }\n",
-        )
-        .unwrap();
+        fs::write(&b_path, "{ add } = math\n\nbar = () i32 { add(3, 4) }\n").unwrap();
 
         let mut files = FileTable::new();
         let mut ms = ModuleSystem::new();
@@ -1125,16 +1097,12 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let math_path = tmp.path().join("math.zen");
-        fs::write(
-            &math_path,
-            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
-        )
-        .unwrap();
+        fs::write(&math_path, "pub add = (a: i32, b: i32) i32 { a + b }\n").unwrap();
 
         let main_path = tmp.path().join("main.zen");
         fs::write(
             &main_path,
-            "{ add } = math\n\nmain = () i32 { return add(1, 2) }\n",
+            "{ add } = math\n\nmain = () i32 { add(1, 2) }\n",
         )
         .unwrap();
 
@@ -1159,23 +1127,19 @@ mod tests {
 
         // c.zen has a helper
         let c_path = tmp.path().join("c.zen");
-        fs::write(&c_path, "pub helper = () i32 { return 42 }\n").unwrap();
+        fs::write(&c_path, "pub helper = () i32 { 42 }\n").unwrap();
 
         // b.zen imports from c
         let b_path = tmp.path().join("b.zen");
         fs::write(
             &b_path,
-            "{ helper } = c\n\npub wrapper = () i32 { return helper() }\n",
+            "{ helper } = c\n\npub wrapper = () i32 { helper() }\n",
         )
         .unwrap();
 
         // a.zen imports from b
         let a_path = tmp.path().join("a.zen");
-        fs::write(
-            &a_path,
-            "{ wrapper } = b\n\nmain = () i32 { return wrapper() }\n",
-        )
-        .unwrap();
+        fs::write(&a_path, "{ wrapper } = b\n\nmain = () i32 { wrapper() }\n").unwrap();
 
         let mut files = FileTable::new();
         let mut ms = ModuleSystem::new();
@@ -1198,13 +1162,13 @@ mod tests {
         let utils_dir = tmp.path().join("utils");
         fs::create_dir(&utils_dir).unwrap();
         let math_path = utils_dir.join("math.zen");
-        fs::write(&math_path, "pub square = (x: i32) i32 { return x * x }\n").unwrap();
+        fs::write(&math_path, "pub square = (x: i32) i32 { x * x }\n").unwrap();
 
         // Create main.zen that imports from utils.math
         let main_path = tmp.path().join("main.zen");
         fs::write(
             &main_path,
-            "{ square } = utils.math\n\nmain = () i32 { return square(5) }\n",
+            "{ square } = utils.math\n\nmain = () i32 { square(5) }\n",
         )
         .unwrap();
 
@@ -1226,12 +1190,12 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let math_path = tmp.path().join("math.zen");
-        fs::write(&math_path, "add = (a: i32, b: i32) i32 { return a + b }\n").unwrap();
+        fs::write(&math_path, "add = (a: i32, b: i32) i32 { a + b }\n").unwrap();
 
         let main_path = tmp.path().join("main.zen");
         fs::write(
             &main_path,
-            "{ add } = math\n\nmain = () i32 { return add(1, 2) }\n",
+            "{ add } = math\n\nmain = () i32 { add(1, 2) }\n",
         )
         .unwrap();
 
@@ -1252,18 +1216,10 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let math_path = tmp.path().join("math.zen");
-        fs::write(
-            &math_path,
-            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
-        )
-        .unwrap();
+        fs::write(&math_path, "pub add = (a: i32, b: i32) i32 { a + b }\n").unwrap();
 
         let main_path = tmp.path().join("main.zen");
-        fs::write(
-            &main_path,
-            "{ subtract } = math\n\nmain = () i32 { return 0 }\n",
-        )
-        .unwrap();
+        fs::write(&main_path, "{ subtract } = math\n\nmain = () i32 { 0 }\n").unwrap();
 
         let mut files = FileTable::new();
         let mut ms = ModuleSystem::new();
@@ -1285,18 +1241,10 @@ mod tests {
         let tmp = setup_temp_dir();
 
         let math_path = tmp.path().join("math.zen");
-        fs::write(
-            &math_path,
-            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
-        )
-        .unwrap();
+        fs::write(&math_path, "pub add = (a: i32, b: i32) i32 { a + b }\n").unwrap();
 
         let main_path = tmp.path().join("main.zen");
-        fs::write(
-            &main_path,
-            "{ add, add } = math\n\nmain = () i32 { return 0 }\n",
-        )
-        .unwrap();
+        fs::write(&main_path, "{ add, add } = math\n\nmain = () i32 { 0 }\n").unwrap();
 
         let mut files = FileTable::new();
         let mut ms = ModuleSystem::new();

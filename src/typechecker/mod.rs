@@ -12335,7 +12335,7 @@ mod tests {
         let program = parse_program(
             r#"
 Point: { x: i32 }
-Point.get = (self: Point) i32 { return self.x }
+Point.get = (self: Point) i32 { self.x }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -13182,7 +13182,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -13226,7 +13226,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -13347,7 +13347,7 @@ Point.implements(Json) {
             r#"
 Json<T: Json<T>>: behavior {
     encode: (Self) T {
-        return 1
+        1
     }
 }
 "#,
@@ -13466,7 +13466,7 @@ Point: { x: i32 }
     fn resolver_callable_signature_metadata_requires_complete_signature() {
         let program = parse_program(
             r#"
-identity<T> = (value: T) T { return value }
+identity<T> = (value: T) T { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -13589,7 +13589,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-identity<T: Json<T>> = (value: T) T { return value }
+identity<T: Json<T>> = (value: T) T { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -13655,9 +13655,9 @@ Box<T>: {
     value: T
 }
 
-identity<T> = (value: T) T { return value }
+identity<T> = (value: T) T { value }
 
-Box.get<T> = (self: Box<T>) T { return self.value }
+Box.get<T> = (self: Box<T>) T { self.value }
 "#,
         );
         let ast::Declaration::Function {
@@ -13737,9 +13737,9 @@ Box<T>: {
     value: T
 }
 
-identity<T> = (value: T) T { return value }
+identity<T> = (value: T) T { value }
 
-Box.get<T> = (self: Box<T>) T { return self.value }
+Box.get<T> = (self: Box<T>) T { self.value }
 "#,
         );
         let ast::Declaration::Function {
@@ -13805,9 +13805,9 @@ Box<T>: {
     value: T
 }
 
-identity<T> = (mut value: T) T { return value }
+identity<T> = (mut value: T) T { value }
 
-Box.get<T> = (self: Box<T>, mut fallback: T) T { return fallback }
+Box.get<T> = (self: Box<T>, mut fallback: T) T { fallback }
 "#,
         );
         let mut tc = TypeChecker::new();
@@ -13980,8 +13980,8 @@ PrettyJson: behavior {
 PrettyJson.extends(Json<str>)
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str { return "point" }
-    pretty = (value: Point) str { return "pretty" }
+    encode = (value: Point) str { "point" }
+    pretty = (value: Point) str { "pretty" }
 }
 
 Point.requires(Json<str>)
@@ -14030,8 +14030,8 @@ PrettyJson: behavior {
 PrettyJson.extends(Json<str>)
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str { return "point" }
-    pretty = (value: Point) str { return "pretty" }
+    encode = (value: Point) str { "point" }
+    pretty = (value: Point) str { "pretty" }
 }
 
 Point.requires(Json<str>)
@@ -14480,7 +14480,7 @@ Json<T>: behavior {
 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -14516,7 +14516,7 @@ PrettyJson: behavior {
 PrettyJson.extends(Json<str>)
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -14560,7 +14560,7 @@ Point: { x: i32 = 1 }
 
 main = (input: i32) i32 {
     value := input
-    return value
+    value
 }
 "#,
         );
@@ -14599,7 +14599,7 @@ Json<T>: behavior {
 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -14641,7 +14641,7 @@ Point.requires(Json<str>)
 Point: { x: i32 }
 
 main = (input: Point) Point {
-    return input
+    input
 }
 "#,
         );
@@ -14671,13 +14671,13 @@ Json<T>: behavior {
 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
 
 main = (input: i32) i32 {
-    return input
+    input
 }
 "#,
         );
@@ -14793,7 +14793,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -14864,11 +14864,11 @@ Json: behavior {
 }
 
 Point.impl = {
-    x_value = (value: Point) i32 { return value.x }
+    x_value = (value: Point) i32 { value.x }
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -14889,9 +14889,9 @@ Point.implements(Json) {
             r#"
 Point: { x: i32 }
 
-make = () Point { return Point { x: 1 } }
+make = () Point { Point { x: 1 } }
 
-Point.get = (self: Point) i32 { return self.x }
+Point.get = (self: Point) i32 { self.x }
 "#,
         );
 
@@ -14975,7 +14975,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.impl = {
-    x_value = (value: Point) i32 { return value.x }
+    x_value = (value: Point) i32 { value.x }
 }
 "#,
         );
@@ -15007,7 +15007,7 @@ Point.impl = {
             r#"
 main = (input: i32) i32 {
     value := input
-    return value
+    value
 }
 "#,
         );
@@ -15029,7 +15029,7 @@ main = (input: i32) i32 {
             r#"
 main = () i32 {
     value := 1
-    return value
+    value
 }
 "#,
         );
@@ -15053,7 +15053,7 @@ main = () i32 {
         value := 1
         break
     }
-    return value
+    value
 }
 "#,
         );
@@ -15087,7 +15087,7 @@ Option:
     Some(i32)
 
 main = (value: Option) i32 {
-    return value ?
+    value ?
         | Some(inner) {
             doubled := inner
             doubled
@@ -15105,13 +15105,7 @@ main = (value: Option) i32 {
         else {
             panic!("expected block");
         };
-        let Expression::Return {
-            value: Some(value), ..
-        } = expr.as_ref()
-        else {
-            panic!("expected return expression");
-        };
-        let Expression::Match { arms, .. } = value.as_ref() else {
+        let Expression::Match { arms, .. } = expr.as_ref() else {
             panic!("expected match expression");
         };
         let arm = arms.first().expect("first match arm");
@@ -15138,7 +15132,7 @@ main = (value: Option) i32 {
 Point: { x: i32, y: i32 }
 
 main = (point: Point) i32 {
-    return point ?
+    point ?
         | Point { x, y } { x + y }
 }
 "#,
@@ -15152,13 +15146,7 @@ main = (point: Point) i32 {
         else {
             panic!("expected block");
         };
-        let Expression::Return {
-            value: Some(value), ..
-        } = expr.as_ref()
-        else {
-            panic!("expected return expression");
-        };
-        let Expression::Match { arms, .. } = value.as_ref() else {
+        let Expression::Match { arms, .. } = expr.as_ref() else {
             panic!("expected match expression");
         };
         let arm = arms.first().expect("first match arm");
@@ -15184,7 +15172,7 @@ main = (point: Point) i32 {
 main = () i32 {
     value := 1
     (input: i32) i32 {
-        return input
+        input
     }
 }
 "#,
@@ -15240,7 +15228,7 @@ main = () i32 {
         inner := input
         inner
     }
-    return 0
+    0
 }
 "#,
         );
@@ -15291,16 +15279,16 @@ Json: behavior {
 }
 
 Point.impl = {
-    x_value = (value: Point) i32 { return value.x }
+    x_value = (value: Point) i32 { value.x }
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json)
 
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
 
@@ -15370,7 +15358,7 @@ PrettyJson: behavior {
 }
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { return "pretty" }
+    pretty = (value: Point) str { "pretty" }
 }
 "#,
         );
@@ -15409,7 +15397,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json)
@@ -15594,7 +15582,7 @@ PrettyJson.extends(Json)
     fn value_signature_absence_validation_builds_entries() {
         let program = parse_program(
             r#"
-add = (left: i32, right: i32) i32 { return left + right }
+add = (left: i32, right: i32) i32 { left + right }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -15695,7 +15683,7 @@ Json: behavior {
     encode: (Self) str
 }
 
-identity<T: Json> = (value: T) T { return value }
+identity<T: Json> = (value: T) T { value }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -15962,7 +15950,7 @@ Option<T>: Some(T), None
             r#"
 main = (mut input: i32) i32 {
     value ::= input
-    return value
+    value
 }
 "#,
         );
@@ -16277,7 +16265,7 @@ main = (mut input: i32) i32 {
     fn check_program_rejects_self_type_outside_method_or_behavior() {
         let program = parse_program(
             r#"
-main = (value: Self) i32 { return 0 }
+main = (value: Self) i32 { 0 }
 "#,
         );
         let mut tc = TypeChecker::new();
@@ -16306,12 +16294,12 @@ Json: behavior {
 
 Pretty.extends(Json)
 
-make = () Point { return Point { x: 1 } }
+make = () Point { Point { x: 1 } }
 
-Point.get = (self: Point) i32 { return self.x }
+Point.get = (self: Point) i32 { self.x }
 
 Point.impl = {
-    x_value = (self: Point) i32 { return self.x }
+    x_value = (self: Point) i32 { self.x }
 }
 
 Point.requires(Json)
@@ -16365,7 +16353,7 @@ result := 1
     fn check_program_rejects_unknown_type_references() {
         let program = parse_program(
             r#"
-main = (value: Missing, items: Bag<i32>) i32 { return 0 }
+main = (value: Missing, items: Bag<i32>) i32 { 0 }
 "#,
         );
         let mut tc = TypeChecker::new();
@@ -16458,7 +16446,7 @@ Box<T>: { value: T }
 Point: { x: i32 = 1 }
 Option<T>: Some(T), None
 
-main = () i32 { return 1 }
+main = () i32 { 1 }
 "#,
         );
 
@@ -16513,7 +16501,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-main = () i32 { return 1 }
+main = () i32 { 1 }
 "#,
         );
 
@@ -16563,7 +16551,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (self: Point) str { return "point" }
+    encode = (self: Point) str { "point" }
 }
 "#,
         );
@@ -16595,12 +16583,12 @@ Point.implements(Json) {
             r#"
 Point: { x: i32 }
 
-make = () Point { return Point { x: 1 } }
+make = () Point { Point { x: 1 } }
 
-Point.get = (self: Point) i32 { return self.x }
+Point.get = (self: Point) i32 { self.x }
 
 Point.impl = {
-    plus = (self: Point, other: Point) i32 { return self.x + other.x }
+    plus = (self: Point, other: Point) i32 { self.x + other.x }
 }
 "#,
         );
@@ -16637,7 +16625,7 @@ Point.impl = {
             r#"
 Point: { x: i32 }
 
-make = () Point { return Point { x: 1 } }
+make = () Point { Point { x: 1 } }
 "#,
         );
         let mut callable_tasks = Vec::new();
@@ -16671,11 +16659,11 @@ Json: behavior {
 }
 
 Point.impl = {
-    x_value = (value: Point) i32 { return value.x }
+    x_value = (value: Point) i32 { value.x }
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -16701,12 +16689,12 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-make = () Point { return Point { x: 1 } }
+make = () Point { Point { x: 1 } }
 
-Point.get = (self: Point) i32 { return self.x }
+Point.get = (self: Point) i32 { self.x }
 
 Point.impl = {
-    x_value = (self: Point) i32 { return self.x }
+    x_value = (self: Point) i32 { self.x }
 }
 
 result := make()
@@ -16824,7 +16812,7 @@ result := make()
 { io, fmt } = std
 
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -16857,7 +16845,7 @@ main = () i32 {
         let mut program = parse_program(
             r#"
 apply = (callback: (i32) i32) (i32) i32 {
-    return callback
+    callback
 }
 "#,
         );
@@ -16898,7 +16886,7 @@ apply = (callback: (i32) i32) (i32) i32 {
     fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_function_signature() {
         let mut program = parse_program(
             r#"
-main = (value: i32) i32 { return value }
+main = (value: i32) i32 { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -16928,7 +16916,7 @@ main = (value: i32) i32 { return value }
     fn collect_declarations_with_symbols_clears_stale_function_signature_after_name_restore() {
         let mut program = parse_program(
             r#"
-main = (value: i32) i32 { return value }
+main = (value: i32) i32 { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -16965,7 +16953,7 @@ main = (value: i32) i32 { return value }
     {
         let mut program = parse_program(
             r#"
-identity<T> = (value: T) T { return value }
+identity<T> = (value: T) T { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -16998,7 +16986,7 @@ identity<T> = (value: T) T { return value }
             r#"
 identity<T> = (value: T) T {
     same: T = value
-    return same
+    same
 }
 "#,
         );
@@ -17028,7 +17016,7 @@ identity<T> = (value: T) T {
     fn collect_declarations_with_symbols_uses_resolver_function_signature_for_type_refs() {
         let mut program = parse_program(
             r#"
-main = (value: i32) i32 { return value }
+main = (value: i32) i32 { value }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -17059,7 +17047,7 @@ main = (value: i32) i32 { return value }
         let mut program = parse_program(
             r#"
 Box: { value: i32 }
-Box.get = (self: Box, value: i32) i32 { return value }
+Box.get = (self: Box, value: i32) i32 { value }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -17090,7 +17078,7 @@ Box.get = (self: Box, value: i32) i32 { return value }
         let mut program = parse_program(
             r#"
 Point: { x: i32 }
-Point.get = (self: Point) i32 { return self.x }
+Point.get = (self: Point) i32 { self.x }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -17112,7 +17100,7 @@ Point.get = (self: Point) i32 { return self.x }
         let mut program = parse_program(
             r#"
 Point: { x: i32 }
-Point.get = (self: Point) i32 { return self.x }
+Point.get = (self: Point) i32 { self.x }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -17140,7 +17128,7 @@ Point.get = (self: Point) i32 { return self.x }
         let mut program = parse_program(
             r#"
 Point: { x: i32 }
-Point.get = (self: Point) i32 { return self.x }
+Point.get = (self: Point) i32 { self.x }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -17178,7 +17166,7 @@ Point.get = (self: Point) i32 { return self.x }
     fn collect_declarations_with_symbols_uses_resolver_function_name_metadata() {
         let mut program = parse_program(
             r#"
-main = () i32 { return 1 }
+main = () i32 { 1 }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -17199,7 +17187,7 @@ main = () i32 { return 1 }
     fn collect_declarations_with_symbols_uses_resolver_generic_function_template_name_metadata() {
         let mut program = parse_program(
             r#"
-identity<T> = (value: T) T { return value }
+identity<T> = (value: T) T { value }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -17221,7 +17209,7 @@ identity<T> = (value: T) T { return value }
     {
         let mut program = parse_program(
             r#"
-identity<T> = (value: T) T { return value }
+identity<T> = (value: T) T { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -17257,7 +17245,7 @@ identity<T> = (value: T) T { return value }
     fn collect_declarations_with_symbols_uses_resolver_function_type_params_for_type_refs() {
         let mut program = parse_program(
             r#"
-identity<T> = (value: T) T { return value }
+identity<T> = (value: T) T { value }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -17338,7 +17326,7 @@ Json<T>: behavior {
 Json<T>: behavior {
     encode: (Self) T
 }
-identity<T: Json<T>> = (value: T) T { return value }
+identity<T: Json<T>> = (value: T) T { value }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -17508,7 +17496,7 @@ Json<T>: behavior {
 }
 Box: { value: i32 }
 Box.impl = {
-    keep<T: Json<T>> = (self: Box, value: T) T { return value }
+    keep<T: Json<T>> = (self: Box, value: T) T { value }
 }
 "#,
         );
@@ -17539,7 +17527,7 @@ Box.impl = {
 Point: { x: i32 }
 
 Point.impl = {
-    get = (self: Point) i32 { return self.x }
+    get = (self: Point) i32 { self.x }
 }
 "#,
         );
@@ -17566,7 +17554,7 @@ Point.impl = {
 Point: { x: i32 }
 
 Point.impl = {
-    get = (self: Point) i32 { return self.x }
+    get = (self: Point) i32 { self.x }
 }
 "#,
         );
@@ -17591,7 +17579,7 @@ Point.impl = {
 Point: { x: i32 }
 
 Point.impl = {
-    get = (self: Point) i32 { return self.x }
+    get = (self: Point) i32 { self.x }
 }
 "#,
         );
@@ -17628,7 +17616,7 @@ Point.impl = {
 Box: { value: i32 }
 
 Box.impl = {
-    keep<T> = (self: Box, value: T) T { return value }
+    keep<T> = (self: Box, value: T) T { value }
 }
 "#,
         );
@@ -17679,7 +17667,7 @@ Box: { value: i32 }
 
 Box.impl = {
     apply<U: Json<U>> = (self: Box, callback: (U) U) (U) U {
-        return callback
+        callback
     }
 }
 "#,
@@ -17747,7 +17735,7 @@ Box: { value: i32 }
 
 Box.impl = {
     keep<T> = (self: Box, value: T) T {
-        return value
+        value
     }
 }
 "#,
@@ -17780,7 +17768,7 @@ Box: { value: i32 }
 
 Box.impl = {
     choose<T> = (self: Box, left: T, right: T) T {
-        return left
+        left
     }
 }
 "#,
@@ -17820,7 +17808,7 @@ Box: { value: i32 }
 Box.impl = {
     keep<T> = (self: Box, mut value: T) T {
         value = value
-        return value
+        value
     }
 }
 "#,
@@ -17858,7 +17846,7 @@ Box: { value: i32 }
 Box.impl = {
     choose<T> = (self: Box, left: T, mut right: T) T {
         right = right
-        return right
+        right
     }
 }
 "#,
@@ -17899,7 +17887,7 @@ Box.impl = {
 Box: { value: i32 }
 
 Box.impl = {
-    keep<T> = (self: Box, value: T) T { return value }
+    keep<T> = (self: Box, value: T) T { value }
 }
 "#,
         );
@@ -17936,7 +17924,7 @@ Box.impl = {
 Box: { value: i32 }
 
 Box.impl = {
-    keep<T> = (self: Box, value: T) T { return value }
+    keep<T> = (self: Box, value: T) T { value }
 }
 "#,
         );
@@ -17983,7 +17971,7 @@ Box.impl = {
 Box: { value: i32 }
 
 Box.impl = {
-    keep<T> = (self: Box, value: T) T { return value }
+    keep<T> = (self: Box, value: T) T { value }
 }
 "#,
         );
@@ -18033,7 +18021,7 @@ Box: { value: i32 }
 Box.impl = {
     keep<T> = (self: Box, value: T) T {
         same: T = value
-        return same
+        same
     }
 }
 "#,
@@ -18072,7 +18060,7 @@ Debug: behavior {
     debug: (Self) str
 }
 apply<T: Json<T>> = (callback: (T) T) (T) T {
-    return callback
+    callback
 }
 "#,
         );
@@ -18131,7 +18119,7 @@ apply<T: Json<T>> = (callback: (T) T) (T) T {
             r#"
 keep<T> = (value: T) T {
     same: T = value
-    return same
+    same
 }
 "#,
         );
@@ -18164,7 +18152,7 @@ keep<T> = (value: T) T {
 Json<T>: behavior {
     encode: (Self) T
 }
-identity<T: Json<T>> = (value: T) T { return value }
+identity<T: Json<T>> = (value: T) T { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -18198,7 +18186,7 @@ identity<T: Json<T>> = (value: T) T { return value }
         let mut program = parse_program(
             r#"
 identity<T> = (value: T) T {
-    return value
+    value
 }
 "#,
         );
@@ -18224,7 +18212,7 @@ identity<T> = (value: T) T {
         let mut program = parse_program(
             r#"
 choose<T> = (left: T, right: T) T {
-    return left
+    left
 }
 "#,
         );
@@ -18255,7 +18243,7 @@ choose<T> = (left: T, right: T) T {
             r#"
 keep<T> = (mut value: T) T {
     value = value
-    return value
+    value
 }
 "#,
         );
@@ -18284,7 +18272,7 @@ keep<T> = (mut value: T) T {
             r#"
 choose<T> = (left: T, mut right: T) T {
     right = right
-    return right
+    right
 }
 "#,
         );
@@ -18326,7 +18314,7 @@ Debug: behavior {
 }
 Box: { value: i32 }
 Box.apply<U: Json<U>> = (self: Box, callback: (U) U) (U) U {
-    return callback
+    callback
 }
 "#,
         );
@@ -18391,7 +18379,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 Box: { value: i32 }
-Box.keep<U: Json<U>> = (self: Box, value: U) U { return value }
+Box.keep<U: Json<U>> = (self: Box, value: U) U { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -18426,7 +18414,7 @@ Box.keep<U: Json<U>> = (self: Box, value: U) U { return value }
             r#"
 Box: { value: i32 }
 Box.keep<T> = (self: Box, value: T) T {
-    return value
+    value
 }
 "#,
         );
@@ -18453,7 +18441,7 @@ Box.keep<T> = (self: Box, value: T) T {
             r#"
 Box: { value: i32 }
 Box.choose<T> = (self: Box, left: T, right: T) T {
-    return left
+    left
 }
 "#,
         );
@@ -18488,7 +18476,7 @@ Box.choose<T> = (self: Box, left: T, right: T) T {
 Box: { value: i32 }
 Box.keep<T> = (self: Box, mut value: T) T {
     value = value
-    return value
+    value
 }
 "#,
         );
@@ -18521,7 +18509,7 @@ Box.keep<T> = (self: Box, mut value: T) T {
 Box: { value: i32 }
 Box.choose<T> = (self: Box, left: T, mut right: T) T {
     right = right
-    return right
+    right
 }
 "#,
         );
@@ -18556,7 +18544,7 @@ Box.choose<T> = (self: Box, left: T, mut right: T) T {
         let mut program = parse_program(
             r#"
 Box: { value: i32 }
-Box.keep<T> = (self: Box, value: T) T { return value }
+Box.keep<T> = (self: Box, value: T) T { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -18587,7 +18575,7 @@ Box.keep<T> = (self: Box, value: T) T { return value }
         let mut program = parse_program(
             r#"
 Box: { value: i32 }
-Box.keep<T> = (self: Box, value: T) T { return value }
+Box.keep<T> = (self: Box, value: T) T { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -18628,7 +18616,7 @@ Box.keep<T> = (self: Box, value: T) T { return value }
 Box: { value: i32 }
 Box.keep<T> = (self: Box, value: T) T {
     same: T = value
-    return same
+    same
 }
 "#,
         );
@@ -19130,7 +19118,7 @@ Mapper: behavior {
 Mapper<T>: behavior {
     map: (Self, value: T) T {
         same: T = value
-        return same
+        same
     }
 }
 "#,
@@ -19199,7 +19187,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -19232,7 +19220,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -19265,7 +19253,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -19304,7 +19292,7 @@ Mapper: behavior {
 }
 
 Point.implements(Mapper) {
-    map = (value: Point, input: i32) str { return "point" }
+    map = (value: Point, input: i32) str { "point" }
 }
 "#,
         );
@@ -19341,7 +19329,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -19375,7 +19363,7 @@ Mapper: behavior {
 }
 
 Point.implements(Mapper) {
-    map = (value: Point, input: i32) str { return "point" }
+    map = (value: Point, input: i32) str { "point" }
 }
 "#,
         );
@@ -19412,8 +19400,8 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
-    describe = (value: Point) str { return "desc" }
+    encode = (value: Point) str { "point" }
+    describe = (value: Point) str { "desc" }
 }
 "#,
         );
@@ -19444,7 +19432,7 @@ Point.implements(Json) {
             r#"
 Point: { x: i32 }
 Mapper: behavior {
-    map: (self: Self, callback: (i32) i32) (i32) i32 { return callback }
+    map: (self: Self, callback: (i32) i32) (i32) i32 { callback }
 }
 
 Point.implements(Mapper) {
@@ -19485,7 +19473,7 @@ Point.implements(Mapper) {
             r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (self: Self) str { return "default" }
+    encode: (self: Self) str { "default" }
 }
 
 Point.implements(Json) {
@@ -19525,11 +19513,11 @@ Point.implements(Json) {
             r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (self: Self) str { return "default" }
+    encode: (self: Self) str { "default" }
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -19570,7 +19558,7 @@ Point.implements(Json) {
             r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (self: Self) str { return "default" }
+    encode: (self: Self) str { "default" }
 }
 Debug: behavior {
     describe: (Self) str
@@ -19613,7 +19601,7 @@ Point.implements(Json) {
             r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (self: Self) str { return "default" }
+    encode: (self: Self) str { "default" }
 }
 
 Point.implements(Json) {
@@ -19646,7 +19634,7 @@ Point.implements(Json) {
             r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (self: Self) str { return "default" }
+    encode: (self: Self) str { "default" }
 }
 Debug: behavior {
     describe: (Self) str
@@ -19695,7 +19683,7 @@ Mapper: behavior {
 }
 
 Point.implements(Mapper) {
-    map = (self: Point, callback: (i32) i32) (i32) i32 { return callback }
+    map = (self: Point, callback: (i32) i32) (i32) i32 { callback }
 }
 "#,
         );
@@ -19727,7 +19715,7 @@ Mapper: behavior {
 }
 
 Point.implements(Mapper) {
-    map = (self: Point, callback: (i32) i32) (i32) i32 { return callback }
+    map = (self: Point, callback: (i32) i32) (i32) i32 { callback }
 }
 "#,
         );
@@ -19766,7 +19754,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -19799,7 +19787,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    extra = (value: Point) str { return "extra" }
+    extra = (value: Point) str { "extra" }
 }
 "#,
         );
@@ -19840,7 +19828,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -19877,7 +19865,7 @@ Mapper: behavior {
 }
 
 Point.implements(Mapper) {
-    map = (value: Point, input: i32) str { return "point" }
+    map = (value: Point, input: i32) str { "point" }
 }
 "#,
         );
@@ -19915,7 +19903,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -19948,11 +19936,11 @@ Json: behavior {
 }
 
 Point.impl = {
-    get = (self: Point) i32 { return self.x }
+    get = (self: Point) i32 { self.x }
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -19988,7 +19976,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20028,7 +20016,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20078,7 +20066,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20129,7 +20117,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode<T> = (value: Point) str { return "point" }
+    encode<T> = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20186,7 +20174,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    encode<T> = (value: Point) str { return "point" }
+    encode<T> = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20415,7 +20403,7 @@ Point: { x: i32 }
 PrettyJson.extends(Json<str>)
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { return "point" }
+    pretty = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20575,7 +20563,7 @@ PrettyJson.extends(Json)
         let mut program = parse_program(
             r#"
 Json: behavior {
-    encode: (Self) str { return "json" }
+    encode: (Self) str { "json" }
 }
 PrettyJson: behavior {
     pretty: (Self) str
@@ -20585,7 +20573,7 @@ Point: { x: i32 }
 PrettyJson.extends(Json)
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { return "point" }
+    pretty = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20616,7 +20604,7 @@ Point.implements(PrettyJson) {
         let mut program = parse_program(
             r#"
 Json<T>: behavior {
-    encode: (Self) T { return "json" }
+    encode: (Self) T { "json" }
 }
 PrettyJson: behavior {
     pretty: (Self) str
@@ -20626,7 +20614,7 @@ Point: { x: i32 }
 PrettyJson.extends(Json<str>)
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { return "point" }
+    pretty = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20670,7 +20658,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20715,7 +20703,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20747,7 +20735,7 @@ Point.implements(Json<str>) {
             r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (self: Self) str { return "default" }
+    encode: (self: Self) str { "default" }
 }
 
 Point.implements(Json) {
@@ -20802,7 +20790,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20834,7 +20822,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -20941,11 +20929,11 @@ Point: { x: i32 }
 PrettyJson.extends(Json<str>)
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { return "point" }
+    pretty = (value: Point) str { "point" }
 }
 "#,
         );
@@ -21002,7 +20990,7 @@ Point.implements(PrettyJson) {
         let mut program = parse_program(
             r#"
 Json<T>: behavior {
-    encode: (Self) T { return "default" }
+    encode: (Self) T { "default" }
 }
 Point: { x: i32 }
 
@@ -21076,7 +21064,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -21113,7 +21101,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -21148,7 +21136,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -21246,8 +21234,8 @@ Point: { x: i32 }
 PrettyJson.extends(Json<str>)
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str { return "point" }
-    pretty = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
+    pretty = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -21288,7 +21276,7 @@ Point.requires(Json<str>)
         let mut program = parse_program(
             r#"
 Json<T>: behavior {
-    encode: (Self) T { return "default" }
+    encode: (Self) T { "default" }
 }
 Point: { x: i32 }
 
@@ -21353,7 +21341,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -21391,7 +21379,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -21434,7 +21422,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -21461,7 +21449,7 @@ Point.requires(Json<str>)
     fn check_program_with_symbols_requires_resolver_declarations() {
         let program = parse_program(
             r#"
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let empty_symbols = SymbolTable::default();
@@ -21483,13 +21471,13 @@ main = () i32 { return 0 }
     fn check_program_with_symbols_rejects_extra_resolver_declarations() {
         let program = parse_program(
             r#"
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let symbols_program = parse_program(
             r#"
-main = () i32 { return 0 }
-extra = () i32 { return 1 }
+main = () i32 { 0 }
+extra = () i32 { 1 }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -21514,13 +21502,13 @@ extra = () i32 { return 1 }
         let program = parse_program(
             r#"
 { io } = std
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let symbols_program = parse_program(
             r#"
 { io, math } = std
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -21545,14 +21533,14 @@ main = () i32 { return 0 }
         let program = parse_program(
             r#"
 { io } = std
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let symbols_program = parse_program(
             r#"
 { io } = std
 { helper } = other
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let symbols = crate::resolver::Resolver::new()
@@ -21577,7 +21565,7 @@ main = () i32 { return 0 }
         let program = parse_program(
             r#"
 Point: { x: i32 }
-Point.label = () str { return "point" }
+Point.label = () str { "point" }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -21607,7 +21595,7 @@ Box<T>: {
 }
 
 Box.get<T> = (self: Box<T>) T {
-    return self.value
+    self.value
 }
 "#,
         );
@@ -21642,7 +21630,7 @@ Box<T>: {
 }
 
 Box.map<T> = (self: Box<T>, callback: (T) T) (T) T {
-    return callback
+    callback
 }
 "#,
         );
@@ -21675,7 +21663,7 @@ Box.map<T> = (self: Box<T>, callback: (T) T) (T) T {
 { io } = std
 main = () i32 {
     io.println("ok")
-    return 0
+    0
 }
 "#,
         );
@@ -21698,7 +21686,7 @@ main = () i32 {
         let mut program = parse_program(
             r#"
 { io } = std
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -21727,7 +21715,7 @@ main = () i32 { return 0 }
         let mut program = parse_program(
             r#"
 { io } = std
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -21756,7 +21744,7 @@ main = () i32 { return 0 }
         let mut program = parse_program(
             r#"
 { io } = std
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -21784,16 +21772,13 @@ main = () i32 { return 0 }
     fn check_module_graph_entry_uses_graph_import_bindings() {
         let tmp = tempfile::tempdir().expect("temp dir");
         let math_path = tmp.path().join("math.zen");
-        std::fs::write(
-            &math_path,
-            "pub add = (a: i32, b: i32) i32 { return a + b }\n",
-        )
-        .expect("write imported module");
+        std::fs::write(&math_path, "pub add = (a: i32, b: i32) i32 { a + b }\n")
+            .expect("write imported module");
 
         let main_path = tmp.path().join("main.zen");
         std::fs::write(
             &main_path,
-            "{ add } = math\n\nmain = () i32 { return add(1, 2) }\n",
+            "{ add } = math\n\nmain = () i32 { add(1, 2) }\n",
         )
         .expect("write entry module");
 
@@ -21833,7 +21818,7 @@ main = () i32 { return 0 }
         let callbacks_path = tmp.path().join("callbacks.zen");
         std::fs::write(
             &callbacks_path,
-            "pub apply = (callback: (i32) i32, value: i32) i32 { return value }\n",
+            "pub apply = (callback: (i32) i32, value: i32) i32 { value }\n",
         )
         .expect("write imported module");
 
@@ -21843,8 +21828,8 @@ main = () i32 { return 0 }
             r#"{ apply } = callbacks
 
 main = () i32 {
-    callback = (value: i32) i32 { return value }
-    return apply(callback, 1)
+    callback = (value: i32) i32 { value }
+    apply(callback, 1)
 }
 "#,
         )
@@ -21865,16 +21850,13 @@ main = () i32 {
     fn check_module_graph_entry_specializes_imported_generic_functions() {
         let tmp = tempfile::tempdir().expect("temp dir");
         let identity_path = tmp.path().join("identity.zen");
-        std::fs::write(
-            &identity_path,
-            "pub id<T> = (value: T) T { return value }\n",
-        )
-        .expect("write imported module");
+        std::fs::write(&identity_path, "pub id<T> = (value: T) T { value }\n")
+            .expect("write imported module");
 
         let main_path = tmp.path().join("main.zen");
         std::fs::write(
             &main_path,
-            "{ id } = identity\n\nmain = () i32 { return id<i32>(1) }\n",
+            "{ id } = identity\n\nmain = () i32 { id<i32>(1) }\n",
         )
         .expect("write entry module");
 
@@ -21920,7 +21902,7 @@ pub Result<T, E>:
 main = () i32 {
     maybe = Option<i32>.Some(7)
     result = Result<i32, str>.Ok(9)
-    return 0
+    0
 }
 "#,
         )
@@ -21950,7 +21932,7 @@ main = () i32 {
             r#"pub Point: { x: i32 }
 
 pub Point.value = (self: Point) i32 {
-    return self.x
+    self.x
 }
 "#,
         )
@@ -21963,7 +21945,7 @@ pub Point.value = (self: Point) i32 {
 
 main = () i32 {
     point = Point { x: 7 }
-    return point.value()
+    point.value()
 }
 "#,
         )
@@ -21989,7 +21971,7 @@ main = () i32 {
             r#"pub Point: { x: i32 }
 
 Point.value = (self: Point) i32 {
-    return self.x
+    self.x
 }
 "#,
         )
@@ -22002,7 +21984,7 @@ Point.value = (self: Point) i32 {
 
 main = () i32 {
     point = Point { x: 7 }
-    return point.value()
+    point.value()
 }
 "#,
         )
@@ -22034,7 +22016,7 @@ main = () i32 {
             r#"pub Point: { x: i32 }
 
 pub Point.keep<T> = (self: Point, value: T) T {
-    return value
+    value
 }
 "#,
         )
@@ -22047,7 +22029,7 @@ pub Point.keep<T> = (self: Point, value: T) T {
 
 main = () i32 {
     point = Point { x: 7 }
-    return point.keep<i32>(1)
+    point.keep<i32>(1)
 }
 "#,
         )
@@ -22076,7 +22058,7 @@ main = () i32 {
             r#"
 { io } = std
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -22104,7 +22086,7 @@ main = () i32 {
             r#"
 { io } = std
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -22132,7 +22114,7 @@ main = () i32 {
             r#"
 { io } = std
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -22167,7 +22149,7 @@ main = () i32 {
             r#"
 { io } = std
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -22329,7 +22311,7 @@ main = () i32 {
             r#"
 { io } = std
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -22361,7 +22343,7 @@ main = () i32 {
             r#"
 { io } = std
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -22396,7 +22378,7 @@ main = () i32 {
             r#"
 { io } = std
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -22431,7 +22413,7 @@ main = () i32 {
             r#"
 { io } = std
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -22602,7 +22584,7 @@ Json: behavior {
 Point: { x: i32 }
 
 Point.implements(Json) {
-    stringify = (value: Point) str { return "point" }
+    stringify = (value: Point) str { "point" }
 }
 "#,
         );
@@ -22632,7 +22614,7 @@ Json: behavior {
 Point: { x: i32 }
 
 Point.implements(Json) {
-    stringify = (value: Point) str { return "point" }
+    stringify = (value: Point) str { "point" }
 }
 "#,
         );
@@ -22670,7 +22652,7 @@ Point: { x: i32 }
 
 Point.implements(Mapper) {
     map = (value: Point, callback: (i32) i32) (i32) i32 {
-        return callback
+        callback
     }
 }
 "#,
@@ -22710,7 +22692,7 @@ Point: { x: i32 }
 Point.implements(Json) {
     stringify = (value: Point) str {
         label = "point"
-        return label
+        label
     }
 }
 "#,
@@ -22762,7 +22744,7 @@ Option: Some(i32), None
     fn check_program_with_symbols_validates_resolver_function_arity() {
         let program = parse_program(
             r#"
-add = (a: i32, b: i32) i32 { return a + b }
+add = (a: i32, b: i32) i32 { a + b }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -22787,7 +22769,7 @@ add = (a: i32, b: i32) i32 { return a + b }
     fn check_program_with_symbols_validates_resolver_function_parameter_types() {
         let program = parse_program(
             r#"
-add = (a: i32, b: f64) f64 { return b }
+add = (a: i32, b: f64) f64 { b }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -22816,7 +22798,7 @@ add = (a: i32, b: f64) f64 { return b }
     fn check_program_with_symbols_validates_resolver_function_type_parameter_metadata() {
         let program = parse_program(
             r#"
-apply = (callback: (i32) i32, value: i32) i32 { return value }
+apply = (callback: (i32) i32, value: i32) i32 { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -22845,7 +22827,7 @@ apply = (callback: (i32) i32, value: i32) i32 { return value }
     fn check_program_with_symbols_validates_resolver_function_parameter_names() {
         let program = parse_program(
             r#"
-add = (a: i32, b: f64) f64 { return b }
+add = (a: i32, b: f64) f64 { b }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -22874,7 +22856,7 @@ add = (a: i32, b: f64) f64 { return b }
     fn check_program_with_symbols_requires_resolver_parameter_locals() {
         let program = parse_program(
             r#"
-add = (a: i32, b: i32) i32 { return a + b }
+add = (a: i32, b: i32) i32 { a + b }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -22899,7 +22881,7 @@ add = (a: i32, b: i32) i32 { return a + b }
     fn check_program_with_symbols_validates_resolver_parameter_local_mutability() {
         let program = parse_program(
             r#"
-add = (mut a: i32, b: i32) i32 { return a + b }
+add = (mut a: i32, b: i32) i32 { a + b }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -22924,7 +22906,7 @@ add = (mut a: i32, b: i32) i32 { return a + b }
     fn check_program_with_symbols_validates_resolver_local_visibility_and_source() {
         let program = parse_program(
             r#"
-add = (a: i32, b: i32) i32 { return a + b }
+add = (a: i32, b: i32) i32 { a + b }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -22956,7 +22938,7 @@ add = (a: i32, b: i32) i32 { return a + b }
     fn check_program_with_symbols_validates_resolver_local_absent_declaration_metadata() {
         let program = parse_program(
             r#"
-add = (a: i32, b: i32) i32 { return a + b }
+add = (a: i32, b: i32) i32 { a + b }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -22988,7 +22970,7 @@ add = (a: i32, b: i32) i32 { return a + b }
     fn check_program_with_symbols_validates_resolver_local_absent_type_metadata() {
         let program = parse_program(
             r#"
-add = (a: i32, b: i32) i32 { return a + b }
+add = (a: i32, b: i32) i32 { a + b }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -23145,7 +23127,7 @@ add = (a: i32, b: i32) i32 { return a + b }
             r#"
 main = () i32 {
     value = 1
-    return value
+    value
 }
 "#,
         );
@@ -23173,7 +23155,7 @@ main = () i32 {
             r#"
 main = () i32 {
     value ::= 1
-    return value
+    value
 }
 "#,
         );
@@ -23200,7 +23182,7 @@ main = () i32 {
         let program = parse_program(
             r#"
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -23208,7 +23190,7 @@ main = () i32 {
             r#"
 main = () i32 {
     value = 1
-    return 0
+    0
 }
 "#,
         );
@@ -23239,7 +23221,7 @@ main = () i32 {
         value := 2
         value
     }
-    return value
+    value
 }
 "#,
         );
@@ -23277,7 +23259,7 @@ Option:
     Some(i32)
 
 main = (value: Option) i32 {
-    return value ?
+    value ?
         | Some(inner) { inner }
         | None { 0 }
 }
@@ -23335,7 +23317,7 @@ main = () i32 {
         inner = input
         inner
     }
-    return 0
+    0
 }
 "#,
         );
@@ -23366,7 +23348,7 @@ main = () i32 {
         input = input + 1
         input
     }
-    return 0
+    0
 }
 "#,
         );
@@ -23452,7 +23434,7 @@ Json: behavior {
     fn check_program_with_symbols_validates_resolver_function_visibility() {
         let program = parse_program(
             r#"
-pub exported = () i32 { return 1 }
+pub exported = () i32 { 1 }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -23477,7 +23459,7 @@ pub exported = () i32 { return 1 }
     fn check_program_with_symbols_validates_resolver_function_return_type() {
         let program = parse_program(
             r#"
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -23503,7 +23485,7 @@ main = () i32 { return 0 }
         let program = parse_program(
             r#"
 factory = () (i32) i32 {
-    return (value: i32) i32 { value }
+    (value: i32) i32 { value }
 }
 "#,
         );
@@ -23530,7 +23512,7 @@ factory = () (i32) i32 {
         let program = parse_program(
             r#"
 apply = (callback: (i32) i32) (i32) i32 {
-    return callback
+    callback
 }
 "#,
         );
@@ -23563,7 +23545,7 @@ apply = (callback: (i32) i32) (i32) i32 {
     fn check_program_with_symbols_validates_resolver_function_type_parameter_counts() {
         let program = parse_program(
             r#"
-identity<T> = (value: T) T { return value }
+identity<T> = (value: T) T { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -23588,7 +23570,7 @@ identity<T> = (value: T) T { return value }
     fn check_program_with_symbols_validates_resolver_function_type_parameter_names() {
         let program = parse_program(
             r#"
-identity<T> = (value: T) T { return value }
+identity<T> = (value: T) T { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -23620,7 +23602,7 @@ identity<T> = (value: T) T { return value }
 Json: behavior {
     encode: (Self) str
 }
-encode<T: Json> = (value: T) str { return "encoded" }
+encode<T: Json> = (value: T) str { "encoded" }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -23652,7 +23634,7 @@ encode<T: Json> = (value: T) str { return "encoded" }
 Json<T>: behavior {
     encode: (Self) T
 }
-identity<T: Json<T>> = (value: T) T { return value }
+identity<T: Json<T>> = (value: T) T { value }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -23684,7 +23666,7 @@ identity<T: Json<T>> = (value: T) T { return value }
     fn check_program_with_symbols_validates_resolver_function_absent_declaration_metadata() {
         let program = parse_program(
             r#"
-main = () i32 { return 0 }
+main = () i32 { 0 }
 "#,
         );
         let mut symbols = crate::resolver::Resolver::new()
@@ -24556,7 +24538,7 @@ Json: behavior {
 Point: { x: i32 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -24589,7 +24571,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -24626,7 +24608,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -24666,7 +24648,7 @@ Json: behavior {
 Point: { x: i32 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json)
@@ -24701,7 +24683,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -24740,7 +24722,7 @@ Json<T>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -24786,7 +24768,7 @@ Debug: behavior {
 Point: { x: i32 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -24827,7 +24809,7 @@ Debug: behavior {
 Point: { x: i32 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -26614,7 +26596,7 @@ describe = (flag: bool) StaticString {
             r#"
 describe = (flag: bool) StaticString {
     flag ?
-        | true { return "early" }
+        | true { "early" }
         | false { "late" }
 }
 "#,
@@ -26899,7 +26881,7 @@ Point: { x: i32 }
 
 Point.impl = {
     get = (self: Point) i32 {
-        return self.x
+        self.x
     }
 }
 "#,
@@ -26941,7 +26923,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str { return "point" }
+    to_json = (value: Point) str { "point" }
 }
 "#,
         );
@@ -26985,7 +26967,7 @@ Point.implements(Json) {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str { return "{}" }
+    to_json: (Self) str { "{}" }
 }
 
 Point.implements(Json) {
@@ -27009,11 +26991,11 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str { return "point" }
+    to_json = (value: Point) str { "point" }
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str { return "point" }
+    to_json = (value: Point) str { "point" }
 }
 "#,
         );
@@ -27041,7 +27023,7 @@ Json<T>: behavior {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 "#,
         );
@@ -27068,7 +27050,7 @@ Json<T>: behavior {
 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.requires(Json<str>)
@@ -27095,7 +27077,7 @@ Serializable<T: Json<T>>: behavior {
 Point: { x: i32 }
 
 Point.implements(Serializable<Point>) {
-    serialize = (value: Point) Point { return value }
+    serialize = (value: Point) Point { value }
 }
 "#,
         );
@@ -27126,11 +27108,11 @@ Serializable<T: Json<T>>: behavior {
 Point: { x: i32 }
 
 Point.implements(Json<Point>) {
-    encode = (value: Point) Point { return value }
+    encode = (value: Point) Point { value }
 }
 
 Point.implements(Serializable<Point>) {
-    serialize = (value: Point) Point { return value }
+    serialize = (value: Point) Point { value }
 }
 "#,
         );
@@ -27176,7 +27158,7 @@ Json<T>: behavior {
 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) i32 { return 1 }
+    encode = (value: Point) i32 { 1 }
 }
 "#,
         );
@@ -27209,12 +27191,12 @@ PrettyJson: behavior {
 PrettyJson.extends(Json)
 
 Point.implements(Json) {
-    to_json = (value: Point) str { return "point" }
+    to_json = (value: Point) str { "point" }
 }
 
 Point.implements(PrettyJson) {
-    to_json = (value: Point) str { return "point" }
-    pretty = (value: Point) str { return "pretty" }
+    to_json = (value: Point) str { "point" }
+    pretty = (value: Point) str { "pretty" }
 }
 "#,
         );
@@ -27243,7 +27225,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str { return "point" }
+    to_json = (value: Point) str { "point" }
 }
 
 Point.requires(Json)
@@ -27322,7 +27304,7 @@ PrettyJson: behavior {
 PrettyJson.extends(Json)
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { return "pretty" }
+    pretty = (value: Point) str { "pretty" }
 }
 "#,
         );
@@ -27355,8 +27337,8 @@ PrettyJson: behavior {
 PrettyJson.extends(Json)
 
 Point.implements(PrettyJson) {
-    to_json = (value: Point) str { return "point" }
-    pretty = (value: Point) str { return "pretty" }
+    to_json = (value: Point) str { "point" }
+    pretty = (value: Point) str { "pretty" }
 }
 
 Point.requires(Json)
@@ -27385,7 +27367,7 @@ PrettyJson: behavior {
 PrettyJson.extends(Json<str>)
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { return "pretty" }
+    pretty = (value: Point) str { "pretty" }
 }
 "#,
         );
@@ -27418,8 +27400,8 @@ PrettyJson: behavior {
 PrettyJson.extends(Json<str>)
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str { return "point" }
-    pretty = (value: Point) str { return "pretty" }
+    encode = (value: Point) str { "point" }
+    pretty = (value: Point) str { "pretty" }
 }
 
 Point.requires(Json<str>)
@@ -27473,12 +27455,12 @@ PrettyJson: behavior {
 PrettyJson.extends(Json<str>)
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str { return "point" }
-    pretty = (value: Point) str { return "pretty" }
+    encode = (value: Point) str { "point" }
+    pretty = (value: Point) str { "pretty" }
 }
 "#,
         );
@@ -27505,11 +27487,11 @@ Json<T>: behavior {
 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 Point.implements(Json<i32>) {
-    encode = (value: Point) i32 { return value.x }
+    encode = (value: Point) i32 { value.x }
 }
 
 Point.requires(Json<str>)
@@ -27674,7 +27656,7 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    to_json = (value: i32) i32 { return value }
+    to_json = (value: i32) i32 { value }
 }
 "#,
         );
@@ -27702,11 +27684,11 @@ Point.implements(Json) {
         let program = parse_program(
             r#"
 identity<T> = (value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
-    return identity<i32, str>(1)
+    identity<i32, str>(1)
 }
 "#,
         );
@@ -27728,11 +27710,11 @@ main = () i32 {
         let program = parse_program(
             r#"
 id = (value: i32) i32 {
-    return value
+    value
 }
 
 main = () i32 {
-    return id<i32>(1)
+    id<i32>(1)
 }
 "#,
         );
@@ -27754,11 +27736,11 @@ main = () i32 {
         let program = parse_program(
             r#"
 make_default<T> = () T {
-    return 0
+    0
 }
 
 main = () i32 {
-    return make_default()
+    make_default()
 }
 "#,
         );
@@ -27780,11 +27762,11 @@ main = () i32 {
         let program = parse_program(
             r#"
 show<T: Display> = (value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
-    return show(1)
+    show(1)
 }
 "#,
         );
@@ -27810,11 +27792,11 @@ Json<T>: behavior {
 }
 
 encode<T: Json> = (value: T) str {
-    return "encoded"
+    "encoded"
 }
 
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -27843,17 +27825,17 @@ Json<T>: behavior {
 }
 
 Point.implements(Json<Point>) {
-    encode = (value: Point) Point { return value }
+    encode = (value: Point) Point { value }
 }
 
 identity<T: Json<T>> = (value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
     p = Point { x: 1 }
     same = identity(p)
-    return same.x
+    same.x
 }
 "#,
         );
@@ -27874,17 +27856,17 @@ Json<T>: behavior {
 }
 
 Point.implements(Json<str>) {
-    encode = (value: Point) str { return "point" }
+    encode = (value: Point) str { "point" }
 }
 
 identity<T: Json<T>> = (value: T) T {
-    return value
+    value
 }
 
 main = () i32 {
     p = Point { x: 1 }
     same = identity(p)
-    return same.x
+    same.x
 }
 "#,
         );
@@ -27913,7 +27895,7 @@ Json: behavior {
 }
 
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -27932,7 +27914,7 @@ Serializable<T: Missing>: behavior {
 }
 
 main = () i32 {
-    return 0
+    0
 }
 "#,
         );
@@ -27966,17 +27948,17 @@ Json: behavior {
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str { return "point" }
+    to_json = (value: Point) str { "point" }
 }
 
 encode<T: Json> = (value: T) str {
-    return "encoded"
+    "encoded"
 }
 
 main = () i32 {
     p = Point { x: 1 }
     encoded = encode(p)
-    return 0
+    0
 }
 "#,
         );
@@ -28003,18 +27985,18 @@ PrettyJson: behavior {
 PrettyJson.extends(Json)
 
 Point.implements(PrettyJson) {
-    to_json = (value: Point) str { return "point" }
-    pretty = (value: Point) str { return "pretty" }
+    to_json = (value: Point) str { "point" }
+    pretty = (value: Point) str { "pretty" }
 }
 
 encode<T: Json> = (value: T) str {
-    return "encoded"
+    "encoded"
 }
 
 main = () i32 {
     p = Point { x: 1 }
     encoded = encode(p)
-    return 0
+    0
 }
 "#,
         );
@@ -28035,13 +28017,13 @@ Json: behavior {
 }
 
 encode<T: Json> = (value: T) str {
-    return "encoded"
+    "encoded"
 }
 
 main = () i32 {
     p = Point { x: 1 }
     encoded = encode(p)
-    return 0
+    0
 }
 "#,
         );
