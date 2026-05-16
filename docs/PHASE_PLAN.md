@@ -216,6 +216,9 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver-local tests now keep absent local metadata coverage in a
   focused child module, separate from parameter, scoped binding, closure,
   pattern, and default-body local handoff cases.
+- Generic-specialization integration tests now keep behavior-bound and
+  imported-behavior generated-C checks in a focused child module, separate from
+  direct generic enum, method, worklist, and multi-file type dependency checks.
 - Module-system unit tests now live beside the module-system implementation in
   a dedicated test module, keeping module graph/load entry points compact.
 - Resolver expected-local traversal now lives in a dedicated validation support
