@@ -2127,9 +2127,14 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_routes_through_deterministic_graph`, and
   now compiles multiple executable targets through
   `direct_file_command_build_zen_compiles_multiple_executable_targets`. It
+  compiles executable dependencies before dependents through
+  `direct_file_command_build_zen_compiles_executable_dependencies_first`,
   rejects test-only graphs before execution starts through
   `direct_file_command_build_zen_rejects_graph_without_executable_targets`,
-  and rejects undeclared host effects through
+  and rejects undeclared host effects for single-target and multi-target graphs
+  through
+  `direct_file_command_multi_target_build_zen_rejects_undeclared_host_effects`
+  and
   `direct_file_command_build_zen_rejects_undeclared_host_effects`.
 - Build script lowering collects multiple executable targets deterministically,
   covered by `build_program_lowering_collects_multiple_executable_targets`.
