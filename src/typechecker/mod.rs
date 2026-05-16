@@ -8473,10 +8473,7 @@ impl TypeChecker {
         self.validate_no_extra_resolver_declaration_symbols(&replay_tasks, symbols);
         self.validate_no_extra_resolver_local_symbols(&replay_tasks, symbols);
         self.validate_resolver_behavior_association_lists(&replay_tasks);
-        self.validate_stripped_resolver_import_symbols(
-            replay_tasks.expected_symbols.validate_imports,
-            symbols,
-        );
+        self.validate_stripped_resolver_import_symbols(&replay_tasks, symbols);
     }
 
     fn require_resolver_callable_locals(
@@ -8919,10 +8916,10 @@ impl TypeChecker {
 
     fn validate_stripped_resolver_import_symbols(
         &mut self,
-        validate_imports: bool,
+        tasks: &ResolverValidationReplayTasks<'_>,
         symbols: &SymbolTable,
     ) {
-        if validate_imports {
+        if tasks.expected_symbols.validate_imports {
             return;
         }
 
