@@ -207,9 +207,9 @@ and do not assume Phase 4 is ready without evidence.
 - Generic type-reference validation now shares strict and unknown-tolerant
   type-argument list walking across recursive type refs, expression type args,
   and resolver-owned behavior association refs.
-- Resolver behavior association list validation now collects type-owned
-  impl/required tasks and behavior-owned parent tasks in one declaration pass,
-  covered by
+- Resolver behavior association list validation now collects expected
+  impl/requires/extends edges with type-owned impl/required tasks and
+  behavior-owned parent tasks in one declaration pass, covered by
   `typechecker::tests::resolver_behavior_association_list_tasks_collect_type_and_parent_edges_together`.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the

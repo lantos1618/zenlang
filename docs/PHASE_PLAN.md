@@ -135,9 +135,10 @@ checked-in docs, tests, and commits only.
 - Generic type-reference validation now shares strict and unknown-tolerant
   type-argument list walking across recursive type refs, expression type args,
   and resolver-owned behavior association refs.
-- Resolver behavior association list validation now builds type-owned
-  impl/required tasks and behavior-owned parent tasks in one declaration pass
-  before replaying the existing resolver metadata list checks.
+- Resolver behavior association list validation now builds expected
+  impl/requires/extends edges with type-owned impl/required tasks and
+  behavior-owned parent tasks in one declaration pass before replaying the
+  existing resolver metadata list checks.
 - Resolver-backed declaration metadata collection now builds callable, type,
   and behavior metadata tasks in one declaration dispatch before replaying the
   existing callable/type/behavior restoration order.
