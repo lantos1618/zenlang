@@ -156,6 +156,9 @@ checked-in docs, tests, and commits only.
 - Typechecker AST-side declaration collection now lives in a dedicated helper
   module, keeping import, callable, type, behavior, and precollection task
   helpers out of resolver metadata collection.
+- Typechecker generic behavior-bound validation now lives in a dedicated helper
+  module, keeping bound declaration checks and substitution-based impl checks
+  out of the broad generic type-reference traversal.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
