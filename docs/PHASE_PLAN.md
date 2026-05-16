@@ -1809,6 +1809,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior impl metadata collection now receives the full
   resolver declaration metadata task bundle and selects behavior impl entries
   internally, so collected replay call sites all use the same bundle shape.
+- Resolver-backed callable metadata collection now receives the full resolver
+  declaration metadata task bundle and selects callable entries internally,
+  continuing the resolver replay move away from parallel slices.
 
 ## Current Phase
 
