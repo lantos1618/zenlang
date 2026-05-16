@@ -2040,6 +2040,9 @@ fn emit_json_build_graph_outputs_project_build_graph() {
     assert_eq!(json["targets"][0]["name"], "myapp");
     assert_eq!(json["targets"][0]["kind"]["root_source_file"], "main.zen");
     assert_eq!(json["targets"][0]["kind"]["out_dir"], "build/");
+    assert_eq!(json["targets"][1]["name"], "test");
+    assert_eq!(json["targets"][1]["kind"]["kind"], "test");
+    assert_eq!(json["targets"][1]["kind"]["root_source_file"], "test.zen");
 }
 
 #[test]
@@ -2052,6 +2055,41 @@ fn emit_json_build_graph_rejects_undeclared_host_effects() {
 build = (b: Builder) Result<BuildConfig, BuildError> {
     std_path = b.os.env("ZEN_STD")
     b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "build-graph", build_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json build-graph");
+
+    assert!(
+        !output.status.success(),
+        "emit-json build-graph unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("undeclared host effect: read env `ZEN_STD`"),
+        "expected undeclared host effect diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn emit_json_build_graph_rejects_undeclared_host_effects_before_test_target_lowering() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let build_path = tmp.path().join("build.zen");
+    std::fs::write(
+        &build_path,
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD")
+    b.add(Test { root: "test.zen" })
     .Ok(b.config())
 }
 "#,

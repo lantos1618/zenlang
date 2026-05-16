@@ -1870,15 +1870,18 @@ checked-in docs, tests, and commits only.
   build-style result/config flows is covered by
   `parse_shorthand_enum_variant_expr_and_pattern`.
 - A constrained `build.zen` lowering boundary now maps parsed build scripts into
-  `BuildGraph` without enabling CLI execution. `parsed_project_build_zen_lowers_to_executable_graph`
-  covers the checked-in project executable target, and
+  `BuildGraph` without enabling CLI execution. `parsed_project_build_zen_lowers_to_executable_and_test_graph`
+  covers the checked-in project executable and test targets,
+  `build_program_lowering_collects_test_target` covers default naming for
+  `Test { root: ... }`, and
   `build_program_lowering_rejects_undeclared_env_reads` keeps undeclared host
   effects rejected during lowering.
 - `emit-json build-graph <build.zen>` now exposes the constrained graph-emission
   path without enabling normal build execution. `emit_json_build_graph_outputs_project_build_graph`
   covers the positive CLI path, and
-  `emit_json_build_graph_rejects_undeclared_host_effects` covers the negative
-  host-effect path through the advertised compiler command.
+  `emit_json_build_graph_rejects_undeclared_host_effects` plus
+  `emit_json_build_graph_rejects_undeclared_host_effects_before_test_target_lowering`
+  cover negative host-effect paths through the advertised compiler command.
 - `build-graph <build.zen>` now consumes the deterministic graph for one
   executable target without widening the accepted `build.zen` subset.
   `build_graph_command_compiles_single_executable_target` covers the positive
@@ -1920,9 +1923,10 @@ Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
 Phase 4 build-driver work still has constrained `build.zen` semantics: normal
 `zen build build.zen` and direct `zen build.zen` execute multiple executable
-graph targets, `zen check build.zen` validates the graph, and `zen emit
-build.zen` emits target C for a single graph target. Legacy generic JSON
-emitters reject `build.zen` and point to `emit-json build-graph`.
+graph targets, `zen check build.zen` validates executable and test targets in
+the graph, and `zen emit build.zen` emits target C for a single executable
+graph target. Legacy generic JSON emitters reject `build.zen` and point to
+`emit-json build-graph`.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
