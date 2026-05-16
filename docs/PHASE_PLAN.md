@@ -1818,6 +1818,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior declaration metadata collection now receives the
   full resolver declaration metadata task bundle and selects behavior entries
   internally, completing the declaration metadata replay helper bundle shape.
+- Resolver behavior impl-block restoration now receives the full resolver
+  declaration metadata task bundle and selects `.implements` entries
+  internally, keeping behavior impl metadata replay on the bundled task shape.
 
 ## Current Phase
 
