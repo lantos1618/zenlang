@@ -1,21 +1,25 @@
 use std::collections::HashSet;
 
 use crate::ast::{
-    AstType, BehaviorMethod, Declaration, Expression, Param, Pattern, Program, Statement,
-    StringPart, StructField, TypeParam,
+    AstType, Declaration, Expression, Param, Pattern, Program, Statement, StringPart, TypeParam,
 };
 use crate::error::{Diagnostic, Span};
 
 #[cfg(test)]
 mod symbol_table_test_support;
 
+mod metadata_helpers;
 mod symbol_table;
 
+use metadata_helpers::{
+    behavior_ref_display, resolver_behavior_method_signatures, resolver_behavior_method_types,
+    resolver_field_types, resolver_method_key, resolver_value_signature, resolver_variant_names,
+};
 pub use symbol_table::{
     BehaviorMethodTypeMetadata, BehaviorRefMetadata, MethodSignatureMetadata, Namespace, Symbol,
     SymbolId, SymbolTable, TypeParameterBoundMetadata, TypeParameterBoundRefMetadata,
 };
-use symbol_table::{ScopeStack, TypeLikeMembers, ValueSignatureMetadata};
+use symbol_table::{ScopeStack, TypeLikeMembers};
 
 #[derive(Debug, Default)]
 pub struct Resolver;
@@ -1453,166 +1457,4 @@ impl Resolver {
             | Pattern::BoolFalse { .. } => {}
         }
     }
-}
-
-fn resolver_return_type_name(return_type: &Option<AstType>) -> String {
-    return_type
-        .as_ref()
-        .unwrap_or(&AstType::Void)
-        .display_name()
-}
-
-fn resolver_param_names(params: &[Param]) -> Vec<String> {
-    params.iter().map(|param| param.name.clone()).collect()
-}
-
-fn resolver_param_type_names(params: &[Param]) -> Vec<String> {
-    params.iter().map(|param| param.ty.display_name()).collect()
-}
-
-fn resolver_value_signature(
-    params: &[Param],
-    return_type: &Option<AstType>,
-    type_params: &[TypeParam],
-) -> ValueSignatureMetadata {
-    ValueSignatureMetadata {
-        parameter_names: resolver_param_names(params),
-        parameter_types: params.iter().map(|param| param.ty.clone()).collect(),
-        parameter_type_names: resolver_param_type_names(params),
-        return_type: return_type.clone().unwrap_or(AstType::Void),
-        return_type_name: resolver_return_type_name(return_type),
-        type_parameter_count: type_params.len(),
-        type_parameter_names: resolver_type_parameter_names(type_params),
-        type_parameter_bounds: resolver_type_parameter_bounds(type_params),
-        type_parameter_bound_refs: resolver_type_parameter_bound_refs(type_params),
-    }
-}
-
-fn resolver_type_parameter_names(type_params: &[TypeParam]) -> Vec<String> {
-    type_params
-        .iter()
-        .map(|type_param| type_param.name.clone())
-        .collect()
-}
-
-fn resolver_type_parameter_bounds(type_params: &[TypeParam]) -> Vec<TypeParameterBoundMetadata> {
-    type_params
-        .iter()
-        .filter_map(|type_param| {
-            type_param_bound_display(type_param)
-                .map(|constraint| (type_param.name.clone(), constraint))
-        })
-        .collect()
-}
-
-fn resolver_type_parameter_bound_refs(
-    type_params: &[TypeParam],
-) -> Vec<TypeParameterBoundRefMetadata> {
-    type_params
-        .iter()
-        .filter_map(|type_param| {
-            type_param
-                .constraint
-                .as_ref()
-                .map(|behavior| TypeParameterBoundRefMetadata {
-                    type_parameter: type_param.name.clone(),
-                    behavior: behavior.clone(),
-                    type_args: type_param.constraint_type_args.clone(),
-                })
-        })
-        .collect()
-}
-
-fn type_param_bound_display(type_param: &TypeParam) -> Option<String> {
-    type_param.constraint.as_ref().map(|constraint| {
-        if type_param.constraint_type_args.is_empty() {
-            constraint.clone()
-        } else {
-            format!(
-                "{}<{}>",
-                constraint,
-                type_param
-                    .constraint_type_args
-                    .iter()
-                    .map(AstType::display_name)
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
-        }
-    })
-}
-
-fn behavior_ref_display(behavior: &str, type_args: &[AstType]) -> String {
-    if type_args.is_empty() {
-        behavior.to_string()
-    } else {
-        format!(
-            "{}<{}>",
-            behavior,
-            type_args
-                .iter()
-                .map(AstType::display_name)
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
-}
-
-fn resolver_method_key(type_name: &str, method_name: &str) -> String {
-    format!("{type_name}.{method_name}")
-}
-
-fn resolver_field_types(fields: &[StructField]) -> Vec<(String, AstType, String)> {
-    fields
-        .iter()
-        .map(|field| {
-            (
-                field.name.clone(),
-                field.ty.clone(),
-                field.ty.display_name(),
-            )
-        })
-        .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn resolver_method_key_formats_type_qualified_method_name() {
-        assert_eq!(resolver_method_key("Point", "get"), "Point.get");
-    }
-}
-
-fn resolver_variant_names(variants: &[crate::ast::EnumVariant]) -> Vec<String> {
-    variants
-        .iter()
-        .map(|variant| variant.name.clone())
-        .collect()
-}
-
-fn resolver_behavior_method_signatures(methods: &[BehaviorMethod]) -> Vec<MethodSignatureMetadata> {
-    methods
-        .iter()
-        .map(|method| {
-            (
-                method.name.clone(),
-                resolver_param_type_names(&method.params),
-                resolver_return_type_name(&method.return_type),
-            )
-        })
-        .collect()
-}
-
-fn resolver_behavior_method_types(methods: &[BehaviorMethod]) -> Vec<BehaviorMethodTypeMetadata> {
-    methods
-        .iter()
-        .map(|method| BehaviorMethodTypeMetadata {
-            name: method.name.clone(),
-            parameter_names: resolver_param_names(&method.params),
-            parameter_types: method.params.iter().map(|param| param.ty.clone()).collect(),
-            return_type: method.return_type.clone().unwrap_or(AstType::Void),
-        })
-        .collect()
 }

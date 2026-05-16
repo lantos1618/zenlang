@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::ast::{AstType, TypeParam};
 use crate::error::{Diagnostic, Span};
 
-use super::{
+use super::metadata_helpers::{
     behavior_ref_display, resolver_type_parameter_bound_refs, resolver_type_parameter_bounds,
     resolver_type_parameter_names,
 };
