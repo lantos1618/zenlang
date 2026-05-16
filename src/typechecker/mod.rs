@@ -3933,7 +3933,7 @@ impl TypeChecker {
         self.collect_resolver_behavior_impl_metadata(&tasks.behavior_associations, symbols);
         self.validate_resolver_collected_declaration_semantics(symbols, &tasks);
         self.clear_resolver_behavior_ref_state();
-        self.refresh_resolver_type_behavior_impls(&tasks.types, symbols);
+        self.refresh_resolver_type_behavior_impls(&tasks, symbols);
     }
 
     fn collect_resolver_declaration_metadata_tasks(
@@ -4505,10 +4505,10 @@ impl TypeChecker {
 
     fn refresh_resolver_type_behavior_impls(
         &mut self,
-        type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
         symbols: &SymbolTable,
     ) {
-        for task in self.resolver_type_behavior_refresh_tasks(type_tasks, symbols) {
+        for task in self.resolver_type_behavior_refresh_tasks(tasks, symbols) {
             self.collect_resolver_type_behavior_impls(symbols, &task.restored_name);
         }
     }
@@ -4546,21 +4546,21 @@ impl TypeChecker {
 
     fn resolver_type_behavior_refresh_tasks(
         &self,
-        type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
         symbols: &SymbolTable,
     ) -> Vec<ResolverTypeBehaviorRefreshTask> {
-        let mut tasks = Vec::new();
-        for type_task in type_tasks {
+        let mut refresh_tasks = Vec::new();
+        for type_task in &tasks.types {
             match type_task {
                 ResolverTypeDeclarationMetadataTask::Struct { name, span, .. }
                 | ResolverTypeDeclarationMetadataTask::Enum { name, span } => {
                     let restored_name =
                         Self::resolver_symbol_name_for(symbols, Namespace::Type, name, *span);
-                    tasks.push(ResolverTypeBehaviorRefreshTask { restored_name });
+                    refresh_tasks.push(ResolverTypeBehaviorRefreshTask { restored_name });
                 }
             }
         }
-        tasks
+        refresh_tasks
     }
 
     fn collect_resolver_type_behavior_refs_for_declaration(
@@ -15243,7 +15243,7 @@ main = () i32 { 0 }
         assert_eq!(tasks.type_references.len(), 6);
 
         let tc = TypeChecker::new();
-        let refresh_tasks = tc.resolver_type_behavior_refresh_tasks(&tasks.types, &symbols);
+        let refresh_tasks = tc.resolver_type_behavior_refresh_tasks(&tasks, &symbols);
         assert_eq!(refresh_tasks.len(), 2);
         assert_eq!(refresh_tasks[0].restored_name, "Point");
         assert_eq!(refresh_tasks[1].restored_name, "Option");
