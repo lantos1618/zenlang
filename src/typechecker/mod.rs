@@ -3853,22 +3853,29 @@ impl TypeChecker {
     ) -> Vec<BehaviorExtendsValidationTask<'_>> {
         let mut tasks = Vec::new();
         for decl in decls {
-            if let Declaration::BehaviorExtends {
+            Self::push_behavior_extends_validation_task(decl, &mut tasks);
+        }
+        tasks
+    }
+
+    fn push_behavior_extends_validation_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<BehaviorExtendsValidationTask<'a>>,
+    ) {
+        if let Declaration::BehaviorExtends {
+            behavior,
+            parent,
+            parent_type_args,
+            span,
+        } = decl
+        {
+            tasks.push(BehaviorExtendsValidationTask {
                 behavior,
                 parent,
                 parent_type_args,
-                span,
-            } = decl
-            {
-                tasks.push(BehaviorExtendsValidationTask {
-                    behavior,
-                    parent,
-                    parent_type_args,
-                    span: *span,
-                });
-            }
+                span: *span,
+            });
         }
-        tasks
     }
 
     fn validate_behavior_extends_tasks(&mut self, tasks: &[BehaviorExtendsValidationTask<'_>]) {

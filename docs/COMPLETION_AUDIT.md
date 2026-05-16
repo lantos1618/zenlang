@@ -2063,6 +2063,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls`,
   and
   `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
+- Behavior extends validation now uses a shared extends-task push helper before
+  replaying parent-edge checks, covered by
+  `cargo test behavior_extends_validation_tasks_collect_parent_refs` and
+  `cargo test behavior_extends_duplicate_parent_is_error`.
 
 ## Unresolved Gaps
 

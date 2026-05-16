@@ -1720,6 +1720,8 @@ checked-in docs, tests, and commits only.
   metadata collector.
 - Behavior impl validation now uses a shared impl-task push helper before
   replaying conformance checks.
+- Behavior extends validation now uses a shared extends-task push helper before
+  replaying parent-edge checks.
 
 ## Current Phase
 
