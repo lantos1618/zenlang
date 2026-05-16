@@ -2065,7 +2065,9 @@ checked-in docs, tests, and commits only.
   `build_graph_orders_targets_before_dependents` and
   `build_command_build_zen_compiles_executable_dependencies_first`, and reject
   dependencies on gated library targets through
-  `build_command_build_zen_rejects_gated_library_dependencies`. They reject
+  `build_command_build_zen_rejects_gated_library_dependencies`. They also
+  reject executable-target dependencies on gated test targets through
+  `build_command_build_zen_rejects_gated_test_dependencies`. They reject
   undeclared host effects before dependency-ordered execution through
   `build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
   The normal build path also rejects undeclared host effects before
@@ -2089,7 +2091,9 @@ checked-in docs, tests, and commits only.
   effects before test execution through
   `test_command_build_zen_rejects_undeclared_host_effects`. Test execution also
   rejects dependencies on gated library targets through
-  `test_command_build_zen_rejects_gated_library_dependencies`.
+  `test_command_build_zen_rejects_gated_library_dependencies`, and rejects
+  test-target dependencies on gated executable targets through
+  `test_command_build_zen_rejects_gated_executable_dependencies`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `emit_command_build_zen_outputs_target_c_source`, and rejects undeclared host

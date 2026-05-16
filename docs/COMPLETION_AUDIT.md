@@ -2261,6 +2261,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_command_build_zen_rejects_gated_library_dependencies`
   and
   `cargo test --test integration test_command_build_zen_rejects_gated_library_dependencies`.
+  Cross-mode execution gating is also covered by
+  `cargo test --test integration build_command_build_zen_rejects_gated_test_dependencies`
+  and
+  `cargo test --test integration test_command_build_zen_rejects_gated_executable_dependencies`.
 - Dependency-ordered build execution still stops before execution when graph
   lowering detects undeclared host effects, covered by
   `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
