@@ -1869,22 +1869,26 @@ checked-in docs, tests, and commits only.
   `parse_project_build_zen_example`, and leading-dot enum shorthand used by
   build-style result/config flows is covered by
   `parse_shorthand_enum_variant_expr_and_pattern`.
+- A constrained `build.zen` lowering boundary now maps parsed build scripts into
+  `BuildGraph` without enabling CLI execution. `parsed_project_build_zen_lowers_to_executable_graph`
+  covers the checked-in project executable target, and
+  `build_program_lowering_rejects_undeclared_env_reads` keeps undeclared host
+  effects rejected during lowering.
 
 ## Current Phase
 
 Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
-Phase 4 build-driver work is still gated by the lack of a constrained
-`build.zen` evaluator that lowers parsed build scripts into the deterministic
-build graph.
+Phase 4 build-driver work is still gated by the lack of a CLI integration path
+that executes only the constrained `build.zen` subset and emits the
+deterministic build graph.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Continue the next smallest build-driver slice by adding a constrained
-`build.zen` evaluation boundary that can lower the parsed project build script
-into `BuildGraph` without allowing undeclared host effects. Keep CLI
-`build.zen` execution gated until that boundary has positive and negative
-integration coverage.
+Continue the next smallest build-driver slice by adding positive and negative
+CLI integration coverage for the constrained `build.zen` graph-emission path.
+Keep normal `zen build build.zen` execution gated until graph emission proves the
+lowering boundary through the advertised compiler path.
