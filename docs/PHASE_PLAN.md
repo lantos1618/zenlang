@@ -1803,6 +1803,9 @@ checked-in docs, tests, and commits only.
 - Prefix loop syntax now accepts `loop((l) { ... })` with enum-backed
   `done`/`next` control actions, including nested outer-loop exits and UFC
   `done(l)` / `next(l)` forms, with fixture and docs coverage.
+- Resolver-backed type behavior refresh now receives the full resolver
+  declaration metadata task bundle and selects type declarations internally,
+  keeping the final replay step aligned with the bundled call sites.
 
 ## Current Phase
 
