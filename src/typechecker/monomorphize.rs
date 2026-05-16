@@ -11,32 +11,6 @@ pub(crate) use super::monomorphize_types::type_to_ast;
 use super::monomorphize_types::{substitute_ast_type, type_mangle_key};
 use super::TypeChecker;
 
-fn install_dependency_map<T: Clone>(
-    target: &mut HashMap<String, T>,
-    dependencies: &HashMap<String, T>,
-) -> Vec<super::TemplateDependencyEntry<T>> {
-    dependencies
-        .iter()
-        .map(|(name, value)| super::TemplateDependencyEntry {
-            name: name.clone(),
-            previous: target.insert(name.clone(), value.clone()),
-        })
-        .collect()
-}
-
-fn restore_dependency_map<T>(
-    target: &mut HashMap<String, T>,
-    state: Vec<super::TemplateDependencyEntry<T>>,
-) {
-    for entry in state {
-        if let Some(previous) = entry.previous {
-            target.insert(entry.name, previous);
-        } else {
-            target.remove(&entry.name);
-        }
-    }
-}
-
 impl TypeChecker {
     pub(crate) fn mangle_generic_type_name(&self, name: &str, type_args: &[AstType]) -> String {
         if type_args.is_empty() {
@@ -215,35 +189,6 @@ impl TypeChecker {
             ));
         }
         Some(self.resolve_type(&AstType::Named(receiver_name.to_string())))
-    }
-
-    fn install_template_dependencies(
-        &mut self,
-        template: &super::GenericFunctionTemplate,
-    ) -> super::TemplateDependencyState {
-        super::TemplateDependencyState {
-            structs: install_dependency_map(&mut self.structs, &template.dependency_structs),
-            enums: install_dependency_map(&mut self.enums, &template.dependency_enums),
-            functions: install_dependency_map(&mut self.functions, &template.dependency_functions),
-            generic_functions: install_dependency_map(
-                &mut self.generic_functions,
-                &template.dependency_generic_functions,
-            ),
-            methods: install_dependency_map(&mut self.methods, &template.dependency_methods),
-            generic_methods: install_dependency_map(
-                &mut self.generic_methods,
-                &template.dependency_generic_methods,
-            ),
-        }
-    }
-
-    fn restore_template_dependencies(&mut self, state: super::TemplateDependencyState) {
-        restore_dependency_map(&mut self.structs, state.structs);
-        restore_dependency_map(&mut self.enums, state.enums);
-        restore_dependency_map(&mut self.functions, state.functions);
-        restore_dependency_map(&mut self.generic_functions, state.generic_functions);
-        restore_dependency_map(&mut self.methods, state.methods);
-        restore_dependency_map(&mut self.generic_methods, state.generic_methods);
     }
 
     fn generic_receiver_self_type(
