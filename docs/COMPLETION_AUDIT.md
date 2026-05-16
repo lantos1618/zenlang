@@ -2249,6 +2249,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test build_graph build_graph_orders_targets_before_dependents`
   and
   `cargo test --test integration build_command_build_zen_compiles_executable_dependencies_first`.
+- Build/test graph execution rejects dependencies on gated library targets,
+  covered by
+  `cargo test --test integration build_command_build_zen_rejects_gated_library_dependencies`
+  and
+  `cargo test --test integration test_command_build_zen_rejects_gated_library_dependencies`.
 - Dependency-ordered build execution still stops before execution when graph
   lowering detects undeclared host effects, covered by
   `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
@@ -2264,7 +2269,8 @@ and do not assume Phase 4 is ready without evidence.
   executable target execution for normal `zen build build.zen`, normal
   `zen test build.zen` test-target execution, normal `zen check build.zen`,
   test and library target graph lowering/emission, and single-target normal
-  `zen emit build.zen`, while legacy generic `emit-json` build.zen modes have a
+  `zen emit build.zen`, while build/test execution rejects dependencies on
+  gated library targets and legacy generic `emit-json` build.zen modes have a
   targeted rejection. Library execution, package/link semantics, and other
   broader graph semantics still need explicit deterministic semantics before
   promotion.

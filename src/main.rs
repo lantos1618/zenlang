@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -386,6 +387,24 @@ struct BuildGraphTestTarget {
     out_dir: PathBuf,
 }
 
+#[derive(Clone, Copy)]
+enum BuildGraphExecutionKind {
+    Executable,
+    Test,
+}
+
+impl BuildGraphExecutionKind {
+    fn includes(self, kind: &zen::build_graph::BuildTargetKind) -> bool {
+        matches!(
+            (self, kind),
+            (
+                Self::Executable,
+                zen::build_graph::BuildTargetKind::Executable { .. }
+            ) | (Self::Test, zen::build_graph::BuildTargetKind::Test { .. })
+        )
+    }
+}
+
 fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget {
     let mut targets = executable_build_targets(path_str);
     if targets.len() != 1 {
@@ -401,6 +420,7 @@ fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget 
 
 fn test_build_targets(path_str: &str) -> Vec<BuildGraphTestTarget> {
     let graph = load_build_graph(path_str);
+    validate_executed_dependency_targets(&graph, BuildGraphExecutionKind::Test);
     let build_path = Path::new(path_str);
     let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
     let ordered_targets = match graph.targets_in_dependency_order() {
@@ -423,6 +443,7 @@ fn test_build_targets(path_str: &str) -> Vec<BuildGraphTestTarget> {
 
 fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
     let graph = load_build_graph(path_str);
+    validate_executed_dependency_targets(&graph, BuildGraphExecutionKind::Executable);
     let build_path = Path::new(path_str);
     let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
     let ordered_targets = match graph.targets_in_dependency_order() {
@@ -441,6 +462,47 @@ fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
         process::exit(1);
     }
     targets
+}
+
+fn validate_executed_dependency_targets(
+    graph: &zen::build_graph::BuildGraph,
+    execution_kind: BuildGraphExecutionKind,
+) {
+    let targets_by_name: HashMap<_, _> = graph
+        .targets()
+        .iter()
+        .map(|target| (target.name(), target))
+        .collect();
+
+    for target in graph
+        .targets()
+        .iter()
+        .filter(|target| execution_kind.includes(target.kind()))
+    {
+        for dependency in target.dependencies() {
+            let Some(dependency_target) = targets_by_name.get(dependency.as_str()) else {
+                continue;
+            };
+            if execution_kind.includes(dependency_target.kind()) {
+                continue;
+            }
+            eprintln!(
+                "build graph target `{}` depends on gated {} target `{}`",
+                target.name(),
+                build_target_kind_name(dependency_target.kind()),
+                dependency_target.name()
+            );
+            process::exit(1);
+        }
+    }
+}
+
+fn build_target_kind_name(kind: &zen::build_graph::BuildTargetKind) -> &'static str {
+    match kind {
+        zen::build_graph::BuildTargetKind::Executable { .. } => "executable",
+        zen::build_graph::BuildTargetKind::Test { .. } => "test",
+        zen::build_graph::BuildTargetKind::Library { .. } => "library",
+    }
 }
 
 fn test_build_target(
