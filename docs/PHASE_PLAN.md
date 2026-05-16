@@ -145,8 +145,9 @@ checked-in docs, tests, and commits only.
   collection is also shared for struct field defaults and top-level
   expressions on both required and expected resolver-symbol replay paths.
   Closure parameter local collection now reuses the same parameter helper,
-  preserving mutable parameter handoff metadata. Child expression local
-  collection is shared for loop, while, and conditional branch scopes.
+  preserving mutable parameter handoff metadata, and closure body local
+  collection now shares one scoped helper. Child expression local collection is
+  shared for loop, while, and conditional branch scopes.
   Match-arm pattern/body local collection also shares one scoped helper, and
   block expression/statement local collection now shares one block-scope helper.
 - Resolver-backed declaration metadata collection now builds callable, type,

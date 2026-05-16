@@ -232,6 +232,11 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::check_program_with_symbols_requires_resolver_top_level_expr_locals`.
   Closure parameters now reuse the same parameter-local helpers for expected
   and required resolver locals, preserving mutable parameter metadata.
+  Closure body local collection is shared, covered by
+  `typechecker::tests::expected_resolver_closure_locals_collects_params_and_body_bindings`,
+  `typechecker::tests::check_program_with_symbols_requires_resolver_closure_locals`,
+  and
+  `typechecker::tests::check_program_with_symbols_validates_resolver_closure_parameter_mutability`.
   Child expression local collection is shared for loop, while, and conditional
   branch scopes, covered by
   `typechecker::tests::expected_resolver_child_expr_locals_collects_branch_bindings`.

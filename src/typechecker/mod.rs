@@ -9256,6 +9256,19 @@ impl TypeChecker {
         }
     }
 
+    fn require_resolver_closure_locals(
+        &mut self,
+        symbols: &SymbolTable,
+        params: &[Param],
+        body: &Expression,
+        scope_cursor: &mut ResolverScopeCursor,
+        locals: &ResolverLocalScope,
+    ) {
+        let mut closure_locals = scope_cursor.child_scope(locals);
+        self.require_resolver_parameter_locals(symbols, params, &mut closure_locals);
+        self.require_resolver_expr_locals(symbols, body, scope_cursor, &mut closure_locals);
+    }
+
     fn require_resolver_expr_locals(
         &mut self,
         symbols: &SymbolTable,
@@ -9370,9 +9383,7 @@ impl TypeChecker {
                 }
             }
             Expression::Closure { params, body, .. } => {
-                let mut closure_locals = scope_cursor.child_scope(locals);
-                self.require_resolver_parameter_locals(symbols, params, &mut closure_locals);
-                self.require_resolver_expr_locals(symbols, body, scope_cursor, &mut closure_locals);
+                self.require_resolver_closure_locals(symbols, params, body, scope_cursor, locals);
             }
             Expression::Cast { expr, .. } | Expression::Defer { expr, .. } => {
                 self.require_resolver_expr_locals(symbols, expr, scope_cursor, locals);
@@ -11022,6 +11033,18 @@ fn expected_resolver_block_locals(
     }
 }
 
+fn expected_resolver_closure_locals(
+    params: &[Param],
+    body: &Expression,
+    scope_cursor: &mut ResolverScopeCursor,
+    locals: &ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    let mut closure_locals = scope_cursor.child_scope(locals);
+    expected_resolver_parameter_locals(params, &mut closure_locals, expected);
+    expected_resolver_expr_locals(body, scope_cursor, &mut closure_locals, expected);
+}
+
 fn expected_resolver_parameter_locals(
     params: &[Param],
     locals: &mut ResolverLocalScope,
@@ -11140,9 +11163,7 @@ fn expected_resolver_expr_locals(
             }
         }
         Expression::Closure { params, body, .. } => {
-            let mut closure_locals = scope_cursor.child_scope(locals);
-            expected_resolver_parameter_locals(params, &mut closure_locals, expected);
-            expected_resolver_expr_locals(body, scope_cursor, &mut closure_locals, expected);
+            expected_resolver_closure_locals(params, body, scope_cursor, locals, expected);
         }
         Expression::Cast { expr, .. } | Expression::Defer { expr, .. } => {
             expected_resolver_expr_locals(expr, scope_cursor, locals, expected);
@@ -13889,6 +13910,53 @@ main = () i32 {
 
         assert!(expected.iter().any(|(name, _)| name == "value"));
         assert!(expected.iter().any(|(name, _)| name == "input"));
+    }
+
+    #[test]
+    fn expected_resolver_closure_locals_collects_params_and_body_bindings() {
+        let program = parse_program(
+            r#"
+main = () i32 {
+    mapper = (mut input: i32) i32 {
+        inner := input
+        inner
+    }
+    return 0
+}
+"#,
+        );
+        let Declaration::Function { body, .. } = &program.declarations[0] else {
+            panic!("expected function");
+        };
+        let Expression::Block { statements, .. } = body else {
+            panic!("expected block");
+        };
+        let Some(ast::Statement::VarDecl {
+            value:
+                Expression::Closure {
+                    params,
+                    body: closure_body,
+                    ..
+                },
+            ..
+        }) = statements.first()
+        else {
+            panic!("expected closure var declaration");
+        };
+        let mut scope_cursor = ResolverScopeCursor::default();
+        let locals = scope_cursor.new_scope();
+        let mut expected = HashSet::new();
+
+        expected_resolver_closure_locals(
+            params,
+            closure_body,
+            &mut scope_cursor,
+            &locals,
+            &mut expected,
+        );
+
+        assert!(expected.iter().any(|(name, _)| name == "input"));
+        assert!(expected.iter().any(|(name, _)| name == "inner"));
     }
 
     #[test]
