@@ -3514,46 +3514,54 @@ impl TypeChecker {
     fn collect_callable_declaration_tasks(
         decls: &[Declaration],
     ) -> Vec<CallableDeclarationTask<'_>> {
-        decls
-            .iter()
-            .filter_map(|decl| match decl {
-                Declaration::Function {
-                    name,
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                    span,
-                    ..
-                } => Some(CallableDeclarationTask::Function {
-                    name,
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                    span: *span,
-                }),
-                Declaration::Method {
-                    type_name,
-                    method_name,
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                    span,
-                    ..
-                } => Some(CallableDeclarationTask::Method {
-                    type_name,
-                    method_name,
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                    span: *span,
-                }),
-                _ => None,
-            })
-            .collect()
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_callable_declaration_task(decl, &mut tasks);
+        }
+        tasks
+    }
+
+    fn push_callable_declaration_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<CallableDeclarationTask<'a>>,
+    ) {
+        match decl {
+            Declaration::Function {
+                name,
+                type_params,
+                params,
+                return_type,
+                body,
+                span,
+                ..
+            } => tasks.push(CallableDeclarationTask::Function {
+                name,
+                type_params,
+                params,
+                return_type,
+                body,
+                span: *span,
+            }),
+            Declaration::Method {
+                type_name,
+                method_name,
+                type_params,
+                params,
+                return_type,
+                body,
+                span,
+                ..
+            } => tasks.push(CallableDeclarationTask::Method {
+                type_name,
+                method_name,
+                type_params,
+                params,
+                return_type,
+                body,
+                span: *span,
+            }),
+            _ => {}
+        }
     }
 
     fn collect_callable_declarations_from_tasks(&mut self, tasks: &[CallableDeclarationTask<'_>]) {

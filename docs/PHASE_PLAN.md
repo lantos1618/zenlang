@@ -1726,6 +1726,8 @@ checked-in docs, tests, and commits only.
   helper before replaying default expression checks.
 - AST import declaration collection now uses a shared import-task push helper
   before seeding imported names.
+- Callable declaration collection now uses a shared callable-task push helper
+  before replaying function and method signature setup.
 
 ## Current Phase
 
