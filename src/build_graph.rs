@@ -159,11 +159,13 @@ impl BuildGraph {
         }
         targets.sort_by(|left, right| left.name.cmp(&right.name));
 
-        Ok(Self {
+        let graph = Self {
             targets,
             declared_host_effects,
             used_host_effects,
-        })
+        };
+        graph.targets_in_dependency_order()?;
+        Ok(graph)
     }
 
     pub fn targets(&self) -> &[BuildTarget] {

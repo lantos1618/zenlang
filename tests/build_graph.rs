@@ -104,6 +104,26 @@ fn build_graph_rejects_self_target_dependencies() {
 }
 
 #[test]
+fn build_graph_rejects_cyclic_target_dependencies() {
+    let mut app = executable_target("app", &["src/app.zen"]);
+    app.dependencies = vec!["tool".to_string()];
+    let mut tool = executable_target("tool", &["src/tool.zen"]);
+    tool.dependencies = vec!["app".to_string()];
+
+    let err = BuildGraph::from_input(BuildGraphInput {
+        targets: vec![app, tool],
+        declared_host_effects: Vec::new(),
+        used_host_effects: Vec::new(),
+    })
+    .expect_err("cyclic target dependencies should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "build target dependency cycle includes `app`"
+    );
+}
+
+#[test]
 fn build_graph_orders_targets_before_dependents() {
     let mut app = executable_target("app", &["src/app.zen"]);
     app.dependencies = vec!["tool".to_string()];
@@ -123,6 +143,37 @@ fn build_graph_orders_targets_before_dependents() {
         .map(|target| target.name().to_string())
         .collect();
     assert_eq!(ordered_names, ["tool", "app"]);
+}
+
+#[test]
+fn build_program_lowering_rejects_cyclic_target_dependencies() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        dependencies: ["tool"],
+    })
+    b.add(Executable {
+        name: "tool",
+        main: "tool.zen",
+        out_dir: "build/tool/",
+        dependencies: ["app"],
+    })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("cyclic build target dependencies should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "build target dependency cycle includes `app`"
+    );
 }
 
 #[test]

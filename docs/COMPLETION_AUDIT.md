@@ -2230,6 +2230,13 @@ and do not assume Phase 4 is ready without evidence.
 - `emit-json build-graph` rejects self-dependencies through the advertised
   graph-emission path, covered by
   `cargo test --test integration emit_json_build_graph_rejects_self_target_dependencies`.
+- Build graph validation rejects dependency cycles, covered by
+  `cargo test --test build_graph build_graph_rejects_cyclic_target_dependencies`
+  and
+  `cargo test --test build_graph build_program_lowering_rejects_cyclic_target_dependencies`.
+- `emit-json build-graph` rejects dependency cycles through the advertised
+  graph-emission path, covered by
+  `cargo test --test integration emit_json_build_graph_rejects_cyclic_target_dependencies`.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes remain
   rejected with a targeted graph diagnostic, covered by
   `cargo test --test integration legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic`.
