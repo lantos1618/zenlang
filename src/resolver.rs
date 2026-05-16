@@ -2405,6 +2405,7 @@ impl Resolver {
             | Expression::CharLiteral { .. }
             | Expression::Break { .. }
             | Expression::Continue { .. }
+            | Expression::LoopControl { .. }
             | Expression::Error { .. } => {}
         }
     }

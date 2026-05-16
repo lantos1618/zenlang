@@ -80,6 +80,14 @@ impl Parser {
                         let args = self.parse_arg_list()?;
                         let end = self.expect(&Token::RParen)?;
                         let span = id_span.merge(end);
+                        if let Some((action, target_label)) = self.loop_control_call(&name, &args) {
+                            lhs = Expression::LoopControl {
+                                action,
+                                target_label,
+                                span,
+                            };
+                            continue;
+                        }
                         lhs = Expression::FunctionCall {
                             name,
                             module: None,
@@ -302,6 +310,25 @@ impl Parser {
             let end = self.expect(&Token::RParen)?;
             let span = lhs.span().merge(end);
 
+            if args.is_empty() {
+                if let Expression::Identifier {
+                    name: ref receiver_name,
+                    ..
+                } = lhs
+                {
+                    if let (Ok(action), Some(target_label)) = (
+                        name.parse::<LoopControlAction>(),
+                        self.loop_control_label(receiver_name),
+                    ) {
+                        return Ok(Expression::LoopControl {
+                            action,
+                            target_label,
+                            span,
+                        });
+                    }
+                }
+            }
+
             // If lhs is an identifier, this could be module.func(args) or ufc
             if let Expression::Identifier {
                 name: ref _mod_name,
@@ -338,6 +365,25 @@ impl Parser {
             field: name,
             span,
         })
+    }
+
+    fn loop_control_call(
+        &self,
+        name: &str,
+        args: &[Expression],
+    ) -> Option<(LoopControlAction, String)> {
+        let action = name.parse::<LoopControlAction>().ok()?;
+        (args.len() == 1).then_some(())?;
+
+        let Expression::Identifier {
+            name: control_name, ..
+        } = &args[0]
+        else {
+            return None;
+        };
+
+        self.loop_control_label(control_name)
+            .map(|target_label| (action, target_label))
     }
 
     // ── Struct literal ────────────────────────────────────────

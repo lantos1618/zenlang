@@ -1317,7 +1317,11 @@ impl TypeChecker {
                 })
             }
 
-            Expression::Loop { body, span } => {
+            Expression::Loop {
+                body,
+                control_label,
+                span,
+            } => {
                 let typed_body = self.check_expr(body)?;
                 // Loop desugars to WhileLoop with `true` scrutinee
                 let body_block = TypedBlock {
@@ -1339,12 +1343,30 @@ impl TypeChecker {
                             body: body_block,
                             span: *span,
                         }],
-                        kind: MatchKind::WhileLoop,
+                        kind: control_label
+                            .as_ref()
+                            .map(|label| MatchKind::ControlledLoop {
+                                label: label.clone(),
+                            })
+                            .unwrap_or(MatchKind::WhileLoop),
                     },
                     ty: Type::Void,
                     span: *span,
                 })
             }
+
+            Expression::LoopControl {
+                action,
+                target_label,
+                span,
+            } => Ok(TypedExpression {
+                kind: TypedExprKind::LoopControl {
+                    action: *action,
+                    label: target_label.clone(),
+                },
+                ty: Type::Never,
+                span: *span,
+            }),
 
             Expression::Cast {
                 expr,

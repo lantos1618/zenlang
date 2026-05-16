@@ -1,5 +1,7 @@
 use crate::ast::declarations::{Declaration, EnumVariant, StructField, TypeParam};
-use crate::ast::expressions::{BinaryOp, Expression, MatchArm, StringPart, UnaryOp};
+use crate::ast::expressions::{
+    BinaryOp, Expression, LoopControlAction, MatchArm, StringPart, UnaryOp,
+};
 use crate::ast::patterns::Pattern;
 use crate::ast::statements::Statement;
 use crate::ast::types::{AstType, Param};
@@ -41,6 +43,8 @@ struct Parser {
     #[allow(dead_code)]
     file_id: FileId,
     errors: Vec<CompileError>,
+    loop_controls: Vec<(String, String)>,
+    next_loop_control_id: usize,
 }
 
 impl Parser {
@@ -50,6 +54,8 @@ impl Parser {
             pos: 0,
             file_id,
             errors: Vec::new(),
+            loop_controls: Vec::new(),
+            next_loop_control_id: 0,
         }
     }
 
@@ -60,6 +66,20 @@ impl Parser {
             .get(self.pos)
             .map(|(t, _)| t)
             .unwrap_or(&Token::EOF)
+    }
+
+    fn loop_control_label(&self, name: &str) -> Option<String> {
+        self.loop_controls
+            .iter()
+            .rev()
+            .find(|(control_name, _)| control_name == name)
+            .map(|(_, label)| label.clone())
+    }
+
+    fn fresh_loop_control_label(&mut self) -> String {
+        let id = self.next_loop_control_id;
+        self.next_loop_control_id += 1;
+        format!("__zen_loop_{}", id)
     }
 
     fn peek_span(&self) -> Span {

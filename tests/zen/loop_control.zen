@@ -1,0 +1,60 @@
+{ io } = std
+
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop((l) {
+        i > limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
+
+    total
+}
+
+nested_outer_done = () i32 {
+    outer_count ::= 0
+    inner_count ::= 0
+    stop ::= false
+
+    loop((outer) {
+        outer_count = outer_count + 1
+
+        loop((inner) {
+            inner_count = inner_count + 1
+            stop ?
+                | true { outer.done() }
+                | false {
+                    stop = true
+                    inner.next()
+                }
+        })
+
+        outer.next()
+    })
+
+    outer_count * 10 + inner_count
+}
+
+ufc_control = () i32 {
+    i ::= 0
+    loop((l) {
+        i = i + 1
+        i >= 3 ?
+            | true { done(l) }
+            | false { next(l) }
+    })
+    i
+}
+
+main = () i32 {
+    io.println("${sum_to(5)}")
+    io.println("${nested_outer_done()}")
+    io.println("${ufc_control()}")
+    0
+}

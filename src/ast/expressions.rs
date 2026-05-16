@@ -3,6 +3,8 @@ use crate::ast::statements::Statement;
 use crate::ast::types::{AstType, Param};
 use crate::error::Span;
 use serde::Serialize;
+use std::fmt;
+use std::str::FromStr;
 
 /// Binary operators.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -66,6 +68,38 @@ pub enum UnaryOp {
     Neg,    // -x
     Not,    // !x
     BitNot, // ~x
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum LoopControlAction {
+    Done,
+    Next,
+}
+
+impl LoopControlAction {
+    pub const DONE: &'static str = "done";
+    pub const NEXT: &'static str = "next";
+}
+
+impl fmt::Display for LoopControlAction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Done => Self::DONE,
+            Self::Next => Self::NEXT,
+        })
+    }
+}
+
+impl FromStr for LoopControlAction {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            Self::DONE => Ok(Self::Done),
+            Self::NEXT => Ok(Self::Next),
+            _ => Err(()),
+        }
+    }
 }
 
 impl UnaryOp {
@@ -209,9 +243,16 @@ pub enum Expression {
         body: Box<Expression>,
         span: Span,
     },
-    /// Infinite loop: `loop { body }` or `loop(() { body })`
+    /// Infinite loop: `loop { body }`, `loop(() { body })`, or `loop((l) { body })`.
     Loop {
         body: Box<Expression>,
+        control_label: Option<String>,
+        span: Span,
+    },
+    /// `l.done()`, `l.next()`, `done(l)`, or `next(l)` inside `loop((l) { ... })`.
+    LoopControl {
+        action: LoopControlAction,
+        target_label: String,
         span: Span,
     },
     /// If/else — desugared from `expr ? | true { } | false { }` by parser
@@ -306,6 +347,7 @@ impl Expression {
             | Expression::Match { span, .. }
             | Expression::WhileLoop { span, .. }
             | Expression::Loop { span, .. }
+            | Expression::LoopControl { span, .. }
             | Expression::If { span, .. }
             | Expression::Block { span, .. }
             | Expression::Return { span, .. }

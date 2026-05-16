@@ -320,19 +320,35 @@ impl Parser {
 
     fn parse_loop(&mut self, start_span: Span) -> Result<Expression, CompileError> {
         self.skip_newlines();
-        // loop(() { body }) — closure-style
+        // loop(() { body }) or loop((l) { body }) — closure-style
         if matches!(self.peek(), Token::LParen) {
             self.advance(); // (
             self.skip_newlines();
-            // The inner () is the empty param list of the closure
+            // The inner (...) is the loop-control parameter list.
             if matches!(self.peek(), Token::LParen) {
                 self.advance(); // inner (
+                self.skip_newlines();
+                let control = if matches!(self.peek(), Token::RParen) {
+                    None
+                } else {
+                    let (name, _) = self.expect_identifier()?;
+                    Some((name, self.fresh_loop_control_label()))
+                };
+                self.skip_newlines();
                 self.expect(&Token::RParen)?; // inner )
                 self.skip_newlines();
-                let body = self.parse_block_expression()?;
+                if let Some((name, label)) = &control {
+                    self.loop_controls.push((name.clone(), label.clone()));
+                }
+                let body_result = self.parse_block_expression();
+                if control.is_some() {
+                    self.loop_controls.pop();
+                }
+                let body = body_result?;
                 let end = self.expect(&Token::RParen)?;
                 return Ok(Expression::Loop {
                     body: Box::new(body),
+                    control_label: control.map(|(_, label)| label),
                     span: start_span.merge(end),
                 });
             }
@@ -341,6 +357,7 @@ impl Parser {
             let end = self.expect(&Token::RParen)?;
             return Ok(Expression::Loop {
                 body: Box::new(expr),
+                control_label: None,
                 span: start_span.merge(end),
             });
         }
@@ -350,6 +367,7 @@ impl Parser {
         let span = start_span.merge(body.span());
         Ok(Expression::Loop {
             body: Box::new(body),
+            control_label: None,
             span,
         })
     }

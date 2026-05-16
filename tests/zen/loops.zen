@@ -2,10 +2,14 @@
 
 main = () i32 {
     i ::= 0
-    loop(() {
-        i >= 5 ? { break }
-        io.print("${i} ")
-        i = i + 1
+    loop((l) {
+        i >= 5 ?
+            | true { l.done() }
+            | false {
+                io.print("${i} ")
+                i = i + 1
+                l.next()
+            }
     })
     io.println("")
     0

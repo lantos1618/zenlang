@@ -1800,6 +1800,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed collected semantic validation now receives the full resolver
   declaration metadata task bundle and selects behavior, type-reference, and
   field-default work internally instead of taking parallel slices.
+- Prefix loop syntax now accepts `loop((l) { ... })` with enum-backed
+  `done`/`next` control actions, including nested outer-loop exits and UFC
+  `done(l)` / `next(l)` forms, with fixture and docs coverage.
 
 ## Current Phase
 
