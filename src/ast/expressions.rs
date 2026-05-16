@@ -79,14 +79,18 @@ pub enum LoopControlAction {
 impl LoopControlAction {
     pub const DONE: &'static str = "done";
     pub const NEXT: &'static str = "next";
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Done => Self::DONE,
+            Self::Next => Self::NEXT,
+        }
+    }
 }
 
 impl fmt::Display for LoopControlAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Self::Done => Self::DONE,
-            Self::Next => Self::NEXT,
-        })
+        f.write_str(self.as_str())
     }
 }
 
@@ -94,10 +98,12 @@ impl FromStr for LoopControlAction {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            Self::DONE => Ok(Self::Done),
-            Self::NEXT => Ok(Self::Next),
-            _ => Err(()),
+        if value == Self::Done.as_str() {
+            Ok(Self::Done)
+        } else if value == Self::Next.as_str() {
+            Ok(Self::Next)
+        } else {
+            Err(())
         }
     }
 }
@@ -360,5 +366,27 @@ impl Expression {
             | Expression::Defer { span, .. }
             | Expression::Error { span, .. } => *span,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn loop_control_action_owns_text_spelling() {
+        assert_eq!(LoopControlAction::Done.as_str(), "done");
+        assert_eq!(LoopControlAction::Next.as_str(), "next");
+        assert_eq!(
+            "done".parse::<LoopControlAction>(),
+            Ok(LoopControlAction::Done)
+        );
+        assert_eq!(
+            "next".parse::<LoopControlAction>(),
+            Ok(LoopControlAction::Next)
+        );
+        assert!("stop".parse::<LoopControlAction>().is_err());
+        assert_eq!(LoopControlAction::Done.to_string(), "done");
+        assert_eq!(LoopControlAction::Next.to_string(), "next");
     }
 }

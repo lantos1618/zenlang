@@ -80,12 +80,10 @@ impl Parser {
                         let args = self.parse_arg_list()?;
                         let end = self.expect(&Token::RParen)?;
                         let span = id_span.merge(end);
-                        if let Some((action, target_label)) = self.loop_control_call(&name, &args) {
-                            lhs = Expression::LoopControl {
-                                action,
-                                target_label,
-                                span,
-                            };
+                        if let Some(loop_control) =
+                            self.parse_loop_control_function_call(&name, &args, span)
+                        {
+                            lhs = loop_control;
                             continue;
                         }
                         lhs = Expression::FunctionCall {
@@ -310,23 +308,10 @@ impl Parser {
             let end = self.expect(&Token::RParen)?;
             let span = lhs.span().merge(end);
 
-            if args.is_empty() {
-                if let Expression::Identifier {
-                    name: ref receiver_name,
-                    ..
-                } = lhs
-                {
-                    if let (Ok(action), Some(target_label)) = (
-                        name.parse::<LoopControlAction>(),
-                        self.loop_control_label(receiver_name),
-                    ) {
-                        return Ok(Expression::LoopControl {
-                            action,
-                            target_label,
-                            span,
-                        });
-                    }
-                }
+            if let Some(loop_control) =
+                self.parse_loop_control_method_call(&lhs, &name, &args, span)
+            {
+                return Ok(loop_control);
             }
 
             // If lhs is an identifier, this could be module.func(args) or ufc
@@ -367,11 +352,12 @@ impl Parser {
         })
     }
 
-    fn loop_control_call(
+    fn parse_loop_control_function_call(
         &self,
         name: &str,
         args: &[Expression],
-    ) -> Option<(LoopControlAction, String)> {
+        span: Span,
+    ) -> Option<Expression> {
         let action = name.parse::<LoopControlAction>().ok()?;
         (args.len() == 1).then_some(())?;
 
@@ -383,7 +369,36 @@ impl Parser {
         };
 
         self.loop_control_label(control_name)
-            .map(|target_label| (action, target_label))
+            .map(|target_label| Expression::LoopControl {
+                action,
+                target_label,
+                span,
+            })
+    }
+
+    fn parse_loop_control_method_call(
+        &self,
+        receiver: &Expression,
+        name: &str,
+        args: &[Expression],
+        span: Span,
+    ) -> Option<Expression> {
+        let action = name.parse::<LoopControlAction>().ok()?;
+        args.is_empty().then_some(())?;
+
+        let Expression::Identifier {
+            name: control_name, ..
+        } = receiver
+        else {
+            return None;
+        };
+
+        self.loop_control_label(control_name)
+            .map(|target_label| Expression::LoopControl {
+                action,
+                target_label,
+                span,
+            })
     }
 
     // ── Struct literal ────────────────────────────────────────
