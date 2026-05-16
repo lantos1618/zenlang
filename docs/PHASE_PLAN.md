@@ -153,6 +153,9 @@ checked-in docs, tests, and commits only.
 - Typechecker semantic validation now lives in a dedicated helper module,
   keeping behavior association validation and struct-field default checks out
   of the broad typechecker root.
+- Typechecker AST-side declaration collection now lives in a dedicated helper
+  module, keeping import, callable, type, behavior, and precollection task
+  helpers out of resolver metadata collection.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
