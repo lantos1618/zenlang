@@ -227,6 +227,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::expected_resolver_scoped_expr_locals_collects_block_bindings`.
   Closure parameters now reuse the same parameter-local helpers for expected
   and required resolver locals, preserving mutable parameter metadata.
+  Child expression local collection is shared for loop, while, and conditional
+  branch scopes, covered by
+  `typechecker::tests::expected_resolver_child_expr_locals_collects_branch_bindings`.
 - Resolver-backed declaration metadata collection now records callable, type,
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate

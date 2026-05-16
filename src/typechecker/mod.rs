@@ -9208,6 +9208,17 @@ impl TypeChecker {
         }
     }
 
+    fn require_resolver_child_expr_locals(
+        &mut self,
+        symbols: &SymbolTable,
+        expr: &Expression,
+        scope_cursor: &mut ResolverScopeCursor,
+        locals: &ResolverLocalScope,
+    ) {
+        let mut child_locals = scope_cursor.child_scope(locals);
+        self.require_resolver_expr_locals(symbols, expr, scope_cursor, &mut child_locals);
+    }
+
     fn require_resolver_expr_locals(
         &mut self,
         symbols: &SymbolTable,
@@ -9295,12 +9306,10 @@ impl TypeChecker {
                 condition, body, ..
             } => {
                 self.require_resolver_expr_locals(symbols, condition, scope_cursor, locals);
-                let mut body_locals = scope_cursor.child_scope(locals);
-                self.require_resolver_expr_locals(symbols, body, scope_cursor, &mut body_locals);
+                self.require_resolver_child_expr_locals(symbols, body, scope_cursor, locals);
             }
             Expression::Loop { body, .. } => {
-                let mut body_locals = scope_cursor.child_scope(locals);
-                self.require_resolver_expr_locals(symbols, body, scope_cursor, &mut body_locals);
+                self.require_resolver_child_expr_locals(symbols, body, scope_cursor, locals);
             }
             Expression::If {
                 condition,
@@ -9309,20 +9318,13 @@ impl TypeChecker {
                 ..
             } => {
                 self.require_resolver_expr_locals(symbols, condition, scope_cursor, locals);
-                let mut then_locals = scope_cursor.child_scope(locals);
-                self.require_resolver_expr_locals(
-                    symbols,
-                    then_body,
-                    scope_cursor,
-                    &mut then_locals,
-                );
+                self.require_resolver_child_expr_locals(symbols, then_body, scope_cursor, locals);
                 if let Some(else_body) = else_body {
-                    let mut else_locals = scope_cursor.child_scope(locals);
-                    self.require_resolver_expr_locals(
+                    self.require_resolver_child_expr_locals(
                         symbols,
                         else_body,
                         scope_cursor,
-                        &mut else_locals,
+                        locals,
                     );
                 }
             }
@@ -10975,6 +10977,16 @@ fn expected_resolver_scoped_expr_locals(
     expected_resolver_expr_locals(expr, scope_cursor, &mut locals, expected);
 }
 
+fn expected_resolver_child_expr_locals(
+    expr: &Expression,
+    scope_cursor: &mut ResolverScopeCursor,
+    locals: &ResolverLocalScope,
+    expected: &mut HashSet<(String, u32)>,
+) {
+    let mut child_locals = scope_cursor.child_scope(locals);
+    expected_resolver_expr_locals(expr, scope_cursor, &mut child_locals, expected);
+}
+
 fn expected_resolver_parameter_locals(
     params: &[Param],
     locals: &mut ResolverLocalScope,
@@ -11061,12 +11073,10 @@ fn expected_resolver_expr_locals(
             condition, body, ..
         } => {
             expected_resolver_expr_locals(condition, scope_cursor, locals, expected);
-            let mut body_locals = scope_cursor.child_scope(locals);
-            expected_resolver_expr_locals(body, scope_cursor, &mut body_locals, expected);
+            expected_resolver_child_expr_locals(body, scope_cursor, locals, expected);
         }
         Expression::Loop { body, .. } => {
-            let mut body_locals = scope_cursor.child_scope(locals);
-            expected_resolver_expr_locals(body, scope_cursor, &mut body_locals, expected);
+            expected_resolver_child_expr_locals(body, scope_cursor, locals, expected);
         }
         Expression::If {
             condition,
@@ -11075,11 +11085,9 @@ fn expected_resolver_expr_locals(
             ..
         } => {
             expected_resolver_expr_locals(condition, scope_cursor, locals, expected);
-            let mut then_locals = scope_cursor.child_scope(locals);
-            expected_resolver_expr_locals(then_body, scope_cursor, &mut then_locals, expected);
+            expected_resolver_child_expr_locals(then_body, scope_cursor, locals, expected);
             if let Some(else_body) = else_body {
-                let mut else_locals = scope_cursor.child_scope(locals);
-                expected_resolver_expr_locals(else_body, scope_cursor, &mut else_locals, expected);
+                expected_resolver_child_expr_locals(else_body, scope_cursor, locals, expected);
             }
         }
         Expression::Block {
@@ -13735,6 +13743,40 @@ main = () i32 {
         let mut expected = HashSet::new();
 
         expected_resolver_scoped_expr_locals(body, &mut scope_cursor, &mut expected);
+
+        assert!(expected.iter().any(|(name, _)| name == "value"));
+    }
+
+    #[test]
+    fn expected_resolver_child_expr_locals_collects_branch_bindings() {
+        let program = parse_program(
+            r#"
+main = () i32 {
+    loop {
+        value := 1
+        break
+    }
+    return value
+}
+"#,
+        );
+        let Declaration::Function { body, .. } = &program.declarations[0] else {
+            panic!("expected function");
+        };
+        let Expression::Block { statements, .. } = body else {
+            panic!("expected block");
+        };
+        let Some(ast::Statement::Expression { expr, .. }) = statements.first() else {
+            panic!("expected expression statement");
+        };
+        let Expression::Loop { body, .. } = expr else {
+            panic!("expected loop expression");
+        };
+        let mut scope_cursor = ResolverScopeCursor::default();
+        let locals = scope_cursor.new_scope();
+        let mut expected = HashSet::new();
+
+        expected_resolver_child_expr_locals(body, &mut scope_cursor, &locals, &mut expected);
 
         assert!(expected.iter().any(|(name, _)| name == "value"));
     }
