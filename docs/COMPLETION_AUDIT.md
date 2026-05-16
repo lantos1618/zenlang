@@ -2091,6 +2091,10 @@ and do not assume Phase 4 is ready without evidence.
   before replaying declaration and expression `Self` checks, covered by
   `cargo test self_type_context_validation_tasks_collect_declarations` and
   `cargo test check_program_rejects_self_type_outside_method_or_behavior`.
+- AST type reference validation now uses a shared reference-task push helper
+  before replaying generic type-reference diagnostics, covered by
+  `cargo test ast_type_reference_validation_tasks_collect_declarations` and
+  `cargo test check_program_rejects_unknown_type_references`.
 
 ## Unresolved Gaps
 

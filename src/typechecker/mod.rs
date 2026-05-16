@@ -6660,66 +6660,74 @@ impl TypeChecker {
     fn collect_ast_type_reference_validation_tasks(
         decls: &[Declaration],
     ) -> Vec<AstTypeReferenceValidationTask<'_>> {
-        decls
-            .iter()
-            .filter_map(|decl| match decl {
-                Declaration::Struct {
-                    type_params,
-                    fields,
-                    ..
-                } => Some(AstTypeReferenceValidationTask::Struct {
-                    type_params,
-                    fields,
-                }),
-                Declaration::Enum {
-                    type_params,
-                    variants,
-                    ..
-                } => Some(AstTypeReferenceValidationTask::Enum {
-                    type_params,
-                    variants,
-                }),
-                Declaration::Function {
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                    ..
-                } => Some(AstTypeReferenceValidationTask::Function {
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                }),
-                Declaration::Method {
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                    ..
-                } => Some(AstTypeReferenceValidationTask::Method {
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                }),
-                Declaration::Behavior {
-                    type_params,
-                    methods,
-                    ..
-                } => Some(AstTypeReferenceValidationTask::Behavior {
-                    type_params,
-                    methods,
-                }),
-                Declaration::ImplBlock { methods, .. } => {
-                    Some(AstTypeReferenceValidationTask::ImplBlock { methods })
-                }
-                Declaration::TopLevelExpr { expr, .. } => {
-                    Some(AstTypeReferenceValidationTask::TopLevelExpr { expr })
-                }
-                _ => None,
-            })
-            .collect()
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_ast_type_reference_validation_task(decl, &mut tasks);
+        }
+        tasks
+    }
+
+    fn push_ast_type_reference_validation_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<AstTypeReferenceValidationTask<'a>>,
+    ) {
+        match decl {
+            Declaration::Struct {
+                type_params,
+                fields,
+                ..
+            } => tasks.push(AstTypeReferenceValidationTask::Struct {
+                type_params,
+                fields,
+            }),
+            Declaration::Enum {
+                type_params,
+                variants,
+                ..
+            } => tasks.push(AstTypeReferenceValidationTask::Enum {
+                type_params,
+                variants,
+            }),
+            Declaration::Function {
+                type_params,
+                params,
+                return_type,
+                body,
+                ..
+            } => tasks.push(AstTypeReferenceValidationTask::Function {
+                type_params,
+                params,
+                return_type,
+                body,
+            }),
+            Declaration::Method {
+                type_params,
+                params,
+                return_type,
+                body,
+                ..
+            } => tasks.push(AstTypeReferenceValidationTask::Method {
+                type_params,
+                params,
+                return_type,
+                body,
+            }),
+            Declaration::Behavior {
+                type_params,
+                methods,
+                ..
+            } => tasks.push(AstTypeReferenceValidationTask::Behavior {
+                type_params,
+                methods,
+            }),
+            Declaration::ImplBlock { methods, .. } => {
+                tasks.push(AstTypeReferenceValidationTask::ImplBlock { methods });
+            }
+            Declaration::TopLevelExpr { expr, .. } => {
+                tasks.push(AstTypeReferenceValidationTask::TopLevelExpr { expr });
+            }
+            _ => {}
+        }
     }
 
     fn validate_ast_type_reference_tasks(&mut self, tasks: &[AstTypeReferenceValidationTask<'_>]) {

@@ -1734,6 +1734,8 @@ checked-in docs, tests, and commits only.
   before replaying signature setup and behavior generic-bound validation.
 - Self type context validation now uses a shared context-task push helper
   before replaying declaration and expression `Self` checks.
+- AST type reference validation now uses a shared reference-task push helper
+  before replaying generic type-reference diagnostics.
 
 ## Current Phase
 
