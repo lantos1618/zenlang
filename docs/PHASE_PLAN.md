@@ -98,6 +98,9 @@ checked-in docs, tests, and commits only.
 - Resolver expression validation now keeps constructor-specific reference checks
   and scoped traversal helpers in a focused module, leaving the main expression
   validator as the dispatcher.
+- Monomorphization now keeps generic struct/enum specialization and nested
+  specialized type-ref emission in a focused module, separate from callable
+  specialization and substitution helpers.
 - Resolver-backed callable type-reference validation now shares the collected
   signature/body validation helper after function, top-level method, and
   `Type.impl` method dispatch restore the resolver-owned callable key, with
