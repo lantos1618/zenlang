@@ -1839,6 +1839,9 @@ checked-in docs, tests, and commits only.
 - Resolver extra declaration/local symbol validation now receives the full
   resolver validation replay task bundle and selects expected symbol sets
   internally, reducing another replay sub-bundle handoff.
+- Stripped resolver import validation now receives the full resolver
+  validation replay task bundle and reads the import-validation flag
+  internally, completing the current resolver replay call-site bundle shape.
 
 ## Current Phase
 
