@@ -1806,6 +1806,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed type behavior refresh now receives the full resolver
   declaration metadata task bundle and selects type declarations internally,
   keeping the final replay step aligned with the bundled call sites.
+- Resolver-backed behavior impl metadata collection now receives the full
+  resolver declaration metadata task bundle and selects behavior impl entries
+  internally, so collected replay call sites all use the same bundle shape.
 
 ## Current Phase
 
