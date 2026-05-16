@@ -1892,6 +1892,13 @@ and do not assume Phase 4 is ready without evidence.
   metadata tasks instead of rescanning declarations during semantic replay,
   covered by
   `cargo test resolver_struct_field_defaults_validate_from_type_metadata_tasks`.
+- Resolver-backed generic type-reference validation now reuses type-reference
+  tasks from the declaration metadata pass instead of rescanning declarations
+  during semantic replay, covered by
+  `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`,
+  `cargo test collect_declarations_with_symbols_uses_resolver_function_type_metadata`,
+  and
+  `cargo test collect_declarations_with_symbols_does_not_validate_stale_generic_function_body_refs_when_signature_incomplete`.
 
 ## Unresolved Gaps
 

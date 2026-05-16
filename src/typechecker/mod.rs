@@ -98,6 +98,41 @@ enum ResolverTypeDeclarationMetadataTask<'a> {
     },
 }
 
+enum ResolverTypeReferenceValidationTask<'a> {
+    Struct {
+        name: &'a str,
+        fields: &'a [StructField],
+        span: Span,
+    },
+    Enum {
+        name: &'a str,
+        span: Span,
+    },
+    Function {
+        name: &'a str,
+        body: &'a Expression,
+        span: Span,
+    },
+    Method {
+        type_name: &'a str,
+        method_name: &'a str,
+        body: &'a Expression,
+        span: Span,
+    },
+    Behavior {
+        name: &'a str,
+        methods: &'a [BehaviorMethod],
+        span: Span,
+    },
+    ImplBlock {
+        type_name: &'a str,
+        methods: &'a [Declaration],
+    },
+    TopLevelExpr {
+        expr: &'a Expression,
+    },
+}
+
 #[derive(Default)]
 struct ResolverDeclarationMetadataTasks<'a> {
     callable: Vec<ResolverCallableDeclarationMetadataTask<'a>>,
@@ -105,6 +140,7 @@ struct ResolverDeclarationMetadataTasks<'a> {
     behaviors: Vec<(&'a str, Span)>,
     behavior_impl_blocks: Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
     behavior_requires: Vec<BehaviorRequiresValidationTask<'a>>,
+    type_references: Vec<ResolverTypeReferenceValidationTask<'a>>,
 }
 
 struct ResolverBehaviorImplBlockDeclarationTask<'a> {
@@ -3505,11 +3541,11 @@ impl TypeChecker {
         self.collect_resolver_declaration_metadata(symbols, &tasks);
         self.collect_resolver_behavior_impl_metadata(&tasks.behavior_impl_blocks, symbols);
         self.validate_resolver_collected_declaration_semantics(
-            decls,
             symbols,
             &tasks.behavior_impl_blocks,
             &tasks.behavior_requires,
             &tasks.types,
+            &tasks.type_references,
         );
         self.clear_resolver_behavior_ref_state();
         self.refresh_resolver_type_behavior_impls(&tasks.types, symbols);
@@ -3521,17 +3557,27 @@ impl TypeChecker {
         let mut tasks = ResolverDeclarationMetadataTasks::default();
         for decl in decls {
             match decl {
-                Declaration::Function { name, span, .. } => {
+                Declaration::Function {
+                    name, body, span, ..
+                } => {
                     tasks
                         .callable
                         .push(ResolverCallableDeclarationMetadataTask::Function {
                             name,
                             span: *span,
                         });
+                    tasks
+                        .type_references
+                        .push(ResolverTypeReferenceValidationTask::Function {
+                            name,
+                            body,
+                            span: *span,
+                        });
                 }
                 Declaration::Method {
                     type_name,
                     method_name,
+                    body,
                     span,
                     ..
                 } => {
@@ -3540,6 +3586,14 @@ impl TypeChecker {
                         .push(ResolverCallableDeclarationMetadataTask::Method {
                             type_name,
                             method_name,
+                            span: *span,
+                        });
+                    tasks
+                        .type_references
+                        .push(ResolverTypeReferenceValidationTask::Method {
+                            type_name,
+                            method_name,
+                            body,
                             span: *span,
                         });
                 }
@@ -3552,6 +3606,12 @@ impl TypeChecker {
                     tasks
                         .callable
                         .push(ResolverCallableDeclarationMetadataTask::TypeImpl {
+                            type_name,
+                            methods,
+                        });
+                    tasks
+                        .type_references
+                        .push(ResolverTypeReferenceValidationTask::ImplBlock {
                             type_name,
                             methods,
                         });
@@ -3572,6 +3632,12 @@ impl TypeChecker {
                             behavior_type_args,
                             methods,
                             span: *span,
+                        });
+                    tasks
+                        .type_references
+                        .push(ResolverTypeReferenceValidationTask::ImplBlock {
+                            type_name,
+                            methods,
                         });
                 }
                 Declaration::Requires {
@@ -3599,14 +3665,41 @@ impl TypeChecker {
                             fields,
                             span: *span,
                         });
+                    tasks
+                        .type_references
+                        .push(ResolverTypeReferenceValidationTask::Struct {
+                            name,
+                            fields,
+                            span: *span,
+                        });
                 }
                 Declaration::Enum { name, span, .. } => {
                     tasks
                         .types
                         .push(ResolverTypeDeclarationMetadataTask::Enum { name, span: *span });
+                    tasks
+                        .type_references
+                        .push(ResolverTypeReferenceValidationTask::Enum { name, span: *span });
                 }
-                Declaration::Behavior { name, span, .. } => {
+                Declaration::Behavior {
+                    name,
+                    methods,
+                    span,
+                    ..
+                } => {
                     tasks.behaviors.push((name.as_str(), *span));
+                    tasks
+                        .type_references
+                        .push(ResolverTypeReferenceValidationTask::Behavior {
+                            name,
+                            methods,
+                            span: *span,
+                        });
+                }
+                Declaration::TopLevelExpr { expr, .. } => {
+                    tasks
+                        .type_references
+                        .push(ResolverTypeReferenceValidationTask::TopLevelExpr { expr });
                 }
                 _ => {}
             }
@@ -3769,11 +3862,11 @@ impl TypeChecker {
 
     fn validate_resolver_collected_declaration_semantics(
         &mut self,
-        decls: &[Declaration],
         symbols: &SymbolTable,
         behavior_impl_tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
         behavior_requires_tasks: &[BehaviorRequiresValidationTask<'_>],
         type_tasks: &[ResolverTypeDeclarationMetadataTask<'_>],
+        type_reference_tasks: &[ResolverTypeReferenceValidationTask<'_>],
     ) {
         self.with_resolver_backed_collection(|checker| {
             checker.validate_resolver_collected_behavior_impl_declarations(
@@ -3781,7 +3874,7 @@ impl TypeChecker {
                 behavior_impl_tasks,
             );
             checker.validate_behavior_requires_tasks(behavior_requires_tasks, Some(symbols));
-            checker.validate_generic_type_references(decls, Some(symbols));
+            checker.validate_resolver_type_reference_tasks(type_reference_tasks, Some(symbols));
             checker.validate_resolver_struct_field_default_tasks(type_tasks, symbols);
         });
     }
@@ -6198,6 +6291,50 @@ impl TypeChecker {
                     self.validate_generic_expr_type_references(expr, &HashSet::new());
                 }
                 _ => {}
+            }
+        }
+    }
+
+    fn validate_resolver_type_reference_tasks(
+        &mut self,
+        tasks: &[ResolverTypeReferenceValidationTask<'_>],
+        symbols: Option<&SymbolTable>,
+    ) {
+        for task in tasks {
+            match task {
+                ResolverTypeReferenceValidationTask::Struct { name, fields, span } => {
+                    self.validate_resolver_struct_type_references(symbols, name, fields, *span);
+                }
+                ResolverTypeReferenceValidationTask::Enum { name, span } => {
+                    self.validate_resolver_enum_type_references(symbols, name, *span);
+                }
+                ResolverTypeReferenceValidationTask::Function { name, body, span } => {
+                    self.validate_resolver_function_type_references(symbols, name, body, *span);
+                }
+                ResolverTypeReferenceValidationTask::Method {
+                    type_name,
+                    method_name,
+                    body,
+                    span,
+                } => {
+                    let ast_key = Self::method_key(type_name, method_name);
+                    self.validate_resolver_method_type_references(
+                        symbols, &ast_key, type_name, body, *span,
+                    );
+                }
+                ResolverTypeReferenceValidationTask::Behavior {
+                    name,
+                    methods,
+                    span,
+                } => {
+                    self.validate_resolver_behavior_type_references(symbols, name, methods, *span);
+                }
+                ResolverTypeReferenceValidationTask::ImplBlock { type_name, methods } => {
+                    self.validate_resolver_impl_method_type_references(symbols, type_name, methods);
+                }
+                ResolverTypeReferenceValidationTask::TopLevelExpr { expr } => {
+                    self.validate_generic_expr_type_references(expr, &HashSet::new());
+                }
             }
         }
     }
@@ -13313,6 +13450,7 @@ main = () i32 { return 0 }
         let requires = &tasks.behavior_requires[0];
         assert_eq!(requires.type_name, "Point");
         assert_eq!(requires.behavior, "Json");
+        assert_eq!(tasks.type_references.len(), 6);
 
         let tc = TypeChecker::new();
         let refresh_tasks = tc.resolver_type_behavior_refresh_tasks(&tasks.types, &symbols);
