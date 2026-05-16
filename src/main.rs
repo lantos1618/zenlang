@@ -16,6 +16,7 @@ fn main() {
         eprintln!("Commands:");
         eprintln!("  check <file>   Parse and typecheck a .zen file");
         eprintln!("  build <file>   Compile a .zen file to a binary");
+        eprintln!("  test <build.zen>   Compile and run deterministic test targets");
         eprintln!("  build-graph <build.zen>   Compile one target from deterministic build graph");
         eprintln!("  emit  <file>   Emit C source (no compilation)");
         eprintln!("  emit-json ast <file>   Emit resolved AST JSON");
@@ -41,6 +42,13 @@ fn main() {
                 process::exit(1);
             }
             cmd_build(&args[2]);
+        }
+        "test" => {
+            if args.len() < 3 {
+                eprintln!("Usage: zen test <build.zen>");
+                process::exit(1);
+            }
+            cmd_test(&args[2]);
         }
         "build-graph" => {
             if args.len() < 3 {
@@ -301,6 +309,43 @@ fn cmd_build(path_str: &str) {
     }
 }
 
+fn cmd_test(path_str: &str) {
+    if !is_build_zen_path(path_str) {
+        eprintln!("error: zen test expects a build.zen file");
+        process::exit(1);
+    }
+
+    for target in test_build_targets(path_str) {
+        if let Err(err) = std::fs::create_dir_all(&target.out_dir) {
+            eprintln!("error creating {}: {}", target.out_dir.display(), err);
+            process::exit(1);
+        }
+
+        let bin_path = compile_file_to_binary(
+            target
+                .root_path
+                .to_str()
+                .unwrap_or(&target.root_source_file),
+            Some(&target.out_dir),
+            Some(&target.name),
+        );
+        let run = process::Command::new(&bin_path).status();
+        match run {
+            Ok(status) if status.success() => {
+                println!("  test {} passed", target.name);
+            }
+            Ok(status) => {
+                eprintln!("  test {} exited with {}", target.name, status);
+                process::exit(1);
+            }
+            Err(err) => {
+                eprintln!("  failed to run test {}: {}", target.name, err);
+                process::exit(1);
+            }
+        }
+    }
+}
+
 fn cmd_run_file(path_str: &str) {
     if is_build_zen_path(path_str) {
         cmd_build_graph(path_str);
@@ -334,6 +379,13 @@ struct BuildGraphExecutableTarget {
     out_dir: PathBuf,
 }
 
+struct BuildGraphTestTarget {
+    name: String,
+    root_source_file: String,
+    root_path: PathBuf,
+    out_dir: PathBuf,
+}
+
 fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget {
     let mut targets = executable_build_targets(path_str);
     if targets.len() != 1 {
@@ -345,6 +397,28 @@ fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget 
     }
 
     targets.pop().expect("one target")
+}
+
+fn test_build_targets(path_str: &str) -> Vec<BuildGraphTestTarget> {
+    let graph = load_build_graph(path_str);
+    let build_path = Path::new(path_str);
+    let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
+    let ordered_targets = match graph.targets_in_dependency_order() {
+        Ok(targets) => targets,
+        Err(err) => {
+            eprintln!("build graph error: {}", err);
+            process::exit(1);
+        }
+    };
+    let targets: Vec<_> = ordered_targets
+        .into_iter()
+        .filter_map(|target| test_build_target(base_dir, target))
+        .collect();
+    if targets.is_empty() {
+        eprintln!("build graph test execution requires at least one test target");
+        process::exit(1);
+    }
+    targets
 }
 
 fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
@@ -367,6 +441,31 @@ fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
         process::exit(1);
     }
     targets
+}
+
+fn test_build_target(
+    base_dir: &Path,
+    target: &zen::build_graph::BuildTarget,
+) -> Option<BuildGraphTestTarget> {
+    let zen::build_graph::BuildTargetKind::Test { root_source_file } = target.kind() else {
+        return None;
+    };
+    let root_path = base_dir.join(root_source_file);
+    if !root_path.exists() {
+        eprintln!(
+            "build graph target `{}` root source not found: {}",
+            target.name(),
+            root_source_file
+        );
+        process::exit(1);
+    }
+
+    Some(BuildGraphTestTarget {
+        name: target.name().to_string(),
+        root_source_file: root_source_file.clone(),
+        root_path,
+        out_dir: base_dir.join("build").join("tests"),
+    })
 }
 
 fn executable_build_target(
@@ -418,7 +517,11 @@ fn typed_program_to_c_source(typed: &zen::ast::typed::TypedProgram) -> String {
     }
 }
 
-fn compile_file_to_binary(path_str: &str, output_dir: Option<&Path>, output_name: Option<&str>) {
+fn compile_file_to_binary(
+    path_str: &str,
+    output_dir: Option<&Path>,
+    output_name: Option<&str>,
+) -> PathBuf {
     let c_source = compile_file_to_c_source(Path::new(path_str));
 
     // Determine output paths
@@ -453,6 +556,7 @@ fn compile_file_to_binary(path_str: &str, output_dir: Option<&Path>, output_name
     match status {
         Ok(s) if s.success() => {
             println!("  compiled → {}", bin_path.display());
+            bin_path
         }
         Ok(s) => {
             eprintln!("  {} exited with {}", cc, s);
