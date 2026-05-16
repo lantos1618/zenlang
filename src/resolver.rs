@@ -8,6 +8,7 @@ mod symbol_table_test_support;
 
 mod declaration_definition;
 mod expression_validation;
+mod expression_validation_constructs;
 mod local_validation;
 mod metadata_helpers;
 mod symbol_table;
