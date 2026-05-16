@@ -86,7 +86,12 @@ fn main() {
 }
 
 fn cmd_check(path_str: &str) {
-    reject_build_zen(path_str);
+    if is_build_zen_path(path_str) {
+        let graph = load_build_graph(path_str);
+        println!("  {} build targets — ok", graph.targets().len());
+        return;
+    }
+
     let typed = graph_frontend(path_str);
     println!(
         "  {} functions, {} types — ok",
@@ -408,7 +413,7 @@ fn is_build_zen_path(path_str: &str) -> bool {
 
 fn reject_build_zen(path_str: &str) {
     if is_build_zen_path(path_str) {
-        eprintln!("error: build.zen is only executable through `zen build build.zen`");
+        eprintln!("error: build.zen is only supported through `zen check build.zen` or `zen build build.zen`");
         process::exit(1);
     }
 }

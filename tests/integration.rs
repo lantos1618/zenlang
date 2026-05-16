@@ -1623,8 +1623,71 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
-fn check_command_rejects_build_zen_as_build_only_entrypoint() {
-    assert_build_zen_rejected(&["check"], "zen check build.zen");
+fn check_command_validates_build_zen_graph() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["check", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen check build.zen");
+
+    assert!(
+        output.status.success(),
+        "zen check build.zen failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("1 build targets"),
+        "expected build graph check summary, stdout={}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}
+
+#[test]
+fn check_command_build_zen_rejects_undeclared_host_effects() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD")
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["check", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen check build.zen");
+
+    assert!(
+        !output.status.success(),
+        "zen check build.zen unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("undeclared host effect: read env `ZEN_STD`"),
+        "expected undeclared host effect diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 #[test]
@@ -1803,8 +1866,9 @@ main = () i32 {
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("build.zen is only executable through `zen build build.zen`"),
+        String::from_utf8_lossy(&output.stderr).contains(
+            "build.zen is only supported through `zen check build.zen` or `zen build build.zen`"
+        ),
         "expected build.zen gated diagnostic for {command_name}, stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
