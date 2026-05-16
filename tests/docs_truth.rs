@@ -10,7 +10,7 @@ fn read(path: impl AsRef<Path>) -> String {
 }
 
 #[test]
-fn readme_only_advertises_rewrite_baseline() {
+fn readme_is_language_first_and_links_status_docs() {
     let readme = read("README.md");
 
     for stale_claim in [
@@ -22,25 +22,72 @@ fn readme_only_advertises_rewrite_baseline() {
         "zen-lsp",
         "examples/showcase.zen",
         "codegen/llvm",
-    ] {
-        assert!(
-            !readme.contains(stale_claim),
-            "README still advertises unsupported rewrite-baseline claim: {stale_claim}"
-        );
-    }
-
-    for required in [
-        "rewrite",
-        "C backend",
+        "work-in-progress systems language compiler",
+        "Current Baseline",
+        "Repository Layout",
         "cargo fmt --check",
         "cargo clippy -- -D warnings",
         "cargo test --lib",
         "cargo test --tests",
+        "rewrite branch as the baseline",
+        "not a complete v1 language",
+    ] {
+        assert!(
+            !readme.contains(stale_claim),
+            "README should stay language-focused and avoid status/dev workflow text: {stale_claim}"
+        );
+    }
+
+    for required in [
+        "Zen",
+        "Prefix-first declarations",
+        "pattern matching",
+        "behaviors",
+        "docs/learn_zen_in_y_minutes.md",
+        "examples/README.md",
         "docs/V1_SPEC.md",
+        "docs/PHASE_PLAN.md",
+        "docs/COMPLETION_AUDIT.md",
     ] {
         assert!(
             readme.contains(required),
-            "README is missing required truthful baseline text: {required}"
+            "README is missing required language or docs pointer text: {required}"
+        );
+    }
+}
+
+#[test]
+fn examples_index_uses_canonical_tutorial_and_project_paths() {
+    let examples = read("examples/README.md");
+
+    for required in [
+        "docs/learn_zen_in_y_minutes.md",
+        "examples/01_hello_world.zen",
+        "examples/02_variables_and_types.zen",
+        "examples/03_pattern_matching.zen",
+        "examples/04_structs_and_methods.zen",
+        "examples/05_loops.zen",
+        "examples/06_error_handling.zen",
+        "examples/project/main.zen",
+    ] {
+        assert!(
+            examples.contains(required),
+            "examples/README.md is missing canonical path: {required}"
+        );
+    }
+
+    for stale_path in [
+        "examples/hello_world.zen",
+        "examples/variables_and_types.zen",
+        "examples/pattern_matching.zen",
+        "examples/structs_and_methods.zen",
+        "examples/loops_and_closures.zen",
+        "examples/error_handling.zen",
+        "examples/demo_project",
+    ] {
+        assert!(
+            !examples.contains(stale_path),
+            "examples/README.md still references redundant path: {stale_path}"
         );
     }
 }

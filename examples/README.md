@@ -1,35 +1,28 @@
-# Zen Language Examples
+# Zen Examples
 
-Practical examples demonstrating Zen's core features.
+Start with [Learn Zen In Y Minutes](../docs/learn_zen_in_y_minutes.md), then use
+these files as focused language samples.
 
-## Running Examples
+## Tutorial Sequence
 
-```bash
-zen run examples/hello_world.zen
-zen run examples/ffi_demo.zen
-zen run examples/demo_project/main.zen
-```
+- [examples/01_hello_world.zen](01_hello_world.zen): imports, `main`, printing,
+  and return values.
+- [examples/02_variables_and_types.zen](02_variables_and_types.zen): bindings,
+  numbers, booleans, strings, and casts.
+- [examples/03_pattern_matching.zen](03_pattern_matching.zen): `?` branches,
+  enums, payloads, and nested conditions.
+- [examples/04_structs_and_methods.zen](04_structs_and_methods.zen): named
+  fields, dot calls, and small data APIs.
+- [examples/05_loops.zen](05_loops.zen): loop forms, mutable counters, breaks,
+  and recursion.
+- [examples/06_error_handling.zen](06_error_handling.zen): `Result<T, E>`,
+  `Option<T>`, matching, and explicit propagation.
 
-## Examples
+## Project Example
 
-### hello_world.zen
-The classic first program - minimal and clear.
+- [examples/project/main.zen](project/main.zen)
+- [examples/project/math_utils.zen](project/math_utils.zen)
+- [examples/project/build.zen](project/build.zen)
 
-### ffi_demo.zen
-Foreign Function Interface demonstration - calling C from Zen.
-
-### demo_project/
-Complete multi-file project demonstrating:
-- Build system using `std.build`
-- Standard library imports (`std.char`, `std.math`)
-- Test framework using `std.testing.runner`
-- Structs, enums, pattern matching, UFC
-- Practical project organization
-
-## Key Language Features
-
-- **No Keywords**: No `if/else/while/for/match/class`
-- **Pattern Matching**: Only `?` operator for all control flow
-- **UFC**: Any function becomes a method
-- **Expression-Based**: Everything returns a value
-- **Type Safety**: Algebraic data types, no null
+`examples/project/` is the canonical multi-file example. The numbered files are
+the canonical single-topic examples.

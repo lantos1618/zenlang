@@ -134,9 +134,9 @@ impl Backend for CBackend { ... }
 
 ---
 
-## Target: The Demo Project
+## Target: The Project Example
 
-The rewrite's finish line is compiling `examples/demo_project/`.
+The rewrite's finish line is compiling `examples/project/`.
 Every phase is measured against: does `main.zen` + `build.zen` work?
 
 ---
@@ -2081,7 +2081,7 @@ zen/
 │   └── ...
 │
 ├── examples/
-│   └── demo_project/       # THE target — must compile
+│   └── project/            # THE target — must compile
 │       ├── build.zen
 │       └── main.zen
 │
@@ -2108,18 +2108,18 @@ Goal: error infrastructure that every phase builds on
 - AST Display/Debug traits — co-located with AST node definitions
 - Test: can create, format, and render diagnostics
 
-### Sprint 1: Parse the demo
+### Sprint 1: Parse the project example
 
-Goal: `zen parse examples/demo_project/main.zen` → AST dump
+Goal: `zen parse examples/project/main.zen` → AST dump
 
 - Lexer (tokens, string interpolation, spans) — emits `Vec<Diagnostic>` on errors
 - Parser (structs, enums, functions, generics, `?`/`|`, methods, imports)
 - AST pretty printer (Display impls alongside node definitions)
 - Test: parse main.zen and build.zen without errors
 
-### Sprint 2: Type check the demo
+### Sprint 2: Type check the project example
 
-Goal: `zen check examples/demo_project/main.zen` → no type errors
+Goal: `zen check examples/project/main.zen` → no type errors
 
 This is the hardest sprint. Break it into sub-milestones:
 
@@ -2161,7 +2161,7 @@ This is the hardest sprint. Break it into sub-milestones:
 
 ### Sprint 3: Emit C
 
-Goal: `zen build examples/demo_project/` → compiles C → produces binary
+Goal: `zen build examples/project/` → compiles C → produces binary
 
 - C emitter for each AST node type
 - Runtime header (tagged unions, defer, string builder)

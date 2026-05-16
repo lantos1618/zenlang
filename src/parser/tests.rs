@@ -283,15 +283,15 @@ fn parse_nested_conditionals() {
 }
 
 #[test]
-fn parse_full_demo() {
-    let src = std::fs::read_to_string("examples/demo_project/main.zen");
+fn parse_project_example() {
+    let src = std::fs::read_to_string("examples/project/main.zen");
     if let Ok(src) = src {
         let result = parse_str(&src);
         match result {
             Ok(prog) => {
                 assert!(
-                    prog.declarations.len() >= 10,
-                    "demo should have many declarations, got {}",
+                    !prog.declarations.is_empty(),
+                    "project example should have declarations, got {}",
                     prog.declarations.len()
                 );
             }

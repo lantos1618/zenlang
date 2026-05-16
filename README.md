@@ -1,76 +1,86 @@
-# Zen Programming Language
+# Zen
 
-Zen is a work-in-progress systems language compiler. This worktree uses the
-`rewrite` branch as the baseline: a small Rust compiler pipeline that parses Zen
-source, typechecks it into a typed AST, emits C through the C backend, compiles
-the C with `cc`, and runs the result in integration tests.
+Zen is a systems language for code that should stay readable when programs get
+large: declarations are compact, data shapes are explicit, and control flow is
+driven by expressions and pattern matching instead of statement-heavy ceremony.
 
-The current repository is not a complete v1 language. Documentation and examples
-should describe only behavior covered by tests, or explicitly mark future work as
-gated or experimental.
+```zen
+{ io } = std
 
-## Current Baseline
+Result<T, E>:
+    Ok(T),
+    Err(E)
 
-Implemented and tested today:
+Point: {
+    x: i32,
+    y: i32,
+}
 
-- Lexer, parser, module loading for local files, typechecker, typed AST, C backend.
-- Runtime integration tests for arithmetic, strings, structs, enums, pattern-style
-  matches, loops, recursion, mutability, `defer`, casts, and UFCS-style calls.
-- CI checks for formatting, clippy, library tests, and integration tests.
+Point.sum = (self: Point) i32 {
+    return self.x + self.y
+}
 
-Not implemented as stable v1 features yet:
+main = () i32 {
+    p = Point { x: 20, y: 22 }
 
-- Real `Sync/Async` effects, typed allocator effects, actor runtime, behavior
-  solver, comptime type matching, `build.zen` execution, JSON/YAML IR emission,
-  formatter, package manager, alternate backend, or stable ABI/layout contracts.
+    p.sum() == 42 ?
+        | true { io.println("the point adds up") }
+        | false { io.println("try another point") }
 
-See [docs/V1_SPEC.md](docs/V1_SPEC.md) for the draft v1 contract, feature matrix,
-and required positive/negative test backlog.
-
-## Quick Start
-
-```bash
-# Build the compiler
-cargo build
-
-# Run the tested integration suite
-cargo test --tests
-
-# Run the current CI-equivalent local checks
-cargo fmt --check
-cargo clippy -- -D warnings
-cargo test --lib
-cargo test --tests
+    return 0
+}
 ```
 
-To run a currently tested program manually:
+## Why Zen
 
-```bash
-cargo run -- tests/zen/hello.zen
+- Prefix-first declarations keep functions, structs, enums, imports, methods,
+  and behaviors visually regular.
+- Pattern matching is the core branching form, so booleans, enums, results, and
+  options all use the same `?` shape.
+- Algebraic data types make absence and failure explicit with `Option<T>` and
+  `Result<T, E>` instead of nulls and hidden exceptions.
+- Dot calls work for ordinary functions and declared methods, which keeps APIs
+  fluent without requiring class-based design.
+- Behaviors describe required capabilities directly, so generic code can state
+  the operations it needs.
+- The language is designed for predictable native programs: explicit types,
+  explicit imports, and no hidden object model.
+
+## Language Shape
+
+```zen
+{ io } = std
+
+Option<T>:
+    None,
+    Some(T)
+
+unwrap_or<T> = (value: Option<T>, fallback: T) T {
+    value ?
+        | Some(inner) { inner }
+        | None { fallback }
+}
+
+Display: behavior {
+    display: (Self) str
+}
 ```
 
-## Repository Layout
+Zen code is meant to read from the outside in:
 
-```text
-src/
-  lexer/          tokenization
-  parser/         syntax parsing
-  module_system/  local file loading and imports
-  typechecker/    semantic checks and typed AST construction
-  codegen/c/      C backend
-tests/
-  zen/            executable integration fixtures and expected output
-stdlib/           aspirational and experimental Zen stdlib sources
-docs/
-  V1_SPEC.md      draft v1 contract and feature gates
-```
+- imports bind names from modules with destructuring syntax;
+- data types are named first, then shaped with fields or variants;
+- functions put the name first, then parameters, return type, and body;
+- methods attach behavior to a type with `Type.method`;
+- generic constraints use behavior bounds such as `T: Display`.
 
-## Development Rule
+## Learn
 
-Language work is TDD-first. Add the failing parser, semantic, effects, stdlib,
-codegen, tooling, or documentation assertion before changing implementation or
-public claims.
+- [Learn Zen In Y Minutes](docs/learn_zen_in_y_minutes.md)
+- [Examples](examples/README.md)
+- [V1 language contract](docs/V1_SPEC.md)
+- [Phase plan](docs/PHASE_PLAN.md)
+- [Completion audit](docs/COMPLETION_AUDIT.md)
 
-## License
-
-MIT
+The README is intentionally about the language. Current implementation status,
+gates, and audit details live in the docs linked above.

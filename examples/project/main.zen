@@ -1,9 +1,9 @@
 // main.zen - Entry point for a multi-file Zen project
 //
-// `std` comes from build.zen packages. `.` prefix means local project file.
+// `std` comes from build.zen packages. Local files import by module name.
 
 { io } = std
-{ clamp, factorial, is_even } = .math_utils
+{ clamp, factorial, is_even } = math_utils
 
 main = () i32 {
     io.println("factorial(6) = ${factorial(6)}")
