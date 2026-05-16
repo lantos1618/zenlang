@@ -1,0 +1,19 @@
+{ io } = std
+
+Option<T>:
+    None,
+    Some(T)
+
+Option.unwrap_or<T> = (self: Self, fallback: T) T {
+    self ?
+        | Some(value) { value }
+        | None { fallback }
+}
+
+main = () i32 {
+    some = Option<i32>.Some(34)
+    none = Option<i32>.None
+    io.println("${some.unwrap_or(0)}")
+    io.println("${none.unwrap_or(55)}")
+    0
+}
