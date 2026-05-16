@@ -3902,7 +3902,7 @@ impl TypeChecker {
 
     fn validate_ast_behavior_extends_declarations(&mut self, decls: &[Declaration]) {
         let tasks = Self::collect_behavior_association_validation_tasks(decls);
-        self.validate_behavior_extends_tasks(&tasks.extends);
+        self.validate_behavior_extends_tasks(&tasks);
         self.validate_behavior_extends_cycles();
         self.validate_behavior_method_coherence();
     }
@@ -3930,8 +3930,8 @@ impl TypeChecker {
         }
     }
 
-    fn validate_behavior_extends_tasks(&mut self, tasks: &[BehaviorExtendsValidationTask<'_>]) {
-        for task in tasks {
+    fn validate_behavior_extends_tasks(&mut self, tasks: &BehaviorAssociationValidationTasks<'_>) {
+        for task in &tasks.extends {
             self.check_behavior_extends(
                 task.behavior,
                 task.parent,
