@@ -213,6 +213,9 @@ checked-in docs, tests, and commits only.
 - Typechecker declaration-validation tests now keep resolver replay task
   coverage in a focused child module, separate from AST precollection,
   Self-context, and type-reference validation cases.
+- Typechecker resolver-local tests now keep absent local metadata coverage in a
+  focused child module, separate from parameter, scoped binding, closure,
+  pattern, and default-body local handoff cases.
 - Module-system unit tests now live beside the module-system implementation in
   a dedicated test module, keeping module graph/load entry points compact.
 - Resolver expected-local traversal now lives in a dedicated validation support
