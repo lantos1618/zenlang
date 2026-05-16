@@ -18,6 +18,8 @@ mod core_symbols;
 mod enum_metadata;
 #[path = "resolver_phase2/expr_locals.rs"]
 mod expr_locals;
+#[path = "resolver_phase2/generic_behavior_associations.rs"]
+mod generic_behavior_associations;
 #[path = "resolver_phase2/generic_behavior_metadata.rs"]
 mod generic_behavior_metadata;
 #[path = "resolver_phase2/impls.rs"]
