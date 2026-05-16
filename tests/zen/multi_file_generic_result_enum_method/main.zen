@@ -1,0 +1,10 @@
+{ io } = std
+{ Result } = result
+
+main = () i32 {
+    ok = Result<i32, str>.Ok(55)
+    err = Result<i32, str>.Err("bad")
+    io.println("${ok.unwrap_or(0)}")
+    io.println("${err.unwrap_or(144)}")
+    0
+}
