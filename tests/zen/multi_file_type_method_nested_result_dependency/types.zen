@@ -1,0 +1,7 @@
+pub Option<T>:
+    None,
+    Some(T)
+
+pub Result<T, E>:
+    Ok(T),
+    Err(E)

@@ -49,6 +49,11 @@ checked-in docs, tests, and commits only.
   now also rely on receiver inference in
   `tests/zen/multi_file_type_method_return_enum_dependency`, covering both the
   entry-module call and the source method's nested `self.wrap()` call.
+- Imported generic methods returning nested source-module generic enum
+  dependencies are covered by
+  `tests/zen/multi_file_type_method_nested_result_dependency/main.zen`,
+  proving `Result<Option<T>, str>` return specialization through an imported
+  public method without undefined generated C calls.
 - Resolver method symbols carry full value-signature metadata, including
   generic type-parameter names and bounds, and typechecker setup validates
   method signature handoff drift before method bodies are checked.

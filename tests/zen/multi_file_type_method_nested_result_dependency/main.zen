@@ -1,0 +1,14 @@
+{ io } = std
+{ Option, Result } = types
+{ Box, unwrap_option, unwrap_result } = model
+
+main = () i32 {
+    box = Box<i32> { value: 109 }
+    wrapped = box.wrap_result()
+    fallback = Result<Option<i32>, str>.Err("bad")
+    some = unwrap_result(wrapped, Option<i32>.None)
+    other = unwrap_result(fallback, Option<i32>.Some(7))
+    io.println("${unwrap_option(some, 0)}")
+    io.println("${unwrap_option(other, 0)}")
+    return 0
+}

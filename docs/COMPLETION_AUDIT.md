@@ -89,6 +89,12 @@ and do not assume Phase 4 is ready without evidence.
   method body, covered by
   `tests/zen/multi_file_type_method_return_enum_dependency/main.zen` and
   `integration::test_multi_file_type_method_return_enum_dependency_imports`.
+  Nested imported generic method return dependencies are also covered by
+  `tests/zen/multi_file_type_method_nested_result_dependency/main.zen`,
+  `integration::test_multi_file_type_method_nested_result_dependency_imports`,
+  and `integration::generated_c_call_definition_scan_reports_missing_generated_calls`,
+  proving `Result<Option<T>, str>` specialization does not leave undefined
+  generated C calls.
   Imported public generic non-behavior `Type.impl` method templates that use
   source-module imported generic types and methods are covered by
   `tests/zen/multi_file_type_impl_imported_type_dependency/main.zen` and

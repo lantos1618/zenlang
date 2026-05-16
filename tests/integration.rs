@@ -810,6 +810,18 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T Box_wrap"));
 
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_type_method_nested_result_dependency/main.zen"),
+    );
+    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
+    assert!(c_source.contains("typedef struct Result_Option_i32_str Result_Option_i32_str;"));
+    assert!(c_source.contains("Result_Option_i32_str Box_wrap_result_i32(Box_i32 self)"));
+    assert!(c_source.contains("Box_wrap_result_i32(box)"));
+    assert_c_call_resolves_to_definition(&c_source, "Box_wrap_result_i32");
+    assert!(!c_source.contains("Option_T"));
+    assert!(!c_source.contains("Result_Option_T"));
+    assert!(!c_source.contains("T Box_wrap_result"));
+
     let c_source =
         compile_to_c_with_generated_call_check(&test_dir().join("generic_ufc_function.zen"));
     assert!(c_source.contains("int32_t id_i32(int32_t value)"));
@@ -1707,6 +1719,13 @@ fn test_multi_file_type_method_return_enum_dependency_imports() {
     let zen_path = test_dir().join("multi_file_type_method_return_enum_dependency/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "97\n");
+}
+
+#[test]
+fn test_multi_file_type_method_nested_result_dependency_imports() {
+    let zen_path = test_dir().join("multi_file_type_method_nested_result_dependency/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "109\n7\n");
 }
 
 #[test]
