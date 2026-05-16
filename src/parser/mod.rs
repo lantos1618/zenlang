@@ -11,6 +11,7 @@ use crate::lexer::Token;
 
 mod atoms;
 mod behavior_declarations;
+mod block_helpers;
 mod declarations;
 mod expressions;
 mod patterns;
