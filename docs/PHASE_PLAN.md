@@ -1392,6 +1392,8 @@ checked-in docs, tests, and commits only.
   routing for restored value metadata.
 - Resolver-backed generic template restoration now shares function-vs-method
   routing for restored generic value metadata.
+- Resolver-backed stale-name recovery now routes resolver symbol/span lookup and
+  behavior-ref owner fallback through a dedicated resolver lookup helper module.
 - Resolver-backed struct and enum metadata restoration now use shared
   constructors for resolver type parameters, bounds, fields, and variants.
 - Resolver-backed behavior metadata restoration now uses the same constructor
