@@ -1,0 +1,12 @@
+{ io } = std
+{ Json, Point } = traits
+
+render<T: Json<str>> = (value: T) str {
+    value.encode()
+}
+
+main = () i32 {
+    point = Point { x: 19 }
+    io.println(render(point))
+    0
+}

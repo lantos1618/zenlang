@@ -883,6 +883,17 @@ fn generic_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T_to_json"));
 
     let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_imported_generic_behavior_default/main.zen"),
+    );
+    assert!(c_source.contains("zen_str Point_encode(Point __arg0)"));
+    assert!(c_source.contains("zen_str render_Point(Point value)"));
+    assert!(c_source.contains("Point_encode(value)"));
+    assert_c_call_resolves_to_definition(&c_source, "Point_encode");
+    assert_c_call_resolves_to_definition(&c_source, "render_Point");
+    assert!(!c_source.contains("Json_T"));
+    assert!(!c_source.contains("T_encode"));
+
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("behavior_generic_default_method.zen"),
     );
     assert!(c_source.contains("zen_str Point_encode(Point __arg0)"));
@@ -2517,6 +2528,13 @@ fn test_multi_file_imported_behavior_defaults() {
     let zen_path = test_dir().join("multi_file_imported_behavior_default/main.zen");
     let actual = compile_and_run(&zen_path);
     assert_eq!(actual, "default-json\n");
+}
+
+#[test]
+fn test_multi_file_imported_generic_behavior_defaults() {
+    let zen_path = test_dir().join("multi_file_imported_generic_behavior_default/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "imported-default\n");
 }
 
 #[test]

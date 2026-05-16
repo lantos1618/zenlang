@@ -1,0 +1,12 @@
+pub Json<T>: behavior {
+    encode: (Self) T {
+        "imported-default"
+    }
+}
+
+pub Point: {
+    x: i32
+}
+
+Point.implements(Json<str>) {
+}
