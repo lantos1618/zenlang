@@ -1827,6 +1827,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed struct field-default validation now receives the full
   resolver declaration metadata task bundle and selects type declarations
   internally, removing another `tasks.types` handoff from semantic replay.
+- Resolver-backed type-reference validation now receives the full resolver
+  declaration metadata task bundle and selects type-reference replay entries
+  internally, keeping collected semantic replay on the bundled task shape.
 
 ## Current Phase
 
