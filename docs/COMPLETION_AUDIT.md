@@ -2027,6 +2027,13 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_type_reference_validation_tasks_collect_only_type_reference_work`
   and
   `cargo test collect_declarations_with_symbols_uses_resolver_type_metadata_for_type_refs`.
+- Resolver-backed struct field-default validation now uses a narrow type
+  declaration metadata task collector instead of collecting the full resolver
+  metadata task bundle when only type default replay is needed, covered by
+  `cargo test resolver_type_declaration_metadata_tasks_collect_only_type_work`,
+  `cargo test resolver_backed_struct_field_defaults_reuse_metadata_tasks`,
+  and
+  `cargo test resolver_struct_field_defaults_validate_from_type_metadata_tasks`.
 
 ## Unresolved Gaps
 

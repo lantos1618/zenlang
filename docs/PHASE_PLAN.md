@@ -1706,6 +1706,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed type-reference validation now uses a narrow type-reference
   task collector instead of collecting the full resolver metadata task bundle
   when only type-reference replay is needed.
+- Resolver-backed struct field-default validation now uses a narrow type
+  declaration metadata task collector instead of collecting the full resolver
+  metadata task bundle when only type default replay is needed.
 
 ## Current Phase
 
