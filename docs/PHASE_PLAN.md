@@ -1907,8 +1907,14 @@ checked-in docs, tests, and commits only.
   deterministic graph pipeline used by `build-graph <build.zen>`, covered by
   `build_command_routes_build_zen_through_deterministic_graph`. The normal
   build path now compiles multiple executable targets, covered by
-  `build_command_build_zen_compiles_multiple_executable_targets`, and rejects
-  undeclared host effects before multi-target execution through
+  `build_command_build_zen_compiles_multiple_executable_targets`. Executable
+  graph targets now compile dependencies before dependents, covered by
+  `build_graph_orders_targets_before_dependents` and
+  `build_command_build_zen_compiles_executable_dependencies_first`, and reject
+  undeclared host effects before dependency-ordered execution through
+  `build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
+  The normal build path also rejects undeclared host effects before
+  multi-target execution through
   `build_command_multi_target_build_zen_rejects_undeclared_host_effects`. The
   single-target rejection remains covered by
   `build_command_build_zen_rejects_undeclared_host_effects`.

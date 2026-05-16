@@ -2233,6 +2233,14 @@ and do not assume Phase 4 is ready without evidence.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes remain
   rejected with a targeted graph diagnostic, covered by
   `cargo test --test integration legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic`.
+- Executable build graph targets now execute dependencies before dependents,
+  covered by
+  `cargo test --test build_graph build_graph_orders_targets_before_dependents`
+  and
+  `cargo test --test integration build_command_build_zen_compiles_executable_dependencies_first`.
+- Dependency-ordered build execution still stops before execution when graph
+  lowering detects undeclared host effects, covered by
+  `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
 
 ## Unresolved Gaps
 
@@ -2241,7 +2249,8 @@ and do not assume Phase 4 is ready without evidence.
   resolver-owned semantic handoffs.
 - build.zen entrypoints are not complete: the constrained graph path now covers
   graph emission, multi-executable target execution for normal
-  `zen build build.zen` and direct `zen build.zen`, normal
+  `zen build build.zen` and direct `zen build.zen`, dependency-ordered
+  executable target execution for normal `zen build build.zen`, normal
   `zen check build.zen`, test and library target graph lowering/emission, and
   single-target normal `zen emit build.zen`, while legacy generic `emit-json`
   build.zen modes have a targeted rejection. Test/library execution,
