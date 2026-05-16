@@ -2100,7 +2100,9 @@ checked-in docs, tests, and commits only.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
   `test_command_build_zen_runs_test_targets`, compiles and runs multiple test
   graph targets through `test_command_build_zen_runs_multiple_test_targets`,
-  and rejects undeclared host effects before test execution through
+  rejects executable-only graphs before execution starts through
+  `test_command_build_zen_rejects_graph_without_test_targets`, and rejects
+  undeclared host effects before test execution through
   `test_command_build_zen_rejects_undeclared_host_effects` and
   `test_command_multi_target_build_zen_rejects_undeclared_host_effects`.
   Test execution also rejects dependencies on gated library targets through
