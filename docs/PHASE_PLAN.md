@@ -1776,6 +1776,9 @@ checked-in docs, tests, and commits only.
   validation task collection, so behavior inheritance declarations are
   classified consistently before parent validation, cycle checks, and method
   coherence run.
+- Behavior impl validation now reuses the resolver behavior-impl declaration
+  task shape and helper, so standalone validation and resolver metadata replay
+  classify `.implements` blocks through the same path.
 
 ## Current Phase
 

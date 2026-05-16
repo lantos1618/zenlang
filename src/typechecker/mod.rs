@@ -293,14 +293,6 @@ struct ImplBlockDeclarationTask<'a> {
     methods: &'a [Declaration],
 }
 
-struct BehaviorImplValidationTask<'a> {
-    type_name: &'a str,
-    behavior: &'a str,
-    behavior_type_args: &'a [AstType],
-    methods: &'a [Declaration],
-    span: Span,
-}
-
 struct BehaviorRequiresValidationTask<'a> {
     type_name: &'a str,
     behavior: &'a str,
@@ -4120,28 +4112,18 @@ impl TypeChecker {
         behavior_impl_tasks: &mut Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
         type_reference_tasks: &mut Vec<ResolverTypeReferenceValidationTask<'a>>,
     ) -> bool {
-        if let Declaration::ImplBlock {
-            type_name,
-            behavior: Some(behavior),
-            behavior_type_args,
-            methods,
-            span,
-            ..
-        } = decl
-        {
-            behavior_impl_tasks.push(ResolverBehaviorImplBlockDeclarationTask {
-                ast_type_name: type_name,
-                behavior,
-                behavior_type_args,
-                methods,
-                span: *span,
-            });
+        let handled = Self::push_behavior_impl_block_declaration_task(decl, behavior_impl_tasks);
+        if handled {
+            let Declaration::ImplBlock {
+                type_name, methods, ..
+            } = decl
+            else {
+                return false;
+            };
             type_reference_tasks
                 .push(ResolverTypeReferenceValidationTask::ImplBlock { type_name, methods });
-            true
-        } else {
-            false
         }
+        handled
     }
 
     #[cfg(test)]
@@ -4150,16 +4132,15 @@ impl TypeChecker {
     ) -> Vec<ResolverBehaviorImplBlockDeclarationTask<'_>> {
         let mut tasks = Vec::new();
         for decl in decls {
-            Self::push_resolver_behavior_impl_block_declaration_task(decl, &mut tasks);
+            Self::push_behavior_impl_block_declaration_task(decl, &mut tasks);
         }
         tasks
     }
 
-    #[cfg(test)]
-    fn push_resolver_behavior_impl_block_declaration_task<'a>(
+    fn push_behavior_impl_block_declaration_task<'a>(
         decl: &'a Declaration,
         tasks: &mut Vec<ResolverBehaviorImplBlockDeclarationTask<'a>>,
-    ) {
+    ) -> bool {
         if let Declaration::ImplBlock {
             type_name,
             behavior: Some(behavior),
@@ -4176,6 +4157,9 @@ impl TypeChecker {
                 methods,
                 span: *span,
             });
+            true
+        } else {
+            false
         }
     }
 
@@ -4646,47 +4630,24 @@ impl TypeChecker {
 
     fn collect_behavior_impl_validation_tasks(
         decls: &[Declaration],
-    ) -> Vec<BehaviorImplValidationTask<'_>> {
+    ) -> Vec<ResolverBehaviorImplBlockDeclarationTask<'_>> {
         let mut impl_tasks = Vec::new();
 
         for decl in decls {
-            Self::push_behavior_impl_validation_task(decl, &mut impl_tasks);
+            Self::push_behavior_impl_block_declaration_task(decl, &mut impl_tasks);
         }
         impl_tasks
     }
 
-    fn push_behavior_impl_validation_task<'a>(
-        decl: &'a Declaration,
-        tasks: &mut Vec<BehaviorImplValidationTask<'a>>,
-    ) {
-        if let Declaration::ImplBlock {
-            type_name,
-            behavior: Some(behavior),
-            behavior_type_args,
-            methods,
-            span,
-            ..
-        } = decl
-        {
-            tasks.push(BehaviorImplValidationTask {
-                type_name,
-                behavior,
-                behavior_type_args,
-                methods,
-                span: *span,
-            });
-        }
-    }
-
     fn validate_behavior_impl_tasks(
         &mut self,
-        impl_tasks: &[BehaviorImplValidationTask<'_>],
+        impl_tasks: &[ResolverBehaviorImplBlockDeclarationTask<'_>],
         symbols: Option<&SymbolTable>,
     ) {
         for task in impl_tasks {
             self.validate_collected_behavior_impl_declaration(
                 symbols,
-                task.type_name,
+                task.ast_type_name,
                 task.behavior,
                 task.behavior_type_args,
                 task.methods,
@@ -14801,7 +14762,7 @@ Point.implements(Json) {
         let tasks = TypeChecker::collect_behavior_impl_validation_tasks(&program.declarations);
 
         assert_eq!(tasks.len(), 1);
-        assert_eq!(tasks[0].type_name, "Point");
+        assert_eq!(tasks[0].ast_type_name, "Point");
         assert_eq!(tasks[0].behavior, "Json");
         assert_eq!(tasks[0].methods.len(), 1);
     }
