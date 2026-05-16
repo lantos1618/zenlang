@@ -2198,6 +2198,8 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration test_command_build_zen_runs_test_targets`,
   compiles and runs multiple test graph targets through
   `cargo test --test integration test_command_build_zen_runs_multiple_test_targets`,
+  rejects executable-only graphs before execution starts through
+  `cargo test --test integration test_command_build_zen_rejects_graph_without_test_targets`,
   and rejects undeclared host effects before test execution through
   `cargo test --test integration test_command_build_zen_rejects_undeclared_host_effects`
   and

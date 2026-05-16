@@ -373,6 +373,53 @@ main = () i32 {
 }
 
 #[test]
+fn test_command_build_zen_rejects_graph_without_test_targets() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("app.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write app.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["test", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen test build.zen");
+
+    assert!(
+        !output.status.success(),
+        "zen test build.zen unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("build graph test execution requires at least one test target"),
+        "expected no test target diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        !tmp.path().join("build").exists(),
+        "test command should not create outputs for an executable-only graph"
+    );
+}
+
+#[test]
 fn test_command_build_zen_rejects_undeclared_host_effects() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
