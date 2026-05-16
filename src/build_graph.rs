@@ -103,6 +103,7 @@ pub struct BuildTarget {
 pub enum BuildGraphError {
     EmptyTargetName,
     DuplicateTargetName(String),
+    SelfTargetDependency(String),
     UnknownTargetDependency { target: String, dependency: String },
     MissingTargets,
     UndeclaredHostEffect(HostEffect),
@@ -144,6 +145,9 @@ impl BuildGraph {
         }
         for target in &targets {
             for dependency in &target.dependencies {
+                if dependency == &target.name {
+                    return Err(BuildGraphError::SelfTargetDependency(target.name.clone()));
+                }
                 if !target_names.contains(dependency) {
                     return Err(BuildGraphError::UnknownTargetDependency {
                         target: target.name.clone(),
@@ -226,6 +230,9 @@ impl fmt::Display for BuildGraphError {
             Self::EmptyTargetName => f.write_str("build target name cannot be empty"),
             Self::DuplicateTargetName(name) => {
                 write!(f, "duplicate build target name `{name}`")
+            }
+            Self::SelfTargetDependency(name) => {
+                write!(f, "build target `{name}` cannot depend on itself")
             }
             Self::UnknownTargetDependency { target, dependency } => {
                 write!(

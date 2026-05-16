@@ -101,10 +101,11 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   direct `zen build.zen` aliases that same graph build path. Test targets are
   lowered and emitted in build graph JSON, and library targets are lowered and
   emitted in build graph JSON. Target dependency and feature metadata arrays
-  are lowered and emitted in build graph JSON, and target dependencies must
-  reference known graph targets, but test and library execution remain gated.
-  Legacy `emit-json ast|symbols|typed|diagnostics` modes for `build.zen` are
-  explicitly rejected with a diagnostic that points to `emit-json build-graph`.
+  are lowered and emitted in build graph JSON. Target dependencies must
+  reference known graph targets and may not point back to the same target, but
+  test and library execution remain gated. Legacy
+  `emit-json ast|symbols|typed|diagnostics` modes for `build.zen` are explicitly
+  rejected with a diagnostic that points to `emit-json build-graph`.
 - Errors: `Result<T, E>` and `.raise()` are v1 design goals, but `.raise()` is
   gated until typechecked propagation and lowering are implemented.
 - ABI: stable layouts for structs, enums, options/results, strings, slices,
