@@ -2270,6 +2270,8 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_compiles_single_executable_target`
   and
   `cargo test --test integration build_graph_command_rejects_undeclared_host_effects`.
+  Test-only graphs are rejected before execution starts, covered by
+  `cargo test --test integration build_graph_command_rejects_graph_without_executable_targets`.
 - Executable build graph targets now execute dependencies before dependents,
   covered by
   `cargo test --test build_graph build_graph_orders_targets_before_dependents`
