@@ -210,6 +210,9 @@ checked-in docs, tests, and commits only.
 - Resolver phase 2 generic behavior tests now keep association edge coverage
   in a focused integration module, separate from generic behavior declaration
   and method metadata capture.
+- Typechecker declaration-validation tests now keep resolver replay task
+  coverage in a focused child module, separate from AST precollection,
+  Self-context, and type-reference validation cases.
 - Module-system unit tests now live beside the module-system implementation in
   a dedicated test module, keeping module graph/load entry points compact.
 - Resolver expected-local traversal now lives in a dedicated validation support
