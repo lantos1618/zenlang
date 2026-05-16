@@ -3956,10 +3956,19 @@ impl TypeChecker {
     ) -> ResolverDeclarationMetadataTasks<'_> {
         let mut tasks = ResolverDeclarationMetadataTasks::default();
         for decl in decls {
-            Self::push_resolver_type_reference_validation_task(decl, &mut tasks.type_references);
+            let callable_handled = Self::push_resolver_callable_replay_tasks(
+                decl,
+                &mut tasks.callable,
+                &mut tasks.type_references,
+            );
+            if !callable_handled {
+                Self::push_resolver_type_reference_validation_task(
+                    decl,
+                    &mut tasks.type_references,
+                );
+            }
             Self::push_resolver_type_declaration_metadata_task(decl, &mut tasks.types);
             Self::push_resolver_behavior_declaration_metadata_task(decl, &mut tasks.behaviors);
-            Self::push_resolver_callable_declaration_metadata_task(decl, &mut tasks.callable);
             Self::push_resolver_behavior_impl_block_declaration_task(
                 decl,
                 &mut tasks.behavior_impl_blocks,
@@ -4068,6 +4077,7 @@ impl TypeChecker {
         tasks
     }
 
+    #[cfg(test)]
     fn push_resolver_callable_declaration_metadata_task<'a>(
         decl: &'a Declaration,
         tasks: &mut Vec<ResolverCallableDeclarationMetadataTask<'a>>,
@@ -4098,6 +4108,67 @@ impl TypeChecker {
                     .push(ResolverCallableDeclarationMetadataTask::TypeImpl { type_name, methods });
             }
             _ => {}
+        }
+    }
+
+    fn push_resolver_callable_replay_tasks<'a>(
+        decl: &'a Declaration,
+        callable_tasks: &mut Vec<ResolverCallableDeclarationMetadataTask<'a>>,
+        type_reference_tasks: &mut Vec<ResolverTypeReferenceValidationTask<'a>>,
+    ) -> bool {
+        match decl {
+            Declaration::Function {
+                name, body, span, ..
+            } => {
+                callable_tasks
+                    .push(ResolverCallableDeclarationMetadataTask::Function { name, span: *span });
+                type_reference_tasks.push(ResolverTypeReferenceValidationTask::Function {
+                    name,
+                    body,
+                    span: *span,
+                });
+                true
+            }
+            Declaration::Method {
+                type_name,
+                method_name,
+                body,
+                span,
+                ..
+            } => {
+                callable_tasks.push(ResolverCallableDeclarationMetadataTask::Method {
+                    type_name,
+                    method_name,
+                    span: *span,
+                });
+                type_reference_tasks.push(ResolverTypeReferenceValidationTask::Method {
+                    type_name,
+                    method_name,
+                    body,
+                    span: *span,
+                });
+                true
+            }
+            Declaration::ImplBlock {
+                type_name,
+                behavior: None,
+                methods,
+                ..
+            } => {
+                callable_tasks
+                    .push(ResolverCallableDeclarationMetadataTask::TypeImpl { type_name, methods });
+                type_reference_tasks
+                    .push(ResolverTypeReferenceValidationTask::ImplBlock { type_name, methods });
+                true
+            }
+            Declaration::ImplBlock {
+                type_name, methods, ..
+            } => {
+                type_reference_tasks
+                    .push(ResolverTypeReferenceValidationTask::ImplBlock { type_name, methods });
+                true
+            }
+            _ => false,
         }
     }
 
@@ -16305,6 +16376,35 @@ Point.impl = {
                 type_name: "Point",
                 ..
             }
+        ));
+    }
+
+    #[test]
+    fn resolver_callable_replay_task_helper_pushes_metadata_and_type_refs_together() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+make = () Point { return Point { x: 1 } }
+"#,
+        );
+        let mut callable_tasks = Vec::new();
+        let mut type_reference_tasks = Vec::new();
+
+        let handled = TypeChecker::push_resolver_callable_replay_tasks(
+            &program.declarations[1],
+            &mut callable_tasks,
+            &mut type_reference_tasks,
+        );
+
+        assert!(handled);
+        assert!(matches!(
+            callable_tasks.as_slice(),
+            [ResolverCallableDeclarationMetadataTask::Function { name: "make", .. }]
+        ));
+        assert!(matches!(
+            type_reference_tasks.as_slice(),
+            [ResolverTypeReferenceValidationTask::Function { name: "make", .. }]
         ));
     }
 

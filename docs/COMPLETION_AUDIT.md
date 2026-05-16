@@ -2133,6 +2133,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test check_program_with_symbols_requires_resolver_top_level_expr_locals`,
   `cargo test check_program_with_symbols_requires_resolver_struct_field_default_locals`,
   and `cargo test expected_resolver_scoped_expr_locals_collects_block_bindings`.
+- Resolver-backed callable replay now shares one helper for callable metadata
+  and callable type-reference validation tasks, covered by
+  `cargo test resolver_callable_replay_task_helper_pushes_metadata_and_type_refs_together`,
+  `cargo test resolver_callable_declaration_metadata_tasks_collect_callable_work`,
+  and
+  `cargo test resolver_declaration_metadata_tasks_collect_impl_blocks_with_declarations`.
 
 ## Unresolved Gaps
 

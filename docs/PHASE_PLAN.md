@@ -1752,6 +1752,10 @@ checked-in docs, tests, and commits only.
   expected enum variant entries.
 - Resolver validation replay now uses a shared scoped-expression helper for
   struct field defaults and top-level expressions.
+- Resolver-backed callable replay now shares one helper for callable metadata
+  and callable type-reference validation tasks, so functions, top-level
+  methods, and impl methods are classified once before their restored
+  signature and body-reference replay paths run.
 
 ## Current Phase
 
