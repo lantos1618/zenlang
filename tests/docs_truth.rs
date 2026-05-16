@@ -384,6 +384,8 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "JSON is compiler-owned IR output",
         "YAML is human-authored config/spec input",
         "build.zen is deterministic comptime build graph",
+        "deterministic_build_graph_creates_one_executable_target",
+        "build_graph_rejects_undeclared_host_effects",
         "collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata",
         "collect_declarations_with_symbols_clears_stale_behavior_impl_generic_method_template_after_key_restore",
         "resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl_pass",

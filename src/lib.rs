@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod build_graph;
 pub mod codegen;
 pub mod error;
 pub mod ir_json;
