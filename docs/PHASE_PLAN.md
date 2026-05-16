@@ -197,6 +197,8 @@ checked-in docs, tests, and commits only.
   helper, keeping expected metadata formatting separate from scoped local walks.
 - Build graph lowering from parsed build.zen programs now lives beside the
   graph model, keeping graph validation separate from AST traversal details.
+- Resolver symbol-table behavior edge recording now lives in a focused helper,
+  keeping symbol definition and lookup separate from association mutation.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
