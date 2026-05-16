@@ -1925,6 +1925,10 @@ checked-in docs, tests, and commits only.
   graph without compiling targets, covered by
   `check_command_validates_build_zen_graph`, and rejects undeclared host effects
   through `check_command_build_zen_rejects_undeclared_host_effects`.
+- Normal `zen test build.zen` compiles and runs test graph targets, covered by
+  `test_command_build_zen_runs_test_targets`, and rejects undeclared host
+  effects before test execution through
+  `test_command_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `emit_command_build_zen_outputs_target_c_source`, and rejects undeclared host
@@ -1948,10 +1952,11 @@ Continue the smallest behavior-association and resolver/typechecker hardening
 slices. Phase 3 C codegen is sufficient for the current tested fixtures, but
 Phase 4 build-driver work still has constrained `build.zen` semantics: normal
 `zen build build.zen` and direct `zen build.zen` execute multiple executable
-graph targets, `zen check build.zen` validates executable, test, and library
-targets in the graph, `zen emit build.zen` emits target C for a single
-executable graph target, and library execution remains gated. Legacy generic
-JSON emitters reject `build.zen` and point to
+graph targets, `zen test build.zen` executes test graph targets,
+`zen check build.zen` validates executable, test, and library targets in the
+graph, `zen emit build.zen` emits target C for a single executable graph target,
+and library execution remains gated. Legacy generic JSON emitters reject
+`build.zen` and point to
 `emit-json build-graph`.
 
 Do not promote gated v1 features until the relevant positive and negative tests

@@ -1919,6 +1919,94 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn test_command_build_zen_runs_test_targets() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Test { name: "unit", root: "test.zen" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("test.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write test.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["test", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen test build.zen");
+
+    assert!(
+        output.status.success(),
+        "zen test build.zen failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let bin_path = tmp.path().join("build").join("tests").join("unit");
+    assert!(
+        bin_path.exists(),
+        "expected {} to exist",
+        bin_path.display()
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("test unit passed"),
+        "expected test pass output, stdout={}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}
+
+#[test]
+fn test_command_build_zen_rejects_undeclared_host_effects() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD")
+    b.add(Test { name: "unit", root: "test.zen" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["test", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen test build.zen");
+
+    assert!(
+        !output.status.success(),
+        "zen test build.zen unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("undeclared host effect: read env `ZEN_STD`"),
+        "expected undeclared host effect diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        !tmp.path().join("build").exists(),
+        "test command should not start after graph validation fails"
+    );
+}
+
+#[test]
 fn emit_command_build_zen_outputs_target_c_source() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(

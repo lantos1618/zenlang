@@ -2180,6 +2180,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration check_command_validates_build_zen_graph`, and
   rejects undeclared host effects through
   `cargo test --test integration check_command_build_zen_rejects_undeclared_host_effects`.
+- Normal `zen test build.zen` compiles and runs test graph targets, covered by
+  `cargo test --test integration test_command_build_zen_runs_test_targets`, and
+  rejects undeclared host effects before test execution through
+  `cargo test --test integration test_command_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `cargo test --test integration emit_command_build_zen_outputs_target_c_source`,
@@ -2258,11 +2262,12 @@ and do not assume Phase 4 is ready without evidence.
   graph emission, multi-executable target execution for normal
   `zen build build.zen` and direct `zen build.zen`, dependency-ordered
   executable target execution for normal `zen build build.zen`, normal
-  `zen check build.zen`, test and library target graph lowering/emission, and
-  single-target normal `zen emit build.zen`, while legacy generic `emit-json`
-  build.zen modes have a targeted rejection. Test/library execution,
-  package/link semantics, and other broader graph semantics still need explicit
-  deterministic semantics before promotion.
+  `zen test build.zen` test-target execution, normal `zen check build.zen`,
+  test and library target graph lowering/emission, and single-target normal
+  `zen emit build.zen`, while legacy generic `emit-json` build.zen modes have a
+  targeted rejection. Library execution, package/link semantics, and other
+  broader graph semantics still need explicit deterministic semantics before
+  promotion.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
