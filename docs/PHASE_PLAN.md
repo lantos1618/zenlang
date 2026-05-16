@@ -191,6 +191,9 @@ checked-in docs, tests, and commits only.
   from argument, annotation, and return-flow validation.
 - C backend unit tests now live beside the backend in a dedicated test module,
   keeping the production C backend entry point and identifier helpers compact.
+- C backend expression-emission unit tests now live in their own test helper,
+  keeping backend generation, C type mapping, and low-level expression emission
+  coverage separate.
 - Module-system unit tests now live beside the module-system implementation in
   a dedicated test module, keeping module graph/load entry points compact.
 - Resolver expected-local traversal now lives in a dedicated validation support
