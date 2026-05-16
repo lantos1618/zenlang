@@ -1848,6 +1848,9 @@ checked-in docs, tests, and commits only.
 - The main AST declaration collection path now builds behavior, type,
   callable, impl-block, and import collection task lists in one declaration
   pass before replaying them in the existing collection order.
+- AST declaration semantic validation now builds behavior-association,
+  type-reference, and struct field-default validation task lists in one
+  declaration pass before replaying the existing validation order.
 
 ## Current Phase
 

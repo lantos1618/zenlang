@@ -276,6 +276,13 @@ struct BehaviorAssociationValidationTasks<'a> {
     requires: Vec<BehaviorRequiresValidationTask<'a>>,
 }
 
+#[derive(Default)]
+struct AstDeclarationValidationTasks<'a> {
+    behavior_associations: BehaviorAssociationValidationTasks<'a>,
+    type_references: Vec<AstTypeReferenceValidationTask<'a>>,
+    struct_field_defaults: Vec<AstStructFieldDefaultValidationTask<'a>>,
+}
+
 trait BehaviorAssociationValidationTaskSource<'a> {
     fn behavior_association_tasks(&self) -> &BehaviorAssociationValidationTasks<'a>;
 }
@@ -283,6 +290,12 @@ trait BehaviorAssociationValidationTaskSource<'a> {
 impl<'a> BehaviorAssociationValidationTaskSource<'a> for BehaviorAssociationValidationTasks<'a> {
     fn behavior_association_tasks(&self) -> &BehaviorAssociationValidationTasks<'a> {
         self
+    }
+}
+
+impl<'a> BehaviorAssociationValidationTaskSource<'a> for AstDeclarationValidationTasks<'a> {
+    fn behavior_association_tasks(&self) -> &BehaviorAssociationValidationTasks<'a> {
+        &self.behavior_associations
     }
 }
 
@@ -4624,10 +4637,42 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: Option<&SymbolTable>,
     ) {
-        let behavior_association_tasks = Self::collect_behavior_association_validation_tasks(decls);
-        self.validate_behavior_association_tasks(&behavior_association_tasks, symbols);
-        self.validate_generic_type_references(decls, symbols);
-        self.validate_struct_field_defaults(decls, symbols);
+        if self.resolver_backed_collection {
+            let behavior_association_tasks =
+                Self::collect_behavior_association_validation_tasks(decls);
+            self.validate_behavior_association_tasks(&behavior_association_tasks, symbols);
+            self.validate_generic_type_references(decls, symbols);
+            self.validate_struct_field_defaults(decls, symbols);
+            return;
+        }
+
+        let tasks = Self::collect_ast_declaration_validation_tasks(decls);
+        self.validate_behavior_association_tasks(&tasks.behavior_associations, symbols);
+        self.validate_ast_type_reference_tasks(&tasks.type_references);
+        self.validate_ast_struct_field_default_tasks(&tasks.struct_field_defaults);
+    }
+
+    fn collect_ast_declaration_validation_tasks(
+        decls: &[Declaration],
+    ) -> AstDeclarationValidationTasks<'_> {
+        let mut tasks = AstDeclarationValidationTasks::default();
+        for decl in decls {
+            Self::push_behavior_extends_replay_task(decl, &mut tasks.behavior_associations.extends);
+            Self::push_behavior_impl_block_declaration_task(
+                decl,
+                &mut tasks.behavior_associations.impls,
+            );
+            Self::push_behavior_requires_replay_task(
+                decl,
+                &mut tasks.behavior_associations.requires,
+            );
+            Self::push_ast_type_reference_validation_task(decl, &mut tasks.type_references);
+            Self::push_ast_struct_field_default_validation_task(
+                decl,
+                &mut tasks.struct_field_defaults,
+            );
+        }
+        tasks
     }
 
     fn collect_behavior_association_validation_tasks(
@@ -16675,6 +16720,37 @@ result := make()
             tasks[6],
             AstTypeReferenceValidationTask::TopLevelExpr { .. }
         ));
+    }
+
+    #[test]
+    fn ast_declaration_validation_tasks_collect_semantic_validation_work() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 = 1 }
+Option<T>: Some(T), None
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<str>) {
+    encode = (self: Point) str { "point" }
+}
+
+Point.requires(Json<str>)
+JsonString.extends(Json<str>)
+
+main = () i32 { 1 }
+"#,
+        );
+
+        let tasks = TypeChecker::collect_ast_declaration_validation_tasks(&program.declarations);
+
+        assert_eq!(tasks.behavior_associations.extends.len(), 1);
+        assert_eq!(tasks.behavior_associations.impls.len(), 1);
+        assert_eq!(tasks.behavior_associations.requires.len(), 1);
+        assert_eq!(tasks.type_references.len(), 5);
+        assert_eq!(tasks.struct_field_defaults.len(), 1);
     }
 
     #[test]
