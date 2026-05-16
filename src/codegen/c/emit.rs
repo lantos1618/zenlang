@@ -80,6 +80,9 @@ impl CEmitter {
             },
             TypedExprKind::Break => "break;".into(),
             TypedExprKind::Continue => "continue;".into(),
+            TypedExprKind::LoopControl { action, label } => {
+                format!("goto {label}_{action};")
+            }
             TypedExprKind::Assign { target, value } => {
                 let t = self.emit_expr_inline(target);
                 let v = self.emit_expr_inline(value);
@@ -321,6 +324,7 @@ impl CEmitter {
 
             TypedExprKind::Break => "break".into(),
             TypedExprKind::Continue => "continue".into(),
+            TypedExprKind::LoopControl { action, label } => format!("goto {label}_{action}"),
             TypedExprKind::Error => "/* error */".into(),
         }
     }
@@ -347,6 +351,19 @@ impl CEmitter {
                 }
                 self.dedent();
                 self.line("}");
+            }
+            MatchKind::ControlledLoop { label } => {
+                let cond = self.emit_expr_inline(scrutinee);
+                self.line(&format!("while ({}) {{", cond));
+                self.indent();
+                if let Some(arm) = arms.first() {
+                    self.emit_block_body(&arm.body);
+                }
+                self.line(&format!("{label}_next:"));
+                self.line("continue;");
+                self.dedent();
+                self.line("}");
+                self.line(&format!("{label}_done:;"));
             }
             MatchKind::EnumMatch => {
                 self.emit_enum_match(scrutinee, arms, result_var);

@@ -7674,6 +7674,7 @@ impl TypeChecker {
             | Expression::Identifier { .. }
             | Expression::Break { .. }
             | Expression::Continue { .. }
+            | Expression::LoopControl { .. }
             | Expression::Error { .. } => {}
         }
     }
@@ -8077,6 +8078,7 @@ impl TypeChecker {
             | Expression::Identifier { .. }
             | Expression::Break { .. }
             | Expression::Continue { .. }
+            | Expression::LoopControl { .. }
             | Expression::Error { .. } => {}
         }
     }
@@ -10122,6 +10124,7 @@ impl TypeChecker {
             | Expression::CharLiteral { .. }
             | Expression::Break { .. }
             | Expression::Continue { .. }
+            | Expression::LoopControl { .. }
             | Expression::Error { .. } => {}
         }
     }
@@ -12009,6 +12012,7 @@ fn expected_resolver_expr_locals(
         | Expression::CharLiteral { .. }
         | Expression::Break { .. }
         | Expression::Continue { .. }
+        | Expression::LoopControl { .. }
         | Expression::Error { .. } => {}
     }
 }

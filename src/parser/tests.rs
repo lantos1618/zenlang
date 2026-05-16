@@ -253,6 +253,20 @@ fn parse_loop_expr() {
 }
 
 #[test]
+fn parse_loop_control_param_expr() {
+    let prog = parse_ok(
+        r#"f = (done: bool) void {
+    loop((l) {
+        done ?
+            | true { l.done() }
+            | false { l.next() }
+    })
+}"#,
+    );
+    assert_eq!(prog.declarations.len(), 1);
+}
+
+#[test]
 fn parse_while_loop() {
     let prog = parse_ok(
         r#"f = () void {

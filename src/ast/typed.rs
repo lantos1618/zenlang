@@ -1,5 +1,4 @@
-use crate::ast::expressions::BinaryOp;
-use crate::ast::expressions::UnaryOp;
+use crate::ast::expressions::{BinaryOp, LoopControlAction, UnaryOp};
 use crate::error::Span;
 use serde::Serialize;
 
@@ -255,12 +254,16 @@ pub enum TypedExprKind {
     Return(Option<Box<TypedExpression>>),
     Break,
     Continue,
+    LoopControl {
+        action: LoopControlAction,
+        label: std::string::String,
+    },
 
     Error,
 }
 
 /// Sema resolves which kind of control flow `?` represents.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum MatchKind {
     /// `expr ? | true { } | false { }` → if/else
     ConditionalElse,
@@ -268,6 +271,8 @@ pub enum MatchKind {
     Conditional,
     /// `expr ? { body }` → while loop
     WhileLoop,
+    /// `loop((l) { ... })` with generated `l.done()` / `l.next()` labels.
+    ControlledLoop { label: std::string::String },
     /// `enum ? | Variant {} ...` → switch on tag
     EnumMatch,
     /// `val ? | X {} | Y {}` → if/else chain on values

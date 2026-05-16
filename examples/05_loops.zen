@@ -1,25 +1,33 @@
 // Loops and Closures in Zen
-// No for/while keywords - loops use `loop` with closures or conditions
+// No for/while keywords - loops use prefix loop controls
 
 { io } = std
 
 // Counter loop using loop closure
 count_to = (n: i32) void {
     i ::= 0
-    loop(() {
-        i >= n ? | true { break }
-        io.println("  ${i}")
-        i = i + 1
+    loop((l) {
+        i >= n ?
+            | true { l.done() }
+            | false {
+                io.println("  ${i}")
+                i = i + 1
+                l.next()
+            }
     })
 }
 
-// Infinite loop with break
+// Infinite loop with explicit loop control
 find_power_of_two = (target: i32) i32 {
     val ::= 1
-    loop {
-        val >= target ? | true { break }
-        val = val * 2
-    }
+    loop((l) {
+        val >= target ?
+            | true { l.done() }
+            | false {
+                val = val * 2
+                l.next()
+            }
+    })
     val
 }
 
@@ -31,13 +39,17 @@ fibonacci = (n: i32) i32 {
             a ::= 0
             b ::= 1
             i ::= 2
-            loop {
-                i > n ? | true { break }
-                temp = a + b
-                a = b
-                b = temp
-                i = i + 1
-            }
+            loop((l) {
+                i > n ?
+                    | true { l.done() }
+                    | false {
+                        temp = a + b
+                        a = b
+                        b = temp
+                        i = i + 1
+                        l.next()
+                    }
+            })
             b
         }
 }
@@ -46,12 +58,50 @@ fibonacci = (n: i32) i32 {
 sum_array = (arr: [i32; 5]) i32 {
     total ::= 0
     i ::= 0
-    loop(() {
-        i >= 5 ? | true { break }
-        total = total + arr[i]
-        i = i + 1
+    loop((l) {
+        i >= 5 ?
+            | true { l.done() }
+            | false {
+                total = total + arr[i]
+                i = i + 1
+                l.next()
+            }
     })
     total
+}
+
+// Nested loop control can target an outer loop.
+nested_stop = () i32 {
+    outer_count ::= 0
+    stop ::= false
+
+    loop((outer) {
+        loop((inner) {
+            stop ?
+                | true { outer.done() }
+                | false {
+                    stop = true
+                    inner.next()
+                }
+        })
+
+        outer_count = outer_count + 1
+        outer.next()
+    })
+
+    outer_count
+}
+
+// UFC form works too.
+count_with_ufc = (limit: i32) i32 {
+    i ::= 0
+    loop((l) {
+        i = i + 1
+        i >= limit ?
+            | true { done(l) }
+            | false { next(l) }
+    })
+    i
 }
 
 main = () i32 {
@@ -63,14 +113,20 @@ main = () i32 {
 
     io.println("Fibonacci sequence:")
     i ::= 0
-    loop(() {
-        i >= 10 ? | true { break }
-        io.println("  fib(${i}) = ${fibonacci(i)}")
-        i = i + 1
+    loop((l) {
+        i >= 10 ?
+            | true { l.done() }
+            | false {
+                io.println("  fib(${i}) = ${fibonacci(i)}")
+                i = i + 1
+                l.next()
+            }
     })
 
     numbers = [10, 20, 30, 40, 50]
     io.println("Sum: ${sum_array(numbers)}")
+    io.println("Nested stop count: ${nested_stop()}")
+    io.println("UFC count: ${count_with_ufc(3)}")
 
     0
 }

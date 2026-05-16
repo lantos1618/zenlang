@@ -13,8 +13,8 @@ these files as focused language samples.
   enums, payloads, and nested conditions.
 - [examples/04_structs_and_methods.zen](04_structs_and_methods.zen): named
   fields, dot calls, and small data APIs.
-- [examples/05_loops.zen](05_loops.zen): loop forms, mutable counters, breaks,
-  and recursion.
+- [examples/05_loops.zen](05_loops.zen): prefix loop controls, mutable
+  counters, and recursion.
 - [examples/06_error_handling.zen](06_error_handling.zen): `Result<T, E>`,
   `Option<T>`, matching, and explicit propagation.
 

@@ -99,8 +99,10 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
     for required in [
         "## Loops",
         "loop",
-        "break",
-        "continue",
+        "l.done()",
+        "l.next()",
+        "done(l)",
+        "next(l)",
         "## Imports And Modules",
         "## Defer",
         "## Gated Preview: Sync, Async, And Allocators",

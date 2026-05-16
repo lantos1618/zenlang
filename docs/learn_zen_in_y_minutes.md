@@ -302,21 +302,23 @@ sum_to = (limit: i32) i32 {
     total ::= 0
     i ::= 0
 
-    loop {
+    loop((l) {
         i > limit ?
-            | true { break }
+            | true { l.done() }
             | false {
                 total = total + i
                 i = i + 1
-                continue
+                l.next()
             }
-    }
+    })
 
     total
 }
 ```
 
-Loops use `loop { ... }` with `break` and `continue`. See
+Loops use prefix `loop((l) { ... })` with explicit loop-control calls:
+`l.done()` exits the target loop and `l.next()` continues it. The same control
+operations can be called in UFC form as `done(l)` and `next(l)`. See
 `examples/05_loops.zen` for the tutorial version.
 
 ## Defer
