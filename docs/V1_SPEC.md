@@ -96,18 +96,19 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `zen emit-json symbols <file>`, `zen emit-json typed <file>`, and
   `zen emit-json diagnostics <file>`.
 - `build.zen`: constrained. `zen check build.zen` validates the deterministic
-  graph, `zen emit build.zen` emits target C for one graph target,
-  `zen build build.zen` compiles executable targets through that graph, and
-  direct `zen build.zen` aliases that same graph build path. `zen test build.zen`
-  compiles and runs test graph targets. Executable target dependencies compile
-  before their dependents. Test targets are lowered, emitted in build graph
-  JSON, compiled, and run through the constrained test command. Library targets
-  are lowered and emitted in build graph JSON, but library execution remains
-  gated. Build and test execution reject dependencies on gated target kinds
-  until deterministic package/link semantics exist. Target dependency and
-  feature metadata arrays are lowered and emitted in build graph JSON. Target
-  dependencies must reference known graph targets, may not point back to the
-  same target, and may not form dependency cycles.
+  graph and verifies declared target sources exist, `zen emit build.zen` emits
+  target C for one graph target, `zen build build.zen` compiles executable
+  targets through that graph, and direct `zen build.zen` aliases that same graph
+  build path. `zen test build.zen` compiles and runs test graph targets.
+  Executable target dependencies compile before their dependents. Test targets
+  are lowered, emitted in build graph JSON, compiled, and run through the
+  constrained test command. Library targets are lowered and emitted in build
+  graph JSON, but library execution remains gated. Build and test execution
+  reject dependencies on gated target kinds until deterministic package/link
+  semantics exist. Target dependency and feature metadata arrays are lowered and
+  emitted in build graph JSON. Target dependencies must reference known graph
+  targets, may not point back to the same target, and may not form dependency
+  cycles; dependency cycles are rejected before execution.
   Legacy
   `emit-json ast|symbols|typed|diagnostics` modes for `build.zen` are explicitly
   rejected with a diagnostic that points to `emit-json build-graph`.

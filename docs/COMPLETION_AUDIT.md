@@ -2178,7 +2178,14 @@ and do not assume Phase 4 is ready without evidence.
 - Normal `zen check build.zen` validates the constrained deterministic graph
   without compiling targets, covered by
   `cargo test --test integration check_command_validates_build_zen_graph`, and
-  rejects undeclared host effects through
+  rejects missing executable, test, and library sources through
+  `cargo test --test integration check_command_build_zen_rejects_missing_executable_source`,
+  `cargo test --test integration check_command_build_zen_rejects_missing_test_source`,
+  and
+  `cargo test --test integration check_command_build_zen_rejects_missing_library_source`.
+  It rejects undeclared host effects before source validation through
+  `cargo test --test integration check_command_build_zen_rejects_undeclared_host_effects_before_source_validation`.
+  The single-target host-effect rejection remains covered by
   `cargo test --test integration check_command_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
   `cargo test --test integration test_command_build_zen_runs_test_targets`, and
