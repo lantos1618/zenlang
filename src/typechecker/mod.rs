@@ -118,6 +118,19 @@ enum ResolverTypeDeclarationMetadataTask<'a> {
     },
 }
 
+enum AstTypeDeclarationTask<'a> {
+    Struct {
+        name: &'a str,
+        type_params: &'a [ast::TypeParam],
+        fields: &'a [StructField],
+    },
+    Enum {
+        name: &'a str,
+        type_params: &'a [ast::TypeParam],
+        variants: &'a [EnumVariant],
+    },
+}
+
 enum ResolverTypeReferenceValidationTask<'a> {
     Struct {
         name: &'a str,
@@ -3549,33 +3562,66 @@ impl TypeChecker {
     }
 
     fn collect_ast_type_declarations(&mut self, decls: &[Declaration]) {
-        for decl in decls {
-            match decl {
+        let tasks = Self::collect_ast_type_declaration_tasks(decls);
+        self.collect_ast_type_declarations_from_tasks(&tasks);
+    }
+
+    fn collect_ast_type_declaration_tasks(
+        decls: &[Declaration],
+    ) -> Vec<AstTypeDeclarationTask<'_>> {
+        decls
+            .iter()
+            .filter_map(|decl| match decl {
                 Declaration::Struct {
                     name,
                     type_params,
                     fields,
                     ..
-                } => {
-                    self.validate_generic_bounds(type_params);
-                    self.structs.insert(
-                        name.clone(),
-                        struct_info_from_ast_fields(name.clone(), type_params, fields),
-                    );
-                }
+                } => Some(AstTypeDeclarationTask::Struct {
+                    name,
+                    type_params,
+                    fields,
+                }),
                 Declaration::Enum {
                     name,
                     type_params,
                     variants,
                     ..
+                } => Some(AstTypeDeclarationTask::Enum {
+                    name,
+                    type_params,
+                    variants,
+                }),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn collect_ast_type_declarations_from_tasks(&mut self, tasks: &[AstTypeDeclarationTask<'_>]) {
+        for task in tasks {
+            match task {
+                AstTypeDeclarationTask::Struct {
+                    name,
+                    type_params,
+                    fields,
+                } => {
+                    self.validate_generic_bounds(type_params);
+                    self.structs.insert(
+                        (*name).to_string(),
+                        struct_info_from_ast_fields((*name).to_string(), type_params, fields),
+                    );
+                }
+                AstTypeDeclarationTask::Enum {
+                    name,
+                    type_params,
+                    variants,
                 } => {
                     self.validate_generic_bounds(type_params);
                     self.enums.insert(
-                        name.clone(),
-                        enum_info_from_ast_variants(name.clone(), type_params, variants),
+                        (*name).to_string(),
+                        enum_info_from_ast_variants((*name).to_string(), type_params, variants),
                     );
                 }
-                _ => {}
             }
         }
     }
@@ -13986,6 +14032,40 @@ Point.get = (self: Point) i32 { return self.x }
                 assert_eq!(*method_name, "get");
             }
             _ => panic!("expected method task"),
+        }
+    }
+
+    #[test]
+    fn ast_type_declaration_tasks_collect_structs_and_enums() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 }
+
+Option<T>: Some(T), None
+"#,
+        );
+
+        let tasks = TypeChecker::collect_ast_type_declaration_tasks(&program.declarations);
+
+        assert_eq!(tasks.len(), 2);
+        match &tasks[0] {
+            AstTypeDeclarationTask::Struct { name, fields, .. } => {
+                assert_eq!(*name, "Point");
+                assert_eq!(fields.len(), 1);
+            }
+            _ => panic!("expected struct task"),
+        }
+        match &tasks[1] {
+            AstTypeDeclarationTask::Enum {
+                name,
+                type_params,
+                variants,
+            } => {
+                assert_eq!(*name, "Option");
+                assert_eq!(type_params.len(), 1);
+                assert_eq!(variants.len(), 2);
+            }
+            _ => panic!("expected enum task"),
         }
     }
 

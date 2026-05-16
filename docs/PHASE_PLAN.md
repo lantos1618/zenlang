@@ -1688,6 +1688,9 @@ checked-in docs, tests, and commits only.
 - Callable declaration collection now uses a named task collector for
   top-level functions and methods before replaying the existing AST or
   resolver-backed collection path.
+- AST struct and enum declaration collection now uses a named task collector
+  before replaying the existing generic-bound validation and type registration
+  path.
 
 ## Current Phase
 

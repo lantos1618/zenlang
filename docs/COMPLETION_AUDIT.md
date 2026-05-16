@@ -1984,6 +1984,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test collect_declarations_with_symbols_uses_resolver_function_type_metadata`,
   and
   `cargo test collect_declarations_with_symbols_uses_resolver_method_signature_for_type_refs`.
+- AST type declaration collection now uses named struct and enum tasks before
+  replaying generic-bound validation and type registration, covered by
+  `cargo test ast_type_declaration_tasks_collect_structs_and_enums`,
+  `cargo test generic_enum_type_arg_arity_is_error`, and
+  `cargo test check_program_with_symbols_uses_resolver_type_metadata_for_type_refs`.
 
 ## Unresolved Gaps
 
