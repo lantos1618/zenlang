@@ -4670,11 +4670,10 @@ impl TypeChecker {
         symbols: Option<&SymbolTable>,
     ) {
         if self.resolver_backed_collection {
-            let behavior_association_tasks =
-                Self::collect_behavior_association_validation_tasks(decls);
-            self.validate_behavior_association_tasks(&behavior_association_tasks, symbols);
-            self.validate_generic_type_references(decls, symbols);
-            self.validate_struct_field_defaults(decls, symbols);
+            let tasks = Self::collect_resolver_semantic_validation_tasks(decls);
+            self.validate_behavior_association_tasks(&tasks, symbols);
+            self.validate_resolver_type_reference_tasks(&tasks, symbols);
+            self.validate_resolver_struct_field_default_tasks(&tasks, symbols);
             return;
         }
 
@@ -4707,6 +4706,7 @@ impl TypeChecker {
         tasks
     }
 
+    #[cfg(test)]
     fn collect_behavior_association_validation_tasks(
         decls: &[Declaration],
     ) -> BehaviorAssociationValidationTasks<'_> {
@@ -4717,6 +4717,12 @@ impl TypeChecker {
             Self::push_behavior_requires_replay_task(decl, &mut tasks.requires);
         }
         tasks
+    }
+
+    fn collect_resolver_semantic_validation_tasks(
+        decls: &[Declaration],
+    ) -> ResolverDeclarationMetadataTasks<'_> {
+        Self::collect_resolver_declaration_metadata_tasks(decls)
     }
 
     fn validate_behavior_association_tasks<'a>(
@@ -4835,6 +4841,7 @@ impl TypeChecker {
         self.check_behavior_requires(&type_name, behavior, behavior_type_args, span);
     }
 
+    #[cfg(test)]
     fn validate_struct_field_defaults(
         &mut self,
         decls: &[Declaration],
@@ -4850,6 +4857,7 @@ impl TypeChecker {
         self.validate_ast_struct_field_default_tasks(&tasks);
     }
 
+    #[cfg(test)]
     fn collect_ast_struct_field_default_validation_tasks(
         decls: &[Declaration],
     ) -> Vec<AstStructFieldDefaultValidationTask<'_>> {
@@ -6850,20 +6858,7 @@ impl TypeChecker {
         }
     }
 
-    fn validate_generic_type_references(
-        &mut self,
-        decls: &[Declaration],
-        symbols: Option<&SymbolTable>,
-    ) {
-        if self.resolver_backed_collection {
-            self.validate_resolver_backed_type_references(decls, symbols);
-            return;
-        }
-
-        let tasks = Self::collect_ast_type_reference_validation_tasks(decls);
-        self.validate_ast_type_reference_tasks(&tasks);
-    }
-
+    #[cfg(test)]
     fn collect_ast_type_reference_validation_tasks(
         decls: &[Declaration],
     ) -> Vec<AstTypeReferenceValidationTask<'_>> {
@@ -7055,15 +7050,6 @@ impl TypeChecker {
             self.validate_generic_type_ref_bounds(return_type, &scoped, return_span);
         }
         self.validate_generic_expr_type_references(body, &scoped);
-    }
-
-    fn validate_resolver_backed_type_references(
-        &mut self,
-        decls: &[Declaration],
-        symbols: Option<&SymbolTable>,
-    ) {
-        let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
-        self.validate_resolver_type_reference_tasks(&tasks, symbols);
     }
 
     fn validate_resolver_type_reference_tasks(
@@ -18919,6 +18905,39 @@ Point: { x: i32 = true }
                         .contains("field `x` default expects `i32`, found `bool`")
             }),
             "resolver-backed default validation should reuse shared metadata tasks: {:?}",
+            tc.diagnostics
+        );
+    }
+
+    #[test]
+    fn resolver_backed_semantic_validation_reuses_metadata_tasks() {
+        let program = parse_program(
+            r#"
+Point: { x: i32 = true }
+"#,
+        );
+        let symbols = crate::resolver::Resolver::new()
+            .resolve_program(&program)
+            .expect("resolver succeeds");
+        let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+        let mut tc = TypeChecker::new();
+        tc.with_resolver_backed_collection(|checker| {
+            checker.collect_declarations(&program.declarations)
+        });
+        tc.collect_resolver_declaration_metadata(&symbols, &tasks);
+
+        tc.with_resolver_backed_collection(|checker| {
+            checker.validate_collected_declaration_semantics(&program.declarations, Some(&symbols));
+        });
+
+        assert!(
+            tc.diagnostics.iter().any(|diag| {
+                diag.code == "E3073"
+                    && diag
+                        .message
+                        .contains("field `x` default expects `i32`, found `bool`")
+            }),
+            "resolver-backed semantic validation should reuse resolver metadata tasks: {:?}",
             tc.diagnostics
         );
     }
