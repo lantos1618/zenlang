@@ -1845,6 +1845,9 @@ checked-in docs, tests, and commits only.
 - AST behavior extends validation now receives the full behavior-association
   task bundle and selects `.extends` entries internally, removing another
   association sub-slice handoff.
+- The main AST declaration collection path now builds behavior, type,
+  callable, impl-block, and import collection task lists in one declaration
+  pass before replaying them in the existing collection order.
 
 ## Current Phase
 
