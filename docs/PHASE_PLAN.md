@@ -199,6 +199,8 @@ checked-in docs, tests, and commits only.
   graph model, keeping graph validation separate from AST traversal details.
 - Resolver symbol-table behavior edge recording now lives in a focused helper,
   keeping symbol definition and lookup separate from association mutation.
+- Typechecker resolver callable signature restoration now lives in a focused
+  helper, keeping the main typechecker module below broad dispatcher size.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
