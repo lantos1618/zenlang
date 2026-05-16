@@ -191,6 +191,8 @@ checked-in docs, tests, and commits only.
   from argument, annotation, and return-flow validation.
 - C backend unit tests now live beside the backend in a dedicated test module,
   keeping the production C backend entry point and identifier helpers compact.
+- Module-system unit tests now live beside the module-system implementation in
+  a dedicated test module, keeping module graph/load entry points compact.
 - Resolver validation replay now collects expected declaration symbols,
   expected local symbols, import-validation state, and behavior-association
   replay tasks in one declaration pass before checking resolver-owned extras,
