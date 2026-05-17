@@ -131,6 +131,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/concurrency/sync/condvar.zen",
         "stdlib/concurrency/sync/mutex.zen",
         "stdlib/concurrency/sync/once.zen",
+        "stdlib/concurrency/sync/rwlock.zen",
         "stdlib/concurrency/sync/semaphore.zen",
         "stdlib/concurrency/sync/waitgroup.zen",
         "stdlib/ffi.zen",
