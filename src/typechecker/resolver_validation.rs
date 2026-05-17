@@ -13,6 +13,7 @@ include!("resolver_validation/imports_source_dependencies.rs");
 include!("resolver_validation/symbols_locals.rs");
 include!("resolver_validation/local_traversal.rs");
 include!("resolver_validation/metadata_core.rs");
+include!("resolver_validation/metadata_diagnostics.rs");
 include!("resolver_validation/metadata_types.rs");
 include!("resolver_validation/metadata_behavior_refs.rs");
 include!("resolver_validation/metadata_values.rs");
