@@ -2528,6 +2528,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_accepts_identifier_fallback_declared_file_read_effects`,
   and
   `cargo test --test integration build_graph_command_rejects_undeclared_file_read_effects_before_execution`.
+  Missing fallback arms on deterministic file reads also reject before
+  execution, covered by
+  `cargo test --test integration build_graph_command_rejects_file_read_without_fallback_before_execution`.
   Graph-only library export source validation and typechecking before
   execution are covered by
   `cargo test --test integration build_graph_command_rejects_missing_graph_only_library_source`,
@@ -2648,10 +2651,12 @@ and do not assume Phase 4 is ready without evidence.
   and
   `cargo test --test integration test_command_build_zen_rejects_library_only_graph_execution`.
 - Direct `zen build.zen` accepts declared deterministic file-read effects and
-  rejects undeclared file reads before execution, covered by
-  `cargo test --test integration direct_file_command_build_zen_accepts_declared_file_read_effects`
+  rejects undeclared file reads plus missing fallback arms before execution,
+  covered by
+  `cargo test --test integration direct_file_command_build_zen_accepts_declared_file_read_effects`,
+  `cargo test --test integration direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
   and
-  `cargo test --test integration direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  `cargo test --test integration direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
   Declared deterministic env reads with fallbacks are accepted on the same
   direct execution path through
   `cargo test --test integration direct_file_command_build_zen_accepts_declared_env_read_with_fallback`.
@@ -2873,11 +2878,13 @@ and do not assume Phase 4 is ready without evidence.
   an executable `zen build build.zen` file-read fixture.
 - `zen test build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, while keeping
-  the matching undeclared file-read rejection before test execution. Coverage:
+  the matching undeclared file-read and missing-fallback rejections before test
+  execution. Coverage:
   `test_command_build_zen_accepts_declared_file_read_effects`,
   `test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
-  and `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
+  and `test_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - `zen emit build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, while keeping
   the matching undeclared file-read rejection before C emission. Coverage:
@@ -2887,11 +2894,13 @@ and do not assume Phase 4 is ready without evidence.
   and `emit_command_build_zen_rejects_undeclared_file_read_effects`.
 - Direct `zen build.zen` execution now has executable graph fixtures for
   `.Err`, wildcard, and identifier fallback arms on declared file reads, while
-  keeping the matching undeclared file-read rejection before graph execution.
+  keeping the matching undeclared file-read and missing-fallback rejections
+  before graph execution.
   Coverage: `direct_file_command_build_zen_accepts_declared_file_read_effects`,
   `direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
-  and `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
+  and `direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the
