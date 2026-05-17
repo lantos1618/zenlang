@@ -2375,9 +2375,14 @@ and do not assume Phase 4 is ready without evidence.
   covered by
   `cargo test --test integration emit_json_build_graph_outputs_target_dependencies_and_features`
   and `cargo test --test integration emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering`.
-- `emit-json build-graph` emits declared deterministic file-read effects and
-  rejects undeclared file reads through the advertised graph command, covered
-  by `cargo test --test integration file_read_effects`.
+- `emit-json build-graph` emits declared deterministic file-read effects
+  through `.Err`, wildcard, and identifier fallback arms, and rejects
+  undeclared file reads through the advertised graph command, covered by
+  `cargo test --test integration emit_json_build_graph_outputs_declared_file_read_effects`,
+  `cargo test --test integration emit_json_build_graph_outputs_wildcard_fallback_declared_file_read_effects`,
+  `cargo test --test integration emit_json_build_graph_outputs_identifier_fallback_declared_file_read_effects`,
+  and
+  `cargo test --test integration emit_json_build_graph_rejects_undeclared_file_read_effects`.
 - `emit-json build-graph` emits declared deterministic env-read effects
   through the advertised graph command, covered by
   `cargo test --test integration emit_json_build_graph_outputs_declared_env_read_effects`.

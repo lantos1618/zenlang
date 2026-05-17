@@ -2275,10 +2275,14 @@ checked-in docs, tests, and commits only.
   cover negative host-effect paths through the advertised compiler command.
   `emit_json_build_graph_outputs_declared_env_read_effects` covers the
   matching positive declared environment-read effect JSON.
-  `emit_json_build_graph_outputs_declared_file_read_effects` and
-  `emit_json_build_graph_rejects_undeclared_file_read_effects` cover the
-  matching positive and negative deterministic file-read effect pair through
-  that same graph-emission command.
+  `emit_json_build_graph_outputs_declared_file_read_effects`,
+  `emit_json_build_graph_outputs_wildcard_fallback_declared_file_read_effects`,
+  and
+  `emit_json_build_graph_outputs_identifier_fallback_declared_file_read_effects`
+  cover `.Err`, wildcard, and identifier fallback arms for declared
+  deterministic file-read effect JSON. The
+  `emit_json_build_graph_rejects_undeclared_file_read_effects` fixture covers
+  the matching negative path through that same graph-emission command.
   `emit_json_build_graph_rejects_unknown_target_dependencies` covers unresolved
   target dependency rejection through the same graph-emission path, and
   `emit_json_build_graph_rejects_self_target_dependencies` covers
