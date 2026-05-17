@@ -269,6 +269,9 @@ checked-in docs, tests, and commits only.
 - Resolver declaration definition now lives in a dedicated resolver helper
   module, keeping top-level symbol registration separate from resolver
   validation replay.
+- Resolver declaration validation dispatch now lives in a dedicated resolver
+  helper module, keeping declaration-type, behavior-edge, and local-expression
+  validation separate from the root resolver orchestration.
 - Resolver type-reference validation now lives in a dedicated resolver helper
   module, keeping parameter, type-parameter, and known-symbol checks separate
   from declaration and expression traversal.
