@@ -3016,17 +3016,20 @@ checked-in docs, tests, and commits only.
   preserving CLI diagnostics through
   `emit_json_build_graph_rejects_unknown_target_fields` and
   `emit_json_build_graph_rejects_duplicate_target_fields`, with executing
-  `zen build build.zen` duplicate-field coverage in
-  `build_command_build_zen_rejects_duplicate_target_fields`.
+  `zen build build.zen` and direct `zen build.zen` duplicate-field coverage in
+  `build_command_build_zen_rejects_duplicate_target_fields` and
+  `direct_file_command_build_zen_rejects_duplicate_target_fields`.
 - Build graph target metadata lowering now rejects missing required fields and
   wrong field value types before graph construction, preserving direct
   diagnostics through `build_program_lowering_rejects_missing_required_target_fields`,
   `build_program_lowering_rejects_invalid_target_field_types`, and
   `emit_json_build_graph_rejects_missing_required_target_fields` plus
   `emit_json_build_graph_rejects_invalid_target_field_types`, with executing
-  `zen build build.zen` coverage in
+  `zen build build.zen` and direct `zen build.zen` coverage in
   `build_command_build_zen_rejects_missing_required_target_fields` and
-  `build_command_build_zen_rejects_invalid_target_field_types`.
+  `build_command_build_zen_rejects_invalid_target_field_types`, plus
+  `direct_file_command_build_zen_rejects_missing_required_target_fields` and
+  `direct_file_command_build_zen_rejects_invalid_target_field_types`.
 
 ## Current Phase
 
