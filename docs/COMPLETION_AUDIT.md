@@ -2623,8 +2623,8 @@ and do not assume Phase 4 is ready without evidence.
 - Build graph lowering now keeps build.zen DSL target kinds, field names, and
   builder method names in `src/build_graph/lowering/dsl.rs`, reducing
   `src/build_graph/lowering.rs` from 515 to 384 lines while preserving lowering
-  behavior. `production_rust_files_stay_below_cleanup_threshold` guards
-  selected production files against growing back past the 500-line cleanup
+  behavior. `production_rust_files_stay_below_cleanup_threshold` now guards
+  every tracked Rust source file against growing past the 500-line cleanup
   threshold.
 
 ## Unresolved Gaps

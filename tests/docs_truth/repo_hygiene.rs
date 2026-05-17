@@ -46,11 +46,21 @@ fn stale_rewrite_audit_docs_are_removed() {
 fn production_rust_files_stay_below_cleanup_threshold() {
     const MAX_LINES: usize = 500;
 
-    for path in [
-        "src/build_graph/lowering.rs",
-        "src/cli.rs",
-        "src/typechecker/mod.rs",
-    ] {
+    let output = std::process::Command::new("git")
+        .args(["ls-files", "*.rs"])
+        .current_dir(repo_root())
+        .output()
+        .expect("list tracked Rust files");
+    assert!(
+        output.status.success(),
+        "git ls-files failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let paths = String::from_utf8(output.stdout).expect("git ls-files output is utf-8");
+    assert!(!paths.trim().is_empty(), "expected tracked Rust files");
+
+    for path in paths.lines() {
         let line_count = read(path).lines().count();
         assert!(
             line_count <= MAX_LINES,

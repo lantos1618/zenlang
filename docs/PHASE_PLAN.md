@@ -2415,8 +2415,9 @@ checked-in docs, tests, and commits only.
   `src/build_graph/lowering/dsl.rs`, reducing
   `src/build_graph/lowering.rs` below the 500-line cleanup threshold while
   preserving the existing build.zen lowering behavior. The guard
-  `production_rust_files_stay_below_cleanup_threshold` keeps the focused
-  production files from silently growing back past the cleanup threshold.
+  `production_rust_files_stay_below_cleanup_threshold` now checks every tracked
+  Rust source file, keeping every tracked Rust source file from silently
+  growing back past the cleanup threshold.
 
 ## Current Phase
 
