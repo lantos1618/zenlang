@@ -2858,6 +2858,11 @@ and do not assume Phase 4 is ready without evidence.
   requires-pass, missing-impl, generic arity, missing type-argument, and
   nongeneric type-argument diagnostics while keeping behavior implementation
   tests focused.
+- Resolver enum metadata validation tests now live in
+  `src/typechecker/tests/resolver_struct_enum_metadata/enum_metadata.rs`,
+  preserving variant payload count/type, visibility, typed payload,
+  generic enum payload, variant-list, and owner diagnostics while keeping
+  struct metadata validation focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
