@@ -2713,6 +2713,10 @@ and do not assume Phase 4 is ready without evidence.
   matcher as monomorphization, preserving generic method/generated-C
   specialization coverage while removing a hand-rolled mangled-name prefix
   check from method lookup.
+- Generic direct-call and UFC-call deduplication for the same function
+  instantiation is now covered by `tests/zen/generic_ufc_dedup.zen` and
+  generated-C assertions that both calls resolve to a single emitted `id_i32`
+  definition with no unspecialized `id` calls left behind.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the

@@ -107,4 +107,15 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "id_i32");
     assert!(!c_source.contains("id(12LL)"));
     assert!(!c_source.contains("T id"));
+
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_ufc_dedup.zen"));
+    assert!(c_source.contains("int32_t id_i32(int32_t value)"));
+    assert!(c_source.contains("id_i32(12LL)"));
+    assert!(c_source.contains("id_i32(30LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "id_i32");
+    assert_c_function_definition_count(&c_source, "id_i32", 1);
+    assert!(!c_source.contains("id(12LL)"));
+    assert!(!c_source.contains("id(30LL)"));
+    assert!(!c_source.contains("T id"));
 }
