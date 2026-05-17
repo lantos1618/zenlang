@@ -226,16 +226,6 @@ main = () i32 {
 }
 
 #[test]
-fn emit_command_build_zen_rejects_gated_library_dependencies() {
-    assert_emit_rejects_gated_dependency(
-        r#"b.add(Library { name: "core", exports: ["lib.zen"] })"#,
-        "core",
-        "lib.zen",
-        "library",
-    );
-}
-
-#[test]
 fn emit_command_build_zen_rejects_gated_test_dependencies() {
     assert_emit_rejects_gated_dependency(
         r#"b.add(Test { name: "unit", root: "test.zen" })"#,

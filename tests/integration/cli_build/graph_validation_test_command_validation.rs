@@ -48,7 +48,7 @@ main = () i32 {
 }
 
 #[test]
-fn test_command_build_zen_rejects_gated_library_dependencies() {
+fn test_command_build_zen_accepts_library_dependencies() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
@@ -87,20 +87,19 @@ main = () i32 {
         .expect("run zen test build.zen");
 
     assert!(
-        !output.status.success(),
-        "zen test build.zen unexpectedly succeeded: stdout={}, stderr={}",
+        output.status.success(),
+        "zen test build.zen failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("build graph target `unit` depends on gated library target `core`"),
-        "expected gated library dependency diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
+        tmp.path().join("build").join("tests").join("unit").exists(),
+        "expected test binary output to exist"
     );
     assert!(
-        !tmp.path().join("build").exists(),
-        "test command should not start after gated dependency validation fails"
+        String::from_utf8_lossy(&output.stdout).contains("test unit passed"),
+        "expected test pass output, stdout={}",
+        String::from_utf8_lossy(&output.stdout)
     );
 }
 

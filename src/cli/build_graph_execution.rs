@@ -155,7 +155,12 @@ fn validate_executed_dependency_targets(
             let Some(dependency_target) = targets_by_name.get(dependency.as_str()) else {
                 continue;
             };
-            if execution_kind.includes(dependency_target.kind()) {
+            if execution_kind.includes(dependency_target.kind())
+                || matches!(
+                    dependency_target.kind(),
+                    zen::build_graph::BuildTargetKind::Library { .. }
+                )
+            {
                 continue;
             }
             eprintln!(

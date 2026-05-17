@@ -2251,9 +2251,10 @@ checked-in docs, tests, and commits only.
   graph-only library typechecking before execution starts, and
   `build_graph_command_rejects_undeclared_host_effects_before_library_typechecking`
   preserves deterministic host-effect validation before graph-only library
-  typechecking. `build_graph_command_rejects_gated_library_dependencies` and
-  `build_graph_command_rejects_gated_test_dependencies` cover rejected
-  executable dependencies on gated library/test targets, and
+  typechecking. `build_graph_command_accepts_library_dependencies` covers
+  executable dependencies on validated library source targets, while
+  `build_graph_command_rejects_gated_test_dependencies` covers rejected
+  executable dependencies on gated test targets, and
   `build_graph_command_rejects_missing_root_source` covers a target execution
   failure before normal `zen build build.zen` is ungated.
   Declared deterministic env reads with fallbacks are accepted through
@@ -2272,9 +2273,9 @@ checked-in docs, tests, and commits only.
   Executable graph targets now compile dependencies before dependents, covered by
   `build_graph_orders_targets_before_dependents` and
   `build_command_build_zen_compiles_executable_dependencies_first`, and reject
-  dependencies on gated library targets through
-  `build_command_build_zen_rejects_gated_library_dependencies`. They also
-  reject executable-target dependencies on gated test targets through
+  dependencies on validated library source targets through
+  `build_command_build_zen_accepts_library_dependencies`. They still reject
+  executable-target dependencies on gated test targets through
   `build_command_build_zen_rejects_gated_test_dependencies`. They reject
   graph-only library exports with missing sources through
   `build_command_build_zen_rejects_missing_graph_only_library_source`, accept
@@ -2334,8 +2335,8 @@ checked-in docs, tests, and commits only.
   undeclared host effects before test execution through
   `test_command_build_zen_rejects_undeclared_host_effects` and
   `test_command_multi_target_build_zen_rejects_undeclared_host_effects`.
-  Test execution also rejects dependencies on gated library targets through
-  `test_command_build_zen_rejects_gated_library_dependencies`, and rejects
+  Test execution also accepts dependencies on validated library source targets
+  through `test_command_build_zen_accepts_library_dependencies`, and rejects
   test-target dependencies on gated executable targets through
   `test_command_build_zen_rejects_gated_executable_dependencies`. It validates
   graph-only library exports before execution through
@@ -2362,10 +2363,11 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_rejects_multiple_executable_targets`, and rejects
   undeclared host effects through
   `emit_command_build_zen_rejects_undeclared_host_effects`. It validates
-  selected executable dependencies before emission through
-  `emit_command_build_zen_rejects_gated_library_dependencies` and
-  `emit_command_build_zen_rejects_gated_test_dependencies`, preserving gated
-  library/test execution boundaries on the emit path. It validates
+  selected executable dependencies before emission, accepting validated library
+  source dependencies through
+  `emit_command_build_zen_accepts_library_dependencies` and
+  rejecting gated test dependencies through
+  `emit_command_build_zen_rejects_gated_test_dependencies`. It validates
   graph-only library exports before emission through
   `emit_command_build_zen_rejects_missing_graph_only_library_source`,
   accepts valid graph-only library exports through
@@ -2401,8 +2403,9 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_compiles_multiple_executable_targets`. It
   compiles executable dependencies before dependents through
   `direct_file_command_build_zen_compiles_executable_dependencies_first`,
-  rejects dependencies on gated library and test targets through
-  `direct_file_command_build_zen_rejects_gated_library_dependencies` and
+  accepts validated library source dependencies and rejects gated test
+  dependencies through
+  `direct_file_command_build_zen_accepts_library_dependencies` and
   `direct_file_command_build_zen_rejects_gated_test_dependencies`,
   rejects graph-only library exports with missing sources through
   `direct_file_command_build_zen_rejects_missing_graph_only_library_source`,
@@ -2474,9 +2477,10 @@ Phase 4 build-driver work still has constrained `build.zen` semantics: normal
   graph, accepts library-only validation, and typechecks target sources without
   compiling them, `zen emit build.zen`
   emits target C for a single executable graph target, and build/test/emit
-  validate and typecheck graph-only library target sources while build/test/emit
-  execution rejects dependencies on gated non-selected target kinds and library
-  execution remains explicitly gated by library-only graph rejection coverage.
+  validate and typecheck graph-only library target sources, allow executable
+  and test targets to depend on library source targets, and reject dependencies
+  on gated executable/test non-selected target kinds while library execution
+  remains explicitly gated by library-only graph rejection coverage.
   Legacy generic JSON emitters reject
   `build.zen` and point to
   `emit-json build-graph`.
