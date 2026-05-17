@@ -2,110 +2,121 @@ use std::process::Command;
 
 #[test]
 fn build_command_build_zen_accepts_declared_env_read_with_fallback() {
-    let tmp = executable_graph_with_declared_env_read();
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build build.zen");
-
-    assert!(
-        output.status.success(),
-        "zen build build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    assert_executable_command_accepts_declared_env_read(
+        &["build", "build.zen"],
+        r#"| .Err { "default" }"#,
+        "build_command_build_zen_accepts_declared_env_read_with_fallback",
+        ExecutableCommandExpectation::BuildOutput,
     );
-    assert!(
-        tmp.path().join("build").join("app").exists(),
-        "expected build output after declared env effect"
+}
+
+#[test]
+fn build_command_build_zen_accepts_wildcard_fallback_declared_env_read() {
+    assert_executable_command_accepts_declared_env_read(
+        &["build", "build.zen"],
+        r#"| _ { "default" }"#,
+        "build_command_build_zen_accepts_wildcard_fallback_declared_env_read",
+        ExecutableCommandExpectation::BuildOutput,
+    );
+}
+
+#[test]
+fn build_command_build_zen_accepts_identifier_fallback_declared_env_read() {
+    assert_executable_command_accepts_declared_env_read(
+        &["build", "build.zen"],
+        r#"| err { "default" }"#,
+        "build_command_build_zen_accepts_identifier_fallback_declared_env_read",
+        ExecutableCommandExpectation::BuildOutput,
     );
 }
 
 #[test]
 fn direct_file_command_build_zen_accepts_declared_env_read_with_fallback() {
-    let tmp = executable_graph_with_declared_env_read();
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .arg("build.zen")
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build.zen");
-
-    assert!(
-        output.status.success(),
-        "zen build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        tmp.path().join("build").join("app").exists(),
-        "expected build output after declared env effect"
+    assert_executable_command_accepts_declared_env_read(
+        &["build.zen"],
+        r#"| .Err { "default" }"#,
+        "direct_file_command_build_zen_accepts_declared_env_read_with_fallback",
+        ExecutableCommandExpectation::BuildOutput,
     );
 }
 
 #[test]
-fn build_graph_command_accepts_declared_env_read_with_fallback() {
-    let tmp = executable_graph_with_declared_env_read();
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build-graph", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build-graph build.zen");
-
-    assert!(
-        output.status.success(),
-        "zen build-graph build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        tmp.path().join("build").join("app").exists(),
-        "expected build output after declared env effect"
-    );
-}
-
-#[test]
-fn build_graph_command_accepts_wildcard_fallback_declared_env_read() {
-    assert_build_graph_command_accepts_declared_env_read(
+fn direct_file_command_build_zen_accepts_wildcard_fallback_declared_env_read() {
+    assert_executable_command_accepts_declared_env_read(
+        &["build.zen"],
         r#"| _ { "default" }"#,
-        "build_graph_command_accepts_wildcard_fallback_declared_env_read",
+        "direct_file_command_build_zen_accepts_wildcard_fallback_declared_env_read",
+        ExecutableCommandExpectation::BuildOutput,
     );
 }
 
 #[test]
-fn build_graph_command_accepts_identifier_fallback_declared_env_read() {
-    assert_build_graph_command_accepts_declared_env_read(
+fn direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read() {
+    assert_executable_command_accepts_declared_env_read(
+        &["build.zen"],
         r#"| err { "default" }"#,
-        "build_graph_command_accepts_identifier_fallback_declared_env_read",
+        "direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read",
+        ExecutableCommandExpectation::BuildOutput,
     );
 }
 
 #[test]
 fn emit_command_build_zen_accepts_declared_env_read_with_fallback() {
-    let tmp = executable_graph_with_declared_env_read();
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen emit build.zen");
-
-    assert!(
-        output.status.success(),
-        "zen emit build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    assert_executable_command_accepts_declared_env_read(
+        &["emit", "build.zen"],
+        r#"| .Err { "default" }"#,
+        "emit_command_build_zen_accepts_declared_env_read_with_fallback",
+        ExecutableCommandExpectation::EmitStdout,
     );
-    assert!(
-        String::from_utf8_lossy(&output.stdout).contains("int32_t zen_main(void)"),
-        "expected C output after declared env effect, stdout={}",
-        String::from_utf8_lossy(&output.stdout)
+}
+
+#[test]
+fn emit_command_build_zen_accepts_wildcard_fallback_declared_env_read() {
+    assert_executable_command_accepts_declared_env_read(
+        &["emit", "build.zen"],
+        r#"| _ { "default" }"#,
+        "emit_command_build_zen_accepts_wildcard_fallback_declared_env_read",
+        ExecutableCommandExpectation::EmitStdout,
     );
-    assert!(
-        !tmp.path().join("build").exists(),
-        "zen emit build.zen should not create build outputs"
+}
+
+#[test]
+fn emit_command_build_zen_accepts_identifier_fallback_declared_env_read() {
+    assert_executable_command_accepts_declared_env_read(
+        &["emit", "build.zen"],
+        r#"| err { "default" }"#,
+        "emit_command_build_zen_accepts_identifier_fallback_declared_env_read",
+        ExecutableCommandExpectation::EmitStdout,
+    );
+}
+
+#[test]
+fn build_graph_command_accepts_declared_env_read_with_fallback() {
+    assert_executable_command_accepts_declared_env_read(
+        &["build-graph", "build.zen"],
+        r#"| .Err { "default" }"#,
+        "build_graph_command_accepts_declared_env_read_with_fallback",
+        ExecutableCommandExpectation::BuildOutput,
+    );
+}
+
+#[test]
+fn build_graph_command_accepts_wildcard_fallback_declared_env_read() {
+    assert_executable_command_accepts_declared_env_read(
+        &["build-graph", "build.zen"],
+        r#"| _ { "default" }"#,
+        "build_graph_command_accepts_wildcard_fallback_declared_env_read",
+        ExecutableCommandExpectation::BuildOutput,
+    );
+}
+
+#[test]
+fn build_graph_command_accepts_identifier_fallback_declared_env_read() {
+    assert_executable_command_accepts_declared_env_read(
+        &["build-graph", "build.zen"],
+        r#"| err { "default" }"#,
+        "build_graph_command_accepts_identifier_fallback_declared_env_read",
+        ExecutableCommandExpectation::BuildOutput,
     );
 }
 
@@ -247,29 +258,48 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     );
 }
 
-fn executable_graph_with_declared_env_read() -> tempfile::TempDir {
-    executable_graph_with_declared_env_read_fallback(r#"| .Err { "default" }"#)
+enum ExecutableCommandExpectation {
+    BuildOutput,
+    EmitStdout,
 }
 
-fn assert_build_graph_command_accepts_declared_env_read(fallback_arm: &str, case_name: &str) {
+fn assert_executable_command_accepts_declared_env_read(
+    args: &[&str],
+    fallback_arm: &str,
+    case_name: &str,
+    expectation: ExecutableCommandExpectation,
+) {
     let tmp = executable_graph_with_declared_env_read_fallback(fallback_arm);
 
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build-graph", "build.zen"])
+        .args(args)
         .current_dir(tmp.path())
         .output()
-        .expect("run zen build-graph build.zen");
+        .expect("run zen build graph command");
 
     assert!(
         output.status.success(),
-        "{case_name}: zen build-graph build.zen failed: stdout={}, stderr={}",
+        "{case_name}: zen command failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    assert!(
-        tmp.path().join("build").join("app").exists(),
-        "{case_name}: expected build output after declared env effect"
-    );
+    match expectation {
+        ExecutableCommandExpectation::BuildOutput => assert!(
+            tmp.path().join("build").join("app").exists(),
+            "{case_name}: expected build output after declared env effect"
+        ),
+        ExecutableCommandExpectation::EmitStdout => {
+            assert!(
+                String::from_utf8_lossy(&output.stdout).contains("int32_t zen_main(void)"),
+                "{case_name}: expected C output after declared env effect, stdout={}",
+                String::from_utf8_lossy(&output.stdout)
+            );
+            assert!(
+                !tmp.path().join("build").exists(),
+                "{case_name}: zen emit build.zen should not create build outputs"
+            );
+        }
+    }
 }
 
 fn executable_graph_with_declared_env_read_fallback(fallback_arm: &str) -> tempfile::TempDir {
