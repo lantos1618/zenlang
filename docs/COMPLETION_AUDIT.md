@@ -2721,6 +2721,10 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/emit_direct_validation/gated_dependencies.rs`,
   preserving the gated dependency diagnostic coverage while keeping direct emit
   graph validation cases grouped by failure mode.
+- Resolver-backed generic type-reference validation now lives in
+  `src/typechecker/generic_type_validation/resolver_type_references.rs`,
+  preserving resolver-restored callable/type metadata validation while keeping
+  AST-owned type-reference validation separate.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

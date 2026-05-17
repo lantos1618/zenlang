@@ -311,6 +311,9 @@ checked-in docs, tests, and commits only.
 - Direct `zen emit build.zen` gated dependency tests now live in a focused
   child module, keeping direct emit graph validation tests grouped by failure
   mode.
+- Resolver-backed generic type-reference validation now lives in a focused
+  child module, leaving AST-owned type-reference validation and shared resolver
+  name restoration in the parent module.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
