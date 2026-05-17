@@ -2428,6 +2428,9 @@ and do not assume Phase 4 is ready without evidence.
 - `zen check build.zen` typechecks graph target sources after deterministic
   graph/source validation and before reporting the graph summary, covered by
   `cargo test --test integration check_command_build_zen_typechecks_target_sources`.
+  Library-only graphs are valid on this non-executing validation path, covered
+  by
+  `cargo test --test integration check_command_build_zen_accepts_library_only_graph_validation`.
   Undeclared host effects still reject before target source typechecking,
   covered by
   `cargo test --test integration check_command_build_zen_rejects_undeclared_host_effects_before_target_typechecking`.
