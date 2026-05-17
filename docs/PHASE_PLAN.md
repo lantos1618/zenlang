@@ -2560,6 +2560,9 @@ checked-in docs, tests, and commits only.
 - Parser import declarations now live in `src/parser/import_declarations.rs`,
   keeping module-path parsing separate from generic/function/type declaration
   dispatch while preserving parser import coverage.
+- Build graph check-source typechecking now lives beside source validation in
+  `src/cli/build_graph_execution.rs`, keeping the root CLI module focused on
+  command routing while preserving `zen check build.zen` source diagnostics.
 
 ## Current Phase
 

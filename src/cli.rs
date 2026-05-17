@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use std::path::Path;
 use std::process;
 
@@ -9,8 +8,8 @@ mod json_emit;
 mod usage;
 
 use build_graph_execution::{
-    executable_build_targets, single_executable_build_target, test_build_targets,
-    validate_build_graph_sources,
+    check_build_graph_sources, executable_build_targets, single_executable_build_target,
+    test_build_targets, validate_build_graph_sources,
 };
 use compile::{compile_file_to_binary, compile_file_to_c_source, typed_program_to_c_source};
 use diagnostics::{print_diagnostic, print_errors};
@@ -113,23 +112,6 @@ fn cmd_check(path_str: &str) {
         typed.functions.len(),
         typed.types.len()
     );
-}
-
-fn check_build_graph_sources(base_dir: &Path, graph: &zen::build_graph::BuildGraph) {
-    let mut source_paths = BTreeSet::new();
-    for target in graph.targets() {
-        for source in target.sources() {
-            source_paths.insert(base_dir.join(source));
-        }
-    }
-
-    for source_path in source_paths {
-        let source_path = source_path.to_str().unwrap_or_else(|| {
-            eprintln!("error: non-utf8 source path: {}", source_path.display());
-            process::exit(1);
-        });
-        graph_frontend(source_path);
-    }
 }
 
 fn load_module_graph(path_str: &str) -> (zen::module_system::ResolvedModuleGraph, FileTable) {
