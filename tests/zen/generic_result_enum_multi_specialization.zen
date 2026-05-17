@@ -1,0 +1,24 @@
+{ io } = std
+
+Result<T, E>:
+    Ok(T),
+    Err(E)
+
+Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
+    self ?
+        | Ok(inner) { inner }
+        | Err(_) { fallback }
+}
+
+main = () i32 {
+    ok_int = Result<i32, str>.Ok(21)
+    err_int = Result<i32, str>.Err("bad")
+    ok_bool = Result<bool, str>.Ok(false)
+    err_bool = Result<bool, str>.Err("nope")
+
+    io.println("${ok_int.unwrap_or(0)}")
+    io.println("${err_int.unwrap_or(34)}")
+    io.println("${ok_bool.unwrap_or(true)}")
+    io.println("${err_bool.unwrap_or(true)}")
+    0
+}

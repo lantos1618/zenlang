@@ -114,6 +114,11 @@ checked-in docs, tests, and commits only.
   in a focused submodule, separate from template shape and mutability metadata.
 - Generic enum specialization coverage now includes a `Result<T, E>` enum method
   fixture with generated-C assertions for the concrete mangled method.
+- Generic enum method specialization now also covers multiple concrete
+  instantiations of the same `Option<T>` and `Result<T, E>` methods in one
+  program through `generic_enum_multi_specialization` and
+  `generic_result_enum_multi_specialization`, including generated-C definition
+  uniqueness and call/definition assertions.
 - Generic diagnostics now cover explicit type-argument arity failures for
   two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
 - Generic diagnostics now cover generic enum constructor arity failures without

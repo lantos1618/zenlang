@@ -71,6 +71,11 @@ fn test_generic_enum_method() {
 }
 
 #[test]
+fn test_generic_enum_multi_specialization() {
+    run_test("generic_enum_multi_specialization");
+}
+
+#[test]
 fn test_generic_method() {
     run_test("generic_method");
 }
@@ -103,6 +108,11 @@ fn test_generic_result_enum() {
 #[test]
 fn test_generic_result_enum_method() {
     run_test("generic_result_enum_method");
+}
+
+#[test]
+fn test_generic_result_enum_multi_specialization() {
+    run_test("generic_result_enum_multi_specialization");
 }
 
 #[test]
