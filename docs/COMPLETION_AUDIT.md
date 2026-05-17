@@ -2757,6 +2757,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/patterns/match_validation.rs`, preserving exhaustiveness,
   redundancy, and payload-shape diagnostics while keeping pattern binding and
   lowering smaller.
+- Generic type reference validation now keeps expression and statement tree
+  walking in `src/typechecker/generic_type_reference_walker/expressions.rs`,
+  preserving generic annotation diagnostics while keeping type argument arity
+  and bound checks smaller.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
