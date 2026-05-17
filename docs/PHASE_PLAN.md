@@ -2711,6 +2711,10 @@ checked-in docs, tests, and commits only.
   `src/codegen/c/tests/helpers.rs`, keeping identifier escaping, literal
   formatting, temporary naming, and simple statement emission coverage separate
   from whole-program generation tests.
+- C codegen whole-program generation tests now live in
+  `src/codegen/c/tests/program_generation.rs`, keeping function, struct, enum,
+  entry-point, payload enum, and defer generation coverage separate from shared
+  C codegen test fixtures.
 
 ## Current Phase
 

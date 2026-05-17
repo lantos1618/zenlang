@@ -1,4 +1,5 @@
 use super::*;
+use crate::ast::expressions::BinaryOp;
 
 #[test]
 fn emit_int_literal() {
