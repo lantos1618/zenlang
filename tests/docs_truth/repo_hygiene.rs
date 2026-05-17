@@ -120,8 +120,9 @@ fn source_ast_no_longer_has_return_expression_nodes() {
 }
 
 #[test]
-fn central_stdlib_core_modules_do_not_use_removed_return_keyword() {
+fn central_stdlib_bridge_and_core_modules_do_not_use_removed_return_keyword() {
     for path in [
+        "stdlib/compiler.zen",
         "stdlib/core/option.zen",
         "stdlib/core/result.zen",
         "stdlib/core/propagate.zen",
