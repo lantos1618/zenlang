@@ -159,6 +159,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/io/io.zen",
         "stdlib/io/mux/epoll.zen",
         "stdlib/io/mux/poll.zen",
+        "stdlib/io/mux/uring.zen",
         "stdlib/io/net/pipe.zen",
         "stdlib/io/signal.zen",
         "stdlib/io/terminal.zen",
