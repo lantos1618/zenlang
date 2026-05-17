@@ -1974,13 +1974,14 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test collect_declarations_with_symbols_uses_distinct_restored_requires_type_args`,
   and
   `cargo test collect_declarations_with_symbols_does_not_validate_stale_requires_after_target_restore`.
-- Resolver-backed struct field default validation now reuses collected type
-  metadata tasks instead of rescanning declarations during semantic replay,
+- Resolver-backed struct field default validation now uses dedicated semantic
+  validation tasks instead of carrying unused resolver metadata while replaying
+  standalone default checks,
   covered by
-  `cargo test resolver_struct_field_defaults_validate_from_type_metadata_tasks`.
+  `cargo test resolver_struct_field_defaults_validate_from_semantic_tasks`.
   The fallback resolver-backed struct field default validation path also uses
-  the shared metadata task collector, covered by
-  `cargo test resolver_backed_struct_field_defaults_reuse_metadata_tasks`.
+  the focused semantic task collector, covered by
+  `cargo test resolver_backed_struct_field_defaults_use_semantic_tasks`.
 - Resolver-backed generic type-reference validation now reuses type-reference
   tasks from the declaration metadata pass instead of rescanning declarations
   during semantic replay, covered by
@@ -2075,13 +2076,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test resolver_type_reference_validation_tasks_collect_only_type_reference_work`
   and
   `cargo test collect_declarations_with_symbols_uses_resolver_type_metadata_for_type_refs`.
-- Resolver-backed struct field-default validation now uses a narrow type
-  declaration metadata task collector instead of collecting the full resolver
-  metadata task bundle when only type default replay is needed, covered by
-  `cargo test resolver_type_declaration_metadata_tasks_collect_only_type_work`,
-  `cargo test resolver_backed_struct_field_defaults_reuse_metadata_tasks`,
-  and
-  `cargo test resolver_struct_field_defaults_validate_from_type_metadata_tasks`.
+- Resolver-backed struct field-default validation now uses the dedicated
+  semantic task collector instead of collecting the full resolver metadata
+  task bundle when only default replay is needed, covered by
+  `cargo test resolver_declaration_semantic_tasks_collect_only_semantic_work`,
+  `cargo test resolver_backed_struct_field_defaults_use_semantic_tasks`, and
+  `cargo test resolver_struct_field_defaults_validate_from_semantic_tasks`.
 - Resolver-backed behavior declaration metadata now uses a narrow behavior
   metadata task collector shared by the full resolver metadata collector,
   covered by

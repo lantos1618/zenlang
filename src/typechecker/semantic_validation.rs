@@ -205,8 +205,8 @@ impl TypeChecker {
         symbols: Option<&SymbolTable>,
     ) {
         if self.resolver_backed_collection {
-            let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
-            self.validate_resolver_struct_field_default_tasks(&tasks, symbols);
+            let tasks = Self::collect_resolver_declaration_semantic_validation_tasks(decls);
+            self.validate_resolver_struct_field_default_task_list(&tasks.struct_defaults, symbols);
             return;
         }
 

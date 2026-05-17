@@ -1915,8 +1915,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed behavior requires semantic validation now reuses collected
   requires tasks from the declaration metadata pass instead of rebuilding
   requires tasks during semantic replay.
-- Resolver-backed struct field default validation now reuses collected type
-  metadata tasks instead of rescanning declarations during semantic replay.
+- Resolver-backed struct field default validation now uses dedicated semantic
+  validation tasks instead of carrying unused resolver metadata while replaying
+  standalone default checks.
 - Resolver-backed generic type-reference validation now reuses type-reference
   tasks from the declaration metadata pass instead of rescanning declarations
   during semantic replay.
