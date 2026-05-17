@@ -3107,6 +3107,12 @@ checked-in docs, tests, and commits only.
   `build_zen_commands_reject_duplicate_executable_target_fields`,
   `build_zen_commands_reject_missing_required_executable_target_fields`, and
   `build_zen_commands_reject_invalid_executable_target_field_types`.
+- All executing/checking `build.zen` command entrypoints now reject malformed
+  `Test` target metadata for duplicate fields, missing required root fields,
+  and invalid root field types before outputs are created, covered by
+  `build_zen_commands_reject_duplicate_test_target_fields`,
+  `build_zen_commands_reject_missing_required_test_target_fields`, and
+  `build_zen_commands_reject_invalid_test_target_field_types`.
 - The stdlib build DSL, compiler/FFI bridges, environment, filesystem, IO,
   math, random, time, and memory facades, testing facade, memory allocator
   wrappers plus arena, async, heap, and mmap helpers, and core `Option`,
