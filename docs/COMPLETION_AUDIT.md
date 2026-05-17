@@ -2319,6 +2319,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test build_graph build_graph_rejects_unknown_target_dependencies`
   and
   `cargo test --test build_graph build_program_lowering_rejects_unknown_target_dependencies`.
+- Build graph lowering rejects unsupported package targets with a targeted
+  diagnostic instead of silently treating them as absent, covered by
+  `cargo test --test build_graph build_program_lowering_rejects_unsupported_package_targets`.
 - Build graph validation rejects self-dependencies, covered by
   `cargo test --test build_graph build_graph_rejects_self_target_dependencies`
   and
@@ -2341,6 +2344,9 @@ and do not assume Phase 4 is ready without evidence.
 - `emit-json build-graph` rejects unresolved target dependencies through the
   advertised graph-emission path, covered by
   `cargo test --test integration emit_json_build_graph_rejects_unknown_target_dependencies`.
+- `emit-json build-graph` rejects unsupported package targets through the
+  advertised graph-emission path, covered by
+  `cargo test --test integration emit_json_build_graph_rejects_unsupported_package_targets`.
 - `emit-json build-graph` rejects self-dependencies through the advertised
   graph-emission path, covered by
   `cargo test --test integration emit_json_build_graph_rejects_self_target_dependencies`.

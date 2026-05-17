@@ -2137,7 +2137,9 @@ checked-in docs, tests, and commits only.
   `build_program_lowering_rejects_cyclic_target_dependencies` covers
   dependency-cycle rejection,
   `build_program_lowering_rejects_unknown_target_dependencies` covers
-  unresolved target dependency rejection, and
+  unresolved target dependency rejection,
+  `build_program_lowering_rejects_unsupported_package_targets` keeps package
+  target semantics gated with a targeted diagnostic, and
   `build_program_lowering_rejects_undeclared_env_reads` keeps undeclared host
   effects rejected during lowering. The constrained deterministic-effect
   surface also recognizes declared `b.os.read_file("...")` effects, covered by
@@ -2164,6 +2166,8 @@ checked-in docs, tests, and commits only.
   `emit_json_build_graph_rejects_self_target_dependencies` covers
   self-dependency rejection there. `emit_json_build_graph_rejects_cyclic_target_dependencies`
   covers dependency-cycle rejection on that graph-emission path.
+  `emit_json_build_graph_rejects_unsupported_package_targets` covers targeted
+  package-target rejection through the CLI graph-emission path.
 - `build-graph <build.zen>` now consumes the deterministic graph for executable
   targets without widening the accepted `build.zen` subset.
   `build_graph_command_compiles_single_executable_target` covers the

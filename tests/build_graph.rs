@@ -349,6 +349,26 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn build_program_lowering_rejects_unsupported_package_targets() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Package { name: "core", root: "src/lib.zen" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("unsupported package build target should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "unsupported build target kind `Package`; supported target kinds are `Executable`, `Test`, and `Library`"
+    );
+}
+
+#[test]
 fn build_program_lowering_rejects_self_target_dependencies() {
     let program = parse_program(
         r#"
