@@ -128,6 +128,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/compiler.zen",
         "stdlib/concurrency/primitives/futex.zen",
         "stdlib/concurrency/sync/barrier.zen",
+        "stdlib/concurrency/sync/channel.zen",
         "stdlib/concurrency/sync/condvar.zen",
         "stdlib/concurrency/sync/mutex.zen",
         "stdlib/concurrency/sync/once.zen",
