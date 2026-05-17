@@ -2520,6 +2520,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver behavior-association list replay now selects from the resolver
   declaration task bundle internally, covered by
   `cargo test --lib resolver_behavior_association_list_tasks_select_from_declaration_bundle`.
+- AST declaration collection now replays the full collection task bundle through
+  one helper, covered by
+  `cargo test --lib ast_declaration_collection_bundle_replays_collection_passes`.
 
 ## Unresolved Gaps
 
