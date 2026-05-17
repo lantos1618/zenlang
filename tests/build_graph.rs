@@ -350,21 +350,32 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
 #[test]
 fn build_program_lowering_rejects_unsupported_package_targets() {
-    let program = parse_program(
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Package { name: "core", root: "src/lib.zen" })
-    .Ok(b.config())
+    assert_build_program_lowering_rejects_unsupported_target_kind("Package");
 }
-"#,
-    );
 
-    let err = BuildGraph::from_build_program(&program)
-        .expect_err("unsupported package build target should fail");
+#[test]
+fn build_program_lowering_rejects_unsupported_link_targets() {
+    assert_build_program_lowering_rejects_unsupported_target_kind("Link");
+}
+
+fn assert_build_program_lowering_rejects_unsupported_target_kind(target_kind: &str) {
+    let program = parse_program(&format!(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
+    b.add({target_kind} {{ name: "core", root: "src/lib.zen" }})
+    .Ok(b.config())
+}}
+"#,
+    ));
+
+    let err =
+        BuildGraph::from_build_program(&program).expect_err("unsupported build target should fail");
 
     assert_eq!(
         err.to_string(),
-        "unsupported build target kind `Package`; supported target kinds are `Executable`, `Test`, and `Library`"
+        format!(
+            "unsupported build target kind `{target_kind}`; supported target kinds are `Executable`, `Test`, and `Library`"
+        )
     );
 }
 

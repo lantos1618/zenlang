@@ -316,16 +316,27 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
 #[test]
 fn emit_json_build_graph_rejects_unsupported_package_targets() {
+    assert_emit_json_build_graph_rejects_unsupported_target_kind("Package");
+}
+
+#[test]
+fn emit_json_build_graph_rejects_unsupported_link_targets() {
+    assert_emit_json_build_graph_rejects_unsupported_target_kind("Link");
+}
+
+fn assert_emit_json_build_graph_rejects_unsupported_target_kind(target_kind: &str) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let build_path = tmp.path().join("build.zen");
     std::fs::write(
         &build_path,
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Package { name: "core", root: "src/lib.zen" })
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
+    b.add({target_kind} {{ name: "core", root: "src/lib.zen" }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
 
@@ -342,7 +353,9 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     );
     assert!(
         String::from_utf8_lossy(&output.stderr).contains(
-            "unsupported build target kind `Package`; supported target kinds are `Executable`, `Test`, and `Library`"
+            &format!(
+                "unsupported build target kind `{target_kind}`; supported target kinds are `Executable`, `Test`, and `Library`"
+            )
         ),
         "expected unsupported target diagnostic, stderr={}",
         String::from_utf8_lossy(&output.stderr)
