@@ -2740,6 +2740,9 @@ checked-in docs, tests, and commits only.
   and UFC bound-failure coverage in
   `tests/generic_diagnostics/call_site_bounds/methods.rs`, leaving the parent
   call-site bound module focused on generic function bound failures.
+- Generic annotation arity diagnostics now keep local variable annotation
+  coverage in `tests/generic_diagnostics/annotations/local.rs`, leaving the
+  parent annotation module focused on function/signature annotations.
 
 ## Current Phase
 

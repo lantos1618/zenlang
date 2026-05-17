@@ -3010,6 +3010,10 @@ and do not assume Phase 4 is ready without evidence.
   `tests/generic_diagnostics/call_site_bounds/methods.rs`, preserving the
   no-followup-body-error checks while keeping the parent call-site bound module
   focused on generic function bound failures.
+- Generic annotation arity diagnostics now keep local variable annotation
+  coverage in `tests/generic_diagnostics/annotations/local.rs`, preserving
+  struct/enum arity and unspecialized-generic checks while keeping the parent
+  annotation module focused on function/signature annotations.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
