@@ -36,7 +36,7 @@ TaskQueue.new = (capacity: usize, allocator: Allocator) TaskQueue {
     tasks = allocator.allocate(capacity * 8)  // 8 bytes per pointer
     compiler.memset(compiler.int_to_ptr(tasks), 0, capacity * 8)
 
-    return TaskQueue {
+    TaskQueue {
         tasks: tasks,
         capacity: capacity,
         head: 0,
@@ -46,36 +46,38 @@ TaskQueue.new = (capacity: usize, allocator: Allocator) TaskQueue {
 }
 
 TaskQueue.push = (self: MutPtr<TaskQueue>, task_ptr: i64) bool {
-    self.val.count >= cast(self.val.capacity, u32) ? {
-        return false  // Queue full
-    }
+    self.val.count >= cast(self.val.capacity, u32) ?
+        | true { false }  // Queue full
+        | false {
+            idx = self.val.tail % cast(self.val.capacity, u32)
+            compiler.store<i64>(
+                compiler.int_to_ptr(self.val.tasks + cast(idx, i64) * 8),
+                task_ptr
+            )
+            self.val.tail = self.val.tail + 1
+            self.val.count = self.val.count + 1
 
-    idx = self.val.tail % cast(self.val.capacity, u32)
-    compiler.store<i64>(
-        compiler.int_to_ptr(self.val.tasks + cast(idx, i64) * 8),
-        task_ptr
-    )
-    self.val.tail = self.val.tail + 1
-    self.val.count = self.val.count + 1
-    return true
+            true
+        }
 }
 
 TaskQueue.pop = (self: MutPtr<TaskQueue>) Option<i64> {
-    self.val.count == 0 ? {
-        return Option.None
-    }
+    self.val.count == 0 ?
+        | true { Option.None }
+        | false {
+            idx = self.val.head % cast(self.val.capacity, u32)
+            task_ptr = compiler.load<i64>(
+                compiler.int_to_ptr(self.val.tasks + cast(idx, i64) * 8)
+            )
+            self.val.head = self.val.head + 1
+            self.val.count = self.val.count - 1
 
-    idx = self.val.head % cast(self.val.capacity, u32)
-    task_ptr = compiler.load<i64>(
-        compiler.int_to_ptr(self.val.tasks + cast(idx, i64) * 8)
-    )
-    self.val.head = self.val.head + 1
-    self.val.count = self.val.count - 1
-    return Option.Some(task_ptr)
+            Option.Some(task_ptr)
+        }
 }
 
 TaskQueue.is_empty = (self: Ptr<TaskQueue>) bool {
-    return self.val.count == 0
+    self.val.count == 0
 }
 
 TaskQueue.free = (self: MutPtr<TaskQueue>, allocator: Allocator) void {
@@ -120,7 +122,7 @@ Scheduler.new = (async_pool: MutPtr<AsyncPool>, allocator: Allocator) Scheduler 
     suspended = allocator.allocate(MAX_TASKS * 8)
     compiler.memset(compiler.int_to_ptr(suspended), 0, MAX_TASKS * 8)
 
-    return Scheduler {
+    Scheduler {
         runnable: runnable,
         suspended: suspended,
         suspended_count: 0,
@@ -144,7 +146,7 @@ Scheduler.new = (async_pool: MutPtr<AsyncPool>, allocator: Allocator) Scheduler 
 Scheduler.spawn = (self: MutPtr<Scheduler>, entry: i64, arg: i64) Result<u64, i32> {
     task_result = Task.new(entry, arg, self.val.allocator)
     task_result ? {
-        | Err(e) { return Result.Err(e) }
+        | Err(e) { Result.Err(e) }
         | Ok(task) {
             // Assign task ID
             task_ptr = self.val.allocator.allocate(compiler.sizeof<Task>())
@@ -162,7 +164,7 @@ Scheduler.spawn = (self: MutPtr<Scheduler>, entry: i64, arg: i64) Result<u64, i3
             // Add to runnable queue
             self.val.runnable.mut_ref().push(task_ptr)
 
-            return Result.Ok(task_copy.val.id)
+            Result.Ok(task_copy.val.id)
         }
     }
 }
@@ -254,32 +256,34 @@ Scheduler.run_task = (self: MutPtr<Scheduler>, task_ptr: i64) void {
 // Finds the suspended task and makes it runnable
 Scheduler.on_io_complete = (self: MutPtr<Scheduler>, op_id: u64, result: i64) void {
     // Find task waiting on this operation
+    resumed ::= false
     i ::= 0
     i < cast(self.val.suspended_count, i32) ? {
-        task_ptr = compiler.load<i64>(
-            compiler.int_to_ptr(self.val.suspended + cast(i, i64) * 8)
-        )
-        task: MutPtr<Task> = cast(compiler.int_to_ptr(task_ptr), MutPtr<Task>)
-
-        // Check if this task was waiting for this op
-        // (In real impl, would track op_id -> task mapping)
-        task.val.state == TaskState.Suspended ? {
-            // Move from suspended to runnable
-            task.val.state = TaskState.Running
-            self.val.runnable.mut_ref().push(task_ptr)
-
-            // Remove from suspended (swap with last)
-            last_idx = self.val.suspended_count - 1
-            last_ptr = compiler.load<i64>(
-                compiler.int_to_ptr(self.val.suspended + cast(last_idx, i64) * 8)
+        resumed == false ? {
+            task_ptr = compiler.load<i64>(
+                compiler.int_to_ptr(self.val.suspended + cast(i, i64) * 8)
             )
-            compiler.store<i64>(
-                compiler.int_to_ptr(self.val.suspended + cast(i, i64) * 8),
-                last_ptr
-            )
-            self.val.suspended_count = self.val.suspended_count - 1
+            task: MutPtr<Task> = cast(compiler.int_to_ptr(task_ptr), MutPtr<Task>)
 
-            return
+            // Check if this task was waiting for this op
+            // (In real impl, would track op_id -> task mapping)
+            task.val.state == TaskState.Suspended ? {
+                // Move from suspended to runnable
+                task.val.state = TaskState.Running
+                self.val.runnable.mut_ref().push(task_ptr)
+
+                // Remove from suspended (swap with last)
+                last_idx = self.val.suspended_count - 1
+                last_ptr = compiler.load<i64>(
+                    compiler.int_to_ptr(self.val.suspended + cast(last_idx, i64) * 8)
+                )
+                compiler.store<i64>(
+                    compiler.int_to_ptr(self.val.suspended + cast(i, i64) * 8),
+                    last_ptr
+                )
+                self.val.suspended_count = self.val.suspended_count - 1
+                resumed = true
+            }
         }
 
         i = i + 1
@@ -324,8 +328,9 @@ set_scheduler = (sched: i64) void {
 }
 
 get_scheduler = () Option<MutPtr<Scheduler>> {
-    GLOBAL_SCHEDULER == 0 ? { return Option.None }
-    return Option.Some(cast(compiler.int_to_ptr(GLOBAL_SCHEDULER), MutPtr<Scheduler>))
+    GLOBAL_SCHEDULER == 0 ?
+        | true { Option.None }
+        | false { Option.Some(cast(compiler.int_to_ptr(GLOBAL_SCHEDULER), MutPtr<Scheduler>)) }
 }
 
 // Convenience: yield from current task

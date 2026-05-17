@@ -130,6 +130,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/concurrency/actor/async_actor.zen",
         "stdlib/concurrency/actor/supervisor.zen",
         "stdlib/concurrency/actor/system.zen",
+        "stdlib/concurrency/async/scheduler.zen",
         "stdlib/concurrency/async/task.zen",
         "stdlib/concurrency/primitives/atomic.zen",
         "stdlib/concurrency/primitives/futex.zen",
