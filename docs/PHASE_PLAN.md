@@ -3052,13 +3052,13 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_rejects_duplicate_target_fields`,
   `emit_command_build_zen_rejects_missing_required_target_fields`, and
   `emit_command_build_zen_rejects_invalid_target_field_types`.
-- Normal `zen check build.zen` now has `Library` target metadata diagnostics
-  for duplicate fields, missing `exports`, non-array `exports`, and empty
-  `exports`, covered by
-  `check_command_build_zen_rejects_duplicate_library_target_fields`,
-  `check_command_build_zen_rejects_missing_library_exports`,
-  `check_command_build_zen_rejects_invalid_library_exports_type`, and
-  `check_command_build_zen_rejects_empty_library_exports`.
+- All executing/checking `build.zen` command entrypoints now reject malformed
+  `Library` target metadata for duplicate fields, missing `exports`,
+  non-array `exports`, and empty `exports` before outputs are created, covered
+  by `build_zen_commands_reject_duplicate_library_target_fields`,
+  `build_zen_commands_reject_missing_library_exports`,
+  `build_zen_commands_reject_invalid_library_exports_type`, and
+  `build_zen_commands_reject_empty_library_exports`.
 - All executing/checking `build.zen` command entrypoints now reject ordinary
   unknown target fields before outputs are created, covered by
   `build_zen_commands_reject_unknown_target_fields`.

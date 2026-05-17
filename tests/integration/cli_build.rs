@@ -52,5 +52,7 @@ mod legacy_graph_command_validation;
 mod library_execution_gates;
 #[path = "cli_build/support.rs"]
 mod support;
+#[path = "cli_build/target_metadata_matrix.rs"]
+mod target_metadata_matrix;
 #[path = "cli_build/unsupported_targets.rs"]
 mod unsupported_targets;
