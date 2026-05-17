@@ -2184,7 +2184,9 @@ checked-in docs, tests, and commits only.
   graph-only library typechecking before execution starts, and
   `build_graph_command_rejects_undeclared_host_effects_before_library_typechecking`
   preserves deterministic host-effect validation before graph-only library
-  typechecking, and
+  typechecking. `build_graph_command_rejects_gated_library_dependencies` and
+  `build_graph_command_rejects_gated_test_dependencies` cover rejected
+  executable dependencies on gated library/test targets, and
   `build_graph_command_rejects_missing_root_source` covers a target execution
   failure before normal `zen build build.zen` is ungated.
   Declared deterministic file-read effects are accepted through
