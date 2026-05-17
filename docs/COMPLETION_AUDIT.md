@@ -2324,6 +2324,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test build_graph build_program_lowering_rejects_unsupported_package_targets`
   and
   `cargo test --test build_graph build_program_lowering_rejects_unsupported_link_targets`.
+- Build target kind spellings are owned by enums instead of duplicated in
+  semantic and CLI logic. `build_target_dsl_kind_owns_source_spelling` covers
+  accepted build target DSL names and the supported-target diagnostic list, and
+  `build_target_kind_owns_diagnostic_spelling` covers runtime target-kind
+  diagnostic names used by gated dependency errors.
 - Build graph validation rejects self-dependencies, covered by
   `cargo test --test build_graph build_graph_rejects_self_target_dependencies`
   and
