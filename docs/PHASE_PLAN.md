@@ -2554,6 +2554,9 @@ checked-in docs, tests, and commits only.
 - Lexer whitespace and comment skipping now lives in `src/lexer/whitespace.rs`,
   separate from token dispatch, while preserving newline significance and
   string interpolation comment handling.
+- Typed resolved type definitions and helpers now live in
+  `src/ast/typed/types.rs`, preserving the public `ast::typed::Type` path while
+  keeping typed AST node definitions separate.
 
 ## Current Phase
 

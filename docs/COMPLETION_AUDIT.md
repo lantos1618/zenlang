@@ -2723,6 +2723,9 @@ and do not assume Phase 4 is ready without evidence.
 - Lexer whitespace and comment skipping now lives in `src/lexer/whitespace.rs`,
   preserving newline-token and string-interpolation comment coverage while
   keeping token dispatch smaller.
+- Typed resolved type definitions and helpers now live in
+  `src/ast/typed/types.rs`, preserving the public `ast::typed::Type` path while
+  keeping typed AST node definitions smaller.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type
