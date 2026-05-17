@@ -2526,6 +2526,13 @@ and do not assume Phase 4 is ready without evidence.
 - AST declaration semantic validation now replays its full validation task
   bundle through one helper, covered by
   `cargo test --lib ast_declaration_semantic_bundle_replays_validation_passes`.
+- Resolver validation replay tests now keep association-list replay coverage in
+  `src/typechecker/tests/resolver_validation/replay_tasks/association_lists.rs`
+  and declaration-task collector coverage in
+  `src/typechecker/tests/resolver_validation/replay_tasks/declaration_tasks.rs`,
+  reducing `src/typechecker/tests/resolver_validation/replay_tasks.rs` from 525
+  lines to a module index while preserving coverage through
+  `cargo test --lib resolver_validation::replay_tasks`.
 
 ## Unresolved Gaps
 
