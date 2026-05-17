@@ -2104,6 +2104,11 @@ checked-in docs, tests, and commits only.
   associations, resolver-owned type-reference checks, and resolver struct-field
   defaults through one task-bundle helper, covered by
   `cargo test --lib resolver_declaration_semantic_bundle_replays_validation_passes`.
+- Resolver-backed declaration collection now replays resolver metadata
+  restoration, behavior-impl metadata restoration, semantic validation,
+  behavior-ref cleanup, and final type behavior refresh through one
+  task-bundle helper, covered by
+  `cargo test --lib resolver_declaration_collection_bundle_replays_metadata_semantics_and_refresh`.
 - Resolver validation replay tests now keep association-list replay cases and
   declaration-task collector cases in focused submodules, leaving the parent
   replay test module as a small index.

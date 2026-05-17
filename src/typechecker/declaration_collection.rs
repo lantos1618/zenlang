@@ -55,11 +55,7 @@ impl TypeChecker {
         self.with_resolver_backed_collection(|checker| checker.collect_declarations(decls));
 
         let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
-        self.collect_resolver_declaration_metadata(symbols, &tasks);
-        self.collect_resolver_behavior_impl_metadata(&tasks, symbols);
-        self.validate_resolver_collected_declaration_semantics(symbols, &tasks);
-        self.clear_resolver_behavior_ref_state();
-        self.refresh_resolver_type_behavior_impls(&tasks, symbols);
+        self.collect_resolver_declarations_from_tasks(&tasks, symbols);
     }
 
     pub(super) fn collect_resolver_declaration_metadata(
