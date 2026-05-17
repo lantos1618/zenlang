@@ -2737,6 +2737,9 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/resolver_validation/metadata_diagnostics.rs`, preserving
   mismatch and absence diagnostics while keeping core resolver symbol
   requirement logic smaller.
+- Parser atom expression forms now live in `src/parser/atoms/forms.rs`,
+  preserving loop, match, cast, shorthand enum, and string interpolation
+  parsing while keeping prefix atom dispatch smaller.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
