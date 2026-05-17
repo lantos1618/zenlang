@@ -2416,6 +2416,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration emit_command_build_zen_accepts_declared_file_read_effects`
   and
   `cargo test --test integration emit_command_build_zen_rejects_undeclared_file_read_effects`.
+- Direct `zen build.zen` accepts declared deterministic file-read effects and
+  rejects undeclared file reads before execution, covered by
+  `cargo test --test integration direct_file_command_build_zen_accepts_declared_file_read_effects`
+  and
+  `cargo test --test integration direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
 - Dependency-ordered build execution still stops before execution when graph
   lowering detects undeclared host effects, covered by
   `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.

@@ -2261,6 +2261,10 @@ checked-in docs, tests, and commits only.
   `direct_file_command_multi_target_build_zen_rejects_undeclared_host_effects`
   and
   `direct_file_command_build_zen_rejects_undeclared_host_effects`.
+  Declared deterministic file-read effects are accepted through
+  `direct_file_command_build_zen_accepts_declared_file_read_effects`, while
+  undeclared file reads reject before execution through
+  `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
 - Build script lowering collects multiple executable targets deterministically,
   covered by `build_program_lowering_collects_multiple_executable_targets`.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes stay
