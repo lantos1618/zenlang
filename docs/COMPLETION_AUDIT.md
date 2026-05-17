@@ -2976,6 +2976,10 @@ and do not assume Phase 4 is ready without evidence.
   preserving identifier escaping, literal formatting, temporary naming, and
   simple statement emission coverage while keeping whole-program generation
   tests focused.
+- C codegen whole-program generation tests now live in
+  `src/codegen/c/tests/program_generation.rs`, preserving function, struct,
+  enum, entry-point, payload enum, and defer generation coverage while keeping
+  shared C codegen test fixtures focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
