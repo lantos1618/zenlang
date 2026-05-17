@@ -470,6 +470,9 @@ checked-in docs, tests, and commits only.
 - Frontend JSON integration tests now keep AST and symbol module-graph
   serialization coverage in a focused child module, leaving typed-program and
   diagnostics JSON checks in the parent module.
+- Build-graph JSON host-effect tests now keep declared file-read fallback
+  accept/reject cases in a focused child module, leaving env-effect rejection
+  ordering coverage in the parent integration module.
 - Generic specialization generated-C assertions now keep multi-file import and
   dependency cases in a focused integration module, separating them from
   single-file generic specialization emission assertions.
