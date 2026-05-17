@@ -43,6 +43,32 @@ fn stale_rewrite_audit_docs_are_removed() {
 }
 
 #[test]
+fn generated_vscode_packages_are_not_tracked() {
+    let output = std::process::Command::new("git")
+        .args(["ls-files", "*.vsix"])
+        .current_dir(repo_root())
+        .output()
+        .expect("list tracked VSIX packages");
+    assert!(
+        output.status.success(),
+        "git ls-files failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let tracked = String::from_utf8(output.stdout).expect("git ls-files output is utf-8");
+    assert!(
+        tracked.trim().is_empty(),
+        "generated VS Code packages should not be checked in:\n{tracked}"
+    );
+
+    let gitignore = read(".gitignore");
+    assert!(
+        gitignore.lines().any(|line| line.trim() == "*.vsix"),
+        ".gitignore should keep generated VSIX packages out of source control"
+    );
+}
+
+#[test]
 fn production_rust_files_stay_below_cleanup_threshold() {
     const MAX_LINES: usize = 500;
 
