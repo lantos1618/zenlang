@@ -4,6 +4,7 @@ use std::process;
 mod build_graph_execution;
 mod compile;
 mod diagnostics;
+mod frontend;
 mod json_emit;
 mod usage;
 
@@ -13,14 +14,13 @@ use build_graph_execution::{
 };
 use compile::{compile_file_to_binary, compile_file_to_c_source, typed_program_to_c_source};
 use diagnostics::{print_diagnostic, print_errors};
+use frontend::{graph_frontend, load_module_graph};
 use json_emit::{
     cmd_emit_json_ast, cmd_emit_json_build_graph, cmd_emit_json_diagnostics, cmd_emit_json_symbols,
     cmd_emit_json_typed,
 };
 use usage::print_usage;
 use zen::error::FileTable;
-use zen::module_system::ModuleSystem;
-use zen::typechecker::TypeChecker;
 
 pub fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -112,52 +112,6 @@ fn cmd_check(path_str: &str) {
         typed.functions.len(),
         typed.types.len()
     );
-}
-
-fn load_module_graph(path_str: &str) -> (zen::module_system::ResolvedModuleGraph, FileTable) {
-    let path = Path::new(path_str);
-    if !path.exists() {
-        eprintln!("error: file not found: {}", path_str);
-        process::exit(1);
-    }
-
-    let mut files = FileTable::new();
-    let mut module_system = ModuleSystem::new();
-
-    let graph = match module_system.load_module_graph(path, &mut files) {
-        Ok(graph) => graph,
-        Err(errs) => {
-            print_errors(&errs, &files);
-            process::exit(1);
-        }
-    };
-
-    (graph, files)
-}
-
-fn graph_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
-    let (graph, files) = load_module_graph(path_str);
-
-    let mut checker = TypeChecker::new();
-    match checker.check_module_graph_entry(&graph) {
-        Ok(typed) => {
-            for diag in checker.diagnostics() {
-                print_diagnostic(diag, &files);
-            }
-            typed
-        }
-        Err(diags) => {
-            for diag in &diags {
-                print_diagnostic(diag, &files);
-            }
-            let errors = diags
-                .iter()
-                .filter(|d| d.severity == zen::error::Severity::Error)
-                .count();
-            eprintln!("  {} error(s)", errors);
-            process::exit(1);
-        }
-    }
 }
 
 fn load_build_graph(path_str: &str) -> zen::build_graph::BuildGraph {

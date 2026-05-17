@@ -2563,6 +2563,9 @@ checked-in docs, tests, and commits only.
 - Build graph check-source typechecking now lives beside source validation in
   `src/cli/build_graph_execution.rs`, keeping the root CLI module focused on
   command routing while preserving `zen check build.zen` source diagnostics.
+- CLI module-graph loading and frontend typechecking now live in
+  `src/cli/frontend.rs`, sharing the same frontend path across check, emit,
+  JSON, build, and run commands while keeping root CLI dispatch smaller.
 
 ## Current Phase
 
