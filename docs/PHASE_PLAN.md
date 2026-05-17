@@ -2469,6 +2469,10 @@ checked-in docs, tests, and commits only.
   `src/cli/compile.rs`, keeping the root CLI module focused on command
   dispatch, graph loading, and frontend diagnostics while preserving existing
   build/emit integration coverage.
+- Resolver validation now keeps imported behavior association dependency
+  seeding in `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
+  separate from imported callable/type dependency seeding while preserving
+  imported behavior inheritance and impl fixture coverage.
 
 ## Current Phase
 

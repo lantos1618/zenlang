@@ -8,6 +8,7 @@ include!("resolver_validation/entry_symbols.rs");
 include!("resolver_validation/replay_tasks.rs");
 include!("resolver_validation/imports_modules.rs");
 include!("resolver_validation/imports_dependencies.rs");
+include!("resolver_validation/imports_behavior_dependencies.rs");
 include!("resolver_validation/imports_source_dependencies.rs");
 include!("resolver_validation/symbols_locals.rs");
 include!("resolver_validation/local_traversal.rs");
