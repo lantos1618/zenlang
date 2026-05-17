@@ -320,6 +320,9 @@ checked-in docs, tests, and commits only.
 - Resolver validation support now keeps collected type-info and generic
   template constructors in a focused include, separate from method-key and AST
   type traversal helpers.
+- Resolver metadata diagnostics now live in a focused validation include,
+  keeping core resolver symbol requirement logic separate from reusable
+  mismatch and absence diagnostic emitters.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
