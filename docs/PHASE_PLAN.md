@@ -2331,9 +2331,12 @@ checked-in docs, tests, and commits only.
   failure before normal `zen build build.zen` is ungated.
   Declared deterministic env reads with fallbacks are accepted through
   `build_graph_command_accepts_declared_env_read_with_fallback`.
-  Declared deterministic file-read effects are accepted through
-  `build_graph_command_accepts_declared_file_read_effects`, while undeclared
-  file reads reject before execution through
+  Declared deterministic file-read effects are accepted through `.Err`,
+  wildcard, and identifier fallback arms, covered by
+  `build_graph_command_accepts_declared_file_read_effects`,
+  `build_graph_command_accepts_wildcard_fallback_declared_file_read_effects`,
+  and `build_graph_command_accepts_identifier_fallback_declared_file_read_effects`,
+  while undeclared file reads reject before execution through
   `build_graph_command_rejects_undeclared_file_read_effects_before_execution`.
 - Normal `zen build build.zen` now routes through the same constrained
   deterministic graph pipeline used by `build-graph <build.zen>`, covered by
