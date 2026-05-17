@@ -2520,6 +2520,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_multi_target_rejects_undeclared_host_effects`.
   Declared deterministic env reads with fallbacks are accepted through
   `cargo test --test integration build_graph_command_accepts_declared_env_read_with_fallback`.
+  Missing fallback arms on deterministic env reads reject before execution
+  through
+  `cargo test --test integration build_graph_command_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted through `.Err`,
   wildcard, and identifier fallback arms, and undeclared file reads reject
   before execution, covered by
@@ -2553,6 +2556,9 @@ and do not assume Phase 4 is ready without evidence.
   Declared deterministic env reads with fallbacks are accepted on the same
   execution path through
   `cargo test --test integration build_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Missing fallback arms on deterministic env reads reject before execution
+  through
+  `cargo test --test integration build_command_build_zen_rejects_env_read_without_fallback_before_execution`.
 - Build/test/legacy graph execution accepts dependencies on validated library
   source targets,
   covered by
@@ -2573,6 +2579,9 @@ and do not assume Phase 4 is ready without evidence.
   Declared deterministic env reads with fallbacks are accepted on the same
   test execution path through
   `cargo test --test integration test_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Missing fallback arms on deterministic env reads reject before test
+  execution through
+  `cargo test --test integration test_command_build_zen_rejects_env_read_without_fallback_before_execution`.
 - Build/test/emit graph execution validates non-executed graph-only library
   exports before compiling or running selected targets, covered by
   `cargo test --test integration build_command_build_zen_rejects_missing_graph_only_library_source`,
@@ -2613,6 +2622,9 @@ and do not assume Phase 4 is ready without evidence.
   Declared deterministic env reads with fallbacks are accepted on the same
   validation path through
   `cargo test --test integration check_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Missing fallback arms on deterministic env reads reject before source
+  validation through
+  `cargo test --test integration check_command_build_zen_rejects_env_read_without_fallback_before_source_validation`.
 - Single-target `zen emit build.zen` rejects multi-executable ambiguity before
   per-executable source validation, covered by
   `cargo test --test integration emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source`.
@@ -2630,6 +2642,9 @@ and do not assume Phase 4 is ready without evidence.
   Declared deterministic env reads with fallbacks are accepted on the same emit
   path through
   `cargo test --test integration emit_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Missing fallback arms on deterministic env reads reject before C emission
+  through
+  `cargo test --test integration emit_command_build_zen_rejects_env_read_without_fallback`.
 - Single-target `zen emit build.zen` accepts selected executable dependencies
   on validated library source targets and rejects gated test dependencies
   before C emission, covered by
@@ -2660,6 +2675,9 @@ and do not assume Phase 4 is ready without evidence.
   Declared deterministic env reads with fallbacks are accepted on the same
   direct execution path through
   `cargo test --test integration direct_file_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Missing fallback arms on deterministic env reads reject before execution
+  through
+  `cargo test --test integration direct_file_command_build_zen_rejects_env_read_without_fallback_before_execution`.
 - Direct `zen build.zen` validates and typechecks graph-only library exports
   before execution, covered by
   `cargo test --test integration direct_file_command_build_zen_accepts_valid_graph_only_library_sources`,
