@@ -16,6 +16,10 @@ mod frontend_diagnostics;
 mod generated_c_assertions;
 #[path = "integration/import_visibility.rs"]
 mod import_visibility;
+#[path = "integration/import_visibility_dependencies.rs"]
+mod import_visibility_dependencies;
+#[path = "integration/import_visibility_private_methods.rs"]
+mod import_visibility_private_methods;
 #[path = "integration/multi_file_fixtures.rs"]
 mod multi_file_fixtures;
 #[path = "integration/runtime_fixtures.rs"]
