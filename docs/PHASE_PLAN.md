@@ -2659,6 +2659,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_value_metadata/absent_declaration_metadata.rs`,
   keeping rejected type, enum, behavior, parent, impl, and requires metadata on
   value symbols separate from value signature and generic metadata validation.
+- Resolver expected composite symbol builder tests now live in
+  `src/typechecker/tests/resolver_validation/expected_symbols/composite_symbols.rs`,
+  keeping behavior, struct, enum, and variant symbol metadata coverage separate
+  from primitive expected metadata and leaf symbol builders.
 
 ## Current Phase
 
