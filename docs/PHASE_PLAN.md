@@ -3084,13 +3084,16 @@ checked-in docs, tests, and commits only.
 - All executing/checking `build.zen` command entrypoints now reject ordinary
   unknown target fields before outputs are created, covered by
   `build_zen_commands_reject_unknown_target_fields`.
-- The stdlib build DSL, compiler/FFI bridges, environment, filesystem, IO, math, random, time, and memory facades,
-  testing facade, memory allocator wrappers plus arena, async, heap, and mmap helpers, and
-  core `Option`, `Result`, propagation, byte-buffer, iterator, pointer, and
-  slice helpers no longer use the removed `return` keyword, guarded by
-  `promoted_stdlib_modules_do_not_use_removed_return_keyword`, so the
-  first stdlib compilation cleanup point stays aligned with expression-tail
-  returns before broader stdlib parsing/building is promoted.
+- The stdlib build DSL, compiler/FFI bridges, environment, filesystem, IO,
+  math, random, time, and memory facades, testing facade, memory allocator
+  wrappers plus arena, async, heap, and mmap helpers, and core `Option`,
+  `Result`, propagation, byte-buffer, iterator, pointer, and slice helpers no
+  longer use the removed `return` keyword. The final sweep includes
+  `stdlib/io/net/unix_socket.zen`, `stdlib/io/net/socket.zen`,
+  `stdlib/io/files/file.zen`, and `stdlib/sys/process/prctl.zen`, guarded by
+  `promoted_stdlib_modules_do_not_use_removed_return_keyword`, so the first
+  stdlib compilation cleanup point stays aligned with expression-tail returns
+  before broader stdlib parsing/building is promoted.
 - Root smoke fixtures under `tests/test_*.zen` now use expression-tail returns
   instead of the removed `return` keyword, guarded by
   `root_smoke_fixtures_do_not_use_removed_return_keyword`.
