@@ -2678,6 +2678,10 @@ checked-in docs, tests, and commits only.
   keeping behavior method signature, function-typed method, duplicate
   parameter, and default-local coverage separate from generic parameter and
   bound metadata tests.
+- Direct `zen emit build.zen` graph-only library validation tests now live in
+  `tests/integration/cli_build/emit_direct_validation/graph_only_libraries.rs`,
+  keeping missing source, valid source, and library typecheck coverage separate
+  from executable target-count ambiguity checks.
 
 ## Current Phase
 
