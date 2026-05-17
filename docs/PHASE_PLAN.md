@@ -158,6 +158,9 @@ checked-in docs, tests, and commits only.
   without specializing failed method bodies into followup errors.
 - Generic diagnostics now also guard plain generic function and method
   inference conflicts against argument/return mismatch followups.
+- Generic diagnostics now reject explicit type arguments on non-generic
+  module-qualified calls such as `io.println<i32>(...)`, so import/module call
+  syntax no longer silently drops malformed type arguments.
 - Generic enum method specialization coverage now includes an imported
   `Result<T, E>` fixture with generated-C assertions for the concrete method.
 - Resolver-backed callable type-reference validation now shares the collected
