@@ -2740,6 +2740,9 @@ and do not assume Phase 4 is ready without evidence.
 - CLI build, test, direct-file, and legacy build-graph execution commands now
   live in `src/cli/execution_commands.rs`, preserving executable/test graph
   execution behavior while keeping root CLI dispatch smaller.
+- CLI check and emit command bodies now live in
+  `src/cli/check_emit_commands.rs`, preserving source validation and C emission
+  behavior while keeping root CLI dispatch smaller.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type
