@@ -1,5 +1,8 @@
 use std::process::Command;
 
+#[path = "direct_build_graph_host_effects/file_reads.rs"]
+mod file_reads;
+
 #[test]
 fn direct_file_command_multi_target_build_zen_rejects_undeclared_host_effects() {
     let tmp = tempfile::tempdir().expect("create temp dir");
@@ -129,127 +132,6 @@ value = () i32 {
     assert!(
         !stderr.contains("return type mismatch"),
         "host-effect validation should run before graph-only library typechecking, stderr={stderr}"
-    );
-    assert!(
-        !tmp.path().join("build").exists(),
-        "direct build.zen command should not start after graph validation fails"
-    );
-}
-
-#[test]
-fn direct_file_command_build_zen_accepts_declared_file_read_effects() {
-    assert_direct_file_command_accepts_declared_file_read_effect(
-        r#"| .Err { "default" }"#,
-        "direct_file_command_build_zen_accepts_declared_file_read_effects",
-    );
-}
-
-#[test]
-fn direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects() {
-    assert_direct_file_command_accepts_declared_file_read_effect(
-        r#"| _ { "default" }"#,
-        "direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects",
-    );
-}
-
-#[test]
-fn direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects() {
-    assert_direct_file_command_accepts_declared_file_read_effect(
-        r#"| err { "default" }"#,
-        "direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects",
-    );
-}
-
-fn assert_direct_file_command_accepts_declared_file_read_effect(
-    fallback_arm: &str,
-    case_name: &str,
-) {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        format!(
-            r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {{
-    manifest = b.os.read_file("build.targets") ?
-        | .Ok(contents) {{ contents }}
-        {fallback_arm}
-    b.add(Executable {{ name: "myapp", main: "main.zen", out_dir: "build/" }})
-    .Ok(b.config())
-}}
-"#,
-        ),
-    )
-    .expect("write build.zen");
-    std::fs::write(tmp.path().join("build.targets"), "myapp\n").expect("write manifest");
-    std::fs::write(
-        tmp.path().join("main.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write main.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .arg("build.zen")
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build.zen");
-
-    assert!(
-        output.status.success(),
-        "{case_name}: zen build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let bin_path = tmp.path().join("build").join("myapp");
-    assert!(
-        bin_path.exists(),
-        "expected {} to exist",
-        bin_path.display()
-    );
-    let run = Command::new(&bin_path).output().expect("run built binary");
-    assert!(
-        run.status.success(),
-        "built binary exited with {}",
-        run.status
-    );
-}
-
-#[test]
-fn direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    manifest = b.os.read_file("build.targets")
-    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .arg("build.zen")
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build.zen");
-
-    assert!(
-        !output.status.success(),
-        "zen build.zen unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("undeclared host effect: read file `build.targets`"),
-        "expected undeclared file read diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
     );
     assert!(
         !tmp.path().join("build").exists(),
