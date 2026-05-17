@@ -2427,6 +2427,11 @@ checked-in docs, tests, and commits only.
   `production_rust_files_stay_below_cleanup_threshold` now checks every tracked
   Rust source file, keeping every tracked Rust source file from silently
   growing back past the cleanup threshold.
+- Build graph execution setup now shares one `BuildGraphExecutionContext`
+  helper for graph loading, dependency gates, and base directory selection,
+  with shared dependency ordering and existing non-executed source-validation
+  ordering preserved, covered by `cargo test --test integration
+  library_execution_gates`.
 
 ## Current Phase
 

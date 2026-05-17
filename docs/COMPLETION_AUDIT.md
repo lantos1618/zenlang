@@ -2635,6 +2635,11 @@ and do not assume Phase 4 is ready without evidence.
   behavior. `production_rust_files_stay_below_cleanup_threshold` now guards
   every tracked Rust source file against growing past the 500-line cleanup
   threshold.
+- Build graph execution setup now shares one `BuildGraphExecutionContext`
+  helper for graph loading, dependency gates, and base directory selection,
+  with shared dependency ordering and existing non-executed source-validation
+  ordering preserved, covered by `cargo test --test integration
+  library_execution_gates`.
 
 ## Unresolved Gaps
 
