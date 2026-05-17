@@ -2286,6 +2286,8 @@ and do not assume Phase 4 is ready without evidence.
   focused enums for target kinds, target fields, and builder identifiers,
   covered by `cargo test build_target_dsl --lib` and
   `cargo test build_target_field_owns_source_spelling --lib`.
+  Those spelling guards now live in `src/build_graph/lowering_tests.rs`,
+  keeping `src/build_graph/lowering.rs` below the cleanup threshold.
 - Build graph validation rejects unresolved target dependencies, covered by
   `cargo test --test build_graph build_graph_rejects_unknown_target_dependencies`
   and
