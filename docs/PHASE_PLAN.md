@@ -2510,6 +2510,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/expressions/method_call_support.rs`, keeping direct
   function-call checking separate from method, generic-method, and UFC
   resolution while preserving generic method fixture coverage.
+- Generic method-call checking now shares one specialization path for direct
+  receiver methods and concrete generic receiver base methods, so inference,
+  signature validation, bounds, and monomorphization cannot drift between the
+  two Phase 5 method-specialization paths.
 - Expression function checking now lives in
   `src/typechecker/expressions/function_checking.rs`, keeping
   `src/typechecker/expressions.rs` focused on expression dispatch while

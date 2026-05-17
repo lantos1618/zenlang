@@ -1,4 +1,5 @@
 use super::*;
+use crate::typechecker::FuncInfo;
 
 mod module_calls;
 
@@ -37,69 +38,7 @@ impl TypeChecker {
         if let Some(info) = self.methods.get(&method_key).cloned() {
             // Found as a type method — handle generics
             let (resolved_method, ret_type) = if !info.type_params.is_empty() {
-                let (subs, explicit_type_args_valid) = if type_args.is_empty() {
-                    let arg_types: Vec<Type> = typed_args.iter().map(|a| a.ty.clone()).collect();
-                    let (subs, conflicts) = self.infer_method_type_args(
-                        &method_key,
-                        &info.type_params,
-                        &info.params,
-                        &arg_types,
-                    );
-                    let inferred_type_args_valid =
-                        self.report_inference_conflicts("method", &method_key, conflicts, span);
-                    (subs, inferred_type_args_valid)
-                } else {
-                    self.explicit_type_arg_substitutions(
-                        "method",
-                        &method_key,
-                        &info.type_params,
-                        type_args,
-                        span,
-                    )
-                };
-                let (ret, mangled) = if explicit_type_args_valid {
-                    let saved_self_type = self.current_self_type.clone();
-                    self.current_self_type = self.generic_method_self_type(&method_key, &subs);
-                    self.check_call_signature_with_substitutions(
-                        "method",
-                        &method_key,
-                        &info.params,
-                        &typed_args,
-                        &subs,
-                        &span,
-                    );
-                    let (ret, mangled) =
-                        if self.check_generic_bounds_valid(&info.type_param_bounds, &subs, span) {
-                            let ret = self.substitute_type(&info.return_type, &subs);
-                            let mangled = self
-                                .specialize_generic_method(&method_key, &subs, span)
-                                .unwrap_or_else(|| {
-                                    self.generic_function_mangled_name(
-                                        &method_key,
-                                        &info.type_params,
-                                        &subs,
-                                    )
-                                });
-                            (ret, mangled)
-                        } else {
-                            (
-                                Type::Unknown,
-                                self.generic_function_mangled_name(
-                                    &method_key,
-                                    &info.type_params,
-                                    &subs,
-                                ),
-                            )
-                        };
-                    self.current_self_type = saved_self_type;
-                    (ret, mangled)
-                } else {
-                    (
-                        Type::Unknown,
-                        self.generic_function_mangled_name(&method_key, &info.type_params, &subs),
-                    )
-                };
-                (mangled, ret)
+                self.resolve_generic_method_call(&method_key, &info, type_args, &typed_args, span)
             } else {
                 if !type_args.is_empty() {
                     self.diagnostics.push(Diagnostic::error(
@@ -126,81 +65,13 @@ impl TypeChecker {
             let generic_method_key = Self::method_key(&generic_base, method);
             if let Some(info) = self.methods.get(&generic_method_key).cloned() {
                 if !info.type_params.is_empty() {
-                    let (subs, explicit_type_args_valid) = if type_args.is_empty() {
-                        let arg_types: Vec<Type> =
-                            typed_args.iter().map(|a| a.ty.clone()).collect();
-                        let (subs, conflicts) = self.infer_method_type_args(
-                            &generic_method_key,
-                            &info.type_params,
-                            &info.params,
-                            &arg_types,
-                        );
-                        let inferred_type_args_valid = self.report_inference_conflicts(
-                            "method",
-                            &generic_method_key,
-                            conflicts,
-                            span,
-                        );
-                        (subs, inferred_type_args_valid)
-                    } else {
-                        self.explicit_type_arg_substitutions(
-                            "method",
-                            &generic_method_key,
-                            &info.type_params,
-                            type_args,
-                            span,
-                        )
-                    };
-                    let (ret_type, mangled) = if explicit_type_args_valid {
-                        let saved_self_type = self.current_self_type.clone();
-                        self.current_self_type =
-                            self.generic_method_self_type(&generic_method_key, &subs);
-                        self.check_call_signature_with_substitutions(
-                            "method",
-                            &generic_method_key,
-                            &info.params,
-                            &typed_args,
-                            &subs,
-                            &span,
-                        );
-                        let (ret_type, mangled) = if self.check_generic_bounds_valid(
-                            &info.type_param_bounds,
-                            &subs,
-                            span,
-                        ) {
-                            let ret_type = self.substitute_type(&info.return_type, &subs);
-                            let mangled = self
-                                .specialize_generic_method(&generic_method_key, &subs, span)
-                                .unwrap_or_else(|| {
-                                    self.generic_function_mangled_name(
-                                        &generic_method_key,
-                                        &info.type_params,
-                                        &subs,
-                                    )
-                                });
-                            (ret_type, mangled)
-                        } else {
-                            (
-                                Type::Unknown,
-                                self.generic_function_mangled_name(
-                                    &generic_method_key,
-                                    &info.type_params,
-                                    &subs,
-                                ),
-                            )
-                        };
-                        self.current_self_type = saved_self_type;
-                        (ret_type, mangled)
-                    } else {
-                        (
-                            Type::Unknown,
-                            self.generic_function_mangled_name(
-                                &generic_method_key,
-                                &info.type_params,
-                                &subs,
-                            ),
-                        )
-                    };
+                    let (mangled, ret_type) = self.resolve_generic_method_call(
+                        &generic_method_key,
+                        &info,
+                        type_args,
+                        &typed_args,
+                        span,
+                    );
                     Ok(TypedExpression {
                         kind: TypedExprKind::FunctionCall {
                             function: mangled,
@@ -316,5 +187,65 @@ impl TypeChecker {
         } else {
             self.unknown_method_expr(&type_name, method, typed_args, span)
         }
+    }
+
+    fn resolve_generic_method_call(
+        &mut self,
+        method_key: &str,
+        info: &FuncInfo,
+        type_args: &[AstType],
+        typed_args: &[TypedExpression],
+        span: Span,
+    ) -> (String, Type) {
+        let (subs, type_args_valid) = if type_args.is_empty() {
+            let arg_types: Vec<Type> = typed_args.iter().map(|arg| arg.ty.clone()).collect();
+            let (subs, conflicts) = self.infer_method_type_args(
+                method_key,
+                &info.type_params,
+                &info.params,
+                &arg_types,
+            );
+            let inferred_type_args_valid =
+                self.report_inference_conflicts("method", method_key, conflicts, span);
+            (subs, inferred_type_args_valid)
+        } else {
+            self.explicit_type_arg_substitutions(
+                "method",
+                method_key,
+                &info.type_params,
+                type_args,
+                span,
+            )
+        };
+
+        let fallback_mangled =
+            self.generic_function_mangled_name(method_key, &info.type_params, &subs);
+        if !type_args_valid {
+            return (fallback_mangled, Type::Unknown);
+        }
+
+        let saved_self_type = self.current_self_type.clone();
+        self.current_self_type = self.generic_method_self_type(method_key, &subs);
+        self.check_call_signature_with_substitutions(
+            "method",
+            method_key,
+            &info.params,
+            typed_args,
+            &subs,
+            &span,
+        );
+
+        let result = if self.check_generic_bounds_valid(&info.type_param_bounds, &subs, span) {
+            let ret_type = self.substitute_type(&info.return_type, &subs);
+            let mangled = self
+                .specialize_generic_method(method_key, &subs, span)
+                .unwrap_or(fallback_mangled);
+            (mangled, ret_type)
+        } else {
+            (fallback_mangled, Type::Unknown)
+        };
+
+        self.current_self_type = saved_self_type;
+        result
     }
 }

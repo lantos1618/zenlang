@@ -2701,6 +2701,10 @@ and do not assume Phase 4 is ready without evidence.
 - CLI JSON emit handlers are now split into `src/cli/json_emit.rs`,
   preserving frontend and build-graph JSON integration coverage while keeping
   JSON output paths separate from root command dispatch.
+- Generic method-call checking now shares one helper for direct receiver
+  methods and concrete generic receiver base methods, preserving existing
+  generic method diagnostics and generated-C worklist coverage while reducing
+  duplicate Phase 5 specialization logic.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the
