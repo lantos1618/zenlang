@@ -2348,6 +2348,9 @@ and do not assume Phase 4 is ready without evidence.
   so public tutorial files cannot drift into typecheck-only codegen gaps.
   They also execute as compiled binaries, covered by
   `cargo test --test integration public_runnable_examples_execute_through_cli`.
+  The canonical project build graph also builds, runs its executable target,
+  and runs its test target from a temp copy, covered by
+  `cargo test --test integration public_project_build_graph_builds_and_tests_through_cli`.
 - Normal `zen check build.zen` validates the constrained deterministic graph
   without compiling targets, covered by
   `cargo test --test integration check_command_validates_build_zen_graph`, and
