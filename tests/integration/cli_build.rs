@@ -1,5 +1,7 @@
 #[path = "cli_build/build_command.rs"]
 mod build_command;
+#[path = "cli_build/build_command_execution.rs"]
+mod build_command_execution;
 #[path = "cli_build/build_graph_json.rs"]
 mod build_graph_json;
 #[path = "cli_build/diagnostics.rs"]
