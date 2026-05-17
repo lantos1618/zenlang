@@ -3030,6 +3030,11 @@ checked-in docs, tests, and commits only.
   `build_command_build_zen_rejects_invalid_target_field_types`, plus
   `direct_file_command_build_zen_rejects_missing_required_target_fields` and
   `direct_file_command_build_zen_rejects_invalid_target_field_types`.
+- Declared env-effect integration rejection tests now live in
+  `tests/integration/cli_build/declared_env_effects/rejections.rs`, preserving
+  build, direct-file, legacy build-graph, check, emit, and test command
+  no-fallback diagnostics while keeping the positive declared-env coverage
+  focused in the parent test module.
 
 ## Current Phase
 
