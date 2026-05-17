@@ -2896,6 +2896,10 @@ and do not assume Phase 4 is ready without evidence.
   behavior. `production_rust_files_stay_below_cleanup_threshold` now guards
   every tracked Rust source file against growing past the 500-line cleanup
   threshold.
+- `stdlib/io/mux/uring.zen` no longer carries generated-looking section
+  banners and now stays below the Zen source cleanup threshold.
+  `repo_hygiene::zen_source_files_stay_below_cleanup_threshold` guards tracked
+  example, stdlib, and test Zen sources against growing to 600+ lines.
 - Build graph execution setup now shares one `BuildGraphExecutionContext`
   helper for graph loading, dependency gates, and base directory selection,
   with shared dependency ordering and existing graph-only library validation

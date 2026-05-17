@@ -409,6 +409,11 @@ checked-in docs, tests, and commits only.
   graph execution, deterministic host-effect rejection, and graph validation
   failures in focused modules instead of one threshold-adjacent command test
   file.
+- Stdlib io_uring now drops generated-looking section banners from
+  `stdlib/io/mux/uring.zen`, bringing the file below the Zen source cleanup
+  threshold. `repo_hygiene::zen_source_files_stay_below_cleanup_threshold`
+  guards tracked example, stdlib, and test Zen sources against growing to
+  600+ lines.
 - Import-visibility integration coverage now keeps transitive dependency and
   private imported-method cases in focused modules, dropping
   `tests/integration/import_visibility.rs` below the cleanup threshold while
