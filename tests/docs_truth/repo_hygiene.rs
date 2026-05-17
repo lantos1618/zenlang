@@ -120,6 +120,21 @@ fn source_ast_no_longer_has_return_expression_nodes() {
 }
 
 #[test]
+fn central_stdlib_core_modules_do_not_use_removed_return_keyword() {
+    for path in [
+        "stdlib/core/option.zen",
+        "stdlib/core/result.zen",
+        "stdlib/core/propagate.zen",
+    ] {
+        let source = read(path);
+        assert!(
+            !source.contains("return "),
+            "{path} still uses the removed return keyword"
+        );
+    }
+}
+
+#[test]
 fn source_ast_does_not_carry_dead_char_literal_nodes() {
     for path in [
         "src/ast/expressions.rs",
