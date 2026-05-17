@@ -2576,16 +2576,17 @@ and do not assume Phase 4 is ready without evidence.
 - build.zen entrypoints are not complete: the constrained graph path now covers
   graph emission, multi-executable target execution for normal
   `zen build build.zen` and direct `zen build.zen`, dependency-ordered
-  executable target execution for normal `zen build build.zen`, normal
-  `zen test build.zen` test-target execution, normal `zen check build.zen`
-  graph/source validation plus target source typechecking, graph-only library
-  source validation and typechecking before build/test/emit execution, test and
-  library target graph lowering/emission, and single-target normal
-  `zen emit build.zen`, while build/test execution rejects dependencies on
-  gated library targets and legacy generic `emit-json` build.zen modes have a
-  targeted rejection. Library execution, package/link semantics, and other
-  broader graph semantics still need explicit deterministic semantics before
-  promotion.
+  executable target execution for normal, direct, and legacy build graph
+  commands, normal `zen test build.zen` test-target execution, normal
+  `zen check build.zen` graph/source validation plus target source
+  typechecking, library-only graph validation on the non-executing check path,
+  graph-only library source validation and typechecking before build/test/emit
+  execution, test and library target graph lowering/emission, single-target
+  normal `zen emit build.zen`, gated dependency rejection for selected
+  build/test/emit target kinds, library-only graph execution rejection, and
+  targeted rejection for legacy generic `emit-json build.zen` modes. Library
+  execution, package/link semantics, and other broader graph semantics still
+  need explicit deterministic semantics before promotion.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

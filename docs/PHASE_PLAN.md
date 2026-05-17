@@ -2248,6 +2248,8 @@ checked-in docs, tests, and commits only.
   `check_command_build_zen_accepts_declared_file_read_effects`, while
   undeclared file reads reject before source validation through
   `check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation`.
+  Library-only graphs remain valid on this non-executing path through
+  `check_command_build_zen_accepts_library_only_graph_validation`.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
   `test_command_build_zen_runs_test_targets`, compiles and runs multiple test
   graph targets through `test_command_build_zen_runs_multiple_test_targets`,
@@ -2306,6 +2308,13 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_accepts_declared_file_read_effects`, while
   undeclared file reads reject before C emission through
   `emit_command_build_zen_rejects_undeclared_file_read_effects`.
+- Library-only build graphs remain non-executable across build, direct,
+  legacy, emit, and test execution entrypoints through
+  `build_command_build_zen_rejects_library_only_graph_execution`,
+  `direct_file_command_build_zen_rejects_library_only_graph_execution`,
+  `build_graph_command_rejects_library_only_graph_execution`,
+  `emit_command_build_zen_rejects_library_only_graph_execution`, and
+  `test_command_build_zen_rejects_library_only_graph_execution`.
 - Direct `zen build.zen` now aliases the same constrained deterministic graph
   build path as `zen build build.zen`, covered by
   `direct_file_command_build_zen_routes_through_deterministic_graph`, and
