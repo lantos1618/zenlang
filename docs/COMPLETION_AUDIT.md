@@ -2740,6 +2740,10 @@ and do not assume Phase 4 is ready without evidence.
 - Parser atom expression forms now live in `src/parser/atoms/forms.rs`,
   preserving loop, match, cast, shorthand enum, and string interpolation
   parsing while keeping prefix atom dispatch smaller.
+- Parser core state/navigation and Pratt precedence helpers now live in
+  `src/parser/core.rs` and `src/parser/precedence.rs`, preserving parser unit
+  coverage while keeping `src/parser/mod.rs` focused on module wiring and the
+  public parse entry point.
 - Resolver declaration replay-kind helpers now live in
   `src/typechecker/declaration_collection_resolver_tasks/replay_kinds.rs`,
   preserving type, behavior, impl, callable, and type-reference replay task

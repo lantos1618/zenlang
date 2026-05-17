@@ -335,6 +335,9 @@ checked-in docs, tests, and commits only.
 - Parser atom expression forms now live in a focused child module, leaving
   prefix atom dispatch separate from loop, match, cast, shorthand enum, and
   string interpolation parsing.
+- Parser state, token navigation, declaration lookahead helpers, and Pratt
+  binding powers now live in focused child modules, leaving `parser/mod.rs`
+  centered on module wiring and the public parse entry point.
 - Resolver declaration replay-kind helpers now live in a focused child module,
   leaving declaration collection orchestration separate from type, behavior,
   impl, callable, and type-reference replay task construction.
