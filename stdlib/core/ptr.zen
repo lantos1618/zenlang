@@ -15,26 +15,26 @@ Ptr<T>:
 Ptr<T>.allocate = (size: usize) Ptr<T> {
     addr = compiler.raw_allocate(size)
     compiler.is_null(addr) ?
-        | true { return Ptr.None }
+        | true { Ptr.None }
         | false {
             addr_int = compiler.ptr_to_int(addr)
-            return Ptr.Some(addr_int)
+            Ptr.Some(addr_int)
     }
 }
 
 // Create a Ptr from an address (caller must ensure validity)
 Ptr<T>.from_addr = (addr: RawPtr<u8>) Ptr<T> {
     compiler.is_null(addr) ?
-        | true { return Ptr.None }
+        | true { Ptr.None }
         | false {
             addr_int = compiler.ptr_to_int(addr)
-            return Ptr.Some(addr_int)
+            Ptr.Some(addr_int)
     }
 }
 
 // Create a None pointer
 Ptr<T>.none = () Ptr<T> {
-    return Ptr.None
+    Ptr.None
 }
 
 // Check if pointer is valid
@@ -60,9 +60,9 @@ Ptr<T>.at = (self: Ptr<T>, index: usize) Ptr<T> {
             offset = index * item_size
             new_addr = compiler.gep(addr, offset)
             new_addr_int = compiler.ptr_to_int(new_addr)
-            return Ptr.Some(new_addr_int)
+            Ptr.Some(new_addr_int)
         }
-        | None { return Ptr.None }
+        | None { Ptr.None }
 }
 
 // Pointer arithmetic - advance by N items
@@ -74,9 +74,9 @@ Ptr<T>.offset = (self: Ptr<T>, count: i64) Ptr<T> {
             byte_offset = count * item_size
             new_addr = compiler.gep(addr, byte_offset)
             new_addr_int = compiler.ptr_to_int(new_addr)
-            return Ptr.Some(new_addr_int)
+            Ptr.Some(new_addr_int)
         }
-        | None { return Ptr.None }
+        | None { Ptr.None }
 }
 
 // Get raw address
@@ -107,7 +107,7 @@ Ptr<T>.free = (self: Ptr<T>, size: usize) void {
 Ptr<T>.eq = (self: Ptr<T>, other: Ptr<T>) bool {
     addr1 = self.addr()
     addr2 = other.addr()
-    return addr1 == addr2
+    addr1 == addr2
 }
 
 // ============================================================================
@@ -117,11 +117,11 @@ Ptr<T>.eq = (self: Ptr<T>, other: Ptr<T>) bool {
 // Check if raw pointer is null
 is_null = (ptr: RawPtr<u8>) bool {
     addr = compiler.ptr_to_int(ptr)
-    return addr == 0
+    addr == 0
 }
 
 // Check if raw pointer is valid (not null)
 is_valid = (ptr: RawPtr<u8>) bool {
     addr = compiler.ptr_to_int(ptr)
-    return addr != 0
+    addr != 0
 }
