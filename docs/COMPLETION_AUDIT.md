@@ -2884,6 +2884,11 @@ and do not assume Phase 4 is ready without evidence.
   preserving enum payload/name restoration, stale AST enum rejection, and
   restored-name cleanup coverage while keeping struct field/default validation
   focused.
+- Resolver-backed behavior impl default synthesis tests now live in
+  `src/typechecker/tests/resolver_collection/behavior_impl_methods/default_synthesis.rs`,
+  preserving behavior-name, impl-target, and combined restored metadata default
+  synthesis coverage while keeping behavior impl method signature and impl-check
+  metadata coverage focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

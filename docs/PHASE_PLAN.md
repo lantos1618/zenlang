@@ -2626,6 +2626,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_collection/type_metadata/enum_metadata.rs`,
   keeping enum payload/name restoration and incomplete-variant metadata
   coverage separate from struct field and default validation coverage.
+- Resolver-backed behavior impl default synthesis tests now live in
+  `src/typechecker/tests/resolver_collection/behavior_impl_methods/default_synthesis.rs`,
+  keeping omitted behavior default synthesis coverage separate from behavior
+  impl method signature and impl-check metadata coverage.
 
 ## Current Phase
 
