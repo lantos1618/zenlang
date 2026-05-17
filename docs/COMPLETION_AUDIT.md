@@ -2912,27 +2912,29 @@ and do not assume Phase 4 is ready without evidence.
 
 ## Unresolved Gaps
 
-- Phase 2 is not complete: resolver/typechecker integration still has duplicate
-  declaration collection for richer function type metadata and residual
-  resolver-owned semantic handoffs.
-- build.zen entrypoints are not complete: the constrained graph path now covers
-  graph emission, multi-executable target execution for normal
-  `zen build build.zen` and direct `zen build.zen`, dependency-ordered
-  executable target execution for normal, direct, and legacy build graph
-  commands, normal `zen test build.zen` test-target execution, normal
-  `zen check build.zen` graph/source validation plus target source
-  typechecking, library-only graph validation on the non-executing check path,
-  graph-only library source validation and typechecking before build/test/emit
-  execution, test and library target graph lowering/emission, single-target
-  normal `zen emit build.zen`, validated library source dependencies for
+- Resolver/typechecker work is still in the hardening phase: behavior
+  association, resolver-owned semantic handoffs, and metadata replay boundaries
+  need continued small-slice coverage before the broader project goal can be
+  treated as complete.
+- `build.zen` remains constrained: the checked-in entrypoints now cover graph
+  emission, multi-executable target execution for normal `zen build build.zen`
+  and direct `zen build.zen`, dependency-ordered executable target execution
+  for normal, direct, and legacy build graph commands, normal
+  `zen test build.zen` test-target execution, normal `zen check build.zen`
+  graph/source validation plus target source typechecking, library-only graph
+  validation on the non-executing check path, graph-only library source
+  validation and typechecking before build/test/emit execution, test and
+  library target graph lowering/emission, single-target normal
+  `zen emit build.zen`, validated library source dependencies for
   build/test/emit graph execution, direct and transitive gated executable/test
   dependency rejection for selected target kinds, skipped source validation for
   unrelated gated executable/test targets during normal build/test execution
-  plus direct build, legacy build-graph, and emit entrypoints,
-  library-only graph execution rejection, and targeted rejection for legacy
-  generic `emit-json build.zen` modes. Library
-  execution, package/link semantics, and other broader graph semantics still
-  need explicit deterministic semantics before promotion.
+  plus direct build, legacy build-graph, and emit entrypoints, library-only
+  graph execution rejection, target metadata diagnostics, and targeted
+  rejection for legacy generic `emit-json build.zen` modes. Library execution,
+  package/link semantics, and other broader build graph semantics remain gated
+  until they have explicit deterministic semantics and matching positive and
+  negative tests.
 - CLI compile helpers are now split into `src/cli/compile.rs`; this is an
   internal cleanup preserving the same build/emit behavior and keeping tracked
   Rust source files under the cleanup threshold.
@@ -3394,6 +3396,7 @@ and do not assume Phase 4 is ready without evidence.
 
 ## Decision
 
-Do not mark the objective complete. Continue Phase 2 work unless a later audit
-shows the resolver/typechecker and build-gate requirements have concrete
-coverage.
+Do not mark the objective complete. Continue the smallest
+behavior-association, resolver/typechecker, and constrained build-driver
+hardening slices unless a later audit shows every remaining project-phase
+requirement has concrete coverage.
