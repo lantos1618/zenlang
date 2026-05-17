@@ -4,6 +4,8 @@ mod build_command;
 mod build_graph_json;
 #[path = "cli_build/diagnostics.rs"]
 mod diagnostics;
+#[path = "cli_build/direct_build_graph_execution.rs"]
+mod direct_build_graph_execution;
 #[path = "cli_build/emit_direct.rs"]
 mod emit_direct;
 #[path = "cli_build/frontend_json.rs"]
