@@ -124,6 +124,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
     for path in [
         "stdlib/build.zen",
         "stdlib/compiler.zen",
+        "stdlib/ffi.zen",
         "stdlib/core/option.zen",
         "stdlib/core/result.zen",
         "stdlib/core/propagate.zen",
