@@ -323,6 +323,9 @@ checked-in docs, tests, and commits only.
 - Resolver metadata diagnostics now live in a focused validation include,
   keeping core resolver symbol requirement logic separate from reusable
   mismatch and absence diagnostic emitters.
+- Parser atom expression forms now live in a focused child module, leaving
+  prefix atom dispatch separate from loop, match, cast, shorthand enum, and
+  string interpolation parsing.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
