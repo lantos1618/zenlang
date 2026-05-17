@@ -131,6 +131,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/memory/async_helpers.zen",
         "stdlib/memory/async_pool.zen",
         "stdlib/memory/memory.zen",
+        "stdlib/memory/mmap.zen",
         "stdlib/core/option.zen",
         "stdlib/core/result.zen",
         "stdlib/core/propagate.zen",
