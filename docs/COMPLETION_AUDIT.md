@@ -2622,6 +2622,10 @@ and do not assume Phase 4 is ready without evidence.
   behavior-ref cleanup, and final type behavior refresh through one
   task-bundle helper, covered by
   `cargo test --lib resolver_declaration_collection_bundle_replays_metadata_semantics_and_refresh`.
+- Resolver-backed declaration collection now builds AST collection tasks and
+  resolver replay tasks through one declaration pass before replaying either
+  side, covered by
+  `cargo test --lib declaration_collection_replay_bundle_collects_ast_and_resolver_tasks_together`.
 - Resolver validation replay tests now keep association-list replay coverage in
   `src/typechecker/tests/resolver_validation/replay_tasks/association_lists.rs`
   and declaration-task collector coverage in
