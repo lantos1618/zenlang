@@ -181,6 +181,11 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "generic_bound_nongeneric_behavior_type_args_are_error",
         "generic_enum_constructor_without_type_args_is_error",
         "type_declaration_keyword_owns_text_spelling",
+        "promoted_stdlib_modules_do_not_use_removed_return_keyword",
+        "stdlib/io/net/unix_socket.zen",
+        "stdlib/io/net/socket.zen",
+        "stdlib/io/files/file.zen",
+        "stdlib/sys/process/prctl.zen",
     ] {
         assert!(
             plan.contains(required),
@@ -367,6 +372,11 @@ fn completion_audit_records_recovery_objective_evidence_and_gaps() {
         "behavior_extends_nongeneric_parent_type_args_are_error",
         "generic_bound_nongeneric_behavior_type_args_are_error",
         "generic_enum_constructor_without_type_args_is_error",
+        "promoted_stdlib_modules_do_not_use_removed_return_keyword",
+        "stdlib/io/net/unix_socket.zen",
+        "stdlib/io/net/socket.zen",
+        "stdlib/io/files/file.zen",
+        "stdlib/sys/process/prctl.zen",
     ] {
         assert!(
             audit.contains(required),
