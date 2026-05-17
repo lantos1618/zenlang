@@ -11,7 +11,7 @@ TFD_CLOEXEC = 524288
 TFD_NONBLOCK = 2048
 
 TimerError: { code: i32 }
-TimerError.from_errno = (errno: i64) TimerError { return TimerError { code: cast(0 - errno, i32) } }
+TimerError.from_errno = (errno: i64) TimerError { TimerError { code: cast(0 - errno, i32) } }
 
 Itimerspec: { interval_sec: i64, interval_nsec: i64, value_sec: i64, value_nsec: i64 }
 
@@ -19,15 +19,17 @@ Timerfd: { fd: i32 }
 
 Timerfd.new = () Result<Timerfd, TimerError> {
     result = compiler.syscall2(SYS_TIMERFD_CREATE, CLOCK_MONOTONIC, TFD_CLOEXEC)
-    result < 0 ? { return Result.Err(TimerError.from_errno(result)) }
-    return Result.Ok(Timerfd { fd: cast(result, i32) })
+    result < 0 ?
+        | true { Result.Err(TimerError.from_errno(result)) }
+        | false { Result.Ok(Timerfd { fd: cast(result, i32) }) }
 }
 
 Timerfd.set_oneshot_ms = (self: MutPtr<Timerfd>, ms: i64) Result<(), TimerError> {
     spec = Itimerspec { interval_sec: 0, interval_nsec: 0, value_sec: ms / 1000, value_nsec: (ms % 1000) * 1000000 }
     result = compiler.syscall4(SYS_TIMERFD_SETTIME, self.val.fd, 0, compiler.ptr_to_int(&spec.ref()), 0)
-    result < 0 ? { return Result.Err(TimerError.from_errno(result)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(TimerError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 Timerfd.set_interval_ms = (self: MutPtr<Timerfd>, ms: i64) Result<(), TimerError> {
@@ -35,15 +37,17 @@ Timerfd.set_interval_ms = (self: MutPtr<Timerfd>, ms: i64) Result<(), TimerError
     nsec = (ms % 1000) * 1000000
     spec = Itimerspec { interval_sec: sec, interval_nsec: nsec, value_sec: sec, value_nsec: nsec }
     result = compiler.syscall4(SYS_TIMERFD_SETTIME, self.val.fd, 0, compiler.ptr_to_int(&spec.ref()), 0)
-    result < 0 ? { return Result.Err(TimerError.from_errno(result)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(TimerError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 Timerfd.wait = (self: MutPtr<Timerfd>) Result<u64, TimerError> {
     expirations: u64 = 0
     result = compiler.syscall3(SYS_READ, self.val.fd, compiler.ptr_to_int(&expirations.ref()), 8)
-    result < 0 ? { return Result.Err(TimerError.from_errno(result)) }
-    return Result.Ok(expirations)
+    result < 0 ?
+        | true { Result.Err(TimerError.from_errno(result)) }
+        | false { Result.Ok(expirations) }
 }
 
 Timerfd.close = (self: MutPtr<Timerfd>) void { compiler.syscall1(SYS_CLOSE, self.val.fd) }
