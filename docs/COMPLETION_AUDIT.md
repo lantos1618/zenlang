@@ -2432,6 +2432,12 @@ and do not assume Phase 4 is ready without evidence.
 - Build script lowering includes target dependency and feature metadata arrays,
   covered by
   `cargo test --test build_graph build_program_lowering_collects_target_dependencies_and_features`.
+- Build script lowering keeps plain nested static blocks in the deterministic
+  graph body accepted while rejecting target additions inside dynamic
+  control-flow expressions, covered by
+  `cargo test --test build_graph build_program_lowering_collects_static_block_targets`
+  and
+  `cargo test --test build_graph build_program_lowering_rejects_dynamic_target_adds`.
 - Build script lowering recognizes declared deterministic file-read effects
   without allowing undeclared file reads, covered by
   `cargo test --test build_graph file_reads`.
@@ -2445,6 +2451,9 @@ and do not assume Phase 4 is ready without evidence.
   `build.zen` graph validation, and `build.zen` host-effect ordering in
   focused modules, with the split guarded by the same full integration suite
   and focused filters for the moved validation and host-effect cases.
+- Normal `zen build build.zen` rejects dynamic target additions before
+  execution starts, covered by
+  `cargo test --test integration build_command_build_zen_rejects_dynamic_target_adds_before_execution`.
 - `zen test build.zen` integration coverage now keeps execution/order tests,
   host-effect rejection, and graph validation failures in focused modules,
   with focused filters for moved execution, host-effect, and validation cases

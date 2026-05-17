@@ -2312,7 +2312,12 @@ checked-in docs, tests, and commits only.
   `Test { root: ... }`, `build_program_lowering_collects_library_target`
   covers graph-only `Library { name: ..., exports: ... }` targets,
   `build_program_lowering_collects_target_dependencies_and_features` covers
-  target metadata arrays,
+  target metadata arrays, and
+  `build_program_lowering_collects_static_block_targets` keeps plain nested
+  static blocks in the deterministic graph body accepted.
+  `build_program_lowering_rejects_dynamic_target_adds` keeps target creation
+  gated inside dynamic control-flow expressions instead of collecting both
+  branches as if they executed,
   `build_program_lowering_rejects_self_target_dependencies` covers
   self-dependency rejection,
   `build_program_lowering_rejects_cyclic_target_dependencies` covers
@@ -2459,6 +2464,8 @@ checked-in docs, tests, and commits only.
   `build_command_build_zen_rejects_unknown_target_dependencies`,
   `build_command_build_zen_rejects_self_target_dependencies`, and
   `build_command_build_zen_rejects_cyclic_target_dependencies`. They still reject
+  dynamic target additions before execution starts through
+  `build_command_build_zen_rejects_dynamic_target_adds_before_execution`, and
   executable-target dependencies on gated test targets through
   `build_command_build_zen_rejects_gated_test_dependencies`. They reject
   graph-only library exports with missing sources through
