@@ -2942,6 +2942,10 @@ and do not assume Phase 4 is ready without evidence.
   preserving behavior method signature, function-typed method, duplicate
   parameter, and default-local coverage while keeping generic parameter and
   bound metadata tests focused.
+- Direct `zen emit build.zen` graph-only library validation tests now live in
+  `tests/integration/cli_build/emit_direct_validation/graph_only_libraries.rs`,
+  preserving missing source, valid source, and library typecheck coverage while
+  keeping executable target-count ambiguity checks focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
