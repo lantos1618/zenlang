@@ -2761,6 +2761,11 @@ and do not assume Phase 4 is ready without evidence.
   walking in `src/typechecker/generic_type_reference_walker/expressions.rs`,
   preserving generic annotation diagnostics while keeping type argument arity
   and bound checks smaller.
+- Expression checking now keeps identifier, block, return, cast,
+  interpolation, defer, and closure forms in
+  `src/typechecker/expressions/simple_forms.rs`, preserving core semantic,
+  single-file fixture, and generic diagnostic coverage while leaving the root
+  expression checker closer to dispatch.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
