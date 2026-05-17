@@ -5,10 +5,7 @@ mod unsupported_targets;
 
 #[test]
 fn emit_json_build_graph_rejects_unknown_target_fields() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let build_path = tmp.path().join("build.zen");
-    std::fs::write(
-        &build_path,
+    assert_emit_json_build_graph_error_contains(
         r#"
 build = (b: Builder) Result<BuildConfig, BuildError> {
     b.add(Executable {
@@ -19,34 +16,13 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     .Ok(b.config())
 }
 "#,
-    )
-    .expect("write build.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "build-graph", build_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json build-graph");
-
-    assert!(
-        !output.status.success(),
-        "emit-json build-graph unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("unknown field `output_dir` in `Executable` build target"),
-        "expected unknown field diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
+        "unknown field `output_dir` in `Executable` build target",
     );
 }
 
 #[test]
 fn emit_json_build_graph_rejects_missing_required_target_fields() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let build_path = tmp.path().join("build.zen");
-    std::fs::write(
-        &build_path,
+    assert_emit_json_build_graph_error_contains(
         r#"
 build = (b: Builder) Result<BuildConfig, BuildError> {
     b.add(Executable {
@@ -56,34 +32,48 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     .Ok(b.config())
 }
 "#,
-    )
-    .expect("write build.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "build-graph", build_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json build-graph");
-
-    assert!(
-        !output.status.success(),
-        "emit-json build-graph unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        "missing required field `out_dir` in `Executable` build target",
     );
-    assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("missing required field `out_dir` in `Executable` build target"),
-        "expected missing field diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
+}
+
+#[test]
+fn emit_json_build_graph_rejects_duplicate_target_fields() {
+    assert_emit_json_build_graph_error_contains(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        name: "tool",
+        main: "app.zen",
+        out_dir: "build/app/",
+    })
+    .Ok(b.config())
+}
+"#,
+        "duplicate field `name` in `Executable` build target",
+    );
+}
+
+#[test]
+fn emit_json_build_graph_rejects_invalid_target_field_types() {
+    assert_emit_json_build_graph_error_contains(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: 42,
+    })
+    .Ok(b.config())
+}
+"#,
+        "field `out_dir` in `Executable` build target must be a string",
     );
 }
 
 #[test]
 fn emit_json_build_graph_rejects_unknown_target_dependencies() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let build_path = tmp.path().join("build.zen");
-    std::fs::write(
-        &build_path,
+    assert_emit_json_build_graph_error_contains(
         r#"
 build = (b: Builder) Result<BuildConfig, BuildError> {
     b.add(Executable {
@@ -95,34 +85,13 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     .Ok(b.config())
 }
 "#,
-    )
-    .expect("write build.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "build-graph", build_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json build-graph");
-
-    assert!(
-        !output.status.success(),
-        "emit-json build-graph unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("build target `app` depends on unknown target `core`"),
-        "expected unknown dependency diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
+        "build target `app` depends on unknown target `core`",
     );
 }
 
 #[test]
 fn emit_json_build_graph_rejects_self_target_dependencies() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let build_path = tmp.path().join("build.zen");
-    std::fs::write(
-        &build_path,
+    assert_emit_json_build_graph_error_contains(
         r#"
 build = (b: Builder) Result<BuildConfig, BuildError> {
     b.add(Executable {
@@ -134,34 +103,13 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     .Ok(b.config())
 }
 "#,
-    )
-    .expect("write build.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "build-graph", build_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json build-graph");
-
-    assert!(
-        !output.status.success(),
-        "emit-json build-graph unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("build target `app` cannot depend on itself"),
-        "expected self dependency diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
+        "build target `app` cannot depend on itself",
     );
 }
 
 #[test]
 fn emit_json_build_graph_rejects_cyclic_target_dependencies() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let build_path = tmp.path().join("build.zen");
-    std::fs::write(
-        &build_path,
+    assert_emit_json_build_graph_error_contains(
         r#"
 build = (b: Builder) Result<BuildConfig, BuildError> {
     b.add(Executable {
@@ -179,9 +127,14 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     .Ok(b.config())
 }
 "#,
-    )
-    .expect("write build.zen");
+        "build target dependency cycle includes `app`",
+    );
+}
 
+fn assert_emit_json_build_graph_error_contains(build_source: &str, expected: &str) {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let build_path = tmp.path().join("build.zen");
+    std::fs::write(&build_path, build_source).expect("write build.zen");
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
         .args(["emit-json", "build-graph", build_path.to_str().unwrap()])
         .output()
@@ -193,10 +146,9 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("build target dependency cycle includes `app`"),
-        "expected cyclic dependency diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
+        stderr.contains(expected),
+        "expected {expected:?}, stderr={stderr}"
     );
 }
