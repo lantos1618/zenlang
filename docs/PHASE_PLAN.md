@@ -2213,6 +2213,10 @@ checked-in docs, tests, and commits only.
   `test_command_build_zen_rejects_missing_graph_only_library_source` and
   typechecks them before execution through
   `test_command_build_zen_rejects_graph_only_library_type_errors`.
+  Declared deterministic file-read effects are accepted on the normal test
+  path through `test_command_build_zen_accepts_declared_file_read_effects`,
+  while undeclared file reads reject before test execution through
+  `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `emit_command_build_zen_outputs_target_c_source`, rejects ambiguous

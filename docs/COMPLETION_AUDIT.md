@@ -2373,6 +2373,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_command_build_zen_rejects_gated_test_dependencies`
   and
   `cargo test --test integration test_command_build_zen_rejects_gated_executable_dependencies`.
+- Normal test graph execution accepts declared deterministic file-read effects
+  and rejects undeclared file reads before test execution, covered by
+  `cargo test --test integration test_command_build_zen_accepts_declared_file_read_effects`
+  and
+  `cargo test --test integration test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
 - Build/test/emit graph execution validates non-executed graph-only library
   exports before compiling or running selected targets, covered by
   `cargo test --test integration build_command_build_zen_rejects_missing_graph_only_library_source`,
