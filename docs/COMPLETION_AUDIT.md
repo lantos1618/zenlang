@@ -2695,6 +2695,9 @@ and do not assume Phase 4 is ready without evidence.
   targeted rejection for legacy generic `emit-json build.zen` modes. Library
   execution, package/link semantics, and other broader graph semantics still
   need explicit deterministic semantics before promotion.
+- CLI compile helpers are now split into `src/cli/compile.rs`; this is an
+  internal cleanup preserving the same build/emit behavior and keeping tracked
+  Rust source files under the cleanup threshold.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
