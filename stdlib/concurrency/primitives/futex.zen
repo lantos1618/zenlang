@@ -15,59 +15,62 @@ FUTEX_WAKE_PRIVATE = 129
 FutexError: { code: i32 }
 
 FutexError.from_errno = (errno: i64) FutexError {
-    return FutexError { code: cast(0 - errno, i32) }
+    FutexError { code: cast(0 - errno, i32) }
 }
 
 // Wait on futex (block if *addr == expected)
 futex_wait = (addr: Ptr<i32>, expected: i32) Result<(), FutexError> {
     result = compiler.syscall4(SYS_FUTEX, compiler.ptr_to_int(addr), FUTEX_WAIT_PRIVATE, expected, 0)
     // EAGAIN (-11) means value changed, not an error
-    result < 0 ? {
-        result == -11 ? { return Result.Ok(()) }
-        return Result.Err(FutexError.from_errno(result))
-    }
-    return Result.Ok(())
+    result < 0 ?
+        | true {
+            result == -11 ?
+                | true { Result.Ok(()) }
+                | false { Result.Err(FutexError.from_errno(result)) }
+        }
+        | false { Result.Ok(()) }
 }
 
 // Wake waiters on futex
 futex_wake = (addr: Ptr<i32>, count: i32) Result<i32, FutexError> {
     result = compiler.syscall3(SYS_FUTEX, compiler.ptr_to_int(addr), FUTEX_WAKE_PRIVATE, count)
-    result < 0 ? { return Result.Err(FutexError.from_errno(result)) }
-    return Result.Ok(cast(result, i32))
+    result < 0 ?
+        | true { Result.Err(FutexError.from_errno(result)) }
+        | false { Result.Ok(cast(result, i32)) }
 }
 
 // Wake one waiter
 futex_wake_one = (addr: Ptr<i32>) Result<i32, FutexError> {
-    return futex_wake(addr, 1)
+    futex_wake(addr, 1)
 }
 
 // Wake all waiters
 futex_wake_all = (addr: Ptr<i32>) Result<i32, FutexError> {
-    return futex_wake(addr, 2147483647)
+    futex_wake(addr, 2147483647)
 }
 
 // Simple spinlock using futex
 Spinlock: { state: i32 }
 
 Spinlock.new = () Spinlock {
-    return Spinlock { state: 0 }
+    Spinlock { state: 0 }
 }
 
 Spinlock.lock = (self: MutPtr<Spinlock>) void {
     // Try to acquire (0 -> 1)
     old ::= compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), 0, 1)
-    old == 0 ? { return }
+    acquired ::= old == 0
 
     // Spin then wait
     i ::= 0
-    i < 100 ? {
+    i < 100 && acquired == false ? {
         old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), 0, 1)
-        old == 0 ? { return }
+        old == 0 ? { acquired = true }
         i = i + 1
     }
 
     // Fall back to futex wait
-    self.val.state != 0 ? {
+    acquired == false && self.val.state != 0 ? {
         futex_wait(&self.val.state.ref(), 1)
     }
 }
