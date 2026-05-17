@@ -2782,6 +2782,13 @@ and do not assume Phase 4 is ready without evidence.
   `test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
   and `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+- `zen emit build.zen` now has executable graph fixtures for `.Err`,
+  wildcard, and identifier fallback arms on declared file reads, while keeping
+  the matching undeclared file-read rejection before C emission. Coverage:
+  `emit_command_build_zen_accepts_declared_file_read_effects`,
+  `emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
+  `emit_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  and `emit_command_build_zen_rejects_undeclared_file_read_effects`.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the
