@@ -9,6 +9,7 @@
 //! resolved, it's an error.
 
 mod behavior_associations;
+mod behavior_impl_methods;
 mod behavior_impl_support;
 mod behavior_impl_validation;
 mod behavior_ref_metadata;

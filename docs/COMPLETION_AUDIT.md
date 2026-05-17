@@ -1988,6 +1988,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test impl_effective_method_name_prefers_resolver_then_ast_then_collected_signature`,
   and
   `cargo test collect_declarations_with_symbols_uses_resolver_behavior_impl_method_signature_target_and_name_metadata`.
+- Behavior impl method naming, resolver-owned key restoration, and
+  behavior-specialized method-key helpers now live in
+  `src/typechecker/behavior_impl_methods.rs`, reducing
+  `src/typechecker/behavior_impl_support.rs` to 385 lines while preserving
+  the focused impl-method helper tests above.
 - Generic template dependency save/restore entries now use named `name` and
   `previous` fields instead of raw `(name, previous)` tuples in the
   monomorphization dependency snapshots, covered by
