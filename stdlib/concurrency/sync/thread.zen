@@ -53,7 +53,7 @@ ThreadHandle: {
 // Get current thread ID
 get_tid = () i32 {
     result = compiler.syscall0(SYS_GETTID)
-    return cast(result, i32)
+    cast(result, i32)
 }
 
 // ============================================================================
@@ -65,7 +65,7 @@ get_tid = () i32 {
 // Returns ThreadHandle on success
 //
 // Note: This is a low-level primitive. The thread function must:
-// 1. Not return (call thread_exit instead)
+// 1. End by calling thread_exit
 // 2. Handle its own cleanup
 //
 // Usage:
@@ -76,50 +76,52 @@ Thread.spawn = (entry_fn: i64, context: i64, allocator: Allocator) Result<Thread
     // Allocate stack (grows down, so we need the top)
     stack_size = DEFAULT_STACK_SIZE
     stack_base = allocator.allocate(stack_size)
-    stack_base == 0 ? {
-        return Result.Err(-12)  // ENOMEM
-    }
+    stack_base == 0 ?
+        | true { Result.Err(-12) }  // ENOMEM
+        | false {
+            // Stack top (stack grows down on x86-64)
+            stack_top = compiler.ptr_to_int(compiler.gep(stack_base, stack_size - 64))
 
-    // Stack top (stack grows down on x86-64)
-    stack_top = compiler.ptr_to_int(compiler.gep(stack_base, stack_size - 64))
+            // Set up initial stack frame with context and entry point
+            compiler.store<i64>(compiler.int_to_ptr(stack_top), context)
+            compiler.store<i64>(compiler.int_to_ptr(stack_top - 8), entry_fn)
 
-    // Set up initial stack frame with context and entry point
-    compiler.store<i64>(compiler.int_to_ptr(stack_top), context)
-    compiler.store<i64>(compiler.int_to_ptr(stack_top - 8), entry_fn)
+            // Allocate space for TID storage (child_tid for CLEARTID)
+            tid_ptr = allocator.allocate(8)
+            compiler.store<i64>(compiler.int_to_ptr(tid_ptr), 0)
 
-    // Allocate space for TID storage (child_tid for CLEARTID)
-    tid_ptr = allocator.allocate(8)
-    compiler.store<i64>(compiler.int_to_ptr(tid_ptr), 0)
+            // Clone with thread flags
+            // clone(flags, stack, parent_tid, child_tid, tls)
+            // For threads: flags, stack_top, &parent_tid, &child_tid
+            result = compiler.syscall4(
+                SYS_CLONE,
+                CLONE_THREAD_FLAGS,
+                stack_top - 16,  // Point to the setup stack frame
+                tid_ptr,         // parent_tid (we'll read from here)
+                tid_ptr          // child_tid (kernel writes here, clears on exit)
+            )
 
-    // Clone with thread flags
-    // clone(flags, stack, parent_tid, child_tid, tls)
-    // For threads: flags, stack_top, &parent_tid, &child_tid
-    result = compiler.syscall4(
-        SYS_CLONE,
-        CLONE_THREAD_FLAGS,
-        stack_top - 16,  // Point to the setup stack frame
-        tid_ptr,         // parent_tid (we'll read from here)
-        tid_ptr          // child_tid (kernel writes here, clears on exit)
-    )
+            result < 0 ?
+                | true {
+                    allocator.deallocate(stack_base, stack_size)
+                    allocator.deallocate(tid_ptr, 8)
+                    Result.Err(cast(result, i32))
+                }
+                | false {
+                    // Parent: result is child TID
+                    tid = cast(result, i32)
 
-    result < 0 ? {
-        allocator.deallocate(stack_base, stack_size)
-        allocator.deallocate(tid_ptr, 8)
-        return Result.Err(cast(result, i32))
-    }
+                    handle = ThreadHandle {
+                        tid: tid,
+                        state: THREAD_RUNNING,
+                        stack_base: stack_base,
+                        stack_size: stack_size,
+                        allocator: allocator
+                    }
 
-    // Parent: result is child TID
-    tid = cast(result, i32)
-
-    handle = ThreadHandle {
-        tid: tid,
-        state: THREAD_RUNNING,
-        stack_base: stack_base,
-        stack_size: stack_size,
-        allocator: allocator
-    }
-
-    return Result.Ok(handle)
+                    Result.Ok(handle)
+                }
+        }
 }
 
 // ============================================================================
@@ -134,35 +136,35 @@ thread_exit = (status: i32) void {
 // Wait for thread to finish
 // Note: Uses futex on TID (CLONE_CHILD_CLEARTID sets up kernel to wake on exit)
 ThreadHandle.join = (self: MutPtr<ThreadHandle>) Result<(), i32> {
-    self.val.state == THREAD_JOINED ? {
-        return Result.Err(-22)  // EINVAL - already joined
-    }
+    self.val.state == THREAD_JOINED ?
+        | true { Result.Err(-22) }  // EINVAL - already joined
+        | false {
+            // Wait for thread to exit using futex on TID
+            // The kernel clears the TID and wakes futex when thread exits
+            tid_ptr = &self.val.tid.ref()
+            tid = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.tid.ref())), i32)
 
-    // Wait for thread to exit using futex on TID
-    // The kernel clears the TID and wakes futex when thread exits
-    tid_ptr = &self.val.tid.ref()
-    tid = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.tid.ref())), i32)
+            tid != 0 ? {
+                futex_wait(tid_ptr, tid)
+            }
 
-    tid != 0 ? {
-        futex_wait(tid_ptr, tid)
-    }
+            // Clean up
+            self.val.allocator.deallocate(self.val.stack_base, self.val.stack_size)
+            self.val.state = THREAD_JOINED
 
-    // Clean up
-    self.val.allocator.deallocate(self.val.stack_base, self.val.stack_size)
-    self.val.state = THREAD_JOINED
-
-    return Result.Ok(())
+            Result.Ok(())
+        }
 }
 
 // Check if thread has finished (non-blocking)
 ThreadHandle.is_finished = (self: Ptr<ThreadHandle>) bool {
     tid = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.tid.ref())), i32)
-    return tid == 0
+    tid == 0
 }
 
 // Get the thread ID
 ThreadHandle.id = (self: Ptr<ThreadHandle>) i32 {
-    return self.val.tid
+    self.val.tid
 }
 
 // ============================================================================
