@@ -29,6 +29,12 @@ pub(super) enum BuildTargetDslIdent {
     ReadFile,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum HostEffectResultVariant {
+    Ok,
+    Err,
+}
+
 impl BuildTargetDslKind {
     const ALL: [Self; 3] = [Self::Executable, Self::Test, Self::Library];
     const EXECUTABLE: &'static str = "Executable";
@@ -78,6 +84,36 @@ impl BuildTargetField {
             Self::Dependencies => Self::DEPENDENCIES,
             Self::Features => Self::FEATURES,
             Self::Exports => Self::EXPORTS,
+        }
+    }
+}
+
+impl HostEffectResultVariant {
+    const OK: &'static str = "Ok";
+    const ERR: &'static str = "Err";
+
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            Self::Ok => Self::OK,
+            Self::Err => Self::ERR,
+        }
+    }
+}
+
+impl fmt::Display for HostEffectResultVariant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl FromStr for HostEffectResultVariant {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, <Self as FromStr>::Err> {
+        match value {
+            Self::OK => Ok(Self::Ok),
+            Self::ERR => Ok(Self::Err),
+            _ => Err(()),
         }
     }
 }

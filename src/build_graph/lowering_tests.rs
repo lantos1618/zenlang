@@ -1,4 +1,4 @@
-use super::{BuildTargetDslIdent, BuildTargetDslKind, BuildTargetField};
+use super::{BuildTargetDslIdent, BuildTargetDslKind, BuildTargetField, HostEffectResultVariant};
 
 #[test]
 fn build_target_dsl_kind_owns_source_spelling() {
@@ -46,4 +46,15 @@ fn build_target_dsl_ident_owns_source_spelling() {
     assert_eq!(BuildTargetDslIdent::Os.as_str(), "os");
     assert_eq!(BuildTargetDslIdent::ReadFile.as_str(), "read_file");
     assert_eq!(BuildTargetDslIdent::Builder.to_string(), "b");
+}
+
+#[test]
+fn host_effect_result_variant_owns_source_spelling() {
+    assert_eq!(HostEffectResultVariant::Ok.as_str(), "Ok");
+    assert_eq!(HostEffectResultVariant::Err.as_str(), "Err");
+    assert_eq!("Ok".parse(), Ok(HostEffectResultVariant::Ok));
+    assert_eq!("Err".parse(), Ok(HostEffectResultVariant::Err));
+    assert!("Missing".parse::<HostEffectResultVariant>().is_err());
+    assert_eq!(HostEffectResultVariant::Ok.to_string(), "Ok");
+    assert_eq!(HostEffectResultVariant::Err.to_string(), "Err");
 }

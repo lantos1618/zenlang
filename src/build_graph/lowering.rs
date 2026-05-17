@@ -5,7 +5,7 @@ mod dsl;
 #[path = "lowering/targets.rs"]
 mod targets;
 
-use dsl::BuildTargetDslIdent;
+use dsl::{BuildTargetDslIdent, HostEffectResultVariant};
 #[cfg(test)]
 use dsl::{BuildTargetDslKind, BuildTargetField};
 use targets::build_target_from_builder_add;
@@ -201,7 +201,9 @@ fn declared_host_effect(expr: &Expression) -> Option<HostEffect> {
 fn host_effect_arm_declares_fallback(pattern: &crate::ast::Pattern) -> bool {
     match pattern {
         crate::ast::Pattern::Wildcard { .. } | crate::ast::Pattern::Identifier { .. } => true,
-        crate::ast::Pattern::Enum { variant, .. } => variant == "Err",
+        crate::ast::Pattern::Enum { variant, .. } => {
+            variant.parse::<HostEffectResultVariant>() == Ok(HostEffectResultVariant::Err)
+        }
         _ => false,
     }
 }
