@@ -461,6 +461,9 @@ checked-in docs, tests, and commits only.
 - Build-graph JSON integration tests now keep host-effect JSON coverage in a
   focused module, separating effect determinism cases from target metadata and
   dependency JSON assertions.
+- Build-graph JSON validation tests now keep unsupported target kind and gated
+  package/link field diagnostics in a focused child module, leaving target
+  field and dependency graph diagnostics in the parent module.
 - Generic specialization generated-C assertions now keep multi-file import and
   dependency cases in a focused integration module, separating them from
   single-file generic specialization emission assertions.

@@ -275,6 +275,10 @@ and do not assume Phase 4 is ready without evidence.
 - Build-graph JSON integration tests now split host-effect JSON coverage into
   `tests/integration/cli_build/build_graph_json_host_effects.rs`, keeping target
   metadata/dependency JSON tests separate from effect determinism tests.
+- Build-graph JSON validation tests now split unsupported target kind and gated
+  package/link field diagnostics into
+  `tests/integration/cli_build/build_graph_json/validation/unsupported_targets.rs`,
+  leaving target field and dependency graph diagnostics in the parent module.
 - Generic specialization generated-C assertions now split multi-file import and
   dependency cases into
   `tests/integration/generic_specializations/multifile_generated_c.rs`,
