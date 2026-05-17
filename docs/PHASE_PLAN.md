@@ -314,6 +314,9 @@ checked-in docs, tests, and commits only.
 - Resolver-backed generic type-reference validation now lives in a focused
   child module, leaving AST-owned type-reference validation and shared resolver
   name restoration in the parent module.
+- Parser expression suffix and aggregate literal parsing now lives in a focused
+  child module, keeping Pratt precedence dispatch separate from postfix
+  expression forms.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
