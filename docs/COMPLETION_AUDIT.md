@@ -2726,6 +2726,8 @@ and do not assume Phase 4 is ready without evidence.
 - Typed resolved type definitions and helpers now live in
   `src/ast/typed/types.rs`, preserving the public `ast::typed::Type` path while
   keeping typed AST node definitions smaller.
+- Parser import declarations now live in `src/parser/import_declarations.rs`,
+  preserving parser import coverage while keeping declaration dispatch smaller.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type

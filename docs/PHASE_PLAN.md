@@ -2557,6 +2557,9 @@ checked-in docs, tests, and commits only.
 - Typed resolved type definitions and helpers now live in
   `src/ast/typed/types.rs`, preserving the public `ast::typed::Type` path while
   keeping typed AST node definitions separate.
+- Parser import declarations now live in `src/parser/import_declarations.rs`,
+  keeping module-path parsing separate from generic/function/type declaration
+  dispatch while preserving parser import coverage.
 
 ## Current Phase
 
