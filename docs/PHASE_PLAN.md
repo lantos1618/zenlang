@@ -126,6 +126,9 @@ checked-in docs, tests, and commits only.
   uniqueness and call/definition assertions.
 - Generic diagnostics now cover explicit type-argument arity failures for
   two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
+- Imported generic enum methods now cover the same explicit type-argument arity
+  failure through the module graph, preserving the hard method diagnostic
+  without inference or argument-mismatch followups.
 - Generic diagnostics now cover generic enum constructor arity failures without
   leaking raw type-parameter payload mismatch followups, including
   `generic_enum_constructor_without_type_args_is_error`.

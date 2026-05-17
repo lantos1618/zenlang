@@ -74,6 +74,62 @@ main = () i32 {
 }
 
 #[test]
+fn imported_generic_enum_method_explicit_type_arg_arity_is_error() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let result_path = tmp.path().join("result.zen");
+    std::fs::write(
+        &result_path,
+        r#"
+pub Result<T, E>:
+    Ok(T),
+    Err(E)
+
+pub Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
+    self ?
+        | Ok(value) { value }
+        | Err(_) { fallback }
+}
+"#,
+    )
+    .expect("write result module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ Result } = result
+
+main = () i32 {
+    value = Result<i32, str>.Ok(1)
+    value.unwrap_or<i32>(0)
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject imported generic method arity errors");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("generic method `Result.unwrap_or` expects 2 type arguments, found 1"),
+        "expected imported generic method arity diagnostic, panic={message}"
+    );
+    assert!(
+        !message.contains("cannot infer type argument"),
+        "imported generic method arity failure should not also report inference, panic={message}"
+    );
+    assert!(
+        !message.contains("argument 2"),
+        "imported generic method arity failure should not also report argument mismatch, panic={message}"
+    );
+}
+
+#[test]
 fn imported_behavior_extends_requires_parent_methods() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let traits_path = tmp.path().join("traits.zen");
