@@ -2663,6 +2663,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration test_command_build_zen_accepts_declared_file_read_effects`
   and
   `cargo test --test integration test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  Multi-target test graph execution now has the matching positive and negative
+  file-read coverage through
+  `cargo test --test integration test_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`
+  and
+  `cargo test --test integration test_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
   Declared deterministic env reads with `.Err`, wildcard, and identifier
   fallback arms are accepted on the same test execution path through
   `cargo test --test integration test_command_build_zen_accepts_declared_env_read_with_fallback`,
@@ -3013,11 +3018,14 @@ and do not assume Phase 4 is ready without evidence.
 - `zen test build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, while keeping
   the matching undeclared file-read and missing-fallback rejections before test
-  execution. Coverage:
+  execution. Multi-target test graph execution also has the matching declared
+  and undeclared file-read pair. Coverage:
   `test_command_build_zen_accepts_declared_file_read_effects`,
   `test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  `test_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
   `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
+  `test_command_multi_target_build_zen_rejects_undeclared_file_read_effects`,
   and `test_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - `zen emit build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, while keeping
