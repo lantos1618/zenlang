@@ -2803,6 +2803,10 @@ checked-in docs, tests, and commits only.
   `tests/integration/cli_build/graph_validation_test_command_validation/graph_only_libraries.rs`,
   keeping missing source, valid source, and library typecheck coverage separate
   from test-target, gated-dependency, and skipped-source validation checks.
+- Build-graph JSON validation tests now live in
+  `tests/integration/cli_build/build_graph_json/validation.rs`, keeping target
+  field, dependency, unsupported target, and gated package/link diagnostics
+  separate from successful graph JSON shape fixtures.
 - Imported behavior inheritance frontend diagnostics now live in
   `tests/integration/frontend_diagnostics/behavior_extends.rs`, keeping
   direct, imported-parent, and transitive parent-method diagnostics separate
