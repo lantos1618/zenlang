@@ -2213,6 +2213,8 @@ checked-in docs, tests, and commits only.
   executable dependencies on gated library/test targets, and
   `build_graph_command_rejects_missing_root_source` covers a target execution
   failure before normal `zen build build.zen` is ungated.
+  Declared deterministic env reads with fallbacks are accepted through
+  `build_graph_command_accepts_declared_env_read_with_fallback`.
   Declared deterministic file-read effects are accepted through
   `build_graph_command_accepts_declared_file_read_effects`, while undeclared
   file reads reject before execution through
@@ -2248,6 +2250,9 @@ checked-in docs, tests, and commits only.
   `build_command_multi_target_build_zen_rejects_undeclared_host_effects`. The
   single-target rejection remains covered by
   `build_command_build_zen_rejects_undeclared_host_effects`.
+  Declared deterministic env reads with fallbacks are accepted on the normal
+  build path through
+  `build_command_build_zen_accepts_declared_env_read_with_fallback`.
   Declared deterministic file-read effects are accepted on the normal build
   path through `build_command_build_zen_accepts_declared_file_read_effects`,
   while undeclared file reads reject before target execution through
@@ -2268,6 +2273,8 @@ checked-in docs, tests, and commits only.
   `check_command_build_zen_rejects_undeclared_host_effects_before_target_typechecking`.
   The single-target host-effect rejection remains covered by
   `check_command_build_zen_rejects_undeclared_host_effects`.
+  Declared deterministic env reads with fallbacks are accepted through
+  `check_command_build_zen_accepts_declared_env_read_with_fallback`.
   Declared deterministic file-read effects are accepted through
   `check_command_build_zen_accepts_declared_file_read_effects`, while
   undeclared file reads reject before source validation through
@@ -2297,6 +2304,9 @@ checked-in docs, tests, and commits only.
   preserves host-effect validation before graph-only library typechecking
   through
   `test_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`.
+  Declared deterministic env reads with fallbacks are accepted on the normal
+  test path through
+  `test_command_build_zen_accepts_declared_env_read_with_fallback`.
   Declared deterministic file-read effects are accepted on the normal test
   path through `test_command_build_zen_accepts_declared_file_read_effects`,
   while undeclared file reads reject before test execution through
@@ -2328,6 +2338,8 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_reports_multi_target_ambiguity_before_graph_only_library_typechecking`
   keep multi-executable ambiguity ahead of per-executable and graph-only
   library source checks.
+  Declared deterministic env reads with fallbacks are accepted through
+  `emit_command_build_zen_accepts_declared_env_read_with_fallback`.
   Declared deterministic file-read effects are accepted through
   `emit_command_build_zen_accepts_declared_file_read_effects`, while
   undeclared file reads reject before C emission through
@@ -2365,6 +2377,8 @@ checked-in docs, tests, and commits only.
   `direct_file_command_multi_target_build_zen_rejects_undeclared_host_effects`
   and
   `direct_file_command_build_zen_rejects_undeclared_host_effects`.
+  Declared deterministic env reads with fallbacks are accepted through
+  `direct_file_command_build_zen_accepts_declared_env_read_with_fallback`.
   Declared deterministic file-read effects are accepted through
   `direct_file_command_build_zen_accepts_declared_file_read_effects`, while
   undeclared file reads reject before execution through
