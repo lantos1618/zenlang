@@ -400,6 +400,9 @@ checked-in docs, tests, and commits only.
 - Build-graph JSON integration tests now keep host-effect JSON coverage in a
   focused module, separating effect determinism cases from target metadata and
   dependency JSON assertions.
+- Generic specialization generated-C assertions now keep multi-file import and
+  dependency cases in a focused integration module, separating them from
+  single-file generic specialization emission assertions.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a
