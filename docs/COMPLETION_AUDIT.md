@@ -2348,6 +2348,9 @@ and do not assume Phase 4 is ready without evidence.
 - `emit-json build-graph` emits declared deterministic file-read effects and
   rejects undeclared file reads through the advertised graph command, covered
   by `cargo test --test integration file_read_effects`.
+- `emit-json build-graph` emits declared deterministic env-read effects
+  through the advertised graph command, covered by
+  `cargo test --test integration emit_json_build_graph_outputs_declared_env_read_effects`.
 - `emit-json build-graph` rejects unresolved target dependencies through the
   advertised graph-emission path, covered by
   `cargo test --test integration emit_json_build_graph_rejects_unknown_target_dependencies`.
