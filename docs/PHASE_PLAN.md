@@ -476,6 +476,9 @@ checked-in docs, tests, and commits only.
 - Test-command build graph host-effect tests now keep declared file-read
   fallback accept/reject cases in a focused child module, leaving env-effect
   ordering and unrelated executable skip coverage in the parent module.
+- Legacy `build-graph build.zen` host-effect tests now keep declared file-read
+  fallback accept/reject cases in a focused child module, leaving env-effect
+  ordering and unrelated test skip coverage in the parent module.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a
