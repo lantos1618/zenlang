@@ -288,6 +288,11 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/build_command_host_effects/file_reads.rs`,
   leaving env-effect and ordering-before-execution coverage in the parent
   module.
+- Direct `zen build.zen` validation tests now split graph-only library source
+  and typecheck coverage into
+  `tests/integration/cli_build/direct_build_graph_validation/graph_only_libraries.rs`,
+  leaving executable target and gated test dependency validation in the parent
+  module.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.
