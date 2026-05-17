@@ -96,6 +96,8 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls",
         "resolver_type_reference_validation_tasks_collect_only_type_reference_work",
         "generic_struct_constructor_without_type_args_is_error",
+        "nongeneric_struct_constructor_type_args_are_error",
+        "nongeneric_enum_constructor_type_args_are_error",
         "generic_enum_constructor_without_type_args_is_error",
     ] {
         assert!(
@@ -193,6 +195,8 @@ fn completion_audit_records_recovery_objective_evidence_and_gaps() {
         "resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls",
         "resolver_type_reference_validation_tasks_collect_only_type_reference_work",
         "generic_struct_constructor_without_type_args_is_error",
+        "nongeneric_struct_constructor_type_args_are_error",
+        "nongeneric_enum_constructor_type_args_are_error",
         "generic_enum_constructor_without_type_args_is_error",
     ] {
         assert!(

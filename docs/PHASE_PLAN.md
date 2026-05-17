@@ -122,6 +122,10 @@ checked-in docs, tests, and commits only.
 - Generic diagnostics now cover generic struct constructor arity failures
   without leaking raw type-parameter field mismatch followups, including
   `generic_struct_constructor_without_type_args_is_error`.
+- Generic diagnostics now cover non-generic struct and enum constructors that
+  receive type arguments, including
+  `nongeneric_struct_constructor_type_args_are_error` and
+  `nongeneric_enum_constructor_type_args_are_error`.
 - Generic diagnostics now cover receiver-vs-argument inference conflicts for
   two-parameter `Result<T, E>` enum methods.
 - Generic diagnostics now cover bound failures on `Result<T, E>` enum methods
