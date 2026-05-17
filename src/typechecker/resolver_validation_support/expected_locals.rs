@@ -1,5 +1,7 @@
 fn collect_expected_resolver_impl_method_symbols(
     type_name: &str,
+    behavior: Option<&str>,
+    behavior_type_args: &[AstType],
     methods: &[Declaration],
     scope_cursor: &mut ResolverScopeCursor,
     expected: &mut ResolverExpectedSymbolSets,
@@ -10,7 +12,7 @@ fn collect_expected_resolver_impl_method_symbols(
         } = method
         {
             push_expected_resolver_callable_symbol(
-                method_signature_key(type_name, name),
+                expected_resolver_impl_method_key(type_name, name, behavior, behavior_type_args),
                 params,
                 body,
                 scope_cursor,
@@ -18,6 +20,15 @@ fn collect_expected_resolver_impl_method_symbols(
             );
         }
     }
+}
+
+fn expected_resolver_impl_method_key(
+    type_name: &str,
+    method_name: &str,
+    behavior: Option<&str>,
+    behavior_type_args: &[AstType],
+) -> String {
+    behavior_impl_method_signature_key(type_name, method_name, behavior, behavior_type_args)
 }
 
 fn push_resolver_validation_association_source<'a>(

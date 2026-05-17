@@ -178,6 +178,8 @@ impl TypeChecker {
                 } => {
                     collect_expected_resolver_impl_method_symbols(
                         type_name,
+                        Some(behavior),
+                        behavior_type_args,
                         methods,
                         &mut scope_cursor,
                         &mut tasks.expected_symbols,
@@ -194,6 +196,8 @@ impl TypeChecker {
                 } => {
                     collect_expected_resolver_impl_method_symbols(
                         type_name,
+                        None,
+                        &[],
                         methods,
                         &mut scope_cursor,
                         &mut tasks.expected_symbols,

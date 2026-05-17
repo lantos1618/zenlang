@@ -160,7 +160,12 @@ impl TypeChecker {
                             if !type_params.is_empty() {
                                 continue;
                             }
-                            let full_name = Self::method_key(type_name, name);
+                            let full_name = Self::behavior_impl_method_key(
+                                type_name,
+                                name,
+                                behavior.as_deref(),
+                                behavior_type_args,
+                            );
                             self.current_self_type =
                                 Some(self.resolve_type(&AstType::Named(type_name.clone())));
                             match self.check_function(&full_name, params, return_type, body, span) {

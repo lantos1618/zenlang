@@ -411,7 +411,8 @@ impl TypeChecker {
             let Some(restored_name) = restored_name else {
                 continue;
             };
-            let restored_key = Self::method_key(type_name, &restored_name);
+            let restored_key =
+                resolver_owned_key.unwrap_or_else(|| Self::method_key(type_name, &restored_name));
             self.collect_resolver_callable_signature_for_key(symbols, &ast_key, &restored_key);
         }
     }

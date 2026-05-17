@@ -337,7 +337,7 @@ impl TypeChecker {
                 continue;
             }
             for method in methods {
-                self.seed_imported_impl_method(type_name, method, true, &dependencies);
+                self.seed_imported_impl_method(type_name, None, &[], method, true, &dependencies);
             }
         }
     }
@@ -374,7 +374,14 @@ impl TypeChecker {
 
             let dependencies = Self::source_module_dependencies(source_module, graph);
             for method in methods {
-                self.seed_imported_impl_method(local_name, method, false, &dependencies);
+                self.seed_imported_impl_method(
+                    local_name,
+                    Some(behavior),
+                    behavior_type_args,
+                    method,
+                    false,
+                    &dependencies,
+                );
             }
             for default in self.behavior_default_methods_for_impl(
                 local_name,

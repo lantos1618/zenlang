@@ -1144,6 +1144,11 @@ checked-in docs, tests, and commits only.
 - Multi-file generic behavior-bound fixtures now compile and run through
   graph-owned imports, proving imported public behaviors can satisfy
   `T: Json<T>` bounds and dispatch to concrete generated C functions.
+- Distinct generic behavior specializations on one concrete type now emit and
+  dispatch through behavior-specialized impl method symbols, covered by
+  `tests/zen/behavior_distinct_generic_specialization_dispatch.zen` and
+  generated-C assertions for `Point_encode__Json_str` and
+  `Point_encode__Json_i32`.
 - Multi-file behavior inheritance fixtures now compile and run through
   graph-owned imports, proving imported child behavior impls carry inherited
   parent requirements, including transitive parent chains, and can satisfy

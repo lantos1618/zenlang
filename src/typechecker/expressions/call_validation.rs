@@ -231,6 +231,33 @@ impl TypeChecker {
         })
     }
 
+    pub(super) fn behavior_specialized_method_key(
+        &self,
+        type_name: &str,
+        method: &str,
+    ) -> Option<String> {
+        let prefix = format!("{}__", Self::method_key(type_name, method));
+        let candidates: Vec<_> = self
+            .methods
+            .iter()
+            .filter(|(key, _)| key.starts_with(&prefix))
+            .collect();
+
+        if candidates.len() == 1 {
+            return Some(candidates[0].0.clone());
+        }
+
+        let expected = self.current_return_type.as_ref()?;
+        let matching: Vec<_> = candidates
+            .into_iter()
+            .filter(|(_, info)| {
+                self.types_compatible(expected, &self.resolve_type(&info.return_type))
+            })
+            .collect();
+
+        (matching.len() == 1).then(|| matching[0].0.clone())
+    }
+
     pub(super) fn is_root_std_runtime_call(&self, module: &str, function: &str) -> bool {
         self.is_root_std_import(module)
             && matches!((module, function), ("io", "print") | ("io", "println"))

@@ -216,7 +216,9 @@ impl TypeChecker {
             Type::Named(n) | Type::Struct { name: n, .. } | Type::Enum { name: n, .. } => n.clone(),
             _ => String::new(),
         };
-        let method_key = Self::method_key(&type_name, method);
+        let method_key = self
+            .behavior_specialized_method_key(&type_name, method)
+            .unwrap_or_else(|| Self::method_key(&type_name, method));
 
         if let Some(info) = self.methods.get(&method_key).cloned() {
             // Found as a type method — handle generics
@@ -296,10 +298,7 @@ impl TypeChecker {
                     ));
                 }
                 self.check_call_signature("method", &method_key, &info.params, &typed_args, &span);
-                (
-                    format!("{}_{}", type_name, method),
-                    self.resolve_type(&info.return_type),
-                )
+                (method_key.clone(), self.resolve_type(&info.return_type))
             };
             Ok(TypedExpression {
                 kind: TypedExprKind::FunctionCall {

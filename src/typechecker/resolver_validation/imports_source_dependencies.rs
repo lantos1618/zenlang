@@ -68,12 +68,21 @@ impl TypeChecker {
                     );
                 }
                 Declaration::ImplBlock {
-                    type_name, methods, ..
+                    type_name,
+                    behavior,
+                    behavior_type_args,
+                    methods,
+                    ..
                 } => {
                     for method in methods {
                         if let Declaration::Function { name, .. } = method {
                             Self::insert_source_method_dependency(
-                                &Self::method_key(type_name, name),
+                                &Self::behavior_impl_method_key(
+                                    type_name,
+                                    name,
+                                    behavior.as_deref(),
+                                    behavior_type_args,
+                                ),
                                 method,
                                 &mut dependencies.methods,
                                 &mut dependencies.generic_methods,
@@ -259,12 +268,14 @@ impl TypeChecker {
             return;
         };
 
-        self.seed_imported_method_signature(local_type_name, signature, dependencies);
+        self.seed_imported_method_signature(local_type_name, None, &[], signature, dependencies);
     }
 
     fn seed_imported_impl_method(
         &mut self,
         local_type_name: &str,
+        behavior: Option<&str>,
+        behavior_type_args: &[AstType],
         method: &Declaration,
         public_only: bool,
         dependencies: &SourceModuleDependencies,
@@ -280,16 +291,29 @@ impl TypeChecker {
             return;
         };
 
-        self.seed_imported_method_signature(local_type_name, signature, dependencies);
+        self.seed_imported_method_signature(
+            local_type_name,
+            behavior,
+            behavior_type_args,
+            signature,
+            dependencies,
+        );
     }
 
     fn seed_imported_method_signature(
         &mut self,
         local_type_name: &str,
+        behavior: Option<&str>,
+        behavior_type_args: &[AstType],
         signature: ImportedMethodSignature<'_>,
         dependencies: &SourceModuleDependencies,
     ) {
-        let key = Self::method_key(local_type_name, signature.name);
+        let key = Self::behavior_impl_method_key(
+            local_type_name,
+            signature.name,
+            behavior,
+            behavior_type_args,
+        );
         self.methods
             .insert(key.clone(), signature.func_info(key.clone()));
         if let Some(template) = signature.generic_template() {
