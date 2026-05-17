@@ -9,9 +9,7 @@
 { SYS_IO_URING_SETUP, SYS_IO_URING_ENTER, SYS_IO_URING_REGISTER,
   SYS_MMAP, SYS_MUNMAP, SYS_CLOSE } = @std.sys.syscall
 
-// ============================================================================
 // io_uring Setup Flags
-// ============================================================================
 
 IORING_SETUP_IOPOLL = 1       // Use polling for I/O completion
 IORING_SETUP_SQPOLL = 2       // Kernel-side submission queue polling
@@ -21,18 +19,14 @@ IORING_SETUP_CLAMP = 16       // Clamp ring sizes
 IORING_SETUP_ATTACH_WQ = 32   // Share workqueue
 IORING_SETUP_SINGLE_ISSUER = 2048  // Single task submits
 
-// ============================================================================
 // io_uring Enter Flags
-// ============================================================================
 
 IORING_ENTER_GETEVENTS = 1    // Wait for completions
 IORING_ENTER_SQ_WAKEUP = 2    // Wake SQ polling thread
 IORING_ENTER_SQ_WAIT = 4      // Wait for SQ space
 IORING_ENTER_EXT_ARG = 8      // Extended arguments
 
-// ============================================================================
 // io_uring Operation Codes
-// ============================================================================
 
 IORING_OP_NOP = 0
 IORING_OP_READV = 1
@@ -59,9 +53,7 @@ IORING_OP_WRITE = 23
 IORING_OP_SEND = 26
 IORING_OP_RECV = 27
 
-// ============================================================================
 // Memory mapping constants
-// ============================================================================
 
 PROT_READ = 1
 PROT_WRITE = 2
@@ -72,9 +64,7 @@ IORING_OFF_SQ_RING = 0
 IORING_OFF_CQ_RING = 134217728      // 0x8000000
 IORING_OFF_SQES = 268435456         // 0x10000000
 
-// ============================================================================
 // Submission Queue Entry (SQE) - 64 bytes
-// ============================================================================
 
 SQE: {
     opcode: u8,
@@ -94,9 +84,7 @@ SQE: {
     pad3: u64
 }
 
-// ============================================================================
 // Completion Queue Entry (CQE) - 16 bytes
-// ============================================================================
 
 CQE: {
     user_data: u64,  // Copied from SQE
@@ -104,9 +92,7 @@ CQE: {
     flags: u32       // Completion flags
 }
 
-// ============================================================================
 // io_uring Parameters (for setup)
-// ============================================================================
 
 IoUringParams: {
     sq_entries: u32,
@@ -140,9 +126,7 @@ IoUringParams: {
     cq_off_resv2: u64
 }
 
-// ============================================================================
 // IoUring - Main interface
-// ============================================================================
 
 IoUring: {
     ring_fd: i32,
@@ -166,9 +150,7 @@ IoUring: {
     cqes: i64          // Pointer to CQEs
 }
 
-// ============================================================================
 // IoUring Creation
-// ============================================================================
 
 IoUring.new = (entries: u32) Result<IoUring, i32> {
     // Allocate params struct (120 bytes)
@@ -400,9 +382,7 @@ IoUring.finish_new = (
     Result.Ok(ring)
 }
 
-// ============================================================================
 // Submission Operations
-// ============================================================================
 
 // Get next SQE slot (returns null if queue full)
 IoUring.get_sqe = (self: MutPtr<IoUring>) i64 {
@@ -463,9 +443,7 @@ IoUring.submit_and_wait = (self: MutPtr<IoUring>, min_complete: u32) Result<i32,
         | false { Result.Ok(cast(result, i32)) }
 }
 
-// ============================================================================
 // Completion Operations
-// ============================================================================
 
 // Get next CQE (returns None if no completions)
 IoUring.peek_cqe = (self: MutPtr<IoUring>) Option<CQE> {
@@ -526,9 +504,7 @@ IoUring.wait_cqe = (self: MutPtr<IoUring>) Result<CQE, i32> {
     }
 }
 
-// ============================================================================
 // High-Level Operations
-// ============================================================================
 
 // Prepare a read operation
 IoUring.prep_read = (self: MutPtr<IoUring>, fd: i32, buf: i64, len: u32, offset: u64, user_data: u64) Result<(), i32> {
@@ -598,9 +574,7 @@ IoUring.prep_close = (self: MutPtr<IoUring>, fd: i32, user_data: u64) Result<(),
         }
 }
 
-// ============================================================================
 // Cleanup
-// ============================================================================
 
 IoUring.close = (self: MutPtr<IoUring>) void {
     compiler.syscall2(SYS_MUNMAP, self.val.cq_ring_ptr, self.val.cq_ring_size)
