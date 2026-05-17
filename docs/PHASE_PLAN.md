@@ -308,6 +308,9 @@ checked-in docs, tests, and commits only.
 - Typechecker `Self` expression and statement traversal now lives in a focused
   validation child module, leaving declaration task and type-reference
   validation separate.
+- Direct `zen emit build.zen` gated dependency tests now live in a focused
+  child module, keeping direct emit graph validation tests grouped by failure
+  mode.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
