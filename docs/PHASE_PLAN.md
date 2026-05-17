@@ -2682,6 +2682,10 @@ checked-in docs, tests, and commits only.
   `tests/integration/cli_build/emit_direct_validation/graph_only_libraries.rs`,
   keeping missing source, valid source, and library typecheck coverage separate
   from executable target-count ambiguity checks.
+- `zen build build.zen` graph-only library validation tests now live in
+  `tests/integration/cli_build/build_command_validation/graph_only_libraries.rs`,
+  keeping missing source, valid source, and library typecheck coverage separate
+  from executable-target and gated-dependency validation checks.
 
 ## Current Phase
 
