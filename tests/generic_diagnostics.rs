@@ -34,6 +34,8 @@ mod behavior_impls;
 mod bounds;
 #[path = "generic_diagnostics/composite_annotations.rs"]
 mod composite_annotations;
+#[path = "generic_diagnostics/constructors.rs"]
+mod constructors;
 #[path = "generic_diagnostics/inference_conflicts.rs"]
 mod inference_conflicts;
 #[path = "generic_diagnostics/method_type_args.rs"]
