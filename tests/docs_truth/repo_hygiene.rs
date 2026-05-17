@@ -168,6 +168,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/sys/env.zen",
         "stdlib/sys/uname.zen",
         "stdlib/sys/process/process.zen",
+        "stdlib/sys/process/sched.zen",
         "stdlib/sys/random/getrandom.zen",
         "stdlib/sys/random/prng.zen",
         "stdlib/sys/resource.zen",

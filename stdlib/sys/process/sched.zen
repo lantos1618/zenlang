@@ -29,22 +29,25 @@ sched_yield = () void {
 // pid = 0 means current process
 sched_getscheduler = (pid: i32) Result<i32, i32> {
     result = compiler.syscall1(SYS_SCHED_GETSCHEDULER, pid)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, i32))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, i32)) }
 }
 
 // Get maximum priority for a scheduling policy
 sched_get_priority_max = (policy: i32) Result<i32, i32> {
     result = compiler.syscall1(SYS_SCHED_GET_PRIORITY_MAX, policy)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, i32))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, i32)) }
 }
 
 // Get minimum priority for a scheduling policy
 sched_get_priority_min = (policy: i32) Result<i32, i32> {
     result = compiler.syscall1(SYS_SCHED_GET_PRIORITY_MIN, policy)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, i32))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, i32)) }
 }
 
 // ============================================================================
@@ -58,12 +61,12 @@ CpuSet: {
 }
 
 CpuSet.new = () CpuSet {
-    return CpuSet { mask: 0 }
+    CpuSet { mask: 0 }
 }
 
 // Set all CPUs
 CpuSet.all = () CpuSet {
-    return CpuSet { mask: 18446744073709551615 }  // All bits set
+    CpuSet { mask: 18446744073709551615 }  // All bits set
 }
 
 // Set a specific CPU
@@ -88,15 +91,21 @@ CpuSet.clear = (self: MutPtr<CpuSet>, cpu: i32) void {
 
 // Check if a CPU is set
 CpuSet.is_set = (self: Ptr<CpuSet>, cpu: i32) bool {
-    cpu < 0 ? { return false }
-    cpu >= 64 ? { return false }
-    bit = 1 << cpu
-    return (self.val.mask & bit) != 0
+    cpu < 0 ?
+        | true { false }
+        | false {
+            cpu >= 64 ?
+                | true { false }
+                | false {
+                    bit = 1 << cpu
+                    (self.val.mask & bit) != 0
+                }
+        }
 }
 
 // Count set CPUs
 CpuSet.count = (self: Ptr<CpuSet>) i32 {
-    return cast(compiler.ctpop(self.val.mask), i32)
+    cast(compiler.ctpop(self.val.mask), i32)
 }
 
 // Set CPU affinity for a process
@@ -109,8 +118,9 @@ sched_setaffinity = (pid: i32, cpuset: Ptr<CpuSet>) Result<(), i32> {
         8,  // size of u64
         compiler.ptr_to_int(cpuset)
     )
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Get CPU affinity for a process
@@ -123,8 +133,9 @@ sched_getaffinity = (pid: i32) Result<CpuSet, i32> {
         8,  // size of u64
         compiler.ptr_to_int(&cpuset.ref())
     )
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cpuset)
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cpuset) }
 }
 
 // ============================================================================
@@ -141,8 +152,9 @@ getcpu = () Result<CpuInfo, i32> {
         compiler.ptr_to_int(&node.ref()),
         0  // tcache (obsolete, pass NULL)
     )
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(CpuInfo { cpu: cpu, node: node })
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(CpuInfo { cpu: cpu, node: node }) }
 }
 
 CpuInfo: {
@@ -162,16 +174,20 @@ PRIO_USER = 2
 getpriority = () Result<i32, i32> {
     // getpriority returns 20-nice, so we need to adjust
     result = compiler.syscall2(SYS_GETPRIORITY, PRIO_PROCESS, 0)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    // Kernel returns 20 - nice value, so convert back
-    nice = 20 - result
-    return Result.Ok(cast(nice, i32))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false {
+            // Kernel returns 20 - nice value, so convert back
+            nice = 20 - result
+            Result.Ok(cast(nice, i32))
+        }
 }
 
 // Set nice value for current process (-20 = highest, 19 = lowest priority)
 // Requires CAP_SYS_NICE to increase priority (lower nice value)
 setpriority = (nice: i32) Result<(), i32> {
     result = compiler.syscall3(SYS_SETPRIORITY, PRIO_PROCESS, 0, nice)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
