@@ -2614,6 +2614,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_collection/behavior_parents/default_synthesis.rs`,
   keeping inherited default method synthesis coverage separate from parent
   restoration, duplicate, conflict, and cycle diagnostics.
+- Generic behavior inheritance diagnostics now live in
+  `src/typechecker/tests/generic_behaviors/extends/diagnostics.rs`, keeping
+  overlap, cycle, duplicate parent, generic arity, nongeneric type-argument,
+  and signature-mismatch coverage separate from positive inheritance cases.
 
 ## Current Phase
 
