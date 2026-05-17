@@ -390,6 +390,54 @@ main = () i32 {
 }
 
 #[test]
+fn build_graph_command_rejects_missing_graph_only_library_source() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
+    b.add(Library { name: "core", exports: ["missing_lib.zen"] })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("app.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write app.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["build-graph", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build-graph");
+
+    assert!(
+        !output.status.success(),
+        "zen build-graph unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("build graph target `core` source not found: missing_lib.zen"),
+        "expected missing graph-only library source diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        !tmp.path().join("build").exists(),
+        "build-graph command should not start after graph source validation fails"
+    );
+}
+
+#[test]
 fn build_graph_command_rejects_missing_root_source() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(

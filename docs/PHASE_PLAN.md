@@ -2089,7 +2089,9 @@ checked-in docs, tests, and commits only.
   and `build_graph_command_multi_target_rejects_undeclared_host_effects` cover
   deterministic host-effect rejection before execution starts,
   `build_graph_command_rejects_graph_without_executable_targets` covers
-  test-only graph rejection before execution starts, and
+  test-only graph rejection before execution starts,
+  `build_graph_command_rejects_missing_graph_only_library_source` covers
+  graph-only library export validation before execution starts, and
   `build_graph_command_rejects_missing_root_source` covers a target execution
   failure before normal `zen build build.zen` is ungated.
 - Normal `zen build build.zen` now routes through the same constrained
@@ -2106,6 +2108,8 @@ checked-in docs, tests, and commits only.
   `build_command_build_zen_rejects_gated_library_dependencies`. They also
   reject executable-target dependencies on gated test targets through
   `build_command_build_zen_rejects_gated_test_dependencies`. They reject
+  graph-only library exports with missing sources through
+  `build_command_build_zen_rejects_missing_graph_only_library_source`, and
   undeclared host effects before dependency-ordered execution through
   `build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
   The normal build path also rejects undeclared host effects before
@@ -2137,7 +2141,9 @@ checked-in docs, tests, and commits only.
   Test execution also rejects dependencies on gated library targets through
   `test_command_build_zen_rejects_gated_library_dependencies`, and rejects
   test-target dependencies on gated executable targets through
-  `test_command_build_zen_rejects_gated_executable_dependencies`.
+  `test_command_build_zen_rejects_gated_executable_dependencies`. It validates
+  graph-only library exports before execution through
+  `test_command_build_zen_rejects_missing_graph_only_library_source`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `emit_command_build_zen_outputs_target_c_source`, rejects ambiguous
@@ -2145,7 +2151,9 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_rejects_graph_without_executable_targets` and
   `emit_command_build_zen_rejects_multiple_executable_targets`, and rejects
   undeclared host effects through
-  `emit_command_build_zen_rejects_undeclared_host_effects`.
+  `emit_command_build_zen_rejects_undeclared_host_effects`. It validates
+  graph-only library exports before emission through
+  `emit_command_build_zen_rejects_missing_graph_only_library_source`.
 - Direct `zen build.zen` now aliases the same constrained deterministic graph
   build path as `zen build build.zen`, covered by
   `direct_file_command_build_zen_routes_through_deterministic_graph`, and
@@ -2156,6 +2164,8 @@ checked-in docs, tests, and commits only.
   rejects dependencies on gated library and test targets through
   `direct_file_command_build_zen_rejects_gated_library_dependencies` and
   `direct_file_command_build_zen_rejects_gated_test_dependencies`,
+  rejects graph-only library exports with missing sources through
+  `direct_file_command_build_zen_rejects_missing_graph_only_library_source`,
   rejects test-only graphs before execution starts through
   `direct_file_command_build_zen_rejects_graph_without_executable_targets`,
   and rejects undeclared host effects for single-target and multi-target graphs

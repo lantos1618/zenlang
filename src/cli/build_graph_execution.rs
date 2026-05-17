@@ -52,6 +52,7 @@ pub(super) fn test_build_targets(path_str: &str) -> Vec<BuildGraphTestTarget> {
     validate_executed_dependency_targets(&graph, BuildGraphExecutionKind::Test);
     let build_path = Path::new(path_str);
     let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
+    validate_non_executed_target_sources(base_dir, &graph, BuildGraphExecutionKind::Test);
     let ordered_targets = match graph.targets_in_dependency_order() {
         Ok(targets) => targets,
         Err(err) => {
@@ -84,6 +85,7 @@ fn collect_executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableT
     validate_executed_dependency_targets(&graph, BuildGraphExecutionKind::Executable);
     let build_path = Path::new(path_str);
     let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
+    validate_non_executed_target_sources(base_dir, &graph, BuildGraphExecutionKind::Executable);
     let ordered_targets = match graph.targets_in_dependency_order() {
         Ok(targets) => targets,
         Err(err) => {
@@ -133,6 +135,29 @@ fn validate_executed_dependency_targets(
 
 pub(super) fn validate_build_graph_sources(base_dir: &Path, graph: &zen::build_graph::BuildGraph) {
     for target in graph.targets() {
+        for source in target.sources() {
+            if !base_dir.join(source).exists() {
+                eprintln!(
+                    "build graph target `{}` source not found: {}",
+                    target.name(),
+                    source
+                );
+                process::exit(1);
+            }
+        }
+    }
+}
+
+fn validate_non_executed_target_sources(
+    base_dir: &Path,
+    graph: &zen::build_graph::BuildGraph,
+    execution_kind: BuildGraphExecutionKind,
+) {
+    for target in graph
+        .targets()
+        .iter()
+        .filter(|target| !execution_kind.includes(target.kind()))
+    {
         for source in target.sources() {
             if !base_dir.join(source).exists() {
                 eprintln!(

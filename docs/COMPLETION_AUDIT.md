@@ -2315,6 +2315,8 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_rejects_undeclared_host_effects`
   and
   `cargo test --test integration build_graph_command_multi_target_rejects_undeclared_host_effects`.
+  Graph-only library export source validation before execution is covered by
+  `cargo test --test integration build_graph_command_rejects_missing_graph_only_library_source`.
   Test-only graphs are rejected before execution starts, covered by
   `cargo test --test integration build_graph_command_rejects_graph_without_executable_targets`.
 - Executable build graph targets now execute dependencies before dependents,
@@ -2331,6 +2333,14 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_command_build_zen_rejects_gated_test_dependencies`
   and
   `cargo test --test integration test_command_build_zen_rejects_gated_executable_dependencies`.
+- Build/test/emit graph execution validates non-executed graph-only library
+  exports before compiling or running selected targets, covered by
+  `cargo test --test integration build_command_build_zen_rejects_missing_graph_only_library_source`,
+  `cargo test --test integration direct_file_command_build_zen_rejects_missing_graph_only_library_source`,
+  `cargo test --test integration build_graph_command_rejects_missing_graph_only_library_source`,
+  `cargo test --test integration test_command_build_zen_rejects_missing_graph_only_library_source`,
+  and
+  `cargo test --test integration emit_command_build_zen_rejects_missing_graph_only_library_source`.
 - Dependency-ordered build execution still stops before execution when graph
   lowering detects undeclared host effects, covered by
   `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
