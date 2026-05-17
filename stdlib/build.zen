@@ -119,7 +119,7 @@ Build: {
 
 // Create native target (current platform)
 native_target = () Target {
-    return Target {
+    Target {
         os_tag: OsTag.Native,
         cpu_arch: CpuArch.Native
     }
@@ -151,7 +151,7 @@ cpu_name = (t: Target) StaticString {
 
 // Create new build configuration
 new_build = () Build {
-    return Build {
+    Build {
         optimize: OptimizeMode.Debug,
         strip: false,
         enable_stack_traces: true,
@@ -164,18 +164,18 @@ new_build = () Build {
 
 // Get standard target options (returns native target)
 standard_target = (b: Build) Target {
-    return b.target
+    b.target
 }
 
 // Get standard optimize option
 standard_optimize = (b: Build) OptimizeMode {
-    return b.optimize
+    b.optimize
 }
 
 // Add an executable target
 add_executable = (b: Build, opts: ExeOptions) Executable {
     io.println("  Adding executable: ${opts.name}")
-    return Executable {
+    Executable {
         name: opts.name,
         root_source_file: opts.root_source_file,
         optimize: b.optimize,
@@ -187,7 +187,7 @@ add_executable = (b: Build, opts: ExeOptions) Executable {
 // Add a test target
 add_test = (b: Build, root_file: StaticString) Test {
     io.println("  Adding test: ${root_file}")
-    return Test {
+    Test {
         name: root_file,
         root_source_file: root_file
     }
@@ -196,7 +196,7 @@ add_test = (b: Build, root_file: StaticString) Test {
 // Add a static library target
 add_static_library = (b: Build, opts: LibOptions) StaticLibrary {
     io.println("  Adding static library: ${opts.name}")
-    return StaticLibrary {
+    StaticLibrary {
         name: opts.name,
         root_source_file: opts.root_source_file,
         optimize: b.optimize,
@@ -207,7 +207,7 @@ add_static_library = (b: Build, opts: LibOptions) StaticLibrary {
 // Add a dependency
 add_dependency = (b: Build, name: StaticString, opts: DepOptions) Dependency {
     io.println("  Adding dependency: ${name} from ${opts.url}")
-    return Dependency {
+    Dependency {
         name: name,
         url: opts.url
     }
