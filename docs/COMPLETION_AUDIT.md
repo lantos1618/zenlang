@@ -2853,6 +2853,11 @@ and do not assume Phase 4 is ready without evidence.
   `tests/generic_diagnostics/call_site_bounds.rs`, preserving function,
   method, receiver, Result method, unknown bound method, and UFC bound-failure
   coverage while keeping aggregate and annotation bound diagnostics focused.
+- Generic behavior `requires` coverage now lives in
+  `src/typechecker/tests/generic_behaviors/requires.rs`, preserving
+  requires-pass, missing-impl, generic arity, missing type-argument, and
+  nongeneric type-argument diagnostics while keeping behavior implementation
+  tests focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
