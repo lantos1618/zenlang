@@ -3113,6 +3113,10 @@ checked-in docs, tests, and commits only.
   `build_zen_commands_reject_duplicate_test_target_fields`,
   `build_zen_commands_reject_missing_required_test_target_fields`, and
   `build_zen_commands_reject_invalid_test_target_field_types`.
+- All executing/checking `build.zen` command entrypoints now reject ordinary
+  unknown `Test` and `Library` target fields before outputs are created,
+  covered by `build_zen_commands_reject_unknown_test_target_fields` and
+  `build_zen_commands_reject_unknown_library_target_fields`.
 - The stdlib build DSL, compiler/FFI bridges, environment, filesystem, IO,
   math, random, time, and memory facades, testing facade, memory allocator
   wrappers plus arena, async, heap, and mmap helpers, and core `Option`,

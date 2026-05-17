@@ -57,6 +57,19 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn build_zen_commands_reject_unknown_library_target_fields() {
+    assert_build_zen_commands_reject_build_graph_metadata(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library { name: "core", exports: ["lib.zen"], output_dir: "build/lib/" })
+    .Ok(b.config())
+}
+"#,
+        "unknown field `output_dir` in `Library` build target",
+    );
+}
+
+#[test]
 fn build_zen_commands_reject_duplicate_executable_target_fields() {
     assert_build_zen_commands_reject_build_graph_metadata(
         r#"
@@ -140,6 +153,19 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 "#,
         "field `root` in `Test` build target must be a string",
+    );
+}
+
+#[test]
+fn build_zen_commands_reject_unknown_test_target_fields() {
+    assert_build_zen_commands_reject_build_graph_metadata(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Test { name: "unit", root: "test.zen", out_dir: "build/tests/" })
+    .Ok(b.config())
+}
+"#,
+        "unknown field `out_dir` in `Test` build target",
     );
 }
 
