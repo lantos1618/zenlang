@@ -262,6 +262,10 @@ checked-in docs, tests, and commits only.
   helper across metadata setters, dropping
   `src/resolver/symbol_table_test_support.rs` below the cleanup threshold while
   preserving resolver-backed metadata and Phase 2 resolver coverage.
+- Resolver type/behavior metadata tests now keep behavior-method metadata cases
+  in a focused submodule, dropping
+  `src/typechecker/tests/resolver_type_behavior_metadata.rs` below the cleanup
+  threshold while preserving the resolver-backed metadata checks.
 - Parser behavior declaration and impl-block parsing now live in a dedicated
   parser helper module, keeping behavior signatures and association syntax out
   of the broad top-level declaration dispatcher.
