@@ -2458,11 +2458,15 @@ checked-in docs, tests, and commits only.
   wildcard, and identifier fallback arms, covered by
   `build_graph_command_accepts_declared_file_read_effects`,
   `build_graph_command_accepts_wildcard_fallback_declared_file_read_effects`,
-  and `build_graph_command_accepts_identifier_fallback_declared_file_read_effects`,
+  `build_graph_command_accepts_identifier_fallback_declared_file_read_effects`,
+  and `build_graph_command_accepts_declared_file_read_effects_for_multiple_targets`,
   while undeclared file reads reject before execution through
   `build_graph_command_rejects_undeclared_file_read_effects_before_execution`.
   File reads with `?` but no fallback arm also reject before execution through
   `build_graph_command_rejects_file_read_without_fallback_before_execution`.
+  Multi-target executable graphs with file reads lacking a fallback arm reject
+  before execution through
+  `build_graph_command_multi_target_rejects_file_read_without_fallback_before_execution`.
 - Normal `zen build build.zen` now routes through the same constrained
   deterministic graph pipeline used by `build-graph <build.zen>`, covered by
   `build_command_routes_build_zen_through_deterministic_graph`. The normal
