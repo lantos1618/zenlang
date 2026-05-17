@@ -1,6 +1,18 @@
 use super::*;
 
 impl TypeChecker {
+    pub(super) fn collect_resolver_declarations_from_tasks(
+        &mut self,
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
+        symbols: &SymbolTable,
+    ) {
+        self.collect_resolver_declaration_metadata(symbols, tasks);
+        self.collect_resolver_behavior_impl_metadata(tasks, symbols);
+        self.validate_resolver_collected_declaration_semantics(symbols, tasks);
+        self.clear_resolver_behavior_ref_state();
+        self.refresh_resolver_type_behavior_impls(tasks, symbols);
+    }
+
     pub(super) fn collect_resolver_behavior_impl_metadata(
         &mut self,
         tasks: &ResolverDeclarationMetadataTasks<'_>,
