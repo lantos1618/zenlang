@@ -2343,7 +2343,9 @@ checked-in docs, tests, and commits only.
   cover `.Err`, wildcard, and identifier fallback arms for declared
   deterministic file-read effect JSON. The
   `emit_json_build_graph_rejects_undeclared_file_read_effects` fixture covers
-  the matching negative path through that same graph-emission command.
+  undeclared file reads, and
+  `emit_json_build_graph_rejects_file_read_without_fallback` covers missing
+  fallback arms through that same graph-emission command.
   `emit_json_build_graph_rejects_unknown_target_dependencies` covers unresolved
   target dependency rejection through the same graph-emission path, and
   `emit_json_build_graph_rejects_self_target_dependencies` covers

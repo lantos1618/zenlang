@@ -2465,6 +2465,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration emit_json_build_graph_outputs_identifier_fallback_declared_file_read_effects`,
   and
   `cargo test --test integration emit_json_build_graph_rejects_undeclared_file_read_effects`.
+  Missing fallback arms on deterministic file reads reject before graph JSON is
+  emitted through
+  `cargo test --test integration emit_json_build_graph_rejects_file_read_without_fallback`.
 - `emit-json build-graph` emits declared deterministic env-read effects
   through the advertised graph command, covered by
   `cargo test --test integration emit_json_build_graph_outputs_declared_env_read_effects`.
