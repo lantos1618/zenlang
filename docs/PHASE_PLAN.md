@@ -2598,6 +2598,10 @@ checked-in docs, tests, and commits only.
 - Generic call-site, closure, and cast annotation diagnostics now live in
   `tests/generic_diagnostics/call_site_annotations.rs`, keeping expression
   annotation coverage separate from declaration and local annotation cases.
+- Generic callable behavior-bound diagnostics now live in
+  `tests/generic_diagnostics/call_site_bounds.rs`, keeping function, method,
+  receiver, Result method, unknown bound method, and UFC bound-failure coverage
+  separate from aggregate and annotation bound cases.
 
 ## Current Phase
 

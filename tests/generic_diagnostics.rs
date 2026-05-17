@@ -34,6 +34,8 @@ mod behavior_impls;
 mod bounds;
 #[path = "generic_diagnostics/call_site_annotations.rs"]
 mod call_site_annotations;
+#[path = "generic_diagnostics/call_site_bounds.rs"]
+mod call_site_bounds;
 #[path = "generic_diagnostics/composite_annotations.rs"]
 mod composite_annotations;
 #[path = "generic_diagnostics/constructors.rs"]
