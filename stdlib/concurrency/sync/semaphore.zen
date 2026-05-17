@@ -24,12 +24,12 @@ Semaphore: {
 
 // Create a new semaphore with initial count
 Semaphore.new = (initial: i32) Semaphore {
-    return Semaphore { count: initial, waiters: 0 }
+    Semaphore { count: initial, waiters: 0 }
 }
 
 // Create a binary semaphore (mutex-like, 0 or 1)
 Semaphore.binary = () Semaphore {
-    return Semaphore.new(1)
+    Semaphore.new(1)
 }
 
 // Acquire a permit (decrement count), blocking if count is zero
@@ -38,11 +38,12 @@ Semaphore.acquire = (self: MutPtr<Semaphore>) void {
     count = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
     count > 0 ? {
         old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.count.ref()), count, count - 1)
-        old == count ? { return }
+        old == count ?
+            | true { }
+            | false { self.acquire_slow() }
+    } : {
+        self.acquire_slow()
     }
-
-    // Slow path: need to wait
-    self.acquire_slow()
 }
 
 // Slow path for acquire - handles contention
@@ -74,11 +75,12 @@ Semaphore.acquire_slow = (self: MutPtr<Semaphore>) void {
 // Returns true if permit was acquired, false if count was zero
 Semaphore.try_acquire = (self: MutPtr<Semaphore>) bool {
     count = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
-    count > 0 ? {
-        old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.count.ref()), count, count - 1)
-        return old == count
-    }
-    return false
+    count > 0 ?
+        | true {
+            old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.count.ref()), count, count - 1)
+            old == count
+        }
+        | false { false }
 }
 
 // Release a permit (increment count), waking one waiter if any
@@ -109,7 +111,7 @@ Semaphore.release_n = (self: MutPtr<Semaphore>, n: i32) void {
 
 // Get current count (for debugging/testing)
 Semaphore.available = (self: Ptr<Semaphore>) i32 {
-    return cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
+    cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
 }
 
 // ============================================================================
@@ -122,7 +124,7 @@ SemaphoreGuard: {
 
 SemaphoreGuard.new = (sem: MutPtr<Semaphore>) SemaphoreGuard {
     sem.acquire()
-    return SemaphoreGuard { sem: sem }
+    SemaphoreGuard { sem: sem }
 }
 
 SemaphoreGuard.release = (self: MutPtr<SemaphoreGuard>) void {
