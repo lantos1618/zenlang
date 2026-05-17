@@ -2964,6 +2964,10 @@ and do not assume Phase 4 is ready without evidence.
   `tests/generic_diagnostics/method_type_args/arity_followups.rs`, preserving
   function and method inference/argument follow-up checks while keeping direct
   method type-argument diagnostics focused.
+- Lexer syntax example tests now live in
+  `src/lexer/tests/syntax_examples.rs`, preserving Zen function/import,
+  declaration, UFC, pattern-match, and method-call tokenization examples while
+  keeping core token/operator coverage focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

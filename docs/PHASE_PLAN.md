@@ -2699,6 +2699,10 @@ checked-in docs, tests, and commits only.
   `tests/generic_diagnostics/method_type_args/arity_followups.rs`, keeping
   function and method inference/argument follow-up checks separate from direct
   method type-argument diagnostics.
+- Lexer syntax example tests now live in
+  `src/lexer/tests/syntax_examples.rs`, keeping Zen function/import,
+  declaration, UFC, pattern-match, and method-call tokenization examples
+  separate from core token/operator coverage.
 
 ## Current Phase
 
