@@ -3,6 +3,7 @@ use std::process;
 
 mod build_graph_execution;
 mod build_graph_loading;
+mod build_graph_sources;
 mod build_graph_targets;
 mod check_emit_commands;
 mod compile;
@@ -13,10 +14,13 @@ mod json_emit;
 mod usage;
 
 use build_graph_execution::{
-    check_build_graph_sources, executable_build_targets, single_executable_build_target,
-    test_build_targets, validate_build_graph_sources,
+    executable_build_targets, single_executable_build_target, test_build_targets,
+    BuildGraphExecutionKind,
 };
 use build_graph_loading::load_build_graph;
+use build_graph_sources::{
+    check_build_graph_sources, validate_build_graph_sources, validate_non_executed_target_sources,
+};
 use build_graph_targets::{
     executable_build_target, test_build_target, BuildGraphExecutableTarget, BuildGraphTestTarget,
 };
