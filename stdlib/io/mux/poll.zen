@@ -16,49 +16,50 @@ POLLNVAL = 32
 PollError: { code: i32 }
 
 PollError.from_errno = (errno: i64) PollError {
-    return PollError { code: cast(0 - errno, i32) }
+    PollError { code: cast(0 - errno, i32) }
 }
 
 // pollfd structure
 Pollfd: { fd: i32, events: i16, revents: i16 }
 
 Pollfd.new = (fd: i32, events: i16) Pollfd {
-    return Pollfd { fd: fd, events: events, revents: 0 }
+    Pollfd { fd: fd, events: events, revents: 0 }
 }
 
 Pollfd.read_ready = (self: Pollfd) bool {
-    return (self.revents & POLLIN) != 0
+    (self.revents & POLLIN) != 0
 }
 
 Pollfd.write_ready = (self: Pollfd) bool {
-    return (self.revents & POLLOUT) != 0
+    (self.revents & POLLOUT) != 0
 }
 
 Pollfd.has_error = (self: Pollfd) bool {
-    return (self.revents & POLLERR) != 0
+    (self.revents & POLLERR) != 0
 }
 
 Pollfd.hung_up = (self: Pollfd) bool {
-    return (self.revents & POLLHUP) != 0
+    (self.revents & POLLHUP) != 0
 }
 
 // Poll array of file descriptors
 poll = (fds: Ptr<Pollfd>, nfds: i32, timeout_ms: i32) Result<i32, PollError> {
     result = compiler.syscall3(SYS_POLL, compiler.ptr_to_int(fds), nfds, timeout_ms)
-    result < 0 ? { return Result.Err(PollError.from_errno(result)) }
-    return Result.Ok(cast(result, i32))
+    result < 0 ?
+        | true { Result.Err(PollError.from_errno(result)) }
+        | false { Result.Ok(cast(result, i32)) }
 }
 
 // Poll single fd for read
 poll_read = (fd: i32, timeout_ms: i32) Result<bool, PollError> {
     pfd = Pollfd.new(fd, cast(POLLIN, i16))
     result = poll(&pfd.ref(), 1, timeout_ms).raise()
-    return Result.Ok(result > 0 && pfd.read_ready())
+    Result.Ok(result > 0 && pfd.read_ready())
 }
 
 // Poll single fd for write
 poll_write = (fd: i32, timeout_ms: i32) Result<bool, PollError> {
     pfd = Pollfd.new(fd, cast(POLLOUT, i16))
     result = poll(&pfd.ref(), 1, timeout_ms).raise()
-    return Result.Ok(result > 0 && pfd.write_ready())
+    Result.Ok(result > 0 && pfd.write_ready())
 }
