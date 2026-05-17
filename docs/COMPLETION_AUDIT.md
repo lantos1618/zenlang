@@ -2677,6 +2677,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration test_command_build_zen_accepts_wildcard_fallback_declared_env_read`,
   and
   `cargo test --test integration test_command_build_zen_accepts_identifier_fallback_declared_env_read`.
+  Multi-target test graph execution keeps the same declared env-read fallback
+  behavior through
+  `cargo test --test integration test_command_build_zen_accepts_declared_env_read_for_multiple_targets`.
   Missing fallback arms on deterministic env reads reject before test
   execution through
   `cargo test --test integration test_command_build_zen_rejects_env_read_without_fallback_before_execution`.

@@ -269,6 +269,61 @@ fn test_command_build_zen_accepts_identifier_fallback_declared_env_read() {
     );
 }
 
+#[test]
+fn test_command_build_zen_accepts_declared_env_read_for_multiple_targets() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD") ?
+        | .Ok(value) { value }
+        | .Err { "default" }
+    b.add(Test { name: "unit", root: "unit.zen" })
+    b.add(Test { name: "integration", root: "integration.zen" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("unit.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write unit.zen");
+    std::fs::write(
+        tmp.path().join("integration.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write integration.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["test", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen test build.zen");
+
+    assert!(
+        output.status.success(),
+        "zen test build.zen failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("test unit passed") && stdout.contains("test integration passed"),
+        "expected both test targets to pass, stdout={stdout}"
+    );
+}
+
 fn assert_test_command_accepts_declared_env_read(fallback_arm: &str, case_name: &str) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
