@@ -2288,6 +2288,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test build_target_field_owns_source_spelling --lib`.
   Those spelling guards now live in `src/build_graph/lowering_tests.rs`,
   keeping `src/build_graph/lowering.rs` below the cleanup threshold.
+- Build-command integration coverage now keeps ordinary build diagnostics,
+  `build.zen` graph validation, and `build.zen` host-effect ordering in
+  focused modules, with the split guarded by the same full integration suite
+  and focused filters for the moved validation and host-effect cases.
 - Build graph validation rejects unresolved target dependencies, covered by
   `cargo test --test build_graph build_graph_rejects_unknown_target_dependencies`
   and
