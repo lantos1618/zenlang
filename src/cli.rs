@@ -4,12 +4,14 @@ use std::process;
 
 mod build_graph_execution;
 mod diagnostics;
+mod usage;
 
 use build_graph_execution::{
     executable_build_targets, single_executable_build_target, test_build_targets,
     validate_build_graph_sources,
 };
 use diagnostics::{print_diagnostic, print_errors};
+use usage::print_usage;
 use zen::codegen::c::CBackend;
 use zen::codegen::Backend;
 use zen::error::FileTable;
@@ -20,22 +22,7 @@ pub fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
-        eprintln!("zen compiler v0.8.0");
-        eprintln!("Usage: zen <command> [args]");
-        eprintln!("Commands:");
-        eprintln!("  check <file>   Parse and typecheck a .zen file");
-        eprintln!("  build <file>   Compile a .zen file to a binary");
-        eprintln!("  test <build.zen>   Compile and run deterministic test targets");
-        eprintln!(
-            "  build-graph <build.zen>   Compile executable targets from deterministic build graph"
-        );
-        eprintln!("  emit  <file>   Emit C source (no compilation)");
-        eprintln!("  emit-json ast <file>   Emit resolved AST JSON");
-        eprintln!("  emit-json symbols <file>   Emit resolver symbol tables JSON");
-        eprintln!("  emit-json typed <file>   Emit checked typed program JSON");
-        eprintln!("  emit-json diagnostics <file>   Emit diagnostics JSON");
-        eprintln!("  emit-json build-graph <build.zen>   Emit deterministic build graph JSON");
-        eprintln!("  <file>         Run a .zen file");
+        print_usage();
         process::exit(1);
     }
 
