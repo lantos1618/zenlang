@@ -2362,6 +2362,13 @@ and do not assume Phase 4 is ready without evidence.
 - Dependency-ordered build execution still stops before execution when graph
   lowering detects undeclared host effects, covered by
   `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
+- `src/typechecker/mod.rs` no longer owns resolver metadata restoration
+  mechanics directly. Struct field, enum variant, behavior method, callable
+  parameter, and optional-return restoration helpers live in
+  `src/typechecker/resolver_metadata_collection.rs`, reducing the root module
+  to typechecker state/orchestration while retaining focused resolver metadata
+  restoration coverage such as
+  `cargo test --lib resolver_behavior_methods_from_metadata_preserves_defaults_by_resolver_order`.
 
 ## Unresolved Gaps
 

@@ -2195,6 +2195,11 @@ checked-in docs, tests, and commits only.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes stay
   rejected with a targeted `emit-json build-graph` diagnostic, covered by
   `legacy_emit_json_modes_reject_build_zen_with_graph_diagnostic`.
+- Typechecker resolver metadata restoration helpers for struct fields, enum
+  variants, behavior methods, callable params, and optional return types now
+  live in `src/typechecker/resolver_metadata_collection.rs`, keeping
+  `src/typechecker/mod.rs` focused on state and orchestration while preserving
+  the existing resolver metadata restoration tests.
 
 ## Current Phase
 
