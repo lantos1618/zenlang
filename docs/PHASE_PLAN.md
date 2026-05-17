@@ -315,6 +315,9 @@ checked-in docs, tests, and commits only.
   helper, keeping expected metadata formatting separate from scoped local walks.
 - Build graph lowering from parsed build.zen programs now lives beside the
   graph model, keeping graph validation separate from AST traversal details.
+- Build graph lowering now owns accepted `build.zen` DSL spellings for target
+  kinds, target fields, and builder identifiers in focused enums instead of
+  scattering string literals through semantic lowering.
 - Resolver symbol-table behavior edge recording now lives in a focused helper,
   keeping symbol definition and lookup separate from association mutation.
 - Typechecker resolver callable signature restoration now lives in a focused

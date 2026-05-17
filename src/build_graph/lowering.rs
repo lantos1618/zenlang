@@ -9,6 +9,27 @@ enum BuildTargetDslKind {
     Library,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BuildTargetField {
+    Name,
+    Main,
+    Root,
+    RootSourceFile,
+    OutDir,
+    Dependencies,
+    Features,
+    Exports,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BuildTargetDslIdent {
+    Builder,
+    Add,
+    Build,
+    Env,
+    Os,
+}
+
 impl BuildTargetDslKind {
     const EXECUTABLE: &'static str = "Executable";
     const TEST: &'static str = "Test";
@@ -20,6 +41,60 @@ impl BuildTargetDslKind {
             Self::Test => Self::TEST,
             Self::Library => Self::LIBRARY,
         }
+    }
+}
+
+impl BuildTargetField {
+    const NAME: &'static str = "name";
+    const MAIN: &'static str = "main";
+    const ROOT: &'static str = "root";
+    const ROOT_SOURCE_FILE: &'static str = "root_source_file";
+    const OUT_DIR: &'static str = "out_dir";
+    const DEPENDENCIES: &'static str = "dependencies";
+    const FEATURES: &'static str = "features";
+    const EXPORTS: &'static str = "exports";
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Name => Self::NAME,
+            Self::Main => Self::MAIN,
+            Self::Root => Self::ROOT,
+            Self::RootSourceFile => Self::ROOT_SOURCE_FILE,
+            Self::OutDir => Self::OUT_DIR,
+            Self::Dependencies => Self::DEPENDENCIES,
+            Self::Features => Self::FEATURES,
+            Self::Exports => Self::EXPORTS,
+        }
+    }
+}
+
+impl fmt::Display for BuildTargetField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl BuildTargetDslIdent {
+    const BUILDER: &'static str = "b";
+    const ADD: &'static str = "add";
+    const BUILD: &'static str = "build";
+    const ENV: &'static str = "env";
+    const OS: &'static str = "os";
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Builder => Self::BUILDER,
+            Self::Add => Self::ADD,
+            Self::Build => Self::BUILD,
+            Self::Env => Self::ENV,
+            Self::Os => Self::OS,
+        }
+    }
+}
+
+impl fmt::Display for BuildTargetDslIdent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -48,7 +123,11 @@ impl BuildGraph {
             .declarations
             .iter()
             .find_map(|decl| match decl {
-                Declaration::Function { name, body, .. } if name == "build" => Some(body),
+                Declaration::Function { name, body, .. }
+                    if name == BuildTargetDslIdent::Build.as_str() =>
+                {
+                    Some(body)
+                }
                 _ => None,
             })
             .ok_or(BuildGraphError::MissingBuildFunction)?;
@@ -220,8 +299,11 @@ fn build_target_from_builder_add(expr: &Expression) -> Option<BuildTargetInput> 
     else {
         return None;
     };
-    if method != "add"
-        || !matches!(receiver.as_ref(), Expression::Identifier { name, .. } if name == "b")
+    if method != BuildTargetDslIdent::Add.as_str()
+        || !matches!(
+            receiver.as_ref(),
+            Expression::Identifier { name, .. } if name == BuildTargetDslIdent::Builder.as_str()
+        )
     {
         return None;
     }
@@ -239,12 +321,13 @@ fn build_target_from_builder_add(expr: &Expression) -> Option<BuildTargetInput> 
 }
 
 fn executable_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
-    let target_name = string_field(fields, "name")?;
-    let root_source_file =
-        string_field(fields, "main").or_else(|| string_field(fields, "root_source_file"))?;
-    let out_dir = string_field(fields, "out_dir")?;
-    let dependencies = string_array_field(fields, "dependencies").unwrap_or_default();
-    let features = string_array_field(fields, "features").unwrap_or_default();
+    let target_name = string_field(fields, BuildTargetField::Name)?;
+    let root_source_file = string_field(fields, BuildTargetField::Main)
+        .or_else(|| string_field(fields, BuildTargetField::RootSourceFile))?;
+    let out_dir = string_field(fields, BuildTargetField::OutDir)?;
+    let dependencies =
+        string_array_field(fields, BuildTargetField::Dependencies).unwrap_or_default();
+    let features = string_array_field(fields, BuildTargetField::Features).unwrap_or_default();
 
     Some(BuildTargetInput {
         name: target_name,
@@ -259,12 +342,13 @@ fn executable_target_from_fields(fields: &[(String, Expression)]) -> Option<Buil
 }
 
 fn test_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
-    let root_source_file =
-        string_field(fields, "root").or_else(|| string_field(fields, "root_source_file"))?;
+    let root_source_file = string_field(fields, BuildTargetField::Root)
+        .or_else(|| string_field(fields, BuildTargetField::RootSourceFile))?;
     let target_name =
-        string_field(fields, "name").unwrap_or_else(|| target_name_from_root(&root_source_file));
-    let dependencies = string_array_field(fields, "dependencies").unwrap_or_default();
-    let features = string_array_field(fields, "features").unwrap_or_default();
+        string_field(fields, BuildTargetField::Name).unwrap_or_else(|| target_name_from_root(&root_source_file));
+    let dependencies =
+        string_array_field(fields, BuildTargetField::Dependencies).unwrap_or_default();
+    let features = string_array_field(fields, BuildTargetField::Features).unwrap_or_default();
 
     Some(BuildTargetInput {
         name: target_name,
@@ -278,10 +362,11 @@ fn test_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTarge
 }
 
 fn library_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
-    let target_name = string_field(fields, "name")?;
-    let exports = string_array_field(fields, "exports")?;
-    let dependencies = string_array_field(fields, "dependencies").unwrap_or_default();
-    let features = string_array_field(fields, "features").unwrap_or_default();
+    let target_name = string_field(fields, BuildTargetField::Name)?;
+    let exports = string_array_field(fields, BuildTargetField::Exports)?;
+    let dependencies =
+        string_array_field(fields, BuildTargetField::Dependencies).unwrap_or_default();
+    let features = string_array_field(fields, BuildTargetField::Features).unwrap_or_default();
     if exports.is_empty() {
         return None;
     }
@@ -306,18 +391,21 @@ fn target_name_from_root(root: &str) -> String {
         .to_string()
 }
 
-fn string_field(fields: &[(String, Expression)], field_name: &str) -> Option<String> {
+fn string_field(fields: &[(String, Expression)], field_name: BuildTargetField) -> Option<String> {
     fields.iter().find_map(|(name, value)| {
-        (name == field_name).then(|| match value {
+        (name == field_name.as_str()).then(|| match value {
             Expression::StringLiteral { value, .. } => Some(value.clone()),
             _ => None,
         })?
     })
 }
 
-fn string_array_field(fields: &[(String, Expression)], field_name: &str) -> Option<Vec<String>> {
+fn string_array_field(
+    fields: &[(String, Expression)],
+    field_name: BuildTargetField,
+) -> Option<Vec<String>> {
     fields.iter().find_map(|(name, value)| {
-        if name != field_name {
+        if name != field_name.as_str() {
             return None;
         }
         let Expression::ArrayLiteral { elements, .. } = value else {
@@ -359,7 +447,7 @@ fn env_read_effect(expr: &Expression) -> Option<HostEffect> {
     else {
         return None;
     };
-    if method != "env" || !is_builder_os(receiver) {
+    if method != BuildTargetDslIdent::Env.as_str() || !is_builder_os(receiver) {
         return None;
     }
     let [Expression::StringLiteral { value, .. }] = args.as_slice() else {
@@ -372,14 +460,18 @@ fn is_builder_os(expr: &Expression) -> bool {
     matches!(
         expr,
         Expression::MemberAccess { object, field, .. }
-            if field == "os"
-                && matches!(object.as_ref(), Expression::Identifier { name, .. } if name == "b")
+            if field == BuildTargetDslIdent::Os.as_str()
+                && matches!(
+                    object.as_ref(),
+                    Expression::Identifier { name, .. }
+                        if name == BuildTargetDslIdent::Builder.as_str()
+                )
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::BuildTargetDslKind;
+    use super::{BuildTargetDslIdent, BuildTargetDslKind, BuildTargetField};
 
     #[test]
     fn build_target_dsl_kind_owns_source_spelling() {
@@ -393,5 +485,28 @@ mod tests {
         assert_eq!(BuildTargetDslKind::Executable.to_string(), "Executable");
         assert_eq!(BuildTargetDslKind::Test.to_string(), "Test");
         assert_eq!(BuildTargetDslKind::Library.to_string(), "Library");
+    }
+
+    #[test]
+    fn build_target_field_owns_source_spelling() {
+        assert_eq!(BuildTargetField::Name.as_str(), "name");
+        assert_eq!(BuildTargetField::Main.as_str(), "main");
+        assert_eq!(BuildTargetField::Root.as_str(), "root");
+        assert_eq!(BuildTargetField::RootSourceFile.as_str(), "root_source_file");
+        assert_eq!(BuildTargetField::OutDir.as_str(), "out_dir");
+        assert_eq!(BuildTargetField::Dependencies.as_str(), "dependencies");
+        assert_eq!(BuildTargetField::Features.as_str(), "features");
+        assert_eq!(BuildTargetField::Exports.as_str(), "exports");
+        assert_eq!(BuildTargetField::RootSourceFile.to_string(), "root_source_file");
+    }
+
+    #[test]
+    fn build_target_dsl_ident_owns_source_spelling() {
+        assert_eq!(BuildTargetDslIdent::Builder.as_str(), "b");
+        assert_eq!(BuildTargetDslIdent::Add.as_str(), "add");
+        assert_eq!(BuildTargetDslIdent::Build.as_str(), "build");
+        assert_eq!(BuildTargetDslIdent::Env.as_str(), "env");
+        assert_eq!(BuildTargetDslIdent::Os.as_str(), "os");
+        assert_eq!(BuildTargetDslIdent::Builder.to_string(), "b");
     }
 }
