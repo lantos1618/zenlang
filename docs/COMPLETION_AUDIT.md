@@ -3430,6 +3430,12 @@ and do not assume Phase 4 is ready without evidence.
 - All executing/checking `build.zen` command entrypoints now reject ordinary
   unknown executable target fields before creating outputs. Coverage:
   `build_zen_commands_reject_unknown_target_fields`.
+- All executing/checking `build.zen` command entrypoints now reject malformed
+  `Executable` target metadata for duplicate fields, missing required fields,
+  and invalid field value types before creating outputs. Coverage:
+  `build_zen_commands_reject_duplicate_executable_target_fields`,
+  `build_zen_commands_reject_missing_required_executable_target_fields`, and
+  `build_zen_commands_reject_invalid_executable_target_field_types`.
 - The stdlib build DSL, compiler/FFI bridges, environment, filesystem, IO,
   math, random, time, and memory facades, testing facade, memory allocator
   wrappers plus arena, async, heap, and mmap helpers, and core `Option`,

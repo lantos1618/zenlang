@@ -3101,6 +3101,12 @@ checked-in docs, tests, and commits only.
 - All executing/checking `build.zen` command entrypoints now reject ordinary
   unknown target fields before outputs are created, covered by
   `build_zen_commands_reject_unknown_target_fields`.
+- All executing/checking `build.zen` command entrypoints now reject malformed
+  `Executable` target metadata for duplicate fields, missing required fields,
+  and invalid field value types before outputs are created, covered by
+  `build_zen_commands_reject_duplicate_executable_target_fields`,
+  `build_zen_commands_reject_missing_required_executable_target_fields`, and
+  `build_zen_commands_reject_invalid_executable_target_field_types`.
 - The stdlib build DSL, compiler/FFI bridges, environment, filesystem, IO,
   math, random, time, and memory facades, testing facade, memory allocator
   wrappers plus arena, async, heap, and mmap helpers, and core `Option`,
