@@ -24,13 +24,13 @@ Once: {
 }
 
 Once.new = () Once {
-    return Once { state: ONCE_INCOMPLETE }
+    Once { state: ONCE_INCOMPLETE }
 }
 
 // Check if initialization has completed
 Once.is_completed = (self: Ptr<Once>) bool {
     state = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.state.ref())), i32)
-    return state == ONCE_COMPLETE
+    state == ONCE_COMPLETE
 }
 
 // Call the initialization function exactly once
@@ -46,20 +46,23 @@ Once.is_completed = (self: Ptr<Once>) bool {
 Once.call_once = (self: MutPtr<Once>) bool {
     // Fast path: already complete
     state = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.state.ref())), i32)
-    state == ONCE_COMPLETE ? { return false }
+    state == ONCE_COMPLETE ?
+        | true { false }
+        | false {
+            // Try to become the initializer
+            old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), ONCE_INCOMPLETE, ONCE_RUNNING)
 
-    // Try to become the initializer
-    old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), ONCE_INCOMPLETE, ONCE_RUNNING)
-
-    // We won the race - we are the initializer
-    old == ONCE_INCOMPLETE ? { return true }
-
-    // Another thread is initializing - wait for completion
-    old == ONCE_RUNNING ? {
-        self.wait_for_completion()
-    }
-
-    return false
+            // We won the race - we are the initializer
+            old == ONCE_INCOMPLETE ?
+                | true { true }
+                | false {
+                    // Another thread is initializing - wait for completion
+                    old == ONCE_RUNNING ? {
+                        self.wait_for_completion()
+                    }
+                    false
+                }
+        }
 }
 
 // Mark initialization as complete (must be called by initializer)
@@ -88,29 +91,27 @@ OnceCell: {
 }
 
 OnceCell.new = () OnceCell {
-    return OnceCell { once: Once.new(), value: 0 }
+    OnceCell { once: Once.new(), value: 0 }
 }
 
 // Get or initialize the value
 // Returns the stored value
 // Caller must initialize if call_once returns true
 OnceCell.get_or_init = (self: MutPtr<OnceCell>) i64 {
-    self.val.once.is_completed() ? {
-        return self.val.value
-    }
-
-    // Try to initialize
-    self.val.once.call_once() ? {
-        | true {
-            // We are the initializer - caller must set value and complete
-            return 0  // Signal that initialization is needed
-        }
+    self.val.once.is_completed() ?
+        | true { self.val.value }
         | false {
-            // Another thread initialized
-            return self.val.value
+            // Try to initialize
+            self.val.once.call_once() ?
+                | true {
+                    // We are the initializer - caller must set value and complete
+                    0  // Signal that initialization is needed
+                }
+                | false {
+                    // Another thread initialized
+                    self.val.value
+                }
         }
-    }
-    return self.val.value
 }
 
 // Set the value (must only be called during initialization)
@@ -121,11 +122,12 @@ OnceCell.set = (self: MutPtr<OnceCell>, value: i64) void {
 
 // Check if initialized
 OnceCell.is_initialized = (self: Ptr<OnceCell>) bool {
-    return self.val.once.is_completed()
+    self.val.once.is_completed()
 }
 
 // Get value without initialization (returns 0 if not initialized)
 OnceCell.get = (self: Ptr<OnceCell>) i64 {
-    self.val.once.is_completed() ? { return self.val.value }
-    return cast(0, i64)
+    self.val.once.is_completed() ?
+        | true { self.val.value }
+        | false { cast(0, i64) }
 }
