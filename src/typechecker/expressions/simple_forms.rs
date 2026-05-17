@@ -79,38 +79,6 @@ impl TypeChecker {
         })
     }
 
-    pub(super) fn check_return_expr(
-        &mut self,
-        value: &Option<Box<Expression>>,
-        span: Span,
-    ) -> Result<TypedExpression, Diagnostic> {
-        let typed_val = match value {
-            Some(v) => Some(Box::new(self.check_expr(v)?)),
-            None => None,
-        };
-
-        if let Some(ref expected) = self.current_return_type {
-            let actual = typed_val.as_ref().map(|v| &v.ty).unwrap_or(&Type::Void);
-            if !self.types_compatible(expected, actual) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E3030",
-                    format!(
-                        "return type mismatch: expected `{}`, found `{}`",
-                        expected.display_name(),
-                        actual.display_name()
-                    ),
-                    span,
-                ));
-            }
-        }
-
-        Ok(TypedExpression {
-            kind: TypedExprKind::Return(typed_val),
-            ty: Type::Never,
-            span,
-        })
-    }
-
     pub(super) fn check_cast_expr(
         &mut self,
         expr: &Expression,

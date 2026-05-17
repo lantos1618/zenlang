@@ -2717,6 +2717,10 @@ and do not assume Phase 4 is ready without evidence.
   instantiation is now covered by `tests/zen/generic_ufc_dedup.zen` and
   generated-C assertions that both calls resolve to a single emitted `id_i32`
   definition with no unspecialized `id` calls left behind.
+- The removed source `return` keyword no longer leaves dead source or typed AST
+  return-expression nodes behind. Final expressions remain the function result
+  path, and `repo_hygiene::source_ast_no_longer_has_return_expression_nodes`
+  guards the cleanup.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the

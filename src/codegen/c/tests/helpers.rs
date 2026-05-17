@@ -48,26 +48,6 @@ fn fresh_tmp_increments() {
 }
 
 #[test]
-fn emit_return_statement() {
-    let mut e = CEmitter::new();
-    let ret = texpr(
-        TypedExprKind::Return(Some(Box::new(texpr(
-            TypedExprKind::IntLiteral(0),
-            Type::I32,
-        )))),
-        Type::Never,
-    );
-    assert_eq!(e.emit_expr_to_stmt(&ret), "return 0LL;");
-}
-
-#[test]
-fn emit_return_void() {
-    let mut e = CEmitter::new();
-    let ret = texpr(TypedExprKind::Return(None), Type::Never);
-    assert_eq!(e.emit_expr_to_stmt(&ret), "return;");
-}
-
-#[test]
 fn emit_break_continue() {
     let mut e = CEmitter::new();
     assert_eq!(

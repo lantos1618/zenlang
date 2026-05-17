@@ -116,8 +116,6 @@ impl TypeChecker {
                 span,
             } => self.check_block_expr(statements, expr, *span),
 
-            Expression::Return { value, span } => self.check_return_expr(value, *span),
-
             Expression::Break { span } => Ok(TypedExpression {
                 kind: TypedExprKind::Break,
                 ty: Type::Never,

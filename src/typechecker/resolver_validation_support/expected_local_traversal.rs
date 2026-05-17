@@ -100,11 +100,6 @@ fn expected_resolver_expr_locals(
                 expected,
             );
         }
-        Expression::Return { value, .. } => {
-            if let Some(value) = value {
-                expected_resolver_expr_locals(value, scope_cursor, locals, expected);
-            }
-        }
         Expression::Closure { params, body, .. } => {
             expected_resolver_closure_locals(params, body, scope_cursor, locals, expected);
         }

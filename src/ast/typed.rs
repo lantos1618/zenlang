@@ -108,7 +108,6 @@ pub enum TypedExprKind {
 
     Block(TypedBlock),
 
-    Return(Option<Box<TypedExpression>>),
     Break,
     Continue,
     LoopControl {

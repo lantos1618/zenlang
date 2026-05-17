@@ -114,11 +114,6 @@ impl TypeChecker {
                     self.validate_generic_expr_type_references(expr, scoped_type_params);
                 }
             }
-            Expression::Return { value, .. } => {
-                if let Some(value) = value {
-                    self.validate_generic_expr_type_references(value, scoped_type_params);
-                }
-            }
             Expression::Closure {
                 params,
                 return_type,

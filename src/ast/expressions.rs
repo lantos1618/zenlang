@@ -274,11 +274,6 @@ pub enum Expression {
         expr: Option<Box<Expression>>,
         span: Span,
     },
-    /// Return from function.
-    Return {
-        value: Option<Box<Expression>>,
-        span: Span,
-    },
     Break {
         span: Span,
     },
@@ -356,7 +351,6 @@ impl Expression {
             | Expression::LoopControl { span, .. }
             | Expression::If { span, .. }
             | Expression::Block { span, .. }
-            | Expression::Return { span, .. }
             | Expression::Break { span, .. }
             | Expression::Continue { span, .. }
             | Expression::Closure { span, .. }

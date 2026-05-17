@@ -2525,6 +2525,10 @@ checked-in docs, tests, and commits only.
   instantiation is now covered by `tests/zen/generic_ufc_dedup.zen` and
   generated-C assertions proving both calls resolve to one `id_i32`
   definition.
+- The removed source `return` keyword no longer leaves dead source or typed AST
+  return-expression nodes behind. Final expressions remain the function result
+  path, and `repo_hygiene::source_ast_no_longer_has_return_expression_nodes`
+  guards the cleanup.
 - Expression function checking now lives in
   `src/typechecker/expressions/function_checking.rs`, keeping
   `src/typechecker/expressions.rs` focused on expression dispatch while

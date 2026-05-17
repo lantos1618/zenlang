@@ -277,18 +277,6 @@ impl Resolver {
                     diagnostics,
                 );
             }
-            Expression::Return { value, .. } => {
-                if let Some(value) = value {
-                    self.validate_expr_refs(
-                        table,
-                        type_params,
-                        value,
-                        locals,
-                        allow_self_type,
-                        diagnostics,
-                    );
-                }
-            }
             Expression::Closure {
                 params,
                 return_type,

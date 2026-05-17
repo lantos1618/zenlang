@@ -141,11 +141,6 @@ impl BuildProgramLowering {
                     self.collect_expr(expr);
                 }
             }
-            Expression::Return { value, .. } => {
-                if let Some(value) = value {
-                    self.collect_expr(value);
-                }
-            }
             Expression::Closure { body, .. } => self.collect_expr(body),
             Expression::Cast { expr, .. } | Expression::Defer { expr, .. } => {
                 self.collect_expr(expr)

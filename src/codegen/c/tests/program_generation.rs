@@ -21,24 +21,20 @@ fn make_simple_program() -> TypedProgram {
             body: TypedBlock {
                 statements: vec![],
                 expr: Some(Box::new(TypedExpression {
-                    kind: TypedExprKind::Return(Some(Box::new(TypedExpression {
-                        kind: TypedExprKind::BinaryOp {
-                            op: BinaryOp::Add,
-                            left: Box::new(TypedExpression {
-                                kind: TypedExprKind::Variable("a".into()),
-                                ty: Type::I32,
-                                span: crate::error::Span::dummy(),
-                            }),
-                            right: Box::new(TypedExpression {
-                                kind: TypedExprKind::Variable("b".into()),
-                                ty: Type::I32,
-                                span: crate::error::Span::dummy(),
-                            }),
-                        },
-                        ty: Type::I32,
-                        span: crate::error::Span::dummy(),
-                    }))),
-                    ty: Type::Never,
+                    kind: TypedExprKind::BinaryOp {
+                        op: BinaryOp::Add,
+                        left: Box::new(TypedExpression {
+                            kind: TypedExprKind::Variable("a".into()),
+                            ty: Type::I32,
+                            span: crate::error::Span::dummy(),
+                        }),
+                        right: Box::new(TypedExpression {
+                            kind: TypedExprKind::Variable("b".into()),
+                            ty: Type::I32,
+                            span: crate::error::Span::dummy(),
+                        }),
+                    },
+                    ty: Type::I32,
                     span: crate::error::Span::dummy(),
                 })),
                 ty: Type::I32,
@@ -134,12 +130,8 @@ fn generates_entry_point() {
             body: TypedBlock {
                 statements: vec![],
                 expr: Some(Box::new(TypedExpression {
-                    kind: TypedExprKind::Return(Some(Box::new(TypedExpression {
-                        kind: TypedExprKind::IntLiteral(0),
-                        ty: Type::I32,
-                        span: crate::error::Span::dummy(),
-                    }))),
-                    ty: Type::Never,
+                    kind: TypedExprKind::IntLiteral(0),
+                    ty: Type::I32,
                     span: crate::error::Span::dummy(),
                 })),
                 ty: Type::I32,
@@ -201,13 +193,7 @@ fn generates_function_with_defers() {
             return_type: Type::I32,
             body: TypedBlock {
                 statements: vec![],
-                expr: Some(Box::new(texpr(
-                    TypedExprKind::Return(Some(Box::new(texpr(
-                        TypedExprKind::IntLiteral(42),
-                        Type::I32,
-                    )))),
-                    Type::Never,
-                ))),
+                expr: Some(Box::new(texpr(TypedExprKind::IntLiteral(42), Type::I32))),
                 ty: Type::I32,
                 span: dummy(),
             },

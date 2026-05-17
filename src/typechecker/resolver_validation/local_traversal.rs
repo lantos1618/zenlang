@@ -183,11 +183,6 @@ impl TypeChecker {
                     locals,
                 );
             }
-            Expression::Return { value, .. } => {
-                if let Some(value) = value {
-                    self.require_resolver_expr_locals(symbols, value, scope_cursor, locals);
-                }
-            }
             Expression::Closure { params, body, .. } => {
                 self.require_resolver_closure_locals(symbols, params, body, scope_cursor, locals);
             }

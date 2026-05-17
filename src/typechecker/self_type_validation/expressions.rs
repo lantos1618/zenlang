@@ -126,11 +126,6 @@ impl TypeChecker {
                     self.validate_self_type_expr(expr, allow_self_type);
                 }
             }
-            Expression::Return { value, .. } => {
-                if let Some(value) = value {
-                    self.validate_self_type_expr(value, allow_self_type);
-                }
-            }
             Expression::Closure {
                 params,
                 return_type,

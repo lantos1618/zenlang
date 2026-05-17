@@ -49,11 +49,8 @@ fn return_type_mismatch_error() {
             return_type: Some(AstType::I32),
             body: Expression::Block {
                 statements: Vec::new(),
-                expr: Some(Box::new(Expression::Return {
-                    value: Some(Box::new(Expression::StringLiteral {
-                        value: "hello".into(),
-                        span: Span::dummy(),
-                    })),
+                expr: Some(Box::new(Expression::StringLiteral {
+                    value: "hello".into(),
                     span: Span::dummy(),
                 })),
                 span: Span::dummy(),
@@ -97,11 +94,8 @@ fn function_call_wrong_arity_is_error() {
                 return_type: Some(AstType::I32),
                 body: Expression::Block {
                     statements: Vec::new(),
-                    expr: Some(Box::new(Expression::Return {
-                        value: Some(Box::new(Expression::Identifier {
-                            name: "a".into(),
-                            span: Span::dummy(),
-                        })),
+                    expr: Some(Box::new(Expression::Identifier {
+                        name: "a".into(),
                         span: Span::dummy(),
                     })),
                     span: Span::dummy(),
