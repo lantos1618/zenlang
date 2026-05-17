@@ -2741,6 +2741,9 @@ checked-in docs, tests, and commits only.
   `direct_file_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
   File reads with `?` but no fallback arm also reject before execution through
   `direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
+  Multi-target executable graph execution keeps that rejection before execution
+  through
+  `direct_file_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`.
 - Build script lowering collects multiple executable targets deterministically,
   covered by `build_program_lowering_collects_multiple_executable_targets`.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes stay
