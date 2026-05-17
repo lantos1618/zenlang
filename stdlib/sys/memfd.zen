@@ -72,22 +72,25 @@ MemFd: {
 // flags: MFD_CLOEXEC | MFD_ALLOW_SEALING etc.
 MemFd.create = (name_ptr: i64, flags: u32) Result<MemFd, i32> {
     fd = compiler.syscall2(SYS_MEMFD_CREATE, name_ptr, flags)
-    fd < 0 ? { return Result.Err(cast(0 - fd, i32)) }
-
-    return Result.Ok(MemFd { fd: cast(fd, i32), size: 0 })
+    fd < 0 ?
+        | true { Result.Err(cast(0 - fd, i32)) }
+        | false { Result.Ok(MemFd { fd: cast(fd, i32), size: 0 }) }
 }
 
 // Create with common defaults (cloexec + allow sealing)
 MemFd.new = (name_ptr: i64) Result<MemFd, i32> {
-    return MemFd.create(name_ptr, MFD_CLOEXEC | MFD_ALLOW_SEALING)
+    MemFd.create(name_ptr, MFD_CLOEXEC | MFD_ALLOW_SEALING)
 }
 
 // Set the size of the memory file
 MemFd.truncate = (self: MutPtr<MemFd>, size: usize) Result<(), i32> {
     result = compiler.syscall2(SYS_FTRUNCATE, self.val.fd, size)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    self.val.size = size
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false {
+            self.val.size = size
+            Result.Ok(())
+        }
 }
 
 // Map the memory file into process address space
@@ -101,20 +104,22 @@ MemFd.map = (self: MutPtr<MemFd>, offset: usize, length: usize, prot: i32) Resul
         self.val.fd,
         offset
     )
-    addr < 0 ? { return Result.Err(cast(0 - addr, i32)) }
-    return Result.Ok(addr)
+    addr < 0 ?
+        | true { Result.Err(cast(0 - addr, i32)) }
+        | false { Result.Ok(addr) }
 }
 
 // Map entire file
 MemFd.map_all = (self: MutPtr<MemFd>, prot: i32) Result<i64, i32> {
-    return self.map(0, self.val.size, prot)
+    self.map(0, self.val.size, prot)
 }
 
 // Unmap a region
 MemFd.unmap = (addr: i64, length: usize) Result<(), i32> {
     result = compiler.syscall2(SYS_MUNMAP, addr, length)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // ============================================================================
@@ -124,21 +129,23 @@ MemFd.unmap = (addr: i64, length: usize) Result<(), i32> {
 // Add seals to prevent certain operations
 MemFd.add_seals = (self: MutPtr<MemFd>, seals: u32) Result<(), i32> {
     result = compiler.syscall3(SYS_FCNTL, self.val.fd, F_ADD_SEALS, seals)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Get current seals
 MemFd.get_seals = (self: Ptr<MemFd>) Result<u32, i32> {
     result = compiler.syscall2(SYS_FCNTL, self.val.fd, F_GET_SEALS)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, u32))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, u32)) }
 }
 
 // Seal the file completely (no modifications allowed)
 MemFd.seal_all = (self: MutPtr<MemFd>) Result<(), i32> {
     seals = F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE
-    return self.add_seals(seals)
+    self.add_seals(seals)
 }
 
 // ============================================================================
@@ -148,22 +155,25 @@ MemFd.seal_all = (self: MutPtr<MemFd>) Result<(), i32> {
 // Write data to the memory file
 MemFd.write = (self: MutPtr<MemFd>, buf: i64, len: usize) Result<usize, i32> {
     result = compiler.syscall3(SYS_WRITE, self.val.fd, buf, len)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, usize))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, usize)) }
 }
 
 // Read data from the memory file
 MemFd.read = (self: MutPtr<MemFd>, buf: i64, len: usize) Result<usize, i32> {
     result = compiler.syscall3(SYS_READ, self.val.fd, buf, len)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, usize))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, usize)) }
 }
 
 // Seek to position
 MemFd.seek = (self: MutPtr<MemFd>, offset: i64, whence: i32) Result<i64, i32> {
     result = compiler.syscall3(SYS_LSEEK, self.val.fd, offset, whence)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(result) }
 }
 
 // ============================================================================
@@ -172,12 +182,12 @@ MemFd.seek = (self: MutPtr<MemFd>, offset: i64, whence: i32) Result<i64, i32> {
 
 // Get raw file descriptor (for passing to other processes)
 MemFd.raw_fd = (self: Ptr<MemFd>) i32 {
-    return self.val.fd
+    self.val.fd
 }
 
 // Get current size
 MemFd.len = (self: Ptr<MemFd>) usize {
-    return self.val.size
+    self.val.size
 }
 
 // Close the memory file
@@ -201,7 +211,7 @@ SharedMemory.new = (name_ptr: i64, size: usize) Result<SharedMemory, i32> {
     // Create memfd
     memfd_result = MemFd.new(name_ptr)
     memfd_result ? {
-        | Err(e) { return Result.Err(e) }
+        | Err(e) { Result.Err(e) }
         | Ok(mfd) {
             // Set size
             mfd_mut = mfd
@@ -209,24 +219,24 @@ SharedMemory.new = (name_ptr: i64, size: usize) Result<SharedMemory, i32> {
             truncate_result ? {
                 | Err(e) {
                     mfd_mut.close()
-                    return Result.Err(e)
+                    Result.Err(e)
                 }
-                | Ok(_) { }
-            }
-
-            // Map it
-            map_result = mfd_mut.map_all(PROT_READ | PROT_WRITE)
-            map_result ? {
-                | Err(e) {
-                    mfd_mut.close()
-                    return Result.Err(e)
-                }
-                | Ok(addr) {
-                    return Result.Ok(SharedMemory {
-                        memfd: mfd_mut,
-                        base_addr: addr,
-                        size: size
-                    })
+                | Ok(_) {
+                    // Map it
+                    map_result = mfd_mut.map_all(PROT_READ | PROT_WRITE)
+                    map_result ? {
+                        | Err(e) {
+                            mfd_mut.close()
+                            Result.Err(e)
+                        }
+                        | Ok(addr) {
+                            Result.Ok(SharedMemory {
+                                memfd: mfd_mut,
+                                base_addr: addr,
+                                size: size
+                            })
+                        }
+                    }
                 }
             }
         }
@@ -235,17 +245,17 @@ SharedMemory.new = (name_ptr: i64, size: usize) Result<SharedMemory, i32> {
 
 // Get pointer to shared memory
 SharedMemory.ptr = (self: Ptr<SharedMemory>) i64 {
-    return self.val.base_addr
+    self.val.base_addr
 }
 
 // Get size
 SharedMemory.len = (self: Ptr<SharedMemory>) usize {
-    return self.val.size
+    self.val.size
 }
 
 // Get raw fd for sharing
 SharedMemory.fd = (self: Ptr<SharedMemory>) i32 {
-    return self.val.memfd.fd
+    self.val.memfd.fd
 }
 
 // Close and unmap
