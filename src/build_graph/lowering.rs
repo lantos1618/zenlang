@@ -28,6 +28,7 @@ enum BuildTargetDslIdent {
     Build,
     Env,
     Os,
+    ReadFile,
 }
 
 impl BuildTargetDslKind {
@@ -80,6 +81,7 @@ impl BuildTargetDslIdent {
     const BUILD: &'static str = "build";
     const ENV: &'static str = "env";
     const OS: &'static str = "os";
+    const READ_FILE: &'static str = "read_file";
 
     fn as_str(self) -> &'static str {
         match self {
@@ -88,6 +90,7 @@ impl BuildTargetDslIdent {
             Self::Build => Self::BUILD,
             Self::Env => Self::ENV,
             Self::Os => Self::OS,
+            Self::ReadFile => Self::READ_FILE,
         }
     }
 }
@@ -155,10 +158,10 @@ impl BuildProgramLowering {
     }
 
     fn collect_expr(&mut self, expr: &Expression) {
-        if let Some(effect) = env_read_effect(expr) {
+        if let Some(effect) = host_effect(expr) {
             self.used_host_effects.push(effect);
         }
-        if let Some(effect) = declared_env_read_effect(expr) {
+        if let Some(effect) = declared_host_effect(expr) {
             self.declared_host_effects.push(effect);
         }
         if let Some(target) = build_target_from_builder_add(expr) {
@@ -421,7 +424,7 @@ fn string_array_field(
     })
 }
 
-fn declared_env_read_effect(expr: &Expression) -> Option<HostEffect> {
+fn declared_host_effect(expr: &Expression) -> Option<HostEffect> {
     let Expression::Match {
         scrutinee, arms, ..
     } = expr
@@ -434,10 +437,10 @@ fn declared_env_read_effect(expr: &Expression) -> Option<HostEffect> {
             crate::ast::Pattern::Enum { variant, .. } if variant == "Err"
         )
     });
-    has_fallback.then(|| env_read_effect(scrutinee)).flatten()
+    has_fallback.then(|| host_effect(scrutinee)).flatten()
 }
 
-fn env_read_effect(expr: &Expression) -> Option<HostEffect> {
+fn host_effect(expr: &Expression) -> Option<HostEffect> {
     let Expression::MethodCall {
         receiver,
         method,
@@ -447,13 +450,21 @@ fn env_read_effect(expr: &Expression) -> Option<HostEffect> {
     else {
         return None;
     };
-    if method != BuildTargetDslIdent::Env.as_str() || !is_builder_os(receiver) {
+    if !is_builder_os(receiver) {
         return None;
     }
-    let [Expression::StringLiteral { value, .. }] = args.as_slice() else {
+    let [Expression::StringLiteral { value: argument, .. }] = args.as_slice() else {
         return None;
     };
-    Some(HostEffect::ReadEnv(value.clone()))
+    match method.as_str() {
+        method if method == BuildTargetDslIdent::Env.as_str() => {
+            Some(HostEffect::ReadEnv(argument.clone()))
+        }
+        method if method == BuildTargetDslIdent::ReadFile.as_str() => {
+            Some(HostEffect::ReadFile(argument.clone()))
+        }
+        _ => None,
+    }
 }
 
 fn is_builder_os(expr: &Expression) -> bool {

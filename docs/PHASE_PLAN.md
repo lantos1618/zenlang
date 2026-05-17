@@ -2103,7 +2103,11 @@ checked-in docs, tests, and commits only.
   `build_program_lowering_rejects_unknown_target_dependencies` covers
   unresolved target dependency rejection, and
   `build_program_lowering_rejects_undeclared_env_reads` keeps undeclared host
-  effects rejected during lowering.
+  effects rejected during lowering. The constrained deterministic-effect
+  surface also recognizes declared `b.os.read_file("...")` effects, covered by
+  `build_program_lowering_accepts_declared_file_reads`, while
+  `build_program_lowering_rejects_undeclared_file_reads` keeps undeclared file
+  reads rejected before graph promotion.
 - `emit-json build-graph <build.zen>` now exposes the constrained graph-emission
   path without enabling normal build execution. `emit_json_build_graph_outputs_project_build_graph`
   covers the positive CLI path, `emit_json_build_graph_outputs_library_target`
@@ -2115,6 +2119,10 @@ checked-in docs, tests, and commits only.
   and `emit_json_build_graph_rejects_undeclared_host_effects_before_library_target_lowering`
   and `emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering`
   cover negative host-effect paths through the advertised compiler command.
+  `emit_json_build_graph_outputs_declared_file_read_effects` and
+  `emit_json_build_graph_rejects_undeclared_file_read_effects` cover the
+  matching positive and negative deterministic file-read effect pair through
+  that same graph-emission command.
   `emit_json_build_graph_rejects_unknown_target_dependencies` covers unresolved
   target dependency rejection through the same graph-emission path, and
   `emit_json_build_graph_rejects_self_target_dependencies` covers
