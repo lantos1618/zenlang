@@ -43,6 +43,23 @@ fn stale_rewrite_audit_docs_are_removed() {
 }
 
 #[test]
+fn production_rust_files_stay_below_cleanup_threshold() {
+    const MAX_LINES: usize = 500;
+
+    for path in [
+        "src/build_graph/lowering.rs",
+        "src/cli.rs",
+        "src/typechecker/mod.rs",
+    ] {
+        let line_count = read(path).lines().count();
+        assert!(
+            line_count <= MAX_LINES,
+            "{path} has {line_count} lines; split focused helpers before growing past {MAX_LINES}"
+        );
+    }
+}
+
+#[test]
 fn ci_and_release_only_advertise_existing_targets() {
     let ci = read(".github/workflows/ci.yml");
     let release = read(".github/workflows/release.yml");
