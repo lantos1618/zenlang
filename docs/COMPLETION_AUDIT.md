@@ -1834,6 +1834,10 @@ and do not assume Phase 4 is ready without evidence.
   `generic_diagnostics::generic_function_explicit_type_arg_arity_does_not_emit_argument_followup`
   and
   `generic_diagnostics::generic_method_explicit_type_arg_arity_does_not_emit_argument_followup`.
+- Imported generic enum method explicit type-argument arity failures use the
+  same hard diagnostic and suppress inference/argument followups through the
+  module graph, covered by
+  `integration::imported_generic_enum_method_explicit_type_arg_arity_is_error`.
 - Malformed nested generic type annotations inside explicit function and
   method call type arguments now also skip dependent signature checks, covered
   by `generic_diagnostics::generic_function_type_arg_annotation_arity_is_error`
