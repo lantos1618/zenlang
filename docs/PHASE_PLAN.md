@@ -2477,6 +2477,11 @@ checked-in docs, tests, and commits only.
   `src/typechecker/expressions/aggregate_constructors.rs`, leaving
   `aggregate_support.rs` focused on member, array, and index access while
   preserving struct literal, enum variant, and generic enum fixture coverage.
+- Resolver validation support now keeps expected type-parameter metadata and
+  validation descriptors in
+  `src/typechecker/resolver_validation_support/expected_type_parameters.rs`,
+  separate from expected symbol-shape constructors while preserving resolver
+  metadata descriptor tests.
 
 ## Current Phase
 

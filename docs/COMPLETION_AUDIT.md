@@ -2706,6 +2706,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/expressions/aggregate_constructors.rs`, preserving focused
   struct literal, enum variant, and generic enum coverage while keeping
   member/array/index access support separate.
+- Expected resolver type-parameter metadata helpers now live in
+  `src/typechecker/resolver_validation_support/expected_type_parameters.rs`,
+  preserving expected-symbol and resolver metadata validation descriptor
+  coverage while keeping expected symbol constructors smaller.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
