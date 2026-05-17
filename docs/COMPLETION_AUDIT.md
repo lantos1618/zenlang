@@ -287,6 +287,10 @@ and do not assume Phase 4 is ready without evidence.
   serialization coverage into
   `tests/integration/cli_build/frontend_json/module_graph.rs`, leaving
   typed-program and diagnostics JSON checks in the parent module.
+- Build-graph JSON host-effect tests now split declared file-read fallback
+  accept/reject coverage into
+  `tests/integration/cli_build/build_graph_json_host_effects/file_reads.rs`,
+  leaving env-effect rejection ordering coverage in the parent module.
 - Generic specialization generated-C assertions now split multi-file import and
   dependency cases into
   `tests/integration/generic_specializations/multifile_generated_c.rs`,
