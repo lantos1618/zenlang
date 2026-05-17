@@ -2643,6 +2643,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_validation/replay_tasks/association_lists/association_validation.rs`,
   keeping extends, requires, combined association collection, and validation
   replay coverage separate from resolver replay bundle aggregation tests.
+- Extra resolver behavior-association metadata diagnostics now live in
+  `src/typechecker/tests/resolver_behavior_impls_requires/extra_metadata.rs`,
+  keeping extra impl/required name and ref mismatch coverage separate from
+  absent or wrong generic behavior association metadata tests.
 
 ## Current Phase
 

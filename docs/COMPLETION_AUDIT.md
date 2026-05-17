@@ -2904,6 +2904,10 @@ and do not assume Phase 4 is ready without evidence.
   preserving extends, requires, combined association collection, and validation
   replay coverage while keeping resolver replay bundle aggregation tests
   focused.
+- Extra resolver behavior-association metadata diagnostics now live in
+  `src/typechecker/tests/resolver_behavior_impls_requires/extra_metadata.rs`,
+  preserving extra impl/required name and ref mismatch coverage while keeping
+  absent or wrong generic behavior association metadata tests focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
