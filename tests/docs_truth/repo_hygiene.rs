@@ -126,6 +126,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/collections/char.zen",
         "stdlib/collections/queue.zen",
         "stdlib/compiler.zen",
+        "stdlib/concurrency/primitives/atomic.zen",
         "stdlib/concurrency/primitives/futex.zen",
         "stdlib/concurrency/sync/barrier.zen",
         "stdlib/concurrency/sync/channel.zen",

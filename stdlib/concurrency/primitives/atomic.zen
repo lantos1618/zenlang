@@ -26,12 +26,12 @@ AtomicBool: {
 
 AtomicBool.new = (initial: bool) AtomicBool {
     val = initial ? { 1 } : { 0 }
-    return AtomicBool { value: val }
+    AtomicBool { value: val }
 }
 
 AtomicBool.load = (self: Ptr<AtomicBool>) bool {
     val = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.value.ref())), i32)
-    return val != 0
+    val != 0
 }
 
 AtomicBool.store = (self: MutPtr<AtomicBool>, value: bool) void {
@@ -39,11 +39,11 @@ AtomicBool.store = (self: MutPtr<AtomicBool>, value: bool) void {
     compiler.atomic_store(compiler.raw_ptr_cast(&self.val.value.ref()), cast(val, u64))
 }
 
-// Swap and return old value
+// Swap and yield old value
 AtomicBool.swap = (self: MutPtr<AtomicBool>, value: bool) bool {
     new_val = value ? { 1 } : { 0 }
     old = cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.value.ref()), cast(new_val, u64)), i32)
-    return old != 0
+    old != 0
 }
 
 // Compare and swap: if current == expected, set to desired
@@ -52,14 +52,17 @@ AtomicBool.compare_exchange = (self: MutPtr<AtomicBool>, expected: bool, desired
     exp = expected ? { 1 } : { 0 }
     des = desired ? { 1 } : { 0 }
     old = cast(compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.value.ref()), cast(exp, u64), cast(des, u64)), i32)
-    return old == exp
+    old == exp
 }
 
-// Fetch and set to true, return old value
+// Fetch and set to true, yielding old value
 AtomicBool.fetch_or = (self: MutPtr<AtomicBool>, value: bool) bool {
-    value == false ? { return self.load() }
-    old = cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.value.ref()), 1), i32)
-    return old != 0
+    value == false ?
+        | true { self.load() }
+        | false {
+            old = cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.value.ref()), 1), i32)
+            old != 0
+        }
 }
 
 // ============================================================================
@@ -71,11 +74,11 @@ Atomic<T>: {
 }
 
 Atomic<T>.new = (initial: T) Atomic<T> {
-    return Atomic<T> { value: initial }
+    Atomic<T> { value: initial }
 }
 
 Atomic<T>.load = (self: Ptr<Atomic<T>>) T {
-    return cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.value.ref())), T)
+    cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.value.ref())), T)
 }
 
 Atomic<T>.store = (self: MutPtr<Atomic<T>>, value: T) void {
@@ -83,43 +86,43 @@ Atomic<T>.store = (self: MutPtr<Atomic<T>>, value: T) void {
 }
 
 Atomic<T>.swap = (self: MutPtr<Atomic<T>>, value: T) T {
-    return cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.value.ref()), cast(value, u64)), T)
+    cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.value.ref()), cast(value, u64)), T)
 }
 
 Atomic<T>.compare_exchange = (self: MutPtr<Atomic<T>>, expected: T, desired: T) bool {
     old = cast(compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.value.ref()), cast(expected, u64), cast(desired, u64)), T)
-    return old == expected
+    old == expected
 }
 
 // Returns old value, adds delta
 Atomic<T>.fetch_add = (self: MutPtr<Atomic<T>>, delta: T) T {
-    return cast(compiler.atomic_add(compiler.raw_ptr_cast(&self.val.value.ref()), cast(delta, u64)), T)
+    cast(compiler.atomic_add(compiler.raw_ptr_cast(&self.val.value.ref()), cast(delta, u64)), T)
 }
 
 Atomic<T>.fetch_sub = (self: MutPtr<Atomic<T>>, delta: T) T {
-    return cast(compiler.atomic_sub(compiler.raw_ptr_cast(&self.val.value.ref()), cast(delta, u64)), T)
+    cast(compiler.atomic_sub(compiler.raw_ptr_cast(&self.val.value.ref()), cast(delta, u64)), T)
 }
 
-// Convenience: add and return new value
+// Convenience: add and yield new value
 Atomic<T>.add = (self: MutPtr<Atomic<T>>, delta: T) T {
     old = self.fetch_add(delta)
-    return old + delta
+    old + delta
 }
 
-// Convenience: subtract and return new value
+// Convenience: subtract and yield new value
 Atomic<T>.sub = (self: MutPtr<Atomic<T>>, delta: T) T {
     old = self.fetch_sub(delta)
-    return old - delta
+    old - delta
 }
 
-// Increment and return new value
+// Increment and yield new value
 Atomic<T>.inc = (self: MutPtr<Atomic<T>>) T {
-    return self.add(1)
+    self.add(1)
 }
 
-// Decrement and return new value
+// Decrement and yield new value
 Atomic<T>.dec = (self: MutPtr<Atomic<T>>) T {
-    return self.sub(1)
+    self.sub(1)
 }
 
 // ============================================================================
@@ -131,15 +134,15 @@ AtomicPtr<T>: {
 }
 
 AtomicPtr.new = (initial: Ptr<T>) AtomicPtr<T> {
-    return AtomicPtr<T> { ptr: compiler.ptr_to_int(compiler.raw_ptr_cast(&initial.ref())) }
+    AtomicPtr<T> { ptr: compiler.ptr_to_int(compiler.raw_ptr_cast(&initial.ref())) }
 }
 
 AtomicPtr.null = () AtomicPtr<T> {
-    return AtomicPtr<T> { ptr: 0 }
+    AtomicPtr<T> { ptr: 0 }
 }
 
 AtomicPtr.load = (self: Ptr<AtomicPtr<T>>) i64 {
-    return cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.ptr.ref())), i64)
+    cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.ptr.ref())), i64)
 }
 
 AtomicPtr.store = (self: MutPtr<AtomicPtr<T>>, ptr: i64) void {
@@ -147,16 +150,16 @@ AtomicPtr.store = (self: MutPtr<AtomicPtr<T>>, ptr: i64) void {
 }
 
 AtomicPtr.swap = (self: MutPtr<AtomicPtr<T>>, ptr: i64) i64 {
-    return cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.ptr.ref()), cast(ptr, u64)), i64)
+    cast(compiler.atomic_xchg(compiler.raw_ptr_cast(&self.val.ptr.ref()), cast(ptr, u64)), i64)
 }
 
 AtomicPtr.compare_exchange = (self: MutPtr<AtomicPtr<T>>, expected: i64, desired: i64) bool {
     old = cast(compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.ptr.ref()), cast(expected, u64), cast(desired, u64)), i64)
-    return old == expected
+    old == expected
 }
 
 AtomicPtr.is_null = (self: Ptr<AtomicPtr<T>>) bool {
-    return self.load() == 0
+    self.load() == 0
 }
 
 // ============================================================================
@@ -177,7 +180,7 @@ SpinWait: {
 }
 
 SpinWait.new = () SpinWait {
-    return SpinWait { count: 0 }
+    SpinWait { count: 0 }
 }
 
 // Returns true if should yield to OS
@@ -185,14 +188,16 @@ SpinWait.spin_once = (self: MutPtr<SpinWait>) bool {
     self.val.count = self.val.count + 1
 
     // Spin for a while before yielding
-    self.val.count < 10 ? {
-        // CPU pause instruction would go here
-        // For now, just increment count
-        return false
-    }
-
-    // After many spins, suggest yielding
-    return self.val.count > 20
+    self.val.count < 10 ?
+        | true {
+            // CPU pause instruction would go here
+            // For now, just increment count
+            false
+        }
+        | false {
+            // After many spins, suggest yielding
+            self.val.count > 20
+        }
 }
 
 SpinWait.reset = (self: MutPtr<SpinWait>) void {
@@ -200,5 +205,5 @@ SpinWait.reset = (self: MutPtr<SpinWait>) void {
 }
 
 SpinWait.spin_count = (self: Ptr<SpinWait>) i32 {
-    return self.val.count
+    self.val.count
 }
