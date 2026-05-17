@@ -1,0 +1,12 @@
+{ io } = std
+
+id<T> = (value: T) T {
+    value
+}
+
+main = () i32 {
+    direct = id(12)
+    chained = 30.id<i32>()
+    io.println("${direct + chained}")
+    0
+}

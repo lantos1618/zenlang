@@ -25,6 +25,7 @@ fn generic_specializations_emit_each_generated_c_definition_once() {
         "generic_result_enum_method.zen",
         "generic_result_enum_multi_specialization.zen",
         "generic_struct.zen",
+        "generic_ufc_dedup.zen",
         "generic_ufc_function.zen",
         "generic_vec.zen",
         "generic_worklist.zen",

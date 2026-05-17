@@ -2521,6 +2521,10 @@ checked-in docs, tests, and commits only.
 - Generic receiver base detection now reuses the shared generic concrete-name
   matcher used by monomorphization, keeping method lookup and specialization
   from drifting on mangled generic type names.
+- Generic direct-call and UFC-call deduplication for the same function
+  instantiation is now covered by `tests/zen/generic_ufc_dedup.zen` and
+  generated-C assertions proving both calls resolve to one `id_i32`
+  definition.
 - Expression function checking now lives in
   `src/typechecker/expressions/function_checking.rs`, keeping
   `src/typechecker/expressions.rs` focused on expression dispatch while

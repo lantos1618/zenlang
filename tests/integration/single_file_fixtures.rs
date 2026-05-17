@@ -141,6 +141,11 @@ fn test_generic_ufc_function() {
 }
 
 #[test]
+fn test_generic_ufc_dedup() {
+    run_test("generic_ufc_dedup");
+}
+
+#[test]
 fn test_behavior_json_explicit_impl() {
     run_test("behavior_json_explicit_impl");
 }
