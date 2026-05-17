@@ -2655,6 +2655,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_collection/function_method_templates/type_impl_generic_methods/generic_templates.rs`,
   keeping template name, bound, return, parameter count, and mutability
   restoration coverage separate from plain `Type.impl` method metadata tests.
+- Resolver value absent declaration metadata tests now live in
+  `src/typechecker/tests/resolver_value_metadata/absent_declaration_metadata.rs`,
+  keeping rejected type, enum, behavior, parent, impl, and requires metadata on
+  value symbols separate from value signature and generic metadata validation.
 
 ## Current Phase
 
