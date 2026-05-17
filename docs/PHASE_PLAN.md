@@ -2691,6 +2691,10 @@ checked-in docs, tests, and commits only.
   `tests/integration/cli_build/legacy_graph_command_validation/graph_only_libraries.rs`,
   keeping missing source, valid source, and library typecheck coverage separate
   from executable-target, gated-dependency, and missing-root validation checks.
+- Imported behavior inheritance frontend diagnostics now live in
+  `tests/integration/frontend_diagnostics/behavior_extends.rs`, keeping
+  direct, imported-parent, and transitive parent-method diagnostics separate
+  from frontend helper and generic arity diagnostics.
 
 ## Current Phase
 
