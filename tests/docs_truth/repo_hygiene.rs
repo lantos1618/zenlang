@@ -33,6 +33,16 @@ fn aspirational_stdlib_is_explicitly_experimental() {
 }
 
 #[test]
+fn stale_rewrite_audit_docs_are_removed() {
+    for path in ["docs/REWRITE.md", "docs/AUDIT_PROMPT.md"] {
+        assert!(
+            !repo_root().join(path).exists(),
+            "{path} is stale rewrite/audit scaffolding; keep durable status in PHASE_PLAN and COMPLETION_AUDIT"
+        );
+    }
+}
+
+#[test]
 fn ci_and_release_only_advertise_existing_targets() {
     let ci = read(".github/workflows/ci.yml");
     let release = read(".github/workflows/release.yml");
