@@ -305,6 +305,9 @@ checked-in docs, tests, and commits only.
 - Typechecker monomorphization template dependency install/restore now lives in
   a dedicated helper module, keeping generic specialization flow separate from
   temporary source-module dependency overlays.
+- Typechecker `Self` expression and statement traversal now lives in a focused
+  validation child module, leaving declaration task and type-reference
+  validation separate.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
