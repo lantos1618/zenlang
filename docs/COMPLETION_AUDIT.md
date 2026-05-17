@@ -2713,6 +2713,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/resolver_validation_support/expected_type_parameters.rs`,
   preserving expected-symbol and resolver metadata validation descriptor
   coverage while keeping expected symbol constructors smaller.
+- Expected resolver local expression, statement, and pattern traversal now lives
+  in `src/typechecker/resolver_validation_support/expected_local_traversal.rs`,
+  preserving resolver local replay coverage while keeping expected-local entry
+  points smaller.
 - Lexer string literal and interpolation tests now live in
   `src/lexer/tests/string_literals.rs`, preserving literal escape and
   interpolation coverage while keeping the parent lexer test module smaller.
