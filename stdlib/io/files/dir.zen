@@ -49,13 +49,14 @@ DT_SOCK = 12
 // Create a directory
 mkdir = (path_ptr: i64, mode: u32) Result<(), i32> {
     result = compiler.syscall2(SYS_MKDIR, path_ptr, mode)
-    result < 0 ? { return Result.Err(cast(result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Create a directory with default permissions (0755)
 mkdir_default = (path_ptr: i64) Result<(), i32> {
-    return mkdir(path_ptr, DEFAULT_DIR_MODE)
+    mkdir(path_ptr, DEFAULT_DIR_MODE)
 }
 
 // Create directory and all parent directories
@@ -64,55 +65,62 @@ mkdir_all = (path_ptr: i64, mode: u32, allocator: Allocator) Result<(), i32> {
     // Try to create directly first
     result = mkdir(path_ptr, mode)
     result ? {
-        | Ok(_) { return Result.Ok(()) }
+        | Ok(_) { Result.Ok(()) }
         | Err(e) {
             // EEXIST (-17) means already exists - that's ok
-            e == -17 ? { return Result.Ok(()) }
-            // ENOENT (-2) means parent doesn't exist - need to create it
-            e != -2 ? { return Result.Err(e) }
-        }
-    }
+            e == -17 ?
+                | true { Result.Ok(()) }
+                | false {
+                    // ENOENT (-2) means parent doesn't exist - need to create it
+                    e != -2 ?
+                        | true { Result.Err(e) }
+                        | false {
+                            // Find the path length
+                            len :: usize = 0
+                            len < 4096 ? {
+                                c = compiler.load<u8>(compiler.int_to_ptr(path_ptr + cast(len, i64)))
+                                c == 0 ? { len = 4096 }
+                                c != 0 ? { len = len + 1 }
+                            }
 
-    // Find the path length
-    len :: usize = 0
-    len < 4096 ? {
-        c = compiler.load<u8>(compiler.int_to_ptr(path_ptr + cast(len, i64)))
-        c == 0 ? { len = 4096 }
-        c != 0 ? { len = len + 1 }
-    }
-
-    i ::= len
-    i > 0 ? {
-        i = i - 1
-        c = compiler.load<u8>(compiler.int_to_ptr(path_ptr + cast(i, i64)))
-        c == 47 ? {  // '/'
-            // Allocate buffer for parent path
-            parent = allocator.allocate(i + 1)
-            compiler.memcpy(compiler.int_to_ptr(parent), compiler.int_to_ptr(path_ptr), i)
-            compiler.store<u8>(compiler.int_to_ptr(parent + cast(i, i64)), 0)
-
-            // Recursively create parent
-            parent_result = mkdir_all(parent, mode, allocator)
-            allocator.deallocate(parent, i + 1)
-
-            parent_result ? {
-                | Err(e) { return Result.Err(e) }
-                | Ok(_) { }
+                            mkdir_parent_then_self(path_ptr, mode, allocator, len)
+                        }
+                }
             }
-
-            // Now create our directory
-            return mkdir(path_ptr, mode)
         }
-    }
+}
 
-    return Result.Err(-2)  // ENOENT - no parent found
+mkdir_parent_then_self = (path_ptr: i64, mode: u32, allocator: Allocator, index: usize) Result<(), i32> {
+    index == 0 ?
+        | true { Result.Err(-2) }  // ENOENT - no parent found
+        | false {
+            parent_end = index - 1
+            c = compiler.load<u8>(compiler.int_to_ptr(path_ptr + cast(parent_end, i64)))
+            c == 47 ?
+                | true {
+                    // Allocate buffer for parent path
+                    parent = allocator.allocate(parent_end + 1)
+                    compiler.memcpy(compiler.int_to_ptr(parent), compiler.int_to_ptr(path_ptr), parent_end)
+                    compiler.store<u8>(compiler.int_to_ptr(parent + cast(parent_end, i64)), 0)
+
+                    // Recursively create parent
+                    parent_result = mkdir_all(parent, mode, allocator)
+                    allocator.deallocate(parent, parent_end + 1)
+
+                    parent_result ?
+                        | Err(e) { Result.Err(e) }
+                        | Ok(_) { mkdir(path_ptr, mode) }
+                }
+                | false { mkdir_parent_then_self(path_ptr, mode, allocator, parent_end) }
+        }
 }
 
 // Remove an empty directory
 rmdir = (path_ptr: i64) Result<(), i32> {
     result = compiler.syscall1(SYS_RMDIR, path_ptr)
-    result < 0 ? { return Result.Err(cast(result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // ============================================================================
@@ -133,38 +141,50 @@ Dir: {
 Dir.open = (path_ptr: i64, allocator: Allocator) Result<Dir, i32> {
     // Open with O_DIRECTORY to ensure it's a directory
     fd = compiler.syscall4(SYS_OPENAT, AT_FDCWD, path_ptr, O_RDONLY | O_DIRECTORY | O_CLOEXEC, 0)
-    fd < 0 ? { return Result.Err(cast(fd, i32)) }
+    fd < 0 ?
+        | true { Result.Err(cast(fd, i32)) }
+        | false {
+            // Allocate read buffer (4KB)
+            buf_size: usize = 4096
+            buf = allocator.allocate(buf_size)
+            buf == 0 ?
+                | true {
+                    compiler.syscall1(SYS_CLOSE, fd)
+                    Result.Err(-12)  // ENOMEM
+                }
+                | false {
+                    dir = Dir {
+                        fd: cast(fd, i32),
+                        buf: buf,
+                        buf_size: buf_size,
+                        buf_pos: 0,
+                        buf_len: 0,
+                        allocator: allocator
+                    }
 
-    // Allocate read buffer (4KB)
-    buf_size: usize = 4096
-    buf = allocator.allocate(buf_size)
-    buf == 0 ? {
-        compiler.syscall1(SYS_CLOSE, fd)
-        return Result.Err(-12)  // ENOMEM
-    }
-
-    dir = Dir {
-        fd: cast(fd, i32),
-        buf: buf,
-        buf_size: buf_size,
-        buf_pos: 0,
-        buf_len: 0,
-        allocator: allocator
-    }
-
-    return Result.Ok(dir)
+                    Result.Ok(dir)
+                }
+        }
 }
 
 // Read next directory entry
 Dir.next = (self: MutPtr<Dir>) Option<DirEntry> {
     // Need to read more entries?
-    self.val.buf_pos >= self.val.buf_len ? {
-        nread = compiler.syscall3(SYS_GETDENTS64, self.val.fd, self.val.buf, self.val.buf_size)
-        nread <= 0 ? { return Option.None }
-        self.val.buf_len = cast(nread, usize)
-        self.val.buf_pos = 0
-    }
+    self.val.buf_pos >= self.val.buf_len ?
+        | true {
+            nread = compiler.syscall3(SYS_GETDENTS64, self.val.fd, self.val.buf, self.val.buf_size)
+            nread <= 0 ?
+                | true { Option.None }
+                | false {
+                    self.val.buf_len = cast(nread, usize)
+                    self.val.buf_pos = 0
+                    self.read_current()
+                }
+        }
+        | false { self.read_current() }
+}
 
+Dir.read_current = (self: MutPtr<Dir>) Option<DirEntry> {
     // Parse entry at current position
     entry_ptr = self.val.buf + cast(self.val.buf_pos, i64)
 
@@ -185,7 +205,7 @@ Dir.next = (self: MutPtr<Dir>) Option<DirEntry> {
     // Advance position
     self.val.buf_pos = self.val.buf_pos + cast(d_reclen, usize)
 
-    return Option.Some(entry)
+    Option.Some(entry)
 }
 
 // Close directory
@@ -200,37 +220,49 @@ Dir.close = (self: MutPtr<Dir>) void {
 // ============================================================================
 
 DirEntry.is_dir = (self: DirEntry) bool {
-    return self.d_type == DT_DIR
+    self.d_type == DT_DIR
 }
 
 DirEntry.is_file = (self: DirEntry) bool {
-    return self.d_type == DT_REG
+    self.d_type == DT_REG
 }
 
 DirEntry.is_symlink = (self: DirEntry) bool {
-    return self.d_type == DT_LNK
+    self.d_type == DT_LNK
 }
 
 DirEntry.is_dot = (self: DirEntry) bool {
     // Check for "." or ".."
     c0 = compiler.load<u8>(compiler.int_to_ptr(self.d_name))
-    c0 != 46 ? { return false }  // Not '.'
-
-    c1 = compiler.load<u8>(compiler.int_to_ptr(self.d_name + 1))
-    c1 == 0 ? { return true }    // "."
-
-    c1 != 46 ? { return false }  // Not ".."
-    c2 = compiler.load<u8>(compiler.int_to_ptr(self.d_name + 2))
-    return c2 == 0               // ".."
+    c0 != 46 ?
+        | true { false }  // Not '.'
+        | false {
+            c1 = compiler.load<u8>(compiler.int_to_ptr(self.d_name + 1))
+            c1 == 0 ?
+                | true { true }    // "."
+                | false {
+                    c1 != 46 ?
+                        | true { false }  // Not ".."
+                        | false {
+                            c2 = compiler.load<u8>(compiler.int_to_ptr(self.d_name + 2))
+                            c2 == 0       // ".."
+                        }
+                }
+        }
 }
 
 // Get name length
 DirEntry.name_len = (self: DirEntry) usize {
-    len :: usize = 0
-    len < 256 ? {
-        c = compiler.load<u8>(compiler.int_to_ptr(self.d_name + cast(len, i64)))
-        c == 0 ? { return len }
-        len = len + 1
-    }
-    return len
+    dir_entry_name_len_from(self.d_name, 0)
+}
+
+dir_entry_name_len_from = (name: i64, len: usize) usize {
+    len >= 256 ?
+        | true { len }
+        | false {
+            c = compiler.load<u8>(compiler.int_to_ptr(name + cast(len, i64)))
+            c == 0 ?
+                | true { len }
+                | false { dir_entry_name_len_from(name, len + 1) }
+        }
 }
