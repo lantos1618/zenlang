@@ -2545,8 +2545,13 @@ checked-in docs, tests, and commits only.
   `check_command_build_zen_accepts_declared_file_read_effects`,
   `check_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   and `check_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
-  while undeclared file reads reject before source validation through
-  `check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation`.
+  and multi-target graph validation keeps the same declared file-read fallback
+  behavior through
+  `check_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`.
+  Undeclared file reads reject before source validation through
+  `check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation`
+  and before multi-target source validation through
+  `check_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
   File reads with `?` but no fallback arm also reject before source validation
   through
   `check_command_build_zen_rejects_file_read_without_fallback_before_source_validation`.
