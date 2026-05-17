@@ -2946,6 +2946,10 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/emit_direct_validation/graph_only_libraries.rs`,
   preserving missing source, valid source, and library typecheck coverage while
   keeping executable target-count ambiguity checks focused.
+- `zen build build.zen` graph-only library validation tests now live in
+  `tests/integration/cli_build/build_command_validation/graph_only_libraries.rs`,
+  preserving missing source, valid source, and library typecheck coverage while
+  keeping executable-target and gated-dependency validation checks focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
