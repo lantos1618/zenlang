@@ -902,9 +902,9 @@ checked-in docs, tests, and commits only.
   of invoking both and relying on per-pass resolver-backed guards.
   AST import seeding now has a named helper pass, removing the residual mixed
   declaration collection loop.
-  Test-facing resolver replay task views now delegate to the same bundled
-  resolver declaration metadata collector as production replay instead of
-  running separate declaration scans, covered by
+  Test-facing resolver replay task views now use focused slice collectors
+  instead of collecting the full resolver declaration metadata bundle before
+  discarding unrelated task lists, covered by
   `resolver_type_declaration_metadata_tasks_collect_only_type_work`,
   `resolver_callable_declaration_metadata_tasks_collect_callable_work`,
   `resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls`,
