@@ -2770,6 +2770,8 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_accepts_declared_file_read_effects`,
   `emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `emit_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  `emit_command_build_zen_accepts_declared_file_read_effects_with_unselected_targets`,
+  `emit_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`,
   `emit_command_build_zen_rejects_undeclared_file_read_effects`, and
   `emit_command_build_zen_rejects_file_read_without_fallback`.
 - Direct `zen build.zen` execution now has executable graph fixtures for
