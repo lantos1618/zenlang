@@ -2549,7 +2549,7 @@ checked-in docs, tests, and commits only.
   growing back past the cleanup threshold.
 - Build graph execution setup now shares one `BuildGraphExecutionContext`
   helper for graph loading, dependency gates, and base directory selection,
-  with shared dependency ordering and existing non-executed source-validation
+  with shared dependency ordering and existing graph-only library validation
   ordering preserved, covered by `cargo test --test integration
   library_execution_gates`.
 - Build graph execution dependency gates now walk reachable dependencies, so a
@@ -2558,6 +2558,14 @@ checked-in docs, tests, and commits only.
   Coverage includes
   `build_command_build_zen_rejects_transitive_gated_test_dependencies` and
   `test_command_build_zen_rejects_transitive_gated_executable_dependencies`.
+- Build/test graph execution now skips unrelated gated target source validation
+  while preserving graph-only library validation and deterministic host-effect
+  ordering. Coverage includes
+  `build_command_build_zen_ignores_unrelated_gated_test_source_errors`,
+  `test_command_build_zen_ignores_unrelated_gated_executable_source_errors`,
+  `build_command_build_zen_rejects_undeclared_host_effects_before_skipping_unrelated_tests`,
+  and
+  `test_command_build_zen_rejects_undeclared_host_effects_before_skipping_unrelated_executables`.
 - CLI C emission and binary compilation helpers now live in
   `src/cli/compile.rs`, keeping the root CLI module focused on command
   dispatch, graph loading, and frontend diagnostics while preserving existing

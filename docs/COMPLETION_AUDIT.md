@@ -2671,7 +2671,7 @@ and do not assume Phase 4 is ready without evidence.
   threshold.
 - Build graph execution setup now shares one `BuildGraphExecutionContext`
   helper for graph loading, dependency gates, and base directory selection,
-  with shared dependency ordering and existing non-executed source-validation
+  with shared dependency ordering and existing graph-only library validation
   ordering preserved, covered by `cargo test --test integration
   library_execution_gates`.
 - Build graph execution dependency gates now validate reachable dependencies,
@@ -2681,6 +2681,15 @@ and do not assume Phase 4 is ready without evidence.
   test execution. Coverage includes
   `build_command_build_zen_rejects_transitive_gated_test_dependencies` and
   `test_command_build_zen_rejects_transitive_gated_executable_dependencies`.
+- Build/test graph execution now validates graph-only library targets without
+  validating unrelated gated executable/test target sources. Deterministic
+  host-effect validation still runs before execution can skip unrelated gated
+  target sources. Coverage includes
+  `build_command_build_zen_ignores_unrelated_gated_test_source_errors`,
+  `test_command_build_zen_ignores_unrelated_gated_executable_source_errors`,
+  `build_command_build_zen_rejects_undeclared_host_effects_before_skipping_unrelated_tests`,
+  and
+  `test_command_build_zen_rejects_undeclared_host_effects_before_skipping_unrelated_executables`.
 
 ## Unresolved Gaps
 
@@ -2698,8 +2707,10 @@ and do not assume Phase 4 is ready without evidence.
   execution, test and library target graph lowering/emission, single-target
   normal `zen emit build.zen`, validated library source dependencies for
   build/test/emit graph execution, direct and transitive gated executable/test
-  dependency rejection for selected target kinds, library-only graph execution
-  rejection, and targeted rejection for legacy generic `emit-json build.zen` modes. Library
+  dependency rejection for selected target kinds, skipped source validation for
+  unrelated gated executable/test targets during build/test execution,
+  library-only graph execution rejection, and targeted rejection for legacy
+  generic `emit-json build.zen` modes. Library
   execution, package/link semantics, and other broader graph semantics still
   need explicit deterministic semantics before promotion.
 - CLI compile helpers are now split into `src/cli/compile.rs`; this is an

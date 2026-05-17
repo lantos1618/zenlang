@@ -391,3 +391,50 @@ main = () i32 {
         "test command should not start after transitive gated dependency validation fails"
     );
 }
+
+#[test]
+fn test_command_build_zen_ignores_unrelated_gated_executable_source_errors() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable { name: "app", main: "missing_app.zen", out_dir: "build/app/" })
+    b.add(Test { name: "unit", root: "test.zen" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("test.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write test.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["test", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen test build.zen");
+
+    assert!(
+        output.status.success(),
+        "zen test build.zen failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        tmp.path().join("build").join("tests").join("unit").exists(),
+        "expected test output to exist"
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("test unit passed"),
+        "expected test pass output, stdout={}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}
