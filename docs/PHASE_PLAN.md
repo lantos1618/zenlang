@@ -2465,6 +2465,10 @@ checked-in docs, tests, and commits only.
   with shared dependency ordering and existing non-executed source-validation
   ordering preserved, covered by `cargo test --test integration
   library_execution_gates`.
+- CLI C emission and binary compilation helpers now live in
+  `src/cli/compile.rs`, keeping the root CLI module focused on command
+  dispatch, graph loading, and frontend diagnostics while preserving existing
+  build/emit integration coverage.
 
 ## Current Phase
 
