@@ -319,6 +319,10 @@ and do not assume Phase 4 is ready without evidence.
   transitive gated test dependency rejection coverage into
   `tests/integration/cli_build/legacy_graph_command_validation/gated_dependencies.rs`,
   aligning the executable graph validation entrypoints.
+- `zen test build.zen` validation tests now split direct and transitive gated
+  executable dependency rejection coverage into
+  `tests/integration/cli_build/graph_validation_test_command_validation/gated_dependencies.rs`,
+  matching the executable graph validation split layout.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.
