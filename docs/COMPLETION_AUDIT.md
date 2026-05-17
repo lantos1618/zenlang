@@ -3378,6 +3378,9 @@ and do not assume Phase 4 is ready without evidence.
   `emit_command_build_zen_rejects_duplicate_target_fields`,
   `emit_command_build_zen_rejects_missing_required_target_fields`, and
   `emit_command_build_zen_rejects_invalid_target_field_types`.
+- All executing/checking `build.zen` command entrypoints now reject ordinary
+  unknown executable target fields before creating outputs. Coverage:
+  `build_zen_commands_reject_unknown_target_fields`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

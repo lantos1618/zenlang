@@ -73,6 +73,11 @@ fn build_zen_commands_reject_link_fields() {
     assert_build_zen_commands_reject_gated_target_field("link", r#"["m"]"#);
 }
 
+#[test]
+fn build_zen_commands_reject_unknown_target_fields() {
+    assert_build_zen_commands_reject_unknown_target_field("output_dir", r#""build/app/""#);
+}
+
 fn assert_build_zen_command_rejects_unsupported_target_kind(args: &[&str], target_kind: &str) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
@@ -168,5 +173,63 @@ build = (b: Builder) Result<BuildConfig, BuildError> {{
     assert!(
         !tmp.path().join("build").exists(),
         "zen {args:?} should reject gated target fields before creating build outputs"
+    );
+}
+
+fn assert_build_zen_commands_reject_unknown_target_field(field: &str, value: &str) {
+    for args in [
+        &["build", "build.zen"][..],
+        &["build.zen"][..],
+        &["check", "build.zen"][..],
+        &["test", "build.zen"][..],
+        &["emit", "build.zen"][..],
+        &["build-graph", "build.zen"][..],
+    ] {
+        assert_build_zen_command_rejects_unknown_target_field(args, field, value);
+    }
+}
+
+fn assert_build_zen_command_rejects_unknown_target_field(args: &[&str], field: &str, value: &str) {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
+    b.add(Executable {{
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        {field}: {value},
+    }})
+    .Ok(b.config())
+}}
+"#
+        ),
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(args)
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build.zen command");
+
+    assert!(
+        !output.status.success(),
+        "zen {args:?} unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains(&format!(
+            "unknown field `{field}` in `Executable` build target"
+        )),
+        "expected unknown field diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        !tmp.path().join("build").exists(),
+        "zen {args:?} should reject unknown target fields before creating build outputs"
     );
 }

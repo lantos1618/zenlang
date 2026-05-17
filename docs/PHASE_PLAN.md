@@ -3052,6 +3052,9 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_rejects_duplicate_target_fields`,
   `emit_command_build_zen_rejects_missing_required_target_fields`, and
   `emit_command_build_zen_rejects_invalid_target_field_types`.
+- All executing/checking `build.zen` command entrypoints now reject ordinary
+  unknown target fields before outputs are created, covered by
+  `build_zen_commands_reject_unknown_target_fields`.
 
 ## Current Phase
 
