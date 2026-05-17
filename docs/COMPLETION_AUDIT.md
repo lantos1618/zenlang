@@ -2713,6 +2713,10 @@ and do not assume Phase 4 is ready without evidence.
 - Lexer string literal and interpolation tests now live in
   `src/lexer/tests/string_literals.rs`, preserving literal escape and
   interpolation coverage while keeping the parent lexer test module smaller.
+- `Self` expression and statement validation traversal now lives in
+  `src/typechecker/self_type_validation/expressions.rs`, preserving the same
+  context diagnostics while keeping declaration task collection and type
+  reference validation separate.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
