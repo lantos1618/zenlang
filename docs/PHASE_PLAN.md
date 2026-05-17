@@ -470,6 +470,9 @@ checked-in docs, tests, and commits only.
 - Build-command host-effect tests now keep declared file-read fallback accept
   and reject cases in a focused child module, leaving env-effect and
   ordering-before-execution cases in the parent integration module.
+- Direct `zen build.zen` validation tests now keep graph-only library source
+  and typecheck cases in a focused child module, separating them from
+  executable target and gated test dependency validation.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a
