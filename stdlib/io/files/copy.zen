@@ -26,8 +26,9 @@ copy_file_range = (fd_in: i32, off_in: i64, fd_out: i32, off_out: i64, len: usiz
         len,
         flags
     )
-    result < 0 ? { return Result.Err(result as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ?
+        | true { Result.Err(result as i32) }
+        | false { Result.Ok(result as usize) }
 }
 
 // Simple file-to-file copy using copy_file_range
@@ -35,8 +36,10 @@ copy_file_range = (fd_in: i32, off_in: i64, fd_out: i32, off_out: i64, len: usiz
 copy_fd = (src_fd: i32, dst_fd: i32, len: usize) Result<usize, i32> {
     total :: usize = 0
     remaining ::= len
+    failed ::= false
+    error ::= 0
 
-    remaining > 0 ? {
+    remaining > 0 && failed == false ? {
         chunk ::= remaining
         chunk > 1073741824 ? { chunk = 1073741824 }  // Max 1GB per call
 
@@ -50,13 +53,19 @@ copy_fd = (src_fd: i32, dst_fd: i32, len: usize) Result<usize, i32> {
                 }
             }
             | Err(e) {
-                total > 0 ? { return Result.Ok(total) }
-                return Result.Err(e)
+                total > 0 ?
+                    | true { remaining = 0 }
+                    | false {
+                        failed = true
+                        error = e
+                    }
             }
         }
     }
 
-    return Result.Ok(total)
+    failed ?
+        | true { Result.Err(error) }
+        | false { Result.Ok(total) }
 }
 
 // ============================================================================
@@ -69,16 +78,19 @@ copy_fd = (src_fd: i32, dst_fd: i32, len: usize) Result<usize, i32> {
 // Returns number of bytes sent
 sendfile = (out_fd: i32, in_fd: i32, offset: i64, count: usize) Result<usize, i32> {
     result = compiler.syscall4(SYS_SENDFILE, out_fd, in_fd, offset, count)
-    result < 0 ? { return Result.Err(result as i32) }
-    return Result.Ok(result as usize)
+    result < 0 ?
+        | true { Result.Err(result as i32) }
+        | false { Result.Ok(result as usize) }
 }
 
 // Send entire file to socket
 sendfile_all = (socket_fd: i32, file_fd: i32, len: usize) Result<usize, i32> {
     total :: usize = 0
     remaining ::= len
+    failed ::= false
+    error ::= 0
 
-    remaining > 0 ? {
+    remaining > 0 && failed == false ? {
         result = sendfile(socket_fd, file_fd, 0, remaining)
         result ? {
             | Ok(n) {
@@ -92,14 +104,20 @@ sendfile_all = (socket_fd: i32, file_fd: i32, len: usize) Result<usize, i32> {
                 // EAGAIN means try again (non-blocking socket)
                 e == -11 ? { }  // Continue
                 e != -11 ? {
-                    total > 0 ? { return Result.Ok(total) }
-                    return Result.Err(e)
+                    total > 0 ?
+                        | true { remaining = 0 }
+                        | false {
+                            failed = true
+                            error = e
+                        }
                 }
             }
         }
     }
 
-    return Result.Ok(total)
+    failed ?
+        | true { Result.Err(error) }
+        | false { Result.Ok(total) }
 }
 
 // ============================================================================
@@ -112,31 +130,52 @@ copy_fd_buffered = (src_fd: i32, dst_fd: i32, buf: i64, buf_size: usize) Result<
     total :: usize = 0
 
     done ::= false
-    done == false ? {
+    failed ::= false
+    error ::= 0
+
+    done == false && failed == false ? {
         // Read chunk
         nread = compiler.syscall3(SYS_READ, src_fd, buf, buf_size)
-        nread < 0 ? { return Result.Err(nread as i32) }
-        nread == 0 ? { done = true }
-
-        nread > 0 ? {
-            // Write all read data
-            written :: usize = 0
-            written < nread as usize ? {
-                nwrite = compiler.syscall3(
-                    SYS_WRITE,
-                    dst_fd,
-                    buf + written as i64,
-                    nread as usize - written
-                )
-                nwrite < 0 ? { return Result.Err(nwrite as i32) }
-                nwrite == 0 ? { return Result.Err(-28) }  // ENOSPC
-                written = written + nwrite as usize
+        nread < 0 ?
+            | true {
+                failed = true
+                error = nread as i32
             }
-            total = total + nread as usize
-        }
+            | false {
+                nread == 0 ? { done = true }
+
+                nread > 0 ? {
+                    // Write all read data
+                    written :: usize = 0
+                    written < nread as usize && failed == false ? {
+                        nwrite = compiler.syscall3(
+                            SYS_WRITE,
+                            dst_fd,
+                            buf + written as i64,
+                            nread as usize - written
+                        )
+                        nwrite < 0 ?
+                            | true {
+                                failed = true
+                                error = nwrite as i32
+                            }
+                            | false {
+                                nwrite == 0 ?
+                                    | true {
+                                        failed = true
+                                        error = -28  // ENOSPC
+                                    }
+                                    | false { written = written + nwrite as usize }
+                            }
+                    }
+                    total = total + nread as usize
+                }
+            }
     }
 
-    return Result.Ok(total)
+    failed ?
+        | true { Result.Err(error) }
+        | false { Result.Ok(total) }
 }
 
 // ============================================================================
@@ -148,44 +187,36 @@ copy_smart = (src_fd: i32, dst_fd: i32, len: usize, allocator: Allocator) Result
     // Try copy_file_range first (most efficient)
     result = copy_fd(src_fd, dst_fd, len)
     result ? {
-        | Ok(n) { return Result.Ok(n) }
+        | Ok(n) { Result.Ok(n) }
         | Err(e) {
             // EXDEV (-18): different filesystems on older kernel
             // EINVAL (-22): not supported for these fds
             // Fall back to buffered copy
             (e == -18) ? {
-                // Allocate buffer
-                buf_size: usize = 65536  // 64KB
-                buf = allocator.allocate(buf_size)
-                buf == 0 ? { return Result.Err(-12) }  // ENOMEM
-
-                copy_result = copy_fd_buffered(src_fd, dst_fd, buf, buf_size)
-                allocator.deallocate(buf, buf_size)
-                return copy_result
+                copy_fd_buffered_alloc(src_fd, dst_fd, allocator)
             } : {
                 (e == -22) ? {
-                    // Allocate buffer
-                    buf_size: usize = 65536  // 64KB
-                    buf = allocator.allocate(buf_size)
-                    buf == 0 ? { return Result.Err(-12) }  // ENOMEM
-
-                    copy_result = copy_fd_buffered(src_fd, dst_fd, buf, buf_size)
-                    allocator.deallocate(buf, buf_size)
-                    return copy_result
+                    copy_fd_buffered_alloc(src_fd, dst_fd, allocator)
                 } : {
                     (e == -38) ? {
-                        // Allocate buffer
-                        buf_size: usize = 65536  // 64KB
-                        buf = allocator.allocate(buf_size)
-                        buf == 0 ? { return Result.Err(-12) }  // ENOMEM
-
-                        copy_result = copy_fd_buffered(src_fd, dst_fd, buf, buf_size)
-                        allocator.deallocate(buf, buf_size)
-                        return copy_result
+                        copy_fd_buffered_alloc(src_fd, dst_fd, allocator)
+                    } : {
+                        Result.Err(e)
                     }
                 }
             }
-            return Result.Err(e)
         }
     }
+}
+
+copy_fd_buffered_alloc = (src_fd: i32, dst_fd: i32, allocator: Allocator) Result<usize, i32> {
+    buf_size: usize = 65536  // 64KB
+    buf = allocator.allocate(buf_size)
+    buf == 0 ?
+        | true { Result.Err(-12) }  // ENOMEM
+        | false {
+            copy_result = copy_fd_buffered(src_fd, dst_fd, buf, buf_size)
+            allocator.deallocate(buf, buf_size)
+            copy_result
+        }
 }
