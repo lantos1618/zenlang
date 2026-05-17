@@ -59,7 +59,7 @@ FileDescriptor: {
 
 // Create from raw fd
 FileDescriptor.from_raw = (fd: i32) FileDescriptor {
-    return FileDescriptor { fd: fd }
+    FileDescriptor { fd: fd }
 }
 
 // Standard file descriptors
@@ -71,65 +71,65 @@ STDERR = FileDescriptor { fd: 2 }
 // Low-Level Syscall Wrappers
 // ============================================================================
 
-// Open file and return file descriptor
+// Open file and produce a file descriptor
 // Returns negative errno on failure
 sys_open = (path_ptr: i64, flags: i32, mode: i32) i64 {
-    return compiler.syscall3(SYS_OPEN, path_ptr, flags, mode)
+    compiler.syscall3(SYS_OPEN, path_ptr, flags, mode)
 }
 
 // Close file descriptor
 sys_close = (fd: i32) i64 {
-    return compiler.syscall1(SYS_CLOSE, fd)
+    compiler.syscall1(SYS_CLOSE, fd)
 }
 
 // Read from file descriptor
 sys_read = (fd: i32, buf_ptr: i64, count: usize) i64 {
-    return compiler.syscall3(SYS_READ, fd, buf_ptr, count)
+    compiler.syscall3(SYS_READ, fd, buf_ptr, count)
 }
 
 // Write to file descriptor
 sys_write = (fd: i32, buf_ptr: i64, count: usize) i64 {
-    return compiler.syscall3(SYS_WRITE, fd, buf_ptr, count)
+    compiler.syscall3(SYS_WRITE, fd, buf_ptr, count)
 }
 
 // Seek in file
 sys_lseek = (fd: i32, offset: i64, whence: i32) i64 {
-    return compiler.syscall3(SYS_LSEEK, fd, offset, whence)
+    compiler.syscall3(SYS_LSEEK, fd, offset, whence)
 }
 
 // Check file access
 sys_access = (path_ptr: i64, mode: i32) i64 {
-    return compiler.syscall2(SYS_ACCESS, path_ptr, mode)
+    compiler.syscall2(SYS_ACCESS, path_ptr, mode)
 }
 
 // Create directory
 sys_mkdir = (path_ptr: i64, mode: i32) i64 {
-    return compiler.syscall2(SYS_MKDIR, path_ptr, mode)
+    compiler.syscall2(SYS_MKDIR, path_ptr, mode)
 }
 
 // Remove directory
 sys_rmdir = (path_ptr: i64) i64 {
-    return compiler.syscall1(SYS_RMDIR, path_ptr)
+    compiler.syscall1(SYS_RMDIR, path_ptr)
 }
 
 // Unlink (delete) file
 sys_unlink = (path_ptr: i64) i64 {
-    return compiler.syscall1(SYS_UNLINK, path_ptr)
+    compiler.syscall1(SYS_UNLINK, path_ptr)
 }
 
 // Rename file
 sys_rename = (old_ptr: i64, new_ptr: i64) i64 {
-    return compiler.syscall2(SYS_RENAME, old_ptr, new_ptr)
+    compiler.syscall2(SYS_RENAME, old_ptr, new_ptr)
 }
 
 // Get current working directory
 sys_getcwd = (buf_ptr: i64, size: usize) i64 {
-    return compiler.syscall2(SYS_GETCWD, buf_ptr, size)
+    compiler.syscall2(SYS_GETCWD, buf_ptr, size)
 }
 
 // Change directory
 sys_chdir = (path_ptr: i64) i64 {
-    return compiler.syscall1(SYS_CHDIR, path_ptr)
+    compiler.syscall1(SYS_CHDIR, path_ptr)
 }
 
 // ============================================================================
@@ -150,7 +150,7 @@ string_to_cstr = (s: String, allocator: Allocator) i64 {
     // Add null terminator
     compiler.store<u8>(compiler.gep(ptr, len), 0)
 
-    return cast(ptr, i64)
+    cast(ptr, i64)
 }
 
 // Free C string allocated by string_to_cstr
@@ -185,7 +185,7 @@ errno_to_error = (errno: i64, allocator: Allocator) IoError {
         | 28 { String.from("No space left on device", allocator) }
         | _ { String.from("Unknown error", allocator) }
 
-    return IoError { code: code, message: msg }
+    IoError { code: code, message: msg }
 }
 
 // Open file for reading
@@ -196,8 +196,8 @@ open_read = (path: String, allocator: Allocator) Result<FileDescriptor, IoError>
     free_cstr(cstr, path.len(), allocator)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(FileDescriptor.from_raw(result)) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(FileDescriptor.from_raw(result)) }
 }
 
 // Open file for writing (create/truncate)
@@ -208,8 +208,8 @@ open_write = (path: String, allocator: Allocator) Result<FileDescriptor, IoError
     free_cstr(cstr, path.len(), allocator)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(FileDescriptor.from_raw(result)) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(FileDescriptor.from_raw(result)) }
 }
 
 // Open file for appending
@@ -220,8 +220,8 @@ open_append = (path: String, allocator: Allocator) Result<FileDescriptor, IoErro
     free_cstr(cstr, path.len(), allocator)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(FileDescriptor.from_raw(result)) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(FileDescriptor.from_raw(result)) }
 }
 
 // Open file for read/write
@@ -232,8 +232,8 @@ open_readwrite = (path: String, allocator: Allocator) Result<FileDescriptor, IoE
     free_cstr(cstr, path.len(), allocator)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(FileDescriptor.from_raw(result)) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(FileDescriptor.from_raw(result)) }
 }
 
 // Close file
@@ -241,8 +241,8 @@ close = (fd: FileDescriptor, allocator: Allocator) Result<void, IoError> {
     result = sys_close(fd.fd)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(()) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(()) }
 }
 
 // Read from file into buffer
@@ -251,8 +251,8 @@ read = (fd: FileDescriptor, buf: i64, count: usize, allocator: Allocator) Result
     result = sys_read(fd.fd, buf, count)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(result) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(result) }
 }
 
 // Write buffer to file
@@ -261,8 +261,8 @@ write = (fd: FileDescriptor, buf: i64, count: usize, allocator: Allocator) Resul
     result = sys_write(fd.fd, buf, count)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(result) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(result) }
 }
 
 // Seek in file
@@ -270,8 +270,8 @@ seek = (fd: FileDescriptor, offset: i64, whence: i32, allocator: Allocator) Resu
     result = sys_lseek(fd.fd, offset, whence)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(result) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(result) }
 }
 
 // Get file size
@@ -279,19 +279,18 @@ file_size = (fd: FileDescriptor, allocator: Allocator) Result<usize, IoError> {
     // Save current position
     current_pos = sys_lseek(fd.fd, 0, SEEK_CUR)
     current_pos < 0 ?
-        | true { return Result.Err(errno_to_error(current_pos, allocator)) }
-        | false { }
-
-    // Seek to end
-    size = sys_lseek(fd.fd, 0, SEEK_END)
-    size < 0 ?
-        | true { return Result.Err(errno_to_error(size, allocator)) }
-        | false { }
-
-    // Restore position
-    _ = sys_lseek(fd.fd, current_pos, SEEK_SET)
-
-    return Result.Ok(size)
+        | true { Result.Err(errno_to_error(current_pos, allocator)) }
+        | false {
+            // Seek to end
+            size = sys_lseek(fd.fd, 0, SEEK_END)
+            size < 0 ?
+                | true { Result.Err(errno_to_error(size, allocator)) }
+                | false {
+                    // Restore position
+                    _ = sys_lseek(fd.fd, current_pos, SEEK_SET)
+                    Result.Ok(size)
+                }
+        }
 }
 
 // ============================================================================
@@ -303,7 +302,7 @@ file_exists = (path: String, allocator: Allocator) bool {
     cstr = string_to_cstr(path, allocator)
     result = sys_access(cstr, F_OK)
     free_cstr(cstr, path.len(), allocator)
-    return result == 0
+    result == 0
 }
 
 // Create directory
@@ -313,8 +312,8 @@ mkdir = (path: String, allocator: Allocator) Result<void, IoError> {
     free_cstr(cstr, path.len(), allocator)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(()) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(()) }
 }
 
 // Remove directory
@@ -324,8 +323,8 @@ rmdir = (path: String, allocator: Allocator) Result<void, IoError> {
     free_cstr(cstr, path.len(), allocator)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(()) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(()) }
 }
 
 // Delete file
@@ -335,8 +334,8 @@ unlink = (path: String, allocator: Allocator) Result<void, IoError> {
     free_cstr(cstr, path.len(), allocator)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(()) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(()) }
 }
 
 // Rename file
@@ -348,8 +347,8 @@ rename = (old_path: String, new_path: String, allocator: Allocator) Result<void,
     free_cstr(new_cstr, new_path.len(), allocator)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(()) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(()) }
 }
 
 // Get current working directory
@@ -363,28 +362,26 @@ getcwd = (allocator: Allocator) Result<String, IoError> {
     result == 0 ?
         | true {
             allocator.deallocate(buf, buf_size)
-            return Result.Err(errno_to_error(-1, allocator))
+            Result.Err(errno_to_error(-1, allocator))
+        }
+        | false { getcwd_scan_buffer(buf, buf_size, allocator, 0) }
+}
+
+getcwd_scan_buffer = (buf: i64, buf_size: usize, allocator: Allocator, len: usize) Result<String, IoError> {
+    len >= buf_size ?
+        | true {
+            allocator.deallocate(buf, buf_size)
+            Result.Err(errno_to_error(-36, allocator)) // ENAMETOOLONG
         }
         | false {
-            // Find null terminator to get actual length
-            len ::= 0
-            loop {
-                b = compiler.load<u8>(compiler.gep(buf, len))
-                b == 0 ?
-                    | true {
-                        str = String.from_ptr(buf, len, allocator)
-                        allocator.deallocate(buf, buf_size)
-                        return Result.Ok(str)
-                    }
-                    | false { len = len + 1 }
-                len >= buf_size ?
-                    | true {
-                        allocator.deallocate(buf, buf_size)
-                        return Result.Err(errno_to_error(-36, allocator)) // ENAMETOOLONG
-                    }
-                    | false { }
-            }
-            return Result.Err(errno_to_error(-1, allocator))
+            b = compiler.load<u8>(compiler.gep(buf, len))
+            b == 0 ?
+                | true {
+                    str = String.from_ptr(buf, len, allocator)
+                    allocator.deallocate(buf, buf_size)
+                    Result.Ok(str)
+                }
+                | false { getcwd_scan_buffer(buf, buf_size, allocator, len + 1) }
         }
 }
 
@@ -395,8 +392,8 @@ chdir = (path: String, allocator: Allocator) Result<void, IoError> {
     free_cstr(cstr, path.len(), allocator)
 
     result < 0 ?
-        | true { return Result.Err(errno_to_error(result, allocator)) }
-        | false { return Result.Ok(()) }
+        | true { Result.Err(errno_to_error(result, allocator)) }
+        | false { Result.Ok(()) }
 }
 
 // ============================================================================
@@ -408,14 +405,14 @@ read_file = (path: String, allocator: Allocator) Result<DynVec<u8>, IoError> {
     // Open file
     fd_result = open_read(path, allocator)
     fd_result ?
-        | Err(e) { return Result.Err(e) }
+        | Err(e) { Result.Err(e) }
         | Ok(fd) {
             // Get file size
             size_result = file_size(fd, allocator)
             size_result ?
                 | Err(e) {
                     _ = close(fd, allocator)
-                    return Result.Err(e)
+                    Result.Err(e)
                 }
                 | Ok(size) {
                     // Allocate buffer
@@ -428,7 +425,7 @@ read_file = (path: String, allocator: Allocator) Result<DynVec<u8>, IoError> {
                     read_result ?
                         | Err(e) {
                             allocator.deallocate(buf, size)
-                            return Result.Err(e)
+                            Result.Err(e)
                         }
                         | Ok(bytes_read) {
                             // Create DynVec from raw buffer
@@ -438,7 +435,7 @@ read_file = (path: String, allocator: Allocator) Result<DynVec<u8>, IoError> {
                                 capacity: size,
                                 allocator: allocator
                             }
-                            return Result.Ok(vec)
+                            Result.Ok(vec)
                         }
                 }
         }
@@ -449,7 +446,7 @@ write_file = (path: String, data: DynVec<u8>, allocator: Allocator) Result<void,
     // Open file for writing
     fd_result = open_write(path, allocator)
     fd_result ?
-        | Err(e) { return Result.Err(e) }
+        | Err(e) { Result.Err(e) }
         | Ok(fd) {
             // Write data
             buf = data.data.addr()
@@ -457,7 +454,7 @@ write_file = (path: String, data: DynVec<u8>, allocator: Allocator) Result<void,
             _ = close(fd, allocator)
 
             write_result ?
-                | Err(e) { return Result.Err(e) }
-                | Ok(_) { return Result.Ok(()) }
+                | Err(e) { Result.Err(e) }
+                | Ok(_) { Result.Ok(()) }
         }
 }
