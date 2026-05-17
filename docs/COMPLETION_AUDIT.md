@@ -2445,6 +2445,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration emit_command_build_zen_accepts_declared_file_read_effects`
   and
   `cargo test --test integration emit_command_build_zen_rejects_undeclared_file_read_effects`.
+- Single-target `zen emit build.zen` rejects selected executable dependencies
+  on gated library and test targets before C emission, covered by
+  `cargo test --test integration emit_command_build_zen_rejects_gated_library_dependencies`
+  and
+  `cargo test --test integration emit_command_build_zen_rejects_gated_test_dependencies`.
 - Single-target `zen emit build.zen` validates and typechecks graph-only
   library exports before emission, covered by
   `cargo test --test integration emit_command_build_zen_accepts_valid_graph_only_library_sources`,
