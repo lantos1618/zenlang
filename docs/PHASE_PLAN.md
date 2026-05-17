@@ -2195,6 +2195,10 @@ checked-in docs, tests, and commits only.
   `check_command_build_zen_rejects_undeclared_host_effects_before_target_typechecking`.
   The single-target host-effect rejection remains covered by
   `check_command_build_zen_rejects_undeclared_host_effects`.
+  Declared deterministic file-read effects are accepted through
+  `check_command_build_zen_accepts_declared_file_read_effects`, while
+  undeclared file reads reject before source validation through
+  `check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation`.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
   `test_command_build_zen_runs_test_targets`, compiles and runs multiple test
   graph targets through `test_command_build_zen_runs_multiple_test_targets`,

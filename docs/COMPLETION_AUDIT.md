@@ -2400,6 +2400,11 @@ and do not assume Phase 4 is ready without evidence.
   Undeclared host effects still reject before target source typechecking,
   covered by
   `cargo test --test integration check_command_build_zen_rejects_undeclared_host_effects_before_target_typechecking`.
+- `zen check build.zen` accepts declared deterministic file-read effects and
+  rejects undeclared file reads before source validation, covered by
+  `cargo test --test integration check_command_build_zen_accepts_declared_file_read_effects`
+  and
+  `cargo test --test integration check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation`.
 - Single-target `zen emit build.zen` rejects multi-executable ambiguity before
   per-executable source validation, covered by
   `cargo test --test integration emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source`.
