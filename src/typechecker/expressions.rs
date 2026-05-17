@@ -1,6 +1,7 @@
 //! Expression checking — check_function and check_expr.
 #![allow(clippy::result_large_err)]
 
+mod aggregate_constructors;
 mod aggregate_support;
 mod call_support;
 mod call_validation;
