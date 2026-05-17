@@ -2373,6 +2373,9 @@ and do not assume Phase 4 is ready without evidence.
 - Single-target `zen emit build.zen` rejects multi-executable ambiguity before
   per-executable source validation, covered by
   `cargo test --test integration emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source`.
+  It also rejects multi-executable ambiguity before graph-only library
+  typechecking, covered by
+  `cargo test --test integration emit_command_build_zen_reports_multi_target_ambiguity_before_graph_only_library_typechecking`.
 - Dependency-ordered build execution still stops before execution when graph
   lowering detects undeclared host effects, covered by
   `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.

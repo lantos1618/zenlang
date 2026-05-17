@@ -2187,7 +2187,10 @@ checked-in docs, tests, and commits only.
   typechecks them before emission through
   `emit_command_build_zen_rejects_graph_only_library_type_errors`, while
   `emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source`
-  keeps multi-executable ambiguity ahead of per-executable source checks.
+  and
+  `emit_command_build_zen_reports_multi_target_ambiguity_before_graph_only_library_typechecking`
+  keep multi-executable ambiguity ahead of per-executable and graph-only
+  library source checks.
 - Direct `zen build.zen` now aliases the same constrained deterministic graph
   build path as `zen build build.zen`, covered by
   `direct_file_command_build_zen_routes_through_deterministic_graph`, and
