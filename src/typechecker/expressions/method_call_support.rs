@@ -1,5 +1,7 @@
 use super::*;
 
+mod module_calls;
+
 impl TypeChecker {
     pub(super) fn check_method_call_expr(
         &mut self,
@@ -9,73 +11,10 @@ impl TypeChecker {
         args: &[Expression],
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
-        // Check if receiver is an imported module name (like `io`)
-        // In that case, this is a module-qualified call: io.println(args)
-        if let Expression::Identifier {
-            name: ref recv_name,
-            ..
-        } = receiver
+        if let Some(module_call) =
+            self.try_module_qualified_method_call(receiver, method, type_args, args, span)
         {
-            if self.is_import(recv_name) {
-                let mut typed_args = Vec::new();
-                for arg in args {
-                    typed_args.push(self.check_expr(arg)?);
-                }
-                let mangled = format!("{}_{}", recv_name, method);
-                // Try to look up the return type
-                let ret_type = if let Some(info) = self.functions.get(&mangled).cloned() {
-                    self.reject_module_call_type_args(
-                        "function",
-                        &format!("{}.{}", recv_name, method),
-                        type_args,
-                        span,
-                    );
-                    self.check_call_signature(
-                        "function",
-                        &mangled,
-                        &info.params,
-                        &typed_args,
-                        &span,
-                    );
-                    self.resolve_type(&info.return_type)
-                } else {
-                    let method_key = Self::method_key(recv_name, method);
-                    if let Some(info) = self.methods.get(&method_key).cloned() {
-                        self.reject_module_call_type_args("method", &method_key, type_args, span);
-                        self.check_call_signature(
-                            "method",
-                            &method_key,
-                            &info.params,
-                            &typed_args,
-                            &span,
-                        );
-                        self.resolve_type(&info.return_type)
-                    } else if self.is_root_std_runtime_call(recv_name, method) {
-                        self.reject_module_call_type_args(
-                            "function",
-                            &format!("{}.{}", recv_name, method),
-                            type_args,
-                            span,
-                        );
-                        Type::Void
-                    } else {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E3023",
-                            format!("undefined module function `{}.{}`", recv_name, method),
-                            span,
-                        ));
-                        Type::Unknown
-                    }
-                };
-                return Ok(TypedExpression {
-                    kind: TypedExprKind::FunctionCall {
-                        function: mangled,
-                        args: typed_args,
-                    },
-                    ty: ret_type,
-                    span,
-                });
-            }
+            return module_call;
         }
 
         let typed_receiver = self.check_expr(receiver)?;
@@ -377,26 +316,5 @@ impl TypeChecker {
         } else {
             self.unknown_method_expr(&type_name, method, typed_args, span)
         }
-    }
-
-    fn reject_module_call_type_args(
-        &mut self,
-        kind: &str,
-        name: &str,
-        type_args: &[AstType],
-        span: Span,
-    ) {
-        if type_args.is_empty() {
-            return;
-        }
-
-        self.diagnostics.push(Diagnostic::error(
-            "E5001",
-            format!(
-                "non-generic {} `{}` does not accept type arguments",
-                kind, name
-            ),
-            span,
-        ));
     }
 }
