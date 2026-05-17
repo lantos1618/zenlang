@@ -3075,6 +3075,11 @@ and do not assume Phase 4 is ready without evidence.
   preserving missing source, valid source, and library typecheck coverage while
   keeping executable-target, gated-dependency, and missing-root validation
   checks focused.
+- `zen test build.zen` graph-only library validation tests now live in
+  `tests/integration/cli_build/graph_validation_test_command_validation/graph_only_libraries.rs`,
+  preserving missing source, valid source, and library typecheck coverage while
+  keeping test-target, gated-dependency, and skipped-source validation checks
+  focused.
 - Imported behavior inheritance frontend diagnostics now live in
   `tests/integration/frontend_diagnostics/behavior_extends.rs`, preserving
   direct, imported-parent, and transitive parent-method diagnostics while
