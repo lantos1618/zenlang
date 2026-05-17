@@ -2087,6 +2087,8 @@ checked-in docs, tests, and commits only.
 - AST declaration semantic validation now builds behavior-association,
   type-reference, and struct field-default validation task lists in one
   declaration pass before replaying the existing validation order.
+- AST declaration semantic validation now replays that full validation task
+  bundle through one helper instead of unpacking sub-slices at the entrypoint.
 - AST pre-collection validation now builds `Self`-context and behavior-extends
   validation tasks in one declaration pass before replaying the existing
   validation order.

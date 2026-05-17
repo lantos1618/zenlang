@@ -359,3 +359,53 @@ main = () i32 { 1 }
     assert_eq!(tasks.type_references.len(), 5);
     assert_eq!(tasks.struct_field_defaults.len(), 1);
 }
+
+#[test]
+fn ast_declaration_semantic_bundle_replays_validation_passes() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 = "bad" }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (self: Point) str { "point" }
+}
+
+Point.requires(MissingBehavior)
+
+main = (value: MissingType) i32 { 1 }
+"#,
+    );
+    let tasks = TypeChecker::collect_ast_declaration_validation_tasks(&program.declarations);
+    let mut checker = TypeChecker::new();
+    checker.collect_declarations(&program.declarations);
+
+    checker.validate_ast_declaration_semantics_from_tasks(&tasks, None);
+
+    assert!(
+        checker
+            .diagnostics()
+            .iter()
+            .any(|d| d.message.contains("undefined behavior `MissingBehavior`")),
+        "expected behavior association diagnostics, got {:?}",
+        checker.diagnostics()
+    );
+    assert!(
+        checker
+            .diagnostics()
+            .iter()
+            .any(|d| d.message.contains("unknown type symbol 'MissingType'")),
+        "expected type reference diagnostics, got {:?}",
+        checker.diagnostics()
+    );
+    assert!(
+        checker.diagnostics().iter().any(|d| d
+            .message
+            .contains("field `x` default expects `i32`, found `str`")),
+        "expected field default diagnostics, got {:?}",
+        checker.diagnostics()
+    );
+}

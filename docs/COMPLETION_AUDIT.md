@@ -2523,6 +2523,9 @@ and do not assume Phase 4 is ready without evidence.
 - AST declaration collection now replays the full collection task bundle through
   one helper, covered by
   `cargo test --lib ast_declaration_collection_bundle_replays_collection_passes`.
+- AST declaration semantic validation now replays its full validation task
+  bundle through one helper, covered by
+  `cargo test --lib ast_declaration_semantic_bundle_replays_validation_passes`.
 
 ## Unresolved Gaps
 
