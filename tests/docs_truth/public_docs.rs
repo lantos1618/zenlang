@@ -173,11 +173,17 @@ fn public_language_docs_and_examples_do_not_teach_return_keyword() {
 
 #[test]
 fn stale_generated_tooling_directories_are_removed() {
-    for path in [".claude", "scripts", "examples/demo_project"] {
+    for path in [
+        ".claude",
+        "scripts",
+        "examples/demo_project",
+        "main",
+        "main.c",
+    ] {
         let absolute_path = repo_root().join(path);
         assert!(
             !absolute_path.exists(),
-            "{path} should not exist; stale generated tooling/examples should stay out of the repo"
+            "{path} should not exist; stale generated tooling/examples/build outputs should stay out of the repo"
         );
     }
 }
