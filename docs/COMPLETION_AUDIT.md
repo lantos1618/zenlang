@@ -2740,6 +2740,10 @@ and do not assume Phase 4 is ready without evidence.
 - Parser atom expression forms now live in `src/parser/atoms/forms.rs`,
   preserving loop, match, cast, shorthand enum, and string interpolation
   parsing while keeping prefix atom dispatch smaller.
+- Resolver declaration replay-kind helpers now live in
+  `src/typechecker/declaration_collection_resolver_tasks/replay_kinds.rs`,
+  preserving type, behavior, impl, callable, and type-reference replay task
+  construction while keeping declaration collection orchestration smaller.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

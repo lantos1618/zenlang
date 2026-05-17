@@ -326,6 +326,9 @@ checked-in docs, tests, and commits only.
 - Parser atom expression forms now live in a focused child module, leaving
   prefix atom dispatch separate from loop, match, cast, shorthand enum, and
   string interpolation parsing.
+- Resolver declaration replay-kind helpers now live in a focused child module,
+  leaving declaration collection orchestration separate from type, behavior,
+  impl, callable, and type-reference replay task construction.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
