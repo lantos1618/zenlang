@@ -3085,7 +3085,8 @@ checked-in docs, tests, and commits only.
   unknown target fields before outputs are created, covered by
   `build_zen_commands_reject_unknown_target_fields`.
 - Central stdlib core `Option`, `Result`, propagation, byte-buffer, iterator,
-  and pointer helpers no longer use the removed `return` keyword, guarded by
+  pointer, and slice helpers no longer use the removed `return` keyword,
+  guarded by
   `central_stdlib_core_modules_do_not_use_removed_return_keyword`, so the
   first stdlib compilation cleanup point stays aligned with expression-tail
   returns before broader stdlib parsing/building is promoted.
