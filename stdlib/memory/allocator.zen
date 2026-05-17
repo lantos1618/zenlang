@@ -67,7 +67,7 @@ Allocator: {
 
 Allocator.allocate = (self: Allocator, size: usize) RawPtr<u8> {
     f = self.allocate_fn
-    return f(self.ctx, size)
+    f(self.ctx, size)
 }
 
 Allocator.deallocate = (self: Allocator, ptr: RawPtr<u8>, size: usize) void {
@@ -77,30 +77,30 @@ Allocator.deallocate = (self: Allocator, ptr: RawPtr<u8>, size: usize) void {
 
 Allocator.reallocate = (self: Allocator, ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8> {
     f = self.reallocate_fn
-    return f(self.ctx, ptr, old_size, new_size)
+    f(self.ctx, ptr, old_size, new_size)
 }
 
 Allocator.mode = (self: Allocator) ExecutionMode {
     f = self.mode_fn
-    return f(self.ctx)
+    f(self.ctx)
 }
 
 Allocator.schedule_read = (self: Allocator, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
     f = self.schedule_read_fn
-    return f(self.ctx, fd, buf, len, offset, callback, user_data)
+    f(self.ctx, fd, buf, len, offset, callback, user_data)
 }
 
 Allocator.schedule_write = (self: Allocator, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
     f = self.schedule_write_fn
-    return f(self.ctx, fd, buf, len, offset, callback, user_data)
+    f(self.ctx, fd, buf, len, offset, callback, user_data)
 }
 
 Allocator.poll = (self: Allocator) i32 {
     f = self.poll_fn
-    return f(self.ctx)
+    f(self.ctx)
 }
 
 Allocator.wait = (self: Allocator) i32 {
     f = self.wait_fn
-    return f(self.ctx)
+    f(self.ctx)
 }
