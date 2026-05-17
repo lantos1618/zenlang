@@ -2980,6 +2980,12 @@ and do not assume Phase 4 is ready without evidence.
   `src/codegen/c/tests/program_generation.rs`, preserving function, struct,
   enum, entry-point, payload enum, and defer generation coverage while keeping
   shared C codegen test fixtures focused.
+- Resolver symbol table test-support setters for behavior metadata and
+  aggregate metadata now live in
+  `src/resolver/symbol_table_test_support/behavior_metadata.rs` and
+  `src/resolver/symbol_table_test_support/aggregate_metadata.rs`, preserving
+  existing test helper APIs while keeping the parent test-support module
+  focused on shared lookup/indexing and generic value metadata setters.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

@@ -2715,6 +2715,12 @@ checked-in docs, tests, and commits only.
   `src/codegen/c/tests/program_generation.rs`, keeping function, struct, enum,
   entry-point, payload enum, and defer generation coverage separate from shared
   C codegen test fixtures.
+- Resolver symbol table test-support setters for behavior metadata and
+  aggregate metadata now live in
+  `src/resolver/symbol_table_test_support/behavior_metadata.rs` and
+  `src/resolver/symbol_table_test_support/aggregate_metadata.rs`, keeping the
+  parent test-support module focused on shared lookup/indexing and generic
+  value metadata setters.
 
 ## Current Phase
 
