@@ -41,7 +41,7 @@ TaskContext: {
     r13: u64,
     r14: u64,
     r15: u64,
-    rip: u64     // Instruction pointer (return address)
+    rip: u64     // Instruction pointer (resume address)
 }
 
 // ============================================================================
@@ -84,52 +84,52 @@ Task.new = (entry: i64, arg: i64, allocator: Allocator) Result<Task, i32> {
         -1,
         0
     )
-    stack_base < 0 ? {
-        return Result.Err(cast(0 - stack_base, i32))
-    }
+    stack_base < 0 ?
+        | true { Result.Err(cast(0 - stack_base, i32)) }
+        | false {
+            // Set guard page (bottom of stack) to no-access
+            compiler.syscall3(
+                SYS_MPROTECT,
+                stack_base,
+                GUARD_PAGE_SIZE,
+                0    // PROT_NONE
+            )
 
-    // Set guard page (bottom of stack) to no-access
-    compiler.syscall3(
-        SYS_MPROTECT,
-        stack_base,
-        GUARD_PAGE_SIZE,
-        0    // PROT_NONE
-    )
+            // Stack grows down, so top is base + size
+            stack_top = stack_base + cast(total_size, i64) - 8
 
-    // Stack grows down, so top is base + size
-    stack_top = stack_base + cast(total_size, i64) - 8
+            // Initialize context for first switch
+            // Set up stack so context_switch will jump to task_entry
+            initial_rsp = stack_top - 64  // Space for initial frame
 
-    // Initialize context for first switch
-    // Set up stack so context_switch will jump to task_entry
-    initial_rsp = stack_top - 64  // Space for initial frame
+            task = Task {
+                id: 0,  // Will be set by scheduler
+                state: TaskState.Created,
+                context: TaskContext {
+                    rsp: cast(initial_rsp, u64),
+                    rbp: 0,
+                    rbx: 0,
+                    r12: 0,
+                    r13: 0,
+                    r14: 0,
+                    r15: 0,
+                    rip: cast(task_entry_trampoline, u64)
+                },
+                stack_base: stack_base,
+                stack_size: total_size,
+                stack_top: stack_top,
+                entry_fn: entry,
+                entry_arg: arg,
+                result: 0,
+                allocator: allocator
+            }
 
-    task = Task {
-        id: 0,  // Will be set by scheduler
-        state: TaskState.Created,
-        context: TaskContext {
-            rsp: cast(initial_rsp, u64),
-            rbp: 0,
-            rbx: 0,
-            r12: 0,
-            r13: 0,
-            r14: 0,
-            r15: 0,
-            rip: cast(task_entry_trampoline, u64)
-        },
-        stack_base: stack_base,
-        stack_size: total_size,
-        stack_top: stack_top,
-        entry_fn: entry,
-        entry_arg: arg,
-        result: 0,
-        allocator: allocator
-    }
+            // Store task pointer and arg on initial stack for trampoline
+            compiler.store<i64>(compiler.int_to_ptr(initial_rsp), compiler.ptr_to_int(&task.ref()))
+            compiler.store<i64>(compiler.int_to_ptr(initial_rsp + 8), arg)
 
-    // Store task pointer and arg on initial stack for trampoline
-    compiler.store<i64>(compiler.int_to_ptr(initial_rsp), compiler.ptr_to_int(&task.ref()))
-    compiler.store<i64>(compiler.int_to_ptr(initial_rsp + 8), arg)
-
-    return Result.Ok(task)
+            Result.Ok(task)
+        }
 }
 
 // ============================================================================
@@ -174,7 +174,7 @@ context_switch = (old_ctx: i64, new_ctx: i64) void {
     //    mov [old_ctx + 32], r13
     //    mov [old_ctx + 40], r14
     //    mov [old_ctx + 48], r15
-    //    lea rax, [rip + .return_point]
+    //    lea rax, [rip + .resume_point]
     //    mov [old_ctx + 56], rax
     //
     // 2. Load registers from new_ctx:
@@ -187,7 +187,7 @@ context_switch = (old_ctx: i64, new_ctx: i64) void {
     //    mov r15, [new_ctx + 48]
     //    jmp [new_ctx + 56]
     //
-    // .return_point:
+    // .resume_point:
     //    ret
 
     // Stub implementation - will be replaced with intrinsic
@@ -213,16 +213,15 @@ Task.resume = (self: MutPtr<Task>) void {
 
 // Check if task is completed
 Task.is_done = (self: Ptr<Task>) bool {
-    return self.val.state == TaskState.Completed ||
-           self.val.state == TaskState.Failed
+    self.val.state == TaskState.Completed ||
+        self.val.state == TaskState.Failed
 }
 
 // Get task result (after completion)
 Task.get_result = (self: Ptr<Task>) Option<i64> {
-    self.val.state == TaskState.Completed ? {
-        return Option.Some(self.val.result)
-    }
-    return Option.None
+    self.val.state == TaskState.Completed ?
+        | true { Option.Some(self.val.result) }
+        | false { Option.None }
 }
 
 // ============================================================================
@@ -250,8 +249,9 @@ set_current_task = (task: i64) void {
 }
 
 get_current_task = () Option<MutPtr<Task>> {
-    CURRENT_TASK == 0 ? { return Option.None }
-    return Option.Some(cast(compiler.int_to_ptr(CURRENT_TASK), MutPtr<Task>))
+    CURRENT_TASK == 0 ?
+        | true { Option.None }
+        | false { Option.Some(cast(compiler.int_to_ptr(CURRENT_TASK), MutPtr<Task>)) }
 }
 
 // ============================================================================
@@ -260,7 +260,7 @@ get_current_task = () Option<MutPtr<Task>> {
 // This is the key function that enables sync/async transparency.
 // When called with a pending operation, it:
 // - In sync mode: blocks until complete
-// - In async mode: suspends task, returns when resumed
+// - In async mode: suspends task, resumes after completion
 
 await_completion = (op_id: u64) void {
     // Check if we're in a task context
