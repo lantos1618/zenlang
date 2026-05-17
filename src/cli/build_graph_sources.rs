@@ -2,8 +2,6 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::process;
 
-use super::BuildGraphExecutionKind;
-
 pub(super) fn validate_build_graph_sources(base_dir: &Path, graph: &zen::build_graph::BuildGraph) {
     for target in graph.targets() {
         for source in target.sources() {
@@ -30,17 +28,17 @@ pub(super) fn check_build_graph_sources(base_dir: &Path, graph: &zen::build_grap
     check_source_paths(source_paths);
 }
 
-pub(super) fn validate_non_executed_target_sources(
+pub(super) fn validate_graph_only_library_sources(
     base_dir: &Path,
     graph: &zen::build_graph::BuildGraph,
-    execution_kind: BuildGraphExecutionKind,
 ) {
     let mut checked_sources = BTreeSet::new();
-    for target in graph
-        .targets()
-        .iter()
-        .filter(|target| !execution_kind.includes(target.kind()))
-    {
+    for target in graph.targets().iter().filter(|target| {
+        matches!(
+            target.kind(),
+            zen::build_graph::BuildTargetKind::Library { .. }
+        )
+    }) {
         for source in target.sources() {
             let source_path = base_dir.join(source);
             if !source_path.exists() {

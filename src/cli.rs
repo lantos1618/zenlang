@@ -15,11 +15,10 @@ mod usage;
 
 use build_graph_execution::{
     executable_build_targets, single_executable_build_target, test_build_targets,
-    BuildGraphExecutionKind,
 };
 use build_graph_loading::load_build_graph;
 use build_graph_sources::{
-    check_build_graph_sources, validate_build_graph_sources, validate_non_executed_target_sources,
+    check_build_graph_sources, validate_build_graph_sources, validate_graph_only_library_sources,
 };
 use build_graph_targets::{
     executable_build_target, test_build_target, BuildGraphExecutableTarget, BuildGraphTestTarget,

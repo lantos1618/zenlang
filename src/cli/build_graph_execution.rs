@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use super::{
-    executable_build_target, test_build_target, validate_non_executed_target_sources,
+    executable_build_target, test_build_target, validate_graph_only_library_sources,
     BuildGraphExecutableTarget, BuildGraphTestTarget,
 };
 
@@ -50,22 +50,14 @@ pub(super) fn single_executable_build_target(path_str: &str) -> BuildGraphExecut
         process::exit(1);
     }
 
-    validate_non_executed_target_sources(
-        &context.base_dir,
-        &context.graph,
-        BuildGraphExecutionKind::Executable,
-    );
+    validate_graph_only_library_sources(&context.base_dir, &context.graph);
     executable_build_target(&context.base_dir, executable_targets[0])
         .expect("one executable target")
 }
 
 pub(super) fn test_build_targets(path_str: &str) -> Vec<BuildGraphTestTarget> {
     let context = load_execution_context(path_str, BuildGraphExecutionKind::Test);
-    validate_non_executed_target_sources(
-        &context.base_dir,
-        &context.graph,
-        BuildGraphExecutionKind::Test,
-    );
+    validate_graph_only_library_sources(&context.base_dir, &context.graph);
     let ordered_targets = dependency_ordered_targets(&context.graph);
     let targets: Vec<_> = ordered_targets
         .into_iter()
@@ -89,11 +81,7 @@ pub(super) fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutab
 
 fn collect_executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
     let context = load_execution_context(path_str, BuildGraphExecutionKind::Executable);
-    validate_non_executed_target_sources(
-        &context.base_dir,
-        &context.graph,
-        BuildGraphExecutionKind::Executable,
-    );
+    validate_graph_only_library_sources(&context.base_dir, &context.graph);
     dependency_ordered_targets(&context.graph)
         .into_iter()
         .filter_map(|target| executable_build_target(&context.base_dir, target))

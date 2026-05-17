@@ -304,3 +304,45 @@ main = () i32 {
         "build command should not start after transitive gated dependency validation fails"
     );
 }
+
+#[test]
+fn build_command_build_zen_ignores_unrelated_gated_test_source_errors() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Test { name: "unit", root: "missing_test.zen" })
+    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    std::fs::write(
+        tmp.path().join("app.zen"),
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write app.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["build", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build build.zen");
+
+    assert!(
+        output.status.success(),
+        "zen build build.zen failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        tmp.path().join("build").join("app").join("app").exists(),
+        "expected executable output to exist"
+    );
+}
