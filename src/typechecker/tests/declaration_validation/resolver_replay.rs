@@ -258,7 +258,10 @@ main = (value: Point) i32 { 1 }
     let symbols = crate::resolver::Resolver::new()
         .resolve_program(&program)
         .expect("resolver succeeds");
-    let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+    let metadata_tasks =
+        TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+    let semantic_tasks =
+        TypeChecker::collect_resolver_declaration_semantic_validation_tasks(&program.declarations);
     let mut stale_declarations = program.declarations.clone();
     if let Declaration::Requires { behavior, .. } = &mut stale_declarations[3] {
         *behavior = "MissingBehavior".to_string();
@@ -270,9 +273,12 @@ main = (value: Point) i32 { 1 }
     checker.with_resolver_backed_collection(|checker| {
         checker.collect_declarations(&stale_declarations)
     });
-    checker.collect_resolver_declaration_metadata(&symbols, &tasks);
+    checker.collect_resolver_declaration_metadata(&symbols, &metadata_tasks);
 
-    checker.validate_resolver_declaration_semantics_from_tasks(&tasks, Some(&symbols));
+    checker.validate_resolver_declaration_semantics_from_semantic_tasks(
+        &semantic_tasks,
+        Some(&symbols),
+    );
 
     assert!(
         checker
@@ -321,7 +327,7 @@ main = (value: Point) i32 { 1 }
     let symbols = crate::resolver::Resolver::new()
         .resolve_program(&program)
         .expect("resolver succeeds");
-    let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+    let tasks = TypeChecker::collect_declaration_collection_replay_tasks(&program.declarations);
     let mut stale_declarations = program.declarations.clone();
     if let Declaration::Requires { behavior, .. } = &mut stale_declarations[3] {
         *behavior = "MissingBehavior".to_string();
@@ -334,7 +340,11 @@ main = (value: Point) i32 { 1 }
         checker.collect_declarations(&stale_declarations)
     });
 
-    checker.collect_resolver_declarations_from_tasks(&tasks, &symbols);
+    checker.collect_resolver_declarations_from_tasks(
+        &tasks.resolver,
+        &tasks.resolver_semantics,
+        &symbols,
+    );
 
     assert!(
         checker
@@ -402,6 +412,20 @@ main = () i32 { 1 }
     assert_eq!(tasks.resolver.behavior_associations.impls.len(), 1);
     assert_eq!(tasks.resolver.behavior_associations.requires.len(), 1);
     assert_eq!(tasks.resolver.type_references.len(), 4);
+    assert_eq!(
+        tasks.resolver_semantics.behavior_associations.impls.len(),
+        1
+    );
+    assert_eq!(
+        tasks
+            .resolver_semantics
+            .behavior_associations
+            .requires
+            .len(),
+        1
+    );
+    assert_eq!(tasks.resolver_semantics.struct_defaults.len(), 1);
+    assert_eq!(tasks.resolver_semantics.type_references.len(), 4);
 }
 
 #[test]

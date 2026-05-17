@@ -387,6 +387,11 @@ checked-in docs, tests, and commits only.
   collector instead of maintaining a second declaration match, and
   resolver-backed struct field default validation reuses the same collected
   type tasks on the fallback semantic path.
+- Declaration collection replay now also records resolver semantic validation
+  tasks in the same declaration pass as AST collection and resolver metadata,
+  so resolver-backed semantic validation replays dedicated behavior, type-ref,
+  and struct-default task lists instead of treating metadata tasks as a
+  semantic-validation bundle.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a

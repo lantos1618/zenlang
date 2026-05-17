@@ -4,11 +4,12 @@ impl TypeChecker {
     pub(super) fn collect_resolver_declarations_from_tasks(
         &mut self,
         tasks: &ResolverDeclarationMetadataTasks<'_>,
+        semantic_tasks: &ResolverDeclarationSemanticValidationTasks<'_>,
         symbols: &SymbolTable,
     ) {
         self.collect_resolver_declaration_metadata(symbols, tasks);
         self.collect_resolver_behavior_impl_metadata(tasks, symbols);
-        self.validate_resolver_collected_declaration_semantics(symbols, tasks);
+        self.validate_resolver_collected_declaration_semantics(symbols, semantic_tasks);
         self.clear_resolver_behavior_ref_state();
         self.refresh_resolver_type_behavior_impls(tasks, symbols);
     }
@@ -48,10 +49,11 @@ impl TypeChecker {
     pub(super) fn validate_resolver_collected_declaration_semantics(
         &mut self,
         symbols: &SymbolTable,
-        tasks: &ResolverDeclarationMetadataTasks<'_>,
+        tasks: &ResolverDeclarationSemanticValidationTasks<'_>,
     ) {
         self.with_resolver_backed_collection(|checker| {
-            checker.validate_resolver_declaration_semantics_from_tasks(tasks, Some(symbols));
+            checker
+                .validate_resolver_declaration_semantics_from_semantic_tasks(tasks, Some(symbols));
         });
     }
 

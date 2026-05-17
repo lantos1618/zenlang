@@ -8,6 +8,10 @@ impl TypeChecker {
         for decl in decls {
             Self::push_ast_declaration_collection_tasks(decl, &mut tasks.ast);
             Self::push_resolver_declaration_metadata_tasks(decl, &mut tasks.resolver);
+            Self::push_resolver_declaration_semantic_validation_tasks(
+                decl,
+                &mut tasks.resolver_semantics,
+            );
         }
         tasks
     }
