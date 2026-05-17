@@ -67,6 +67,22 @@ fn build_graph_command_accepts_declared_env_read_with_fallback() {
 }
 
 #[test]
+fn build_graph_command_accepts_wildcard_fallback_declared_env_read() {
+    assert_build_graph_command_accepts_declared_env_read(
+        r#"| _ { "default" }"#,
+        "build_graph_command_accepts_wildcard_fallback_declared_env_read",
+    );
+}
+
+#[test]
+fn build_graph_command_accepts_identifier_fallback_declared_env_read() {
+    assert_build_graph_command_accepts_declared_env_read(
+        r#"| err { "default" }"#,
+        "build_graph_command_accepts_identifier_fallback_declared_env_read",
+    );
+}
+
+#[test]
 fn emit_command_build_zen_accepts_declared_env_read_with_fallback() {
     let tmp = executable_graph_with_declared_env_read();
 
@@ -232,18 +248,45 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 fn executable_graph_with_declared_env_read() -> tempfile::TempDir {
+    executable_graph_with_declared_env_read_fallback(r#"| .Err { "default" }"#)
+}
+
+fn assert_build_graph_command_accepts_declared_env_read(fallback_arm: &str, case_name: &str) {
+    let tmp = executable_graph_with_declared_env_read_fallback(fallback_arm);
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["build-graph", "build.zen"])
+        .current_dir(tmp.path())
+        .output()
+        .expect("run zen build-graph build.zen");
+
+    assert!(
+        output.status.success(),
+        "{case_name}: zen build-graph build.zen failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        tmp.path().join("build").join("app").exists(),
+        "{case_name}: expected build output after declared env effect"
+    );
+}
+
+fn executable_graph_with_declared_env_read_fallback(fallback_arm: &str) -> tempfile::TempDir {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
     std_path = b.os.env("ZEN_STD") ?
-        | .Ok(value) { value }
-        | .Err { "default" }
-    b.add(Executable { name: "app", main: "main.zen", out_dir: "build/" })
+        | .Ok(value) {{ value }}
+        {fallback_arm}
+    b.add(Executable {{ name: "app", main: "main.zen", out_dir: "build/" }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
     std::fs::write(

@@ -2403,8 +2403,11 @@ checked-in docs, tests, and commits only.
   executable dependencies on gated test targets, and
   `build_graph_command_rejects_missing_root_source` covers a target execution
   failure before normal `zen build build.zen` is ungated.
-  Declared deterministic env reads with fallbacks are accepted through
-  `build_graph_command_accepts_declared_env_read_with_fallback`.
+  Declared deterministic env reads with `.Err`, wildcard, and identifier
+  fallback arms are accepted through
+  `build_graph_command_accepts_declared_env_read_with_fallback`,
+  `build_graph_command_accepts_wildcard_fallback_declared_env_read`, and
+  `build_graph_command_accepts_identifier_fallback_declared_env_read`.
   Env reads with `?` but no fallback arm reject before execution through
   `build_graph_command_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted through `.Err`,

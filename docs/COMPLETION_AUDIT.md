@@ -2532,8 +2532,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_rejects_undeclared_host_effects`
   and
   `cargo test --test integration build_graph_command_multi_target_rejects_undeclared_host_effects`.
-  Declared deterministic env reads with fallbacks are accepted through
-  `cargo test --test integration build_graph_command_accepts_declared_env_read_with_fallback`.
+  Declared deterministic env reads with `.Err`, wildcard, and identifier
+  fallback arms are accepted through
+  `cargo test --test integration build_graph_command_accepts_declared_env_read_with_fallback`,
+  `cargo test --test integration build_graph_command_accepts_wildcard_fallback_declared_env_read`,
+  and
+  `cargo test --test integration build_graph_command_accepts_identifier_fallback_declared_env_read`.
   Missing fallback arms on deterministic env reads reject before execution
   through
   `cargo test --test integration build_graph_command_rejects_env_read_without_fallback_before_execution`.
