@@ -2522,6 +2522,10 @@ checked-in docs, tests, and commits only.
   `test_command_multi_target_build_zen_rejects_undeclared_host_effects`.
   Test execution also accepts dependencies on validated library source targets
   through `test_command_build_zen_accepts_library_dependencies`, and rejects
+  unknown, self, and cyclic target dependencies before execution through
+  `test_command_build_zen_rejects_unknown_target_dependencies`,
+  `test_command_build_zen_rejects_self_target_dependencies`, and
+  `test_command_build_zen_rejects_cyclic_target_dependencies`. It rejects
   test-target dependencies on gated executable targets through
   `test_command_build_zen_rejects_gated_executable_dependencies`. It validates
   graph-only library exports before execution through
