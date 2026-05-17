@@ -2602,6 +2602,10 @@ checked-in docs, tests, and commits only.
   `tests/generic_diagnostics/call_site_bounds.rs`, keeping function, method,
   receiver, Result method, unknown bound method, and UFC bound-failure coverage
   separate from aggregate and annotation bound cases.
+- Generic behavior `requires` tests now live in
+  `src/typechecker/tests/generic_behaviors/requires.rs`, keeping requires
+  arity, missing-impl, and generic/nongeneric type-argument diagnostics
+  separate from behavior implementation coverage.
 
 ## Current Phase
 
