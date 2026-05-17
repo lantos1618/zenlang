@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -173,13 +173,15 @@ fn validate_non_executed_target_sources(
     graph: &zen::build_graph::BuildGraph,
     execution_kind: BuildGraphExecutionKind,
 ) {
+    let mut checked_sources = BTreeSet::new();
     for target in graph
         .targets()
         .iter()
         .filter(|target| !execution_kind.includes(target.kind()))
     {
         for source in target.sources() {
-            if !base_dir.join(source).exists() {
+            let source_path = base_dir.join(source);
+            if !source_path.exists() {
                 eprintln!(
                     "build graph target `{}` source not found: {}",
                     target.name(),
@@ -187,7 +189,16 @@ fn validate_non_executed_target_sources(
                 );
                 process::exit(1);
             }
+            checked_sources.insert(source_path);
         }
+    }
+
+    for source_path in checked_sources {
+        let source_path = source_path.to_str().unwrap_or_else(|| {
+            eprintln!("error: non-utf8 source path: {}", source_path.display());
+            process::exit(1);
+        });
+        super::graph_frontend(source_path);
     }
 }
 

@@ -2124,7 +2124,15 @@ checked-in docs, tests, and commits only.
   reject executable-target dependencies on gated test targets through
   `build_command_build_zen_rejects_gated_test_dependencies`. They reject
   graph-only library exports with missing sources through
-  `build_command_build_zen_rejects_missing_graph_only_library_source`, and
+  `build_command_build_zen_rejects_missing_graph_only_library_source`, accept
+  valid graph-only library exports through
+  `build_command_build_zen_accepts_valid_graph_only_library_sources`, and
+  typecheck graph-only library exports before compiling executable targets
+  through `build_command_build_zen_rejects_graph_only_library_type_errors`.
+  They preserve host-effect validation before graph-only library typechecking
+  through
+  `build_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`,
+  and reject
   undeclared host effects before dependency-ordered execution through
   `build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
   The normal build path also rejects undeclared host effects before
@@ -2163,7 +2171,9 @@ checked-in docs, tests, and commits only.
   test-target dependencies on gated executable targets through
   `test_command_build_zen_rejects_gated_executable_dependencies`. It validates
   graph-only library exports before execution through
-  `test_command_build_zen_rejects_missing_graph_only_library_source`.
+  `test_command_build_zen_rejects_missing_graph_only_library_source` and
+  typechecks them before execution through
+  `test_command_build_zen_rejects_graph_only_library_type_errors`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `emit_command_build_zen_outputs_target_c_source`, rejects ambiguous
@@ -2173,7 +2183,9 @@ checked-in docs, tests, and commits only.
   undeclared host effects through
   `emit_command_build_zen_rejects_undeclared_host_effects`. It validates
   graph-only library exports before emission through
-  `emit_command_build_zen_rejects_missing_graph_only_library_source`, while
+  `emit_command_build_zen_rejects_missing_graph_only_library_source` and
+  typechecks them before emission through
+  `emit_command_build_zen_rejects_graph_only_library_type_errors`, while
   `emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source`
   keeps multi-executable ambiguity ahead of per-executable source checks.
 - Direct `zen build.zen` now aliases the same constrained deterministic graph
@@ -2229,9 +2241,10 @@ Phase 4 build-driver work still has constrained `build.zen` semantics: normal
 graph targets, `zen test build.zen` executes multiple test graph targets,
 `zen check build.zen` validates executable, test, and library targets in the
 graph and typechecks target sources without compiling them, `zen emit build.zen`
-emits target C for a single executable graph target, and build/test execution
-rejects dependencies on gated library targets while library execution remains
-gated. Legacy generic JSON emitters reject
+emits target C for a single executable graph target, and build/test/emit
+validate and typecheck graph-only library target sources while build/test
+execution rejects dependencies on gated library targets and library execution
+remains gated. Legacy generic JSON emitters reject
 `build.zen` and point to
 `emit-json build-graph`.
 
