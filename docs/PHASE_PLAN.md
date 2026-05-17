@@ -2504,8 +2504,13 @@ checked-in docs, tests, and commits only.
   `build_command_build_zen_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted on the normal build
   path through `build_command_build_zen_accepts_declared_file_read_effects`,
-  while undeclared file reads reject before target execution through
-  `build_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  and multi-target executable graph execution keeps the same declared file-read
+  fallback behavior through
+  `build_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`.
+  Undeclared file reads reject before target execution through
+  `build_command_build_zen_rejects_undeclared_file_read_effects_before_execution`
+  and before multi-target execution through
+  `build_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
 - Normal `zen check build.zen` validates the same constrained deterministic
   graph without compiling targets, covered by
   `check_command_validates_build_zen_graph`. It typechecks graph target
