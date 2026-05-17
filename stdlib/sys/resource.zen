@@ -40,11 +40,11 @@ RLimit: {
 }
 
 RLimit.new = (soft: u64, hard: u64) RLimit {
-    return RLimit { soft: soft, hard: hard }
+    RLimit { soft: soft, hard: hard }
 }
 
 RLimit.unlimited = () RLimit {
-    return RLimit { soft: RLIM_INFINITY, hard: RLIM_INFINITY }
+    RLimit { soft: RLIM_INFINITY, hard: RLIM_INFINITY }
 }
 
 // ============================================================================
@@ -59,8 +59,9 @@ getrlimit = (resource: i32) Result<RLimit, i32> {
         resource,
         compiler.ptr_to_int(&rlimit.ref())
     )
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(rlimit)
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(rlimit) }
 }
 
 // Set resource limit for current process
@@ -72,8 +73,9 @@ setrlimit = (resource: i32, rlimit: Ptr<RLimit>) Result<(), i32> {
         resource,
         compiler.ptr_to_int(rlimit)
     )
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Get and optionally set resource limit (more flexible)
@@ -87,8 +89,9 @@ prlimit = (pid: i32, resource: i32, new_limit: i64, old_limit: i64) Result<(), i
         new_limit,
         old_limit
     )
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // ============================================================================
@@ -138,39 +141,41 @@ getrusage = (who: i32) Result<RUsage, i32> {
         compiler.ptr_to_int(rusage_ptr)
     )
 
-    result < 0 ? {
-        compiler.raw_deallocate(rusage_ptr, 144)
-        return Result.Err(cast(0 - result, i32))
-    }
+    result < 0 ?
+        | true {
+            compiler.raw_deallocate(rusage_ptr, 144)
+            Result.Err(cast(0 - result, i32))
+        }
+        | false {
+            // Extract fields
+            rusage = RUsage {
+                user_time: Timeval {
+                    sec: compiler.load<i64>(rusage_ptr),
+                    usec: compiler.load<i64>(compiler.gep(rusage_ptr, 8))
+                },
+                sys_time: Timeval {
+                    sec: compiler.load<i64>(compiler.gep(rusage_ptr, 16)),
+                    usec: compiler.load<i64>(compiler.gep(rusage_ptr, 24))
+                },
+                maxrss: compiler.load<i64>(compiler.gep(rusage_ptr, 32)),
+                ixrss: compiler.load<i64>(compiler.gep(rusage_ptr, 40)),
+                idrss: compiler.load<i64>(compiler.gep(rusage_ptr, 48)),
+                isrss: compiler.load<i64>(compiler.gep(rusage_ptr, 56)),
+                minflt: compiler.load<i64>(compiler.gep(rusage_ptr, 64)),
+                majflt: compiler.load<i64>(compiler.gep(rusage_ptr, 72)),
+                nswap: compiler.load<i64>(compiler.gep(rusage_ptr, 80)),
+                inblock: compiler.load<i64>(compiler.gep(rusage_ptr, 88)),
+                oublock: compiler.load<i64>(compiler.gep(rusage_ptr, 96)),
+                msgsnd: compiler.load<i64>(compiler.gep(rusage_ptr, 104)),
+                msgrcv: compiler.load<i64>(compiler.gep(rusage_ptr, 112)),
+                nsignals: compiler.load<i64>(compiler.gep(rusage_ptr, 120)),
+                nvcsw: compiler.load<i64>(compiler.gep(rusage_ptr, 128)),
+                nivcsw: compiler.load<i64>(compiler.gep(rusage_ptr, 136))
+            }
 
-    // Extract fields
-    rusage = RUsage {
-        user_time: Timeval {
-            sec: compiler.load<i64>(rusage_ptr),
-            usec: compiler.load<i64>(compiler.gep(rusage_ptr, 8))
-        },
-        sys_time: Timeval {
-            sec: compiler.load<i64>(compiler.gep(rusage_ptr, 16)),
-            usec: compiler.load<i64>(compiler.gep(rusage_ptr, 24))
-        },
-        maxrss: compiler.load<i64>(compiler.gep(rusage_ptr, 32)),
-        ixrss: compiler.load<i64>(compiler.gep(rusage_ptr, 40)),
-        idrss: compiler.load<i64>(compiler.gep(rusage_ptr, 48)),
-        isrss: compiler.load<i64>(compiler.gep(rusage_ptr, 56)),
-        minflt: compiler.load<i64>(compiler.gep(rusage_ptr, 64)),
-        majflt: compiler.load<i64>(compiler.gep(rusage_ptr, 72)),
-        nswap: compiler.load<i64>(compiler.gep(rusage_ptr, 80)),
-        inblock: compiler.load<i64>(compiler.gep(rusage_ptr, 88)),
-        oublock: compiler.load<i64>(compiler.gep(rusage_ptr, 96)),
-        msgsnd: compiler.load<i64>(compiler.gep(rusage_ptr, 104)),
-        msgrcv: compiler.load<i64>(compiler.gep(rusage_ptr, 112)),
-        nsignals: compiler.load<i64>(compiler.gep(rusage_ptr, 120)),
-        nvcsw: compiler.load<i64>(compiler.gep(rusage_ptr, 128)),
-        nivcsw: compiler.load<i64>(compiler.gep(rusage_ptr, 136))
-    }
-
-    compiler.raw_deallocate(rusage_ptr, 144)
-    return Result.Ok(rusage)
+            compiler.raw_deallocate(rusage_ptr, 144)
+            Result.Ok(rusage)
+        }
 }
 
 // ============================================================================
@@ -181,8 +186,8 @@ getrusage = (who: i32) Result<RUsage, i32> {
 get_max_open_files = () Result<u64, i32> {
     rlimit = getrlimit(RLIMIT_NOFILE)
     rlimit ? {
-        | Ok(r) { return Result.Ok(r.soft) }
-        | Err(e) { return Result.Err(e) }
+        | Ok(r) { Result.Ok(r.soft) }
+        | Err(e) { Result.Err(e) }
     }
 }
 
@@ -192,9 +197,9 @@ set_max_open_files = (limit: u64) Result<(), i32> {
     current ? {
         | Ok(r) {
             new_limit = RLimit.new(limit, r.hard)
-            return setrlimit(RLIMIT_NOFILE, &new_limit.ref())
+            setrlimit(RLIMIT_NOFILE, &new_limit.ref())
         }
-        | Err(e) { return Result.Err(e) }
+        | Err(e) { Result.Err(e) }
     }
 }
 
@@ -202,8 +207,8 @@ set_max_open_files = (limit: u64) Result<(), i32> {
 get_stack_size = () Result<u64, i32> {
     rlimit = getrlimit(RLIMIT_STACK)
     rlimit ? {
-        | Ok(r) { return Result.Ok(r.soft) }
-        | Err(e) { return Result.Err(e) }
+        | Ok(r) { Result.Ok(r.soft) }
+        | Err(e) { Result.Err(e) }
     }
 }
 
@@ -214,8 +219,8 @@ get_cpu_time = () Result<i64, i32> {
         | Ok(r) {
             user_us = r.user_time.sec * 1000000 + r.user_time.usec
             sys_us = r.sys_time.sec * 1000000 + r.sys_time.usec
-            return Result.Ok(user_us + sys_us)
+            Result.Ok(user_us + sys_us)
         }
-        | Err(e) { return Result.Err(e) }
+        | Err(e) { Result.Err(e) }
     }
 }
