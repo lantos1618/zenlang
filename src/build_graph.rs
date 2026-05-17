@@ -34,6 +34,22 @@ pub enum BuildTargetKind {
     },
 }
 
+impl BuildTargetKind {
+    pub fn diagnostic_name(&self) -> &'static str {
+        match self {
+            Self::Executable { .. } => "executable",
+            Self::Test { .. } => "test",
+            Self::Library { .. } => "library",
+        }
+    }
+}
+
+impl fmt::Display for BuildTargetKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.diagnostic_name())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum HostEffect {
