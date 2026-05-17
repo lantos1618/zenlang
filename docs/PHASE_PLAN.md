@@ -2401,6 +2401,8 @@ checked-in docs, tests, and commits only.
   and `build_graph_command_accepts_identifier_fallback_declared_file_read_effects`,
   while undeclared file reads reject before execution through
   `build_graph_command_rejects_undeclared_file_read_effects_before_execution`.
+  File reads with `?` but no fallback arm also reject before execution through
+  `build_graph_command_rejects_file_read_without_fallback_before_execution`.
 - Normal `zen build build.zen` now routes through the same constrained
   deterministic graph pipeline used by `build-graph <build.zen>`, covered by
   `build_command_routes_build_zen_through_deterministic_graph`. The normal
@@ -2499,6 +2501,9 @@ checked-in docs, tests, and commits only.
   path through `test_command_build_zen_accepts_declared_file_read_effects`,
   while undeclared file reads reject before test execution through
   `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  File reads with `?` but no fallback arm also reject before test execution
+  through
+  `test_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `emit_command_build_zen_outputs_target_c_source`, rejects ambiguous
@@ -2575,6 +2580,8 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_accepts_declared_file_read_effects`, while
   undeclared file reads reject before execution through
   `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  File reads with `?` but no fallback arm also reject before execution through
+  `direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - Build script lowering collects multiple executable targets deterministically,
   covered by `build_program_lowering_collects_multiple_executable_targets`.
 - Legacy `emit-json ast|symbols|typed|diagnostics build.zen` modes stay
@@ -2623,11 +2630,13 @@ checked-in docs, tests, and commits only.
   an executable `zen build build.zen` file-read fixture.
 - `zen test build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, while keeping
-  the matching undeclared file-read rejection before test execution. Coverage:
+  the matching undeclared file-read and missing-fallback rejections before test
+  execution. Coverage:
   `test_command_build_zen_accepts_declared_file_read_effects`,
   `test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
-  and `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
+  and `test_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - `zen emit build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, while keeping
   the matching undeclared file-read and missing-fallback rejections before C
@@ -2639,11 +2648,13 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_rejects_file_read_without_fallback`.
 - Direct `zen build.zen` execution now has executable graph fixtures for
   `.Err`, wildcard, and identifier fallback arms on declared file reads, while
-  keeping the matching undeclared file-read rejection before graph execution.
+  keeping the matching undeclared file-read and missing-fallback rejections
+  before graph execution.
   Coverage: `direct_file_command_build_zen_accepts_declared_file_read_effects`,
   `direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
-  and `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
+  and `direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - Expression function checking now lives in
   `src/typechecker/expressions/function_checking.rs`, keeping
   `src/typechecker/expressions.rs` focused on expression dispatch while
