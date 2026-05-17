@@ -2418,6 +2418,11 @@ and do not assume Phase 4 is ready without evidence.
   reducing `src/typechecker/tests/resolver_type_behavior_metadata.rs` from 510
   to 332 lines while preserving coverage through
   `cargo test --lib resolver_type_behavior_metadata`.
+- Resolver import metadata tests now keep module-symbol metadata cases in
+  `src/typechecker/tests/resolver_import_metadata/module_metadata.rs`,
+  reducing `src/typechecker/tests/resolver_import_metadata.rs` from 506 to 280
+  lines while preserving coverage through
+  `cargo test --lib resolver_import_metadata`.
 
 ## Unresolved Gaps
 

@@ -266,6 +266,10 @@ checked-in docs, tests, and commits only.
   in a focused submodule, dropping
   `src/typechecker/tests/resolver_type_behavior_metadata.rs` below the cleanup
   threshold while preserving the resolver-backed metadata checks.
+- Resolver import metadata tests now keep module-symbol metadata cases in a
+  focused submodule, dropping
+  `src/typechecker/tests/resolver_import_metadata.rs` below the cleanup
+  threshold while preserving import/module resolver metadata coverage.
 - Parser behavior declaration and impl-block parsing now live in a dedicated
   parser helper module, keeping behavior signatures and association syntax out
   of the broad top-level declaration dispatcher.
