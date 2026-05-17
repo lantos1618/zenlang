@@ -2702,6 +2702,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the
   generic imported dependency include focused on callable/type seeding.
+- Struct and enum aggregate expression construction is now split into
+  `src/typechecker/expressions/aggregate_constructors.rs`, preserving focused
+  struct literal, enum variant, and generic enum coverage while keeping
+  member/array/index access support separate.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

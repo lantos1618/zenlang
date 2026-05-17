@@ -2473,6 +2473,10 @@ checked-in docs, tests, and commits only.
   seeding in `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   separate from imported callable/type dependency seeding while preserving
   imported behavior inheritance and impl fixture coverage.
+- Expression checking now keeps struct and enum aggregate construction in
+  `src/typechecker/expressions/aggregate_constructors.rs`, leaving
+  `aggregate_support.rs` focused on member, array, and index access while
+  preserving struct literal, enum variant, and generic enum fixture coverage.
 
 ## Current Phase
 
