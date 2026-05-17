@@ -2089,6 +2089,9 @@ checked-in docs, tests, and commits only.
   declaration pass before replaying the existing validation order.
 - AST declaration semantic validation now replays that full validation task
   bundle through one helper instead of unpacking sub-slices at the entrypoint.
+- Resolver validation replay tests now keep association-list replay cases and
+  declaration-task collector cases in focused submodules, leaving the parent
+  replay test module as a small index.
 - AST pre-collection validation now builds `Self`-context and behavior-extends
   validation tasks in one declaration pass before replaying the existing
   validation order.
