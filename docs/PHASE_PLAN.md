@@ -2206,6 +2206,10 @@ checked-in docs, tests, and commits only.
 - Resolver behavior-ref metadata validation now lives in
   `src/typechecker/resolver_validation/metadata_behavior_refs.rs`, keeping
   typed metadata validation separate from parent/impl/requires edge checks.
+- Expression method-call checking now lives in
+  `src/typechecker/expressions/method_call_support.rs`, keeping direct
+  function-call checking separate from method, generic-method, and UFC
+  resolution while preserving generic method fixture coverage.
 
 ## Current Phase
 

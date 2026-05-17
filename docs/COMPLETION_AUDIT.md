@@ -2379,6 +2379,11 @@ and do not assume Phase 4 is ready without evidence.
   `metadata_types.rs` to type, field, variant, and behavior-method metadata
   checks while preserving parent/impl/requires edge coverage through
   `cargo test --lib resolver_validation::behavior_refs`.
+- Expression method-call checking now lives in
+  `src/typechecker/expressions/method_call_support.rs`, reducing
+  `call_support.rs` to direct function-call handling while preserving generic
+  method and UFC coverage through `cargo test --lib generic_method` and the
+  `single_file_fixtures::test_generic_method*` integration filters.
 
 ## Unresolved Gaps
 
