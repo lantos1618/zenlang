@@ -38,20 +38,22 @@ SIG_SETMASK = 2
 SignalError: { code: i32 }
 
 SignalError.from_errno = (errno: i64) SignalError {
-    return SignalError { code: cast(0 - errno, i32) }
+    SignalError { code: cast(0 - errno, i32) }
 }
 
 // Send signal to current process
 raise_signal = (sig: i32) Result<(), SignalError> {
     pid = compiler.syscall0(SYS_GETPID)
     result = compiler.syscall2(SYS_KILL, pid, sig)
-    result < 0 ? { return Result.Err(SignalError.from_errno(result)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(SignalError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 // Send signal to process
 kill = (pid: i32, sig: i32) Result<(), SignalError> {
     result = compiler.syscall2(SYS_KILL, pid, sig)
-    result < 0 ? { return Result.Err(SignalError.from_errno(result)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(SignalError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
