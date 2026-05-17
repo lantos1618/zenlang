@@ -2710,6 +2710,9 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/resolver_validation_support/expected_type_parameters.rs`,
   preserving expected-symbol and resolver metadata validation descriptor
   coverage while keeping expected symbol constructors smaller.
+- Lexer string literal and interpolation tests now live in
+  `src/lexer/tests/string_literals.rs`, preserving literal escape and
+  interpolation coverage while keeping the parent lexer test module smaller.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
