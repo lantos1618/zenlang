@@ -2721,6 +2721,12 @@ checked-in docs, tests, and commits only.
   `src/resolver/symbol_table_test_support/aggregate_metadata.rs`, keeping the
   parent test-support module focused on shared lookup/indexing and generic
   value metadata setters.
+- Single-file generic specialization generated-C assertions now keep enum
+  specialization coverage in
+  `tests/integration/generic_specializations/enum_generated_c.rs` and
+  method/worklist specialization coverage in
+  `tests/integration/generic_specializations/method_worklist_generated_c.rs`,
+  leaving the parent integration module focused on cross-fixture uniqueness.
 
 ## Current Phase
 
