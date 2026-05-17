@@ -2844,6 +2844,11 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::core_semantics::literals::range_expression_is_rejected_until_range_type_exists`,
   so parser-accepted range syntax no longer succeeds with an unknown typed
   placeholder before range semantics exist.
+- Type declaration suffix parsing now uses enum-backed `impl`/`implements`/
+  `requires`/`extends` spellings, keeping parser dispatch and diagnostics off
+  ad hoc string comparisons. Coverage:
+  `parser::tests::behaviors::type_declaration_keyword_owns_text_spelling` and
+  `repo_hygiene::parser_type_declaration_suffixes_use_owned_keyword_enum`.
 - Dead char-literal AST support has been removed because no lexer/parser
   surface produces it. The cleanup removes the stale typechecker `Unknown`
   fallback and is guarded by

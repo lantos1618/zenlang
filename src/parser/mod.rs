@@ -1,4 +1,6 @@
-use crate::ast::declarations::{Declaration, EnumVariant, StructField, TypeParam};
+use crate::ast::declarations::{
+    Declaration, EnumVariant, StructField, TypeDeclarationKeyword, TypeParam,
+};
 use crate::ast::expressions::{
     BinaryOp, Expression, LoopControlAction, MatchArm, StringPart, UnaryOp,
 };

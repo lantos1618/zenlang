@@ -2128,6 +2128,11 @@ checked-in docs, tests, and commits only.
 - Prefix loop syntax now accepts `loop((l) { ... })` with enum-backed
   `done`/`next` control actions, including nested outer-loop exits and UFC
   `done(l)` / `next(l)` forms, with fixture and docs coverage.
+- Type declaration suffix parsing now uses enum-backed `impl`/`implements`/
+  `requires`/`extends` spellings, keeping parser dispatch and diagnostics off
+  ad hoc string comparisons. Coverage:
+  `parser::tests::behaviors::type_declaration_keyword_owns_text_spelling` and
+  `repo_hygiene::parser_type_declaration_suffixes_use_owned_keyword_enum`.
 - Resolver-backed type behavior refresh now receives the full resolver
   declaration metadata task bundle and selects type declarations internally,
   keeping the final replay step aligned with the bundled call sites.

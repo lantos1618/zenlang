@@ -116,6 +116,28 @@ fn source_ast_does_not_carry_dead_char_literal_nodes() {
 }
 
 #[test]
+fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
+    let source = read("src/parser/declarations.rs");
+
+    for forbidden in [
+        r#"method_name == "impl""#,
+        r#"method_name == "implements""#,
+        r#"method_name == "requires""#,
+        r#"method_name == "extends""#,
+        r#"matches!(method_name.as_str(), "implements" | "requires" | "extends")"#,
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "parser type declaration suffix dispatch should use TypeDeclarationKeyword, not raw spelling checks: {forbidden}"
+        );
+    }
+    assert!(
+        source.contains("TypeDeclarationKeyword"),
+        "parser type declaration suffix dispatch should use TypeDeclarationKeyword"
+    );
+}
+
+#[test]
 fn ci_and_release_only_advertise_existing_targets() {
     let ci = read(".github/workflows/ci.yml");
     let release = read(".github/workflows/release.yml");

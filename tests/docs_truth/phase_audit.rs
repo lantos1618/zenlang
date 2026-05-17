@@ -41,6 +41,7 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "build_program_lowering_rejects_undeclared_env_reads",
         "production_rust_files_stay_below_cleanup_threshold",
         "source_ast_does_not_carry_dead_char_literal_nodes",
+        "parser_type_declaration_suffixes_use_owned_keyword_enum",
         "every tracked Rust source file",
         "BuildGraphExecutionContext",
         "emit_json_build_graph_outputs_project_build_graph",
@@ -149,6 +150,7 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "behavior_extends_nongeneric_parent_type_args_are_error",
         "generic_bound_nongeneric_behavior_type_args_are_error",
         "generic_enum_constructor_without_type_args_is_error",
+        "type_declaration_keyword_owns_text_spelling",
     ] {
         assert!(
             plan.contains(required),
@@ -234,6 +236,7 @@ fn completion_audit_records_recovery_objective_evidence_and_gaps() {
         "build_program_lowering_accepts_declared_env_reads",
         "production_rust_files_stay_below_cleanup_threshold",
         "source_ast_does_not_carry_dead_char_literal_nodes",
+        "parser_type_declaration_suffixes_use_owned_keyword_enum",
         "every tracked Rust source file",
         "BuildGraphExecutionContext",
         "emit_json_build_graph_outputs_library_target",

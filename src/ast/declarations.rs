@@ -2,6 +2,56 @@ use crate::ast::expressions::Expression;
 use crate::ast::types::{AstType, Param};
 use crate::error::Span;
 use serde::Serialize;
+use std::fmt;
+use std::str::FromStr;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum TypeDeclarationKeyword {
+    Impl,
+    Implements,
+    Requires,
+    Extends,
+}
+
+impl TypeDeclarationKeyword {
+    pub const IMPL: &'static str = "impl";
+    pub const IMPLEMENTS: &'static str = "implements";
+    pub const REQUIRES: &'static str = "requires";
+    pub const EXTENDS: &'static str = "extends";
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Impl => Self::IMPL,
+            Self::Implements => Self::IMPLEMENTS,
+            Self::Requires => Self::REQUIRES,
+            Self::Extends => Self::EXTENDS,
+        }
+    }
+}
+
+impl fmt::Display for TypeDeclarationKeyword {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl FromStr for TypeDeclarationKeyword {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        if value == Self::Impl.as_str() {
+            Ok(Self::Impl)
+        } else if value == Self::Implements.as_str() {
+            Ok(Self::Implements)
+        } else if value == Self::Requires.as_str() {
+            Ok(Self::Requires)
+        } else if value == Self::Extends.as_str() {
+            Ok(Self::Extends)
+        } else {
+            Err(())
+        }
+    }
+}
 
 /// A field in a struct definition.
 #[derive(Debug, Clone, PartialEq, Serialize)]
