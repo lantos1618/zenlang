@@ -2394,9 +2394,12 @@ checked-in docs, tests, and commits only.
   `check_command_build_zen_rejects_undeclared_host_effects`.
   Declared deterministic env reads with fallbacks are accepted through
   `check_command_build_zen_accepts_declared_env_read_with_fallback`.
-  Declared deterministic file-read effects are accepted through
-  `check_command_build_zen_accepts_declared_file_read_effects`, while
-  undeclared file reads reject before source validation through
+  Declared deterministic file-read effects are accepted through `.Err`,
+  wildcard, and identifier fallback arms, covered by
+  `check_command_build_zen_accepts_declared_file_read_effects`,
+  `check_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
+  and `check_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  while undeclared file reads reject before source validation through
   `check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation`.
   Library-only graphs remain valid on this non-executing path through
   `check_command_build_zen_accepts_library_only_graph_validation`.
