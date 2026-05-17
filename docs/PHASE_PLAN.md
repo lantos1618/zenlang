@@ -2627,6 +2627,9 @@ checked-in docs, tests, and commits only.
   File reads with `?` but no fallback arm also reject before test execution
   through
   `test_command_build_zen_rejects_file_read_without_fallback_before_execution`.
+  Multi-target test graph execution keeps that rejection before execution
+  through
+  `test_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `emit_command_build_zen_outputs_target_c_source`, rejects ambiguous
