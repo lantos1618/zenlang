@@ -2566,6 +2566,9 @@ checked-in docs, tests, and commits only.
 - CLI module-graph loading and frontend typechecking now live in
   `src/cli/frontend.rs`, sharing the same frontend path across check, emit,
   JSON, build, and run commands while keeping root CLI dispatch smaller.
+- CLI build graph loading and deterministic `build.zen` lowering now live in
+  `src/cli/build_graph_loading.rs`, keeping parse/lower diagnostics together
+  while root CLI remains focused on command routing.
 
 ## Current Phase
 
