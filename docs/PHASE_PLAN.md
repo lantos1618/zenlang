@@ -2634,6 +2634,11 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/declaration_validation/tasks.rs`, keeping self-type,
   precollection, declaration collection, type-reference, field default, and
   semantic replay task coverage separate from direct validation diagnostics.
+- Resolver-restored behavior method signature tests now live in
+  `src/typechecker/tests/resolver_collection/behavior_methods/restored_signatures.rs`,
+  keeping method name, return, parameter, order, and count restoration coverage
+  separate from incomplete-metadata and default-method behavior collection
+  tests.
 
 ## Current Phase
 

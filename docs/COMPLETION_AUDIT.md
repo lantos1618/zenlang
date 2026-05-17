@@ -2894,6 +2894,11 @@ and do not assume Phase 4 is ready without evidence.
   precollection, declaration collection, type-reference, field default, and
   semantic replay task coverage while keeping direct validation diagnostics
   focused.
+- Resolver-restored behavior method signature tests now live in
+  `src/typechecker/tests/resolver_collection/behavior_methods/restored_signatures.rs`,
+  preserving method name, return, parameter, order, and count restoration
+  coverage while keeping incomplete-metadata and default-method behavior
+  collection tests focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
