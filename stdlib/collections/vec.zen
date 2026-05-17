@@ -20,7 +20,7 @@ DynDynVec<T>: {
 
 // Create new empty vector
 DynVec<T>.new = (allocator: Allocator) DynVec<T> {
-    return DynVec<T> {
+    DynVec<T> {
         data: Ptr<T>.none(),
         len: 0,
         capacity: 0,
@@ -31,14 +31,14 @@ DynVec<T>.new = (allocator: Allocator) DynVec<T> {
 // Create vector with initial capacity
 DynVec<T>.with_capacity = (allocator: Allocator, initial_capacity: usize) DynVec<T> {
     initial_capacity == 0 ?
-        | true { return DynVec<T>.new(allocator) }
+        | true { DynVec<T>.new(allocator) }
         | false {
             item_size = compiler.sizeof<T>()
             total_size = initial_capacity * item_size
             raw_ptr = allocator.allocate(total_size)
             data = Ptr<T>.from_addr(raw_ptr)
-            
-            return DynVec<T> {
+
+            DynVec<T> {
                 data: data,
                 len: 0,
                 capacity: initial_capacity,
@@ -53,17 +53,17 @@ DynVec<T>.with_capacity = (allocator: Allocator, initial_capacity: usize) DynVec
 
 // Get current length
 DynVec<T>.len = (self: DynVec<T>) usize {
-    return self.len
+    self.len
 }
 
 // Get allocated capacity
 DynVec<T>.capacity = (self: DynVec<T>) usize {
-    return self.capacity
+    self.capacity
 }
 
 // Check if empty
 DynVec<T>.is_empty = (self: DynVec<T>) bool {
-    return self.len == 0
+    self.len == 0
 }
 
 // ============================================================================
@@ -73,7 +73,7 @@ DynVec<T>.is_empty = (self: DynVec<T>) bool {
 // Get element at index (returns Option<T>)
 DynVec<T>.get = (self: DynVec<T>, index: usize) Option<T> {
     index >= self.len ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             // Get pointer to element (at handles offset calculation)
             elem_ptr = self.data.at(index)
@@ -82,15 +82,15 @@ DynVec<T>.get = (self: DynVec<T>, index: usize) Option<T> {
                     // Convert i64 address to raw pointer and load
                     addr = compiler.int_to_ptr(addr_i64)
                     value = compiler.load<T>(addr)
-                    return Option.Some(value)
+                    Option.Some(value)
                 }
-                | None { return Option.None }
+                | None { Option.None }
         }
 }
 
 // Check if index is valid
 DynVec<T>.is_valid_index = (self: DynVec<T>, index: usize) bool {
-    return index < self.len
+    index < self.len
 }
 
 // ============================================================================
@@ -193,7 +193,7 @@ DynVecIterator<T>: {
 
 // Create an iterator over the vector
 DynVec<T>.iter = (self: DynVec<T>) DynVecIterator<T> {
-    return DynVecIterator<T> {
+    DynVecIterator<T> {
         data: self.data,
         index: 0,
         len: self.len
@@ -211,14 +211,14 @@ DynVecIterator<T>.next = (self: MutPtr<DynVecIterator<T>>) Option<T> {
                 | Some(addr_i64) {
                     addr = compiler.int_to_ptr(addr_i64)
                     value = compiler.load<T>(addr)
-                    return Option.Some(value)
+                    Option.Some(value)
                 }
-                | None { return Option.None }
+                | None { Option.None }
         }
-        | false { return Option.None }
+        | false { Option.None }
 }
 
 // Check if iterator has more elements
 DynVecIterator<T>.has_next = (self: DynVecIterator<T>) bool {
-    return self.index < self.len
+    self.index < self.len
 }
