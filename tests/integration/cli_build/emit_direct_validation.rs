@@ -53,3 +53,107 @@ main = () i32 {
         "zen emit build.zen should not compile the target binary"
     );
 }
+
+#[test]
+fn emit_command_build_zen_rejects_unknown_target_dependencies() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        dependencies: ["core"],
+    })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    assert_emit_command_rejects_dependency_shape(
+        tmp.path(),
+        "build target `app` depends on unknown target `core`",
+    );
+}
+
+#[test]
+fn emit_command_build_zen_rejects_self_target_dependencies() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        dependencies: ["app"],
+    })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    assert_emit_command_rejects_dependency_shape(
+        tmp.path(),
+        "build target `app` cannot depend on itself",
+    );
+}
+
+#[test]
+fn emit_command_build_zen_rejects_cyclic_target_dependencies() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(
+        tmp.path().join("build.zen"),
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library {
+        name: "core",
+        exports: ["lib.zen"],
+        dependencies: ["app"],
+    })
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        dependencies: ["core"],
+    })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+    assert_emit_command_rejects_dependency_shape(
+        tmp.path(),
+        "build target dependency cycle includes `app`",
+    );
+}
+
+fn assert_emit_command_rejects_dependency_shape(
+    project_dir: &std::path::Path,
+    expected_diagnostic: &str,
+) {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit", "build.zen"])
+        .current_dir(project_dir)
+        .output()
+        .expect("run zen emit build.zen");
+
+    assert!(
+        !output.status.success(),
+        "zen emit build.zen unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains(expected_diagnostic),
+        "expected dependency diagnostic `{expected_diagnostic}`, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        !project_dir.join("build").exists(),
+        "zen emit build.zen should not create outputs after dependency validation fails"
+    );
+}

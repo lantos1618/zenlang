@@ -2370,6 +2370,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration emit_command_build_zen_rejects_graph_without_executable_targets`
   and
   `cargo test --test integration emit_command_build_zen_rejects_multiple_executable_targets`,
+  rejects unknown, self, and cyclic target dependencies before emission through
+  `cargo test --test integration emit_command_build_zen_rejects_unknown_target_dependencies`,
+  `cargo test --test integration emit_command_build_zen_rejects_self_target_dependencies`,
+  and
+  `cargo test --test integration emit_command_build_zen_rejects_cyclic_target_dependencies`,
   and rejects undeclared host effects through
   `cargo test --test integration emit_command_build_zen_rejects_undeclared_host_effects`.
 - Direct `zen build.zen` aliases the same constrained deterministic graph build

@@ -2562,6 +2562,10 @@ checked-in docs, tests, and commits only.
   selected executable dependencies before emission, accepting validated library
   source dependencies through
   `emit_command_build_zen_accepts_library_dependencies` and
+  rejecting unknown, self, and cyclic target dependencies before emission
+  through `emit_command_build_zen_rejects_unknown_target_dependencies`,
+  `emit_command_build_zen_rejects_self_target_dependencies`, and
+  `emit_command_build_zen_rejects_cyclic_target_dependencies`, while
   rejecting gated test dependencies through
   `emit_command_build_zen_rejects_gated_test_dependencies`. It validates
   graph-only library exports before emission through
