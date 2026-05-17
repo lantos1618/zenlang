@@ -25,7 +25,7 @@ Promise: {
 
 // Create a new pending promise
 Promise.new = () Promise {
-    return Promise {
+    Promise {
         state: 0,
         result: 0,
         user_data: 0
@@ -33,7 +33,7 @@ Promise.new = () Promise {
 }
 
 Promise.new_with_data = (data: u64) Promise {
-    return Promise {
+    Promise {
         state: 0,
         result: 0,
         user_data: data
@@ -42,18 +42,18 @@ Promise.new_with_data = (data: u64) Promise {
 
 // Check if promise is complete
 Promise.is_pending = (self: Promise) bool {
-    return self.state == 0
+    self.state == 0
 }
 
 Promise.is_completed = (self: Promise) bool {
-    return self.state == 1
+    self.state == 1
 }
 
 Promise.is_failed = (self: Promise) bool {
-    return self.state == 2
+    self.state == 2
 }
 
 // Get result (only valid after completion)
 Promise.get_result = (self: Promise) i64 {
-    return self.result
+    self.result
 }
