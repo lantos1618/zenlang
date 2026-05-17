@@ -2956,6 +2956,10 @@ and do not assume Phase 4 is ready without evidence.
   preserving missing source, valid source, and library typecheck coverage while
   keeping executable-target, gated-dependency, and missing-root validation
   checks focused.
+- Imported behavior inheritance frontend diagnostics now live in
+  `tests/integration/frontend_diagnostics/behavior_extends.rs`, preserving
+  direct, imported-parent, and transitive parent-method diagnostics while
+  keeping frontend helper and generic arity diagnostics focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
