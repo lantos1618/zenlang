@@ -2282,6 +2282,9 @@ and do not assume Phase 4 is ready without evidence.
 - Build script lowering includes target dependency and feature metadata arrays,
   covered by
   `cargo test --test build_graph build_program_lowering_collects_target_dependencies_and_features`.
+- Build script lowering recognizes declared deterministic file-read effects
+  without allowing undeclared file reads, covered by
+  `cargo test --test build_graph file_reads`.
 - Build script lowering keeps accepted `build.zen` DSL spellings owned by
   focused enums for target kinds, target fields, and builder identifiers,
   covered by `cargo test build_target_dsl --lib` and
@@ -2316,6 +2319,9 @@ and do not assume Phase 4 is ready without evidence.
   covered by
   `cargo test --test integration emit_json_build_graph_outputs_target_dependencies_and_features`
   and `cargo test --test integration emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering`.
+- `emit-json build-graph` emits declared deterministic file-read effects and
+  rejects undeclared file reads through the advertised graph command, covered
+  by `cargo test --test integration file_read_effects`.
 - `emit-json build-graph` rejects unresolved target dependencies through the
   advertised graph-emission path, covered by
   `cargo test --test integration emit_json_build_graph_rejects_unknown_target_dependencies`.

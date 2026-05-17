@@ -40,5 +40,6 @@ fn build_target_dsl_ident_owns_source_spelling() {
     assert_eq!(BuildTargetDslIdent::Build.as_str(), "build");
     assert_eq!(BuildTargetDslIdent::Env.as_str(), "env");
     assert_eq!(BuildTargetDslIdent::Os.as_str(), "os");
+    assert_eq!(BuildTargetDslIdent::ReadFile.as_str(), "read_file");
     assert_eq!(BuildTargetDslIdent::Builder.to_string(), "b");
 }
