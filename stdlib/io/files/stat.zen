@@ -72,31 +72,31 @@ S_IXOTH = 1         // Others execute (0o001)
 // ============================================================================
 
 Stat.is_regular = (self: Stat) bool {
-    return (self.st_mode & S_IFMT) == S_IFREG
+    (self.st_mode & S_IFMT) == S_IFREG
 }
 
 Stat.is_directory = (self: Stat) bool {
-    return (self.st_mode & S_IFMT) == S_IFDIR
+    (self.st_mode & S_IFMT) == S_IFDIR
 }
 
 Stat.is_symlink = (self: Stat) bool {
-    return (self.st_mode & S_IFMT) == S_IFLNK
+    (self.st_mode & S_IFMT) == S_IFLNK
 }
 
 Stat.is_socket = (self: Stat) bool {
-    return (self.st_mode & S_IFMT) == S_IFSOCK
+    (self.st_mode & S_IFMT) == S_IFSOCK
 }
 
 Stat.is_fifo = (self: Stat) bool {
-    return (self.st_mode & S_IFMT) == S_IFIFO
+    (self.st_mode & S_IFMT) == S_IFIFO
 }
 
 Stat.is_block_device = (self: Stat) bool {
-    return (self.st_mode & S_IFMT) == S_IFBLK
+    (self.st_mode & S_IFMT) == S_IFBLK
 }
 
 Stat.is_char_device = (self: Stat) bool {
-    return (self.st_mode & S_IFMT) == S_IFCHR
+    (self.st_mode & S_IFMT) == S_IFCHR
 }
 
 // ============================================================================
@@ -104,32 +104,32 @@ Stat.is_char_device = (self: Stat) bool {
 // ============================================================================
 
 Stat.is_readable_by_owner = (self: Stat) bool {
-    return (self.st_mode & S_IRUSR) != 0
+    (self.st_mode & S_IRUSR) != 0
 }
 
 Stat.is_writable_by_owner = (self: Stat) bool {
-    return (self.st_mode & S_IWUSR) != 0
+    (self.st_mode & S_IWUSR) != 0
 }
 
 Stat.is_executable_by_owner = (self: Stat) bool {
-    return (self.st_mode & S_IXUSR) != 0
+    (self.st_mode & S_IXUSR) != 0
 }
 
 Stat.is_setuid = (self: Stat) bool {
-    return (self.st_mode & S_ISUID) != 0
+    (self.st_mode & S_ISUID) != 0
 }
 
 Stat.is_setgid = (self: Stat) bool {
-    return (self.st_mode & S_ISGID) != 0
+    (self.st_mode & S_ISGID) != 0
 }
 
 Stat.is_sticky = (self: Stat) bool {
-    return (self.st_mode & S_ISVTX) != 0
+    (self.st_mode & S_ISVTX) != 0
 }
 
 // Get permission bits only (no file type)
 Stat.permissions = (self: Stat) u32 {
-    return cast(self.st_mode & 4095, u32)  // 0o7777
+    cast(self.st_mode & 4095, u32)  // 0o7777
 }
 
 // ============================================================================
@@ -148,9 +148,9 @@ stat = (path_ptr: i64) Result<Stat, i32> {
     }
 
     result = compiler.syscall2(SYS_STAT, path_ptr, compiler.ptr_to_int(compiler.raw_ptr_cast(&buf.ref())))
-    result < 0 ? { return Result.Err(cast(result, i32)) }
-
-    return Result.Ok(buf)
+    result < 0 ?
+        | true { Result.Err(cast(result, i32)) }
+        | false { Result.Ok(buf) }
 }
 
 // Stat an open file descriptor
@@ -165,9 +165,9 @@ fstat = (fd: i32) Result<Stat, i32> {
     }
 
     result = compiler.syscall2(SYS_FSTAT, fd, compiler.ptr_to_int(compiler.raw_ptr_cast(&buf.ref())))
-    result < 0 ? { return Result.Err(cast(result, i32)) }
-
-    return Result.Ok(buf)
+    result < 0 ?
+        | true { Result.Err(cast(result, i32)) }
+        | false { Result.Ok(buf) }
 }
 
 // Stat a symlink (don't follow)
@@ -182,9 +182,9 @@ lstat = (path_ptr: i64) Result<Stat, i32> {
     }
 
     result = compiler.syscall2(SYS_LSTAT, path_ptr, compiler.ptr_to_int(compiler.raw_ptr_cast(&buf.ref())))
-    result < 0 ? { return Result.Err(cast(result, i32)) }
-
-    return Result.Ok(buf)
+    result < 0 ?
+        | true { Result.Err(cast(result, i32)) }
+        | false { Result.Ok(buf) }
 }
 
 // ============================================================================
@@ -195,8 +195,8 @@ lstat = (path_ptr: i64) Result<Stat, i32> {
 path_exists = (path_ptr: i64) bool {
     result = stat(path_ptr)
     result ? {
-        | Ok(_) { return true }
-        | Err(_) { return false }
+        | Ok(_) { true }
+        | Err(_) { false }
     }
 }
 
@@ -204,8 +204,8 @@ path_exists = (path_ptr: i64) bool {
 is_dir = (path_ptr: i64) bool {
     result = stat(path_ptr)
     result ? {
-        | Ok(s) { return s.is_directory() }
-        | Err(_) { return false }
+        | Ok(s) { s.is_directory() }
+        | Err(_) { false }
     }
 }
 
@@ -213,8 +213,8 @@ is_dir = (path_ptr: i64) bool {
 is_file = (path_ptr: i64) bool {
     result = stat(path_ptr)
     result ? {
-        | Ok(s) { return s.is_regular() }
-        | Err(_) { return false }
+        | Ok(s) { s.is_regular() }
+        | Err(_) { false }
     }
 }
 
@@ -222,8 +222,8 @@ is_file = (path_ptr: i64) bool {
 file_size = (path_ptr: i64) Result<i64, i32> {
     result = stat(path_ptr)
     result ? {
-        | Ok(s) { return Result.Ok(s.st_size) }
-        | Err(e) { return Result.Err(e) }
+        | Ok(s) { Result.Ok(s.st_size) }
+        | Err(e) { Result.Err(e) }
     }
 }
 
@@ -231,7 +231,7 @@ file_size = (path_ptr: i64) Result<i64, i32> {
 fd_size = (fd: i32) Result<i64, i32> {
     result = fstat(fd)
     result ? {
-        | Ok(s) { return Result.Ok(s.st_size) }
-        | Err(e) { return Result.Err(e) }
+        | Ok(s) { Result.Ok(s.st_size) }
+        | Err(e) { Result.Err(e) }
     }
 }
