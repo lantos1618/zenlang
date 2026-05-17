@@ -2918,6 +2918,11 @@ and do not assume Phase 4 is ready without evidence.
   preserving template name, bound, return, parameter count, and mutability
   restoration coverage while keeping plain `Type.impl` method metadata tests
   focused.
+- Resolver value absent declaration metadata tests now live in
+  `src/typechecker/tests/resolver_value_metadata/absent_declaration_metadata.rs`,
+  preserving rejected type, enum, behavior, parent, impl, and requires metadata
+  on value symbols while keeping value signature and generic metadata
+  validation focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
