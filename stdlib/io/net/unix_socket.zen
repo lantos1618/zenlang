@@ -46,7 +46,7 @@ UnixSocketError.from_errno = (errno: i64) UnixSocketError {
         -107 => "Transport endpoint not connected"
         _ => "Unix socket error"
     }
-    return UnixSocketError { code: code, message: msg }
+    UnixSocketError { code: code, message: msg }
 }
 
 // ============================================================================
@@ -93,7 +93,7 @@ UnixAddr.from_path = (path: String, allocator: Allocator) UnixAddr {
     // Null terminate
     compiler.store<u8>(compiler.int_to_ptr(addr_ptr + max_len), 0)
 
-    return addr
+    addr
 }
 
 // ============================================================================
@@ -101,47 +101,47 @@ UnixAddr.from_path = (path: String, allocator: Allocator) UnixAddr {
 // ============================================================================
 
 sys_socket = (domain: i32, type_: i32, protocol: i32) i64 {
-    return compiler.syscall3(SYS_SOCKET, domain, type_, protocol)
+    compiler.syscall3(SYS_SOCKET, domain, type_, protocol)
 }
 
 sys_bind = (sockfd: i32, addr_ptr: i64, addr_len: i32) i64 {
-    return compiler.syscall3(SYS_BIND, sockfd, addr_ptr, addr_len)
+    compiler.syscall3(SYS_BIND, sockfd, addr_ptr, addr_len)
 }
 
 sys_listen = (sockfd: i32, backlog: i32) i64 {
-    return compiler.syscall2(SYS_LISTEN, sockfd, backlog)
+    compiler.syscall2(SYS_LISTEN, sockfd, backlog)
 }
 
 sys_accept = (sockfd: i32, addr_ptr: i64, addr_len_ptr: i64) i64 {
-    return compiler.syscall3(SYS_ACCEPT, sockfd, addr_ptr, addr_len_ptr)
+    compiler.syscall3(SYS_ACCEPT, sockfd, addr_ptr, addr_len_ptr)
 }
 
 sys_connect = (sockfd: i32, addr_ptr: i64, addr_len: i32) i64 {
-    return compiler.syscall3(SYS_CONNECT, sockfd, addr_ptr, addr_len)
+    compiler.syscall3(SYS_CONNECT, sockfd, addr_ptr, addr_len)
 }
 
 sys_send = (sockfd: i32, buf_ptr: i64, len: i64, flags: i32) i64 {
-    return compiler.syscall4(SYS_SENDTO, sockfd, buf_ptr, len, flags)
+    compiler.syscall4(SYS_SENDTO, sockfd, buf_ptr, len, flags)
 }
 
 sys_recv = (sockfd: i32, buf_ptr: i64, len: i64, flags: i32) i64 {
-    return compiler.syscall4(SYS_RECVFROM, sockfd, buf_ptr, len, flags)
+    compiler.syscall4(SYS_RECVFROM, sockfd, buf_ptr, len, flags)
 }
 
 sys_socketpair = (domain: i32, type_: i32, protocol: i32, fds_ptr: i64) i64 {
-    return compiler.syscall4(SYS_SOCKETPAIR, domain, type_, protocol, fds_ptr)
+    compiler.syscall4(SYS_SOCKETPAIR, domain, type_, protocol, fds_ptr)
 }
 
 sys_shutdown = (sockfd: i32, how: i32) i64 {
-    return compiler.syscall2(SYS_SHUTDOWN, sockfd, how)
+    compiler.syscall2(SYS_SHUTDOWN, sockfd, how)
 }
 
 sys_close = (fd: i32) i64 {
-    return compiler.syscall1(SYS_CLOSE, fd)
+    compiler.syscall1(SYS_CLOSE, fd)
 }
 
 sys_unlink = (path_ptr: i64) i64 {
-    return compiler.syscall1(SYS_UNLINK, path_ptr)
+    compiler.syscall1(SYS_UNLINK, path_ptr)
 }
 
 // ============================================================================
@@ -158,49 +158,49 @@ UnixListener: {
 UnixListener.bind = (path: String, allocator: Allocator) Result<UnixListener, UnixSocketError> {
     // Create socket
     fd = sys_socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0)
-    fd < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(fd))
-    }
+    fd < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(fd)) }
+        | false {
+            // Build address
+            addr = UnixAddr.from_path(path, allocator)
+            addr_ptr = compiler.ptr_to_int(&addr.ref())
 
-    // Build address
-    addr = UnixAddr.from_path(path, allocator)
-    addr_ptr = compiler.ptr_to_int(&addr.ref())
+            // Unlink existing socket file (ignore errors)
+            path_cstr = allocator.allocate(path.len() + 1)
+            compiler.memcpy(path_cstr, path.data.addr(), path.len())
+            compiler.store<u8>(compiler.int_to_ptr(path_cstr + path.len()), 0)
+            sys_unlink(path_cstr)
 
-    // Unlink existing socket file (ignore errors)
-    path_cstr = allocator.allocate(path.len() + 1)
-    compiler.memcpy(path_cstr, path.data.addr(), path.len())
-    compiler.store<u8>(compiler.int_to_ptr(path_cstr + path.len()), 0)
-    sys_unlink(path_cstr)
-
-    // Bind
-    result = sys_bind(cast(fd, i32), addr_ptr, 110)  // sizeof(sockaddr_un)
-    result < 0 ? {
-        sys_close(cast(fd, i32))
-        allocator.deallocate(path_cstr, path.len() + 1)
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-
-    return Result.Ok(UnixListener {
-        fd: cast(fd, i32),
-        path_ptr: path_cstr,
-        path_len: path.len()
-    })
+            // Bind
+            result = sys_bind(cast(fd, i32), addr_ptr, 110)  // sizeof(sockaddr_un)
+            result < 0 ?
+                | true {
+                    sys_close(cast(fd, i32))
+                    allocator.deallocate(path_cstr, path.len() + 1)
+                    Result.Err(UnixSocketError.from_errno(result))
+                }
+                | false {
+                    Result.Ok(UnixListener {
+                        fd: cast(fd, i32),
+                        path_ptr: path_cstr,
+                        path_len: path.len()
+                    })
+                }
+        }
 }
 
 UnixListener.listen = (self: MutPtr<UnixListener>, backlog: i32) Result<(), UnixSocketError> {
     result = sys_listen(self.val.fd, backlog)
-    result < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 UnixListener.accept = (self: MutPtr<UnixListener>) Result<UnixStream, UnixSocketError> {
     client_fd = sys_accept(self.val.fd, 0, 0)
-    client_fd < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(client_fd))
-    }
-    return Result.Ok(UnixStream { fd: cast(client_fd, i32) })
+    client_fd < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(client_fd)) }
+        | false { Result.Ok(UnixStream { fd: cast(client_fd, i32) }) }
 }
 
 UnixListener.close = (self: MutPtr<UnixListener>, allocator: Allocator) void {
@@ -221,48 +221,45 @@ UnixStream: {
 UnixStream.connect = (path: String, allocator: Allocator) Result<UnixStream, UnixSocketError> {
     // Create socket
     fd = sys_socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0)
-    fd < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(fd))
-    }
+    fd < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(fd)) }
+        | false {
+            // Build address
+            addr = UnixAddr.from_path(path, allocator)
+            addr_ptr = compiler.ptr_to_int(&addr.ref())
 
-    // Build address
-    addr = UnixAddr.from_path(path, allocator)
-    addr_ptr = compiler.ptr_to_int(&addr.ref())
-
-    // Connect
-    result = sys_connect(cast(fd, i32), addr_ptr, 110)
-    result < 0 ? {
-        sys_close(cast(fd, i32))
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-
-    return Result.Ok(UnixStream { fd: cast(fd, i32) })
+            // Connect
+            result = sys_connect(cast(fd, i32), addr_ptr, 110)
+            result < 0 ?
+                | true {
+                    sys_close(cast(fd, i32))
+                    Result.Err(UnixSocketError.from_errno(result))
+                }
+                | false { Result.Ok(UnixStream { fd: cast(fd, i32) }) }
+        }
 }
 
 UnixStream.read = (self: MutPtr<UnixStream>, buf: Ptr<u8>, len: i64) Result<i64, UnixSocketError> {
     buf_ptr = compiler.ptr_to_int(buf)
     result = sys_recv(self.val.fd, buf_ptr, len, 0)
-    result < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(result)) }
+        | false { Result.Ok(result) }
 }
 
 UnixStream.write = (self: MutPtr<UnixStream>, buf: Ptr<u8>, len: i64) Result<i64, UnixSocketError> {
     buf_ptr = compiler.ptr_to_int(buf)
     result = sys_send(self.val.fd, buf_ptr, len, MSG_NOSIGNAL)
-    result < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(result)) }
+        | false { Result.Ok(result) }
 }
 
 UnixStream.shutdown = (self: MutPtr<UnixStream>, how: i32) Result<(), UnixSocketError> {
     result = sys_shutdown(self.val.fd, how)
-    result < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 UnixStream.close = (self: MutPtr<UnixStream>) void {
@@ -282,60 +279,59 @@ UnixDatagram: {
 UnixDatagram.bind = (path: String, allocator: Allocator) Result<UnixDatagram, UnixSocketError> {
     // Create socket
     fd = sys_socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0)
-    fd < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(fd))
-    }
+    fd < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(fd)) }
+        | false {
+            // Build address
+            addr = UnixAddr.from_path(path, allocator)
+            addr_ptr = compiler.ptr_to_int(&addr.ref())
 
-    // Build address
-    addr = UnixAddr.from_path(path, allocator)
-    addr_ptr = compiler.ptr_to_int(&addr.ref())
+            // Unlink existing
+            path_cstr = allocator.allocate(path.len() + 1)
+            compiler.memcpy(path_cstr, path.data.addr(), path.len())
+            compiler.store<u8>(compiler.int_to_ptr(path_cstr + path.len()), 0)
+            sys_unlink(path_cstr)
 
-    // Unlink existing
-    path_cstr = allocator.allocate(path.len() + 1)
-    compiler.memcpy(path_cstr, path.data.addr(), path.len())
-    compiler.store<u8>(compiler.int_to_ptr(path_cstr + path.len()), 0)
-    sys_unlink(path_cstr)
-
-    // Bind
-    result = sys_bind(cast(fd, i32), addr_ptr, 110)
-    result < 0 ? {
-        sys_close(cast(fd, i32))
-        allocator.deallocate(path_cstr, path.len() + 1)
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-
-    return Result.Ok(UnixDatagram {
-        fd: cast(fd, i32),
-        bound_path_ptr: path_cstr,
-        bound_path_len: path.len()
-    })
+            // Bind
+            result = sys_bind(cast(fd, i32), addr_ptr, 110)
+            result < 0 ?
+                | true {
+                    sys_close(cast(fd, i32))
+                    allocator.deallocate(path_cstr, path.len() + 1)
+                    Result.Err(UnixSocketError.from_errno(result))
+                }
+                | false {
+                    Result.Ok(UnixDatagram {
+                        fd: cast(fd, i32),
+                        bound_path_ptr: path_cstr,
+                        bound_path_len: path.len()
+                    })
+                }
+        }
 }
 
 UnixDatagram.unbound = () Result<UnixDatagram, UnixSocketError> {
     fd = sys_socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0)
-    fd < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(fd))
-    }
-    return Result.Ok(UnixDatagram { fd: cast(fd, i32), bound_path_ptr: 0, bound_path_len: 0 })
+    fd < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(fd)) }
+        | false { Result.Ok(UnixDatagram { fd: cast(fd, i32), bound_path_ptr: 0, bound_path_len: 0 }) }
 }
 
 UnixDatagram.send_to = (self: MutPtr<UnixDatagram>, buf: Ptr<u8>, len: i64, dest: UnixAddr) Result<i64, UnixSocketError> {
     buf_ptr = compiler.ptr_to_int(buf)
     dest_ptr = compiler.ptr_to_int(&dest.ref())
     result = compiler.syscall6(SYS_SENDTO, self.val.fd, buf_ptr, len, 0, dest_ptr, 110)
-    result < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(result)) }
+        | false { Result.Ok(result) }
 }
 
 UnixDatagram.recv = (self: MutPtr<UnixDatagram>, buf: Ptr<u8>, len: i64) Result<i64, UnixSocketError> {
     buf_ptr = compiler.ptr_to_int(buf)
     result = sys_recv(self.val.fd, buf_ptr, len, 0)
-    result < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(result)) }
+        | false { Result.Ok(result) }
 }
 
 UnixDatagram.close = (self: MutPtr<UnixDatagram>, allocator: Allocator) void {
@@ -360,10 +356,9 @@ SocketPair.stream = () Result<SocketPair, UnixSocketError> {
     fds = [0, 0]
     fds_ptr = compiler.ptr_to_int(&fds.ref())
     result = sys_socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, fds_ptr)
-    result < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-    return Result.Ok(SocketPair { fd1: fds[0], fd2: fds[1] })
+    result < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(result)) }
+        | false { Result.Ok(SocketPair { fd1: fds[0], fd2: fds[1] }) }
 }
 
 // Create a connected pair of datagram sockets
@@ -371,10 +366,9 @@ SocketPair.datagram = () Result<SocketPair, UnixSocketError> {
     fds = [0, 0]
     fds_ptr = compiler.ptr_to_int(&fds.ref())
     result = sys_socketpair(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0, fds_ptr)
-    result < 0 ? {
-        return Result.Err(UnixSocketError.from_errno(result))
-    }
-    return Result.Ok(SocketPair { fd1: fds[0], fd2: fds[1] })
+    result < 0 ?
+        | true { Result.Err(UnixSocketError.from_errno(result)) }
+        | false { Result.Ok(SocketPair { fd1: fds[0], fd2: fds[1] }) }
 }
 
 SocketPair.close = (self: MutPtr<SocketPair>) void {

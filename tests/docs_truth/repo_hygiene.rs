@@ -165,6 +165,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/io/mux/poll.zen",
         "stdlib/io/mux/uring.zen",
         "stdlib/io/net/socket.zen",
+        "stdlib/io/net/unix_socket.zen",
         "stdlib/io/net/pipe.zen",
         "stdlib/io/signal.zen",
         "stdlib/io/terminal.zen",
