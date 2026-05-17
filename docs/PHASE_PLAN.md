@@ -3085,7 +3085,7 @@ checked-in docs, tests, and commits only.
   unknown target fields before outputs are created, covered by
   `build_zen_commands_reject_unknown_target_fields`.
 - The stdlib build DSL, compiler/FFI bridges, filesystem and memory facades,
-  testing facade, memory allocator wrappers plus async, heap, and mmap helpers, and
+  testing facade, memory allocator wrappers plus arena, async, heap, and mmap helpers, and
   core `Option`, `Result`, propagation, byte-buffer, iterator, pointer, and
   slice helpers no longer use the removed `return` keyword, guarded by
   `promoted_stdlib_modules_do_not_use_removed_return_keyword`, so the
