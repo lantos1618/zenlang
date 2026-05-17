@@ -2473,7 +2473,12 @@ checked-in docs, tests, and commits only.
   executable, test, and library sources through
   `check_command_build_zen_rejects_missing_executable_source`,
   `check_command_build_zen_rejects_missing_test_source`, and
-  `check_command_build_zen_rejects_missing_library_source`, and rejects
+  `check_command_build_zen_rejects_missing_library_source`. It rejects
+  unknown, self, and cyclic target dependencies before source validation
+  through
+  `check_command_build_zen_rejects_unknown_target_dependencies`,
+  `check_command_build_zen_rejects_self_target_dependencies`, and
+  `check_command_build_zen_rejects_cyclic_target_dependencies`, and rejects
   undeclared host effects before source validation through
   `check_command_build_zen_rejects_undeclared_host_effects_before_source_validation`.
   It also rejects undeclared host effects before target source typechecking

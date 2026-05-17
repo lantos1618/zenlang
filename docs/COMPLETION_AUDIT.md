@@ -2637,6 +2637,12 @@ and do not assume Phase 4 is ready without evidence.
   Library-only graphs are valid on this non-executing validation path, covered
   by
   `cargo test --test integration check_command_build_zen_accepts_library_only_graph_validation`.
+  Unknown, self, and cyclic target dependencies reject on the same
+  non-executing validation path before source validation, covered by
+  `cargo test --test integration check_command_build_zen_rejects_unknown_target_dependencies`,
+  `cargo test --test integration check_command_build_zen_rejects_self_target_dependencies`,
+  and
+  `cargo test --test integration check_command_build_zen_rejects_cyclic_target_dependencies`.
   Undeclared host effects still reject before target source typechecking,
   covered by
   `cargo test --test integration check_command_build_zen_rejects_undeclared_host_effects_before_target_typechecking`.
