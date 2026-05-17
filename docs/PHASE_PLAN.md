@@ -2589,6 +2589,9 @@ checked-in docs, tests, and commits only.
 - Range expressions now produce an explicit gated typechecker diagnostic until
   a concrete range type is designed, instead of silently carrying an unknown
   placeholder through function return checking.
+- Lexer numeric literal and range-token tests now live in
+  `src/lexer/tests/number_literals.rs`, keeping numeric lexing coverage
+  separate from punctuation, whitespace, and example-token tests.
 
 ## Current Phase
 

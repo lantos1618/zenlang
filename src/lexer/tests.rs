@@ -1,5 +1,6 @@
 use super::*;
 
+mod number_literals;
 mod string_literals;
 
 /// Tokenise and return just token variants, filtering out Newline/EOF.
@@ -54,39 +55,6 @@ fn identifiers_and_pub() {
             Token::Identifier("world".into()),
             Token::Identifier("_foo".into()),
             Token::Identifier("_".into()),
-        ]
-    );
-}
-
-#[test]
-fn integers() {
-    assert_eq!(
-        toks("42 0 1_000"),
-        vec![
-            Token::IntLiteral(42),
-            Token::IntLiteral(0),
-            Token::IntLiteral(1000)
-        ]
-    );
-}
-
-#[test]
-fn floats() {
-    assert_eq!(
-        toks("3.14 0.0"),
-        vec![Token::FloatLiteral(3.14), Token::FloatLiteral(0.0)]
-    );
-}
-
-#[test]
-fn hex_binary_octal() {
-    assert_eq!(
-        toks("0xFF 0b1010 0o777 0xDE_AD"),
-        vec![
-            Token::IntLiteral(0xFF),
-            Token::IntLiteral(0b1010),
-            Token::IntLiteral(0o777),
-            Token::IntLiteral(0xDEAD),
         ]
     );
 }
@@ -339,15 +307,6 @@ fn zen_pattern_match() {
             Token::IntLiteral(0),
             Token::RBrace,
         ]
-    );
-}
-
-#[test]
-fn float_vs_range() {
-    assert_eq!(toks("3.14"), vec![Token::FloatLiteral(3.14)]);
-    assert_eq!(
-        toks("3..10"),
-        vec![Token::IntLiteral(3), Token::DotDot, Token::IntLiteral(10)]
     );
 }
 
