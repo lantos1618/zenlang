@@ -3338,7 +3338,9 @@ and do not assume Phase 4 is ready without evidence.
   Coverage includes `build_program_lowering_rejects_duplicate_target_fields`,
   `build_program_lowering_rejects_unknown_target_fields`, and
   `emit_json_build_graph_rejects_unknown_target_fields` plus
-  `emit_json_build_graph_rejects_duplicate_target_fields`.
+  `emit_json_build_graph_rejects_duplicate_target_fields`, with executing
+  `zen build build.zen` coverage in
+  `build_command_build_zen_rejects_duplicate_target_fields`.
 - Build graph target metadata extraction now validates required fields and
   field value shapes before graph construction, so missing `out_dir` and
   non-string string fields produce direct target-field diagnostics instead of
@@ -3346,7 +3348,10 @@ and do not assume Phase 4 is ready without evidence.
   `build_program_lowering_rejects_missing_required_target_fields`,
   `build_program_lowering_rejects_invalid_target_field_types`, and
   `emit_json_build_graph_rejects_missing_required_target_fields` plus
-  `emit_json_build_graph_rejects_invalid_target_field_types`.
+  `emit_json_build_graph_rejects_invalid_target_field_types`, with executing
+  `zen build build.zen` coverage in
+  `build_command_build_zen_rejects_missing_required_target_fields` and
+  `build_command_build_zen_rejects_invalid_target_field_types`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
