@@ -2673,6 +2673,11 @@ checked-in docs, tests, and commits only.
   keeping stale AST fallback rejection, restored-key cleanup, and body
   type-reference coverage separate from template shape and mutability
   restoration tests.
+- Resolver Phase 2 generic behavior method metadata tests now live in
+  `tests/resolver_phase2/generic_behavior_metadata/method_signatures.rs`,
+  keeping behavior method signature, function-typed method, duplicate
+  parameter, and default-local coverage separate from generic parameter and
+  bound metadata tests.
 
 ## Current Phase
 
