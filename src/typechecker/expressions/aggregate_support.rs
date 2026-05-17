@@ -73,10 +73,26 @@ impl TypeChecker {
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
         let struct_info = self.structs.get(name).cloned();
+        let type_arg_count = struct_info.as_ref().map(|info| info.type_params.len());
+        let type_args_valid = type_arg_count.is_none_or(|expected| expected == type_args.len());
+
         let (type_name, ty, field_defs) = if type_args.is_empty() {
-            let ty = self.resolve_type(&AstType::Named(name.to_string()));
+            let ty = if let Some(expected) = type_arg_count.filter(|expected| *expected > 0) {
+                self.diagnostics.push(Diagnostic::error(
+                    "E5001",
+                    format!(
+                        "generic struct `{}` expects {} type arguments, found 0",
+                        name, expected
+                    ),
+                    span,
+                ));
+                Type::Unknown
+            } else {
+                self.resolve_type(&AstType::Named(name.to_string()))
+            };
             let field_defs = struct_info
                 .as_ref()
+                .filter(|_| type_args_valid)
                 .map(|info| {
                     info.fields
                         .iter()
@@ -98,7 +114,7 @@ impl TypeChecker {
         };
         let mut typed_fields = Vec::new();
         let mut provided = std::collections::HashSet::new();
-        let default_substitutions = if type_args.is_empty() {
+        let default_substitutions = if type_args.is_empty() || !type_args_valid {
             None
         } else {
             struct_info.as_ref().and_then(|info| {
@@ -140,7 +156,7 @@ impl TypeChecker {
                         typed.span,
                     ));
                 }
-            } else if struct_info.is_some() {
+            } else if struct_info.is_some() && type_args_valid {
                 self.diagnostics.push(Diagnostic::error(
                     "E3035",
                     format!("unknown field `{}` for struct `{}`", field_name, name),
@@ -151,7 +167,7 @@ impl TypeChecker {
             typed_fields.push((field_name.clone(), typed));
         }
 
-        if let Some(info) = &struct_info {
+        if let Some(info) = &struct_info.filter(|_| type_args_valid) {
             for (field_name, _) in &info.fields {
                 if !provided.contains(field_name.as_str()) {
                     if let Some(default) = info.field_defaults.get(field_name) {
