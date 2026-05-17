@@ -2240,7 +2240,10 @@ checked-in docs, tests, and commits only.
   unresolved target dependency rejection,
   `build_program_lowering_rejects_unsupported_package_targets` and
   `build_program_lowering_rejects_unsupported_link_targets` keep package/link
-  target semantics gated with targeted diagnostics.
+  target semantics gated with targeted diagnostics, and
+  `build_program_lowering_rejects_gated_package_fields` plus
+  `build_program_lowering_rejects_gated_link_fields` keep recognized
+  package/link fields gated instead of silently dropping them.
   `build_target_dsl_kind_owns_source_spelling` keeps accepted build target
   source spellings and the supported-target diagnostic list owned by the DSL
   kind enum, and `build_target_kind_owns_diagnostic_spelling` keeps runtime
@@ -2292,6 +2295,9 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_rejects_unsupported_link_targets`,
   `build_graph_command_rejects_unsupported_package_targets`, and
   `build_graph_command_rejects_unsupported_link_targets`.
+  `build_zen_commands_reject_package_fields` and
+  `build_zen_commands_reject_link_fields` cover the same entrypoints for
+  recognized-but-gated package/link target fields.
 - `build-graph <build.zen>` now consumes the deterministic graph for executable
   targets without widening the accepted `build.zen` subset.
   `build_graph_command_compiles_single_executable_target` covers the

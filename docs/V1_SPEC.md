@@ -104,9 +104,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   are lowered, emitted in build graph JSON, compiled, and run through the
   constrained test command. Library targets are lowered and emitted in build
   graph JSON, but library execution remains gated. Build and test execution
-  reject dependencies on gated target kinds until deterministic package/link
-  semantics exist. Target dependency and feature metadata arrays are lowered and
-  emitted in build graph JSON. Target dependencies must reference known graph
+  reject dependencies on gated target kinds, and reject `packages`/`link`
+  fields, until deterministic package/link semantics exist. Target dependency
+  and feature metadata arrays are lowered and emitted in build graph JSON.
+  Target dependencies must reference known graph
   targets, may not point back to the same target, and may not form dependency
   cycles; dependency cycles are rejected before execution.
   Legacy

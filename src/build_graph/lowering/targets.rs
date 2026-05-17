@@ -64,6 +64,11 @@ fn validate_target_fields(
                 "unknown field `{name}` in `{kind}` build target"
             ))
         })?;
+        if field.is_package_link_semantics() {
+            return Err(BuildGraphError::UnsupportedBuildScript(format!(
+                "unsupported field `{field}` in `{kind}` build target; package/link semantics are gated"
+            )));
+        }
         if !allowed.contains(&field) {
             return Err(BuildGraphError::UnsupportedBuildScript(format!(
                 "unknown field `{name}` in `{kind}` build target"
@@ -87,8 +92,6 @@ fn allowed_fields(kind: BuildTargetDslKind) -> &'static [BuildTargetField] {
             BuildTargetField::OutDir,
             BuildTargetField::Dependencies,
             BuildTargetField::Features,
-            BuildTargetField::Packages,
-            BuildTargetField::Link,
         ],
         BuildTargetDslKind::Test => &[
             BuildTargetField::Name,
@@ -96,16 +99,12 @@ fn allowed_fields(kind: BuildTargetDslKind) -> &'static [BuildTargetField] {
             BuildTargetField::RootSourceFile,
             BuildTargetField::Dependencies,
             BuildTargetField::Features,
-            BuildTargetField::Packages,
-            BuildTargetField::Link,
         ],
         BuildTargetDslKind::Library => &[
             BuildTargetField::Name,
             BuildTargetField::Exports,
             BuildTargetField::Dependencies,
             BuildTargetField::Features,
-            BuildTargetField::Packages,
-            BuildTargetField::Link,
         ],
     }
 }

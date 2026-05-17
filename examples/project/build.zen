@@ -1,46 +1,13 @@
-// build.zen - Project configuration
-//
-// The compiler calls build() with a Builder.
+// build.zen - deterministic project graph
 
-{ Builder, BuildConfig, BuildError, Package, Executable, Test, Link } = @builtin.build
+{ Builder, BuildConfig, BuildError, Executable, Test } = @builtin.build
 
 build = (b: Builder) Result<BuildConfig, BuildError> {
-
-    // Stdlib path — env override or default
-    std_path = b.os.env("ZEN_STD") ?
-        | .Ok(path) { path }
-        | .Err { "~/.zen/std" }
-
-    // Packages — everything is a package, including your own source
-    packages = [
-        Package { name: "std", path: std_path },
-        Package { name: ".", path: "./src" },
-        // Package { name: "files", url: "github.com/someone/zen-files", version: "4.0.0" },
-    ]
-
-    // Platform linking
-    link = b.target.os ?
-        | .Linux   { Link { libs: ["c", "m"] } }
-        | .Macos   { Link { frameworks: ["Foundation"] } }
-        | .Windows { Link { libs: ["kernel32"] } }
-
-    // Executable
     b.add(Executable {
         name: "myapp",
         main: "main.zen",
         out_dir: "build/",
-        packages: packages,
-        link: link,
     })
-
-    // Library — use exports instead of main
-    // b.add(Library {
-    //     packages: packages,
-    //     exports: {
-    //         math: "src/math.zen",
-    //         strings: "src/strings.zen",
-    //     },
-    // })
 
     b.add(Test { root: "test.zen" })
 

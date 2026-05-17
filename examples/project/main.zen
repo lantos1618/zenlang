@@ -1,6 +1,7 @@
 // main.zen - Entry point for a multi-file Zen project
 //
-// `std` comes from build.zen packages. Local files import by module name.
+// Local files import by module name. The std import uses the current compiler
+// runtime stand-in while package semantics remain gated.
 
 { io } = std
 { clamp, factorial, is_even } = math_utils

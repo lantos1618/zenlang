@@ -92,6 +92,10 @@ impl BuildTargetField {
             Self::Link => Self::LINK,
         }
     }
+
+    pub(super) fn is_package_link_semantics(self) -> bool {
+        matches!(self, Self::Packages | Self::Link)
+    }
 }
 
 impl FromStr for BuildTargetField {
