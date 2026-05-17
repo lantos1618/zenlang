@@ -2972,6 +2972,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/codegen/c/tests/type_mapping.rs`, preserving primitive, string, pointer,
   named, and function-pointer type mapping coverage while keeping program
   generation and helper emission tests focused.
+- C codegen helper tests now live in `src/codegen/c/tests/helpers.rs`,
+  preserving identifier escaping, literal formatting, temporary naming, and
+  simple statement emission coverage while keeping whole-program generation
+  tests focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
