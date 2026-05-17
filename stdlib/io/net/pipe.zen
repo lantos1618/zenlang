@@ -15,7 +15,7 @@ PipeError: { code: i32, message: StaticString }
 
 PipeError.from_errno = (errno: i64) PipeError {
     code = cast(0 - errno, i32)
-    return PipeError { code: code, message: "Pipe error" }
+    PipeError { code: code, message: "Pipe error" }
 }
 
 Pipe: { read_fd: i32, write_fd: i32 }
@@ -23,20 +23,23 @@ Pipe: { read_fd: i32, write_fd: i32 }
 Pipe.new = () Result<Pipe, PipeError> {
     fds: [i32; 2] = [0, 0]
     result = compiler.syscall2(SYS_PIPE2, compiler.ptr_to_int(&fds.ref()), O_CLOEXEC)
-    result < 0 ? { return Result.Err(PipeError.from_errno(result)) }
-    return Result.Ok(Pipe { read_fd: fds[0], write_fd: fds[1] })
+    result < 0 ?
+        | true { Result.Err(PipeError.from_errno(result)) }
+        | false { Result.Ok(Pipe { read_fd: fds[0], write_fd: fds[1] }) }
 }
 
 Pipe.read = (self: MutPtr<Pipe>, buf: Ptr<u8>, len: i64) Result<i64, PipeError> {
     result = compiler.syscall3(SYS_READ, self.val.read_fd, compiler.ptr_to_int(buf), len)
-    result < 0 ? { return Result.Err(PipeError.from_errno(result)) }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(PipeError.from_errno(result)) }
+        | false { Result.Ok(result) }
 }
 
 Pipe.write = (self: MutPtr<Pipe>, buf: Ptr<u8>, len: i64) Result<i64, PipeError> {
     result = compiler.syscall3(SYS_WRITE, self.val.write_fd, compiler.ptr_to_int(buf), len)
-    result < 0 ? { return Result.Err(PipeError.from_errno(result)) }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(PipeError.from_errno(result)) }
+        | false { Result.Ok(result) }
 }
 
 Pipe.close = (self: MutPtr<Pipe>) void {
