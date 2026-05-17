@@ -2514,6 +2514,10 @@ checked-in docs, tests, and commits only.
   receiver methods and concrete generic receiver base methods, so inference,
   signature validation, bounds, and monomorphization cannot drift between the
   two Phase 5 method-specialization paths.
+- Generic function-call checking now shares one specialization path for direct
+  calls and UFC calls, keeping inference, explicit type arguments, substituted
+  signature checks, bounds, and monomorphization consistent across Phase 5
+  function-call syntax.
 - Expression function checking now lives in
   `src/typechecker/expressions/function_checking.rs`, keeping
   `src/typechecker/expressions.rs` focused on expression dispatch while

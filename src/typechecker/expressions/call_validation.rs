@@ -1,6 +1,57 @@
 use super::*;
 
 impl TypeChecker {
+    pub(super) fn resolve_generic_function_call(
+        &mut self,
+        function_name: &str,
+        info: &FuncInfo,
+        type_args: &[AstType],
+        typed_args: &[TypedExpression],
+        span: Span,
+    ) -> (String, Type) {
+        let (subs, type_args_valid) = if type_args.is_empty() {
+            let arg_types: Vec<Type> = typed_args.iter().map(|arg| arg.ty.clone()).collect();
+            let (subs, conflicts) =
+                self.infer_type_args_with_conflicts(&info.type_params, &info.params, &arg_types);
+            let inferred_type_args_valid =
+                self.report_inference_conflicts("function", function_name, conflicts, span);
+            (subs, inferred_type_args_valid)
+        } else {
+            self.explicit_type_arg_substitutions(
+                "function",
+                function_name,
+                &info.type_params,
+                type_args,
+                span,
+            )
+        };
+
+        let fallback_mangled =
+            self.generic_function_mangled_name(function_name, &info.type_params, &subs);
+        if !type_args_valid {
+            return (fallback_mangled, Type::Unknown);
+        }
+
+        self.check_call_signature_with_substitutions(
+            "function",
+            function_name,
+            &info.params,
+            typed_args,
+            &subs,
+            &span,
+        );
+
+        if self.check_generic_bounds_valid(&info.type_param_bounds, &subs, span) {
+            let ret_type = self.substitute_type(&info.return_type, &subs);
+            let mangled = self
+                .specialize_generic_function(function_name, &subs, span)
+                .unwrap_or(fallback_mangled);
+            (mangled, ret_type)
+        } else {
+            (fallback_mangled, Type::Unknown)
+        }
+    }
+
     pub(super) fn check_call_signature(
         &mut self,
         kind: &str,
