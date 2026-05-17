@@ -125,6 +125,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/build.zen",
         "stdlib/collections/char.zen",
         "stdlib/collections/queue.zen",
+        "stdlib/collections/set.zen",
         "stdlib/collections/vec.zen",
         "stdlib/compiler.zen",
         "stdlib/concurrency/actor/actor.zen",
