@@ -2431,6 +2431,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration direct_file_command_build_zen_accepts_declared_file_read_effects`
   and
   `cargo test --test integration direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+- Direct `zen build.zen` validates and typechecks graph-only library exports
+  before execution, covered by
+  `cargo test --test integration direct_file_command_build_zen_accepts_valid_graph_only_library_sources`,
+  `cargo test --test integration direct_file_command_build_zen_rejects_graph_only_library_type_errors`,
+  and
+  `cargo test --test integration direct_file_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`.
 - Dependency-ordered build execution still stops before execution when graph
   lowering detects undeclared host effects, covered by
   `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
@@ -2483,6 +2489,11 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/legacy_graph_command.rs` from 492 to 255 lines
   while preserving coverage through
   `cargo test --test integration build_graph_command`.
+- Direct build.zen integration tests now keep graph validation cases in
+  `tests/integration/cli_build/direct_build_graph_validation.rs`, reducing
+  `tests/integration/cli_build/direct_build_graph_execution.rs` from 417 to
+  198 lines while preserving coverage through
+  `cargo test --test integration direct_file_command_build_zen`.
 - Resolver import metadata tests now keep module-symbol metadata cases in
   `src/typechecker/tests/resolver_import_metadata/module_metadata.rs`,
   reducing `src/typechecker/tests/resolver_import_metadata.rs` from 506 to 280
