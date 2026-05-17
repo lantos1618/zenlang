@@ -2731,6 +2731,9 @@ and do not assume Phase 4 is ready without evidence.
 - Build graph check-source typechecking now lives in
   `src/cli/build_graph_execution.rs`, preserving `zen check build.zen` source
   diagnostics while keeping build graph validation helpers together.
+- CLI module-graph loading and frontend typechecking now live in
+  `src/cli/frontend.rs`, preserving check, emit, JSON, build, and run command
+  frontend behavior while keeping root CLI dispatch smaller.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type
