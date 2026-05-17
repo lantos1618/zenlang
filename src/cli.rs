@@ -2,11 +2,13 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 mod build_graph_execution;
+mod diagnostics;
 
 use build_graph_execution::{
     executable_build_targets, single_executable_build_target, test_build_targets,
     validate_build_graph_sources,
 };
+use diagnostics::{print_diagnostic, print_errors};
 use zen::codegen::c::CBackend;
 use zen::codegen::Backend;
 use zen::error::FileTable;
@@ -469,46 +471,5 @@ fn reject_build_zen_for_emit_json_mode(path_str: &str) {
             "error: this emit-json mode does not support build.zen; use `emit-json build-graph`"
         );
         process::exit(1);
-    }
-}
-
-fn print_errors(errs: &[zen::error::CompileError], files: &FileTable) {
-    for err in errs {
-        let diag: zen::error::Diagnostic = err.clone().into();
-        print_diagnostic(&diag, files);
-    }
-}
-
-fn print_diagnostic(diag: &zen::error::Diagnostic, files: &FileTable) {
-    let severity = match diag.severity {
-        zen::error::Severity::Error => "error",
-        zen::error::Severity::Warning => "warning",
-        zen::error::Severity::Info => "info",
-        zen::error::Severity::Hint => "hint",
-    };
-
-    if let Some(span) = diag.span {
-        let path = files.get_path(span.file_id).unwrap_or("<unknown>");
-        if let Some((line, col)) = files.line_col(span.file_id, span.start) {
-            eprintln!(
-                "{}:{}:{}: {}: {}",
-                path,
-                line + 1,
-                col + 1,
-                severity,
-                diag.message
-            );
-        } else {
-            eprintln!("{}: {}: {}", path, severity, diag.message);
-        }
-    } else {
-        eprintln!("{}: {}", severity, diag.message);
-    }
-
-    for label in &diag.labels {
-        let path = files.get_path(label.span.file_id).unwrap_or("<unknown>");
-        if let Some((line, col)) = files.line_col(label.span.file_id, label.span.start) {
-            eprintln!("  --> {}:{}:{}: {}", path, line + 1, col + 1, label.message);
-        }
     }
 }

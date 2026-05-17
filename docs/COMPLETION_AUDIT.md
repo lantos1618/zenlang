@@ -2369,6 +2369,11 @@ and do not assume Phase 4 is ready without evidence.
   to typechecker state/orchestration while retaining focused resolver metadata
   restoration coverage such as
   `cargo test --lib resolver_behavior_methods_from_metadata_preserves_defaults_by_resolver_order`.
+- `src/cli.rs` no longer owns diagnostic rendering directly. Compile-error and
+  diagnostic printing helpers live in `src/cli/diagnostics.rs`, reducing the
+  root CLI module below the 500-line cleanup threshold while preserving
+  command diagnostic coverage through
+  `cargo test --test integration cli_build::diagnostics`.
 
 ## Unresolved Gaps
 

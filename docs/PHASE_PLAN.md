@@ -2200,6 +2200,9 @@ checked-in docs, tests, and commits only.
   live in `src/typechecker/resolver_metadata_collection.rs`, keeping
   `src/typechecker/mod.rs` focused on state and orchestration while preserving
   the existing resolver metadata restoration tests.
+- CLI diagnostic rendering now lives in `src/cli/diagnostics.rs`, keeping the
+  root `src/cli.rs` module focused on command dispatch and execution while
+  preserving the existing CLI diagnostic integration tests.
 
 ## Current Phase
 
