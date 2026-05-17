@@ -160,18 +160,43 @@ value = () i32 {
 
 #[test]
 fn test_command_build_zen_accepts_declared_file_read_effects() {
+    assert_test_command_accepts_declared_file_read_effect(
+        r#"| .Err { "default" }"#,
+        "test_command_build_zen_accepts_declared_file_read_effects",
+    );
+}
+
+#[test]
+fn test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects() {
+    assert_test_command_accepts_declared_file_read_effect(
+        r#"| _ { "default" }"#,
+        "test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects",
+    );
+}
+
+#[test]
+fn test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects() {
+    assert_test_command_accepts_declared_file_read_effect(
+        r#"| err { "default" }"#,
+        "test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects",
+    );
+}
+
+fn assert_test_command_accepts_declared_file_read_effect(fallback_arm: &str, case_name: &str) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
     manifest = b.os.read_file("test.targets") ?
-        | .Ok(contents) { contents }
-        | .Err { "default" }
-    b.add(Test { name: "unit", root: "test.zen" })
+        | .Ok(contents) {{ contents }}
+        {fallback_arm}
+    b.add(Test {{ name: "unit", root: "test.zen" }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
     std::fs::write(tmp.path().join("test.targets"), "unit\n").expect("write manifest");
@@ -193,7 +218,7 @@ main = () i32 {
 
     assert!(
         output.status.success(),
-        "zen test build.zen failed: stdout={}, stderr={}",
+        "{case_name}: zen test build.zen failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
@@ -206,7 +231,7 @@ main = () i32 {
     );
     assert!(
         String::from_utf8_lossy(&output.stdout).contains("test unit passed"),
-        "expected test pass output, stdout={}",
+        "{case_name}: expected test pass output, stdout={}",
         String::from_utf8_lossy(&output.stdout)
     );
 }

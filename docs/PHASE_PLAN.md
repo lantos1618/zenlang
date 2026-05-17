@@ -2547,6 +2547,13 @@ checked-in docs, tests, and commits only.
 - Build graph host-effect lowering also treats identifier fallback match arms
   as declared deterministic fallbacks, covered by env/file lowering tests and
   an executable `zen build build.zen` file-read fixture.
+- `zen test build.zen` now has executable graph fixtures for `.Err`,
+  wildcard, and identifier fallback arms on declared file reads, while keeping
+  the matching undeclared file-read rejection before test execution. Coverage:
+  `test_command_build_zen_accepts_declared_file_read_effects`,
+  `test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
+  `test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  and `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
 - Expression function checking now lives in
   `src/typechecker/expressions/function_checking.rs`, keeping
   `src/typechecker/expressions.rs` focused on expression dispatch while
