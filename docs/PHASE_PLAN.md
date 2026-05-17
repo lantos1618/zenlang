@@ -2148,7 +2148,9 @@ checked-in docs, tests, and commits only.
   avoiding duplicated magic strings in semantic/CLI logic.
   `build_program_lowering_rejects_undeclared_env_reads` keeps undeclared host
   effects rejected during lowering. The constrained deterministic-effect
-  surface also recognizes declared `b.os.read_file("...")` effects, covered by
+  surface also recognizes declared `b.os.env("...")` effects, covered by
+  `build_program_lowering_accepts_declared_env_reads`, and declared
+  `b.os.read_file("...")` effects, covered by
   `build_program_lowering_accepts_declared_file_reads`, while
   `build_program_lowering_rejects_undeclared_file_reads` keeps undeclared file
   reads rejected before graph promotion.

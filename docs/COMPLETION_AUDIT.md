@@ -2324,6 +2324,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test build_graph build_program_lowering_rejects_unsupported_package_targets`
   and
   `cargo test --test build_graph build_program_lowering_rejects_unsupported_link_targets`.
+- Build graph lowering accepts declared deterministic env-read effects before
+  graph promotion, covered by
+  `cargo test --test build_graph build_program_lowering_accepts_declared_env_reads`.
 - Build target kind spellings are owned by enums instead of duplicated in
   semantic and CLI logic. `build_target_dsl_kind_owns_source_spelling` covers
   accepted build target DSL names and the supported-target diagnostic list, and
