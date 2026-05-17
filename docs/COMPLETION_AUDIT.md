@@ -2749,6 +2749,9 @@ and do not assume Phase 4 is ready without evidence.
 - CLI build graph source existence and typechecking helpers now live in
   `src/cli/build_graph_sources.rs`, preserving source validation behavior while
   keeping graph execution ordering and dependency gating smaller.
+- Build graph lowering target extraction now lives in
+  `src/build_graph/lowering/targets.rs`, preserving deterministic target
+  lowering coverage while keeping build-script expression traversal smaller.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type
