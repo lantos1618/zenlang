@@ -2394,6 +2394,8 @@ checked-in docs, tests, and commits only.
   failure before normal `zen build build.zen` is ungated.
   Declared deterministic env reads with fallbacks are accepted through
   `build_graph_command_accepts_declared_env_read_with_fallback`.
+  Env reads with `?` but no fallback arm reject before execution through
+  `build_graph_command_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted through `.Err`,
   wildcard, and identifier fallback arms, covered by
   `build_graph_command_accepts_declared_file_read_effects`,
@@ -2437,6 +2439,8 @@ checked-in docs, tests, and commits only.
   Declared deterministic env reads with fallbacks are accepted on the normal
   build path through
   `build_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Env reads with `?` but no fallback arm reject before execution through
+  `build_command_build_zen_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted on the normal build
   path through `build_command_build_zen_accepts_declared_file_read_effects`,
   while undeclared file reads reject before target execution through
@@ -2459,6 +2463,9 @@ checked-in docs, tests, and commits only.
   `check_command_build_zen_rejects_undeclared_host_effects`.
   Declared deterministic env reads with fallbacks are accepted through
   `check_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Env reads with `?` but no fallback arm reject before source validation
+  through
+  `check_command_build_zen_rejects_env_read_without_fallback_before_source_validation`.
   Declared deterministic file-read effects are accepted through `.Err`,
   wildcard, and identifier fallback arms, covered by
   `check_command_build_zen_accepts_declared_file_read_effects`,
@@ -2497,6 +2504,8 @@ checked-in docs, tests, and commits only.
   Declared deterministic env reads with fallbacks are accepted on the normal
   test path through
   `test_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Env reads with `?` but no fallback arm reject before test execution through
+  `test_command_build_zen_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted on the normal test
   path through `test_command_build_zen_accepts_declared_file_read_effects`,
   while undeclared file reads reject before test execution through
@@ -2534,6 +2543,8 @@ checked-in docs, tests, and commits only.
   library source checks.
   Declared deterministic env reads with fallbacks are accepted through
   `emit_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Env reads with `?` but no fallback arm reject before C emission through
+  `emit_command_build_zen_rejects_env_read_without_fallback`.
   Declared deterministic file-read effects are accepted through
   `emit_command_build_zen_accepts_declared_file_read_effects`, while
   undeclared file reads reject before C emission through
@@ -2576,6 +2587,8 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_rejects_undeclared_host_effects`.
   Declared deterministic env reads with fallbacks are accepted through
   `direct_file_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Env reads with `?` but no fallback arm reject before execution through
+  `direct_file_command_build_zen_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted through
   `direct_file_command_build_zen_accepts_declared_file_read_effects`, while
   undeclared file reads reject before execution through
