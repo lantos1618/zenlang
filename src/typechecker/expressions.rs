@@ -216,14 +216,11 @@ impl TypeChecker {
                 ))
             }
 
-            // TODO: implement char literal type
-            Expression::Error { span } | Expression::CharLiteral { span, .. } => {
-                Ok(TypedExpression {
-                    kind: TypedExprKind::Error,
-                    ty: Type::Unknown,
-                    span: *span,
-                })
-            }
+            Expression::Error { span } => Ok(TypedExpression {
+                kind: TypedExprKind::Error,
+                ty: Type::Unknown,
+                span: *span,
+            }),
         }
     }
 }

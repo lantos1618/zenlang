@@ -2654,6 +2654,10 @@ checked-in docs, tests, and commits only.
 - Range expressions now produce an explicit gated typechecker diagnostic until
   a concrete range type is designed, instead of silently carrying an unknown
   placeholder through function return checking.
+- Dead char-literal AST support has been removed because no lexer/parser
+  surface produces it. The cleanup removes the stale typechecker `Unknown`
+  fallback and is guarded by
+  `repo_hygiene::source_ast_does_not_carry_dead_char_literal_nodes`.
 - Lexer numeric literal and range-token tests now live in
   `src/lexer/tests/number_literals.rs`, keeping numeric lexing coverage
   separate from punctuation, whitespace, and example-token tests.

@@ -94,6 +94,28 @@ fn source_ast_no_longer_has_return_expression_nodes() {
 }
 
 #[test]
+fn source_ast_does_not_carry_dead_char_literal_nodes() {
+    for path in [
+        "src/ast/expressions.rs",
+        "src/typechecker/expressions.rs",
+        "src/resolver/expression_validation.rs",
+        "src/build_graph/lowering.rs",
+        "src/typechecker/self_type_validation/expressions.rs",
+        "src/typechecker/generic_type_reference_walker/expressions.rs",
+        "src/typechecker/resolver_validation/local_traversal.rs",
+        "src/typechecker/resolver_validation_support/expected_local_traversal.rs",
+    ] {
+        let source = read(path);
+        for forbidden in ["CharLiteral", "TODO: implement char literal type"] {
+            assert!(
+                !source.contains(forbidden),
+                "{path} still contains dead char-literal AST support: {forbidden}"
+            );
+        }
+    }
+}
+
+#[test]
 fn ci_and_release_only_advertise_existing_targets() {
     let ci = read(".github/workflows/ci.yml");
     let release = read(".github/workflows/release.yml");
