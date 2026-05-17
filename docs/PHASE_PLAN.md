@@ -2075,6 +2075,9 @@ checked-in docs, tests, and commits only.
 - Stripped resolver import validation now receives the full resolver
   validation replay task bundle and reads the import-validation flag
   internally, completing the current resolver replay call-site bundle shape.
+- Resolver behavior-association list replay now selects type and behavior
+  association entries from the resolver declaration task bundle internally,
+  reducing another declaration replay sub-slice handoff.
 - AST behavior extends validation now receives the full behavior-association
   task bundle and selects `.extends` entries internally, removing another
   association sub-slice handoff.

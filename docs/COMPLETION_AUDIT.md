@@ -2517,6 +2517,9 @@ and do not assume Phase 4 is ready without evidence.
   `src/module_system/tests/graph_loading.rs`, reducing
   `src/module_system/tests.rs` from 503 to 333 lines while preserving coverage
   through `cargo test --lib module_system::tests`.
+- Resolver behavior-association list replay now selects from the resolver
+  declaration task bundle internally, covered by
+  `cargo test --lib resolver_behavior_association_list_tasks_select_from_declaration_bundle`.
 
 ## Unresolved Gaps
 
