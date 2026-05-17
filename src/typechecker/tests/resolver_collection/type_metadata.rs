@@ -98,7 +98,7 @@ Point: { x: i32 = true }
 }
 
 #[test]
-fn resolver_struct_field_defaults_validate_from_type_metadata_tasks() {
+fn resolver_struct_field_defaults_validate_from_semantic_tasks() {
     let program = parse_program(
         r#"
 Point: { x: i32 = true }
@@ -107,17 +107,20 @@ Point: { x: i32 = true }
     let symbols = crate::resolver::Resolver::new()
         .resolve_program(&program)
         .expect("resolver succeeds");
-    let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+    let tasks =
+        TypeChecker::collect_resolver_declaration_semantic_validation_tasks(&program.declarations);
     let mut stale_declarations = program.declarations.clone();
     if let Declaration::Struct { fields, .. } = &mut stale_declarations[0] {
         fields.clear();
     }
     let mut tc = TypeChecker::new();
     tc.with_resolver_backed_collection(|checker| checker.collect_declarations(&stale_declarations));
-    tc.collect_resolver_declaration_metadata(&symbols, &tasks);
+    let metadata_tasks =
+        TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+    tc.collect_resolver_declaration_metadata(&symbols, &metadata_tasks);
 
     tc.with_resolver_backed_collection(|checker| {
-        checker.validate_resolver_struct_field_default_tasks(&tasks, Some(&symbols));
+        checker.validate_resolver_declaration_semantics_from_semantic_tasks(&tasks, Some(&symbols));
     });
 
     assert!(
@@ -127,13 +130,13 @@ Point: { x: i32 = true }
                     .message
                     .contains("field `x` default expects `i32`, found `bool`")
         }),
-        "resolver-backed default validation should use precollected type tasks: {:?}",
+        "resolver-backed default validation should use semantic validation tasks: {:?}",
         tc.diagnostics
     );
 }
 
 #[test]
-fn resolver_backed_struct_field_defaults_reuse_metadata_tasks() {
+fn resolver_backed_struct_field_defaults_use_semantic_tasks() {
     let program = parse_program(
         r#"
 Point: { x: i32 = true }
@@ -162,13 +165,13 @@ Point: { x: i32 = true }
                     .message
                     .contains("field `x` default expects `i32`, found `bool`")
         }),
-        "resolver-backed default validation should reuse shared metadata tasks: {:?}",
+        "resolver-backed default validation should use focused semantic tasks: {:?}",
         tc.diagnostics
     );
 }
 
 #[test]
-fn resolver_backed_semantic_validation_reuses_metadata_tasks() {
+fn resolver_backed_semantic_validation_uses_semantic_tasks() {
     let program = parse_program(
         r#"
 Point: { x: i32 = true }
@@ -195,7 +198,7 @@ Point: { x: i32 = true }
                     .message
                     .contains("field `x` default expects `i32`, found `bool`")
         }),
-        "resolver-backed semantic validation should reuse resolver metadata tasks: {:?}",
+        "resolver-backed semantic validation should use resolver semantic tasks: {:?}",
         tc.diagnostics
     );
 }
