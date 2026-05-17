@@ -2408,6 +2408,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --lib return_type_mismatch_error`,
   `cargo test --lib non_void_function_without_return_is_error`, and
   `cargo test --test integration runtime_fixtures::test_defer_early_return`.
+- `src/resolver/symbol_table_test_support.rs` now shares one test-only symbol
+  lookup helper across metadata setters, reducing the file from 514 to 405
+  lines while preserving resolver-backed metadata coverage through
+  `cargo test --lib resolver_ -- --nocapture` and
+  `cargo test --test resolver_phase2`.
 
 ## Unresolved Gaps
 
