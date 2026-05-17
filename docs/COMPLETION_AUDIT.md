@@ -279,6 +279,10 @@ and do not assume Phase 4 is ready without evidence.
   package/link field diagnostics into
   `tests/integration/cli_build/build_graph_json/validation/unsupported_targets.rs`,
   leaving target field and dependency graph diagnostics in the parent module.
+- Emit-command build graph validation tests now split target-selection
+  diagnostics into
+  `tests/integration/cli_build/emit_direct_validation/target_selection.rs`,
+  leaving unrelated gated test source skip coverage in the parent module.
 - Generic specialization generated-C assertions now split multi-file import and
   dependency cases into
   `tests/integration/generic_specializations/multifile_generated_c.rs`,
