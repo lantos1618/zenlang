@@ -39,7 +39,6 @@ pub(super) fn single_executable_build_target(path_str: &str) -> BuildGraphExecut
     validate_executed_dependency_targets(&graph, BuildGraphExecutionKind::Executable);
     let build_path = Path::new(path_str);
     let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
-    validate_non_executed_target_sources(base_dir, &graph, BuildGraphExecutionKind::Executable);
     let ordered_targets = match graph.targets_in_dependency_order() {
         Ok(targets) => targets,
         Err(err) => {
@@ -64,6 +63,7 @@ pub(super) fn single_executable_build_target(path_str: &str) -> BuildGraphExecut
         process::exit(1);
     }
 
+    validate_non_executed_target_sources(base_dir, &graph, BuildGraphExecutionKind::Executable);
     executable_build_target(base_dir, executable_targets[0]).expect("one executable target")
 }
 
