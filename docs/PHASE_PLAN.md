@@ -164,6 +164,9 @@ checked-in docs, tests, and commits only.
 - Typechecker method-call support now keeps module-qualified import calls in a
   focused child module, keeping generic receiver/method/UFC resolution
   separate from import dispatch and module-call diagnostics.
+- Direct module-qualified calls such as `@builtin.panic<i32>(...)` now reject
+  explicit type arguments instead of silently accepting them, while preserving
+  the dedicated cast type-argument path.
 - Generic enum method specialization coverage now includes an imported
   `Result<T, E>` fixture with generated-C assertions for the concrete method.
 - Resolver-backed callable type-reference validation now shares the collected
