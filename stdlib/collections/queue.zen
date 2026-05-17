@@ -22,7 +22,7 @@ Queue<T>: {
 
 // Create new empty queue
 Queue<T>.new = (allocator: Allocator) Queue<T> {
-    return Queue<T> {
+    Queue<T> {
         data: DynVec<T>.new(allocator),
         head: 0,
         tail: 0,
@@ -32,7 +32,7 @@ Queue<T>.new = (allocator: Allocator) Queue<T> {
 
 // Create queue with initial capacity
 Queue<T>.with_capacity = (allocator: Allocator, capacity: usize) Queue<T> {
-    return Queue<T> {
+    Queue<T> {
         data: DynVec<T>.with_capacity(allocator, capacity),
         head: 0,
         tail: 0,
@@ -47,13 +47,13 @@ Queue<T>.with_capacity = (allocator: Allocator, capacity: usize) Queue<T> {
 // Get queue size
 Queue<T>.len = (self: Queue<T>) usize {
     self.tail >= self.head ?
-        | true { return self.tail - self.head }
-        | false { return 0 }
+        | true { self.tail - self.head }
+        | false { 0 }
 }
 
 // Check if empty
 Queue<T>.is_empty = (self: Queue<T>) bool {
-    return self.head >= self.tail
+    self.head >= self.tail
 }
 
 // ============================================================================
@@ -76,8 +76,8 @@ Queue<T>.dequeue = (self: MutPtr<Queue<T>>) void {
 // Peek at front element without removing
 Queue<T>.peek = (self: Queue<T>) Option<T> {
     self.head >= self.tail ?
-        | true { return Option.None }
-        | false { return self.data.get(self.head) }
+        | true { Option.None }
+        | false { self.data.get(self.head) }
 }
 
 // Clear queue (reset indices)
@@ -111,7 +111,7 @@ QueueIterator<T>: {
 
 // Create an iterator over the queue (front to back)
 Queue<T>.iter = (self: Queue<T>) QueueIterator<T> {
-    return QueueIterator<T> {
+    QueueIterator<T> {
         data: self.data,
         index: self.head,
         tail: self.tail
@@ -121,15 +121,15 @@ Queue<T>.iter = (self: Queue<T>) QueueIterator<T> {
 // Get next element from iterator
 QueueIterator<T>.next = (self: MutPtr<QueueIterator<T>>) Option<T> {
     self.val.index >= self.val.tail ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             elem_opt = self.val.data.get(self.val.index)
             self.val.index = self.val.index + 1
-            return elem_opt
+            elem_opt
         }
 }
 
 // Check if iterator has more elements
 QueueIterator<T>.has_next = (self: QueueIterator<T>) bool {
-    return self.index < self.tail
+    self.index < self.tail
 }
