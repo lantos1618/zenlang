@@ -2413,6 +2413,11 @@ and do not assume Phase 4 is ready without evidence.
   lines while preserving resolver-backed metadata coverage through
   `cargo test --lib resolver_ -- --nocapture` and
   `cargo test --test resolver_phase2`.
+- Resolver type/behavior metadata tests now keep behavior-method metadata cases
+  in `src/typechecker/tests/resolver_type_behavior_metadata/behavior_methods.rs`,
+  reducing `src/typechecker/tests/resolver_type_behavior_metadata.rs` from 510
+  to 332 lines while preserving coverage through
+  `cargo test --lib resolver_type_behavior_metadata`.
 
 ## Unresolved Gaps
 
