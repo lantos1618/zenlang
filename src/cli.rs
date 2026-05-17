@@ -2,6 +2,7 @@ use std::path::Path;
 use std::process;
 
 mod build_graph_execution;
+mod build_graph_loading;
 mod compile;
 mod diagnostics;
 mod frontend;
@@ -12,6 +13,7 @@ use build_graph_execution::{
     check_build_graph_sources, executable_build_targets, single_executable_build_target,
     test_build_targets, validate_build_graph_sources,
 };
+use build_graph_loading::load_build_graph;
 use compile::{compile_file_to_binary, compile_file_to_c_source, typed_program_to_c_source};
 use diagnostics::{print_diagnostic, print_errors};
 use frontend::{graph_frontend, load_module_graph};
@@ -20,7 +22,6 @@ use json_emit::{
     cmd_emit_json_typed,
 };
 use usage::print_usage;
-use zen::error::FileTable;
 
 pub fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -112,52 +113,6 @@ fn cmd_check(path_str: &str) {
         typed.functions.len(),
         typed.types.len()
     );
-}
-
-fn load_build_graph(path_str: &str) -> zen::build_graph::BuildGraph {
-    let path = Path::new(path_str);
-    if !path.exists() {
-        eprintln!("error: file not found: {}", path_str);
-        process::exit(1);
-    }
-    if !is_build_zen_path(path_str) {
-        eprintln!("error: emit-json build-graph expects a build.zen file");
-        process::exit(1);
-    }
-
-    let source = match std::fs::read_to_string(path) {
-        Ok(source) => source,
-        Err(err) => {
-            eprintln!("error reading {}: {}", path_str, err);
-            process::exit(1);
-        }
-    };
-
-    let mut files = FileTable::new();
-    let file_id = files.add_file(path_str.to_string(), source.clone());
-    let tokens = match zen::lexer::tokenize(&source, file_id) {
-        Ok(tokens) => tokens,
-        Err(err) => {
-            print_errors(&[err], &files);
-            process::exit(1);
-        }
-    };
-    let program = match zen::parser::parse(tokens, file_id) {
-        Ok(program) => program,
-        Err(errs) => {
-            print_errors(&errs, &files);
-            process::exit(1);
-        }
-    };
-    let graph = match zen::build_graph::BuildGraph::from_build_program(&program) {
-        Ok(graph) => graph,
-        Err(err) => {
-            eprintln!("build graph error: {}", err);
-            process::exit(1);
-        }
-    };
-
-    graph
 }
 
 fn cmd_emit(path_str: &str) {
