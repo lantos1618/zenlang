@@ -3360,6 +3360,12 @@ and do not assume Phase 4 is ready without evidence.
   build, direct-file, legacy build-graph, check, emit, and test command
   diagnostics while keeping positive declared-env effect fixtures in the
   parent module.
+- `zen test build.zen` target metadata extraction now has executing `Test`
+  target diagnostics for duplicate fields, missing required root fields, and
+  invalid root field types. Coverage:
+  `test_command_build_zen_rejects_duplicate_test_target_fields`,
+  `test_command_build_zen_rejects_missing_required_test_target_fields`, and
+  `test_command_build_zen_rejects_invalid_test_target_field_types`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

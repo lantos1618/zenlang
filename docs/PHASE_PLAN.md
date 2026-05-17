@@ -3035,6 +3035,12 @@ checked-in docs, tests, and commits only.
   build, direct-file, legacy build-graph, check, emit, and test command
   no-fallback diagnostics while keeping the positive declared-env coverage
   focused in the parent test module.
+- `zen test build.zen` now has executing target metadata diagnostics for
+  `Test` targets, covering duplicate fields, missing `root`/`root_source_file`,
+  and non-string root fields through
+  `test_command_build_zen_rejects_duplicate_test_target_fields`,
+  `test_command_build_zen_rejects_missing_required_test_target_fields`, and
+  `test_command_build_zen_rejects_invalid_test_target_field_types`.
 
 ## Current Phase
 
