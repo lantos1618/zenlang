@@ -303,6 +303,10 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/legacy_graph_command_host_effects/file_reads.rs`,
   leaving env-effect ordering and unrelated test skip coverage in the parent
   module.
+- Build graph unit tests now split target metadata validation and gated
+  package/link target rejection coverage into
+  `tests/build_graph/target_metadata.rs`, leaving the root build graph test
+  file for shared helpers and positive lowering smoke tests.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.
