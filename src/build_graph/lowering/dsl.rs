@@ -7,7 +7,7 @@ pub(super) enum BuildTargetDslKind {
     Library,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum BuildTargetField {
     Name,
     Main,
@@ -17,6 +17,8 @@ pub(super) enum BuildTargetField {
     Dependencies,
     Features,
     Exports,
+    Packages,
+    Link,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -73,6 +75,8 @@ impl BuildTargetField {
     const DEPENDENCIES: &'static str = "dependencies";
     const FEATURES: &'static str = "features";
     const EXPORTS: &'static str = "exports";
+    const PACKAGES: &'static str = "packages";
+    const LINK: &'static str = "link";
 
     pub(super) fn as_str(self) -> &'static str {
         match self {
@@ -84,6 +88,28 @@ impl BuildTargetField {
             Self::Dependencies => Self::DEPENDENCIES,
             Self::Features => Self::FEATURES,
             Self::Exports => Self::EXPORTS,
+            Self::Packages => Self::PACKAGES,
+            Self::Link => Self::LINK,
+        }
+    }
+}
+
+impl FromStr for BuildTargetField {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            Self::NAME => Ok(Self::Name),
+            Self::MAIN => Ok(Self::Main),
+            Self::ROOT => Ok(Self::Root),
+            Self::ROOT_SOURCE_FILE => Ok(Self::RootSourceFile),
+            Self::OUT_DIR => Ok(Self::OutDir),
+            Self::DEPENDENCIES => Ok(Self::Dependencies),
+            Self::FEATURES => Ok(Self::Features),
+            Self::EXPORTS => Ok(Self::Exports),
+            Self::PACKAGES => Ok(Self::Packages),
+            Self::LINK => Ok(Self::Link),
+            _ => Err(()),
         }
     }
 }

@@ -30,9 +30,18 @@ pub(super) fn build_target_from_builder_add(
         return Ok(None);
     };
     let target = match name.parse::<BuildTargetDslKind>() {
-        Ok(BuildTargetDslKind::Executable) => executable_target_from_fields(fields),
-        Ok(BuildTargetDslKind::Test) => test_target_from_fields(fields),
-        Ok(BuildTargetDslKind::Library) => library_target_from_fields(fields),
+        Ok(kind @ BuildTargetDslKind::Executable) => {
+            validate_target_fields(kind, fields)?;
+            executable_target_from_fields(fields)
+        }
+        Ok(kind @ BuildTargetDslKind::Test) => {
+            validate_target_fields(kind, fields)?;
+            test_target_from_fields(fields)
+        }
+        Ok(kind @ BuildTargetDslKind::Library) => {
+            validate_target_fields(kind, fields)?;
+            library_target_from_fields(fields)
+        }
         Err(()) => {
             return Err(BuildGraphError::UnsupportedBuildScript(format!(
                 "unsupported build target kind `{name}`; supported target kinds are {}",
@@ -41,6 +50,64 @@ pub(super) fn build_target_from_builder_add(
         }
     };
     Ok(target)
+}
+
+fn validate_target_fields(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+) -> Result<(), BuildGraphError> {
+    let allowed = allowed_fields(kind);
+    let mut seen = std::collections::BTreeSet::new();
+    for (name, _) in fields {
+        let field = name.parse::<BuildTargetField>().map_err(|()| {
+            BuildGraphError::UnsupportedBuildScript(format!(
+                "unknown field `{name}` in `{kind}` build target"
+            ))
+        })?;
+        if !allowed.contains(&field) {
+            return Err(BuildGraphError::UnsupportedBuildScript(format!(
+                "unknown field `{name}` in `{kind}` build target"
+            )));
+        }
+        if !seen.insert(field) {
+            return Err(BuildGraphError::UnsupportedBuildScript(format!(
+                "duplicate field `{name}` in `{kind}` build target"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn allowed_fields(kind: BuildTargetDslKind) -> &'static [BuildTargetField] {
+    match kind {
+        BuildTargetDslKind::Executable => &[
+            BuildTargetField::Name,
+            BuildTargetField::Main,
+            BuildTargetField::RootSourceFile,
+            BuildTargetField::OutDir,
+            BuildTargetField::Dependencies,
+            BuildTargetField::Features,
+            BuildTargetField::Packages,
+            BuildTargetField::Link,
+        ],
+        BuildTargetDslKind::Test => &[
+            BuildTargetField::Name,
+            BuildTargetField::Root,
+            BuildTargetField::RootSourceFile,
+            BuildTargetField::Dependencies,
+            BuildTargetField::Features,
+            BuildTargetField::Packages,
+            BuildTargetField::Link,
+        ],
+        BuildTargetDslKind::Library => &[
+            BuildTargetField::Name,
+            BuildTargetField::Exports,
+            BuildTargetField::Dependencies,
+            BuildTargetField::Features,
+            BuildTargetField::Packages,
+            BuildTargetField::Link,
+        ],
+    }
 }
 
 fn executable_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {

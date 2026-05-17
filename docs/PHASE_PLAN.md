@@ -2777,6 +2777,10 @@ checked-in docs, tests, and commits only.
 - Build graph host-effect fallback recognition now uses enum-backed
   `Ok`/`Err` result variant spelling instead of comparing raw variant strings,
   covered by `build_graph::lowering_tests::host_effect_result_variant_owns_source_spelling`.
+- Build graph target metadata lowering now rejects duplicate and unknown target
+  fields before graph construction, using enum-backed field spelling and
+  preserving CLI diagnostics through
+  `emit_json_build_graph_rejects_unknown_target_fields`.
 
 ## Current Phase
 

@@ -3051,6 +3051,12 @@ and do not assume Phase 4 is ready without evidence.
   variant spelling in `HostEffectResultVariant`, preserving the existing
   `.Err`, wildcard, and identifier fallback behavior while removing the raw
   string comparison from semantic lowering logic.
+- Build graph target metadata lowering now validates duplicate and unknown
+  target fields before graph construction, so malformed `build.zen` target
+  metadata cannot silently disappear into a vague missing-target diagnostic.
+  Coverage includes `build_program_lowering_rejects_duplicate_target_fields`,
+  `build_program_lowering_rejects_unknown_target_fields`, and
+  `emit_json_build_graph_rejects_unknown_target_fields`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
