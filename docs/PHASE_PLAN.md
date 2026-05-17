@@ -2602,6 +2602,10 @@ checked-in docs, tests, and commits only.
   dependencies through
   `direct_file_command_build_zen_accepts_library_dependencies` and
   `direct_file_command_build_zen_rejects_gated_test_dependencies`,
+  rejects unknown, self, and cyclic target dependencies before execution
+  through `direct_file_command_build_zen_rejects_unknown_target_dependencies`,
+  `direct_file_command_build_zen_rejects_self_target_dependencies`, and
+  `direct_file_command_build_zen_rejects_cyclic_target_dependencies`,
   rejects graph-only library exports with missing sources through
   `direct_file_command_build_zen_rejects_missing_graph_only_library_source`,
   accepts valid graph-only library exports through

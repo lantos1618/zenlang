@@ -2378,6 +2378,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration direct_file_command_build_zen_accepts_library_dependencies`
   and
   `cargo test --test integration direct_file_command_build_zen_rejects_gated_test_dependencies`,
+  rejects unknown, self, and cyclic target dependencies before execution
+  through
+  `cargo test --test integration direct_file_command_build_zen_rejects_unknown_target_dependencies`,
+  `cargo test --test integration direct_file_command_build_zen_rejects_self_target_dependencies`,
+  and
+  `cargo test --test integration direct_file_command_build_zen_rejects_cyclic_target_dependencies`,
   rejects test-only graphs before execution starts through
   `cargo test --test integration direct_file_command_build_zen_rejects_graph_without_executable_targets`,
   and rejects undeclared host effects for single-target and multi-target graphs
