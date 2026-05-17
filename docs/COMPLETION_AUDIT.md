@@ -3014,6 +3014,12 @@ and do not assume Phase 4 is ready without evidence.
   coverage in `tests/generic_diagnostics/annotations/local.rs`, preserving
   struct/enum arity and unspecialized-generic checks while keeping the parent
   annotation module focused on function/signature annotations.
+- Generic method type-argument diagnostics now keep `Option<T>` and
+  `Result<T,E>` enum-method arity coverage in
+  `tests/generic_diagnostics/method_type_args/enum_methods.rs`, preserving
+  malformed enum-method arity and follow-up suppression checks while keeping
+  the parent method type-argument module focused on direct method and
+  non-generic callable cases.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

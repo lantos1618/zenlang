@@ -2743,6 +2743,11 @@ checked-in docs, tests, and commits only.
 - Generic annotation arity diagnostics now keep local variable annotation
   coverage in `tests/generic_diagnostics/annotations/local.rs`, leaving the
   parent annotation module focused on function/signature annotations.
+- Generic method type-argument diagnostics now keep `Option<T>` and
+  `Result<T,E>` enum-method arity coverage in
+  `tests/generic_diagnostics/method_type_args/enum_methods.rs`, leaving the
+  parent method type-argument module focused on direct method and non-generic
+  callable cases.
 
 ## Current Phase
 
