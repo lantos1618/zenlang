@@ -165,6 +165,11 @@ checked-in docs, tests, and commits only.
   the impl target and method list from the declaration dispatcher instead of
   re-matching the whole declaration, shrinking another duplicate declaration
   collection boundary while preserving resolver-restored impl method coverage.
+- Behavior impl method naming, resolver-owned key restoration, and
+  behavior-specialized impl method symbol helpers now live in a focused
+  typechecker module, keeping behavior association/default support below the
+  previous size peak while preserving existing resolver-backed impl method
+  coverage.
 - Impl-block declaration collection now owns the `Type.impl` dispatcher for
   both AST and resolver-backed setup, so resolver-backed template stubs also
   receive the already-dispatched target and method list instead of re-matching
