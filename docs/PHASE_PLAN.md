@@ -2586,6 +2586,9 @@ checked-in docs, tests, and commits only.
   `src/build_graph/lowering/targets.rs`, keeping `b.add(...)` target
   recognition and field extraction separate from build-script expression
   traversal.
+- Range expressions now produce an explicit gated typechecker diagnostic until
+  a concrete range type is designed, instead of silently carrying an unknown
+  placeholder through function return checking.
 
 ## Current Phase
 
