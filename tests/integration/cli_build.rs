@@ -8,6 +8,8 @@ mod build_command_host_effects;
 mod build_command_validation;
 #[path = "cli_build/build_graph_json.rs"]
 mod build_graph_json;
+#[path = "cli_build/declared_env_effects.rs"]
+mod declared_env_effects;
 #[path = "cli_build/diagnostics.rs"]
 mod diagnostics;
 #[path = "cli_build/direct_build_graph_execution.rs"]
