@@ -3041,6 +3041,12 @@ checked-in docs, tests, and commits only.
   `test_command_build_zen_rejects_duplicate_test_target_fields`,
   `test_command_build_zen_rejects_missing_required_test_target_fields`, and
   `test_command_build_zen_rejects_invalid_test_target_field_types`.
+- Legacy `zen build-graph build.zen` execution now has target metadata
+  diagnostics for duplicate executable fields, missing `out_dir`, and
+  non-string `out_dir`, covered by
+  `build_graph_command_rejects_duplicate_target_fields`,
+  `build_graph_command_rejects_missing_required_target_fields`, and
+  `build_graph_command_rejects_invalid_target_field_types`.
 
 ## Current Phase
 
