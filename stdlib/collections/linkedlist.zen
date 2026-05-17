@@ -33,7 +33,7 @@ LinkedList<T>: {
 
 // Create new empty linked list
 LinkedList<T>.new = (allocator: Allocator) LinkedList<T> {
-    return LinkedList<T> {
+    LinkedList<T> {
         head: Ptr<Node<T>>.none(),
         tail: Ptr<Node<T>>.none(),
         len: 0,
@@ -47,17 +47,17 @@ LinkedList<T>.new = (allocator: Allocator) LinkedList<T> {
 
 // Get current length
 LinkedList<T>.len = (self: LinkedList<T>) usize {
-    return self.len
+    self.len
 }
 
 // Alias for len
 LinkedList<T>.size = (self: LinkedList<T>) usize {
-    return self.len
+    self.len
 }
 
 // Check if empty
 LinkedList<T>.is_empty = (self: LinkedList<T>) bool {
-    return self.len == 0
+    self.len == 0
 }
 
 // ============================================================================
@@ -66,58 +66,61 @@ LinkedList<T>.is_empty = (self: LinkedList<T>) bool {
 
 // Get first element
 LinkedList<T>.front = (self: LinkedList<T>) Option<T> {
-    self.head.is_none() ? {
-        return Option.None
-    }
-    return Option.Some(self.head.val.value)
+    self.head.is_none() ?
+        | true { Option.None }
+        | false { Option.Some(self.head.val.value) }
 }
 
 // Get last element
 LinkedList<T>.back = (self: LinkedList<T>) Option<T> {
-    self.tail.is_none() ? {
-        return Option.None
-    }
-    return Option.Some(self.tail.val.value)
+    self.tail.is_none() ?
+        | true { Option.None }
+        | false { Option.Some(self.tail.val.value) }
 }
 
 // Get element at index (O(n) - walks from closest end)
 LinkedList<T>.get = (self: LinkedList<T>, index: usize) Option<T> {
-    index >= self.len ? {
-        return Option.None
-    }
-
-    // Walk from head or tail depending on which is closer
-    index < self.len / 2 ? {
-        // Walk from head
-        current ::= self.head
-        i ::= 0
-        i < index ? {
-            current = current.val.next
-            i = i + 1
+    index >= self.len ?
+        | true { Option.None }
+        | false {
+            // Walk from head or tail depending on which is closer
+            index < self.len / 2 ?
+                | true {
+                    // Walk from head
+                    current ::= self.head
+                    i ::= 0
+                    i < index ? {
+                        current = current.val.next
+                        i = i + 1
+                    }
+                    Option.Some(current.val.value)
+                }
+                | false {
+                    // Walk from tail
+                    current ::= self.tail
+                    i ::= self.len - 1
+                    i > index ? {
+                        current = current.val.prev
+                        i = i - 1
+                    }
+                    Option.Some(current.val.value)
+                }
         }
-        return Option.Some(current.val.value)
-    }
-
-    // Walk from tail
-    current ::= self.tail
-    i ::= self.len - 1
-    i > index ? {
-        current = current.val.prev
-        i = i - 1
-    }
-    return Option.Some(current.val.value)
 }
 
 // Check if list contains value
 LinkedList<T>.contains = (self: LinkedList<T>, value: T) bool {
-    current ::= self.head
-    !current.is_none() ? {
-        current.val.value == value ? {
-            return true
+    contains_from<T>(self.head, value)
+}
+
+contains_from<T> = (current: Ptr<Node<T>>, value: T) bool {
+    current.is_none() ?
+        | true { false }
+        | false {
+            current.val.value == value ?
+                | true { true }
+                | false { contains_from<T>(current.val.next, value) }
         }
-        current = current.val.next
-    }
-    return false
 }
 
 // ============================================================================
@@ -137,7 +140,7 @@ LinkedList<T>.alloc_node = (self: MutPtr<LinkedList<T>>, value: T) Ptr<Node<T>> 
         next: Ptr<Node<T>>.none()
     }
 
-    return node_ptr
+    node_ptr
 }
 
 // Free a node
@@ -185,123 +188,127 @@ LinkedList<T>.push_back = (self: MutPtr<LinkedList<T>>, value: T) void {
 
 // Pop element from front
 LinkedList<T>.pop_front = (self: MutPtr<LinkedList<T>>) Option<T> {
-    self.val.head.is_none() ? {
-        return Option.None
-    }
+    self.val.head.is_none() ?
+        | true { Option.None }
+        | false {
+            old_head = self.val.head
+            value = old_head.val.value
 
-    old_head = self.val.head
-    value = old_head.val.value
+            self.val.head = old_head.val.next
+            self.val.head.is_none() ? {
+                // List is now empty
+                self.val.tail = Ptr<Node<T>>.none()
+            } : {
+                // Clear prev pointer of new head
+                self.val.head.mut_ref().val.prev = Ptr<Node<T>>.none()
+            }
 
-    self.val.head = old_head.val.next
-    self.val.head.is_none() ? {
-        // List is now empty
-        self.val.tail = Ptr<Node<T>>.none()
-    } : {
-        // Clear prev pointer of new head
-        self.val.head.mut_ref().val.prev = Ptr<Node<T>>.none()
-    }
+            self.free_node(old_head)
+            self.val.len = self.val.len - 1
 
-    self.free_node(old_head)
-    self.val.len = self.val.len - 1
-
-    return Option.Some(value)
+            Option.Some(value)
+        }
 }
 
 // Pop element from back
 LinkedList<T>.pop_back = (self: MutPtr<LinkedList<T>>) Option<T> {
-    self.val.tail.is_none() ? {
-        return Option.None
-    }
+    self.val.tail.is_none() ?
+        | true { Option.None }
+        | false {
+            old_tail = self.val.tail
+            value = old_tail.val.value
 
-    old_tail = self.val.tail
-    value = old_tail.val.value
+            self.val.tail = old_tail.val.prev
+            self.val.tail.is_none() ? {
+                // List is now empty
+                self.val.head = Ptr<Node<T>>.none()
+            } : {
+                // Clear next pointer of new tail
+                self.val.tail.mut_ref().val.next = Ptr<Node<T>>.none()
+            }
 
-    self.val.tail = old_tail.val.prev
-    self.val.tail.is_none() ? {
-        // List is now empty
-        self.val.head = Ptr<Node<T>>.none()
-    } : {
-        // Clear next pointer of new tail
-        self.val.tail.mut_ref().val.next = Ptr<Node<T>>.none()
-    }
+            self.free_node(old_tail)
+            self.val.len = self.val.len - 1
 
-    self.free_node(old_tail)
-    self.val.len = self.val.len - 1
-
-    return Option.Some(value)
+            Option.Some(value)
+        }
 }
 
 // Insert at index (O(n))
 LinkedList<T>.insert = (self: MutPtr<LinkedList<T>>, index: usize, value: T) bool {
-    index > self.val.len ? {
-        return false
-    }
+    index > self.val.len ?
+        | true { false }
+        | false {
+            index == 0 ?
+                | true {
+                    self.push_front(value)
+                    true
+                }
+                | false {
+                    index == self.val.len ?
+                        | true {
+                            self.push_back(value)
+                            true
+                        }
+                        | false {
+                            // Find node at index
+                            current ::= self.val.head
+                            i ::= 0
+                            i < index ? {
+                                current = current.val.next
+                                i = i + 1
+                            }
 
-    index == 0 ? {
-        self.push_front(value)
-        return true
-    }
+                            // Insert before current
+                            new_node = self.alloc_node(value)
+                            prev_node = current.val.prev
 
-    index == self.val.len ? {
-        self.push_back(value)
-        return true
-    }
+                            new_node.mut_ref().val.prev = prev_node
+                            new_node.mut_ref().val.next = current
+                            prev_node.mut_ref().val.next = new_node
+                            current.mut_ref().val.prev = new_node
 
-    // Find node at index
-    current ::= self.val.head
-    i ::= 0
-    i < index ? {
-        current = current.val.next
-        i = i + 1
-    }
-
-    // Insert before current
-    new_node = self.alloc_node(value)
-    prev_node = current.val.prev
-
-    new_node.mut_ref().val.prev = prev_node
-    new_node.mut_ref().val.next = current
-    prev_node.mut_ref().val.next = new_node
-    current.mut_ref().val.prev = new_node
-
-    self.val.len = self.val.len + 1
-    return true
+                            self.val.len = self.val.len + 1
+                            true
+                        }
+                }
+        }
 }
 
 // Remove at index (O(n))
 LinkedList<T>.remove = (self: MutPtr<LinkedList<T>>, index: usize) Option<T> {
-    index >= self.val.len ? {
-        return Option.None
-    }
+    index >= self.val.len ?
+        | true { Option.None }
+        | false {
+            index == 0 ?
+                | true { self.pop_front() }
+                | false {
+                    index == self.val.len - 1 ?
+                        | true { self.pop_back() }
+                        | false {
+                            // Find node at index
+                            current ::= self.val.head
+                            i ::= 0
+                            i < index ? {
+                                current = current.val.next
+                                i = i + 1
+                            }
 
-    index == 0 ? {
-        return self.pop_front()
-    }
+                            // Unlink node
+                            value = current.val.value
+                            prev_node = current.val.prev
+                            next_node = current.val.next
 
-    index == self.val.len - 1 ? {
-        return self.pop_back()
-    }
+                            prev_node.mut_ref().val.next = next_node
+                            next_node.mut_ref().val.prev = prev_node
 
-    // Find node at index
-    current ::= self.val.head
-    i ::= 0
-    i < index ? {
-        current = current.val.next
-        i = i + 1
-    }
+                            self.free_node(current)
+                            self.val.len = self.val.len - 1
 
-    // Unlink node
-    value = current.val.value
-    prev_node = current.val.prev
-    next_node = current.val.next
-
-    prev_node.mut_ref().val.next = next_node
-    next_node.mut_ref().val.prev = prev_node
-
-    self.free_node(current)
-    self.val.len = self.val.len - 1
-
-    return Option.Some(value)
+                            Option.Some(value)
+                        }
+                }
+        }
 }
 
 // Clear all elements
@@ -336,23 +343,23 @@ LinkedListIter<T>: {
 
 // Get iterator
 LinkedList<T>.iter = (self: LinkedList<T>) LinkedListIter<T> {
-    return LinkedListIter<T> {
+    LinkedListIter<T> {
         current: self.head
     }
 }
 
 // Check if iterator has more elements
 LinkedListIter<T>.has_next = (self: LinkedListIter<T>) bool {
-    return !self.current.is_none()
+    !self.current.is_none()
 }
 
 // Get next element
 LinkedListIter<T>.next = (self: MutPtr<LinkedListIter<T>>) Option<T> {
-    self.val.current.is_none() ? {
-        return Option.None
-    }
-
-    value = self.val.current.val.value
-    self.val.current = self.val.current.val.next
-    return Option.Some(value)
+    self.val.current.is_none() ?
+        | true { Option.None }
+        | false {
+            value = self.val.current.val.value
+            self.val.current = self.val.current.val.next
+            Option.Some(value)
+        }
 }
