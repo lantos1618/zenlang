@@ -2468,6 +2468,11 @@ and do not assume Phase 4 is ready without evidence.
   reducing `src/typechecker/tests/resolver_type_behavior_metadata.rs` from 510
   to 332 lines while preserving coverage through
   `cargo test --lib resolver_type_behavior_metadata`.
+- Import-visibility integration tests now keep transitive dependency and
+  private imported-method cases in focused modules, reducing
+  `tests/integration/import_visibility.rs` from 500 to 161 lines while
+  preserving coverage through
+  `cargo test --test integration import_visibility`.
 - Resolver import metadata tests now keep module-symbol metadata cases in
   `src/typechecker/tests/resolver_import_metadata/module_metadata.rs`,
   reducing `src/typechecker/tests/resolver_import_metadata.rs` from 506 to 280

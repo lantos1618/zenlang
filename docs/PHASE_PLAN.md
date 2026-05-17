@@ -327,6 +327,10 @@ checked-in docs, tests, and commits only.
 - `zen test build.zen` integration coverage now keeps test-target execution,
   deterministic host-effect rejection, and graph validation failures in
   focused modules instead of one oversized test-command file.
+- Import-visibility integration coverage now keeps transitive dependency and
+  private imported-method cases in focused modules, dropping
+  `tests/integration/import_visibility.rs` below the cleanup threshold while
+  preserving the same import visibility behavior checks.
 - Resolver symbol-table behavior edge recording now lives in a focused helper,
   keeping symbol definition and lookup separate from association mutation.
 - Typechecker resolver callable signature restoration now lives in a focused
