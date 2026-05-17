@@ -2744,6 +2744,11 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/declaration_collection_resolver_tasks/replay_kinds.rs`,
   preserving type, behavior, impl, callable, and type-reference replay task
   construction while keeping declaration collection orchestration smaller.
+- Resolver absence validation now keeps behavior, mutability, and source
+  descriptor tables in
+  `src/typechecker/resolver_validation_support/absence_symbol_descriptors.rs`,
+  preserving absence diagnostics while keeping field and variant descriptors
+  smaller.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
