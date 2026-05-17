@@ -25,46 +25,48 @@ Mutex: {
 }
 
 Mutex.new = () Mutex {
-    return Mutex { state: MUTEX_UNLOCKED }
+    Mutex { state: MUTEX_UNLOCKED }
 }
 
 // Acquire the lock (blocks until acquired)
 Mutex.lock = (self: MutPtr<Mutex>) void {
     // Fast path: try to acquire unlocked mutex
     old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), MUTEX_UNLOCKED, MUTEX_LOCKED)
-    old == MUTEX_UNLOCKED ? { return }
-
-    // Slow path: mutex is contended
-    self.lock_slow()
+    old != MUTEX_UNLOCKED ? {
+        // Slow path: mutex is contended
+        self.lock_slow()
+    }
 }
 
 // Slow path for lock acquisition
 Mutex.lock_slow = (self: MutPtr<Mutex>) void {
     // Spin briefly before blocking
     spins ::= 0
-    spins < 40 ? {
+    acquired ::= false
+    spins < 40 && acquired == false ? {
         state = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.state.ref())), i32)
         state == MUTEX_UNLOCKED ? {
             old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), MUTEX_UNLOCKED, MUTEX_LOCKED)
-            old == MUTEX_UNLOCKED ? { return }
+            old == MUTEX_UNLOCKED ? { acquired = true }
         }
         // Pause instruction would go here for better spin efficiency
         spins = spins + 1
     }
 
-    // Mark as having waiters and block
-    state = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.state.ref())), i32)
-    state != MUTEX_LOCKED_WAITERS ? {
-        old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), state, MUTEX_LOCKED_WAITERS)
-    }
-
-    // Block on futex until we acquire
-    acquired ::= false
     acquired == false ? {
-        futex_wait(&self.val.state.ref(), MUTEX_LOCKED_WAITERS)
-        // Try to acquire, marking waiters since others may be waiting too
-        old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), MUTEX_UNLOCKED, MUTEX_LOCKED_WAITERS)
-        old == MUTEX_UNLOCKED ? { acquired = true }
+        // Mark as having waiters and block
+        state = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.state.ref())), i32)
+        state != MUTEX_LOCKED_WAITERS ? {
+            old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), state, MUTEX_LOCKED_WAITERS)
+        }
+
+        // Block on futex until we acquire
+        acquired == false ? {
+            futex_wait(&self.val.state.ref(), MUTEX_LOCKED_WAITERS)
+            // Try to acquire, marking waiters since others may be waiting too
+            old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), MUTEX_UNLOCKED, MUTEX_LOCKED_WAITERS)
+            old == MUTEX_UNLOCKED ? { acquired = true }
+        }
     }
 }
 
@@ -72,16 +74,13 @@ Mutex.lock_slow = (self: MutPtr<Mutex>) void {
 // Returns true if lock was acquired
 Mutex.try_lock = (self: MutPtr<Mutex>) bool {
     old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), MUTEX_UNLOCKED, MUTEX_LOCKED)
-    return old == MUTEX_UNLOCKED
+    old == MUTEX_UNLOCKED
 }
 
 // Release the lock
 Mutex.unlock = (self: MutPtr<Mutex>) void {
     // Atomically set to unlocked and get previous state
     old = compiler.atomic_cas(compiler.raw_ptr_cast(&self.val.state.ref()), MUTEX_LOCKED, MUTEX_UNLOCKED)
-
-    // Fast path: no waiters
-    old == MUTEX_LOCKED ? { return }
 
     // Had waiters - need to wake one
     old == MUTEX_LOCKED_WAITERS ? {
@@ -93,7 +92,7 @@ Mutex.unlock = (self: MutPtr<Mutex>) void {
 // Check if mutex is locked (for debugging, not synchronization)
 Mutex.is_locked = (self: Ptr<Mutex>) bool {
     state = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.state.ref())), i32)
-    return state != MUTEX_UNLOCKED
+    state != MUTEX_UNLOCKED
 }
 
 // ============================================================================
@@ -106,7 +105,7 @@ MutexGuard: {
 
 MutexGuard.new = (mutex: MutPtr<Mutex>) MutexGuard {
     mutex.lock()
-    return MutexGuard { mutex: mutex }
+    MutexGuard { mutex: mutex }
 }
 
 MutexGuard.release = (self: MutPtr<MutexGuard>) void {
