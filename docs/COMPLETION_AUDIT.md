@@ -3057,6 +3057,13 @@ and do not assume Phase 4 is ready without evidence.
   Coverage includes `build_program_lowering_rejects_duplicate_target_fields`,
   `build_program_lowering_rejects_unknown_target_fields`, and
   `emit_json_build_graph_rejects_unknown_target_fields`.
+- Build graph target metadata extraction now validates required fields and
+  field value shapes before graph construction, so missing `out_dir` and
+  non-string string fields produce direct target-field diagnostics instead of
+  falling through to missing graph targets. Coverage includes
+  `build_program_lowering_rejects_missing_required_target_fields`,
+  `build_program_lowering_rejects_invalid_target_field_types`, and
+  `emit_json_build_graph_rejects_missing_required_target_fields`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

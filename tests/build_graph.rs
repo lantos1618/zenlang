@@ -295,6 +295,53 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn build_program_lowering_rejects_missing_required_target_fields() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+    })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("missing required build target fields should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "missing required field `out_dir` in `Executable` build target"
+    );
+}
+
+#[test]
+fn build_program_lowering_rejects_invalid_target_field_types() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: 42,
+    })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("invalid build target field type should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "field `out_dir` in `Executable` build target must be a string"
+    );
+}
+
+#[test]
 fn build_program_lowering_rejects_unsupported_package_targets() {
     assert_build_program_lowering_rejects_unsupported_target_kind("Package");
 }

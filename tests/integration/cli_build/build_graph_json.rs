@@ -137,6 +137,43 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn emit_json_build_graph_rejects_missing_required_target_fields() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let build_path = tmp.path().join("build.zen");
+    std::fs::write(
+        &build_path,
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+    })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "build-graph", build_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json build-graph");
+
+    assert!(
+        !output.status.success(),
+        "emit-json build-graph unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("missing required field `out_dir` in `Executable` build target"),
+        "expected missing field diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn emit_json_build_graph_rejects_unknown_target_dependencies() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let build_path = tmp.path().join("build.zen");
