@@ -2737,6 +2737,9 @@ and do not assume Phase 4 is ready without evidence.
 - CLI build graph loading and deterministic `build.zen` lowering now live in
   `src/cli/build_graph_loading.rs`, preserving build graph JSON/check behavior
   while keeping root CLI dispatch smaller.
+- CLI build, test, direct-file, and legacy build-graph execution commands now
+  live in `src/cli/execution_commands.rs`, preserving executable/test graph
+  execution behavior while keeping root CLI dispatch smaller.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type

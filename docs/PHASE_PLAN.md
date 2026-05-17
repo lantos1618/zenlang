@@ -2569,6 +2569,9 @@ checked-in docs, tests, and commits only.
 - CLI build graph loading and deterministic `build.zen` lowering now live in
   `src/cli/build_graph_loading.rs`, keeping parse/lower diagnostics together
   while root CLI remains focused on command routing.
+- CLI build, test, direct-file, and legacy build-graph execution commands now
+  live in `src/cli/execution_commands.rs`, keeping command execution separate
+  from root CLI dispatch while preserving graph execution behavior.
 
 ## Current Phase
 

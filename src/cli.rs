@@ -5,6 +5,7 @@ mod build_graph_execution;
 mod build_graph_loading;
 mod compile;
 mod diagnostics;
+mod execution_commands;
 mod frontend;
 mod json_emit;
 mod usage;
@@ -16,6 +17,7 @@ use build_graph_execution::{
 use build_graph_loading::load_build_graph;
 use compile::{compile_file_to_binary, compile_file_to_c_source, typed_program_to_c_source};
 use diagnostics::{print_diagnostic, print_errors};
+use execution_commands::{cmd_build, cmd_build_graph, cmd_run_file, cmd_test};
 use frontend::{graph_frontend, load_module_graph};
 use json_emit::{
     cmd_emit_json_ast, cmd_emit_json_build_graph, cmd_emit_json_diagnostics, cmd_emit_json_symbols,
@@ -124,77 +126,6 @@ fn cmd_emit(path_str: &str) {
 
     let typed = graph_frontend(path_str);
     print!("{}", typed_program_to_c_source(&typed));
-}
-
-fn cmd_build(path_str: &str) {
-    if is_build_zen_path(path_str) {
-        cmd_build_graph(path_str);
-    } else {
-        compile_file_to_binary(path_str, None, None);
-    }
-}
-
-fn cmd_test(path_str: &str) {
-    if !is_build_zen_path(path_str) {
-        eprintln!("error: zen test expects a build.zen file");
-        process::exit(1);
-    }
-
-    for target in test_build_targets(path_str) {
-        if let Err(err) = std::fs::create_dir_all(&target.out_dir) {
-            eprintln!("error creating {}: {}", target.out_dir.display(), err);
-            process::exit(1);
-        }
-
-        let bin_path = compile_file_to_binary(
-            target
-                .root_path
-                .to_str()
-                .unwrap_or(&target.root_source_file),
-            Some(&target.out_dir),
-            Some(&target.name),
-        );
-        let run = process::Command::new(&bin_path).status();
-        match run {
-            Ok(status) if status.success() => {
-                println!("  test {} passed", target.name);
-            }
-            Ok(status) => {
-                eprintln!("  test {} exited with {}", target.name, status);
-                process::exit(1);
-            }
-            Err(err) => {
-                eprintln!("  failed to run test {}: {}", target.name, err);
-                process::exit(1);
-            }
-        }
-    }
-}
-
-fn cmd_run_file(path_str: &str) {
-    if is_build_zen_path(path_str) {
-        cmd_build_graph(path_str);
-    } else {
-        compile_file_to_binary(path_str, None, None);
-    }
-}
-
-fn cmd_build_graph(path_str: &str) {
-    for target in executable_build_targets(path_str) {
-        if let Err(err) = std::fs::create_dir_all(&target.out_dir) {
-            eprintln!("error creating {}: {}", target.out_dir.display(), err);
-            process::exit(1);
-        }
-
-        compile_file_to_binary(
-            target
-                .root_path
-                .to_str()
-                .unwrap_or(&target.root_source_file),
-            Some(&target.out_dir),
-            Some(&target.name),
-        );
-    }
 }
 
 fn is_build_zen_path(path_str: &str) -> bool {
