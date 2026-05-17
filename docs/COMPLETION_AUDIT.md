@@ -3000,6 +3000,11 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs`,
   preserving imported undefined-call and unspecialized-symbol checks while
   keeping the multifile generated-C module focused on submodule wiring.
+- Generic inference conflict diagnostics now keep method and receiver conflict
+  coverage in `tests/generic_diagnostics/inference_conflicts/methods.rs`,
+  preserving direct, receiver-derived, Result enum, function-type, array,
+  raw-pointer, and slice conflict checks while keeping the parent inference
+  conflict module focused on generic function inference conflicts.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
