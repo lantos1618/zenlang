@@ -2239,9 +2239,14 @@ checked-in docs, tests, and commits only.
   test-target dependencies on gated executable targets through
   `test_command_build_zen_rejects_gated_executable_dependencies`. It validates
   graph-only library exports before execution through
-  `test_command_build_zen_rejects_missing_graph_only_library_source` and
+  `test_command_build_zen_rejects_missing_graph_only_library_source`,
+  accepts valid graph-only library exports through
+  `test_command_build_zen_accepts_valid_graph_only_library_sources`, and
   typechecks them before execution through
-  `test_command_build_zen_rejects_graph_only_library_type_errors`.
+  `test_command_build_zen_rejects_graph_only_library_type_errors`. It also
+  preserves host-effect validation before graph-only library typechecking
+  through
+  `test_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`.
   Declared deterministic file-read effects are accepted on the normal test
   path through `test_command_build_zen_accepts_declared_file_read_effects`,
   while undeclared file reads reject before test execution through
