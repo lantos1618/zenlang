@@ -2937,6 +2937,11 @@ and do not assume Phase 4 is ready without evidence.
   preserving stale AST fallback rejection, restored-key cleanup, and body
   type-reference coverage while keeping template shape and mutability
   restoration tests focused.
+- Resolver Phase 2 generic behavior method metadata tests now live in
+  `tests/resolver_phase2/generic_behavior_metadata/method_signatures.rs`,
+  preserving behavior method signature, function-typed method, duplicate
+  parameter, and default-local coverage while keeping generic parameter and
+  bound metadata tests focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
