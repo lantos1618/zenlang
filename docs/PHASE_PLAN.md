@@ -2404,6 +2404,9 @@ checked-in docs, tests, and commits only.
   `build_zen_commands_reject_package_fields` and
   `build_zen_commands_reject_link_fields` cover the execution/check
   entrypoints for recognized-but-gated package/link target fields.
+  `build_zen_commands_reject_dynamic_target_adds` covers the same normal
+  build, direct build.zen, check, test, emit, and legacy build-graph
+  entrypoints for dynamic target-add rejection before execution or emission.
 - `build-graph <build.zen>` now consumes the deterministic graph for executable
   targets without widening the accepted `build.zen` subset.
   `build_graph_command_compiles_single_executable_target` covers the
