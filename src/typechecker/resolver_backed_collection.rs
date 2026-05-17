@@ -39,9 +39,7 @@ impl TypeChecker {
         tasks: &ResolverDeclarationMetadataTasks<'_>,
     ) {
         self.with_resolver_backed_collection(|checker| {
-            checker.validate_behavior_association_tasks(tasks, Some(symbols));
-            checker.validate_resolver_type_reference_tasks(tasks, Some(symbols));
-            checker.validate_resolver_struct_field_default_tasks(tasks, Some(symbols));
+            checker.validate_resolver_declaration_semantics_from_tasks(tasks, Some(symbols));
         });
     }
 

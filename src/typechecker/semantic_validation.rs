@@ -7,10 +7,8 @@ impl TypeChecker {
         symbols: Option<&SymbolTable>,
     ) {
         if self.resolver_backed_collection {
-            let tasks = Self::collect_resolver_semantic_validation_tasks(decls);
-            self.validate_behavior_association_tasks(&tasks, symbols);
-            self.validate_resolver_type_reference_tasks(&tasks, symbols);
-            self.validate_resolver_struct_field_default_tasks(&tasks, symbols);
+            let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
+            self.validate_resolver_declaration_semantics_from_tasks(&tasks, symbols);
             return;
         }
 
@@ -26,6 +24,16 @@ impl TypeChecker {
         self.validate_behavior_association_tasks(tasks, symbols);
         self.validate_ast_type_reference_tasks(&tasks.type_references);
         self.validate_ast_struct_field_default_tasks(&tasks.struct_field_defaults);
+    }
+
+    pub(super) fn validate_resolver_declaration_semantics_from_tasks(
+        &mut self,
+        tasks: &ResolverDeclarationMetadataTasks<'_>,
+        symbols: Option<&SymbolTable>,
+    ) {
+        self.validate_behavior_association_tasks(tasks, symbols);
+        self.validate_resolver_type_reference_tasks(tasks, symbols);
+        self.validate_resolver_struct_field_default_tasks(tasks, symbols);
     }
 
     pub(super) fn collect_ast_declaration_validation_tasks(
@@ -62,12 +70,6 @@ impl TypeChecker {
             Self::push_behavior_requires_replay_task(decl, &mut tasks.requires);
         }
         tasks
-    }
-
-    fn collect_resolver_semantic_validation_tasks(
-        decls: &[Declaration],
-    ) -> ResolverDeclarationMetadataTasks<'_> {
-        Self::collect_resolver_declaration_metadata_tasks(decls)
     }
 
     pub(super) fn validate_behavior_association_tasks<'a>(
