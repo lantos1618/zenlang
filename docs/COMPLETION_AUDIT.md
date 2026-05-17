@@ -2343,6 +2343,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration public_project_build_graph_typechecks_through_cli`.
   The project example includes an explicit `test.zen` target so
   `examples/project/build.zen` validates every advertised source.
+  Runnable public examples also compile through `zen build`, covered by
+  `cargo test --test integration public_runnable_examples_compile_through_cli`,
+  so public tutorial files cannot drift into typecheck-only codegen gaps.
 - Normal `zen check build.zen` validates the constrained deterministic graph
   without compiling targets, covered by
   `cargo test --test integration check_command_validates_build_zen_graph`, and

@@ -2294,6 +2294,9 @@ checked-in docs, tests, and commits only.
   `public_project_build_graph_typechecks_through_cli`, so the README/tutorial
   examples and the canonical project build graph cannot drift back to removed
   syntax without failing integration.
+- Runnable public examples now also compile through the CLI under
+  `public_runnable_examples_compile_through_cli`, which keeps tutorial examples
+  from teaching typecheck-only syntax that C emission cannot lower yet.
 - A constrained `build.zen` lowering boundary now maps parsed build scripts into
   `BuildGraph` without enabling CLI execution. `parsed_project_build_zen_lowers_to_executable_and_test_graph`
   covers the checked-in project executable and test targets,
