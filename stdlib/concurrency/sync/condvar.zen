@@ -22,7 +22,7 @@ CondVar: {
 }
 
 CondVar.new = () CondVar {
-    return CondVar { seq: 0 }
+    CondVar { seq: 0 }
 }
 
 // Wait for the condition to be signaled
@@ -79,7 +79,7 @@ CondVar.wait_timeout = (self: MutPtr<CondVar>, mutex: MutPtr<Mutex>, timeout_ns:
     mutex.lock()
 
     // ETIMEDOUT = -110
-    return result != -110
+    result != -110
 }
 
 // Signal one waiting thread
