@@ -2889,6 +2889,11 @@ and do not assume Phase 4 is ready without evidence.
   preserving behavior-name, impl-target, and combined restored metadata default
   synthesis coverage while keeping behavior impl method signature and impl-check
   metadata coverage focused.
+- AST declaration validation task and replay tests now live in
+  `src/typechecker/tests/declaration_validation/tasks.rs`, preserving self-type,
+  precollection, declaration collection, type-reference, field default, and
+  semantic replay task coverage while keeping direct validation diagnostics
+  focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

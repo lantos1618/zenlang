@@ -2630,6 +2630,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_collection/behavior_impl_methods/default_synthesis.rs`,
   keeping omitted behavior default synthesis coverage separate from behavior
   impl method signature and impl-check metadata coverage.
+- AST declaration validation task and replay tests now live in
+  `src/typechecker/tests/declaration_validation/tasks.rs`, keeping self-type,
+  precollection, declaration collection, type-reference, field default, and
+  semantic replay task coverage separate from direct validation diagnostics.
 
 ## Current Phase
 
