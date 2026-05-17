@@ -490,6 +490,9 @@ checked-in docs, tests, and commits only.
 - Direct `zen build.zen` validation tests now keep direct and transitive gated
   test dependency rejection coverage in a focused child module, matching the
   normal build-command validation layout.
+- Legacy `zen build-graph build.zen` validation tests now keep direct and
+  transitive gated test dependency rejection coverage in a focused child
+  module, aligning the executable graph validation entrypoints.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a

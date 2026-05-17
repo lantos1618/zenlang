@@ -1,5 +1,7 @@
 use std::process::Command;
 
+#[path = "legacy_graph_command_validation/gated_dependencies.rs"]
+mod gated_dependencies;
 #[path = "legacy_graph_command_validation/graph_only_libraries.rs"]
 mod graph_only_libraries;
 
@@ -107,44 +109,6 @@ main = () i32 {
 }
 
 #[test]
-fn build_graph_command_rejects_gated_test_dependencies() {
-    assert_build_graph_rejects_gated_dependency(
-        r#"b.add(Test { name: "unit", root: "test.zen" })"#,
-        "unit",
-        "test.zen",
-        "test",
-    );
-}
-
-#[test]
-fn build_graph_command_rejects_transitive_gated_test_dependencies() {
-    let tmp = super::support::transitive_gated_test_dependency_graph();
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build-graph", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build-graph");
-
-    assert!(
-        !output.status.success(),
-        "zen build-graph unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("build graph target `core` depends on gated test target `unit`"),
-        "expected transitive gated test dependency diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        !tmp.path().join("build").exists(),
-        "build-graph command should not start after transitive gated dependency validation fails"
-    );
-}
-
-#[test]
 fn build_graph_command_ignores_unrelated_gated_test_source_errors() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
@@ -183,75 +147,6 @@ main = () i32 {
     assert!(
         tmp.path().join("build").join("app").join("app").exists(),
         "expected executable output to exist"
-    );
-}
-
-fn assert_build_graph_rejects_gated_dependency(
-    gated_target_decl: &str,
-    gated_target_name: &str,
-    gated_source_name: &str,
-    gated_target_kind: &str,
-) {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        format!(
-            r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {{
-    {gated_target_decl}
-    b.add(Executable {{
-        name: "app",
-        main: "app.zen",
-        out_dir: "build/app/",
-        dependencies: ["{gated_target_name}"],
-    }})
-    .Ok(b.config())
-}}
-"#,
-        ),
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join(gated_source_name),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write gated target source");
-    std::fs::write(
-        tmp.path().join("app.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write app.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build-graph", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build-graph");
-
-    assert!(
-        !output.status.success(),
-        "zen build-graph unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr).contains(&format!(
-            "build graph target `app` depends on gated {gated_target_kind} target `{gated_target_name}`"
-        )),
-        "expected gated dependency diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        !tmp.path().join("build").exists(),
-        "build-graph command should not start after gated dependency validation fails"
     );
 }
 
