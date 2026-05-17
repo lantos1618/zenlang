@@ -2,6 +2,10 @@
 mod build_command;
 #[path = "cli_build/build_command_execution.rs"]
 mod build_command_execution;
+#[path = "cli_build/build_command_host_effects.rs"]
+mod build_command_host_effects;
+#[path = "cli_build/build_command_validation.rs"]
+mod build_command_validation;
 #[path = "cli_build/build_graph_json.rs"]
 mod build_graph_json;
 #[path = "cli_build/diagnostics.rs"]

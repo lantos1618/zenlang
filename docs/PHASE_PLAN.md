@@ -321,6 +321,9 @@ checked-in docs, tests, and commits only.
 - Build graph lowering spelling tests now live in a focused lowering test
   module, keeping the production lowering implementation below the cleanup
   threshold while preserving the same spelling guards.
+- Build-command integration tests now keep ordinary single-file build
+  diagnostics, `build.zen` graph validation, and `build.zen` host-effect
+  ordering in focused modules instead of one oversized command test file.
 - Resolver symbol-table behavior edge recording now lives in a focused helper,
   keeping symbol definition and lookup separate from association mutation.
 - Typechecker resolver callable signature restoration now lives in a focused
